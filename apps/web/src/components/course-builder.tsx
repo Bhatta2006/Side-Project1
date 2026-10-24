@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { BookPlus, CheckCircle2, Loader2, RotateCcw, Save, Sparkles } from 'lucide-react';
+import { BookPlus, CheckCircle2, Loader2, Pause, Play, RotateCcw, Save, ShieldOff, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { conceptHref } from '@/lib/routes';
@@ -31,8 +31,8 @@ interface LogEntry {
   scores?: Record<string, number>;
 }
 interface Job { id: string; kind: string; state: JobState; log: LogEntry[]; cost_usd: number; error: string; created_at: number; updated_at: number }
-interface Summary { id: string; title: string; status: CourseStatus; concepts: number | null; live: number; job: Job | null; spent_usd: number; budget_usd: number }
-interface Brief { id: string; title: string; audience: string; outcome: string; background: string; languages: string[]; reuse: string[]; references: string[]; notes: string; budget_usd: number }
+interface Summary { id: string; title: string; status: CourseStatus; paused: string; concepts: number | null; live: number; job: Job | null; spent_usd: number; budget_usd: number }
+interface Brief { id: string; title: string; audience: string; outcome: string; background: string; languages: string[]; reuse: string[]; references: string[]; notes: string; budget_usd: number; concept_budget_usd?: number }
 interface OutlineConcept {
   id: string; title: string; summary: string; module: string; prerequisites: string[]; difficulty: number; estimated_minutes: number;
   status: 'planned' | 'live' | 'draft';
@@ -44,11 +44,12 @@ interface CourseJson {
   modules: { id: string; title: string; summary: string; concepts: string[] }[];
   concepts: OutlineConcept[];
 }
-interface Detail { id: string; status: CourseStatus; brief: Brief; course: CourseJson | null; jobs: Job[]; packages: Record<string, Job>; spent_usd: number }
+interface Detail { id: string; status: CourseStatus; paused: string; brief: Brief; course: CourseJson | null; jobs: Job[]; packages: Record<string, Job>; spent_usd: number }
 
 const STATUS_LABEL: Record<CourseStatus, string> = { drafting: 'Drafting', review: 'Ready to review', published: 'Published' };
 const busyJob = (job: Job | null | undefined) => job?.state === 'queued' || job?.state === 'running';
 const usd = (n: number) => `$${n.toFixed(2)}`;
+const PAUSED: Record<string, string> = { budget: 'Paused: budget reached', owner: 'Paused by you' };
 const lines = (s: string) => s.split(/[\n,]/).map(x => x.trim()).filter(Boolean);
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -146,11 +147,14 @@ function JobLog({ job }: { job: Job }) {
   );
 }
 
-function Outline({ course, courseId, packages, onGenerate }: {
-  course: CourseJson; courseId: string; packages: Record<string, Job>; onGenerate?: (ids: string[]) => void;
+function Outline({ course, courseId, packages, onGenerate, onWithdraw }: {
+  course: CourseJson; courseId: string; packages: Record<string, Job>;
+  onGenerate?: (ids: string[]) => void; onWithdraw?: (id: string, notes: string) => Promise<boolean>;
 }) {
   const byId = Object.fromEntries(course.concepts.map(c => [c.id, c]));
   const [shown, setShown] = useState<string | null>(null);
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  const [why, setWhy] = useState('');
   const minutes = course.concepts.reduce((sum, c) => sum + c.estimated_minutes, 0);
   return (
     <div className="grid gap-4">
@@ -178,6 +182,9 @@ function Outline({ course, courseId, packages, onGenerate }: {
                       {onGenerate && c.status === 'planned' && !busyJob(packages[id]) ? (
                         <Button size="sm" variant="outline" onClick={() => onGenerate([id])}><Sparkles /> {packages[id] ? 'Try again' : 'Write'}</Button>
                       ) : null}
+                      {onWithdraw && c.status === 'live' && !busyJob(packages[id]) ? (
+                        <Button size="sm" variant="ghost" onClick={() => { setWithdrawing(withdrawing === id ? null : id); setWhy(''); }}><ShieldOff /> Withdraw</Button>
+                      ) : null}
                       {packages[id] ? <Button size="sm" variant="ghost" onClick={() => setShown(shown === id ? null : id)}>{shown === id ? 'Hide run' : 'Agent run'}</Button> : null}
                     </span>
                   </p>
@@ -190,6 +197,18 @@ function Outline({ course, courseId, packages, onGenerate }: {
                   ) : null}
                   {c.outline?.misconceptions.length ? <p className="mt-1 text-xs text-muted-foreground">Misconceptions: {c.outline.misconceptions.join('; ')}</p> : null}
                   {c.outline ? <p className="text-xs text-muted-foreground">Assessed by: {c.outline.assessment.join(', ')}</p> : null}
+                  {withdrawing === id && onWithdraw ? (
+                    <div className="mt-3 grid gap-2">
+                      <label className="grid gap-1.5 font-medium">
+                        What is wrong? Learners stop seeing this lesson now, and it is rewritten with your note.
+                        <Textarea value={why} onChange={e => setWhy(e.target.value)} rows={2} maxLength={4000} />
+                      </label>
+                      <Button size="sm" variant="outline" className="justify-self-start" disabled={why.trim().length < 3}
+                        onClick={async () => { if (await onWithdraw(id, why)) setWithdrawing(null); }}>
+                        <ShieldOff /> Withdraw and rewrite
+                      </Button>
+                    </div>
+                  ) : null}
                   {shown === id && packages[id] ? <div className="mt-3"><JobLog job={packages[id]} /></div> : null}
                 </li>
               );
@@ -235,6 +254,27 @@ export function CourseBuilder() {
       await show(open.id);
     } catch (e) {
       toast.error(explain(e));
+    }
+  }
+
+  const [budget, setBudget] = useState({ course: '', concept: '' });
+  useEffect(() => {
+    if (open) setBudget({ course: String(open.brief.budget_usd), concept: String(open.brief.concept_budget_usd ?? 2) });
+  }, [open?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function control(path: string, body?: unknown, done?: string) {
+    if (!open) return false;
+    try {
+      if (body === undefined) await api.post(`/admin/courses/${open.id}/${path}`);
+      else if (path === 'budget') await api.put(`/admin/courses/${open.id}/budget`, body);
+      else await api.post(`/admin/courses/${open.id}/${path}`, body);
+      if (done) toast.success(done);
+      await show(open.id);
+      load();
+      return true;
+    } catch (e) {
+      toast.error(explain(e));
+      return false;
     }
   }
 
@@ -286,7 +326,7 @@ export function CourseBuilder() {
                     <button type="button" className="text-left font-semibold underline-offset-4 hover:underline" onClick={() => show(c.id)}>{c.title}</button>
                     <span className="block font-mono text-xs text-muted-foreground">{c.id}</span>
                   </TableCell>
-                  <TableCell><Badge variant="outline">{STATUS_LABEL[c.status]}</Badge></TableCell>
+                  <TableCell className="space-x-1"><Badge variant="outline">{STATUS_LABEL[c.status]}</Badge>{c.paused ? <Badge variant="outline" className="border-attention text-attention">{PAUSED[c.paused] ?? 'Paused'}</Badge> : null}</TableCell>
                   <TableCell className="text-sm">{c.job ? <>{busyJob(c.job) ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : null}{c.job.kind} {c.job.state}</> : '—'}</TableCell>
                   <TableCell className="text-right tabular-nums">{c.concepts === null ? '—' : `${c.live} / ${c.concepts}`}</TableCell>
                   <TableCell className="pr-4 text-right tabular-nums">{usd(c.spent_usd)} / {usd(c.budget_usd)}</TableCell>
@@ -307,6 +347,7 @@ export function CourseBuilder() {
                 <SheetDescription className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-xs">{open.id}</span>
                   <Badge variant="outline">{STATUS_LABEL[open.status]}</Badge>
+                  {open.paused ? <Badge variant="outline" className="border-attention text-attention">{PAUSED[open.paused] ?? 'Paused'}</Badge> : null}
                   <span>{usd(open.spent_usd)} of {usd(open.brief.budget_usd)} spent</span>
                 </SheetDescription>
               </SheetHeader>
@@ -318,6 +359,28 @@ export function CourseBuilder() {
                     {open.brief.background ? <div><dt className="inline font-medium">Background: </dt><dd className="inline">{open.brief.background}</dd></div> : null}
                   </dl>
                 </Section>
+                {open.status === 'published' ? (
+                  <Section title="Generation">
+                    <p className="text-sm text-muted-foreground">
+                      Concepts are written as learners approach them (the next three on each learner&apos;s path), within these budgets.
+                      {open.paused === 'budget' ? ' The course budget is used up: raise it, then resume.' : ''}
+                    </p>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <label className="grid gap-1 text-sm font-medium">Course budget (USD)
+                        <Input type="number" min="0.5" step="0.5" className="w-32" value={budget.course} onChange={e => setBudget(b => ({ ...b, course: e.target.value }))} />
+                      </label>
+                      <label className="grid gap-1 text-sm font-medium">Per concept (USD)
+                        <Input type="number" min="0.1" step="0.1" className="w-32" value={budget.concept} onChange={e => setBudget(b => ({ ...b, concept: e.target.value }))} />
+                      </label>
+                      <Button size="sm" variant="outline" onClick={() => control('budget', { budget_usd: Number(budget.course), concept_budget_usd: Number(budget.concept) }, 'Budget saved.')}><Save /> Save budget</Button>
+                      {open.paused ? (
+                        <Button size="sm" onClick={() => control('resume', undefined, 'Generation resumed.')}><Play /> Resume</Button>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={() => control('pause', undefined, 'Paused. Queued work waits; learners keep what is released.')}><Pause /> Pause</Button>
+                      )}
+                    </div>
+                  </Section>
+                ) : null}
                 {(() => {
                   const run = open.jobs.find(j => j.kind === 'outline');
                   return run ? <Section title="Latest outline run"><JobLog job={run} /></Section> : null;
@@ -343,7 +406,13 @@ export function CourseBuilder() {
                               .slice(0, 3),
                           )}><Sparkles /> Write the next 3 planned concepts</Button>
                         ) : null}
-                        <Outline course={open.course} courseId={open.id} packages={open.packages} onGenerate={open.status === 'published' ? generate : undefined} />
+                        <Outline
+                          course={open.course}
+                          courseId={open.id}
+                          packages={open.packages}
+                          onGenerate={open.status === 'published' ? generate : undefined}
+                          onWithdraw={open.status === 'published' ? (id, why) => control(`concepts/${id}/quarantine`, { notes: why }, 'Withdrawn. It is being rewritten.') : undefined}
+                        />
                       </>
                     )}
                   </Section>

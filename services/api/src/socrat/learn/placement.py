@@ -117,6 +117,9 @@ def finish(
         learn.set_state(db, enrollment, concept, placed(known, now), now)
     enrollment.status = "active"
     enrollment.placement = state.to_dict()
+    from socrat.coursegen import prefetch
+
+    prefetch.request(db, enrollment, now, catalog)
 
 
 def _own(catalog: Catalog, enrollment: Enrollment) -> set[str]:

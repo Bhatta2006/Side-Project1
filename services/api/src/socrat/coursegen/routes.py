@@ -9,7 +9,7 @@ from socrat.admin.routes import require_admin
 from socrat.catalog import generated
 from socrat.catalog.registry import CatalogError, default_catalog
 from socrat.catalog.schema import Course, Slug
-from socrat.coursegen import jobs
+from socrat.coursegen import jobs, quality
 from socrat.coursegen.outline import Brief
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine
@@ -24,6 +24,11 @@ class Notes(BaseModel):
 
 class OutlineEdit(BaseModel):
     course: dict
+
+
+class Budget(BaseModel):
+    budget_usd: float = Field(gt=0, le=1000)
+    concept_budget_usd: float = Field(gt=0, le=100)
 
 
 class Generate(BaseModel):
@@ -65,6 +70,7 @@ def list_courses(request: Request):
                     id=course_id,
                     title=brief["title"],
                     status=row.status if row else "drafting",
+                    paused=row.paused if row else "",
                     concepts=None
                     if row is None
                     else sum(len(m["concepts"]) for m in row.payload["modules"]),
@@ -126,6 +132,7 @@ def course_detail(course_id: str, request: Request):
             packages=packages,
             id=course_id,
             status=row.status if row else "drafting",
+            paused=row.paused if row else "",
             brief=(row.brief if row else None) or history[0].input["brief"],
             course=stored.model_dump(mode="json") if stored else None,
             jobs=[job_view(j) for j in history],
@@ -226,3 +233,51 @@ def package_detail(course_id: str, concept_id: str, request: Request):
             atoms=row.atoms,
             jobs=[{**job_view(j), "output": j.output} for j in runs],
         )
+
+
+@router.post("/{course_id}/pause")
+def pause(course_id: str, request: Request):
+    """Stop starting new agent work; queued jobs wait. Learners keep released content."""
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        _course_row(db, course_id).paused = "owner"
+        record_event(db, user.id, "coursegen.paused", course_id)
+        return {"paused": "owner"}
+
+
+@router.post("/{course_id}/resume")
+def resume(course_id: str, request: Request):
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        row = _course_row(db, course_id)
+        if jobs.spent(db, course_id) >= row.brief["budget_usd"]:
+            raise HTTPException(409, "budget_reached")
+        row.paused = ""
+        record_event(db, user.id, "coursegen.resumed", course_id)
+        return {"paused": ""}
+
+
+@router.put("/{course_id}/budget")
+def set_budget(course_id: str, body: Budget, request: Request):
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        row = _course_row(db, course_id)
+        row.brief = {**row.brief, **body.model_dump()}  # a new dict, so the JSON is saved
+        record_event(db, user.id, "coursegen.budget_changed", course_id)
+        return body.model_dump()
+
+
+@router.post("/{course_id}/concepts/{concept_id}/quarantine")
+def quarantine(course_id: str, concept_id: str, body: Notes, request: Request):
+    """Withdraw a released concept now and have it rewritten with the owner's notes."""
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        row = db.get(GeneratedConcept, (course_id, concept_id))
+        if row is None or row.payload.get("status") != "live":
+            raise HTTPException(409, "concept_not_live")
+        if jobs.active(db, course_id, concept_id) is not None:
+            raise HTTPException(409, "generation_in_progress")
+        quality.quarantine(db, default_catalog(), course_id, concept_id, "owner", [body.notes])
+        record_event(db, user.id, "coursegen.quarantined", course_id)
+    quality.announce(course_id, concept_id, "owner")
+    return {"quarantined": True}

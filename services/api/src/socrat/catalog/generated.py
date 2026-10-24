@@ -170,11 +170,11 @@ def publish(db: Session, base: Catalog, course_id: str) -> None:
     save_course(db, base, stored, status="published")
 
 
-def release_concept(
+def store_concept(
     db: Session, base: Catalog, course_id: str, concept: Concept, atoms: AtomPack | None
 ) -> None:
-    """Replace one concept of a generated course with released content; checked against the
-    whole catalog first. No commit; the caller owns it."""
+    """Replace one concept of a generated course (a release, or a quarantine back to planned);
+    checked against the whole catalog first. No commit; the caller owns it."""
     stored = course(db, course_id)
     row = db.get(GeneratedConcept, (course_id, concept.id))
     if stored is None or row is None:

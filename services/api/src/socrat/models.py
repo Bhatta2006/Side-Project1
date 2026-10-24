@@ -583,6 +583,9 @@ class GeneratedCourse(Base):
     # review: outline awaiting the owner; published: served to learners.
     status: Mapped[str] = mapped_column(String(16), default="published")
     brief: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Why generation is paused ("budget" or "owner"); empty while it runs. Learners keep
+    # everything already released either way.
+    paused: Mapped[str] = mapped_column(String(24), default="")
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)

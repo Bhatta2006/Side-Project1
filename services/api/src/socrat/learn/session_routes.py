@@ -143,4 +143,9 @@ def report_issue(session_id: str, body: Issue, request: Request):
         db.add(issue)
         db.flush()
         record_event(db, user.id, "content.issue_reported", issue.id)
-        return {"id": issue.id}
+        issue_id = issue.id
+    from socrat.coursegen import quality
+
+    threshold = request.app.state.settings.gen_quarantine_reports
+    quality.after_report(engine(request), threshold, concept=block["concept"])
+    return {"id": issue_id}

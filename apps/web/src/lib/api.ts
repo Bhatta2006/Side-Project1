@@ -107,6 +107,8 @@ const MESSAGES: Record<string, string> = {
   outline_invalid: 'The outline no longer fits the catalog. Edit it, then publish again.',
   publish_outline_first: 'Publish the outline before writing lessons.',
   concept_not_planned: 'Only planned concepts can be written; this one is already live or unknown.',
+  budget_reached: 'This course has spent its budget. Raise the budget first, then resume.',
+  concept_not_live: 'Only a live concept can be withdrawn.',
   topic_not_completed: 'Complete the required topic lessons before opening this question.',
   independent_work_in_progress: 'Finish your independent assessment or timed work before opening learning help.',
   playground_generation_unavailable: 'Your lesson could not be generated right now. Your request is still here; try again.',

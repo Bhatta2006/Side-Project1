@@ -23,6 +23,8 @@ class Brief(BaseModel):
     references: list[str] = Field(default_factory=list, max_length=10)
     notes: str = Field(default="", max_length=2000)
     budget_usd: float = Field(default=5.0, gt=0, le=1000)
+    # One concept package (all its rounds) may not cost more than this.
+    concept_budget_usd: float = Field(default=2.0, gt=0, le=100)
 
 
 def to_course(brief: Brief, outline: dict) -> Course:

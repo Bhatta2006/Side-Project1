@@ -75,10 +75,11 @@ def enqueue(
 def claim(engine: Engine) -> str | None:
     """Atomically take the oldest queued (or orphaned) job; safe with several API processes."""
     stamp = now()
+    paused = select(GeneratedCourse.id).where(GeneratedCourse.paused != "")
     claimable = or_(
         GenerationJob.state == "queued",
         (GenerationJob.state == "running") & (GenerationJob.updated_at < stamp - STALE_SECONDS),
-    )
+    ) & GenerationJob.course_id.not_in(paused)
     with Session(engine) as db, db.begin():
         candidates = db.scalars(
             select(GenerationJob.id).where(claimable).order_by(GenerationJob.created_at).limit(5)
@@ -210,22 +211,44 @@ def _over_budget(engine: Engine, course_id: str, budget_usd: float) -> bool:
         return spent(db, course_id) >= budget_usd
 
 
+def pause_for_budget(engine: Engine, course_id: str, job_id: str) -> None:
+    """Course budget reached: pause the course and put this job back in the queue, so it
+    restarts when the owner raises the budget and resumes."""
+    with Session(engine) as db, db.begin():
+        db.get(GeneratedCourse, course_id).paused = "budget"
+    _note(engine, job_id, {"role": "system", "event": "budget_reached_paused"}, state="queued")
+    log.error("course generation paused: %s reached its budget", course_id)
+
+
+def _job_cost(engine: Engine, job_id: str) -> float:
+    with Session(engine) as db:
+        return db.get(GenerationJob, job_id).cost_usd
+
+
 async def run_package(
     engine: Engine, settings: Settings, base: Catalog, job_id: str, make=make_provider, http=None
 ) -> None:
     with Session(engine) as db:
         job = db.get(GenerationJob, job_id)
-        course_id, concept_id = job.course_id, job.target
-        brief = db.get(GeneratedCourse, course_id).brief
+        course_id, concept_id, data = job.course_id, job.target, job.input
+        brief = Brief.model_validate(db.get(GeneratedCourse, course_id).brief)
         course = generated.course(db, course_id)
     concept = course.concept(concept_id)
     if concept.status != "planned":
         raise ValueError(f"{course_id}:{concept_id} is not planned")
-    ctx = pkg.context(base, course, brief, concept)
+    ctx = pkg.context(base, course, brief.model_dump(), concept)
     reference = pkg.gold(base)
-    version = 1
+    version = concept.provenance.version + 1 if concept.provenance else 1
     lesson = quiz = atoms = None
     notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
+    if data.get("previous"):
+        # A quarantined concept: revise the reported version with the learners' reports.
+        old = data["previous"]["concept"]
+        lesson = {k: old.get(k) for k in ("lesson", "key_points", "pitfalls", "resources")}
+        reported = [f"Learners reported: {r}" for r in data.get("reports", [])]
+        why = f"This version was withdrawn ({data.get('reason', 'reported')})."
+        notes["lesson"] = [why, *reported]
+        notes["quiz"] = list(reported)
     redo = {"lesson", "quiz", "atoms"}
     models: dict[str, str] = {}
 
@@ -235,8 +258,11 @@ async def run_package(
         return reply
 
     for attempt in range(1, ROUNDS + 1):
-        if _over_budget(engine, course_id, brief["budget_usd"]):
-            _note(engine, job_id, {"role": "system", "event": "budget_reached"})
+        if _over_budget(engine, course_id, brief.budget_usd):
+            pause_for_budget(engine, course_id, job_id)
+            return
+        if _job_cost(engine, job_id) >= brief.concept_budget_usd:
+            _note(engine, job_id, {"role": "system", "event": "concept_budget_reached"})
             break
         if "lesson" in redo:
             prompt = pkg.lesson_prompt(ctx, reference, lesson, notes["lesson"])
@@ -323,7 +349,7 @@ async def run_package(
         if passed:
             pack = pkg.release_pack(pack, models["reviewer"], summary)
             with Session(engine) as db, db.begin():
-                generated.release_concept(db, base, course_id, live, pack)
+                generated.store_concept(db, base, course_id, live, pack)
             _note(engine, job_id, {"role": "system", "event": "released"}, state="done")
             return
         redo = {k for k, v in notes.items() if v} or {"lesson"}

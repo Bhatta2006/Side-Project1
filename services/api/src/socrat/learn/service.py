@@ -225,6 +225,9 @@ def complete_activity(
     minutes = max(1, round(min(MAX_ACTIVITY_SECONDS, now - record.started_at) / 60))
     bump_daily(db, user, now, minutes=minutes, solved=int(solved))
     record_event(db, user.id, "activity.completed")
+    from socrat.coursegen import prefetch
+
+    prefetch.request(db, enrollment, now)  # generated courses: write what comes next
     return True
 
 

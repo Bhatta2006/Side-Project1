@@ -226,6 +226,11 @@ def problem_report(body: ProblemReport, request: Request):
         detail=dict(category=body.category),
         user_id=user_id,
     )
+    if body.category == "content":
+        from socrat.coursegen import quality
+
+        threshold = request.app.state.settings.gen_quarantine_reports
+        quality.after_report(engine, threshold, route=body.route)
     return {"received": True}
 
 
