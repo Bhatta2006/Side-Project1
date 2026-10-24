@@ -5,7 +5,11 @@ live catalog, asks the Curriculum Critic, and revises until the critic passes it
 rounds run out. The best valid outline is stored for the owner's review, never published.
 
 A ``package`` job writes one planned concept's lesson, quiz and atoms (see ``package``) and
-releases it only when every gate, the fact check and the reviewer pass.
+releases it only when every gate, the fact check and the reviewer pass. When the execution
+plane runs every course language, quiz items and atoms may carry code, which is run.
+
+An ``exercise`` job adds one judged problem to a live concept (see ``exercise``); a released
+concept whose outline asks for code queues one.
 """
 
 import asyncio
@@ -19,8 +23,8 @@ from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.catalog import generated
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.config import Settings
+from socrat.coursegen import execute, roles
 from socrat.coursegen import package as pkg
-from socrat.coursegen import roles
 from socrat.coursegen.outline import (
     ARCHITECT,
     CRITIC,
@@ -226,7 +230,13 @@ def _job_cost(engine: Engine, job_id: str) -> float:
 
 
 async def run_package(
-    engine: Engine, settings: Settings, base: Catalog, job_id: str, make=make_provider, http=None
+    engine: Engine,
+    settings: Settings,
+    base: Catalog,
+    job_id: str,
+    make=make_provider,
+    http=None,
+    executor=None,
 ) -> None:
     with Session(engine) as db:
         job = db.get(GenerationJob, job_id)
@@ -236,6 +246,10 @@ async def run_package(
     concept = course.concept(concept_id)
     if concept.status != "planned":
         raise ValueError(f"{course_id}:{concept_id} is not planned")
+    executor = executor or execute.Broker(engine, settings)
+    # Code in quiz items and atoms only when every course language can be run to check it.
+    runnable = executor.available(course.languages)
+    code = list(course.languages) if runnable == list(course.languages) else []
     ctx = pkg.context(base, course, brief.model_dump(), concept)
     reference = pkg.gold(base)
     version = concept.provenance.version + 1 if concept.provenance else 1
@@ -293,10 +307,13 @@ async def run_package(
         pending = {}
         if "quiz" in redo or quiz is None:
             example = pkg.quiz_example(reference)
+            if code:
+                example += "\n\n" + pkg.QUIZ_CODE.format(languages=", ".join(code))
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             pending["quiz"] = ask("quiz", pkg.QUIZ, prompt, 6000)
         if "atoms" in redo or atoms is None:
-            prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], "")
+            extra = pkg.ATOMS_CODE.format(languages=", ".join(code)) if code else ""
+            prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], extra)
             pending["atoms"] = ask("atoms", pkg.ATOMS, prompt, 8000)
         replies = dict(zip(pending, await asyncio.gather(*pending.values()), strict=True))
         for name, reply in replies.items():
@@ -317,9 +334,14 @@ async def run_package(
             f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
             "before release. Not reviewed by a person."
         )
-        live, problems = pkg.build_concept(concept, lesson, quiz, version, attribution)
-        pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version)
+        live, problems = pkg.build_concept(concept, lesson, quiz, version, attribution, code)
+        pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version, code)
         output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}
+        if live is not None and pack is not None and code:
+            pack, ran = await pkg.run_code(executor, live, pack)
+            problems = {**problems, **ran}
+            if any(ran.values()):
+                live = None
         if live is None or pack is None:
             notes = {k: problems.get(k, []) for k in notes}
             redo = {k for k, v in notes.items() if v}
@@ -328,7 +350,15 @@ async def run_package(
             _note(engine, job_id, entry, cost, output=output)
             continue
         shown = {k: lesson.get(k) for k in ("lesson", "key_points", "pitfalls")}
-        bundle = json.dumps({**shown, "quiz": quiz["quiz"], "atoms": atoms["atoms"]}, indent=1)
+        # The checkers see the code's real output (adapters' expected), not the author's claim.
+        bundle = json.dumps(
+            {
+                **shown,
+                "quiz": [q.model_dump(mode="json", exclude_none=True) for q in live.quiz],
+                "atoms": [a.model_dump(mode="json", exclude_none=True) for a in pack.atoms],
+            },
+            indent=1,
+        )
         review_prompt = pkg.lesson_prompt(ctx, reference, None, [])
         facts, review = await asyncio.gather(
             ask("facts", pkg.FACTS, f"{ctx}\n\nPackage:\n{bundle}", 8000),
@@ -348,9 +378,17 @@ async def run_package(
         _note(engine, job_id, entry, spend, output={**output, "scores": scores})
         if passed:
             pack = pkg.release_pack(pack, models["reviewer"], summary)
+            wants = concept.outline is not None and "code" in concept.outline.assessment
+            needed = sorted({"python", *course.languages})
+            exercise = wants and executor.available(needed) == needed
             with Session(engine) as db, db.begin():
                 generated.store_concept(db, base, course_id, live, pack)
-            _note(engine, job_id, {"role": "system", "event": "released"}, state="done")
+                if exercise:
+                    enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
+            event = {"role": "system", "event": "released"}
+            if wants and not exercise:
+                event["exercise"] = "waiting for the execution service"
+            _note(engine, job_id, event, state="done")
             return
         redo = {k for k, v in notes.items() if v} or {"lesson"}
     _note(
@@ -363,7 +401,7 @@ async def run_package(
 
 
 async def run_once(
-    engine: Engine, settings: Settings, base: Catalog, make=make_provider, http=None
+    engine: Engine, settings: Settings, base: Catalog, make=make_provider, http=None, executor=None
 ) -> bool:
     job_id = claim(engine)
     if job_id is None:
@@ -372,11 +410,24 @@ async def run_once(
         with Session(engine) as db:
             kind = db.get(GenerationJob, job_id).kind
         if kind == "package":
-            await run_package(engine, settings, base, job_id, make, http)
+            await run_package(engine, settings, base, job_id, make, http, executor)
+        elif kind == "exercise":
+            from socrat.coursegen.exercise import run_exercise
+
+            executor = executor or execute.Broker(engine, settings)
+            await run_exercise(engine, settings, base, job_id, make, executor)
         elif kind == "outline":
             await run_outline(engine, settings, base, job_id, make)
         else:
             raise ValueError(f"unknown job kind {kind}")
+    except execute.Unavailable as exc:
+        _note(
+            engine,
+            job_id,
+            {"role": "system", "event": "execution_unavailable"},
+            state="failed",
+            error=f"The execution service could not run the code: {exc}",
+        )
     except ProviderError as exc:
         _note(
             engine,

@@ -45,7 +45,11 @@ def request(db: Session, enrollment: Enrollment, now: int, catalog=None) -> list
         local = concept.split(":", 1)[1]
         latest = db.scalars(
             select(GenerationJob)
-            .where(GenerationJob.course_id == course.id, GenerationJob.target == local)
+            .where(
+                GenerationJob.course_id == course.id,
+                GenerationJob.target == local,
+                GenerationJob.kind == "package",
+            )
             .order_by(GenerationJob.created_at.desc())
         ).first()
         # Running or queued: already on its way. Failed: the owner retries it from /admin,

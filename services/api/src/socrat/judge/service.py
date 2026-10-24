@@ -296,6 +296,13 @@ def finalize(db: Session, settings: Settings, worker_id: str, envelope: ResultEn
 
 def settle(job: Submission, results: list[dict]):
     """Store per-case results (public detail only) and the verdict on a finished job."""
+    if job.mode == "verify":
+        # Generator verification: the full output becomes a test's expected output.
+        job.cases = [
+            dict(status=c["status"], stdout=c["stdout"], stderr=c["stderr"]) for c in results
+        ]
+        job.status = "done"
+        return
     cases = []
     for case, test in zip(results, job.tests, strict=True):
         public = test["visibility"] == "public"

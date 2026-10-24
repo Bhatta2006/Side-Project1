@@ -125,11 +125,15 @@ def course_detail(course_id: str, request: Request):
             raise HTTPException(404, "not_found")
         stored = generated.course(db, course_id) if row else None
         packages: dict[str, dict] = {}
+        exercises: dict[str, dict] = {}
         for job in reversed(history):  # oldest first, so the newest per concept wins
             if job.kind == "package":
                 packages[job.target] = job_view(job)
+            elif job.kind == "exercise":
+                exercises[job.target] = job_view(job)
         return dict(
             packages=packages,
+            exercises=exercises,
             id=course_id,
             status=row.status if row else "drafting",
             paused=row.paused if row else "",
@@ -215,6 +219,21 @@ def generate_packages(course_id: str, body: Generate, request: Request):
         return {"queued": queued}
 
 
+@router.post("/{course_id}/concepts/{concept_id}/exercise")
+def generate_exercise(course_id: str, concept_id: str, request: Request):
+    """Queue one more judged problem for a live concept; its code runs in the execution plane."""
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        row = db.get(GeneratedConcept, (course_id, concept_id))
+        if row is None or row.payload.get("status") != "live":
+            raise HTTPException(409, "concept_not_live")
+        if jobs.active(db, course_id, concept_id) is not None:
+            raise HTTPException(409, "generation_in_progress")
+        job = jobs.enqueue(db, "exercise", course_id, {"trigger": "owner"}, user.id, concept_id)
+        record_event(db, user.id, "coursegen.exercise_requested", course_id)
+        return job_view(job)
+
+
 @router.get("/{course_id}/concepts/{concept_id}")
 def package_detail(course_id: str, concept_id: str, request: Request):
     """One concept as stored, with every package run and its last draft (for audit)."""
@@ -231,6 +250,7 @@ def package_detail(course_id: str, concept_id: str, request: Request):
         return dict(
             concept=row.payload,
             atoms=row.atoms,
+            problems=row.problems or [],
             jobs=[{**job_view(j), "output": j.output} for j in runs],
         )
 

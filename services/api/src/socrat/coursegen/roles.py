@@ -17,7 +17,7 @@ from socrat.assistant.gateway import Provider, Turn, make_provider
 from socrat.config import Settings
 from socrat.models import now
 
-ROLES = {"architect", "critic", "author", "quiz", "atoms", "facts", "reviewer"}
+ROLES = {"architect", "critic", "author", "quiz", "atoms", "facts", "reviewer", "engineer"}
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {
     "provider": ("ai_provider",),

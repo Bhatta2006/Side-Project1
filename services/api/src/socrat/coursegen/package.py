@@ -1,7 +1,8 @@
 """Concept package: lesson, quiz and atoms for one planned concept, checked, then released.
 
 Order per round: Lesson Author, then Quiz Builder and Atom Author together, then the
-deterministic gates (schema, depth, links), then Fact Checker and Reviewer together. A
+deterministic gates (schema, depth, links, and running any code in the execution plane),
+then Fact Checker and Reviewer together. A
 failing artifact goes back to its own author with the notes; the rest are kept. Release
 needs every gate, no incorrect claim, and the reviewer's rubric (correctness 5, rest ≥ 4).
 """
@@ -15,11 +16,13 @@ from pydantic import ValidationError
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Concept, Course, Provenance, QuizItem
-from socrat.coursegen import links
+from socrat.coursegen import execute, links
+from socrat.judge.service import normalized
 
 AI_AUTHOR = "Socrat AI course team"
 GOLD = "dsa:sliding-window"  # a hand-authored lesson of typical depth, shown to authors
 ATOM_KINDS = {"hook", "concept", "worked", "explanation", "reflection", "predict", "trace"}
+CODE_ATOMS = {"worked", "predict", "trace"}
 MIN_LESSON = {"overview": 2000, "practitioner": 3000, "mastery": 4000}
 DIMENSIONS = (
     "correctness",
@@ -156,6 +159,19 @@ Reply with one JSON object only:
  "lesson": ["specific fixes"], "quiz": ["..."], "atoms": ["..."]}"""
 
 
+QUIZ_CODE = """Code items are allowed. Up to 3 items may be "kind": "output" with
+"code": {{"<language>": "complete program"}} for each of: {languages}. Each program reads no
+input and prints exactly the text of the correct option; it is run, and the item is
+rejected if the output differs or matches another option. Under 15 lines, equivalent in
+every language; Java uses "public class Solution". Other items are "kind": "mcq" without code."""
+
+ATOMS_CODE = """Code adapters are allowed on worked, predict and trace atoms:
+"adapters": {{"<language>": {{"code": "complete program", "stdin": ""}}}} with one for each of:
+{languages}. The programs are run and must print the same output in every language;
+learners see that output. At most 25 lines (trace 15, predict 10); Java uses
+"public class Solution"."""
+
+
 def lesson_prompt(ctx: str, reference: Concept | None, draft: dict | None, notes: list[str]) -> str:
     parts = [ctx]
     if reference is not None:
@@ -209,8 +225,16 @@ def check_lesson(concept: Concept, course: Course, draft: dict) -> list[str]:
     return problems
 
 
-def build_concept(concept: Concept, lesson: dict, quiz: dict, version: int, attribution: str):
-    """The live concept, or (None, problems by artifact)."""
+def build_concept(
+    concept: Concept,
+    lesson: dict,
+    quiz: dict,
+    version: int,
+    attribution: str,
+    languages: list[str] = (),
+):
+    """The live concept, or (None, problems by artifact). ``languages``: code items allowed
+    (and required in each of them), verified later by ``run_code``."""
     problems: dict[str, list[str]] = {"lesson": [], "quiz": []}
     items = quiz.get("quiz") if isinstance(quiz.get("quiz"), list) else []
     if not 4 <= len(items) <= 10:
@@ -218,7 +242,14 @@ def build_concept(concept: Concept, lesson: dict, quiz: dict, version: int, attr
     parsed = []
     for raw in items:
         try:
-            parsed.append(QuizItem.model_validate({**raw, "kind": "mcq"}))
+            item = {**raw, "kind": raw.get("kind", "mcq")} if languages else {**raw, "kind": "mcq"}
+            if item["kind"] not in {"mcq", "output"}:
+                raise TypeError(f"kind {item['kind']} is not allowed; use mcq or output")
+            if item["kind"] == "mcq":
+                item.pop("code", None)
+            elif set(item.get("code") or {}) != set(languages):
+                raise TypeError(f"an output item needs code in exactly: {', '.join(languages)}")
+            parsed.append(QuizItem.model_validate(item))
         except (ValidationError, TypeError) as exc:
             where = raw.get("id", "?") if isinstance(raw, dict) else "?"
             detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
@@ -249,8 +280,11 @@ def build_concept(concept: Concept, lesson: dict, quiz: dict, version: int, attr
         return None, {"lesson": detail, "quiz": []}
 
 
-def build_atoms(course: Course, concept: Concept, atoms: dict, version: int):
-    """A draft pack, or (None, problems)."""
+def build_atoms(
+    course: Course, concept: Concept, atoms: dict, version: int, languages: list[str] = ()
+):
+    """A draft pack, or (None, problems). ``languages``: code adapters allowed (and needed in
+    each of them); their output is filled in by ``run_code``."""
     raw = atoms.get("atoms") if isinstance(atoms.get("atoms"), list) else []
     problems = []
     if not 3 <= len(raw) <= 8:
@@ -258,8 +292,20 @@ def build_atoms(course: Course, concept: Concept, atoms: dict, version: int):
     kinds = {a.get("kind") for a in raw if isinstance(a, dict)}
     if kinds - ATOM_KINDS:
         problems.append(f"Kinds {sorted(kinds - ATOM_KINDS)} are not allowed here.")
-    if any(isinstance(a, dict) and a.get("adapters") for a in raw):
-        problems.append("Atoms carry no code adapters yet.")
+    for atom in raw:
+        adapters = atom.get("adapters") if isinstance(atom, dict) else None
+        if not adapters:
+            continue
+        if not languages:
+            problems.append("Atoms carry no code adapters in this course.")
+        elif atom.get("kind") not in CODE_ATOMS:
+            problems.append(
+                f"atom {atom.get('id')}: only worked, predict and trace atoms have code."
+            )
+        elif not isinstance(adapters, dict) or set(adapters) != set(languages):
+            problems.append(f"atom {atom.get('id')}: give code in exactly {', '.join(languages)}.")
+        elif any(isinstance(a, dict) and a.get("expected") for a in adapters.values()):
+            problems.append(f"atom {atom.get('id')}: leave out expected; the code is run.")
     if problems:
         return None, problems
     try:
@@ -278,6 +324,47 @@ def build_atoms(course: Course, concept: Concept, atoms: dict, version: int):
     except ValidationError as exc:
         return None, errors_of(exc)
     return pack, []
+
+
+async def run_code(executor, live: Concept, pack: AtomPack):
+    """Run every output item and atom adapter. Returns the pack with each adapter's real
+    output filled in, and problems by artifact."""
+    problems: dict[str, list[str]] = {"quiz": [], "atoms": []}
+    for item in live.quiz:
+        if item.kind != "output":
+            continue
+        claimed = normalized(item.options[item.answer])
+        for lang, code in item.code.items():
+            [case] = await executor.run(lang, code, [""])
+            if not execute.ok(case):
+                problems["quiz"].append(f"item {item.id} ({lang}) {execute.describe(case)}")
+            elif normalized(case["stdout"]) != claimed:
+                problems["quiz"].append(
+                    f"item {item.id}: the {lang} code prints {case['stdout'][:200]!r}, "
+                    f"not the answer {item.options[item.answer][:200]!r}."
+                )
+            elif any(
+                normalized(o) == claimed for i, o in enumerate(item.options) if i != item.answer
+            ):
+                problems["quiz"].append(f"item {item.id}: another option equals the answer.")
+    atoms = []
+    for atom in pack.atoms:
+        outputs = {}
+        for lang, adapter in atom.adapters.items():
+            [case] = await executor.run(lang, adapter.code, [adapter.stdin])
+            if not execute.ok(case):
+                problems["atoms"].append(f"atom {atom.id} ({lang}) {execute.describe(case)}")
+            else:
+                outputs[lang] = normalized(case["stdout"]) + "\n"
+        if len(set(outputs.values())) > 1:
+            shown = "; ".join(f"{k}: {v[:120]!r}" for k, v in outputs.items())
+            problems["atoms"].append(f"atom {atom.id}: languages print different output ({shown}).")
+        adapters = {
+            lang: a.model_copy(update={"expected": outputs.get(lang)})
+            for lang, a in atom.adapters.items()
+        }
+        atoms.append(atom.model_copy(update={"adapters": adapters}))
+    return pack.model_copy(update={"atoms": atoms}), problems
 
 
 def release_pack(pack: AtomPack, reviewer: str, summary: str) -> AtomPack:

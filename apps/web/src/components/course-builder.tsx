@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { BookPlus, CheckCircle2, Loader2, Pause, Play, RotateCcw, Save, ShieldOff, Sparkles } from 'lucide-react';
+import { BookPlus, CheckCircle2, Code2, Loader2, Pause, Play, RotateCcw, Save, ShieldOff, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { conceptHref } from '@/lib/routes';
@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 type CourseStatus = 'drafting' | 'review' | 'published';
 type JobState = 'queued' | 'running' | 'done' | 'failed';
 interface LogEntry {
-  role: 'architect' | 'critic' | 'author' | 'reviewer' | 'system';
+  role: 'architect' | 'critic' | 'author' | 'reviewer' | 'engineer' | 'system';
   round?: number;
   at: number;
   event?: string;
@@ -29,6 +29,10 @@ interface LogEntry {
   modules?: number;
   characters?: number;
   scores?: Record<string, number>;
+  tests?: number;
+  problem?: string;
+  exercise?: string;
+  languages?: string[];
 }
 interface Job { id: string; kind: string; state: JobState; log: LogEntry[]; cost_usd: number; error: string; created_at: number; updated_at: number }
 interface Summary { id: string; title: string; status: CourseStatus; paused: string; concepts: number | null; live: number; job: Job | null; spent_usd: number; budget_usd: number }
@@ -36,6 +40,7 @@ interface Brief { id: string; title: string; audience: string; outcome: string; 
 interface OutlineConcept {
   id: string; title: string; summary: string; module: string; prerequisites: string[]; difficulty: number; estimated_minutes: number;
   status: 'planned' | 'live' | 'draft';
+  problems: string[];
   outline: { depth: string; objectives: string[]; misconceptions: string[]; assessment: string[] } | null;
 }
 interface CourseJson {
@@ -44,7 +49,7 @@ interface CourseJson {
   modules: { id: string; title: string; summary: string; concepts: string[] }[];
   concepts: OutlineConcept[];
 }
-interface Detail { id: string; status: CourseStatus; paused: string; brief: Brief; course: CourseJson | null; jobs: Job[]; packages: Record<string, Job>; spent_usd: number }
+interface Detail { id: string; status: CourseStatus; paused: string; brief: Brief; course: CourseJson | null; jobs: Job[]; packages: Record<string, Job>; exercises: Record<string, Job>; spent_usd: number }
 
 const STATUS_LABEL: Record<CourseStatus, string> = { drafting: 'Drafting', review: 'Ready to review', published: 'Published' };
 const busyJob = (job: Job | null | undefined) => job?.state === 'queued' || job?.state === 'running';
@@ -136,6 +141,10 @@ function JobLog({ job }: { job: Job }) {
             </p>
             {e.event ? <p className="text-muted-foreground">{e.event.replaceAll('_', ' ')}</p> : null}
             {e.characters ? <p className="text-muted-foreground">Lesson draft of {e.characters.toLocaleString()} characters.</p> : null}
+            {e.tests ? <p className="text-muted-foreground">{e.tests} tests generated and verified by running the code.</p> : null}
+            {e.problem ? <p className="text-muted-foreground">Problem <span className="font-mono">{e.problem}</span> released.</p> : null}
+            {e.exercise ? <p className="text-muted-foreground">Exercise {e.exercise}.</p> : null}
+            {e.languages?.length ? <p className="text-muted-foreground">Missing runtimes: {e.languages.join(', ')}</p> : null}
             {e.scores ? <p className="text-muted-foreground">{Object.entries(e.scores).map(([k, v]) => `${k.replaceAll('_', ' ')} ${v}`).join(' · ')}</p> : null}
             {e.concepts ? <p className="text-muted-foreground">Outline with {e.concepts} concepts in {e.modules} module{e.modules === 1 ? '' : 's'}.</p> : null}
             {e.summary ? <p>{e.summary}</p> : null}
@@ -147,9 +156,10 @@ function JobLog({ job }: { job: Job }) {
   );
 }
 
-function Outline({ course, courseId, packages, onGenerate, onWithdraw }: {
-  course: CourseJson; courseId: string; packages: Record<string, Job>;
+function Outline({ course, courseId, packages, exercises, onGenerate, onWithdraw, onExercise }: {
+  course: CourseJson; courseId: string; packages: Record<string, Job>; exercises: Record<string, Job>;
   onGenerate?: (ids: string[]) => void; onWithdraw?: (id: string, notes: string) => Promise<boolean>;
+  onExercise?: (id: string) => void;
 }) {
   const byId = Object.fromEntries(course.concepts.map(c => [c.id, c]));
   const [shown, setShown] = useState<string | null>(null);
@@ -167,6 +177,7 @@ function Outline({ course, courseId, packages, onGenerate, onWithdraw }: {
           <ol className="grid gap-2">
             {m.concepts.map(id => {
               const c = byId[id];
+              const busy = busyJob(packages[id]) || busyJob(exercises[id]);
               return (
                 <li key={id} className="rounded-[16px] border p-3 text-sm">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
@@ -174,18 +185,23 @@ function Outline({ course, courseId, packages, onGenerate, onWithdraw }: {
                     {c.outline ? <Badge variant="outline">{c.outline.depth}</Badge> : null}
                     <span className="text-xs text-muted-foreground">{c.estimated_minutes} min · difficulty {c.difficulty}</span>
                     <span className="ml-auto flex items-center gap-2">
-                      {busyJob(packages[id]) ? <Badge variant="outline"><Loader2 className="animate-spin" /> Writing</Badge>
+                      {busyJob(exercises[id]) ? <Badge variant="outline"><Loader2 className="animate-spin" /> Writing an exercise</Badge>
+                        : busyJob(packages[id]) ? <Badge variant="outline"><Loader2 className="animate-spin" /> Writing</Badge>
                         : c.status === 'live' ? <Badge>Live</Badge>
                         : packages[id]?.state === 'failed' ? <Badge variant="outline" className="border-attention text-attention">Not released</Badge>
                         : <Badge variant="outline">Planned</Badge>}
                       {c.status === 'live' ? <Link href={conceptHref(`${courseId}:${id}`)} className="text-xs underline underline-offset-4">Open lesson</Link> : null}
+                      {c.problems.length ? <span className="text-xs text-muted-foreground">{c.problems.length} exercise{c.problems.length === 1 ? '' : 's'}</span> : null}
+                      {onExercise && c.status === 'live' && !busy ? (
+                        <Button size="sm" variant="ghost" onClick={() => onExercise(id)}><Code2 /> Add exercise</Button>
+                      ) : null}
                       {onGenerate && c.status === 'planned' && !busyJob(packages[id]) ? (
                         <Button size="sm" variant="outline" onClick={() => onGenerate([id])}><Sparkles /> {packages[id] ? 'Try again' : 'Write'}</Button>
                       ) : null}
-                      {onWithdraw && c.status === 'live' && !busyJob(packages[id]) ? (
+                      {onWithdraw && c.status === 'live' && !busy ? (
                         <Button size="sm" variant="ghost" onClick={() => { setWithdrawing(withdrawing === id ? null : id); setWhy(''); }}><ShieldOff /> Withdraw</Button>
                       ) : null}
-                      {packages[id] ? <Button size="sm" variant="ghost" onClick={() => setShown(shown === id ? null : id)}>{shown === id ? 'Hide run' : 'Agent run'}</Button> : null}
+                      {packages[id] || exercises[id] ? <Button size="sm" variant="ghost" onClick={() => setShown(shown === id ? null : id)}>{shown === id ? 'Hide run' : 'Agent run'}</Button> : null}
                     </span>
                   </p>
                   <p className="text-muted-foreground">{c.summary}</p>
@@ -209,7 +225,12 @@ function Outline({ course, courseId, packages, onGenerate, onWithdraw }: {
                       </Button>
                     </div>
                   ) : null}
-                  {shown === id && packages[id] ? <div className="mt-3"><JobLog job={packages[id]} /></div> : null}
+                  {shown === id ? (
+                    <div className="mt-3 grid gap-3">
+                      {packages[id] ? <JobLog job={packages[id]} /> : null}
+                      {exercises[id] ? <JobLog job={exercises[id]} /> : null}
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -239,7 +260,7 @@ export function CourseBuilder() {
   useEffect(load, [load]);
 
   // While agents work, refresh the list and the open course every few seconds.
-  const working = items?.some(i => busyJob(i.job)) || Object.values(open?.packages ?? {}).some(busyJob) || busyJob(open?.jobs[0]);
+  const working = items?.some(i => busyJob(i.job)) || [...Object.values(open?.packages ?? {}), ...Object.values(open?.exercises ?? {})].some(busyJob) || busyJob(open?.jobs[0]);
   useEffect(() => {
     if (!working) return;
     const timer = setInterval(() => { load(); if (open) show(open.id); }, 5000);
@@ -410,7 +431,9 @@ export function CourseBuilder() {
                           course={open.course}
                           courseId={open.id}
                           packages={open.packages}
+                          exercises={open.exercises ?? {}}
                           onGenerate={open.status === 'published' ? generate : undefined}
+                          onExercise={open.status === 'published' ? id => control(`concepts/${id}/exercise`, {}, 'Exercise queued. Its code is run before it is released.') : undefined}
                           onWithdraw={open.status === 'published' ? (id, why) => control(`concepts/${id}/quarantine`, { notes: why }, 'Withdrawn. It is being rewritten.') : undefined}
                         />
                       </>

@@ -207,13 +207,16 @@ class Submission(Base):
     __tablename__ = "submissions"
     __table_args__ = (Index("ix_submissions_status_created", "status", "created_at"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # None for verification jobs of the course generator (mode "verify"): no learner.
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
+    )
     enrollment_id: Mapped[str | None] = mapped_column(
         ForeignKey("enrollments.id", ondelete="CASCADE"), nullable=True
     )
     problem_id: Mapped[str] = mapped_column(String(64), index=True)
     language: Mapped[str] = mapped_column(String(16))
-    mode: Mapped[str] = mapped_column(String(8))  # run|submit
+    mode: Mapped[str] = mapped_column(String(8))  # run|submit|verify
     source: Mapped[str] = mapped_column(Text)
     custom_input: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="queued")  # queued|running|done|failed
@@ -601,6 +604,7 @@ class GeneratedConcept(Base):
     concept_id: Mapped[str] = mapped_column(String(80), primary_key=True)
     payload: Mapped[dict] = mapped_column(JSON)
     atoms: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # an ``AtomPack``
+    problems: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Problem``s
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
 
 

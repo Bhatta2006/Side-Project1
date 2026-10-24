@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog, CatalogError, build
-from socrat.catalog.schema import Concept, Course
+from socrat.catalog.schema import Concept, Course, Problem
 from socrat.models import GeneratedConcept, GeneratedCourse, now
 
 log = logging.getLogger(__name__)
@@ -30,21 +30,24 @@ def bind(engine: Engine) -> None:
     _cache.clear()
 
 
-def _assemble(payload: dict, concepts: list[dict]) -> Course:
+def _assemble(payload: dict, concepts: list[dict], problems: list[dict] = ()) -> Course:
     # Rows come back in key order; authoring (module) order breaks planner ties, so restore it.
     position = {
         cid: i for i, cid in enumerate(c for m in payload["modules"] for c in m["concepts"])
     }
     concepts = sorted(concepts, key=lambda c: position.get(c["id"], len(position)))
-    return Course.model_validate({**payload, "concepts": concepts})
+    return Course.model_validate({**payload, "concepts": concepts, "problems": list(problems)})
 
 
 def course(db: Session, course_id: str) -> Course | None:
     row = db.get(GeneratedCourse, course_id)
     if row is None:
         return None
-    concepts = db.scalars(select(GeneratedConcept).where(GeneratedConcept.course_id == course_id))
-    return _assemble(row.payload, [c.payload for c in concepts])
+    concepts = list(
+        db.scalars(select(GeneratedConcept).where(GeneratedConcept.course_id == course_id))
+    )
+    problems = [p for c in concepts for p in c.problems or []]
+    return _assemble(row.payload, [c.payload for c in concepts], problems)
 
 
 def courses(db: Session, published_only: bool = True) -> list[Course]:
@@ -54,11 +57,15 @@ def courses(db: Session, published_only: bool = True) -> list[Course]:
         query = query.where(GeneratedCourse.status == "published")
     rows = db.scalars(query).all()
     by_course: dict[str, list[dict]] = {}
+    problems: dict[str, list[dict]] = {}
     for concept in db.scalars(
         select(GeneratedConcept).where(GeneratedConcept.course_id.in_([r.id for r in rows]))
     ):
         by_course.setdefault(concept.course_id, []).append(concept.payload)
-    return [_assemble(row.payload, by_course.get(row.id, [])) for row in rows]
+        problems.setdefault(concept.course_id, []).extend(concept.problems or [])
+    return [
+        _assemble(row.payload, by_course.get(row.id, []), problems.get(row.id, [])) for row in rows
+    ]
 
 
 def atom_packs(db: Session) -> dict[str, AtomPack]:
@@ -130,9 +137,28 @@ def save_course(
     if course.id in base.courses:
         raise CatalogError(f"course {course.id} already exists in content/")
     if course.problems:
-        # shortcut: judged problems need generated tests from the execution service; G4.
-        raise CatalogError("generated courses cannot carry problems yet")
-    extend(base, [*(c for c in courses(db) if c.id != course.id), course])
+        # Problems are released one by one with execution-verified tests (store_problem).
+        raise CatalogError("an outline carries no problems")
+    # Released problems stay with their concepts; validate the course as it will be served.
+    kept = {
+        old.concept_id: old
+        for old in db.scalars(
+            select(GeneratedConcept).where(GeneratedConcept.course_id == course.id)
+        )
+    }
+    shown = [
+        Problem.model_validate(p)
+        for c in course.concepts
+        if c.id in kept
+        for p in kept[c.id].problems or []
+    ]
+    extend(
+        base,
+        [
+            *(c for c in courses(db) if c.id != course.id),
+            course.model_copy(update={"problems": shown}),
+        ],
+    )
     stamp = now()
     row = db.get(GeneratedCourse, course.id)
     payload = course.model_dump(mode="json", exclude={"concepts", "problems"})
@@ -145,9 +171,10 @@ def save_course(
     row.status = status
     if brief is not None:
         row.brief = brief
-    atoms = {}  # generated atom packs survive an outline save
-    for old in db.scalars(select(GeneratedConcept).where(GeneratedConcept.course_id == course.id)):
-        atoms[old.concept_id] = old.atoms
+    # Generated atom packs and problems survive an outline save.
+    atoms = {cid: old.atoms for cid, old in kept.items()}
+    problems = {cid: old.problems for cid, old in kept.items()}
+    for old in kept.values():
         db.delete(old)
     db.flush()
     for concept in course.concepts:
@@ -157,6 +184,7 @@ def save_course(
                 concept_id=concept.id,
                 payload=concept.model_dump(mode="json"),
                 atoms=atoms.get(concept.id),
+                problems=problems.get(concept.id),
                 updated_at=stamp,
             )
         )
@@ -171,21 +199,44 @@ def publish(db: Session, base: Catalog, course_id: str) -> None:
 
 
 def store_concept(
-    db: Session, base: Catalog, course_id: str, concept: Concept, atoms: AtomPack | None
+    db: Session,
+    base: Catalog,
+    course_id: str,
+    concept: Concept,
+    atoms: AtomPack | None,
+    problems: list[Problem] | None = None,
 ) -> None:
-    """Replace one concept of a generated course (a release, or a quarantine back to planned);
-    checked against the whole catalog first. No commit; the caller owns it."""
+    """Replace one concept of a generated course (a release, a new problem, or a quarantine
+    back to planned); checked against the whole catalog first. ``problems`` None keeps the
+    concept's problems. No commit; the caller owns it."""
     stored = course(db, course_id)
     row = db.get(GeneratedConcept, (course_id, concept.id))
     if stored is None or row is None:
         raise CatalogError(f"unknown generated concept {course_id}:{concept.id}")
+    if problems is None:
+        problems = [Problem.model_validate(p) for p in row.problems or []]
+    owned = {p["id"] for p in row.problems or []}
     updated = stored.model_copy(
-        update={"concepts": [concept if c.id == concept.id else c for c in stored.concepts]}
+        update={
+            "concepts": [concept if c.id == concept.id else c for c in stored.concepts],
+            "problems": [*(p for p in stored.problems if p.id not in owned), *problems],
+        }
     )
     others = [c for c in courses(db) if c.id != course_id]
     extend(base, [*others, updated])
     row.payload = concept.model_dump(mode="json")
     row.atoms = atoms.model_dump(mode="json") if atoms else None
+    row.problems = [p.model_dump(mode="json") for p in problems] or None
     row.updated_at = now()
     parent = db.get(GeneratedCourse, course_id)
     parent.updated_at = max(now(), parent.updated_at + 1)  # refreshes the merged catalog
+
+
+def add_problem(db: Session, base: Catalog, course_id: str, concept_id: str, problem: Problem):
+    """Release one more judged problem for a live concept. No commit."""
+    row = db.get(GeneratedConcept, (course_id, concept_id))
+    concept = Concept.model_validate(row.payload)
+    listed = concept.model_copy(update={"problems": [*concept.problems, problem.id]})
+    own = [Problem.model_validate(p) for p in row.problems or []]
+    pack = AtomPack.model_validate(row.atoms) if row.atoms else None
+    store_concept(db, base, course_id, listed, pack, [*own, problem])
