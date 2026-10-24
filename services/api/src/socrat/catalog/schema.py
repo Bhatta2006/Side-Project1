@@ -145,6 +145,23 @@ class QuizItem(Model):
         return self
 
 
+class Criterion(Model):
+    criterion: str = Field(min_length=2, max_length=120)
+    points: int = Field(ge=1, le=4)
+    look_for: str = Field(min_length=5, max_length=400)  # what earns the points
+
+
+class Prompt(Model):
+    """A free-text question answered in the learner's own words and graded against its
+    rubric (AI-graded evidence: ``explain``). The model answer is shown only after grading."""
+
+    id: Slug
+    prompt: str = Field(min_length=10, max_length=1000)
+    rubric: list[Criterion] = Field(min_length=2, max_length=6)
+    model_answer: str = Field(min_length=20, max_length=3000)
+    max_words: int = Field(default=250, ge=30, le=600)
+
+
 class PracticeLink(Model):
     title: str = Field(min_length=2, max_length=160)
     url: HttpUrl
@@ -177,6 +194,7 @@ class Concept(Model):
     pitfalls: list[str] = Field(default_factory=list, max_length=8)
     resources: list[Resource] = Field(default_factory=list, max_length=8)
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
+    prompts: list[Prompt] = Field(default_factory=list, max_length=4)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None

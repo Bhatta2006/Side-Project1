@@ -407,7 +407,49 @@ export interface CompanyProblem extends ExternalProblem {
   concept: { id: string; title: string; band: Band } | null;
 }
 
+/** A rubric grade from the AI grader: points per criterion, logged with the evidence. */
+export interface Grade {
+  score: number;
+  criteria: { criterion: string; points: number; max: number; note: string }[];
+  feedback: string;
+  model: string;
+  copied: boolean;
+}
+
+export interface WrittenPrompt {
+  id: string;
+  prompt: string;
+  max_words: number;
+  rubric: { criterion: string; points: number }[];
+  last: { answer: string; grade: Grade; model_answer: string } | null;
+}
+
+export interface ProjectMilestone {
+  id: string;
+  title: string;
+  checklist: string[];
+  done: boolean;
+  available: boolean;
+  last: { work: string; link: string; grade: Grade } | null;
+}
+
+export interface ProjectView {
+  id: string;
+  title: string;
+  summary: string;
+  skills: string[];
+  constraints: string[];
+  concepts: { id: string; title: string }[];
+  rubric: { criterion: string; weight: number; full_marks: string }[];
+  self_review: string[];
+  milestones: ProjectMilestone[];
+  preparing: boolean;
+  ai_generated: boolean;
+  attribution: string;
+}
+
 export interface ConceptView {
+  prompts?: WrittenPrompt[];
   exercises: { number: number; title: string; url: string; language: string; guidance: string }[];
   id: string;
   course: string;

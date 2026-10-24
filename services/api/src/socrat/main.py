@@ -29,6 +29,7 @@ from socrat.coursegen import jobs as coursegen_jobs
 from socrat.coursegen.routes import router as coursegen_router
 from socrat.database import make_engine, record_event
 from socrat.explainer.routes import router as explainer_router
+from socrat.learn.graded_routes import router as graded_router
 from socrat.learn.routes import router as learner_router
 from socrat.learn.session_routes import router as session_router
 from socrat.library import autosync
@@ -90,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(assessments_router)
     app.include_router(admin_router)
     app.include_router(coursegen_router)
+    app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)
     app.include_router(trial_router)

@@ -10,6 +10,9 @@ plane runs every course language, quiz items and atoms may carry code, which is 
 
 An ``exercise`` job adds one judged problem to a live concept (see ``exercise``); a released
 concept whose outline asks for code queues one.
+
+A ``project`` job designs a module's project (see ``project``); releasing the last concept of
+a module whose outline asks for a project queues one.
 """
 
 import asyncio
@@ -309,6 +312,8 @@ async def run_package(
             example = pkg.quiz_example(reference)
             if code:
                 example += "\n\n" + pkg.QUIZ_CODE.format(languages=", ".join(code))
+            if concept.outline and "explain" in concept.outline.assessment:
+                example += "\n\n" + pkg.PROMPTS.format()
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             pending["quiz"] = ask("quiz", pkg.QUIZ, prompt, 6000)
         if "atoms" in redo or atoms is None:
@@ -355,6 +360,7 @@ async def run_package(
             {
                 **shown,
                 "quiz": [q.model_dump(mode="json", exclude_none=True) for q in live.quiz],
+                "prompts": [x.model_dump(mode="json") for x in live.prompts],
                 "atoms": [a.model_dump(mode="json", exclude_none=True) for a in pack.atoms],
             },
             indent=1,
@@ -385,6 +391,8 @@ async def run_package(
                 generated.store_concept(db, base, course_id, live, pack)
                 if exercise:
                     enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
+                if project_due(db, course, concept_id):
+                    enqueue(db, "project", course_id, {"trigger": "release"}, None, concept.module)
             event = {"role": "system", "event": "released"}
             if wants and not exercise:
                 event["exercise"] = "waiting for the execution service"
@@ -398,6 +406,19 @@ async def run_package(
         state="failed",
         error="The package did not pass every gate; the concept stays planned. See the log.",
     )
+
+
+def project_due(db: Session, course, released: str) -> bool:
+    """Releasing ``released`` completes a module that asks for a project and has none yet."""
+    module = next(m for m in course.modules if m.id == course.concept(released).module)
+    concepts = [course.concept(c) for c in module.concepts]
+    wants = any(c.outline and "project" in c.outline.assessment for c in concepts)
+    ready = all(c.status == "live" or c.id == released for c in concepts)
+    if not (wants and ready) or active(db, course.id, module.id) is not None:
+        return False
+    covers = {f"{course.id}:{c}" for c in module.concepts}
+    stored = db.get(GeneratedCourse, course.id).projects or []
+    return not any(set(p["concepts"]) == covers for p in stored)
 
 
 async def run_once(
@@ -416,6 +437,10 @@ async def run_once(
 
             executor = executor or execute.Broker(engine, settings)
             await run_exercise(engine, settings, base, job_id, make, executor)
+        elif kind == "project":
+            from socrat.coursegen.project import run_project
+
+            await run_project(engine, settings, base, job_id, make)
         elif kind == "outline":
             await run_outline(engine, settings, base, job_id, make)
         else:

@@ -18,6 +18,7 @@ import { Soc } from '@/components/socrat/illustration';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
 import { LockedState } from '@/components/socrat/states';
 import { openReportProblem } from '@/components/report-problem';
+import { WrittenAnswers } from '@/components/graded-work';
 import { FeelControls, SupportStep } from '@/components/socrat/support-step';
 import { SUPPORT_STEPS } from '@/lib/routes';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -356,6 +357,11 @@ export default function Lesson() {
           </div>
 
           <div className="mt-10 grid gap-4">
+            {concept.prompts?.length ? (
+              <Section id="written-heading" title="Explain it in your own words">
+                <WrittenAnswers concept={concept.id} prompts={concept.prompts} onGraded={load} />
+              </Section>
+            ) : null}
             {concept.problems.length ? (
               <Section id="judged-heading" title="Practice problems">
                 <ul className="grid gap-2">

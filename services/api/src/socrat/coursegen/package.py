@@ -15,7 +15,7 @@ from pydantic import ValidationError
 
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
-from socrat.catalog.schema import Concept, Course, Provenance, QuizItem
+from socrat.catalog.schema import Concept, Course, Prompt, Provenance, QuizItem
 from socrat.coursegen import execute, links
 from socrat.judge.service import normalized
 
@@ -165,6 +165,14 @@ input and prints exactly the text of the correct option; it is run, and the item
 rejected if the output differs or matches another option. Under 15 lines, equivalent in
 every language; Java uses "public class Solution". Other items are "kind": "mcq" without code."""
 
+PROMPTS = """This concept is also assessed by free-text answers. Add "prompts": 1-3 questions
+the learner answers in their own words (explain why, compare, apply to a new case; never
+recall of a definition), each with a rubric of 2-6 criteria worth 1-4 points that a grader
+can apply to any wording, and a model answer that would earn every point:
+"prompts": [{{"id": "kebab-case", "prompt": "...", "max_words": 150,
+             "rubric": [{{"criterion": "...", "points": 2, "look_for": "what earns the points"}}],
+             "model_answer": "..."}}]"""
+
 ATOMS_CODE = """Code adapters are allowed on worked, predict and trace atoms:
 "adapters": {{"<language>": {{"code": "complete program", "stdin": ""}}}} with one for each of:
 {languages}. The programs are run and must print the same output in every language;
@@ -234,7 +242,8 @@ def build_concept(
     languages: list[str] = (),
 ):
     """The live concept, or (None, problems by artifact). ``languages``: code items allowed
-    (and required in each of them), verified later by ``run_code``."""
+    (and required in each of them), verified later by ``run_code``. Free-text prompts are
+    required when the outline assesses by "explain"."""
     problems: dict[str, list[str]] = {"lesson": [], "quiz": []}
     items = quiz.get("quiz") if isinstance(quiz.get("quiz"), list) else []
     if not 4 <= len(items) <= 10:
@@ -256,6 +265,20 @@ def build_concept(
             problems["quiz"].append(f"item {where}: {'; '.join(detail)}")
     if len({q.id for q in parsed}) != len(parsed):
         problems["quiz"].append("Quiz item ids must be unique.")
+    raw_prompts = quiz.get("prompts") if isinstance(quiz.get("prompts"), list) else []
+    wants = concept.outline is not None and "explain" in concept.outline.assessment
+    if wants and not 1 <= len(raw_prompts) <= 3:
+        problems["quiz"].append(f"Write 1-3 free-text prompts; got {len(raw_prompts)}.")
+    prompts = []
+    for raw in raw_prompts if wants else []:
+        try:
+            prompts.append(Prompt.model_validate(raw))
+        except (ValidationError, TypeError) as exc:
+            where = raw.get("id", "?") if isinstance(raw, dict) else "?"
+            detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
+            problems["quiz"].append(f"prompt {where}: {'; '.join(detail)}")
+    if len({x.id for x in prompts}) != len(prompts):
+        problems["quiz"].append("Prompt ids must be unique.")
     if any(problems.values()):
         return None, problems
     try:
@@ -266,6 +289,7 @@ def build_concept(
                 "key_points": lesson["key_points"],
                 "pitfalls": lesson.get("pitfalls", []),
                 "quiz": parsed,
+                "prompts": prompts,
                 "provenance": Provenance(
                     author=AI_AUTHOR, version=version, attribution_md=attribution
                 ),

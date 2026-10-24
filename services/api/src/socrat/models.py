@@ -589,6 +589,7 @@ class GeneratedCourse(Base):
     # Why generation is paused ("budget" or "owner"); empty while it runs. Learners keep
     # everything already released either way.
     paused: Mapped[str] = mapped_column(String(24), default="")
+    projects: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Project``s
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)

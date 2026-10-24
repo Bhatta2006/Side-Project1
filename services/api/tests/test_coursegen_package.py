@@ -46,7 +46,28 @@ QUIZ = {
             "difficulty": 1 + i % 5,
         }
         for i in range(5)
-    ]
+    ],
+    "prompts": [
+        {
+            "id": "why-examples",
+            "prompt": "Explain why a model trained on examples can be wrong on new data.",
+            "max_words": 120,
+            "rubric": [
+                {
+                    "criterion": "Generalisation",
+                    "points": 2,
+                    "look_for": "New data can differ from the training examples.",
+                },
+                {
+                    "criterion": "Cause",
+                    "points": 2,
+                    "look_for": "Too few or unrepresentative examples, or memorising them.",
+                },
+            ],
+            "model_answer": "A model only fits the examples it saw. If new data differs from "
+            "them, or the model memorised its examples, its rule fails on the new cases.",
+        }
+    ],
 }
 STEP = {
     "state": "Examples: (1,2), (2,4)",

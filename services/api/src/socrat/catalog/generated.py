@@ -13,6 +13,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from socrat.catalog.atoms import AtomPack
+from socrat.catalog.projects import Project
 from socrat.catalog.registry import Catalog, CatalogError, build
 from socrat.catalog.schema import Concept, Course, Problem
 from socrat.models import GeneratedConcept, GeneratedCourse, now
@@ -81,8 +82,25 @@ def atom_packs(db: Session) -> dict[str, AtomPack]:
     }
 
 
-def extend(base: Catalog, extra: list[Course], packs: dict[str, AtomPack] | None = None) -> Catalog:
-    """The file catalog plus ``extra`` courses (and their atom packs), validated as one graph."""
+def projects(db: Session) -> dict[str, Project]:
+    """Projects of published generated courses, keyed ``course:project`` like file projects."""
+    rows = db.scalars(select(GeneratedCourse).where(GeneratedCourse.status == "published"))
+    found = {}
+    for row in rows:
+        for raw in row.projects or []:
+            project = Project.model_validate(raw)
+            found[f"{project.course}:{project.id}"] = project
+    return found
+
+
+def extend(
+    base: Catalog,
+    extra: list[Course],
+    packs: dict[str, AtomPack] | None = None,
+    extra_projects: dict[str, Project] | None = None,
+) -> Catalog:
+    """The file catalog plus ``extra`` courses (and their atom packs and projects), validated
+    as one graph."""
     if not extra:
         return base
     graph = build([*base.courses.values(), *extra])
@@ -96,6 +114,7 @@ def extend(base: Catalog, extra: list[Course], packs: dict[str, AtomPack] | None
         problems=graph.problems,
         order=graph.order,
         atom_packs={**base.atom_packs, **(packs or {})},
+        projects={**base.projects, **(extra_projects or {})},
         digest=hashlib.sha256(f"{base.digest}:{payload}".encode()).hexdigest(),
     )
 
@@ -115,7 +134,7 @@ def merged(base: Catalog) -> Catalog:
         if key in _cache:
             return _cache[key]
         try:
-            catalog = extend(base, courses(db), atom_packs(db))
+            catalog = extend(base, courses(db), atom_packs(db), projects(db))
         except (CatalogError, ValueError):
             # One bad generated course must not take the hand-authored courses down with it.
             log.exception("generated courses skipped: invalid catalog")
@@ -240,3 +259,20 @@ def add_problem(db: Session, base: Catalog, course_id: str, concept_id: str, pro
     own = [Problem.model_validate(p) for p in row.problems or []]
     pack = AtomPack.model_validate(row.atoms) if row.atoms else None
     store_concept(db, base, course_id, listed, pack, [*own, problem])
+
+
+def store_project(db: Session, base: Catalog, project: Project) -> None:
+    """Add or replace one project of a generated course. No commit."""
+    row = db.get(GeneratedCourse, project.course)
+    if row is None:
+        raise CatalogError(f"unknown generated course {project.course}")
+    stored = course(db, project.course)
+    known = {f"{stored.id}:{c.id}" for c in stored.concepts} | set(base.concepts)
+    unknown = [c for c in project.concepts if c not in known]
+    if unknown:
+        raise CatalogError(f"project {project.id}: unknown concepts {unknown}")
+    if project.id in {p.id for k, p in base.projects.items() if p.course == project.course}:
+        raise CatalogError(f"project {project.id} already exists in content/")
+    others = [p for p in row.projects or [] if p["id"] != project.id]
+    row.projects = [*others, project.model_dump(mode="json")]
+    row.updated_at = max(now(), row.updated_at + 1)  # refreshes the merged catalog

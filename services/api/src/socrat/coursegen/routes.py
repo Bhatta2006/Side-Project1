@@ -126,14 +126,19 @@ def course_detail(course_id: str, request: Request):
         stored = generated.course(db, course_id) if row else None
         packages: dict[str, dict] = {}
         exercises: dict[str, dict] = {}
+        designs: dict[str, dict] = {}  # project jobs by module
         for job in reversed(history):  # oldest first, so the newest per concept wins
             if job.kind == "package":
                 packages[job.target] = job_view(job)
             elif job.kind == "exercise":
                 exercises[job.target] = job_view(job)
+            elif job.kind == "project":
+                designs[job.target] = job_view(job)
         return dict(
             packages=packages,
             exercises=exercises,
+            designs=designs,
+            projects=(row.projects if row else None) or [],
             id=course_id,
             status=row.status if row else "drafting",
             paused=row.paused if row else "",
@@ -231,6 +236,25 @@ def generate_exercise(course_id: str, concept_id: str, request: Request):
             raise HTTPException(409, "generation_in_progress")
         job = jobs.enqueue(db, "exercise", course_id, {"trigger": "owner"}, user.id, concept_id)
         record_event(db, user.id, "coursegen.exercise_requested", course_id)
+        return job_view(job)
+
+
+@router.post("/{course_id}/modules/{module_id}/project")
+def design_project(course_id: str, module_id: str, request: Request):
+    """Queue a project for a module whose concepts are all live (a new version if one exists)."""
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        row = _course_row(db, course_id)
+        stored = generated.course(db, course_id)
+        module = next((m for m in stored.modules if m.id == module_id), None)
+        if row.status != "published" or module is None:
+            raise HTTPException(404, "not_found")
+        if any(stored.concept(c).status != "live" for c in module.concepts):
+            raise HTTPException(409, "module_not_live")
+        if jobs.active(db, course_id, module_id) is not None:
+            raise HTTPException(409, "generation_in_progress")
+        job = jobs.enqueue(db, "project", course_id, {"trigger": "owner"}, user.id, module_id)
+        record_event(db, user.id, "coursegen.project_requested", course_id)
         return job_view(job)
 
 

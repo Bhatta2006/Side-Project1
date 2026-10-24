@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { BookPlus, CheckCircle2, Code2, Loader2, Pause, Play, RotateCcw, Save, ShieldOff, Sparkles } from 'lucide-react';
+import { BookPlus, CheckCircle2, Code2, Hammer, Loader2, Pause, Play, RotateCcw, Save, ShieldOff, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { conceptHref } from '@/lib/routes';
@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 type CourseStatus = 'drafting' | 'review' | 'published';
 type JobState = 'queued' | 'running' | 'done' | 'failed';
 interface LogEntry {
-  role: 'architect' | 'critic' | 'author' | 'reviewer' | 'engineer' | 'system';
+  role: 'architect' | 'critic' | 'author' | 'reviewer' | 'engineer' | 'designer' | 'system';
   round?: number;
   at: number;
   event?: string;
@@ -31,6 +31,7 @@ interface LogEntry {
   scores?: Record<string, number>;
   tests?: number;
   problem?: string;
+  project?: string;
   exercise?: string;
   languages?: string[];
 }
@@ -49,7 +50,8 @@ interface CourseJson {
   modules: { id: string; title: string; summary: string; concepts: string[] }[];
   concepts: OutlineConcept[];
 }
-interface Detail { id: string; status: CourseStatus; paused: string; brief: Brief; course: CourseJson | null; jobs: Job[]; packages: Record<string, Job>; exercises: Record<string, Job>; spent_usd: number }
+interface StoredProject { id: string; title: string; summary: string; concepts: string[]; milestones: { id: string; title: string }[] }
+interface Detail { id: string; status: CourseStatus; paused: string; brief: Brief; course: CourseJson | null; jobs: Job[]; packages: Record<string, Job>; exercises: Record<string, Job>; designs: Record<string, Job>; projects: StoredProject[]; spent_usd: number }
 
 const STATUS_LABEL: Record<CourseStatus, string> = { drafting: 'Drafting', review: 'Ready to review', published: 'Published' };
 const busyJob = (job: Job | null | undefined) => job?.state === 'queued' || job?.state === 'running';
@@ -143,6 +145,7 @@ function JobLog({ job }: { job: Job }) {
             {e.characters ? <p className="text-muted-foreground">Lesson draft of {e.characters.toLocaleString()} characters.</p> : null}
             {e.tests ? <p className="text-muted-foreground">{e.tests} tests generated and verified by running the code.</p> : null}
             {e.problem ? <p className="text-muted-foreground">Problem <span className="font-mono">{e.problem}</span> released.</p> : null}
+            {e.project ? <p className="text-muted-foreground">Project <span className="font-mono">{e.project}</span> released.</p> : null}
             {e.exercise ? <p className="text-muted-foreground">Exercise {e.exercise}.</p> : null}
             {e.languages?.length ? <p className="text-muted-foreground">Missing runtimes: {e.languages.join(', ')}</p> : null}
             {e.scores ? <p className="text-muted-foreground">{Object.entries(e.scores).map(([k, v]) => `${k.replaceAll('_', ' ')} ${v}`).join(' · ')}</p> : null}
@@ -156,11 +159,13 @@ function JobLog({ job }: { job: Job }) {
   );
 }
 
-function Outline({ course, courseId, packages, exercises, onGenerate, onWithdraw, onExercise }: {
+function Outline({ course, courseId, packages, exercises, designs = {}, projects = [], onGenerate, onWithdraw, onExercise, onDesign }: {
   course: CourseJson; courseId: string; packages: Record<string, Job>; exercises: Record<string, Job>;
+  designs?: Record<string, Job>; projects?: StoredProject[];
   onGenerate?: (ids: string[]) => void; onWithdraw?: (id: string, notes: string) => Promise<boolean>;
-  onExercise?: (id: string) => void;
+  onExercise?: (id: string) => void; onDesign?: (module: string) => void;
 }) {
+  const [designShown, setDesignShown] = useState<string | null>(null);
   const byId = Object.fromEntries(course.concepts.map(c => [c.id, c]));
   const [shown, setShown] = useState<string | null>(null);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
@@ -174,6 +179,28 @@ function Outline({ course, courseId, packages, exercises, onGenerate, onWithdraw
       {course.modules.map(m => (
         <section key={m.id} className="grid gap-2">
           <h4 className="font-semibold">{m.title} <span className="font-normal text-muted-foreground">— {m.summary}</span></h4>
+          {(() => {
+            const covers = (p: StoredProject) => p.concepts.length === m.concepts.length && m.concepts.every(c => p.concepts.includes(`${courseId}:${c}`));
+            const project = projects.find(covers);
+            const job = designs[m.id];
+            const ready = m.concepts.every(c => byId[c]?.status === 'live');
+            if (!project && !job && !(onDesign && ready)) return null;
+            return (
+              <div className="grid gap-2 rounded-[16px] bg-raised p-3 text-sm">
+                <p className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">Project:</span>
+                  {project ? <>{project.title} <span className="text-muted-foreground">({project.milestones.length} milestones)</span></> : <span className="text-muted-foreground">none yet</span>}
+                  <span className="ml-auto flex items-center gap-2">
+                    {busyJob(job) ? <Badge variant="outline"><Loader2 className="animate-spin" /> Designing</Badge> : null}
+                    {onDesign && ready && !busyJob(job) ? <Button size="sm" variant="ghost" onClick={() => onDesign(m.id)}><Hammer /> {project ? 'Redesign' : 'Design project'}</Button> : null}
+                    {job ? <Button size="sm" variant="ghost" onClick={() => setDesignShown(designShown === m.id ? null : m.id)}>{designShown === m.id ? 'Hide run' : 'Agent run'}</Button> : null}
+                  </span>
+                </p>
+                {project ? <p className="text-muted-foreground">{project.summary}</p> : null}
+                {designShown === m.id && job ? <JobLog job={job} /> : null}
+              </div>
+            );
+          })()}
           <ol className="grid gap-2">
             {m.concepts.map(id => {
               const c = byId[id];
@@ -260,7 +287,7 @@ export function CourseBuilder() {
   useEffect(load, [load]);
 
   // While agents work, refresh the list and the open course every few seconds.
-  const working = items?.some(i => busyJob(i.job)) || [...Object.values(open?.packages ?? {}), ...Object.values(open?.exercises ?? {})].some(busyJob) || busyJob(open?.jobs[0]);
+  const working = items?.some(i => busyJob(i.job)) || [...Object.values(open?.packages ?? {}), ...Object.values(open?.exercises ?? {}), ...Object.values(open?.designs ?? {})].some(busyJob) || busyJob(open?.jobs[0]);
   useEffect(() => {
     if (!working) return;
     const timer = setInterval(() => { load(); if (open) show(open.id); }, 5000);
@@ -432,6 +459,9 @@ export function CourseBuilder() {
                           courseId={open.id}
                           packages={open.packages}
                           exercises={open.exercises ?? {}}
+                          designs={open.designs ?? {}}
+                          projects={open.projects ?? []}
+                          onDesign={open.status === 'published' ? id => control(`modules/${id}/project`, {}, 'Project queued for the designer.') : undefined}
                           onGenerate={open.status === 'published' ? generate : undefined}
                           onExercise={open.status === 'published' ? id => control(`concepts/${id}/exercise`, {}, 'Exercise queued. Its code is run before it is released.') : undefined}
                           onWithdraw={open.status === 'published' ? (id, why) => control(`concepts/${id}/quarantine`, { notes: why }, 'Withdrawn. It is being rewritten.') : undefined}

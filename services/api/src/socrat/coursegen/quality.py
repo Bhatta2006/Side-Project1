@@ -54,6 +54,7 @@ def quarantine(
             "pitfalls": [],
             "resources": [],
             "quiz": [],
+            "prompts": [],
             "problems": [],
         }
     )

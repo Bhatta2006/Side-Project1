@@ -17,7 +17,18 @@ from socrat.assistant.gateway import Provider, Turn, make_provider
 from socrat.config import Settings
 from socrat.models import now
 
-ROLES = {"architect", "critic", "author", "quiz", "atoms", "facts", "reviewer", "engineer"}
+ROLES = {
+    "architect",
+    "critic",
+    "author",
+    "quiz",
+    "atoms",
+    "facts",
+    "reviewer",
+    "engineer",
+    "designer",  # projects
+    "grader",  # learners' free-text answers and project milestones
+}
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {
     "provider": ("ai_provider",),
@@ -80,13 +91,15 @@ async def ask(
     prompt: str,
     max_tokens: int,
     make=make_provider,
+    user_id: str | None = None,
 ) -> Reply:
-    """One metered call. Raises ProviderError when the provider or global budget refuses."""
+    """One metered call, charged to ``user_id`` when a learner caused it. Raises ProviderError
+    when the provider, the global budget or that learner's budget refuses."""
     tuned = role_settings(settings, role)
     provider: Provider = make(tuned)
     if provider.name != "offline":
         with Session(engine) as db:
-            budget.check(db, tuned, None, now())
+            budget.check(db, tuned, user_id, now())
     text, cost = "", 0.0
     async for event in provider.converse(system, [Turn("user", prompt)], max_tokens):
         if event.kind == "text":
@@ -96,7 +109,7 @@ async def ask(
                 cost += budget.record(
                     db,
                     tuned,
-                    user_id=None,
+                    user_id=user_id,
                     feature=f"coursegen.{role}",
                     provider=provider.name,
                     model=budget.model_name(tuned, provider),

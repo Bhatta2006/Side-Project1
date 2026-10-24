@@ -307,8 +307,8 @@ ADAPTER = {
 
 
 def test_code_items_and_adapters_are_run_before_release(client, published, web):  # noqa: F811
-    quiz_bad = {"quiz": [*QUIZ["quiz"], OUTPUT_ITEM]}
-    quiz_good = {"quiz": [*QUIZ["quiz"], OUTPUT_ITEM | {"answer": 1}]}
+    quiz_bad = QUIZ | {"quiz": [*QUIZ["quiz"], OUTPUT_ITEM]}
+    quiz_good = QUIZ | {"quiz": [*QUIZ["quiz"], OUTPUT_ITEM | {"answer": 1}]}
     atoms = {"atoms": [*ATOMS["atoms"][:3], ATOMS["atoms"][3] | {"adapters": ADAPTER}]}
     script = Scripted(
         author=[lesson()],
