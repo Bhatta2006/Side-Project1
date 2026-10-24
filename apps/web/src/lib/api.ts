@@ -99,6 +99,7 @@ const MESSAGES: Record<string, string> = {
   codeforces_unavailable: "Codeforces isn't answering right now. Try again in a minute.",
   not_linked: 'Link a Codeforces handle first.',
   concept_locked: 'This topic unlocks when you pass the checkpoint before it.',
+  concept_preparing: 'This lesson is still being prepared. Keep going with the topics before it.',
   topic_not_completed: 'Complete the required topic lessons before opening this question.',
   independent_work_in_progress: 'Finish your independent assessment or timed work before opening learning help.',
   playground_generation_unavailable: 'Your lesson could not be generated right now. Your request is still here; try again.',

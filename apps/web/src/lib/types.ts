@@ -250,6 +250,7 @@ export interface RoadmapItem {
     | 'in_progress'
     | 'upcoming'
     | 'locked'
+    | 'preparing'
     | 'optional'
     | 'skipped';
   locked_by?: string;

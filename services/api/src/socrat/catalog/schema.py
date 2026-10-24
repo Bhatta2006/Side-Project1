@@ -160,7 +160,7 @@ class Concept(Model):
     prerequisites: list[Ref] = Field(default_factory=list)
     difficulty: int = Field(ge=1, le=5)
     estimated_minutes: int = Field(ge=10, le=600)
-    lesson: str = Field(min_length=1)
+    lesson: str = ""  # empty only while planned
     key_points: list[str] = Field(default_factory=list, max_length=8)
     pitfalls: list[str] = Field(default_factory=list, max_length=8)
     resources: list[Resource] = Field(default_factory=list, max_length=8)
@@ -169,10 +169,14 @@ class Concept(Model):
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None
     # A draft is being authored: validated and kept in the graph, but never served.
-    status: Literal["draft", "live"] = "live"
+    # A planned concept is an outline entry whose content is not generated yet: it is in
+    # the graph and on the roadmap, but its lesson and activities are held.
+    status: Literal["draft", "live", "planned"] = "live"
 
     @model_validator(mode="after")
     def live_is_complete(self):
+        if self.status != "planned" and not self.lesson:
+            raise ValueError(f"concept {self.id} needs a lesson")
         if self.status == "live":
             missing = [
                 name

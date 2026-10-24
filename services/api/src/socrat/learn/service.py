@@ -296,6 +296,8 @@ def require_unlocked(
 ) -> None:
     if concept not in curriculum(catalog, enrollment):
         raise HTTPException(404, "not_found")
+    if catalog.concept(concept).status == "planned":
+        raise HTTPException(423, "concept_preparing")
     if concept in locked_concepts(db, catalog, enrollment, now):
         raise HTTPException(423, "concept_locked")
 

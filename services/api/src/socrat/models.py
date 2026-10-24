@@ -571,3 +571,27 @@ class CompanySprint(Base):
     proposal_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     finished_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class GeneratedCourse(Base):
+    """A course stored in the database rather than ``content/courses`` (the generation
+    pipeline's output). ``payload`` is the ``Course`` schema without concepts or problems."""
+
+    __tablename__ = "generated_courses"
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    # Bumped on every change to the course or its concepts; the catalog cache keys on it.
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class GeneratedConcept(Base):
+    """One concept of a generated course; ``payload`` is the ``Concept`` schema."""
+
+    __tablename__ = "generated_concepts"
+    course_id: Mapped[str] = mapped_column(
+        ForeignKey("generated_courses.id", ondelete="CASCADE"), primary_key=True
+    )
+    concept_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)

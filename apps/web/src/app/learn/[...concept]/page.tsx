@@ -146,7 +146,7 @@ export default function Lesson() {
   const qualified = joinSegments(params.concept);
   const [concept, setConcept] = useState<ConceptView | null>(null);
   const [error, setError] = useState('');
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState<'' | 'gate' | 'preparing'>('');
   const [variant, setVariant] = useState<{ style: string; content: string } | null>(null);
   const [explaining, setExplaining] = useState('');
   const [completing, setCompleting] = useState(false);
@@ -163,7 +163,7 @@ export default function Lesson() {
   const load = useCallback(() => {
     setError('');
     api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(e => {
-      setLocked(e instanceof ApiError && e.code === 'concept_locked');
+      setLocked(e instanceof ApiError && e.code === 'concept_locked' ? 'gate' : e instanceof ApiError && e.code === 'concept_preparing' ? 'preparing' : '');
       setError(explain(e));
     });
   }, [qualified]);
@@ -203,6 +203,15 @@ export default function Lesson() {
   }
 
   if (!allowed || (!concept && !error)) return <Loading variant="article" label="Loading the lesson" />;
+  if (!concept && locked === 'preparing') {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <LockedState title="This lesson is being prepared" href="/plan" action="Back to your plan">
+          It opens as soon as it is ready. Keep going with the topics before it.
+        </LockedState>
+      </div>
+    );
+  }
   if (!concept && locked) {
     return (
       <div className="mx-auto max-w-3xl p-6">

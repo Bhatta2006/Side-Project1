@@ -35,7 +35,7 @@ def migrated(tmp_path, revision="head"):
 
 def test_upgrade_creates_the_tables_and_downgrade_removes_only_them(tmp_path):
     config, engine = migrated(tmp_path)
-    assert SCHEMA_REVISION == "0015_passport_company_sprints"
+    assert SCHEMA_REVISION == "0016_generated_courses"
     before = set(sa.inspect(engine).get_table_names())
     assert TABLES <= before
     command.downgrade(config, "0008_product_tour")
@@ -46,7 +46,9 @@ def test_upgrade_creates_the_tables_and_downgrade_removes_only_them(tmp_path):
         "error_reports",
         "skill_passports",
         "company_sprints",
-    }  # 0012-0015 roll back too
+        "generated_courses",
+        "generated_concepts",
+    }  # 0012-0016 roll back too
     command.upgrade(config, "head")
     assert TABLES <= set(sa.inspect(engine).get_table_names())
     engine.dispose()
