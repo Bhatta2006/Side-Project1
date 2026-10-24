@@ -158,6 +158,12 @@ class Settings(DatabaseSettings):
     content_courses_dir: str = ""
     # Re-sync linked Codeforces profiles in the background (off in tests: no network).
     codeforces_autosync: bool = True
+    # Course generation (docs/architecture/course-generation.md). Each agent role may use its
+    # own provider, model, effort and prices, e.g. SOCRAT_GEN_ROLES='{"critic": {"provider":
+    # "openai", "model": "...", "base_url": "..."}}'; unset keys fall back to SOCRAT_AI_*.
+    gen_roles: dict[str, dict[str, str | float]] = Field(default_factory=dict)
+    gen_runner: bool = True  # run queued generation jobs in the API process (off in tests)
+    gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
     ai_tool_rounds: int = Field(default=4, ge=1, le=8)
 
     # Local demo conveniences (seeded sample learners). Rejected outside development/test.
@@ -231,6 +237,10 @@ class Settings(DatabaseSettings):
         )
         if self.environment == "test":
             self.codeforces_autosync = False
+            self.gen_runner = False
+        from socrat.coursegen.roles import check_roles
+
+        check_roles(self.gen_roles)
         if self.ai_provider == "openai" and not self.openai_model:
             raise ValueError("The OpenAI provider requires SOCRAT_OPENAI_MODEL")
         if self.ai_provider == "anthropic" and not self.ai_model.startswith("claude-"):

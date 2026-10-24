@@ -580,6 +580,9 @@ class GeneratedCourse(Base):
     __tablename__ = "generated_courses"
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
     payload: Mapped[dict] = mapped_column(JSON)
+    # review: outline awaiting the owner; published: served to learners.
+    status: Mapped[str] = mapped_column(String(16), default="published")
+    brief: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
@@ -594,4 +597,22 @@ class GeneratedConcept(Base):
     )
     concept_id: Mapped[str] = mapped_column(String(80), primary_key=True)
     payload: Mapped[dict] = mapped_column(JSON)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class GenerationJob(Base):
+    """One run of the course-generation agents (e.g. brief → outline). The worker claims
+    queued jobs; ``log`` keeps each agent round (verdicts, issues, cost) for the admin."""
+
+    __tablename__ = "generation_jobs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    kind: Mapped[str] = mapped_column(String(24))
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    input: Mapped[dict] = mapped_column(JSON)
+    state: Mapped[str] = mapped_column(String(16), default="queued", index=True)
+    log: Mapped[list] = mapped_column(JSON, default=list)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    error: Mapped[str] = mapped_column(String(500), default="")
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)

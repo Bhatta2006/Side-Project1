@@ -29,15 +29,35 @@ def bind(engine: Engine) -> None:
     _cache.clear()
 
 
-def courses(db: Session) -> list[Course]:
-    rows = db.scalars(select(GeneratedConcept)).all()
+def _assemble(payload: dict, concepts: list[dict]) -> Course:
+    # Rows come back in key order; authoring (module) order breaks planner ties, so restore it.
+    position = {
+        cid: i for i, cid in enumerate(c for m in payload["modules"] for c in m["concepts"])
+    }
+    concepts = sorted(concepts, key=lambda c: position.get(c["id"], len(position)))
+    return Course.model_validate({**payload, "concepts": concepts})
+
+
+def course(db: Session, course_id: str) -> Course | None:
+    row = db.get(GeneratedCourse, course_id)
+    if row is None:
+        return None
+    concepts = db.scalars(select(GeneratedConcept).where(GeneratedConcept.course_id == course_id))
+    return _assemble(row.payload, [c.payload for c in concepts])
+
+
+def courses(db: Session, published_only: bool = True) -> list[Course]:
+    """Learners only ever see published courses; outlines under review stay out."""
+    query = select(GeneratedCourse).order_by(GeneratedCourse.id)
+    if published_only:
+        query = query.where(GeneratedCourse.status == "published")
+    rows = db.scalars(query).all()
     by_course: dict[str, list[dict]] = {}
-    for row in rows:
-        by_course.setdefault(row.course_id, []).append(row.payload)
-    return [
-        Course.model_validate({**row.payload, "concepts": by_course.get(row.id, [])})
-        for row in db.scalars(select(GeneratedCourse).order_by(GeneratedCourse.id))
-    ]
+    for concept in db.scalars(
+        select(GeneratedConcept).where(GeneratedConcept.course_id.in_([r.id for r in rows]))
+    ):
+        by_course.setdefault(concept.course_id, []).append(concept.payload)
+    return [_assemble(row.payload, by_course.get(row.id, [])) for row in rows]
 
 
 def extend(base: Catalog, extra: list[Course]) -> Catalog:
@@ -64,7 +84,11 @@ def merged(base: Catalog) -> Catalog:
     with Session(_engine) as db:
         # shortcut: one small query per catalog() call; cache the key briefly if it shows up
         # in request latency.
-        stamps = db.execute(select(GeneratedCourse.id, GeneratedCourse.updated_at)).all()
+        stamps = db.execute(
+            select(GeneratedCourse.id, GeneratedCourse.updated_at).where(
+                GeneratedCourse.status == "published"
+            )
+        ).all()
         key = (base.digest, *map(tuple, stamps))
         if key in _cache:
             return _cache[key]
@@ -79,7 +103,13 @@ def merged(base: Catalog) -> Catalog:
     return catalog
 
 
-def save_course(db: Session, base: Catalog, course: Course) -> None:
+def save_course(
+    db: Session,
+    base: Catalog,
+    course: Course,
+    status: str = "published",
+    brief: dict | None = None,
+) -> None:
     """Insert or replace a generated course. Validates against the live catalog first, so
     a stored course can never make ``merged`` fail. No commit; the caller owns it."""
     if course.id in base.courses:
@@ -92,10 +122,14 @@ def save_course(db: Session, base: Catalog, course: Course) -> None:
     row = db.get(GeneratedCourse, course.id)
     payload = course.model_dump(mode="json", exclude={"concepts", "problems"})
     if row is None:
-        db.add(GeneratedCourse(id=course.id, payload=payload, created_at=stamp, updated_at=stamp))
+        row = GeneratedCourse(id=course.id, created_at=stamp, updated_at=stamp)
+        db.add(row)
     else:
-        row.payload = payload
         row.updated_at = max(stamp, row.updated_at + 1)
+    row.payload = payload
+    row.status = status
+    if brief is not None:
+        row.brief = brief
     for old in db.scalars(select(GeneratedConcept).where(GeneratedConcept.course_id == course.id)):
         db.delete(old)
     db.flush()
@@ -108,3 +142,11 @@ def save_course(db: Session, base: Catalog, course: Course) -> None:
                 updated_at=stamp,
             )
         )
+
+
+def publish(db: Session, base: Catalog, course_id: str) -> None:
+    """Make a reviewed outline visible to learners, re-checked against today's catalog."""
+    stored = course(db, course_id)
+    if stored is None:
+        raise CatalogError(f"unknown generated course {course_id}")
+    save_course(db, base, stored, status="published")

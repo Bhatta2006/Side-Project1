@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ReviewQueue } from '@/components/review-queue';
+import { CourseBuilder } from '@/components/course-builder';
 
 interface Overview {
   funnel: { step: string; learners: number; share: number }[];
@@ -213,8 +214,10 @@ export default function Admin() {
         <TabsList>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
           <TabsTrigger value="review">Review queue</TabsTrigger>
+          <TabsTrigger value="courses">Courses</TabsTrigger>
         </TabsList>
         <TabsContent value="review"><ReviewQueue /></TabsContent>
+        <TabsContent value="courses"><CourseBuilder /></TabsContent>
         <TabsContent value="metrics">
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

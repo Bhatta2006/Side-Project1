@@ -49,6 +49,16 @@
         "$env:SOCRAT_ENVIRONMENT='test'; $env:SOCRAT_DATABASE_URL='sqlite:///D:/Socrat/.cache/local-test.db'; $env:SOCRAT_DEV_LOGIN_ENABLED='true'; $env:SOCRAT_AI_PROVIDER='offline'; $env:SOCRAT_COMMUNITY_WHATSAPP_URL='https://chat.whatsapp.com/LocalPreviewOnly1'; $env:SOCRAT_PUBLIC_ORIGIN='http://localhost:3000'; .venv/Scripts/alembic.exe upgrade head; if ($?) { .venv/Scripts/uvicorn.exe socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000 }"
       ],
       "port": 8000
+    },
+    {
+      "name": "coursegen-api",
+      "runtimeExecutable": "powershell.exe",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "$env:SOCRAT_ENVIRONMENT='development'; $env:SOCRAT_DATABASE_URL='sqlite:///D:/Socrat/.cache/coursegen-check.db'; $env:SOCRAT_DEV_LOGIN_ENABLED='true'; $env:SOCRAT_AI_PROVIDER='offline'; $env:SOCRAT_ADMIN_SUBJECTS='[\"course-admin\"]'; $env:SOCRAT_PUBLIC_ORIGIN='http://localhost:3000'; .venv/Scripts/alembic.exe upgrade head; if ($?) { .venv/Scripts/uvicorn.exe socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000 }"
+      ],
+      "port": 8000
     }
   ]
 }

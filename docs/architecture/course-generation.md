@@ -229,7 +229,7 @@ deterministic gates.** It amends ADR-0002 as follows:
 | Phase | Delivers | Done when |
 |---|---|---|
 | G0 ✅ | `generated_courses` / `generated_concepts` tables, `planned` status, merged catalog (`catalog/generated.py`), ADR-0008 | A learner can enroll in a DB course and see planned concepts on the roadmap. All existing tests pass |
-| G1 | Brief → Architect → Critic → outline; admin page to create, inspect and edit the outline | The "AI Basics" outline is produced and reviewed in the admin UI |
+| G1 ✅ | Brief → Architect → Critic → outline (`socrat/coursegen`), `generation_jobs` + in-process runner, per-role models (`SOCRAT_GEN_ROLES`), admin Courses tab to brief, follow, edit (JSON), revise and publish | The "AI Basics" outline is produced and reviewed in the admin UI (verified with a scripted provider; a live-model run is still to do) |
 | G2 | Package pipeline for lesson + quiz + atoms, Fact Checker, Reviewer, release | The first 3 AI Basics concepts are learnable end-to-end and pass the gold-comparison eval |
 | G3 | Prefetch triggers, hold state, budgets and pause, quarantine | A learner moves through 10 concepts with no manual step. Budget pause is verified |
 | G4 | Exercise Engineer through the execution service; generated tests | ML course Python exercises are judged |

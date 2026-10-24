@@ -152,6 +152,18 @@ class PracticeLink(Model):
     difficulty: Literal["easy", "medium", "hard"]
 
 
+class Outline(Model):
+    """What a generated concept must teach, set when the course outline is planned. The
+    authoring agents write the lesson from it; hand-authored concepts leave it empty."""
+
+    depth: Literal["overview", "practitioner", "mastery"] = "practitioner"
+    objectives: list[str] = Field(min_length=1, max_length=6)  # observable, start with a verb
+    misconceptions: list[str] = Field(default_factory=list, max_length=6)
+    assessment: list[Literal["quiz", "code", "explain", "project"]] = Field(
+        min_length=1, max_length=4
+    )
+
+
 class Concept(Model):
     id: Slug
     title: str = Field(min_length=2, max_length=100)
@@ -168,6 +180,7 @@ class Concept(Model):
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None
+    outline: Outline | None = None
     # A draft is being authored: validated and kept in the graph, but never served.
     # A planned concept is an outline entry whose content is not generated yet: it is in
     # the graph and on the roadmap, but its lesson and activities are held.
