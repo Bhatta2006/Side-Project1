@@ -12,8 +12,9 @@ from dataclasses import replace
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
+from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog, CatalogError, build
-from socrat.catalog.schema import Course
+from socrat.catalog.schema import Concept, Course
 from socrat.models import GeneratedConcept, GeneratedCourse, now
 
 log = logging.getLogger(__name__)
@@ -60,8 +61,21 @@ def courses(db: Session, published_only: bool = True) -> list[Course]:
     return [_assemble(row.payload, by_course.get(row.id, [])) for row in rows]
 
 
-def extend(base: Catalog, extra: list[Course]) -> Catalog:
-    """The file catalog plus ``extra`` courses, validated as one graph."""
+def atom_packs(db: Session) -> dict[str, AtomPack]:
+    """Released atom packs of published courses, keyed ``course:concept`` like file packs."""
+    rows = db.scalars(
+        select(GeneratedConcept)
+        .join(GeneratedCourse, GeneratedCourse.id == GeneratedConcept.course_id)
+        .where(GeneratedCourse.status == "published")
+    )
+    # A JSON column stores None as JSON null, which SQL IS NULL does not match.
+    return {
+        f"{r.course_id}:{r.concept_id}": AtomPack.model_validate(r.atoms) for r in rows if r.atoms
+    }
+
+
+def extend(base: Catalog, extra: list[Course], packs: dict[str, AtomPack] | None = None) -> Catalog:
+    """The file catalog plus ``extra`` courses (and their atom packs), validated as one graph."""
     if not extra:
         return base
     graph = build([*base.courses.values(), *extra])
@@ -74,6 +88,7 @@ def extend(base: Catalog, extra: list[Course]) -> Catalog:
         prerequisites=graph.prerequisites,
         problems=graph.problems,
         order=graph.order,
+        atom_packs={**base.atom_packs, **(packs or {})},
         digest=hashlib.sha256(f"{base.digest}:{payload}".encode()).hexdigest(),
     )
 
@@ -93,7 +108,7 @@ def merged(base: Catalog) -> Catalog:
         if key in _cache:
             return _cache[key]
         try:
-            catalog = extend(base, courses(db))
+            catalog = extend(base, courses(db), atom_packs(db))
         except (CatalogError, ValueError):
             # One bad generated course must not take the hand-authored courses down with it.
             log.exception("generated courses skipped: invalid catalog")
@@ -130,7 +145,9 @@ def save_course(
     row.status = status
     if brief is not None:
         row.brief = brief
+    atoms = {}  # generated atom packs survive an outline save
     for old in db.scalars(select(GeneratedConcept).where(GeneratedConcept.course_id == course.id)):
+        atoms[old.concept_id] = old.atoms
         db.delete(old)
     db.flush()
     for concept in course.concepts:
@@ -139,6 +156,7 @@ def save_course(
                 course_id=course.id,
                 concept_id=concept.id,
                 payload=concept.model_dump(mode="json"),
+                atoms=atoms.get(concept.id),
                 updated_at=stamp,
             )
         )
@@ -150,3 +168,24 @@ def publish(db: Session, base: Catalog, course_id: str) -> None:
     if stored is None:
         raise CatalogError(f"unknown generated course {course_id}")
     save_course(db, base, stored, status="published")
+
+
+def release_concept(
+    db: Session, base: Catalog, course_id: str, concept: Concept, atoms: AtomPack | None
+) -> None:
+    """Replace one concept of a generated course with released content; checked against the
+    whole catalog first. No commit; the caller owns it."""
+    stored = course(db, course_id)
+    row = db.get(GeneratedConcept, (course_id, concept.id))
+    if stored is None or row is None:
+        raise CatalogError(f"unknown generated concept {course_id}:{concept.id}")
+    updated = stored.model_copy(
+        update={"concepts": [concept if c.id == concept.id else c for c in stored.concepts]}
+    )
+    others = [c for c in courses(db) if c.id != course_id]
+    extend(base, [*others, updated])
+    row.payload = concept.model_dump(mode="json")
+    row.atoms = atoms.model_dump(mode="json") if atoms else None
+    row.updated_at = now()
+    parent = db.get(GeneratedCourse, course_id)
+    parent.updated_at = max(now(), parent.updated_at + 1)  # refreshes the merged catalog

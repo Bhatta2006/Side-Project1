@@ -597,6 +597,7 @@ class GeneratedConcept(Base):
     )
     concept_id: Mapped[str] = mapped_column(String(80), primary_key=True)
     payload: Mapped[dict] = mapped_column(JSON)
+    atoms: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # an ``AtomPack``
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
@@ -608,7 +609,9 @@ class GenerationJob(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
     kind: Mapped[str] = mapped_column(String(24))
     course_id: Mapped[str] = mapped_column(String(80), index=True)
+    target: Mapped[str] = mapped_column(String(80), default="")  # concept id for a package
     input: Mapped[dict] = mapped_column(JSON)
+    output: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # last draft, kept for audit
     state: Mapped[str] = mapped_column(String(16), default="queued", index=True)
     log: Mapped[list] = mapped_column(JSON, default=list)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)

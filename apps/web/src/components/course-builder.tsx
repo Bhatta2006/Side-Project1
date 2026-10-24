@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { BookPlus, CheckCircle2, Loader2, RotateCcw, Save, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
+import { conceptHref } from '@/lib/routes';
 import { ErrorNote } from '@/components/common';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 type CourseStatus = 'drafting' | 'review' | 'published';
 type JobState = 'queued' | 'running' | 'done' | 'failed';
 interface LogEntry {
-  role: 'architect' | 'critic' | 'system';
+  role: 'architect' | 'critic' | 'author' | 'reviewer' | 'system';
   round?: number;
   at: number;
   event?: string;
@@ -25,12 +27,15 @@ interface LogEntry {
   issues?: string[];
   concepts?: number;
   modules?: number;
+  characters?: number;
+  scores?: Record<string, number>;
 }
 interface Job { id: string; kind: string; state: JobState; log: LogEntry[]; cost_usd: number; error: string; created_at: number; updated_at: number }
-interface Summary { id: string; title: string; status: CourseStatus; concepts: number | null; job: Job | null; spent_usd: number; budget_usd: number }
+interface Summary { id: string; title: string; status: CourseStatus; concepts: number | null; live: number; job: Job | null; spent_usd: number; budget_usd: number }
 interface Brief { id: string; title: string; audience: string; outcome: string; background: string; languages: string[]; reuse: string[]; references: string[]; notes: string; budget_usd: number }
 interface OutlineConcept {
   id: string; title: string; summary: string; module: string; prerequisites: string[]; difficulty: number; estimated_minutes: number;
+  status: 'planned' | 'live' | 'draft';
   outline: { depth: string; objectives: string[]; misconceptions: string[]; assessment: string[] } | null;
 }
 interface CourseJson {
@@ -39,7 +44,7 @@ interface CourseJson {
   modules: { id: string; title: string; summary: string; concepts: string[] }[];
   concepts: OutlineConcept[];
 }
-interface Detail { id: string; status: CourseStatus; brief: Brief; course: CourseJson | null; jobs: Job[]; spent_usd: number }
+interface Detail { id: string; status: CourseStatus; brief: Brief; course: CourseJson | null; jobs: Job[]; packages: Record<string, Job>; spent_usd: number }
 
 const STATUS_LABEL: Record<CourseStatus, string> = { drafting: 'Drafting', review: 'Ready to review', published: 'Published' };
 const busyJob = (job: Job | null | undefined) => job?.state === 'queued' || job?.state === 'running';
@@ -129,6 +134,8 @@ function JobLog({ job }: { job: Job }) {
               {e.verdict ? <Badge variant={e.verdict === 'pass' ? 'default' : 'outline'} className="ml-2">{e.verdict}</Badge> : null}
             </p>
             {e.event ? <p className="text-muted-foreground">{e.event.replaceAll('_', ' ')}</p> : null}
+            {e.characters ? <p className="text-muted-foreground">Lesson draft of {e.characters.toLocaleString()} characters.</p> : null}
+            {e.scores ? <p className="text-muted-foreground">{Object.entries(e.scores).map(([k, v]) => `${k.replaceAll('_', ' ')} ${v}`).join(' · ')}</p> : null}
             {e.concepts ? <p className="text-muted-foreground">Outline with {e.concepts} concepts in {e.modules} module{e.modules === 1 ? '' : 's'}.</p> : null}
             {e.summary ? <p>{e.summary}</p> : null}
             {e.issues?.length ? <ul className="mt-1 list-disc pl-5 text-muted-foreground">{e.issues.map(x => <li key={x}>{x}</li>)}</ul> : null}
@@ -139,8 +146,11 @@ function JobLog({ job }: { job: Job }) {
   );
 }
 
-function Outline({ course }: { course: CourseJson }) {
+function Outline({ course, courseId, packages, onGenerate }: {
+  course: CourseJson; courseId: string; packages: Record<string, Job>; onGenerate?: (ids: string[]) => void;
+}) {
   const byId = Object.fromEntries(course.concepts.map(c => [c.id, c]));
+  const [shown, setShown] = useState<string | null>(null);
   const minutes = course.concepts.reduce((sum, c) => sum + c.estimated_minutes, 0);
   return (
     <div className="grid gap-4">
@@ -159,6 +169,17 @@ function Outline({ course }: { course: CourseJson }) {
                     {c.title} <span className="font-mono text-xs text-muted-foreground">{c.id}</span>
                     {c.outline ? <Badge variant="outline">{c.outline.depth}</Badge> : null}
                     <span className="text-xs text-muted-foreground">{c.estimated_minutes} min · difficulty {c.difficulty}</span>
+                    <span className="ml-auto flex items-center gap-2">
+                      {busyJob(packages[id]) ? <Badge variant="outline"><Loader2 className="animate-spin" /> Writing</Badge>
+                        : c.status === 'live' ? <Badge>Live</Badge>
+                        : packages[id]?.state === 'failed' ? <Badge variant="outline" className="border-attention text-attention">Not released</Badge>
+                        : <Badge variant="outline">Planned</Badge>}
+                      {c.status === 'live' ? <Link href={conceptHref(`${courseId}:${id}`)} className="text-xs underline underline-offset-4">Open lesson</Link> : null}
+                      {onGenerate && c.status === 'planned' && !busyJob(packages[id]) ? (
+                        <Button size="sm" variant="outline" onClick={() => onGenerate([id])}><Sparkles /> {packages[id] ? 'Try again' : 'Write'}</Button>
+                      ) : null}
+                      {packages[id] ? <Button size="sm" variant="ghost" onClick={() => setShown(shown === id ? null : id)}>{shown === id ? 'Hide run' : 'Agent run'}</Button> : null}
+                    </span>
                   </p>
                   <p className="text-muted-foreground">{c.summary}</p>
                   {c.prerequisites.length ? <p className="text-xs text-muted-foreground">Needs: {c.prerequisites.join(', ')}</p> : null}
@@ -169,6 +190,7 @@ function Outline({ course }: { course: CourseJson }) {
                   ) : null}
                   {c.outline?.misconceptions.length ? <p className="mt-1 text-xs text-muted-foreground">Misconceptions: {c.outline.misconceptions.join('; ')}</p> : null}
                   {c.outline ? <p className="text-xs text-muted-foreground">Assessed by: {c.outline.assessment.join(', ')}</p> : null}
+                  {shown === id && packages[id] ? <div className="mt-3"><JobLog job={packages[id]} /></div> : null}
                 </li>
               );
             })}
@@ -198,12 +220,23 @@ export function CourseBuilder() {
   useEffect(load, [load]);
 
   // While agents work, refresh the list and the open course every few seconds.
-  const working = items?.some(i => busyJob(i.job)) || busyJob(open?.jobs[0]);
+  const working = items?.some(i => busyJob(i.job)) || Object.values(open?.packages ?? {}).some(busyJob) || busyJob(open?.jobs[0]);
   useEffect(() => {
     if (!working) return;
     const timer = setInterval(() => { load(); if (open) show(open.id); }, 5000);
     return () => clearInterval(timer);
   }, [working, load, show, open]);
+
+  async function generate(ids: string[]) {
+    if (!open || !ids.length) return;
+    try {
+      const result = await api.post<{ queued: Job[] }>(`/admin/courses/${open.id}/concepts/generate`, { concepts: ids });
+      toast.success(`${result.queued.length} concept${result.queued.length === 1 ? '' : 's'} queued for writing.`);
+      await show(open.id);
+    } catch (e) {
+      toast.error(explain(e));
+    }
+  }
 
   function close() { setOpen(null); setEditing(null); setProblems([]); setNotes(''); }
 
@@ -235,7 +268,7 @@ export function CourseBuilder() {
   }
 
   if (error) return <ErrorNote message={error} retry={load} />;
-  const review = open?.status === 'review' && !busyJob(open.jobs[0]);
+  const review = open?.status === 'review' && !open.jobs.some(busyJob);
   return (
     <div className="grid gap-6">
       {items?.length ? (
@@ -245,7 +278,7 @@ export function CourseBuilder() {
             <CardDescription>Open one to follow the agents, read the outline, edit it, send it back, or publish it.</CardDescription>
           </CardHeader>
           <Table>
-            <TableHeader><TableRow><TableHead className="pl-4">Course</TableHead><TableHead>Status</TableHead><TableHead>Agents</TableHead><TableHead className="text-right">Concepts</TableHead><TableHead className="pr-4 text-right">Spent</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead className="pl-4">Course</TableHead><TableHead>Status</TableHead><TableHead>Agents</TableHead><TableHead className="text-right">Live / concepts</TableHead><TableHead className="pr-4 text-right">Spent</TableHead></TableRow></TableHeader>
             <TableBody>
               {items.map(c => (
                 <TableRow key={c.id}>
@@ -254,8 +287,8 @@ export function CourseBuilder() {
                     <span className="block font-mono text-xs text-muted-foreground">{c.id}</span>
                   </TableCell>
                   <TableCell><Badge variant="outline">{STATUS_LABEL[c.status]}</Badge></TableCell>
-                  <TableCell className="text-sm">{c.job ? <>{busyJob(c.job) ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : null}{c.job.state}</> : '—'}</TableCell>
-                  <TableCell className="text-right tabular-nums">{c.concepts ?? '—'}</TableCell>
+                  <TableCell className="text-sm">{c.job ? <>{busyJob(c.job) ? <Loader2 className="mr-1 inline size-3.5 animate-spin" /> : null}{c.job.kind} {c.job.state}</> : '—'}</TableCell>
+                  <TableCell className="text-right tabular-nums">{c.concepts === null ? '—' : `${c.live} / ${c.concepts}`}</TableCell>
                   <TableCell className="pr-4 text-right tabular-nums">{usd(c.spent_usd)} / {usd(c.budget_usd)}</TableCell>
                 </TableRow>
               ))}
@@ -277,7 +310,7 @@ export function CourseBuilder() {
                   <span>{usd(open.spent_usd)} of {usd(open.brief.budget_usd)} spent</span>
                 </SheetDescription>
               </SheetHeader>
-              <div className="grid flex-1 content-start gap-6 overflow-y-auto p-4">
+              <div className="grid flex-1 content-start gap-6 overflow-x-hidden overflow-y-auto p-4">
                 <Section title="Brief">
                   <dl className="grid gap-1 text-sm">
                     <div><dt className="inline font-medium">For: </dt><dd className="inline">{open.brief.audience}</dd></div>
@@ -285,7 +318,10 @@ export function CourseBuilder() {
                     {open.brief.background ? <div><dt className="inline font-medium">Background: </dt><dd className="inline">{open.brief.background}</dd></div> : null}
                   </dl>
                 </Section>
-                {open.jobs[0] ? <Section title="Latest agent run"><JobLog job={open.jobs[0]} /></Section> : null}
+                {(() => {
+                  const run = open.jobs.find(j => j.kind === 'outline');
+                  return run ? <Section title="Latest outline run"><JobLog job={run} /></Section> : null;
+                })()}
                 {open.course ? (
                   <Section title="Outline">
                     {editing !== null ? (
@@ -300,7 +336,14 @@ export function CourseBuilder() {
                     ) : (
                       <>
                         {review ? <Button size="sm" variant="outline" className="justify-self-start" onClick={() => setEditing(JSON.stringify(open.course, null, 2))}>Edit as JSON</Button> : null}
-                        <Outline course={open.course} />
+                        {open.status === 'published' ? (
+                          <Button size="sm" className="justify-self-start" onClick={() => generate(
+                            open.course!.modules.flatMap(m => m.concepts)
+                              .filter(id => open.course!.concepts.find(c => c.id === id)?.status === 'planned' && !busyJob(open.packages[id]))
+                              .slice(0, 3),
+                          )}><Sparkles /> Write the next 3 planned concepts</Button>
+                        ) : null}
+                        <Outline course={open.course} courseId={open.id} packages={open.packages} onGenerate={open.status === 'published' ? generate : undefined} />
                       </>
                     )}
                   </Section>

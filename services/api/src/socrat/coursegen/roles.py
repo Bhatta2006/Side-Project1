@@ -17,7 +17,7 @@ from socrat.assistant.gateway import Provider, Turn, make_provider
 from socrat.config import Settings
 from socrat.models import now
 
-ROLES = {"architect", "critic"}
+ROLES = {"architect", "critic", "author", "quiz", "atoms", "facts", "reviewer"}
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {
     "provider": ("ai_provider",),
@@ -52,11 +52,17 @@ class Reply:
     data: dict | None  # parsed JSON object, or None when the reply was not one
     problem: str  # why parsing failed, for the next round
     cost_usd: float
+    model: str = ""
 
 
 def parse_json(text: str) -> tuple[dict | None, str]:
-    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.DOTALL)
-    raw = fenced.group(1) if fenced else text[text.find("{") : text.rfind("}") + 1]
+    # Lessons contain ``` fences inside JSON strings, so only an outer fence is stripped.
+    raw = text.strip()
+    outer = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", raw, re.DOTALL)
+    if outer:
+        raw = outer.group(1)
+    elif not raw.startswith("{"):
+        raw = raw[raw.find("{") : raw.rfind("}") + 1]
     try:
         value = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -99,4 +105,4 @@ async def ask(
                     stamp=now(),
                 )
     data, problem = parse_json(text)
-    return Reply(data, problem, cost)
+    return Reply(data, problem, cost, budget.model_name(tuned, provider))

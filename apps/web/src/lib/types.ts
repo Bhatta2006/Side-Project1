@@ -415,6 +415,8 @@ export interface ConceptView {
   summary: string;
   module: string;
   lesson: string;
+  ai_generated: boolean;
+  attribution: string;
   key_points: string[];
   pitfalls: string[];
   resources: Resource[];

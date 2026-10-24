@@ -8,12 +8,12 @@ from sqlalchemy.orm import Session
 from socrat.admin.routes import require_admin
 from socrat.catalog import generated
 from socrat.catalog.registry import CatalogError, default_catalog
-from socrat.catalog.schema import Course
+from socrat.catalog.schema import Course, Slug
 from socrat.coursegen import jobs
 from socrat.coursegen.outline import Brief
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine
-from socrat.models import GeneratedCourse, GenerationJob
+from socrat.models import GeneratedConcept, GeneratedCourse, GenerationJob
 
 router = APIRouter(prefix="/api/v1/admin/courses")
 
@@ -24,6 +24,10 @@ class Notes(BaseModel):
 
 class OutlineEdit(BaseModel):
     course: dict
+
+
+class Generate(BaseModel):
+    concepts: list[Slug] = Field(min_length=1, max_length=20)
 
 
 def job_view(job: GenerationJob) -> dict:
@@ -44,6 +48,11 @@ def list_courses(request: Request):
     with Session(engine(request)) as db:
         require_admin(request, db)
         rows = {r.id: r for r in db.scalars(select(GeneratedCourse))}
+        live: dict[str, int] = {}
+        for concept in db.scalars(select(GeneratedConcept)):
+            live[concept.course_id] = live.get(concept.course_id, 0) + (
+                concept.payload.get("status") == "live"
+            )
         latest: dict[str, GenerationJob] = {}
         for job in db.scalars(select(GenerationJob).order_by(GenerationJob.created_at)):
             latest[job.course_id] = job
@@ -59,6 +68,7 @@ def list_courses(request: Request):
                     concepts=None
                     if row is None
                     else sum(len(m["concepts"]) for m in row.payload["modules"]),
+                    live=live.get(course_id, 0),
                     job=job_view(job) if job else None,
                     spent_usd=round(jobs.spent(db, course_id), 4),
                     budget_usd=brief["budget_usd"],
@@ -108,7 +118,12 @@ def course_detail(course_id: str, request: Request):
         if row is None and not history:
             raise HTTPException(404, "not_found")
         stored = generated.course(db, course_id) if row else None
+        packages: dict[str, dict] = {}
+        for job in reversed(history):  # oldest first, so the newest per concept wins
+            if job.kind == "package":
+                packages[job.target] = job_view(job)
         return dict(
+            packages=packages,
             id=course_id,
             status=row.status if row else "drafting",
             brief=(row.brief if row else None) or history[0].input["brief"],
@@ -170,3 +185,44 @@ def publish(course_id: str, request: Request):
             raise HTTPException(422, "outline_invalid") from exc
         record_event(db, user.id, "coursegen.published", course_id)
         return {"published": True}
+
+
+@router.post("/{course_id}/concepts/generate")
+def generate_packages(course_id: str, body: Generate, request: Request):
+    """Queue lesson, quiz and atoms for planned concepts of a published course."""
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        row = _course_row(db, course_id)
+        if row.status != "published":
+            raise HTTPException(409, "publish_outline_first")
+        stored = generated.course(db, course_id)
+        status = {c.id: c.status for c in stored.concepts}
+        if any(status.get(cid) != "planned" for cid in body.concepts):
+            raise HTTPException(422, "concept_not_planned")
+        queued = []
+        for cid in dict.fromkeys(body.concepts):
+            if jobs.active(db, course_id, cid) is None:
+                job = jobs.enqueue(db, "package", course_id, {}, user.id, target=cid)
+                queued.append(job_view(job))
+        record_event(db, user.id, "coursegen.packages_requested", course_id)
+        return {"queued": queued}
+
+
+@router.get("/{course_id}/concepts/{concept_id}")
+def package_detail(course_id: str, concept_id: str, request: Request):
+    """One concept as stored, with every package run and its last draft (for audit)."""
+    with Session(engine(request)) as db:
+        require_admin(request, db)
+        row = db.get(GeneratedConcept, (course_id, concept_id))
+        if row is None:
+            raise HTTPException(404, "not_found")
+        runs = db.scalars(
+            select(GenerationJob)
+            .where(GenerationJob.course_id == course_id, GenerationJob.target == concept_id)
+            .order_by(GenerationJob.created_at.desc())
+        )
+        return dict(
+            concept=row.payload,
+            atoms=row.atoms,
+            jobs=[{**job_view(j), "output": j.output} for j in runs],
+        )

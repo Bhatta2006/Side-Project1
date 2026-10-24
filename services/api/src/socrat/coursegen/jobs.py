@@ -3,9 +3,13 @@
 An ``outline`` job runs the Course Architect, checks its outline against the schema and the
 live catalog, asks the Curriculum Critic, and revises until the critic passes it or the
 rounds run out. The best valid outline is stored for the owner's review, never published.
+
+A ``package`` job writes one planned concept's lesson, quiz and atoms (see ``package``) and
+releases it only when every gate, the fact check and the reviewer pass.
 """
 
 import asyncio
+import json
 import logging
 
 from sqlalchemy import Engine, func, or_, select, update
@@ -15,6 +19,7 @@ from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.catalog import generated
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.config import Settings
+from socrat.coursegen import package as pkg
 from socrat.coursegen import roles
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -25,7 +30,7 @@ from socrat.coursegen.outline import (
     from_course,
     to_course,
 )
-from socrat.models import GenerationJob, now
+from socrat.models import GeneratedCourse, GenerationJob, now
 
 log = logging.getLogger(__name__)
 
@@ -45,17 +50,23 @@ def spent(db: Session, course_id: str) -> float:
     )
 
 
-def active(db: Session, course_id: str) -> GenerationJob | None:
-    return db.scalar(
-        select(GenerationJob).where(
-            GenerationJob.course_id == course_id,
-            GenerationJob.state.in_(["queued", "running"]),
-        )
+def active(db: Session, course_id: str, target: str | None = None) -> GenerationJob | None:
+    """A queued or running job for the course (``target`` narrows it to one concept)."""
+    query = select(GenerationJob).where(
+        GenerationJob.course_id == course_id,
+        GenerationJob.state.in_(["queued", "running"]),
     )
+    if target is not None:
+        query = query.where(GenerationJob.target == target)
+    return db.scalars(query).first()
 
 
-def enqueue(db: Session, kind: str, course_id: str, data: dict, user_id: str) -> GenerationJob:
-    job = GenerationJob(kind=kind, course_id=course_id, input=data, log=[], created_by=user_id)
+def enqueue(
+    db: Session, kind: str, course_id: str, data: dict, user_id: str | None, target: str = ""
+) -> GenerationJob:
+    job = GenerationJob(
+        kind=kind, course_id=course_id, target=target, input=data, log=[], created_by=user_id
+    )
     db.add(job)
     db.flush()
     return job
@@ -194,16 +205,152 @@ async def run_outline(
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
 
 
-async def run_once(engine: Engine, settings: Settings, base: Catalog, make=make_provider) -> bool:
+def _over_budget(engine: Engine, course_id: str, budget_usd: float) -> bool:
+    with Session(engine) as db:
+        return spent(db, course_id) >= budget_usd
+
+
+async def run_package(
+    engine: Engine, settings: Settings, base: Catalog, job_id: str, make=make_provider, http=None
+) -> None:
+    with Session(engine) as db:
+        job = db.get(GenerationJob, job_id)
+        course_id, concept_id = job.course_id, job.target
+        brief = db.get(GeneratedCourse, course_id).brief
+        course = generated.course(db, course_id)
+    concept = course.concept(concept_id)
+    if concept.status != "planned":
+        raise ValueError(f"{course_id}:{concept_id} is not planned")
+    ctx = pkg.context(base, course, brief, concept)
+    reference = pkg.gold(base)
+    version = 1
+    lesson = quiz = atoms = None
+    notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
+    redo = {"lesson", "quiz", "atoms"}
+    models: dict[str, str] = {}
+
+    async def ask(role, system, prompt, tokens):
+        reply = await roles.ask(engine, settings, role, system, prompt, tokens, make)
+        models[role] = reply.model
+        return reply
+
+    for attempt in range(1, ROUNDS + 1):
+        if _over_budget(engine, course_id, brief["budget_usd"]):
+            _note(engine, job_id, {"role": "system", "event": "budget_reached"})
+            break
+        if "lesson" in redo:
+            prompt = pkg.lesson_prompt(ctx, reference, lesson, notes["lesson"])
+            reply = await ask("author", pkg.LESSON, prompt, 16000)
+            if reply.data is None:
+                notes["lesson"] = [reply.problem]
+                entry = {"role": "author", "round": attempt, "issues": notes["lesson"]}
+                _note(engine, job_id, entry, reply.cost_usd)
+                continue
+            lesson = reply.data
+            problems = pkg.check_lesson(concept, course, lesson)
+            problems += [
+                f"This resource link is unreachable or not public https; replace it: {url}"
+                for url in await pkg.broken_links(lesson, http)
+            ]
+            entry = {
+                "role": "author",
+                "round": attempt,
+                "characters": len(str(lesson.get("lesson", ""))),
+                "issues": problems,
+            }
+            _note(engine, job_id, entry, reply.cost_usd, output={"lesson": lesson})
+            if problems:
+                notes["lesson"] = problems
+                redo |= {"lesson"}
+                continue
+            notes["lesson"] = []
+        pending = {}
+        if "quiz" in redo or quiz is None:
+            example = pkg.quiz_example(reference)
+            prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
+            pending["quiz"] = ask("quiz", pkg.QUIZ, prompt, 6000)
+        if "atoms" in redo or atoms is None:
+            prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], "")
+            pending["atoms"] = ask("atoms", pkg.ATOMS, prompt, 8000)
+        replies = dict(zip(pending, await asyncio.gather(*pending.values()), strict=True))
+        for name, reply in replies.items():
+            if reply.data is None:
+                notes[name] = [reply.problem]
+            elif name == "quiz":
+                quiz = reply.data
+            else:
+                atoms = reply.data
+        cost = sum(r.cost_usd for r in replies.values())
+        if any(r.data is None for r in replies.values()):
+            redo = {n for n, r in replies.items() if r.data is None}
+            issues = notes["quiz"] + notes["atoms"]
+            entry = {"role": "system", "round": attempt, "event": "unparsable", "issues": issues}
+            _note(engine, job_id, entry, cost)
+            continue
+        attribution = (
+            f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
+            "before release. Not reviewed by a person."
+        )
+        live, problems = pkg.build_concept(concept, lesson, quiz, version, attribution)
+        pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version)
+        output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}
+        if live is None or pack is None:
+            notes = {k: problems.get(k, []) for k in notes}
+            redo = {k for k, v in notes.items() if v}
+            issues = [f"{k}: {x}" for k, v in notes.items() for x in v]
+            entry = {"role": "system", "round": attempt, "event": "gates_failed", "issues": issues}
+            _note(engine, job_id, entry, cost, output=output)
+            continue
+        shown = {k: lesson.get(k) for k in ("lesson", "key_points", "pitfalls")}
+        bundle = json.dumps({**shown, "quiz": quiz["quiz"], "atoms": atoms["atoms"]}, indent=1)
+        review_prompt = pkg.lesson_prompt(ctx, reference, None, [])
+        facts, review = await asyncio.gather(
+            ask("facts", pkg.FACTS, f"{ctx}\n\nPackage:\n{bundle}", 8000),
+            ask("reviewer", pkg.REVIEW, f"{review_prompt}\n\nPackage to review:\n{bundle}", 6000),
+        )
+        passed, notes, scores = pkg.verdict(facts.data, review.data)
+        summary = str((review.data or {}).get("summary", review.problem))[:1000]
+        entry = {
+            "role": "reviewer",
+            "round": attempt,
+            "verdict": "pass" if passed else "revise",
+            "scores": scores,
+            "summary": summary,
+            "issues": [f"{k}: {x}" for k, v in notes.items() for x in v][:30],
+        }
+        spend = cost + facts.cost_usd + review.cost_usd
+        _note(engine, job_id, entry, spend, output={**output, "scores": scores})
+        if passed:
+            pack = pkg.release_pack(pack, models["reviewer"], summary)
+            with Session(engine) as db, db.begin():
+                generated.release_concept(db, base, course_id, live, pack)
+            _note(engine, job_id, {"role": "system", "event": "released"}, state="done")
+            return
+        redo = {k for k, v in notes.items() if v} or {"lesson"}
+    _note(
+        engine,
+        job_id,
+        {"role": "system", "event": "not_released"},
+        state="failed",
+        error="The package did not pass every gate; the concept stays planned. See the log.",
+    )
+
+
+async def run_once(
+    engine: Engine, settings: Settings, base: Catalog, make=make_provider, http=None
+) -> bool:
     job_id = claim(engine)
     if job_id is None:
         return False
     try:
         with Session(engine) as db:
             kind = db.get(GenerationJob, job_id).kind
-        if kind != "outline":
+        if kind == "package":
+            await run_package(engine, settings, base, job_id, make, http)
+        elif kind == "outline":
+            await run_outline(engine, settings, base, job_id, make)
+        else:
             raise ValueError(f"unknown job kind {kind}")
-        await run_outline(engine, settings, base, job_id, make)
     except ProviderError as exc:
         _note(
             engine,

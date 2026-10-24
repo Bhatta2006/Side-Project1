@@ -105,6 +105,8 @@ const MESSAGES: Record<string, string> = {
   unknown_reuse_concept: 'One of the concepts to build on does not exist. Use full ids like zero:loops.',
   outline_published: 'This course is already published; its outline can no longer change here.',
   outline_invalid: 'The outline no longer fits the catalog. Edit it, then publish again.',
+  publish_outline_first: 'Publish the outline before writing lessons.',
+  concept_not_planned: 'Only planned concepts can be written; this one is already live or unknown.',
   topic_not_completed: 'Complete the required topic lessons before opening this question.',
   independent_work_in_progress: 'Finish your independent assessment or timed work before opening learning help.',
   playground_generation_unavailable: 'Your lesson could not be generated right now. Your request is still here; try again.',

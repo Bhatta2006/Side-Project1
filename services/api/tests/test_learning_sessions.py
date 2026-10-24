@@ -132,7 +132,7 @@ def test_starter_content_has_explicit_versions_rights_and_language_adapters():
 def test_atom_publication_rejects_unreviewed_or_invalid_content():
     raw = next(iter(default_catalog().atom_packs.values())).model_dump()
     raw["review"] = None
-    with pytest.raises(ValidationError, match="human review"):
+    with pytest.raises(ValidationError, match="review record"):
         AtomPack.model_validate(raw)
     raw["status"] = "draft"
     raw["atoms"][0]["body"] = "word " * 121

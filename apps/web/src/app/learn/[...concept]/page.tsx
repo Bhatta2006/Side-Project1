@@ -17,6 +17,7 @@ import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/pra
 import { Soc } from '@/components/socrat/illustration';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
 import { LockedState } from '@/components/socrat/states';
+import { openReportProblem } from '@/components/report-problem';
 import { FeelControls, SupportStep } from '@/components/socrat/support-step';
 import { SUPPORT_STEPS } from '@/lib/routes';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -276,6 +277,15 @@ export default function Lesson() {
             <SupportStep step={step} concept={qualified} language={concept.language} onAsk={() => setAskSoc(n => n + 1)} />
           ) : null}
 
+          {concept.ai_generated ? (
+            <p className="mb-6 flex items-start gap-2 rounded-[16px] border border-border-strong px-4 py-3 text-sm text-muted-foreground">
+              <TriangleAlert className="mt-0.5 size-4 flex-none" aria-hidden />
+              <span>
+                {concept.attribution || 'Written by Socrat AI and checked by AI models.'}{' '}
+                <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={openReportProblem}>Report a problem</button> if something looks wrong.
+              </span>
+            </p>
+          ) : null}
           <Markdown source={concept.lesson} language={concept.language} />
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
