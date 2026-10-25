@@ -240,7 +240,9 @@ class Settings(DatabaseSettings):
             "razorpay_key_secret", self.razorpay_key_secret, self.razorpay_key_secret_file
         )
         self.razorpay_webhook_secret = _secret_from_file(
-            "razorpay_webhook_secret", self.razorpay_webhook_secret, self.razorpay_webhook_secret_file
+            "razorpay_webhook_secret",
+            self.razorpay_webhook_secret,
+            self.razorpay_webhook_secret_file,
         )
         self.explainer_checker_secret = _secret_from_file(
             "explainer_checker_secret",

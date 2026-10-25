@@ -107,14 +107,14 @@ def status(request: Request):
         stamp = now()
         plan = entitlements.plan_of(db, user.id, stamp)
         sub = db.get(Subscription, user.id)
-        paid = plan != "free"
+        paid = sub is not None and plan != "free"
         return dict(
             enabled=entitlements.ENABLED,
             plan=plan,
             usage=entitlements.usage(db, user.id, stamp),
             free_concepts=None if paid else sorted(entitlements.free_concepts(catalog())),
-            renews_at=sub.current_end if paid else None,
-            cancel_at_period_end=bool(paid and sub.cancel_at_period_end),
+            renews_at=sub.current_end if sub and paid else None,
+            cancel_at_period_end=bool(sub and paid and sub.cancel_at_period_end),
             prices=PRICES,
         )
 
@@ -139,7 +139,7 @@ def checkout(body: Checkout, request: Request):
             notes=dict(user_id=user.id),
         )
         sub = db.get(Subscription, user.id)
-        if current != "free":
+        if sub is not None and current != "free":
             # Upgrade: keep the paid plan working until the new payment is verified.
             sub.pending = f"{body.plan}:{body.interval}:{body.currency}:{made['id']}"
         else:
@@ -180,7 +180,7 @@ def verify(body: Verify, request: Request):
         stamp = now()
         if upgrading:
             old = sub.razorpay_subscription_id
-            sub.plan, sub.interval, sub.currency, _ = sub.pending.split(":")
+            sub.plan, sub.interval, sub.currency, _ = (sub.pending or "").split(":")
             sub.razorpay_subscription_id, sub.pending = body.razorpay_subscription_id, None
             sub.current_end, sub.cancel_at_period_end = 0, False  # the new plan starts now
             try:  # stop billing the old plan; no proration, the new period starts today
