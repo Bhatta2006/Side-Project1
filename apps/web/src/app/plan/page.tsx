@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal } from '@/components/common';
 import { LockedState } from '@/components/socrat/states';
 import { NodeMap } from '@/components/socrat/node-map';
-import { usePlanLocks } from '@/lib/billing';
+import { usePlanLocks } from '@/lib/plan-locks';
 import { StatusLabel, StatusLegend, statusFromRoadmap } from '@/components/socrat/status';
 import { Badge } from '@/components/ui/badge';
 import { Soc } from '@/components/socrat/illustration';
@@ -234,7 +234,7 @@ export default function PlanPage() {
                                   <span className="font-semibold">{c.title}</span>
                                   {c.why ? <span className="block text-[13px] text-muted-foreground">{c.why}</span> : null}
                                 </span>
-                                <StatusLabel status={status} detail={byPlan ? 'Plus and Pro' : status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
+                                <StatusLabel status={status} detail={byPlan ? 'Founding Member' : status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
                                 <span className="flex flex-wrap gap-1.5">
                                   {here ? <Badge>Current</Badge> : null}
                                   {c.review_due ? <Badge>Review due</Badge> : null}

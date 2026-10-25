@@ -21,6 +21,7 @@ import {
   Route,
   Settings,
   Shapes,
+  ShieldCheck,
   SquareCode,
   Sparkles,
   Sun,
@@ -29,6 +30,7 @@ import {
 import { api } from '@/lib/api';
 import { NAV, navFor, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
+import { PLAN_NAME } from '@/lib/plans';
 import { useInstall } from '@/lib/pwa';
 import { useCommunityUrl } from '@/components/community-link';
 import type { BillingStatus, Today } from '@/lib/types';
@@ -107,6 +109,7 @@ function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link href="/settings"><Settings /> Settings</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link href="/pricing"><Sparkles /> Plans</Link></DropdownMenuItem>
+        {profile?.admin ? <DropdownMenuItem asChild><Link href="/admin"><ShieldCheck /> Admin</Link></DropdownMenuItem> : null}
         <DropdownMenuItem onSelect={() => openReportProblem()}><MessageSquareWarning /> Report a problem</DropdownMenuItem>
         {community ? (
           <DropdownMenuItem asChild><a href={community} target="_blank" rel="noopener noreferrer"><MessageCircle /> WhatsApp community</a></DropdownMenuItem>
@@ -187,8 +190,6 @@ function useAssessmentReady(learning: boolean) {
 
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 
-const PLAN_NAME = { free: 'Free', plus: 'Plus', pro: 'Pro' } as const;
-
 /** Current plan with the next step up: Free and Plus can upgrade, Pro manages. Hidden while billing is off. */
 function PlanCard({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
@@ -199,9 +200,10 @@ function PlanCard({ collapsed }: { collapsed: boolean }) {
   if (!status?.enabled) return null;
   const { plan } = status;
   const top = plan === 'pro';
-  const label = top ? 'Manage plan' : plan === 'free' ? 'Upgrade' : 'Upgrade to Pro';
+  const free = plan === 'free';
+  const label = top ? 'Manage plan' : free ? 'Become a Founding Member' : 'Upgrade to Pro';
   const href = top ? '/settings#plan-heading' : '/pricing';
-  const hint = status.cancel_at_period_end && status.renews_at ? `Ends ${new Date(status.renews_at * 1000).toLocaleDateString()}` : plan === 'free' ? 'First 2 modules, 5 Soc messages a week' : 'Every topic unlocked';
+  const hint = status.cancel_at_period_end && status.renews_at ? `Ends ${new Date(status.renews_at * 1000).toLocaleDateString()}` : free ? `Every topic, daily Soc, for ₹${status.prices.plus.month.INR / 100} a month` : 'Every topic unlocked · company questions on Pro';
   return (
     <div className="px-3 pb-2">
       <Tooltip>
@@ -212,11 +214,11 @@ function PlanCard({ collapsed }: { collapsed: boolean }) {
         </TooltipTrigger>
         <TooltipContent side="right">{PLAN_NAME[plan]} plan · {label}</TooltipContent>
       </Tooltip>
-      <section aria-label="Your plan" className={cn('hidden rounded-[18px] border border-border-strong bg-card p-3', !collapsed && 'lg:block')}>
-        <p className="text-xs text-muted-foreground">Your plan</p>
-        <p className="font-display text-lg font-bold tracking-[-0.02em]">{PLAN_NAME[plan]}</p>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p>
-        <Button asChild size="sm" variant={top ? 'outline' : 'default'} className="mt-3 w-full"><Link href={href}>{label}</Link></Button>
+      <section aria-label="Your plan" className={cn('hidden rounded-[18px] border p-3', free ? 'border-[1.5px] border-proof-stroke bg-proof text-proof-foreground' : 'border-border-strong bg-card', !collapsed && 'lg:block')}>
+        <p className={cn('text-xs', free ? 'font-semibold text-proof-foreground/75' : 'text-muted-foreground')}>{free ? 'Founding member price' : 'Your plan'}</p>
+        <p className="font-display text-lg font-bold tracking-[-0.02em]">{free ? "You're on Free" : PLAN_NAME[plan]}</p>
+        <p className={cn('mt-0.5 text-[13px]', free ? 'text-proof-foreground/75' : 'text-muted-foreground')}>{hint}</p>
+        <Button asChild size="sm" variant={top ? 'outline' : free ? 'ink' : 'default'} className="mt-3 w-full"><Link href={href}>{label}</Link></Button>
       </section>
     </div>
   );
@@ -224,6 +226,7 @@ function PlanCard({ collapsed }: { collapsed: boolean }) {
 
 /** Desktop: 248 px sidebar, collapsible to a 72 px rail. Tablet: rail only. */
 function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null; collapsed: boolean; onToggle: () => void; ready: boolean }) {
+  const { profile } = useSession();
   const [mac, setMac] = useState(false);
   useEffect(() => setMac(/Mac|iPhone|iPad/.test(navigator.platform)), []);
   return (
@@ -285,6 +288,12 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
         <p className="font-hand pb-1 text-[18px] leading-tight text-pen">one question at a time</p>
       </div>
       <div className="grid gap-1 border-t px-3 py-3">
+        {profile?.admin ? (
+          <Link href="/admin" aria-label="Admin" className="flex h-11 items-center gap-3 rounded-full px-3 text-[15px] text-muted-foreground transition-colors hover:bg-card hover:text-foreground">
+            <ShieldCheck className="size-6 flex-none" strokeWidth={1.5} aria-hidden="true" />
+            <span className={cn('hidden', !collapsed && 'lg:inline')}>Admin</span>
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent('socrat:search'))}

@@ -208,8 +208,8 @@ export default function Lesson() {
   if (!concept && upgrade) {
     return (
       <div className="mx-auto max-w-3xl p-6">
-        <EmptyState title="This topic is on a paid plan" action={<Button asChild><Link href="/pricing">See plans</Link></Button>}>
-          The free plan covers the first two modules of each course. Plus and Pro unlock every topic.
+        <EmptyState title="This topic is for Founding Members" action={<Button asChild><Link href="/pricing">Become a Founding Member</Link></Button>}>
+          The free plan covers the first two modules of each course. Founding Members unlock every topic, checkpoint and practice problem for ₹99 a month.
         </EmptyState>
       </div>
     );

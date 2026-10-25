@@ -20,10 +20,14 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { SocFigure } from '@/components/socrat/soc';
+import { UpgradeBanner } from '@/components/paywall';
+import { PLAN_NAME } from '@/lib/plans';
 
 interface Overview {
   current: AssessmentStatus;
   history: { id: string; week: string; score: number | null; finished_at: number }[];
+  /** Weekly assessments need a paid plan. */
+  locked: boolean;
 }
 
 /** Remaining time: tabular, no colour change; text changes in the last five minutes. */
@@ -342,7 +346,11 @@ export default function Assessments() {
       ) : (
         <PageHeader eyebrow={NAME.evidence} title={NAME.assessment} description="A short check each week, built from what you studied. It is a proof event: no help while you take it." />
       )}
-      {inProgress ? <Attempt view={view} setView={setView} /> : view?.finished ? <Report view={view} /> : overview.current.state === 'available' ? (
+      {inProgress ? <Attempt view={view} setView={setView} /> : view?.finished ? <Report view={view} /> : overview.locked ? (
+        <UpgradeBanner title="Prove what you learned this week" reason="assessment" action="Unlock weekly assessments">
+          A timed check built only from the topics you studied, with a score you can track week over week. Included with {PLAN_NAME.plus} and Pro.
+        </UpgradeBanner>
+      ) : overview.current.state === 'available' ? (
         <Available status={overview.current} onStart={start} busy={busy} />
       ) : <Locked status={overview.current} />}
       {error ? <ErrorNote message={error} /> : null}

@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { SessionProvider } from '@/lib/session';
+import { PaywallHost } from '@/components/paywall-host';
 import { REDUCE_MOTION_SCRIPT } from '@/lib/motion';
 import Shell from '@/components/shell';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <TooltipProvider delayDuration={200}>
             <SessionProvider>
               <Shell>{children}</Shell>
+              <PaywallHost />
             </SessionProvider>
             <Toaster closeButton position="bottom-right" />
           </TooltipProvider>

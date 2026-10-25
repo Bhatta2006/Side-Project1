@@ -26,10 +26,11 @@ API = "https://api.razorpay.com/v1"
 
 # plan -> interval -> currency -> minor units (paise / cents). Yearly = 12 months less 20%.
 PRICES = {
-    "plus": {"month": {"INR": 49900, "USD": 500}, "year": {"INR": 479000, "USD": 4800}},
+    "plus": {"month": {"INR": 9900, "USD": 199}, "year": {"INR": 95000, "USD": 1900}},
     "pro": {"month": {"INR": 99900, "USD": 1000}, "year": {"INR": 959000, "USD": 9600}},
 }
-RANK = {"free": 0, "plus": 1, "pro": 2}
+RANK = entitlements.RANK
+NAMES = {"plus": "Founding Member", "pro": "Pro"}
 # interval -> (Razorpay period, billing cycles to authorise, seconds granted until the webhook)
 PERIOD = {"month": ("monthly", 120, 31 * 86400), "year": ("yearly", 10, 366 * 86400)}
 
@@ -86,7 +87,7 @@ def plan_id(db: Session, settings, body: Checkout) -> str:
         period=PERIOD[body.interval][0],
         interval=1,
         item=dict(
-            name=f"Socrat {body.plan.title()} ({PERIOD[body.interval][0]})",
+            name=f"Socrat {NAMES[body.plan]} ({PERIOD[body.interval][0]})",
             amount=amount,
             currency=body.currency,
         ),
@@ -154,7 +155,7 @@ def checkout(body: Checkout, request: Request):
             key_id=settings.razorpay_key_id,
             subscription_id=made["id"],
             name="Socrat",
-            description=f"{body.plan.title()} plan, billed every {body.interval}",
+            description=f"{NAMES[body.plan]} plan, billed every {body.interval}",
         )
 
 
