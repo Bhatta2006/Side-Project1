@@ -107,7 +107,7 @@ export function SocraticDemo({ className }: { className?: string }) {
               className={cn(
                 'code-line -mx-1.5 px-1.5',
                 line.tone === 'slow' && 'bg-[color-mix(in_srgb,var(--attention)_12%,transparent)] shadow-[inset_2px_0_0_var(--attention)]',
-                line.tone === 'fixed' && 'bg-[color-mix(in_srgb,var(--highlight)_38%,transparent)]',
+                line.tone === 'fixed' && 'bg-[color-mix(in_srgb,var(--highlight)_12%,transparent)]',
               )}
             >
               {highlight(line.text)}

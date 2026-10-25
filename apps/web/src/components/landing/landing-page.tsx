@@ -56,7 +56,7 @@ const FAQ = [
 
 const STEPS: { title: string; status: 'read' | 'practised' | 'mastered'; label: string; text: string; doodle: IllustrationName; note: string }[] = [
   { title: 'Read', status: 'read', label: 'Read', text: 'Short lessons with worked traces, edge cases and self-checks. Reading alone never counts as mastery.', doodle: 'welcome', note: 'the easy part' },
-  { title: 'Check', status: 'practised', label: 'Practised with help', text: 'Concept checks and judged problems. Soc helps with questions, and every hint is recorded.', doodle: 'bulb', note: 'the aha part' },
+  { title: 'Check', status: 'practised', label: 'Check passed', text: 'Reading opens the check. Pass it to show what you learned; a missed check brings support and a fresh try.', doodle: 'bulb', note: 'the aha part' },
   { title: 'Prove', status: 'mastered', label: 'Mastered', text: 'Checkpoints and spaced reviews confirm what holds up over time, as the questions get harder.', doodle: 'target', note: 'the part that counts' },
 ];
 
@@ -258,7 +258,7 @@ export function LandingPage() {
         {/* How it works: three pages of a notebook. */}
         <section id="how" data-soc="happy|Read, check, prove. In that order." aria-labelledby="how-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
           <SectionHead id="how-title" title={<>Read. Check. <span className="hl">Prove.</span></>} note="reading about it is not knowing it">
-            Every skill shows the difference between reading about it, practising it with help and showing it on your own.
+            Every skill separates reading a lesson, passing its check and proving it again after a gap.
           </SectionHead>
           <div className="mt-14 grid gap-5 md:grid-cols-3 lg:gap-8">
             {STEPS.map((step, i) => (
@@ -272,7 +272,7 @@ export function LandingPage() {
                   <p className="mt-3 text-[16px] text-muted-foreground">{step.text}</p>
                   <div className="mt-auto flex items-center gap-2.5 pt-6 text-[14px] font-medium">
                     <StatusIcon status={step.status} size={24} />
-                    {step.label}
+                    <span>{step.label}</span>
                     <span className="font-hand ml-auto text-[20px] font-normal text-pen opacity-0 transition-opacity duration-300 group-hover:opacity-100">{step.note}</span>
                   </div>
                 </div>

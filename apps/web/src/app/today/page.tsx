@@ -191,7 +191,7 @@ export default function TodayPage() {
               <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[58%]">
                 <p className="type-label text-(--card-muted)">{today.minutes.reached ? `Daily goal reached. Keep going or stop here.` : `Today, goal ${today.minutes.goal} min`}</p>
                 <div>
-                  <h2 id="next-heading" className="type-display-l max-w-[14ch] pr-8 [overflow-wrap:anywhere] sm:pr-0">{next.title}</h2>
+                  <h2 id="next-heading" className="type-display-m max-w-[20ch] break-words">{next.title}</h2>
                   <p className="mt-3 max-w-md text-base text-(--card-muted)">{next.reason || 'Next in your plan.'}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">

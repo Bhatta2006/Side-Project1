@@ -406,7 +406,7 @@ export default function Library() {
           {page ? <Pager total={page.total} offset={offset} setOffset={setOffset} /> : null}
 
           {/* Desktop: dense table. Phone: card rows. */}
-          <div className={cn('hidden overflow-hidden paper rounded-card transition-opacity md:block', loading && 'opacity-60')} aria-busy={loading}>
+          <div className={cn('hidden overflow-hidden paper rounded-card transition-opacity md:block', loading && 'opacity-90')} aria-busy={loading}>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -447,7 +447,7 @@ export default function Library() {
               </TableBody>
             </Table>
           </div>
-          <ul className={cn('grid gap-3 md:hidden', loading && 'opacity-60')} aria-busy={loading}>
+          <ul className={cn('grid gap-3 md:hidden', loading && 'opacity-90')} aria-busy={loading}>
             {page?.items.map(p => (
               <li key={p.id} data-problem-row="" className="grid gap-3 paper rounded-card p-4">
                 <div className="flex items-start justify-between gap-3">

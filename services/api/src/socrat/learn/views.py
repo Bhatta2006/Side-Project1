@@ -192,6 +192,11 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
     states = learn.states_for(db, enrollment)
     modules: list[dict] = []
     index: dict[str, dict] = {}
+    reason_codes: dict[str, list[str]] = {}
+    for activity in plan.queue:
+        codes = reason_codes.setdefault(activity.concept, [])
+        if activity.code != "path" and activity.code not in codes:
+            codes.append(activity.code)
     for item in plan.roadmap:
         module_key = item["module"]
         if module_key not in index:
@@ -213,6 +218,7 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
                 lesson_done=f"lesson:{item['concept']}" in completed,
                 quiz_done=f"quiz:{item['concept']}" in completed,
                 review_due=states.get(item["concept"], ConceptState()).due(now),
+                reason_codes=reason_codes.get(item["concept"], []),
                 roadmap_resources=resources.selected(
                     item["concept"], enrollment.language, "roadmap"
                 ),

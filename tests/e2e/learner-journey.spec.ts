@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { outputCheckAnswers } from './helpers/answer-keys';
+import type { AdaptiveSession, AdaptiveAnswer } from '../../apps/web/src/lib/types';
 
 test.describe.configure({ timeout: 90000 });
 
@@ -37,22 +39,30 @@ test('a beginner reads a lesson, passes its check and sees progress', async ({ p
   await expect(page.locator('pre[data-lang="python"]').first()).toBeVisible();
   await expect(page.locator('pre[data-lang="cpp"], pre[data-lang="java"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Mark lesson as read' }).click();
+  const started = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/adaptive-quiz/sessions'));
   await page.getByRole('link', { name: 'Take concept check' }).click();
 
   await expect(page).toHaveURL(/\/quiz\/zero\/programs-and-output$/);
-  for (;;) {
-    const results = page.getByRole('link', { name: 'Continue' });
-    if (await results.isVisible()) break;
-    await page.getByRole('radio').first().click();
+  let session = await (await started).json() as AdaptiveSession;
+  while (!session.finished) {
+    const question = session.current!;
+    const correct = outputCheckAnswers[question.item];
+    expect(correct, `Authored answer for ${question.item}`).toBeDefined();
+    await page.getByRole('radio', { name: correct, exact: true }).click();
+    const answered = page.waitForResponse(r => r.request().method() === 'POST' && /\/adaptive-quiz\/sessions\/[^/]+\/answer$/.test(r.url()));
     await page.getByRole('button', { name: 'Check answer' }).click();
-    await expect(page.getByRole('status').filter({ hasText: /Correct|Incorrect/ })).toBeVisible();
+    const result = await (await answered).json() as AdaptiveAnswer;
+    expect(result.outcome).toBe('correct');
+    session = result.session;
+    await expect(page.getByRole('status').filter({ hasText: 'Correct' })).toBeVisible();
     await page.getByRole('button', { name: /Next question|See results/ }).click();
   }
+  expect(session.passed).toBe(true);
   await expect(page.getByText(/of \d+ correct/)).toBeVisible();
   await page.getByRole('link', { name: 'Continue' }).click();
 
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByText('Programs and output check')).toBeVisible();
+  await expect(page.getByText('Programs and output check', { exact: true }).first()).toBeVisible();
   await page.goto('/progress');
   await expect(page.getByRole('heading', { name: 'Mastery by module' })).toBeVisible();
   await page.goto('/plan');

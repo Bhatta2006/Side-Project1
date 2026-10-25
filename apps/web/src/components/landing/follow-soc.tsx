@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { prefersReducedMotion } from '@/lib/motion';
+import { useReducedMotion } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { LiveSoc } from '@/components/socrat/live-soc';
 import type { SocMood } from '@/components/socrat/soc';
@@ -12,6 +12,7 @@ import type { SocMood } from '@/components/socrat/soc';
  */
 export function FollowSoc({ heroId }: { heroId: string }) {
   const [shown, setShown] = useState(false);
+  const { reduced: still } = useReducedMotion();
   const [state, setState] = useState<{ mood: SocMood; line: string | null }>({ mood: 'neutral', line: null });
 
   useEffect(() => {
@@ -39,7 +40,6 @@ export function FollowSoc({ heroId }: { heroId: string }) {
     return () => window.clearTimeout(timer);
   }, [state.line]);
 
-  const still = typeof window !== 'undefined' && prefersReducedMotion();
   return (
     <div
       aria-hidden={!shown}

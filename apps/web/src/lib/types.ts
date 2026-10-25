@@ -285,6 +285,7 @@ export interface Today {
 }
 
 export interface RoadmapItem {
+  reason_codes: ReasonCode[];
   lesson_done: boolean;
   quiz_done: boolean;
   review_due: boolean;

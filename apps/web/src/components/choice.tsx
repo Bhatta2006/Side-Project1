@@ -30,7 +30,7 @@ export function Choice({
       data-tone={tone}
       className={cn(
         'group/choice flex min-h-14 w-full items-start gap-3 rounded-[20px] border border-border-strong bg-card p-4 text-left transition-[transform,box-shadow,border-color] duration-200 ease-[var(--ease-soft)] outline-none',
-        'hover:-translate-y-0.5 hover:border-foreground/40',
+        'hover:border-foreground/40',
         // Selected: an inked card with an offset shadow, like a book pulled from Soc's stack.
         'data-[selected]:-translate-x-0.5 data-[selected]:-translate-y-0.5 data-[selected]:border-2 data-[selected]:border-[var(--soc-outline)] data-[selected]:shadow-[4px_4px_0_var(--soc-outline)] dark:data-[selected]:border-foreground dark:data-[selected]:shadow-[4px_4px_0_var(--foreground)] data-[selected]:[&_.choice-title]:font-semibold',
         'disabled:cursor-default disabled:hover:bg-card',

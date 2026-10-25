@@ -280,6 +280,8 @@ def advance(
             done = [s for s in steps_of(session) if s.outcome != "skipped"]
             score = sum(s.outcome == "correct" for s in done) / len(done) if done else 0.0
             user = db.get(User, enrollment.user_id)
+            if user is None:
+                raise HTTPException(401, "authentication_required")
             state["passed"] = quizzes.settle_check(
                 db, user, enrollment, f"quiz:{session.concepts[0]}", score, now
             )

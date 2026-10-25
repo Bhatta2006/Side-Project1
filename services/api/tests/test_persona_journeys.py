@@ -204,7 +204,9 @@ def test_a_missed_check_is_not_done_and_socrat_reteaches_before_a_fresh_check(cl
     assert support["code"] == "failed_check_refresh"
     assert plan_ids.index(f"explain:{concept}") < plan_ids.index(f"quiz:{concept}")
     rows = client.get("/api/v1/plan").json()["modules"][0]["concepts"]
-    assert next(r for r in rows if r["concept"] == concept)["status"] != "practiced"
+    row = next(r for r in rows if r["concept"] == concept)
+    assert row["status"] != "practiced"
+    assert "failed_check_refresh" in row["reason_codes"]
     # The retake leads with different questions where the bank allows it.
     client.post(f"/api/v1/activities/explain:{concept}/complete", headers=headers)
     clock["t"] += DAY

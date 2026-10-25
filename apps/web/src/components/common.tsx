@@ -42,7 +42,7 @@ type LoadingVariant = 'page' | 'inline' | 'article' | 'workspace' | 'list' | 'qu
 
 function HeaderSkeleton() {
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-12 w-96 max-w-full" />
       <Skeleton className="h-4 w-[28rem] max-w-full" />
