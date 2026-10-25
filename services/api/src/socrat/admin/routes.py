@@ -1,15 +1,18 @@
 """Admin API: only users on the SOCRAT_ADMIN_SUBJECTS allow-list may read it."""
 
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
-from sqlalchemy import select
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from socrat import billing, entitlements
 from socrat.admin import drafts
 from socrat.admin import service as admin
 from socrat.database import record_event
-from socrat.learn.routes import catalog, engine, user_of
-from socrat.models import ContentIssue, Evidence, LearningSession, User, now
+from socrat.learn.routes import catalog, engine, is_admin, user_of
+from socrat.models import ContentIssue, Evidence, LearningSession, Subscription, User, now
 
 router = APIRouter(prefix="/api/v1/admin")
 
@@ -17,8 +20,7 @@ router = APIRouter(prefix="/api/v1/admin")
 def require_admin(request: Request, db: Session, write: bool = False) -> User:
     """Allow-listed accounts only; `write` also enforces the CSRF token."""
     user = user_of(request, db, write=write)
-    allowed = request.app.state.settings.admin_subjects
-    if f"{user.issuer}|{user.subject}" not in allowed and user.subject not in allowed:
+    if not is_admin(request, user):
         raise HTTPException(403, "forbidden")
     return user
 
@@ -149,3 +151,103 @@ def draft_request_changes(draft_id: str, body: Decision, request: Request):
         result = drafts.request_changes(_roots(request), draft_id, _reviewer(user), body.notes)
         record_event(db, user.id, "content.draft_changes_requested", draft_id)
     return result
+
+
+# ---------------------------------------------------------------- learners and plans
+
+
+class PlanGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    plan: Literal["free", "plus", "pro"]
+    days: int = Field(default=30, ge=1, le=3660)
+
+
+def plan_row(user: User, sub: Subscription | None, stamp: int) -> dict:
+    live = sub is not None and sub.plan in entitlements.PLANS and sub.current_end > stamp
+    return dict(
+        id=user.id,
+        name=user.display_name,
+        subject=user.subject,
+        joined_at=user.created_at,
+        plan=sub.plan if live else "free",
+        status=sub.status if sub else None,
+        interval=sub.interval if live else None,
+        ends_at=sub.current_end if live else None,
+        cancelling=bool(live and sub.cancel_at_period_end),
+        comped=bool(sub and sub.razorpay_subscription_id.startswith("comp_")),
+    )
+
+
+@router.get("/users")
+def users(request: Request, q: str = "", limit: int = 50):
+    stamp = now()
+    with Session(engine(request)) as db:
+        require_admin(request, db)
+        query = (
+            select(User, Subscription)
+            .outerjoin(Subscription, Subscription.user_id == User.id)
+            .order_by(User.created_at.desc())
+            .limit(max(1, min(limit, 200)))
+        )
+        needle = q.strip()[:80]
+        if needle:
+            like = f"%{needle}%"
+            query = query.where(
+                or_(User.display_name.ilike(like), User.subject.ilike(like), User.id == needle)
+            )
+        rows = [plan_row(u, s, stamp) for u, s in db.execute(query)]
+        live = list(
+            db.scalars(
+                select(Subscription).where(
+                    Subscription.current_end > stamp, Subscription.status == "active"
+                )
+            )
+        )
+        paying = [s for s in live if not s.razorpay_subscription_id.startswith("comp_")]
+        # Monthly recurring revenue in INR paise; yearly plans count as a twelfth.
+        mrr = sum(
+            billing.PRICES[s.plan][s.interval]["INR"] // (12 if s.interval == "year" else 1)
+            for s in paying
+            if s.plan in billing.PRICES and s.currency == "INR"
+        )
+        return dict(
+            items=rows,
+            totals=dict(
+                users=db.scalar(select(func.count()).select_from(User)) or 0,
+                plus=sum(s.plan == "plus" for s in paying),
+                pro=sum(s.plan == "pro" for s in paying),
+                comped=len(live) - len(paying),
+                mrr_inr=mrr,
+            ),
+        )
+
+
+@router.post("/users/{user_id}/plan")
+def set_plan(user_id: str, body: PlanGrant, request: Request):
+    """Grant a free (comped) plan for some days, or end a plan now. Razorpay billing for a
+    paying learner must still be cancelled in the Razorpay dashboard."""
+    stamp = now()
+    with Session(engine(request)) as db, db.begin():
+        admin_user = require_admin(request, db, write=True)
+        target = db.get(User, user_id)
+        if target is None:
+            raise HTTPException(404, "not_found")
+        sub = db.get(Subscription, user_id)
+        if body.plan == "free":
+            if sub is not None:
+                sub.current_end, sub.status, sub.updated_at = stamp, "revoked", stamp
+        else:
+            if sub is None:
+                sub = Subscription(
+                    user_id=user_id,
+                    razorpay_subscription_id=f"comp_{user_id}",
+                    interval="month",
+                    currency="INR",
+                )
+                db.add(sub)
+            sub.plan, sub.status, sub.pending = body.plan, "active", None
+            sub.current_end = max(sub.current_end or 0, stamp) + body.days * 86400
+            sub.cancel_at_period_end, sub.updated_at = False, stamp
+        record_event(db, admin_user.id, "admin.plan_set", f"{user_id}:{body.plan}:{body.days}")
+        db.flush()
+        return plan_row(target, sub, stamp)

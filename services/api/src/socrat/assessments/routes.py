@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.assessments import service as assessments
 from socrat.learn.routes import active, catalog, engine, user_of
 from socrat.models import WeeklyAssessment, now
@@ -39,6 +40,7 @@ def overview(request: Request):
         return {
             "current": assessments.status(db, cat, user, enrollment, stamp),
             "history": assessments.history(db, enrollment),
+            "locked": not entitlements.has(db, user.id, "assessment", stamp),
         }
 
 
@@ -47,6 +49,7 @@ def start(body: StartInput, request: Request):
     cat = catalog()
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
+        entitlements.require(db, user.id, "assessment")
         enrollment = active(db, user)
         stamp = now()
         attempt = assessments.start(db, cat, user, enrollment, stamp, body.timed)

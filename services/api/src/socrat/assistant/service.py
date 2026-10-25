@@ -434,9 +434,14 @@ def prepare(
 
         if sessions.instruction_blocked(db, enrollment, now):
             paused = "This is your independent challenge. Try your own approach and submit an attempt; we can review it together afterwards."
-        if scope.startswith("concept:") and scope.removeprefix("concept:") in learn.locked_concepts(
-            db, catalog, enrollment, now
-        ):
+        gate = (
+            learn.locked_concepts(db, catalog, enrollment, now).get(scope.removeprefix("concept:"))
+            if scope.startswith("concept:")
+            else None
+        )
+        if gate == entitlements.PLAN_GATE:
+            paused = "This topic is part of the Founding Member plan. Upgrade to unlock it, then we can work through it together."
+        elif gate is not None:
             paused = "This concept follows a locked prerequisite. Complete the checkpoint first, then we can work through it together."
     return TurnPlan(thread.id, scope, allowed, problem, turns, fallback, reveal_blocked, paused)
 

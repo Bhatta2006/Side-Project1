@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.catalog import practice
 from socrat.catalog.registry import Catalog
 from socrat.learn import achievements, resources
@@ -65,6 +66,8 @@ def lock_info(
     gate = learn.locked_concepts(db, catalog, enrollment, now_seconds()).get(concept)
     if gate is None:
         return None
+    if gate == entitlements.PLAN_GATE:
+        return dict(gate=gate, module="")
     module_key = gate.removeprefix("checkpoint:")
     course_id, module_id = module_key.split(":", 1)
     title = next(m.title for m in catalog.course(course_id).modules if m.id == module_id)

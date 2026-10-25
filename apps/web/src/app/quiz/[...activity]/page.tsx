@@ -18,6 +18,7 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { codeSpans } from '@/components/markdown';
+import { UpgradeBanner } from '@/components/paywall';
 import { SocFigure } from '@/components/socrat/soc';
 
 function Options({ q, choice, onChoose, graded }: { q: QuizQuestion; choice: number | null; onChoose(i: number): void; graded: boolean }) {
@@ -149,6 +150,7 @@ export default function Quiz() {
   const [fixed, setFixed] = useState(false);
   const adaptive = (kind === 'quiz' || kind === 'review') && features?.adaptive_quiz === true && !fixed;
   const [locked, setLocked] = useState(false);
+  const [upgrade, setUpgrade] = useState(false);
   const fallBack = useCallback(() => setFixed(true), []);
   const lock = useCallback(() => setLocked(true), []);
   const [session, setSession] = useState<QuizSession | null>(null);
@@ -168,6 +170,7 @@ export default function Quiz() {
       })
       .catch(e => {
         if (e instanceof ApiError && e.code === 'concept_locked') setLocked(true);
+        else if (e instanceof ApiError && e.code === 'upgrade_required') setUpgrade(true);
         else setError(explain(e));
       });
   }, [activityId]);
@@ -194,6 +197,15 @@ export default function Quiz() {
   const showResults = Boolean(session?.completed && (session.feedback === 'at_end' || index === total));
   const percent = Math.round((session?.score ?? 0) * 100);
 
+  if (upgrade) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <UpgradeBanner title="This check is for Founding Members">
+          Free covers the first 2 modules. Unlock every topic, checkpoint and practice problem to keep going.
+        </UpgradeBanner>
+      </div>
+    );
+  }
   if (locked) {
     return (
       <div className="mx-auto max-w-3xl p-6">

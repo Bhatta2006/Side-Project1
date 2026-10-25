@@ -282,14 +282,27 @@ def gate_cooldowns(db: Session, enrollment: Enrollment) -> dict[str, int]:
 def locked_concepts(
     db: Session, catalog: Catalog, enrollment: Enrollment, now: int
 ) -> dict[str, str]:
-    """Concept -> the gate that must be passed first. Empty when nothing is locked."""
-    return gates.locked_concepts(
+    """Concept -> the gate that must be passed first. Empty when nothing is locked.
+
+    Content outside the learner's plan is locked here too (gate `PLAN_GATE`), so every
+    picker that skips locked concepts (quizzes, sessions, practice, Soc) skips it as well.
+    """
+    locked = gates.locked_concepts(
         catalog,
         enrollment.course_id,
         states_for(db, enrollment),
         completed_for(db, enrollment),
         now,
     )
+    for concept in entitlements.plan_locked(db, catalog, enrollment.user_id, now):
+        locked[concept] = entitlements.PLAN_GATE
+    return locked
+
+
+def lock_error(gate: str) -> HTTPException:
+    if gate == entitlements.PLAN_GATE:
+        return HTTPException(402, "upgrade_required")
+    return HTTPException(423, "concept_locked")
 
 
 def require_unlocked(
@@ -297,9 +310,9 @@ def require_unlocked(
 ) -> None:
     if concept not in curriculum(catalog, enrollment):
         raise HTTPException(404, "not_found")
-    if concept in locked_concepts(db, catalog, enrollment, now):
-        raise HTTPException(423, "concept_locked")
-    entitlements.require_concept(db, catalog, enrollment.user_id, concept, now)
+    gate = locked_concepts(db, catalog, enrollment, now).get(concept)
+    if gate is not None:
+        raise lock_error(gate)
 
 
 def curriculum(catalog: Catalog, enrollment: Enrollment | None) -> set[str]:

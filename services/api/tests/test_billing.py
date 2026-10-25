@@ -154,3 +154,56 @@ def test_plus_upgrades_to_pro_without_losing_access_and_cancels_the_old_plan(pai
     )
     assert api.get("/api/v1/billing/status").json()["plan"] == "pro"
     assert "/subscriptions/sub_plus/cancel" in calls
+
+
+def test_free_learners_cannot_reach_paid_content_by_any_route(paid):
+    api, headers, _ = paid
+    catalog = default_catalog()
+    locked = next(f"zero:{c}" for m in catalog.course("zero").modules[2:] for c in m.concepts)
+    module = catalog.course("zero").modules[2].id
+    for method, path in [
+        ("get", f"/api/v1/concepts/{locked}"),
+        ("get", f"/api/v1/quiz/quiz:{locked}"),
+        ("get", f"/api/v1/quiz/review:{locked}"),
+        ("get", f"/api/v1/quiz/checkpoint:zero:{module}"),
+        ("post", f"/api/v1/activities/lesson:{locked}/start"),
+        ("post", "/api/v1/assessments/start"),
+    ]:
+        reply = getattr(api, method)(
+            path, headers=headers, **({"json": {}} if method == "post" else {})
+        )
+        assert reply.status_code == 402, (path, reply.status_code, reply.text)
+    with Session(api.app.state.engine) as db:
+        from socrat.learn import service as learn
+
+        enrollment = learn.active_enrollment(db, user_id(api))
+        assert learn.locked_concepts(db, catalog, enrollment, 0)[locked] == "plan"
+        assert not set(
+            learn.practice_topics(db, catalog, enrollment, 0)
+        ) - entitlements.free_concepts(catalog)
+
+
+def test_company_questions_are_pro_only(paid):
+    api, headers, _ = paid
+    assert api.get("/api/v1/companies", headers=headers).json()["locked"] is True
+    slug = next(
+        iter(__import__("socrat.catalog.practice", fromlist=["x"]).default_index().companies)
+    )
+    reply = api.get(f"/api/v1/companies/{slug}", headers=headers)
+    assert reply.status_code == 402 and reply.json()["error"]["code"] == "pro_required"
+    with Session(api.app.state.engine) as db, db.begin():
+        from socrat.models import Subscription
+
+        db.add(
+            Subscription(
+                user_id=user_id(api),
+                plan="plus",
+                interval="month",
+                currency="INR",
+                status="active",
+                razorpay_subscription_id="sub_x",
+                current_end=2**31 - 1,
+            )
+        )
+    assert api.get(f"/api/v1/companies/{slug}", headers=headers).status_code == 402
+    assert api.post("/api/v1/assessments/start", headers=headers, json={}).status_code != 402
