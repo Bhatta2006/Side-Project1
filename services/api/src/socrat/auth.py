@@ -1,6 +1,8 @@
 import hashlib
+import re
 import secrets
 import time
+import unicodedata
 
 from fastapi import HTTPException, Request
 from sqlalchemy import select
@@ -28,10 +30,38 @@ def require_csrf(request: Request, session: LoginSession):
         raise HTTPException(403, "csrf_rejected")
 
 
-def establish_session(request: Request, response, issuer: str, subject: str):
+def returning_dev_user(db: Session, subject: str, display_name: str) -> User | None:
+    """Recover a pre-hash dev identity only when its recorded name agrees.
+
+    Old slugs collided for punctuation and non-Latin names. Never claim an old
+    account just because its slug matches; the saved display name must match too.
+    """
+    identity = unicodedata.normalize("NFKC", display_name.strip())
+    slug = re.sub(r"[^a-z0-9]+", "-", display_name.lower()).strip("-")
+    prefix = (slug or "learner")[:53]
+    expected = f"{prefix}-{hashlib.sha256(identity.encode()).hexdigest()[:10]}"
+    if subject != expected:
+        return None
+    user = db.scalar(
+        select(User).where(
+            User.issuer == "local-development", User.subject == (slug[:64] or "learner")
+        )
+    )
+    if user and unicodedata.normalize("NFKC", user.display_name.strip()) == identity:
+        return user
+    return None
+
+
+def establish_session(
+    request: Request, response, issuer: str, subject: str, display_name: str = ""
+):
     settings = request.app.state.settings
     with Session(request.app.state.engine) as db, db.begin():
         user = db.scalar(select(User).where(User.issuer == issuer, User.subject == subject))
+        if user is None and issuer == "local-development" and display_name:
+            user = returning_dev_user(db, subject, display_name)
+            if user is not None:
+                user.subject = subject
         if user is None:
             user = User(issuer=issuer, subject=subject)
             db.add(user)

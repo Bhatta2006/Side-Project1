@@ -62,7 +62,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background = None
         if settings.codeforces_autosync:
             background = asyncio.create_task(autosync.run_forever(engine))
-        if settings.adaptive_quiz_enabled and settings.environment != "test":
+        if settings.adaptive_quiz_enabled and settings.prewarm_content:
+            await asyncio.to_thread(warm_quiz_bank)
+        elif settings.adaptive_quiz_enabled and settings.environment != "test":
             # Building the item bank runs every generator (~20 s); do it before the first check.
             threading.Thread(target=warm_quiz_bank, daemon=True).start()
         yield
@@ -228,7 +230,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if not settings.dev_login_enabled:
             raise HTTPException(404, "not_found")
         response = establish_session(
-            request, JSONResponse({"authenticated": True}), "local-development", body.subject
+            request,
+            JSONResponse({"authenticated": True}),
+            "local-development",
+            body.subject,
+            body.display_name or "",
         )
         if body.display_name:
             with Session(engine) as db, db.begin():

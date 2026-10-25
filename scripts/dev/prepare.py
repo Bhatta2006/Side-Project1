@@ -55,6 +55,7 @@ values = dict(
     SOCRAT_TUTOR_MODEL_ENABLED="false",
     SOCRAT_TUTOR_ADVISOR_SHADOW_ENABLED="false",
     SOCRAT_DEV_LOGIN_ENABLED="true",
+    SOCRAT_PREWARM_CONTENT="true",
 )
 for feature in (
     "ONBOARDING",

@@ -80,6 +80,8 @@ class Settings(DatabaseSettings):
     session_secret_file: str = ""
     session_ttl_seconds: int = 30 * 86400
     dev_login_enabled: bool = False
+    # Local browser runs wait for the catalog and quiz bank before accepting requests.
+    prewarm_content: bool = False
     oidc_issuer: str = ""
     oidc_client_id: str = ""
     oidc_client_secret: SecretStr = SecretStr("")

@@ -27,7 +27,7 @@ export default defineConfig({
     {
       // A fresh database every run: a leftover file from another branch can sit at a schema
       // revision this branch does not know, and then the server cannot start.
-      command: `${executable('python')} -c "import pathlib; [pathlib.Path('socrat.e2e.db' + s).unlink(missing_ok=True) for s in ('', '-wal', '-shm')]" && ${executable('alembic')} upgrade head && ${executable('python')} scripts/content/build.py && ${executable('uvicorn')} socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000`,
+      command: `${executable('python')} -c "import pathlib; [pathlib.Path('socrat.e2e.db' + s).unlink(missing_ok=True) for s in ('', '-wal', '-shm')]" && ${executable('alembic')} upgrade head && ${executable('python')} scripts/content/build.py && ${executable('uvicorn')} socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000 --loop socrat.dev_loop:loop_factory`,
       url: 'http://127.0.0.1:8000/api/health/ready',
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
@@ -36,6 +36,7 @@ export default defineConfig({
         SOCRAT_DATABASE_URL: 'sqlite:///socrat.e2e.db',
         SOCRAT_DEV_LOGIN_ENABLED: 'true',
         SOCRAT_AI_PROVIDER: 'offline',
+        SOCRAT_PREWARM_CONTENT: 'true',
         SOCRAT_PUBLIC_ORIGIN: 'http://localhost:3000',
       },
     },
