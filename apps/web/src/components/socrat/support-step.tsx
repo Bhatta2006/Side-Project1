@@ -65,7 +65,7 @@ export function SupportStep({
   return (
     <section className="mb-8 rounded-card border-2 border-primary/40 p-5" aria-labelledby="support-step-heading">
       <p className="type-label text-muted-foreground">Added for you</p>
-      <h2 id="support-step-heading" className="mt-1 font-display text-xl font-bold tracking-[-0.03em]">
+      <h2 id="support-step-heading" className="mt-1 font-display text-xl font-semibold tracking-[-0.03em]">
         {KIND_LABEL[step as ActivityKind] ?? 'Support step'}
       </h2>
       <p className="mt-2 text-[15px] text-muted-foreground">{INTRO[step]}</p>
@@ -109,7 +109,7 @@ export function FeelControls({ concept, onChanged }: { concept: string; onChange
 
   return (
     <section aria-labelledby="feel-heading" className="mt-8 max-w-[68ch]">
-      <h2 id="feel-heading" className="mb-1 font-display text-lg font-bold tracking-[-0.02em]">How does this feel?</h2>
+      <h2 id="feel-heading" className="mb-1 font-display text-lg font-semibold tracking-[-0.02em]">How does this feel?</h2>
       <p className="mb-3 text-[14px] text-muted-foreground">Your plan adjusts to your answer.</p>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" disabled={!!busy} onClick={() => send('too_easy')}>Too easy</Button>

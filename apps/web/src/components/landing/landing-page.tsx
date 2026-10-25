@@ -4,33 +4,44 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { Menu, Plus, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { destination, useSession } from '@/lib/session';
 import type { Course } from '@/lib/types';
-import { Illustration, Soc } from '@/components/socrat/illustration';
-import { StatusIcon, StatusLabel } from '@/components/socrat/status';
+import { Illustration, Soc, type IllustrationName } from '@/components/socrat/illustration';
+import { LiveSoc } from '@/components/socrat/live-soc';
+import type { SocMood } from '@/components/socrat/soc';
+import { StatusIcon } from '@/components/socrat/status';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { InView } from '@/components/motion';
-import { DrawLine, ScrubText } from '@/components/motion-scroll';
 import { Reveal } from '@/components/common';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { WhySocrat } from '@/components/landing/why-socrat';
 import { CommunityButton, CommunityCard } from '@/components/community-link';
 import { InstallAppButton } from '@/components/install-app';
 import { SocraticDemo } from '@/components/landing/socratic-demo';
+import { FollowSoc } from '@/components/landing/follow-soc';
+import { cn } from '@/lib/utils';
 
 // The demo pulls in the editor and runner; load it after the page is interactive.
 const TryTutor = dynamic(() => import('@/components/landing/try-tutor').then(m => m.TryTutor), {
   ssr: false,
-  loading: () => <div id="try" className="mx-auto min-h-[720px] max-w-[1440px] scroll-mt-20" aria-hidden="true" />,
+  loading: () => <div id="try" className="mx-auto min-h-[720px] max-w-[1320px] scroll-mt-20" aria-hidden="true" />,
 });
 
+/** The hero's opening question. Each answer changes how Soc reacts and where the button goes. */
+const GOALS: { id: string; label: string; mood: SocMood; say: string; cta: string; href: string }[] = [
+  { id: 'zero', label: 'Learn to code from zero', mood: 'happy', say: 'Lovely. So what is a variable, really?', cta: 'Start from zero', href: '/login' },
+  { id: 'interview', label: 'Crack DSA interviews', mood: 'curious', say: 'Why does a hash map make it fast?', cta: 'Prep for interviews', href: '/login' },
+  { id: 'competitive', label: 'Win coding contests', mood: 'proud', say: 'Can you prove it runs in time?', cta: 'Train for contests', href: '/login' },
+  { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then try one problem below. No sign-up.', cta: 'Try a problem', href: '#try' },
+];
+
 const PATHS = [
-  { id: 'zero', name: 'Programming from Zero', title: 'Start from the beginning', description: 'Write your first programs in Python, C++ or Java and understand what each line does.', tone: 'border bg-card text-card-foreground', pill: 'solid' as const },
-  { id: 'interview', name: 'DSA for Interviews', title: 'Data structures and algorithms for interviews', description: 'Learn the patterns behind the questions and explain your choices and trade-offs.', tone: 'bg-forest text-forest-foreground', pill: 'ink' as const, dark: true },
-  { id: 'competitive', name: 'Competitive Programming', title: 'Competitive programming', description: 'Contest techniques, timed practice and upsolving, on a foundation of understanding.', tone: 'bg-cream text-cream-foreground', pill: 'solid' as const },
+  { id: 'zero', name: 'Programming from Zero', title: 'Start from the very first line', description: 'Write your first programs in Python, C++ or Java and understand what each line does.', color: 'bg-[var(--book-blue)] text-white [--illo-line:#fff]', doodle: 'bulb' as IllustrationName },
+  { id: 'interview', name: 'DSA for Interviews', title: 'The patterns behind interview questions', description: 'Learn why each technique works, then explain your choices and trade-offs out loud.', color: 'bg-[var(--book-red)] text-white [--illo-line:#fff]', doodle: 'plane' as IllustrationName },
+  { id: 'competitive', name: 'Competitive Programming', title: 'Contest speed, on real understanding', description: 'Contest techniques, timed practice and upsolving, built on the foundations.', color: 'bg-[var(--book-yellow)] text-[#15161E]', doodle: 'ladder' as IllustrationName },
 ];
 
 const FAQ = [
@@ -43,31 +54,29 @@ const FAQ = [
   ['Where do the practice problems come from?', 'Socrat has its own judged problems and a curated index of LeetCode, CSES and Codeforces problems. External statements and submissions stay on those platforms.'],
 ];
 
-/** A minimal frame around a real component rendering with sample data. */
-function Frame({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
+const STEPS: { title: string; status: 'read' | 'practised' | 'mastered'; label: string; text: string; doodle: IllustrationName; note: string }[] = [
+  { title: 'Read', status: 'read', label: 'Read', text: 'Short lessons with worked traces, edge cases and self-checks. Reading alone never counts as mastery.', doodle: 'welcome', note: 'the easy part' },
+  { title: 'Check', status: 'practised', label: 'Practised with help', text: 'Concept checks and judged problems. Soc helps with questions, and every hint is recorded.', doodle: 'bulb', note: 'the aha part' },
+  { title: 'Prove', status: 'mastered', label: 'Mastered', text: 'Checkpoints and spaced reviews confirm what holds up over time, as the questions get harder.', doodle: 'target', note: 'the part that counts' },
+];
+
+/** A hand-drawn arrow in red pen. */
+function PenArrow({ className, d = 'M6 6c10 18 14 34 10 56', head = 'M6 50l10 12 8-14' }: { className?: string; d?: string; head?: string }) {
   return (
-    <figure className={`flex flex-col overflow-hidden rounded-card border bg-background ${className ?? ''}`}>
-      <figcaption className="flex items-center justify-between gap-3 border-b px-5 py-3 text-[13px]">
-        <span className="font-semibold">{title}</span>
-        <span className="rounded-full border border-border-strong px-2.5 py-0.5 font-semibold text-muted-foreground">Sample data</span>
-      </figcaption>
-      <div className="flex-1 p-4 sm:p-5" aria-hidden="true">{children}</div>
-    </figure>
+    <svg viewBox="0 0 40 70" className={cn('text-pen', className)} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} /><path d={head} />
+    </svg>
   );
 }
 
 function TodaySample() {
   return (
-    <div className="relative overflow-hidden rounded-[24px] bg-forest p-5 text-forest-foreground" data-tone="hero">
-      <Illustration name="orbit" className="absolute -top-4 -right-6 size-28 opacity-90" />
-      <p className="type-label">Next for you</p>
-      <p className="mt-3 max-w-[11ch] font-display text-3xl leading-none font-bold tracking-[-0.035em]">Two-pointer problems</p>
-      <p className="mt-2 text-sm">Next in your plan.</p>
-      <div className="mt-4 flex gap-2">
-        <span className="rounded-full border border-current px-3 py-1 text-[13px] font-semibold">practice</span>
-        <span className="rounded-full border border-current px-3 py-1 text-[13px] font-semibold">45 min</span>
-      </div>
-      <span className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-ink pr-2 pl-5 text-[15px] font-semibold text-ink-foreground">Open problem <ArrowCircle /></span>
+    <div className="relative overflow-hidden rounded-[20px] bg-forest p-5 text-forest-foreground" data-tone="hero">
+      <p className="type-label opacity-80">Next for you · 45 min</p>
+      <p className="mt-2 max-w-[11ch] font-display text-3xl leading-none font-semibold tracking-[-0.045em]">Two-pointer problems</p>
+      <p className="mt-2 text-sm opacity-90">Practise, then one attempt on your own.</p>
+      <span className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-[15px] font-medium text-ink-foreground">Open problem <ArrowCircle /></span>
+      <Soc size={84} mood="happy" className="absolute right-3 bottom-3" />
     </div>
   );
 }
@@ -83,13 +92,13 @@ function ProblemSample() {
         {'        '}total = numbers[left] + numbers[right]{'\n'}
         {'        '}<span style={{ color: 'var(--syntax-comment)' }}># which pointer moves next?</span>
       </code></pre>
-      <div className="rounded-[20px] border bg-card p-4">
-        <p className="font-display text-lg font-bold tracking-[-0.02em]">3 of 4 tests passed</p>
+      <div className="rounded-[18px] border bg-card p-4">
+        <p className="font-display text-lg font-semibold tracking-[-0.03em]"><span className="hl">3 of 4</span> tests passed</p>
         <ul className="mt-2 grid gap-1.5 text-sm">
           {rows.map(([ok, name]) => (
             <li key={name} className="flex items-center gap-2">
-              {ok ? <span className="grid size-5 place-items-center rounded-full bg-cream text-cream-foreground"><svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : <StatusIcon status="needs_practice" size={20} />}
-              <span className={ok ? '' : 'font-semibold'}>{ok ? 'Passed' : name}</span>
+              {ok ? <span className="grid size-5 place-items-center rounded-full bg-[var(--highlight)] text-[#15161E]"><svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : <StatusIcon status="needs_practice" size={20} />}
+              <span className={ok ? '' : 'font-medium'}>{ok ? 'Passed' : name}</span>
               {ok ? <span className="text-muted-foreground">{name}</span> : null}
             </li>
           ))}
@@ -102,17 +111,17 @@ function ProblemSample() {
 function PlaygroundSample() {
   const values = [1, 3, 5, 7, 9];
   return (
-    <div className="overflow-hidden rounded-[20px] border bg-card">
+    <div className="overflow-hidden rounded-[18px] border bg-card">
       <div className="grid gap-4 p-5">
         <p className="text-sm text-muted-foreground">Find two numbers that add up to 8.</p>
         <div className="flex justify-center gap-2">
           {values.map((v, i) => (
-            <span key={v} className={`grid size-11 place-items-center rounded-[12px] font-display text-lg font-bold ${i === 0 || i === 3 ? 'bg-primary text-primary-foreground' : 'bg-raised'}`}>{v}</span>
+            <span key={v} className={cn('grid size-11 place-items-center rounded-[12px] border-2 font-display text-lg font-semibold', i === 0 || i === 3 ? 'border-[var(--soc-outline)] bg-primary text-primary-foreground shadow-[2px_2px_0_var(--soc-outline)]' : 'border-border bg-raised')}>{v}</span>
           ))}
         </div>
-        <p className="text-center text-sm font-semibold">1 + 7 = 8. Found.</p>
+        <p className="text-center text-sm font-medium">1 + 7 = 8. <span className="font-hand text-[19px] text-pen">found it!</span></p>
       </div>
-      <div className="flex items-center gap-2 border-t px-4 py-3 text-[13px] font-semibold">
+      <div className="flex items-center gap-2 border-t px-4 py-3 text-[13px] font-medium">
         <span className="rounded-full border border-border-strong px-3 py-1.5">Previous</span>
         <span className="rounded-full bg-primary px-3 py-1.5 text-primary-foreground">Play</span>
         <span className="rounded-full border border-border-strong px-3 py-1.5">Next</span>
@@ -122,11 +131,23 @@ function PlaygroundSample() {
   );
 }
 
-export function LandingPage({ fontClassName }: { fontClassName: string }) {
+/** A notebook section: heading with an optional handwritten aside. */
+function SectionHead({ id, title, children, note }: { id: string; title: React.ReactNode; children?: React.ReactNode; note?: string }) {
+  return (
+    <div className="max-w-3xl">
+      <h2 id={id} className="type-display-l">{title}</h2>
+      {children ? <p className="type-body-l mt-4 max-w-2xl text-muted-foreground">{children}</p> : null}
+      {note ? <p className="font-hand mt-3 -rotate-2 text-[24px] text-pen">{note}</p> : null}
+    </div>
+  );
+}
+
+export function LandingPage() {
   const { profile, loading } = useSession();
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [menu, setMenu] = useState(false);
+  const [goal, setGoal] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && profile) router.replace(destination(profile, 'active') ?? '/today');
@@ -138,185 +159,231 @@ export function LandingPage({ fontClassName }: { fontClassName: string }) {
     return () => { active = false; };
   }, []);
 
-  const links = [['#why', 'Why Socrat'], ['#try', 'Try it'], ['#paths', 'Paths'], ['#faq', 'FAQ']] as const;
+  const links = [['#how', 'How it works'], ['#tutor', 'The tutor'], ['#try', 'Try it'], ['#paths', 'Paths'], ['#faq', 'FAQ']] as const;
+  const chosen = GOALS.find(g => g.id === goal) ?? null;
+  const skills = courses.reduce((sum, c) => sum + c.concept_count, 0);
+  const problems = courses.reduce((sum, c) => sum + c.problem_count, 0);
 
   return (
-    <div className={`landing min-h-dvh bg-background text-foreground ${fontClassName}`}>
+    <div className="landing min-h-dvh text-foreground">
       <header
-        className="landing-nav fixed inset-x-0 top-3 z-50 px-3 sm:px-6"
+        className="landing-nav fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6 lg:px-8"
         onKeyDown={event => { if (event.key === 'Escape' && menu) { setMenu(false); event.currentTarget.querySelector<HTMLButtonElement>('[data-menu-button]')?.focus(); } }}
       >
-        <div className="glass-nav mx-auto flex h-14 max-w-[1100px] items-center justify-between gap-4 rounded-full border px-4 shadow-floating sm:px-5">
+        <div className="mx-auto flex h-14 max-w-[1500px] items-center justify-between gap-4">
           <Link href="/" aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
-          <nav aria-label="Site" className="hidden items-center gap-8 text-[15px] font-medium md:flex">
-            {links.map(([href, label]) => <a key={href} href={href} className="text-muted-foreground transition-colors hover:text-foreground">{label}</a>)}
+          <nav aria-label="Site" className="glass-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-1.5 shadow-floating lg:flex">
+            {links.map(([href, label]) => <a key={href} href={href} className="rounded-full px-4 py-2 text-[15px] text-muted-foreground transition-colors hover:bg-raised hover:text-foreground">{label}</a>)}
           </nav>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/login" className="hidden min-h-11 items-center text-[15px] font-semibold underline-offset-4 hover:underline sm:inline-flex">Log in</Link>
+          <div className="flex items-center gap-1 sm:gap-3">
             <ThemeToggle />
-            <Button asChild size="sm"><Link href="/login">Get started</Link></Button>
-            <Button data-menu-button variant="ghost" size="icon" className="md:hidden" aria-label={menu ? 'Close navigation' : 'Open navigation'} aria-expanded={menu} aria-controls={menu ? 'landing-mobile-nav' : undefined} onClick={() => setMenu(!menu)}>
+            <Link href="/login" className="hidden min-h-11 items-center px-2 text-[15px] font-medium underline-offset-4 hover:underline sm:inline-flex">Log in</Link>
+            <Button asChild className="max-sm:h-10 max-sm:px-4 max-sm:[&_[data-slot=arrow]]:hidden"><Link href="/login">Get started<ArrowCircle /></Link></Button>
+            <Button data-menu-button variant="ghost" size="icon" className="lg:hidden" aria-label={menu ? 'Close navigation' : 'Open navigation'} aria-expanded={menu} aria-controls={menu ? 'landing-mobile-nav' : undefined} onClick={() => setMenu(!menu)}>
               {menu ? <X /> : <Menu />}
             </Button>
           </div>
         </div>
         {menu ? (
-          <nav id="landing-mobile-nav" aria-label="Mobile site" className="mx-auto mt-2 grid max-w-[1100px] rounded-card border bg-background px-4 py-2 shadow-floating md:hidden">
-            {links.map(([href, label]) => <a key={href} href={href} onClick={() => setMenu(false)} className="flex min-h-12 items-center text-[17px] font-semibold">{label}</a>)}
-            <Link href="/login" className="flex min-h-12 items-center text-[17px] font-semibold">Log in</Link>
+          <nav id="landing-mobile-nav" aria-label="Mobile site" className="paper mx-auto mt-2 grid max-w-[1500px] rounded-card px-4 py-2 lg:hidden">
+            {links.map(([href, label]) => <a key={href} href={href} onClick={() => setMenu(false)} className="flex min-h-12 items-center text-[17px] font-medium">{label}</a>)}
+            <Link href="/login" className="flex min-h-12 items-center text-[17px] font-medium">Log in</Link>
             <InstallAppButton variant="ghost" className="-ml-3 justify-start text-[17px]" />
           </nav>
         ) : null}
       </header>
 
-      <div>
-        {/* Hero: the promise on the left, a replay of Soc teaching on the right. */}
-        <section aria-labelledby="hero-title" className="relative isolate overflow-hidden">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(var(--border-strong)_1px,transparent_1px)] [background-size:24px_24px] opacity-60 [mask-image:radial-gradient(ellipse_70%_60%_at_70%_40%,black,transparent)]" />
-          <div aria-hidden="true" className="pointer-events-none absolute top-24 right-[-10%] -z-10 size-[620px] rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--violet)_16%,transparent),transparent)]" />
-          <div className="mx-auto grid max-w-[1320px] items-center gap-14 px-4 pt-28 pb-20 sm:px-6 lg:grid-cols-[1.02fr_1fr] lg:gap-16 lg:px-10 lg:pt-40 lg:pb-28">
+      <main>
+        {/* Hero: Soc introduces himself, then asks the first question. The answer changes his reaction. */}
+        <section id="hero" aria-labelledby="hero-title" className="margin-rule relative min-h-[100svh] overflow-hidden [--margin-x:20px] sm:[--margin-x:40px] lg:[--margin-x:88px]">
+          <div className="mx-auto grid min-h-[100svh] max-w-[1500px] items-center gap-10 pt-28 pr-5 pb-24 pl-10 sm:pr-8 sm:pl-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:pr-10 lg:pl-[128px]">
             <div>
-              <p className="type-label inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-[11px] text-muted-foreground uppercase">
-                <span className="size-1.5 rounded-full bg-violet" aria-hidden="true" />
-                A Socratic tutor for code and DSA
+              <p className="max-w-[30ch] text-[22px] leading-[1.3] tracking-[-0.03em] text-muted-foreground sm:text-[28px] lg:text-[32px]">
+                Hey there, I&apos;m Soc,<br />the tutor who answers your questions with questions.
               </p>
               {/* The heading is the largest paint: no fade-in on it (LCP). */}
-              <h1 id="hero-title" className="mt-6 text-[56px] leading-[0.95] sm:text-[76px] lg:text-[92px]">
-                The tutor that <em className="font-medium text-[var(--brand-text)]">asks&nbsp;back.</em>
+              <h1 id="hero-title" className="mt-8 max-w-[19ch] text-[34px] leading-[1.12] font-medium tracking-[-0.045em] sm:text-[44px] lg:text-[52px]">
+                Quick question before we start: <span className="hl hl-draw">what do you want to be able to do?</span>
               </h1>
-              <Reveal index={1}><p className="type-body-l mt-7 max-w-[34rem] text-muted-foreground">Socrat teaches programming and DSA with a question, not the answer. Help rises one step at a time, and every skill is checked on your own.</p></Reveal>
-              <Reveal index={2}>
-                <div className="mt-9 flex flex-wrap items-center gap-5">
-                  <Button asChild size="lg"><a href="#try">Try a problem now<ArrowCircle /></a></Button>
-                  <Link href="/login" className="inline-flex min-h-11 items-center text-[17px] font-semibold underline decoration-border-strong decoration-2 underline-offset-[6px] hover:decoration-foreground">Get started free</Link>
+              <Reveal index={1}>
+                <div role="radiogroup" aria-label="Your goal" className="mt-9 flex max-w-[44rem] flex-wrap gap-2.5">
+                  {GOALS.map(g => {
+                    const on = goal === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => setGoal(on ? null : g.id)}
+                        className={cn(
+                          'min-h-11 rounded-full border px-5 text-[16px] tracking-[-0.01em] transition-[background-color,color,border-color,transform] duration-200 ease-[var(--ease-soft)] active:scale-[0.97]',
+                          on ? 'border-ink bg-ink text-ink-foreground' : 'border-border-strong bg-card hover:-translate-y-0.5 hover:border-foreground/40',
+                        )}
+                      >
+                        {g.label}
+                      </button>
+                    );
+                  })}
+                  <Button asChild size="lg" className="lg:h-11">
+                    <Link href={chosen?.href ?? '/login'}>{chosen?.cta ?? 'Get started'}<ArrowCircle /></Link>
+                  </Button>
                 </div>
-                <p className="mt-3 text-[13px] text-muted-foreground">No sign-up for the first problem. About three minutes.</p>
-              </Reveal>
-              <Reveal index={3}>
-                <dl className="mt-12 grid max-w-xl grid-cols-3 divide-x border-y">
-                  {([
-                    ['6', 'help levels, enforced on the server'],
-                    [String(courses.reduce((sum, c) => sum + c.concept_count, 0) || '100+'), 'skills, each with its own checks'],
-                    [String(courses.reduce((sum, c) => sum + c.problem_count, 0) || '100+'), 'judged problems, hidden tests'],
-                  ] as const).map(([value, label]) => (
-                    <div key={label} className="px-4 py-4 first:pl-0">
-                      <dt className="sr-only">{label}</dt>
-                      <dd className="font-display text-[32px] leading-none">{value}</dd>
-                      <dd className="mt-2 text-[13px] leading-snug text-muted-foreground">{label}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <p className="mt-4 text-[14px] text-muted-foreground">Free while in beta. The first problem needs no sign-up.</p>
               </Reveal>
             </div>
-            <SocraticDemo className="mx-auto w-full max-w-[560px] lg:mr-0" />
+            <div className="relative mx-auto w-full max-w-[300px] sm:max-w-[360px] lg:mr-0 lg:max-w-[420px]">
+              <LiveSoc mood={chosen?.mood ?? 'worried'} say={chosen?.say ?? null} />
+            </div>
+          </div>
+          <a href="#statement" className="absolute right-6 bottom-6 hidden items-end gap-2 sm:flex lg:right-12 lg:bottom-8">
+            <span className="font-hand -rotate-3 text-[26px] text-pen">scroll down, I&apos;ll follow you</span>
+            <PenArrow className="h-12 w-7" />
+          </a>
+        </section>
+
+        {/* The problem, stated plainly, beside a replay of Soc teaching. */}
+        <section id="statement" data-soc="thinking|Finding answers is easy. Knowing why?" aria-labelledby="statement-title" className="mx-auto grid max-w-[1500px] scroll-mt-20 items-center gap-14 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:py-32 lg:pr-10 lg:pl-[128px]">
+          <div>
+            <h2 id="statement-title" className="text-[44px] leading-[0.98] font-semibold tracking-[-0.055em] sm:text-[64px] lg:text-[84px]">
+              More tutorials won&apos;t fix that. <span className="hl">Proving what you can do</span> will.
+            </h2>
+            <p className="type-body-l mt-8 max-w-[36rem] text-muted-foreground">Finding information is easy now. The hard part is knowing what to learn, what to practise, and whether you actually learned it.</p>
+          </div>
+          <div id="tutor" className="scroll-mt-28">
+            <SocraticDemo className="mx-auto w-full max-w-[540px] lg:mr-0" />
           </div>
         </section>
 
-        {/* The main highlight: why not just a chatbot. */}
-        <WhySocrat
-          skills={courses.reduce((sum, c) => sum + c.concept_count, 0)}
-          problems={courses.reduce((sum, c) => sum + c.problem_count, 0)}
-        />
+        {/* How it works: three pages of a notebook. */}
+        <section id="how" data-soc="happy|Read, check, prove. In that order." aria-labelledby="how-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
+          <SectionHead id="how-title" title={<>Read. Check. <span className="hl">Prove.</span></>} note="reading about it is not knowing it">
+            Every skill shows the difference between reading about it, practising it with help and showing it on your own.
+          </SectionHead>
+          <div className="mt-14 grid gap-5 md:grid-cols-3 lg:gap-8">
+            {STEPS.map((step, i) => (
+              <InView key={step.title} index={i} className="doodle-host paper group relative flex flex-col rounded-card p-6 transition-transform duration-300 ease-[var(--ease-soft)] hover:-translate-y-1 lg:p-8">
+                <div className="contents">
+                  <div className="flex items-start justify-between">
+                    <span className="font-hand text-[44px] leading-none text-pen">{i + 1}.</span>
+                    <Illustration name={step.doodle} className="-mt-2 -mr-2 size-28" />
+                  </div>
+                  <h3 className="type-display-m mt-2">{step.title}</h3>
+                  <p className="mt-3 text-[16px] text-muted-foreground">{step.text}</p>
+                  <div className="mt-auto flex items-center gap-2.5 pt-6 text-[14px] font-medium">
+                    <StatusIcon status={step.status} size={24} />
+                    {step.label}
+                    <span className="font-hand ml-auto text-[20px] font-normal text-pen opacity-0 transition-opacity duration-300 group-hover:opacity-100">{step.note}</span>
+                  </div>
+                </div>
+              </InView>
+            ))}
+          </div>
+        </section>
+
+        {/* The main question learners ask: why not a chatbot. */}
+        <div data-soc="worried|A chatbot would just give you the answer…">
+          <WhySocrat skills={skills} problems={problems} />
+        </div>
 
         {/* First "aha" before sign-up. */}
-        <TryTutor />
-
-        {/* How it works: introduces the status system. */}
-        <section id="how" aria-labelledby="how-title" className="below-fold mx-auto max-w-[1440px] scroll-mt-20 px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
-          <h2 id="how-title" className="type-display-m max-w-2xl">Read. Check. Prove.</h2>
-          <p className="mt-3 max-w-2xl text-base text-muted-foreground">Every skill shows the difference between reading about it, practising it with help and showing it in a check.</p>
-          <ol className="mt-10 lg:mt-14">
-            {([
-              ['Read', 'read', 'Read', 'Lessons with worked traces, edge cases and self-checks. Reading alone never counts as mastery.'],
-              ['Check', 'practised', 'Practised with help', 'Concept checks and judged problems. The tutor helps, and help is recorded.'],
-              ['Prove', 'mastered', 'Mastered', 'Checkpoints and reviews confirm what holds up over time, as the questions get harder.'],
-            ] as const).map(([title, status, label, text], i) => (
-              <li key={title}>
-                <DrawLine />
-                <ScrubText className="scroll-row grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 py-7 md:grid-cols-[4rem_minmax(0,1.1fr)_minmax(0,1.3fr)_auto] lg:py-10">
-                  <span className="font-mono text-sm text-muted-foreground">0{i + 1}</span>
-                  <h3 className="type-display-l">{title}</h3>
-                  <p className="col-start-2 text-base text-muted-foreground md:col-start-auto">{text}</p>
-                  <div className="col-start-2 flex items-center gap-3 md:col-start-auto">
-                    <StatusIcon status={status} size={28} />
-                    <StatusLabel status={status} detail={label} muted className="text-[13px]" />
-                  </div>
-                </ScrubText>
-              </li>
-            ))}
-            <li><DrawLine /></li>
-          </ol>
-        </section>
+        <div data-soc="curious|Go on. Write some code. I will only ask questions.">
+          <TryTutor />
+        </div>
 
         {/* Product proof: real components with sample data. */}
-        <section aria-labelledby="inside-title" className="below-fold mx-auto max-w-[1440px] px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
-          <h2 id="inside-title" className="type-display-m max-w-2xl">Inside Socrat</h2>
-          <p className="mt-3 max-w-2xl text-base text-muted-foreground">One next step each day, a real editor with judged tests, and visuals you can explore.</p>
-          <div className="mt-8 grid gap-4 lg:grid-cols-3 lg:gap-6">
-            <InView index={0} className="flex"><Frame title="Today" className="w-full"><TodaySample /></Frame></InView>
-            <InView index={1} className="flex"><Frame title="Problem workspace" className="w-full"><ProblemSample /></Frame></InView>
-            <InView index={2} className="flex"><Frame title="Playground" className="w-full"><PlaygroundSample /></Frame></InView>
+        <section data-soc="proud|This is where you will work every day." aria-labelledby="inside-title" className="below-fold mx-auto max-w-[1500px] px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
+          <SectionHead id="inside-title" title="Inside Socrat">One next step each day, a real editor with judged tests, and visuals you can play with.</SectionHead>
+          <div className="mt-12 grid gap-5 lg:grid-cols-3 lg:gap-6">
+            {([['Today', <TodaySample key="t" />], ['Problem workspace', <ProblemSample key="p" />], ['Playground', <PlaygroundSample key="g" />]] as const).map(([title, sample], i) => (
+              <InView key={title} index={i} className="flex">
+                <figure className="paper flex w-full flex-col overflow-hidden rounded-card">
+                  <figcaption className="flex items-center justify-between gap-3 border-b px-5 py-3 text-[14px]">
+                    <span className="font-medium">{title}</span>
+                    <span className="font-hand text-[18px] text-pen">sample data</span>
+                  </figcaption>
+                  <div className="flex-1 p-4 sm:p-5" aria-hidden="true">{sample}</div>
+                </figure>
+              </InView>
+            ))}
           </div>
         </section>
 
-        {/* Learning paths */}
-        <section id="paths" aria-labelledby="paths-title" className="below-fold mx-auto max-w-[1440px] scroll-mt-20 px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
-          <h2 id="paths-title" className="type-display-m">Three ways in</h2>
-          <div className="mt-8 grid gap-3 md:grid-cols-3 md:gap-4 lg:gap-6">
+        {/* Learning paths: three books from Soc's stack. */}
+        <section id="paths" data-soc="happy|Pick a book. Any book." aria-labelledby="paths-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
+          <SectionHead id="paths-title" title="Three ways in" note="each one is a book from Soc's stack ↓" />
+          <div className="mt-12 grid gap-6 md:grid-cols-3 lg:gap-8">
             {PATHS.map((path, i) => {
               const course = courses.find(c => c.id === path.id || c.title === path.name);
               return (
-                <InView key={path.id} index={i} data-tone={'dark' in path ? 'hero' : undefined} className={`flex min-h-80 flex-col gap-4 rounded-card p-6 transition-transform duration-300 ease-[var(--ease-soft)] hover:-translate-y-1 lg:p-8 ${path.tone}`}>
-                  <p className="type-label text-[12px] uppercase opacity-75">{course?.title ?? path.name}</p>
-                  <h3 className="font-display text-[34px] leading-[1.02]">{path.title}</h3>
-                  <p className="text-base">{path.description}</p>
-                  {course ? <p className="path-count text-[13px] font-semibold">{course.concept_count} skills, {course.problem_count} judged problems</p> : null}
-                  <div className="mt-auto">
-                    <Button asChild variant={path.pill}><Link href="/login" aria-label={`Get started with ${path.name}`}>Get started<ArrowCircle /></Link></Button>
-                  </div>
+                <InView key={path.id} index={i} className="doodle-host group">
+                  <Link
+                    href="/login"
+                    aria-label={`Get started with ${path.name}`}
+                    className={cn('relative flex min-h-[22rem] flex-col gap-3 overflow-hidden rounded-[20px] border-2 border-[var(--soc-outline)] p-6 shadow-[6px_6px_0_var(--soc-outline)] transition-[transform,box-shadow] duration-300 ease-[var(--ease-soft)] group-hover:-translate-x-0.5 group-hover:-translate-y-1 group-hover:shadow-[9px_10px_0_var(--soc-outline)] lg:p-8', path.color)}
+                  >
+                    <span aria-hidden="true" className="absolute inset-y-0 left-5 w-px bg-current opacity-25" />
+                    <p className="type-label pl-4 opacity-85">{course?.title ?? path.name}</p>
+                    <h3 className="pl-4 font-display text-[30px] leading-[1.04] font-semibold tracking-[-0.045em]">{path.title}</h3>
+                    <p className="pl-4 text-[16px] opacity-90">{path.description}</p>
+                    {course ? <p className="path-count pl-4 text-[14px] font-medium">{course.concept_count} skills · {course.problem_count} judged problems</p> : null}
+                    <div className="mt-auto flex items-end justify-between pl-4">
+                      <span className="inline-flex h-11 items-center gap-2 rounded-full bg-card px-5 text-[15px] font-medium text-foreground">Get started<ArrowCircle /></span>
+                      <Illustration name={path.doodle} className="-mr-3 -mb-3 size-28" />
+                    </div>
+                  </Link>
                 </InView>
               );
             })}
           </div>
         </section>
 
-        {/* FAQ */}
-        <section id="faq" aria-labelledby="faq-title" className="below-fold mx-auto grid max-w-[1440px] scroll-mt-20 gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_1.4fr] lg:px-10 lg:py-24">
-          <h2 id="faq-title" className="type-display-m">Questions</h2>
-          <div className="grid gap-3">
+        {/* FAQ: questions in the margin, answers on the line. */}
+        <section id="faq" data-soc="curious|Ask me anything. I will ask back." aria-labelledby="faq-title" className="below-fold mx-auto grid max-w-[1500px] scroll-mt-20 gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_1.5fr] lg:py-28 lg:pr-10 lg:pl-[128px]">
+          <div>
+            <h2 id="faq-title" className="type-display-l">Questions?</h2>
+            <p className="font-hand mt-3 -rotate-2 text-[24px] text-pen">of course there are questions. it&apos;s Socrat.</p>
+            <Illustration name="empty" className="mt-8 hidden size-48 lg:block" />
+          </div>
+          <div className="grid">
             {FAQ.map(([question, answer]) => (
-              <details key={question} className="landing-question group rounded-[20px] border bg-card">
-                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-[17px] font-semibold [&::-webkit-details-marker]:hidden">
+              <details key={question} className="landing-question group border-b border-border-strong">
+                <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-4 text-[19px] font-medium tracking-[-0.02em] [&::-webkit-details-marker]:hidden">
                   {question}
-                  <ChevronDown className="size-5 flex-none transition-transform group-open:rotate-180" aria-hidden="true" />
+                  <Plus className="size-5 flex-none transition-transform duration-300 ease-[var(--ease-soft)] group-open:rotate-45" aria-hidden="true" />
                 </summary>
-                <p className="px-5 pb-5 text-[15px] text-muted-foreground">{answer}</p>
+                <p className="max-w-[60ch] pb-6 text-[16px] text-muted-foreground">{answer}</p>
               </details>
             ))}
           </div>
         </section>
 
         {/* Beta community */}
-        <div className="below-fold mx-auto max-w-[1440px] px-4 pb-8 sm:px-6 lg:px-10"><CommunityCard /></div>
+        <div className="below-fold mx-auto max-w-[1500px] px-5 pb-8 sm:px-8 lg:pr-10 lg:pl-[128px]"><CommunityCard /></div>
 
-        {/* Final call to action */}
-        <section aria-labelledby="cta-title" className="below-fold mx-auto max-w-[1440px] px-4 pb-16 sm:px-6 lg:px-10 lg:pb-24">
-          <InView data-tone="hero" className="flex flex-col items-start gap-6 rounded-card bg-forest p-8 text-forest-foreground lg:flex-row lg:items-end lg:justify-between lg:p-12">
-            <div className="flex items-center gap-5"><Soc size={72} className="hidden sm:block" /><ScrubText><h2 id="cta-title" className="type-display-l max-w-[22ch]">Start where you are.<br /><em className="font-medium opacity-70">Soc will ask the first question.</em></h2></ScrubText></div>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild variant="ink" size="lg"><Link href="/login">Get started<ArrowCircle /></Link></Button>
-              <InstallAppButton variant="ink" size="lg" />
+        {/* Final call to action: Soc, happy, on his books. */}
+        <section aria-labelledby="cta-title" className="below-fold mx-auto max-w-[1500px] px-5 pb-20 sm:px-8 lg:pr-10 lg:pb-28 lg:pl-[128px]">
+          <InView className="paper relative grid items-center gap-8 overflow-hidden rounded-[28px] p-8 sm:p-10 lg:grid-cols-[1fr_auto] lg:p-14">
+            <div>
+              <h2 id="cta-title" className="type-display-l max-w-[18ch]">Start where you are. <span className="hl">Soc will ask the first question.</span></h2>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild size="lg"><Link href="/login">Get started<ArrowCircle /></Link></Button>
+                <InstallAppButton variant="outline" size="lg" />
+              </div>
+            </div>
+            <div className="mx-auto w-[220px] lg:mr-6">
+              <LiveSoc mood="happy" bubbleSide="left" />
             </div>
           </InView>
         </section>
-      </div>
+      </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-6 lg:px-10">
-          <Wordmark size={24} />
+      <footer className="border-t border-border-strong">
+        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-6 px-5 py-10 sm:px-8 lg:pr-10 lg:pl-[128px]">
+          <Wordmark size={22} />
           <nav aria-label="Footer" className="flex flex-wrap gap-6 text-[15px] text-muted-foreground">
-            <a href="#why" className="hover:text-foreground">Why Socrat</a>
             <a href="#how" className="hover:text-foreground">How it works</a>
+            <a href="#tutor" className="hover:text-foreground">The tutor</a>
             <a href="#paths" className="hover:text-foreground">Paths</a>
             <a href="#faq" className="hover:text-foreground">FAQ</a>
             <Link href="/login" className="hover:text-foreground">Log in</Link>
@@ -328,6 +395,8 @@ export function LandingPage({ fontClassName }: { fontClassName: string }) {
           <p className="text-[13px] text-muted-foreground">© {new Date().getFullYear()} Socrat</p>
         </div>
       </footer>
+
+      <FollowSoc heroId="hero" />
     </div>
   );
 }

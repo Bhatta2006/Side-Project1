@@ -27,6 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { useInstall } from '@/lib/pwa';
 import { CommunityButton, useCommunityUrl } from '@/components/community-link';
 import { InstallAppButton } from '@/components/install-app';
+import { Soc } from '@/components/socrat/illustration';
 
 const MINUTES = [15, 20, 30, 45, 60, 90, 120];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -38,8 +39,8 @@ const THEMES = [
 
 function Section({ id, title, description, children, className }: { id: string; title: string; description?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section aria-labelledby={id} className={cn('rounded-card border bg-card p-5 lg:p-6', className)}>
-      <h2 id={id} className="font-display text-xl font-bold tracking-[-0.03em]">{title}</h2>
+    <section aria-labelledby={id} className={cn('paper rounded-card p-5 lg:p-6', className)}>
+      <h2 id={id} className="font-display text-xl font-semibold tracking-[-0.035em]"><span className="bg-[linear-gradient(transparent_62%,color-mix(in_srgb,var(--highlight)_70%,transparent)_62%)] px-0.5">{title}</span></h2>
       {description ? <p className="mt-1 text-[15px] text-muted-foreground">{description}</p> : null}
       <div className="mt-5">{children}</div>
     </section>
@@ -67,11 +68,11 @@ function ThemePreview({ id }: { id: 'light' | 'dark' | 'system' }) {
   const swatch = (bg: string, card: string, text: string) => (
     <span className="flex h-16 flex-1 flex-col gap-1.5 p-2" style={{ background: bg }}>
       <span className="h-2 w-10 rounded-full" style={{ background: text }} />
-      <span className="flex-1 rounded-md p-1.5" style={{ background: card }}><span className="block h-2 w-8 rounded-full bg-[#7034F4]" /></span>
+      <span className="flex-1 rounded-md p-1.5" style={{ background: card }}><span className="block h-2 w-8 rounded-full bg-[#2340E8]" /></span>
     </span>
   );
-  const light = swatch('#F6F4FA', '#FFFFFF', '#17151F');
-  const dark = swatch('#0F0E14', '#17161E', '#ECEAF3');
+  const light = swatch('#F6F5F0', '#FFFFFF', '#15161E');
+  const dark = swatch('#121318', '#1A1B21', '#ECEBE5');
   return <span className="flex w-full overflow-hidden rounded-[14px] border" aria-hidden="true">{id === 'light' ? light : id === 'dark' ? dark : <>{light}{dark}</>}</span>;
 }
 
@@ -211,7 +212,7 @@ export default function Settings() {
 
   return (
     <Page narrow>
-      <PageHeader title={NAME.settings} description="Changes to your schedule update your plan straight away." />
+      <PageHeader eyebrow="make it yours" title={NAME.settings} description="Changes to your schedule update your plan straight away." actions={<Soc size={88} mood="wink" className="hidden sm:block" />} />
       <div className="grid gap-4 lg:gap-6">
         <Appearance />
 

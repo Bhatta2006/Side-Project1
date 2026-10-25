@@ -36,7 +36,7 @@ export default async function Passport({ params }: { params: Promise<{ slug: str
       <PassportCard passport={passport} />
       <aside className="mt-10 flex flex-col items-start gap-4 rounded-card bg-raised p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-display text-xl font-bold tracking-[-0.03em]">Learn it. Then prove it.</p>
+          <p className="font-display text-xl font-semibold tracking-[-0.03em]">Learn it. Then prove it.</p>
           <p className="mt-1 text-[15px] text-muted-foreground">Socrat’s tutor asks before it tells, so every result here is the learner’s own.</p>
         </div>
         <Button asChild><Link href="/">Build your own passport<ArrowCircle /></Link></Button>

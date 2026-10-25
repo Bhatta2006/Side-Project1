@@ -96,8 +96,8 @@ export function SocraticDemo({ className }: { className?: string }) {
           <span className="size-2.5 rounded-full bg-border-strong" />
           <span className="size-2.5 rounded-full bg-border-strong" />
           <span className="size-2.5 rounded-full bg-border-strong" />
-          <span className="label-mono ml-2 text-[12px] text-muted-foreground">two_sum.py</span>
-          <span className="label-mono ml-auto rounded-full border px-2.5 py-0.5 text-[11px] text-muted-foreground uppercase">Sample session</span>
+          <span className="font-mono ml-2 text-[12px] text-muted-foreground">two_sum.py</span>
+          <span className="font-hand ml-auto text-[18px] text-pen">sample session</span>
         </div>
 
         <pre className="min-h-[164px] overflow-x-auto bg-[var(--code-bg)] px-4 py-3 font-mono text-[13px] leading-[22px] text-[var(--code-fg)] [font-variant-ligatures:none]">
@@ -107,7 +107,7 @@ export function SocraticDemo({ className }: { className?: string }) {
               className={cn(
                 'code-line -mx-1.5 px-1.5',
                 line.tone === 'slow' && 'bg-[color-mix(in_srgb,var(--attention)_12%,transparent)] shadow-[inset_2px_0_0_var(--attention)]',
-                line.tone === 'fixed' && 'bg-[color-mix(in_srgb,var(--proof)_10%,transparent)] shadow-[inset_2px_0_0_var(--proof)]',
+                line.tone === 'fixed' && 'bg-[color-mix(in_srgb,var(--highlight)_38%,transparent)]',
               )}
             >
               {highlight(line.text)}
@@ -123,7 +123,7 @@ export function SocraticDemo({ className }: { className?: string }) {
                 className={cn(
                   'max-w-[82%] px-3.5 py-2 text-[14px] leading-snug',
                   m.from === 'soc'
-                    ? 'soc-voice rounded-[16px_16px_16px_4px] bg-[var(--soc-tint)] text-[15px] text-[var(--soc-ink)]'
+                    ? 'rounded-[16px_16px_16px_4px] border border-[color-mix(in_srgb,var(--highlight)_60%,var(--border))] bg-cream text-[15px] text-cream-foreground'
                     : 'rounded-[16px_16px_4px_16px] bg-raised',
                 )}
               >
@@ -145,16 +145,16 @@ export function SocraticDemo({ className }: { className?: string }) {
               </span>
             ))}
           </span>
-          <span className="label-mono text-muted-foreground tabular-nums">
+          <span className="font-mono text-muted-foreground tabular-nums">
             {passed === 4 ? '4 / 4 passed · 1 hint used' : '2 / 4 · time limit on large input'}
           </span>
           <span className="ml-auto flex items-center gap-2">
             <span className="flex gap-[3px]">
               {[0, 1, 2, 3, 4, 5].map(i => (
-                <span key={i} className={cn('h-[5px] w-3.5 rounded-full', i < (step >= 2 ? 1 : 0) ? 'bg-violet' : 'bg-border-strong')} />
+                <span key={i} className={cn('h-[5px] w-3.5 rounded-full', i < (step >= 2 ? 1 : 0) ? 'bg-primary' : 'bg-border-strong')} />
               ))}
             </span>
-            <span className="label-mono text-muted-foreground">Help {step >= 2 ? 1 : 0}/6</span>
+            <span className="font-mono text-muted-foreground">Help {step >= 2 ? 1 : 0}/6</span>
           </span>
         </div>
       </div>
@@ -163,9 +163,9 @@ export function SocraticDemo({ className }: { className?: string }) {
         aria-hidden="true"
         data-step
         data-hidden={step < LAST}
-        className="label-mono absolute -bottom-9 right-6 rotate-[-4deg] rounded-[10px] border-2 border-proof bg-card px-3 py-1.5 text-[12px] font-semibold tracking-[0.12em] text-proof uppercase shadow-floating sm:-right-5"
+        className="font-hand absolute -bottom-10 right-6 rotate-[-5deg] rounded-[12px] border-2 border-pen bg-card px-3.5 py-1 text-[24px] text-pen shadow-[3px_3px_0_var(--pen)] sm:-right-5"
       >
-        Solved · Hash maps
+        solved it! hash maps ✓
       </span>
     </figure>
   );

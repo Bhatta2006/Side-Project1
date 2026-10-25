@@ -58,7 +58,7 @@ export default function CodeforcesLink() {
   return (
     <Card id="codeforces" className="scroll-mt-24" aria-labelledby="codeforces-heading">
       <CardHeader>
-        <CardTitle as="h2" id="codeforces-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Codeforces</CardTitle>
+        <CardTitle as="h2" id="codeforces-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Codeforces</CardTitle>
         <CardDescription>Link your public handle and Socrat reads your rating and accepted solutions to pitch problems at the right level. Public data only. No password.</CardDescription>
         {account ? <CardAction><Badge variant="outline" className="capitalize">{account.rank}</Badge></CardAction> : null}
       </CardHeader>

@@ -5,9 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --font-heading: var(--font-display);
   --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-hand: var(--font-delicious), "Segoe Print", "Bradley Hand", cursive;
   --font-mono: var(--font-jetbrains), ui-monospace, "Cascadia Code", Consolas, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -56,6 +57,9 @@
   --color-proof: var(--proof);
   --color-proof-foreground: var(--proof-foreground);
   --color-proof-stroke: var(--proof-stroke);
+  --color-pen: var(--pen);
+  --color-highlight: var(--highlight);
+  --color-margin-line: var(--margin-line);
   /* Retired meanings, kept as aliases so nothing renders unstyled: success is plain text, warning is attention. */
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -73,9 +77,9 @@
   --radius-2xl: 1.25rem;
   --radius-3xl: 1.75rem;
   --radius-4xl: 2rem;
-  --radius-card: 1.75rem;
-  --radius-inner: 1.25rem;
-  --radius-control: 1rem;
+  --radius-card: 1.5rem;
+  --radius-inner: 1rem;
+  --radius-control: 0.875rem;
   --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-shake: shake 0.32s var(--ease-soft);
   --animate-pop: pop 0.4s var(--ease-soft) both;
@@ -101,180 +105,199 @@
 }
 
 /*
- * "Learn it. Then prove it." Violet and ink on lilac paper and true black, lime for energy and proof, white and coral as supports. (--forest is the brand surface token: violet.)
+ * "Learn it. Then prove it." A notebook page: warm paper with faint rules and a red margin, ink type,
+ * one royal blue for action, highlighter yellow for proof, red pen for handwritten notes.
  * The :root and .dark blocks are also read by the playground compiler
  * (services/api/src/socrat/explainer/artifact.py) and injected into generated visuals, so they
  * keep the token names it expects and never contain the host-only proof colour.
  */
 :root {
-  --background: #F6F4FA;
-  --foreground: #17151F;
+  --background: #F6F5F0;
+  --foreground: #15161E;
   --card: #FFFFFF;
-  --card-foreground: #17151F;
+  --card-foreground: #15161E;
   --popover: #FFFFFF;
-  --popover-foreground: #17151F;
-  --raised: #EFECF6;
-  --primary: #7034F4;
+  --popover-foreground: #15161E;
+  --raised: #EEECE5;
+  --primary: #2340E8;
   --primary-foreground: #FFFFFF;
-  --secondary: #B9A6F5;
-  --secondary-foreground: #17151F;
-  --violet: #7034F4;
+  --secondary: #DDE3FF;
+  --secondary-foreground: #15161E;
+  --violet: #2340E8;
   --violet-foreground: #FFFFFF;
-  --muted: #EFECF6;
-  --muted-foreground: #55616B;
-  --accent: #EFECF6;
-  --accent-foreground: #17151F;
-  --cream: #E9E4F6;
-  --cream-foreground: #17151F;
-  --ink: #17151F;
-  --ink-foreground: #F6F4FA;
-  --forest: #7034F4;
+  --muted: #EEECE5;
+  --muted-foreground: #5D5C57;
+  --accent: #EEECE5;
+  --accent-foreground: #15161E;
+  --cream: #FBF4CB;
+  --cream-foreground: #15161E;
+  --ink: #15161E;
+  --ink-foreground: #F6F5F0;
+  --forest: #2340E8;
   --forest-foreground: #FFFFFF;
-  --attention: #C4453F;
+  --attention: #D3302A;
   --attention-foreground: #FFFFFF;
-  --destructive: #C4453F;
-  --success: #17151F;
+  --destructive: #D3302A;
+  --success: #15161E;
   --success-foreground: #FFFFFF;
-  --warning: #C4453F;
+  --warning: #D3302A;
   --warning-foreground: #FFFFFF;
-  --brand-text: #7034F4;
-  --border: #DDD9E8;
-  --border-strong: #C4BFD4;
-  --input: #C4BFD4;
-  --ring: #7034F4;
-  --chart-1: #7034F4;
-  --chart-2: #8A55E6;
-  --chart-3: #17151F;
-  --chart-4: #55616B;
-  --chart-5: #C4453F;
+  --brand-text: #2340E8;
+  --border: #E4E2DA;
+  --border-strong: #CFCCC2;
+  --input: #CFCCC2;
+  --ring: #2340E8;
+  --chart-1: #2340E8;
+  --chart-2: #7488FF;
+  --chart-3: #15161E;
+  --chart-4: #5D5C57;
+  --chart-5: #D3302A;
   --radius: 1rem;
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #17151F;
-  --sidebar-primary: #7034F4;
+  --sidebar: #F6F5F0;
+  --sidebar-foreground: #15161E;
+  --sidebar-primary: #2340E8;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #EFECF6;
-  --sidebar-accent-foreground: #17151F;
-  --sidebar-border: #DDD9E8;
-  --sidebar-ring: #7034F4;
+  --sidebar-accent: #EEECE5;
+  --sidebar-accent-foreground: #15161E;
+  --sidebar-border: #E4E2DA;
+  --sidebar-ring: #2340E8;
   --code-bg: #FFFFFF;
-  --code-fg: #17151F;
-  --syntax-keyword: #7034F4;
-  --syntax-function: #1F6F80;
-  --syntax-string: #2F7D57;
-  --syntax-number: #A8461F;
-  --syntax-comment: #6F6A85;
-  --syntax-gutter: #8A849C;
-  --heat-0: #EFECF6;
-  --heat-1: #D9CCF5;
-  --heat-2: #B9A6F5;
-  --heat-3: #8A55E6;
-  --heat-4: #7034F4;
-  --floating-shadow: 0 8px 24px rgb(23 21 31 / 0.10);
+  --code-fg: #15161E;
+  --syntax-keyword: #2340E8;
+  --syntax-function: #0E6F80;
+  --syntax-string: #2F7A4C;
+  --syntax-number: #B0441E;
+  --syntax-comment: #75736C;
+  --syntax-gutter: #98968E;
+  --heat-0: #EEECE5;
+  --heat-1: #CDD5FF;
+  --heat-2: #95A6FF;
+  --heat-3: #5A72F5;
+  --heat-4: #2340E8;
+  --floating-shadow: 0 1px 2px rgb(21 22 30 / 0.05), 0 14px 36px -14px rgb(21 22 30 / 0.20);
 }
 
 .dark {
-  --background: #0F0E14;
-  --foreground: #ECEAF3;
-  --card: #17161E;
-  --card-foreground: #ECEAF3;
-  --popover: #1E1C26;
-  --popover-foreground: #ECEAF3;
-  --raised: #201E29;
-  --primary: #7034F4;
+  --background: #121318;
+  --foreground: #ECEBE5;
+  --card: #1A1B21;
+  --card-foreground: #ECEBE5;
+  --popover: #202128;
+  --popover-foreground: #ECEBE5;
+  --raised: #23242B;
+  --primary: #4A63FF; /* white 4.6:1 */
   --primary-foreground: #FFFFFF;
-  --secondary: #B9A6F5;
-  --secondary-foreground: #17151F;
-  --violet: #7C45E8; /* white 5.4:1; muted text on it stays above 4.5:1 */
+  --secondary: #2A3360;
+  --secondary-foreground: #ECEBE5;
+  --violet: #4A63FF;
   --violet-foreground: #FFFFFF;
-  --muted: #201E29;
-  --muted-foreground: #A7A2B8;
-  --accent: #201E29;
-  --accent-foreground: #ECEAF3;
-  --cream: #F4F2FA;
-  --cream-foreground: #17151F;
-  --ink: #07060B;
-  --ink-foreground: #ECEAF3;
-  --forest: #7034F4;
+  --muted: #23242B;
+  --muted-foreground: #A4A39C;
+  --accent: #23242B;
+  --accent-foreground: #ECEBE5;
+  --cream: #F1E8B4;
+  --cream-foreground: #15161E;
+  --ink: #0B0C10;
+  --ink-foreground: #ECEBE5;
+  --forest: #3049F0;
   --forest-foreground: #FFFFFF;
-  --attention: #F08A86;
-  --attention-foreground: #0F1B17;
-  --destructive: #F08A86;
-  --success: #ECEAF3;
-  --success-foreground: #0F1B17;
-  --warning: #F08A86;
-  --warning-foreground: #0F1B17;
-  --brand-text: #B9A6F5;
-  --border: #2A2733;
-  --border-strong: #3A3649;
-  --input: #3A3649;
-  --ring: #B9A6F5;
-  --chart-1: #7034F4;
-  --chart-2: #B9A6F5;
-  --chart-3: #ECEAF3;
-  --chart-4: #A19BB4;
-  --chart-5: #F08A86;
+  --attention: #FF7D72;
+  --attention-foreground: #15161E;
+  --destructive: #FF7D72;
+  --success: #ECEBE5;
+  --success-foreground: #15161E;
+  --warning: #FF7D72;
+  --warning-foreground: #15161E;
+  --brand-text: #93A3FF;
+  --border: #2A2B33;
+  --border-strong: #3B3C46;
+  --input: #3B3C46;
+  --ring: #93A3FF;
+  --chart-1: #4A63FF;
+  --chart-2: #93A3FF;
+  --chart-3: #ECEBE5;
+  --chart-4: #A4A39C;
+  --chart-5: #FF7D72;
   --radius: 1rem;
-  --sidebar: #0E0D13;
-  --sidebar-foreground: #ECEAF3;
-  --sidebar-primary: #7034F4;
-  --sidebar-primary-foreground: #0F1B17;
-  --sidebar-accent: #201E29;
-  --sidebar-accent-foreground: #ECEAF3;
-  --sidebar-border: #2A2733;
-  --sidebar-ring: #B9A6F5;
-  --code-bg: #121118;
-  --code-fg: #ECEAF3;
-  --syntax-keyword: #B79BE0;
+  --sidebar: #121318;
+  --sidebar-foreground: #ECEBE5;
+  --sidebar-primary: #4A63FF;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #23242B;
+  --sidebar-accent-foreground: #ECEBE5;
+  --sidebar-border: #2A2B33;
+  --sidebar-ring: #93A3FF;
+  --code-bg: #16171C;
+  --code-fg: #ECEBE5;
+  --syntax-keyword: #9DADFF;
   --syntax-function: #5BB8C6;
   --syntax-string: #7CCBA0;
-  --syntax-number: #D9B380;
-  --syntax-comment: #8A849C;
-  --syntax-gutter: #6B6580;
-  --heat-0: #201E29;
-  --heat-1: #3B2A6B;
-  --heat-2: #5A30A8;
-  --heat-3: #7034F4;
-  --heat-4: #B9A6F5;
-  --floating-shadow: 0 8px 24px rgb(0 0 0 / 0.6);
+  --syntax-number: #E3B57E;
+  --syntax-comment: #86857E;
+  --syntax-gutter: #6B6A64;
+  --heat-0: #23242B;
+  --heat-1: #26306A;
+  --heat-2: #2F44B8;
+  --heat-3: #4A63FF;
+  --heat-4: #93A3FF;
+  --floating-shadow: 0 0 0 1px #2A2B33, 0 18px 40px -16px rgb(0 0 0 / 0.7);
 }
 
 /* Proof is a host concept: kept out of the blocks above so generated visuals never receive it. */
 html:root {
-  --proof: #C6FF33;
-  --proof-foreground: #17151F;
-  --proof-stroke: #17151F;
-  /* Illustration and mark: lime reads against forest; lines are ink. */
-  --mark-cream: #C6FF33;
-  --illo-line: #17151F;
-  --soc-bg: #E9E4F6;
-  --soc-line: #17151F;
+  --proof: #F7E33E;
+  --proof-foreground: #15161E;
+  --proof-stroke: #15161E;
+  --mark-cream: #F7E33E;
+  --illo-line: #15161E;
+  --soc-bg: #FBF4CB;
+  --soc-line: #15161E;
+  /* The notebook: rules, the red margin, the pen and the highlighter. */
+  --rule: #E8E6DE;
+  --rule-gap: 40px;
+  --margin-line: #EE9C95;
+  --pen: #E0322B;
+  --highlight: #F7E33E;
+  --primary-glow: 0 1px 0 rgb(255 255 255 / 0.25) inset, 0 8px 22px -8px rgb(35 64 232 / 0.65);
+  /* Soc: a stone bust on a stack of primary-colour books. */
+  --stone: #D2D1CC;
+  --stone-shade: #B5B4AE;
+  --stone-light: #E6E5E0;
+  --book-blue: #1E3FE0;
+  --book-red: #E6262C;
+  --book-yellow: #ECD75A;
+  --book-page: #F1F0EA;
+  --soc-outline: #121212;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 html.dark {
-  --proof-foreground: #0F0E14;
-  --proof-stroke: #0F0E14;
-  /* #7034F4 is 2.9:1 on black surfaces; status rings need 3:1. */
-  --status-practised: #9A63F2;
-  --mark-cream: #C6FF33;
-  --illo-line: #ECEAF3;
-  --soc-bg: #0F0E14;
-  --soc-line: #ECEAF3;
+  --proof-foreground: #15161E;
+  --proof-stroke: #121318;
+  --status-practised: #93A3FF;
+  --illo-line: #ECEBE5;
+  --soc-bg: #23242B;
+  --soc-line: #ECEBE5;
+  --rule: #1A1B21;
+  --margin-line: #5E2D2D;
+  --pen: #FF7D72;
+  --highlight: #E9D53A;
+  --primary-glow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 8px 24px -8px rgb(74 99 255 / 0.6);
+  --soc-outline: #0A0A0A;
 }
-/* Forest hero cards: the status shapes take the card's text colours. */
-[data-tone="hero"] { --status-practised: var(--forest-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--proof); }
-[data-tone="violet"] { --status-practised: var(--violet-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--violet-foreground); }
-[data-tone="lilac"], [data-tone="cream"] { --status-practised: var(--forest); --status-muted: var(--card-muted); }
-/* Forest surfaces carry a fine grain, as on the brand canvas. */
+/* Blue hero cards: the status shapes take the card's text colours. */
+[data-tone="hero"] { --status-practised: var(--forest-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--proof); --card-muted: rgb(255 255 255 / 0.6); --card-line: rgb(255 255 255 / 0.3); }
+[data-tone="violet"] { --status-practised: var(--violet-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--violet-foreground); --card-muted: rgb(255 255 255 / 0.6); --card-line: rgb(255 255 255 / 0.3); }
+[data-tone="lilac"], [data-tone="cream"] { --status-practised: var(--forest); --status-muted: var(--card-muted); --card-muted: #A9A595; --card-line: #D9D3B4; }
 [data-tone="hero"], .grain { position: relative; isolation: isolate; }
 [data-tone="hero"]::before, .grain::before {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
-  background-image: var(--grain); background-size: 160px; opacity: 0.09; mix-blend-mode: overlay;
+  background-image: var(--grain); background-size: 160px; opacity: 0.08; mix-blend-mode: overlay;
 }
 
 @utility type-display-xl {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-weight: 600;
+  letter-spacing: -0.05em;
   font-size: 52px;
   line-height: 52px;
   text-wrap: balance;
@@ -282,8 +305,8 @@ html.dark {
 }
 @utility type-display-l {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-weight: 600;
+  letter-spacing: -0.045em;
   font-size: 44px;
   line-height: 46px;
   text-wrap: balance;
@@ -291,17 +314,17 @@ html.dark {
 }
 @utility type-display-m {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.04em;
   font-size: 32px;
-  line-height: 34px;
+  line-height: 36px;
   text-wrap: balance;
   @media (width >= 64rem) { font-size: 40px; line-height: 42px; }
 }
 @utility type-title {
   font-family: var(--font-display);
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   font-size: 22px;
   line-height: 28px;
   @media (width >= 64rem) { font-size: 24px; line-height: 30px; }
@@ -311,12 +334,20 @@ html.dark {
   line-height: 28px;
   @media (width >= 64rem) { font-size: 18px; line-height: 30px; }
 }
+/* Small labels read like a margin note, not a shouted caption: sentence case, medium weight. */
 @utility type-label {
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+/* Handwritten notes in red pen. Only for asides, never for content that must be read. */
+@utility font-hand {
+  font-family: var(--font-hand);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.1;
 }
 
 @layer base {
@@ -328,21 +359,21 @@ html.dark {
     text-rendering: optimizeLegibility;
     scroll-padding-top: 80px;
   }
+  /* A ruled notebook page. The rules scroll with the content, like paper. */
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(900px 520px at 8% -8%, color-mix(in srgb, var(--forest) 20%, transparent), transparent 70%);
-    background-attachment: fixed;
+    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-gap) - 1px), var(--rule) calc(var(--rule-gap) - 1px), var(--rule) var(--rule-gap));
     font-size: 16px;
     line-height: 24px;
-    font-weight: 500;
+    font-weight: 400;
+    letter-spacing: -0.006em;
   }
-  body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-image: var(--grain); background-size: 160px; opacity: 0.05; mix-blend-mode: multiply; }
-  .dark body::before { opacity: 0.07; mix-blend-mode: overlay; }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-image: var(--grain); background-size: 160px; opacity: 0.035; mix-blend-mode: multiply; }
+  .dark body::before { opacity: 0.05; mix-blend-mode: overlay; }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.035em; font-weight: 600; }
   p, li, label, td { overflow-wrap: anywhere; }
   button:not(:disabled), [role="button"]:not(:disabled), summary, a { cursor: pointer; }
-  ::selection { background: color-mix(in srgb, var(--primary) 18%, transparent); }
-  .dark ::selection { background: color-mix(in srgb, var(--primary) 30%, transparent); }
+  ::selection { background: color-mix(in srgb, var(--highlight) 75%, transparent); color: #15161E; }
   /* One focus ring everywhere: 2 px, 2 px offset, in both themes. */
   :focus-visible:not([tabindex="-1"]):not(.cm-content) { outline: 2px solid var(--ring) !important; outline-offset: 2px; }
   .cm-editor.cm-focused { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -360,8 +391,8 @@ html.dark {
   .prose-socrat { font-size: 17px; line-height: 28px; max-width: 68ch; }
   @media (width >= 64rem) { .prose-socrat { font-size: 18px; line-height: 30px; } }
   .prose-socrat > * + * { margin-top: 1em; }
-  .prose-socrat h2 { font-family: var(--font-display); font-size: 1.5em; font-weight: 700; margin-top: 1.8em; letter-spacing: -0.03em; line-height: 1.2; }
-  .prose-socrat h3 { font-family: var(--font-display); font-size: 1.15em; font-weight: 650; margin-top: 1.5em; letter-spacing: -0.02em; }
+  .prose-socrat h2 { font-family: var(--font-display); font-size: 1.5em; font-weight: 600; margin-top: 1.8em; letter-spacing: -0.035em; line-height: 1.2; }
+  .prose-socrat h3 { font-family: var(--font-display); font-size: 1.15em; font-weight: 600; margin-top: 1.5em; letter-spacing: -0.025em; }
   .prose-socrat h4 { font-weight: 650; margin-top: 1.2em; }
   .prose-socrat > :first-child { margin-top: 0; }
   .prose-socrat ul { list-style: disc; padding-left: 1.4em; }
@@ -372,7 +403,7 @@ html.dark {
   .prose-socrat code { font-family: var(--font-mono); font-size: 0.84em; background: var(--raised); border-radius: 6px; padding: 0.1em 0.35em; font-variant-ligatures: none; }
   .prose-socrat pre { font-family: var(--font-mono); font-size: 14px; line-height: 22px; background: var(--code-bg); color: var(--code-fg); border-radius: 20px; padding: 16px 20px; overflow-x: auto; border: 1px solid var(--border); font-variant-ligatures: none; }
   .prose-socrat pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }
-  .prose-socrat blockquote { border-left: 2px solid var(--secondary); padding: 0.2em 0 0.2em 1em; color: var(--muted-foreground); }
+  .prose-socrat blockquote { border-left: 2px solid var(--margin-line); padding: 0.2em 0 0.2em 1em; color: var(--muted-foreground); }
   .prose-socrat table { border-collapse: collapse; font-size: 0.9em; min-width: 100%; }
   .prose-socrat th, .prose-socrat td { border-bottom: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
   .prose-socrat th { font-weight: 650; }
@@ -397,8 +428,8 @@ html.dark {
   .code-editor-host { height: min(62dvh, 580px); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; background: var(--code-bg); }
 
   /* Tutor chat */
-  .chat-bubble-user { @apply bg-primary text-primary-foreground; border-radius: 20px 20px 6px 20px; padding: 10px 14px; margin-left: auto; max-width: 85%; white-space: pre-wrap; font-size: 15px; }
-  .chat-bubble-assistant { @apply bg-raised; border-radius: 20px 20px 20px 6px; padding: 10px 14px; max-width: 94%; }
+  .chat-bubble-user { @apply bg-ink text-ink-foreground; border-radius: 20px 20px 6px 20px; padding: 10px 14px; margin-left: auto; max-width: 85%; white-space: pre-wrap; font-size: 15px; }
+  .chat-bubble-assistant { @apply bg-card; border: 1px solid var(--border); border-radius: 20px 20px 20px 6px; padding: 10px 14px; max-width: 94%; }
 
   @media (max-width: 1023px) {
     .workspace { grid-template-columns: minmax(0, 1fr); }
@@ -484,126 +515,41 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
 .soc-avatar { transform-origin: 50% 80%; transition: transform 260ms var(--ease-soft, cubic-bezier(0.2, 0.8, 0.2, 1)); }
 :is(button, a):is(:hover, :focus-visible) .soc-avatar { transform: rotate(-7deg) scale(1.06); }
 :is(button, a):active .soc-avatar { transform: rotate(0deg) scale(0.96); }
+/* Soc blinks now and then, bobs a little, and his gaze eases toward wherever it is sent. */
+.soc-eyes { transform-box: fill-box; transform-origin: center; animation: soc-blink 5.5s infinite; }
+.soc-look, .soc-head { transition: transform 420ms var(--ease-soft); }
+.soc-idle { animation: soc-bob 5s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes soc-blink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+@keyframes soc-bob { 50% { transform: translateY(-3px) rotate(-0.6deg); } }
 
-/*
- * Landing only: "Scholar by day, Midnight Lab by night". Tokens are re-declared on the page root,
- * so every shared component on the landing picks them up while the app keeps its own palette.
- * Each colour has one job: ink (or white) is action, violet is Soc, green (lime at night) is proof.
- */
-.landing {
-  --background: #F4EFE6;
-  --foreground: #1B1915;
-  --card: #FFFDF8;
-  --card-foreground: #1B1915;
-  --popover: #FFFDF8;
-  --popover-foreground: #1B1915;
-  --raised: #EDE6D8;
-  --muted: #EDE6D8;
-  --muted-foreground: #645C4E;
-  --accent: #EDE6D8;
-  --accent-foreground: #1B1915;
-  --primary: #1B1915;
-  --primary-foreground: #FFFDF8;
-  --secondary: #EDE6D8;
-  --secondary-foreground: #1B1915;
-  --border: #E2DACB;
-  --border-strong: #CBC0AC;
-  --input: #CBC0AC;
-  --ring: #1B1915;
-  --brand-text: #5B2FD6;
-  --violet: #6D3CF0;
-  --violet-foreground: #FFFFFF;
-  --soc-tint: #EDE6FF;
-  --soc-ink: #3B1FA0;
-  --forest: #1B1915;
-  --forest-foreground: #F4EFE6;
-  --ink: #1B1915;
-  --ink-foreground: #FFFDF8;
-  --cream: #EDE6D8;
-  --cream-foreground: #1B1915;
-  --proof: #2F6B4F;
-  --proof-foreground: #FFFFFF;
-  --proof-stroke: #FFFFFF;
-  --mark-cream: #2F6B4F;
-  --status-practised: #6D3CF0;
-  --card-muted: #CFC6B5;
-  --card-line: #4A443A;
-  --code-bg: #FFFDF8;
-  --code-fg: #1B1915;
-  --syntax-keyword: #5B2FD6;
-  --syntax-function: #1F6F80;
-  --syntax-string: #2F6B4F;
-  --syntax-number: #A8461F;
-  --syntax-comment: #6E6658;
-  --floating-shadow: 0 1px 0 rgb(27 25 21 / 0.04), 0 24px 60px -28px rgb(27 25 21 / 0.28);
-  --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
-  --font-label: var(--font-geist-mono), ui-monospace, monospace;
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-weight: 400;
+/* The notebook kit. */
+/* A highlighter stroke behind text: slightly tilted, soft at the ends, drawn in once. */
+.hl {
+  background-image: linear-gradient(100deg, transparent 0.15em, var(--highlight) 0.3em, color-mix(in srgb, var(--highlight) 90%, white) 55%, var(--highlight) calc(100% - 0.3em), transparent calc(100% - 0.1em));
+  background-repeat: no-repeat;
+  background-size: 100% 0.6em;
+  background-position: 0 80%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 0.1em;
+  margin: 0 -0.05em;
 }
-.dark .landing {
-  --background: #0A0A0D;
-  --foreground: #EDEDF2;
-  --card: #131318;
-  --card-foreground: #EDEDF2;
-  --popover: #17171D;
-  --popover-foreground: #EDEDF2;
-  --raised: #1B1B22;
-  --muted: #1B1B22;
-  --muted-foreground: #9898A6;
-  --accent: #1B1B22;
-  --accent-foreground: #EDEDF2;
-  --primary: #EDEDF2;
-  --primary-foreground: #0A0A0D;
-  --secondary: #1B1B22;
-  --secondary-foreground: #EDEDF2;
-  --border: #24242D;
-  --border-strong: #363642;
-  --input: #363642;
-  --ring: #EDEDF2;
-  --brand-text: #B3A4FF;
-  --violet: #9B87FF;
-  --violet-foreground: #0A0A0D;
-  --soc-tint: #1D1838;
-  --soc-ink: #D3C9FF;
-  --forest: #131318;
-  --forest-foreground: #EDEDF2;
-  --ink: #EDEDF2;
-  --ink-foreground: #0A0A0D;
-  --cream: #1B1B22;
-  --cream-foreground: #EDEDF2;
-  --proof: #C6F432;
-  --proof-foreground: #0A0A0D;
-  --proof-stroke: #0A0A0D;
-  --mark-cream: #C6F432;
-  --status-practised: #9B87FF;
-  --card-muted: #9898A6;
-  --card-line: #363642;
-  --code-bg: #0E0E12;
-  --code-fg: #EDEDF2;
-  --syntax-keyword: #B3A4FF;
-  --syntax-function: #5BB8C6;
-  --syntax-string: #A8D86A;
-  --syntax-number: #E3B57E;
-  --syntax-comment: #7C7C8A;
-  --floating-shadow: 0 0 0 1px #24242D, 0 30px 70px -30px rgb(0 0 0 / 0.8);
-}
-/* Display type speaks in Fraunces; the interface stays in Geist. */
-.landing :is(h1, h2, h3, .font-display, .type-display-xl, .type-display-l, .type-display-m, .type-title) {
-  font-family: var(--font-serif);
-  font-weight: 600;
-  letter-spacing: -0.028em;
-  font-optical-sizing: auto;
-}
-.landing .type-label, .landing .label-mono { font-family: var(--font-label); font-weight: 500; letter-spacing: 0.08em; }
-.landing .soc-voice { font-family: var(--font-serif); font-weight: 450; letter-spacing: -0.01em; }
-/* The arrow disc inverts whichever pill it sits in. */
-.landing [data-slot="button"]:is([data-variant="default"], [data-variant="ink"], [data-variant="solid"]) [data-slot="arrow"] { background: var(--primary-foreground); color: var(--primary); }
-/* Ink surfaces: their primary pill turns paper so it never disappears. */
-.landing [data-tone="hero"] [data-slot="button"]:is([data-variant="default"], [data-variant="ink"], [data-variant="solid"]) { background: var(--forest-foreground); color: var(--forest); }
-.landing [data-tone="hero"] [data-slot="button"]:is([data-variant="default"], [data-variant="ink"], [data-variant="solid"]) [data-slot="arrow"] { background: var(--forest); color: var(--forest-foreground); }
-.dark .landing [data-tone="hero"] { box-shadow: inset 0 0 0 1px var(--border); }
-.landing .glass-nav { background: color-mix(in srgb, var(--card) 88%, transparent); backdrop-filter: blur(14px) saturate(1.4); }
+.hl-draw { animation: hl-draw 0.9s var(--ease-soft) 0.35s both; }
+@keyframes hl-draw { from { background-size: 0% 0.6em; } }
+.dark .hl { color: #15161E; background-size: 100% 0.92em; background-position: 0 65%; }
+.dark .hl-draw { animation-name: hl-draw-dark; }
+@keyframes hl-draw-dark { from { background-size: 0% 0.92em; } }
+/* A hand-drawn underline in red pen. */
+.pen-underline { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 10' preserveAspectRatio='none'%3E%3Cpath d='M2 7c40-4 90-5 196-3' fill='none' stroke='%23E0322B' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") bottom / 100% 0.32em no-repeat; padding-bottom: 0.14em; }
+/* The red margin line of a notebook page, drawn at --margin-x from the element's left edge. */
+.margin-rule { position: relative; isolation: isolate; }
+.margin-rule::after { content: ""; position: absolute; top: 0; bottom: 0; left: var(--margin-x, 88px); width: 1.5px; background: var(--margin-line); pointer-events: none; z-index: -1; }
+/* Paper cards: white sheets with a hairline and a soft lift. */
+.paper { background: var(--card); border: 1px solid var(--border); box-shadow: 0 1px 0 rgb(21 22 30 / 0.03), 0 12px 30px -20px rgb(21 22 30 / 0.22); }
+.dark .paper { box-shadow: none; }
+
+/* The landing shares the app palette; only its nav floats over the page. */
+.landing .glass-nav { background: color-mix(in srgb, var(--card) 86%, transparent); backdrop-filter: blur(14px) saturate(1.4); }
 
 /* Hero demo: messages and tests arrive in sequence; reduced motion shows the finished state. */
 .socratic-demo [data-step] { transition: opacity 0.45s var(--ease-soft), translate 0.45s var(--ease-soft); }
@@ -613,3 +559,37 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
 .socratic-demo .test-dot[data-ok="true"] { background: var(--proof); transform: scale(1.08); }
 @keyframes caret { 50% { opacity: 0; } }
 .socratic-demo .caret { animation: caret 1s steps(1) infinite; }
+
+/* Doodles draw their ink in: as they scroll into view, or once on load. */
+.doodle [data-ink] { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.doodle-load [data-ink] { animation: doodle-draw 1.1s var(--ease-soft) 0.15s both; }
+.doodle-load [data-fill] { animation: doodle-fill 0.6s var(--ease-soft) 0.7s both; }
+@supports (animation-timeline: view()) {
+  .doodle-scroll [data-ink] { animation: doodle-draw linear both; animation-timeline: view(); animation-range: entry 5% cover 40%; }
+  .doodle-scroll [data-fill] { animation: doodle-fill linear both; animation-timeline: view(); animation-range: entry 25% cover 45%; }
+}
+@keyframes doodle-draw { from { stroke-dashoffset: 1; } }
+@keyframes doodle-fill { from { opacity: 0; } }
+
+/* Soc's speech bubble: a little tail toward him. */
+.soc-bubble { position: relative; }
+.soc-bubble::after { content: ""; position: absolute; bottom: -9px; width: 16px; height: 16px; background: var(--card); border-right: 2px solid var(--soc-outline); border-bottom: 2px solid var(--soc-outline); transform: rotate(45deg); }
+.soc-bubble[data-side="left"]::after { right: 22px; transform: rotate(20deg) skewX(-10deg); }
+.soc-bubble[data-side="right"]::after { left: 22px; transform: rotate(70deg) skewX(10deg); }
+
+/* Hover a doodle: the colour slides into register, the ink redraws and the whole sketch wiggles. */
+.doodle { transition: rotate 0.5s var(--ease-soft), scale 0.5s var(--ease-soft); }
+.doodle [data-fill] { transition: translate 0.45s var(--ease-soft); }
+:is(.doodle, .doodle-host):hover .doodle, .doodle:hover { rotate: -2.5deg; scale: 1.04; }
+:is(.doodle-host:hover .doodle, .doodle:hover) [data-fill] { translate: -4px -3px; }
+:is(.doodle-host:hover .doodle, .doodle:hover) [data-ink] { animation: doodle-draw 0.8s var(--ease-soft) both; animation-timeline: auto; }
+@media (prefers-reduced-motion: reduce) { .doodle:hover, .doodle-host:hover .doodle { rotate: none; scale: none; } }
+
+/* Soc's chat: a ruled page with a red margin, inside the panel. */
+.chat-page {
+  background-image:
+    linear-gradient(to right, transparent 26px, var(--margin-line) 26px, var(--margin-line) 27.5px, transparent 27.5px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px);
+  background-attachment: local;
+  padding-left: 36px;
+}

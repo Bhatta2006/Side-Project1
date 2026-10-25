@@ -61,7 +61,7 @@ function useMilestones(left: number) {
 function ProblemRow({ p, index, live }: { p: SprintView['problems'][number]; index: number; live: boolean }) {
   const solved = p.solved_after !== null;
   return (
-    <li className="flex min-h-16 flex-wrap items-center gap-3 rounded-card border bg-card px-4 py-3 lg:px-5">
+    <li className="flex min-h-16 flex-wrap items-center gap-3 paper rounded-card px-4 py-3 lg:px-5">
       <StatusIcon status={solved ? 'practised' : 'not_seen'} size={24} title={solved ? 'Solved' : 'Not solved yet'} />
       <div className="min-w-0 flex-1">
         <p className="font-semibold">{index + 1}. {p.title}</p>
@@ -192,8 +192,8 @@ export default function Sprint() {
       ) : error ? <ErrorNote message={error} /> : null}
       {overview?.history.length ? (
         <section className="mt-10" aria-labelledby="history-heading">
-          <h2 id="history-heading" className="mb-3 font-display text-xl font-bold tracking-[-0.03em]">Past sprints</h2>
-          <ul className="grid divide-y rounded-card border bg-card px-5 text-[15px]">
+          <h2 id="history-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Past sprints</h2>
+          <ul className="grid divide-y paper rounded-card px-5 text-[15px]">
             {overview.history.map(h => (
               <li key={h.id} className="flex min-h-12 items-center justify-between gap-3 py-2">
                 <span>{formatStamp(h.started_at)}</span>

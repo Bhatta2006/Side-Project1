@@ -12,6 +12,7 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { codeSpans } from '@/components/markdown';
+import { SocFigure } from '@/components/socrat/soc';
 
 export default function Placement() {
   const allowed = useGuard('enrolled');
@@ -59,14 +60,15 @@ export default function Placement() {
   if (summary) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 pt-10 pb-32 sm:px-6 md:pt-16">
+        <SocFigure books mood="happy" idle size={170} className="mb-4" />
         <p className="text-[15px] text-muted-foreground">Placement complete. {summary.correct} of {summary.asked} answered correctly.</p>
-        <h1 className="type-display-l mt-2">Your plan is ready</h1>
+        <h1 className="type-display-l mt-2">Your plan is <span className="hl hl-draw">ready</span></h1>
         <p className="mt-3 text-base text-muted-foreground">
           {summary.starting_concept ? <>You start with <strong className="text-foreground">{summary.starting_concept}</strong>, at the edge of what you know.</> : 'You answered everything we asked. Reviews will confirm it over the coming days.'}
         </p>
         {summary.known_concepts.length ? (
-          <section className="mt-8 rounded-card border bg-card p-5 lg:p-6" aria-labelledby="skip-heading">
-            <h2 id="skip-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Topics you can skip</h2>
+          <section className="mt-8 paper rounded-card p-5 lg:p-6" aria-labelledby="skip-heading">
+            <h2 id="skip-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Topics you can skip</h2>
             <p className="mt-1 text-[15px] text-muted-foreground">These are assumptions from placement, not evidence. Short reviews confirm them over the coming days.</p>
             <ul className="mt-4 grid gap-2">
               {summary.known_concepts.map(c => (

@@ -14,6 +14,7 @@ import { PassportSettingsCard } from '@/components/socrat/passport-settings';
 import { STATUS_LABEL, StatusIcon, StatusLabel, StatusLegend, statusFromBand } from '@/components/socrat/status';
 import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
+import { SocFigure } from '@/components/socrat/soc';
 
 const KIND: Record<string, string> = { quiz: 'concept check', code: 'problem', checkpoint: 'checkpoint', review: 'review', placement: 'placement', external: 'practice', verified: 'Codeforces', guided: 'guided step', trace: 'trace', retrieval: 'recall', debug: 'debugging', explanation: 'explanation' };
 
@@ -53,16 +54,16 @@ export default function ProgressPage() {
   return (
     <Page wide>
       <header className="mb-8">
-        <p className="type-label mb-3 text-muted-foreground">{NAME.evidence}</p>
-        <h1 className="type-display-l">What you have shown</h1>
+        <p className="font-hand mb-2 origin-left -rotate-2 text-[22px] text-pen">{NAME.evidence}</p>
+        <h1 className="type-display-l">What you have <span className="hl hl-draw">shown</span></h1>
       </header>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:gap-6">
         {assessmentOpen ? (
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-card border bg-card p-5 lg:p-6" aria-labelledby="assessment-heading">
+          <section className="flex flex-wrap items-center justify-between gap-4 paper rounded-card p-5 lg:p-6" aria-labelledby="assessment-heading">
             <div>
               <div className="mb-2"><Badge>{assessment.state === 'in_progress' ? 'In progress' : 'Available'}</Badge></div>
-              <h2 id="assessment-heading" className="font-display text-xl font-bold tracking-[-0.03em]">{NAME.assessment}</h2>
+              <h2 id="assessment-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">{NAME.assessment}</h2>
               <p className="text-sm text-muted-foreground">A proof event built from what you studied this week.</p>
             </div>
             <Button asChild><Link href="/assessments">{assessment.state === 'in_progress' ? 'Continue assessment' : 'Open assessment'}<ArrowCircle /></Link></Button>
@@ -70,13 +71,14 @@ export default function ProgressPage() {
         ) : null}
 
         {/* Hero: course completion. */}
-        <section className="flex flex-wrap items-center gap-6 rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:gap-10 lg:p-8" data-tone="hero" aria-labelledby="course-heading">
+        <section className="relative flex flex-wrap items-center gap-6 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:gap-10 lg:p-8" data-tone="hero" aria-labelledby="course-heading">
+          <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[190px] xl:block"><SocFigure books mood="proud" idle className="h-auto w-full" /></div>
           <Ring value={data.progress.percent} size={128} stroke={6} label={<span className="font-display text-3xl">{data.progress.percent}%</span>} ariaLabel={`Course ${data.progress.percent} percent complete`} />
-          <div className="min-w-0 flex-1">
-            <p className="type-label">Course completion</p>
+          <div className="min-w-0 flex-1 xl:pr-[220px]">
+            <p className="font-hand origin-left -rotate-2 text-[22px] text-white/90">look how far you&apos;ve come</p>
             <h2 id="course-heading" className="type-display-m mt-2 tabular-nums">{data.progress.finished} of {data.progress.total} skills</h2>
             <p className="mt-2 text-base" data-visual-mask="">Projected finish {formatDate(data.projected_finish, { month: 'long', day: 'numeric', year: 'numeric' })}. {PACE_LABEL[data.pace]} pace.</p>
-            <p className="mt-1 text-sm">Counts skills you have practised or mastered{data.progress.assumed ? `. ${data.progress.assumed} more are assumed from placement until a short review confirms them` : ''}.</p>
+            <p className="mt-1 max-w-xl text-sm">Counts skills you have practised or mastered{data.progress.assumed ? `. ${data.progress.assumed} more are assumed from placement until a short review confirms them` : ''}.</p>
           </div>
         </section>
 
@@ -93,15 +95,15 @@ export default function ProgressPage() {
           {/* Mastery comes before activity on every width. */}
           <section aria-labelledby="mastery-heading" className="grid min-w-0 content-start gap-4 lg:col-span-8">
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <h2 id="mastery-heading" className="font-display text-2xl font-bold tracking-[-0.03em]">Mastery by module</h2>
+              <h2 id="mastery-heading" className="font-display text-2xl font-semibold tracking-[-0.03em]">Mastery by module</h2>
             </div>
             {data.modules.map((m, mi) => {
               const moduleWeak = m.concepts.filter(c => c.band === 'needs_practice').length;
               const moduleMastered = m.concepts.filter(c => c.band === 'strong').length;
               return (
-                <details key={m.id} className="group rounded-card border bg-card" open={mi === 0 || moduleWeak > 0}>
+                <details key={m.id} className="group paper rounded-card" open={mi === 0 || moduleWeak > 0}>
                   <summary className="flex min-h-14 cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4 lg:px-6 [&::-webkit-details-marker]:hidden">
-                    <span className="font-display text-lg font-bold tracking-[-0.02em]">{m.title}</span>
+                    <span className="font-display text-lg font-semibold tracking-[-0.02em]">{m.title}</span>
                     <span className="flex items-center gap-3 text-sm font-semibold text-muted-foreground tabular-nums">
                       {moduleMastered} mastered{moduleWeak ? `, ${moduleWeak} need practice` : ''}
                       <ChevronDown className="size-5 text-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
@@ -131,8 +133,8 @@ export default function ProgressPage() {
           </section>
 
           <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-span-4 lg:gap-6" aria-label="Activity and results">
-            <section className="rounded-card border bg-card p-5 lg:p-6" aria-labelledby="timeline-heading">
-              <h2 id="timeline-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Evidence timeline</h2>
+            <section className="paper rounded-card p-5 lg:p-6" aria-labelledby="timeline-heading">
+              <h2 id="timeline-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Evidence timeline</h2>
               {data.recent.length ? (
                 <ol className="mt-4 grid gap-0">
                   {data.recent.map((r, i) => {
@@ -159,8 +161,8 @@ export default function ProgressPage() {
 
             <LearnerProfileCard />
 
-            <section className="rounded-card border bg-card p-5 lg:p-6" aria-labelledby="activity-heading">
-              <h2 id="activity-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Study activity</h2>
+            <section className="paper rounded-card p-5 lg:p-6" aria-labelledby="activity-heading">
+              <h2 id="activity-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Study activity</h2>
               <p className="mt-1 text-sm font-semibold">Activity shows time spent. It does not measure mastery.</p>
               <p className="mt-1 text-sm text-muted-foreground">{hours(data.total_minutes)} over {activeDays} days in the last 6 months. This week: {data.week.minutes} of {data.week.goal} min.</p>
               <div className="mt-4 overflow-x-auto rounded-lg pb-1" tabIndex={0} role="region" aria-label="Study activity, scrolls sideways">

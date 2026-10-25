@@ -23,7 +23,7 @@ export function PageHeader({ eyebrow, title, description, actions, className }: 
   return (
     <header className={cn('mb-8 flex flex-wrap items-end justify-between gap-4 lg:mb-10', className)}>
       <div className="min-w-0 max-w-3xl">
-        {eyebrow ? <p className="type-label mb-3 text-muted-foreground">{eyebrow}</p> : null}
+        {eyebrow ? <p className="font-hand mb-2 origin-left -rotate-2 text-[22px] text-pen">{eyebrow}</p> : null}
         <h1 className="type-display-l">{title}</h1>
         {description ? <p className="mt-3 text-base text-muted-foreground text-pretty">{description}</p> : null}
       </div>
@@ -34,7 +34,7 @@ export function PageHeader({ eyebrow, title, description, actions, className }: 
 
 /** Small section heading inside a page, in the display face. */
 export function SectionTitle({ id, children, className, as: Tag = 'h2' }: { id?: string; children: ReactNode; className?: string; as?: 'h2' | 'h3' }) {
-  return <Tag id={id} className={cn('font-display text-2xl font-bold tracking-[-0.03em]', className)}>{children}</Tag>;
+  return <Tag id={id} className={cn('font-display text-2xl font-semibold tracking-[-0.03em]', className)}>{children}</Tag>;
 }
 
 /** Content-shaped placeholder; perceived as faster than a spinner. */
@@ -222,7 +222,7 @@ export function Difficulty({ level, className }: { level: string; className?: st
 /** Supporting number: number first, noun second, a one-line definition below. */
 export function StatCard({ icon, label, value, hint, className }: { icon?: ReactNode; label: ReactNode; value: ReactNode; hint?: ReactNode; className?: string }) {
   return (
-    <div data-slot="card" className={cn('flex flex-col gap-2 rounded-card bg-raised p-5 lg:p-6', className)}>
+    <div data-slot="card" className={cn('paper flex flex-col gap-2 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6', className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="type-display-m tabular-nums">{value}</div>
         {icon ? <span className="flex-none text-muted-foreground [&_svg]:size-6">{icon}</span> : null}

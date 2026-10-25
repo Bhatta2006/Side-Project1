@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { SocFigure } from '@/components/socrat/soc';
+import { Illustration } from '@/components/socrat/illustration';
 
 const VisualExplainer = dynamic(() => import('@/components/visual-explainer'), { ssr: false, loading: () => <Skeleton className="h-[560px] w-full rounded-card" /> });
 type Level = VisualArtifact['level'];
@@ -238,10 +240,10 @@ export default function PlaygroundPage() {
                 </button>
               ))}
             </div>
-            <div className="rounded-card border bg-card p-5" role="tabpanel">
+            <div className="paper rounded-card p-5" role="tabpanel">
               {panel === 'explanation' ? (
                 <>
-                  <h3 className="mb-2 font-display text-lg font-bold tracking-[-0.02em]">Explanation</h3>
+                  <h3 className="mb-2 font-display text-lg font-semibold tracking-[-0.02em]">Explanation</h3>
                   <Transcript text={artifact.transcript} className="text-[15px]" />
                   <p className="mt-4 text-[13px] text-muted-foreground">Exploring does not count as practice or mastery.</p>
                 </>
@@ -249,11 +251,11 @@ export default function PlaygroundPage() {
             </div>
           </aside>
           <div className="grid gap-3 lg:hidden">
-            <details ref={explanation} className="group rounded-card border bg-card">
+            <details ref={explanation} className="group paper rounded-card">
               <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 font-semibold [&::-webkit-details-marker]:hidden">Explanation <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
               <Transcript text={artifact.transcript} className="px-5 pb-5 text-[15px]" />
             </details>
-            <details className="group rounded-card border bg-card">
+            <details className="group paper rounded-card">
               <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 font-semibold [&::-webkit-details-marker]:hidden">Saved ({saved.length}) <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
               <div className="px-5 pb-5"><SavedList saved={saved} busy={busy} onOpen={id => void openSaved(id)} /></div>
             </details>
@@ -273,8 +275,9 @@ export default function PlaygroundPage() {
       <Page wide>
         <h1 className="sr-only">Playground</h1>
         <p className="mb-5 line-clamp-2 rounded-full border border-border-strong px-4 py-2 text-[15px]"><span className="sr-only">Your question: </span>{prompt}</p>
-        <section className="grid min-h-[max(420px,60dvh)] place-items-center rounded-card border bg-card p-8" aria-labelledby="generating-heading">
+        <section className="grid min-h-[max(420px,60dvh)] place-items-center paper rounded-card p-8" aria-labelledby="generating-heading">
           <div className="w-full max-w-md">
+            <div className="mb-4 flex items-end gap-3"><SocFigure mood="thinking" idle size={96} /><p className="font-hand pb-3 text-[22px] text-pen">sketching it out for you…</p></div>
             <h2 id="generating-heading" className="type-display-m">Building your visual</h2>
             <ol className="mt-6 grid gap-4" aria-label="Generation steps">
               {visible.map(([id, label], i) => {
@@ -305,8 +308,10 @@ export default function PlaygroundPage() {
   return (
     <Page wide>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
-        <div className="min-w-0">
-          <h1 className="type-display-l">Ask about a concept.</h1>
+        <div className="doodle-host relative min-w-0">
+          <Illustration name="orbit" draw="load" className="pointer-events-none absolute -top-6 right-0 hidden size-36 xl:block" />
+          <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">draw me a picture of it</p>
+          <h1 className="type-display-l mt-1">Ask about <span className="hl hl-draw">a concept.</span></h1>
           <p className="mt-3 max-w-2xl text-base text-muted-foreground">Socrat builds an interactive explanation from your question. Add your own values if you want to test them.</p>
 
           {failure ? (
@@ -325,7 +330,7 @@ export default function PlaygroundPage() {
           ) : null}
           {notice ? <SuccessLine className="mt-6">{notice}</SuccessLine> : null}
 
-          <div className="mt-6 grid gap-4 rounded-card border bg-card p-5 lg:p-6">
+          <div className="mt-6 grid gap-4 paper rounded-card p-5 lg:p-6">
             <label htmlFor="visual-request" className="font-semibold">Your question</label>
             <Textarea
               ref={input}
@@ -371,8 +376,8 @@ export default function PlaygroundPage() {
           <div className="rounded-card bg-raised p-5 text-[15px]">
             Generated visuals can contain mistakes. Compare them with your lesson. Exploring does not count as practice or mastery.
           </div>
-          <section className="rounded-card border bg-card p-5" aria-labelledby="recent-heading">
-            <h2 id="recent-heading" className="mb-3 font-display text-lg font-bold tracking-[-0.02em]">Recent visuals</h2>
+          <section className="paper rounded-card p-5" aria-labelledby="recent-heading">
+            <h2 id="recent-heading" className="mb-3 font-display text-lg font-semibold tracking-[-0.02em]">Recent visuals</h2>
             <SavedList saved={saved.slice(0, 3)} busy={busy} onOpen={id => void openSaved(id)} />
             {saved.length > 3 ? (
               <details className="group mt-3">

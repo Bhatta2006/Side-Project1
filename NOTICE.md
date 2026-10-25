@@ -10,9 +10,8 @@ material that ships with Socrat or that Socrat depends on.
 
 | Font | License | Where |
 |---|---|---|
-| Figtree | SIL Open Font License 1.1 | `apps/web/src/fonts/figtree-latin-wght.woff2`, license text `apps/web/src/fonts/Figtree-OFL.txt` |
 | JetBrains Mono | SIL Open Font License 1.1 | `apps/web/src/fonts/jetbrains-mono-latin-wght.woff2`, license text `apps/web/src/fonts/JetBrainsMono-OFL.txt` |
-| Fraunces (landing page) | SIL Open Font License 1.1 | `apps/web/src/fonts/fraunces-latin-standard-normal.woff2`, `apps/web/src/fonts/fraunces-latin-standard-italic.woff2`, license text `apps/web/src/fonts/Fraunces-OFL.txt` |
+| Delicious Handrawn (handwritten notes) | SIL Open Font License 1.1 | `apps/web/src/fonts/delicious-handrawn-latin-400.woff2`, license text `apps/web/src/fonts/DeliciousHandrawn-OFL.txt` |
 | Geist | SIL Open Font License 1.1 | npm package `geist`, license text `node_modules/geist/LICENSE.txt` |
 
 ## Software dependencies

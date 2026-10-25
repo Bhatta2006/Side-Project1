@@ -10,20 +10,20 @@ type Palette = {
 };
 
 const LIGHT: Palette = {
-  bg: '#ffffff', fg: '#17151F', gutter: '#ffffff', gutterFg: '#8A849C', border: '#DDD9E8',
-  selection: '#E1D5F7', activeLine: '#F6F4FA', cursor: '#7034F4', focus: '#7034F4',
-  keyword: '#7034F4', string: '#2F7D57', number: '#A8461F', comment: '#6F6A85', fn: '#1F6F80',
-  type: '#1F6F80', constant: '#A8461F', operator: '#3A3649', punctuation: '#55616B',
+  bg: '#ffffff', fg: '#15161E', gutter: '#ffffff', gutterFg: '#8E8C84', border: '#E4E2DA',
+  selection: '#FBF0A6', activeLine: '#F8F7F3', cursor: '#2340E8', focus: '#2340E8',
+  keyword: '#2340E8', string: '#2F7A4C', number: '#B0441E', comment: '#6F6D66', fn: '#0E6F80',
+  type: '#0E6F80', constant: '#B0441E', operator: '#3B3C46', punctuation: '#5D5C57',
 };
 const DARK: Palette = {
-  bg: '#121118', fg: '#ECEAF3', gutter: '#121118', gutterFg: '#6B6580', border: '#24222D',
-  selection: '#3A2766', activeLine: '#15141B', cursor: '#B9A6F5', focus: '#B9A6F5',
-  keyword: '#B79BE0', string: '#7CCBA0', number: '#D9B380', comment: '#8A849C', fn: '#5BB8C6',
-  type: '#5BB8C6', constant: '#D9B380', operator: '#CFCADC', punctuation: '#9A94AD',
+  bg: '#16171C', fg: '#ECEBE5', gutter: '#16171C', gutterFg: '#6B6A64', border: '#2A2B33',
+  selection: '#2A3570', activeLine: '#1A1B21', cursor: '#93A3FF', focus: '#93A3FF',
+  keyword: '#9DADFF', string: '#7CCBA0', number: '#E3B57E', comment: '#8A8982', fn: '#5BB8C6',
+  type: '#5BB8C6', constant: '#E3B57E', operator: '#CFCEC8', punctuation: '#9C9B94',
 };
 const CONTRAST: Palette = {
   ...DARK, bg: '#000000', gutter: '#000000', fg: '#ffffff', gutterFg: '#e5e7eb', border: '#ffffff',
-  comment: '#d1d5db', focus: '#ffd45c', selection: '#3A2766',
+  comment: '#d1d5db', focus: '#ffd45c', selection: '#2A3570',
 };
 
 function highlight(p: Palette) {

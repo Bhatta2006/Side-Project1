@@ -46,10 +46,10 @@ export function PassportSettingsCard() {
   }
 
   return (
-    <section aria-labelledby="passport-heading" className="rounded-card border bg-card p-5 lg:p-6">
+    <section aria-labelledby="passport-heading" className="paper rounded-card p-5 lg:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
-          <h2 id="passport-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Skill Passport</h2>
+          <h2 id="passport-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Skill Passport</h2>
           <p className="mt-1 text-[15px] text-muted-foreground">A public page of what you have proven: unaided solves, checks passed and skills mastered. It shows your display name and nothing else about you.</p>
         </div>
         {data ? (

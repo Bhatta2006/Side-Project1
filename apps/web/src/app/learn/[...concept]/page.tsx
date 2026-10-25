@@ -14,7 +14,7 @@ import Markdown, { outline } from '@/components/markdown';
 import Assistant from '@/components/assistant';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
-import { Soc } from '@/components/socrat/illustration';
+import { Illustration, Soc } from '@/components/socrat/illustration';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
 import { LockedState } from '@/components/socrat/states';
 import { FeelControls, SupportStep } from '@/components/socrat/support-step';
@@ -122,16 +122,16 @@ function ResourceList({ concept, resources, onChange }: { concept: string; resou
 function Section({ id, title, children, collapsible = false }: { id: string; title: string; children: React.ReactNode; collapsible?: boolean }) {
   if (!collapsible) {
     return (
-      <section aria-labelledby={id} className="rounded-card border bg-card p-5 lg:p-6">
-        <h2 id={id} className="mb-4 font-display text-xl font-bold tracking-[-0.03em]">{title}</h2>
+      <section aria-labelledby={id} className="paper rounded-card p-5 lg:p-6">
+        <h2 id={id} className="mb-4 font-display text-xl font-semibold tracking-[-0.03em]">{title}</h2>
         {children}
       </section>
     );
   }
   return (
-    <details className="group rounded-card border bg-card">
+    <details className="group paper rounded-card">
       <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 lg:px-6 [&::-webkit-details-marker]:hidden">
-        <h2 id={id} className="font-display text-xl font-bold tracking-[-0.03em]">{title}</h2>
+        <h2 id={id} className="font-display text-xl font-semibold tracking-[-0.03em]">{title}</h2>
         <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden="true" />
       </summary>
       <div className="px-5 pb-5 lg:px-6 lg:pb-6">{children}</div>
@@ -231,8 +231,8 @@ export default function Lesson() {
     <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-32 sm:px-6 md:pt-8 lg:px-10 lg:pb-16">
       <ReadingProgress />
 
-      {/* Header card: the one violet element on this reading screen. */}
-      <header className="relative mb-6 overflow-hidden rounded-card bg-violet p-6 text-violet-foreground [--card-muted:color-mix(in_srgb,var(--violet-foreground),transparent_8%)] lg:p-8" data-tone="violet">
+      {/* Header card: the one blue element on this reading screen, with a doodle. */}
+      <header className="doodle-host relative mb-6 overflow-hidden rounded-card bg-violet p-6 text-violet-foreground [--card-muted:color-mix(in_srgb,var(--violet-foreground),transparent_8%)] lg:p-8" data-tone="violet">
         <div className="relative max-w-[70%] lg:max-w-[75%]">
           <Link href="/plan" transitionTypes={['nav-back']} aria-label={`Back to ${NAME.skills}`} className="mb-5 grid size-11 place-items-center rounded-full bg-ink text-ink-foreground">
             <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -240,6 +240,7 @@ export default function Lesson() {
           <h1 className="type-display-l">{concept.title}</h1>
           <p className="mt-3 text-[15px] font-semibold text-(--card-muted)">Lesson, {LANGUAGE_LABEL[concept.language]}</p>
         </div>
+        <Illustration name="bulb" draw="load" className="pointer-events-none absolute top-1/2 right-6 size-28 -translate-y-1/2 [--illo-line:#fff] sm:size-36 lg:right-10" />
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
@@ -273,7 +274,7 @@ export default function Lesson() {
 
           {/* Explain it differently. */}
           <section className="mt-10 max-w-[68ch]" aria-labelledby="reexplain-heading">
-            <h2 id="reexplain-heading" className="mb-3 font-display text-xl font-bold tracking-[-0.03em]">Explain it differently</h2>
+            <h2 id="reexplain-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Explain it differently</h2>
             <div className="inline-flex max-w-full flex-wrap gap-1 rounded-[24px] bg-raised p-1" role="group" aria-label="Explanation style">
               {STYLES.map(([style, label]) => (
                 <button
@@ -290,9 +291,9 @@ export default function Lesson() {
               ))}
             </div>
             {variant ? (
-              <div className="mt-4 rounded-card border bg-card p-5 lg:p-6">
+              <div className="mt-4 paper rounded-card p-5 lg:p-6">
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="font-display text-lg font-bold tracking-[-0.02em]">{STYLES.find(s => s[0] === variant.style)?.[1]}</h3>
+                  <h3 className="font-display text-lg font-semibold tracking-[-0.02em]">{STYLES.find(s => s[0] === variant.style)?.[1]}</h3>
                   <Button variant="ghost" size="sm" onClick={() => setVariant(null)}>Hide</Button>
                 </div>
                 <Markdown source={variant.content} language={concept.language} />
@@ -301,17 +302,17 @@ export default function Lesson() {
           </section>
 
           {/* Playground: the skill is passed as a request topic only. */}
-          <Link href={`/playground?concept=${encodeURIComponent(concept.id)}`} className="group mt-6 flex max-w-[68ch] items-center justify-between gap-4 rounded-card bg-secondary p-5 text-secondary-foreground transition-colors hover:bg-[color-mix(in_srgb,var(--secondary),white_8%)] lg:p-6">
+          <Link href={`/playground?concept=${encodeURIComponent(concept.id)}`} className="group mt-6 flex max-w-[68ch] items-center justify-between gap-4 rounded-card bg-cream p-5 text-cream-foreground shadow-[0_10px_24px_-18px_rgb(21_22_30/0.35)] transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:-rotate-[0.4deg] lg:p-6">
             <span>
               <span className="type-label block">{NAME.playground}</span>
-              <span className="mt-1 block font-display text-xl font-bold tracking-[-0.02em]">Explore {concept.title} visually</span>
+              <span className="mt-1 block font-display text-xl font-semibold tracking-[-0.02em]">Explore {concept.title} visually</span>
             </span>
             <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
           </Link>
 
           {/* End of lesson: reading is not proof. */}
           <section className="mt-10 max-w-[68ch] border-t pt-8" aria-labelledby="finish-heading">
-            <h2 id="finish-heading" className="font-display text-2xl font-bold tracking-[-0.03em]">{concept.lesson_done ? 'Lesson read' : 'Finished reading?'}</h2>
+            <h2 id="finish-heading" className="font-display text-2xl font-semibold tracking-[-0.03em]">{concept.lesson_done ? 'Lesson read' : 'Finished reading?'}</h2>
             <div className="mt-4 flex flex-wrap gap-3">
               {!concept.lesson_done ? (
                 <Button variant="outline" size="lg" disabled={!active || completing || Boolean(concept.locked)} aria-busy={completing} onClick={complete}>
@@ -425,22 +426,22 @@ export default function Lesson() {
 
         {/* Desktop support column: stepper, on this page, Ask Soc, reminders. */}
         <aside className="hidden content-start gap-5 lg:sticky lg:top-24 lg:grid lg:self-start" aria-label="Lesson tools">
-          <div className="rounded-card border bg-card p-5">
+          <div className="paper rounded-card p-5">
             <StatusLabel status={statusFromBand(concept.band)} className="mb-4" />
             <Stepper concept={concept} className="flex-col gap-4" />
           </div>
           {sections.length > 1 ? (
-            <nav aria-label="On this page" className="rounded-card border bg-card p-5">
+            <nav aria-label="On this page" className="paper rounded-card p-5">
               <h2 className="type-label mb-3 text-muted-foreground">On this page</h2>
               <ul className="grid gap-1 text-[15px]">
                 {sections.map(s => <li key={s.id}><a href={`#${s.id}`} className="block rounded-lg py-1 text-muted-foreground hover:text-foreground">{s.text}</a></li>)}
               </ul>
             </nav>
           ) : null}
-          <button type="button" onClick={() => setAskSoc(n => n + 1)} className="flex items-center gap-4 rounded-card border bg-card p-5 text-left transition-colors hover:bg-raised" aria-haspopup="dialog">
+          <button type="button" onClick={() => setAskSoc(n => n + 1)} className="flex items-center gap-4 paper rounded-card p-5 text-left transition-colors hover:bg-raised" aria-haspopup="dialog">
             <Soc size={48} />
             <span>
-              <span className="block font-display text-lg font-bold tracking-[-0.02em]">Ask Soc</span>
+              <span className="block font-display text-lg font-semibold tracking-[-0.02em]">Ask Soc</span>
               <span className="block text-sm text-muted-foreground">About this lesson</span>
             </span>
           </button>
@@ -458,7 +459,7 @@ function KeyReminders({ concept }: { concept: ConceptView }) {
   return (
     <Card tone="cream" size="sm" aria-label="Key reminders">
       <div className="px-(--card-spacing)">
-        <h2 className="mb-3 font-display text-lg font-bold tracking-[-0.02em]">Key reminders</h2>
+        <h2 className="mb-3 font-display text-lg font-semibold tracking-[-0.02em]">Key reminders</h2>
         <ul className="grid gap-2.5 text-[15px]">
           {concept.key_points.map(p => <li key={p} className="flex gap-2.5"><span aria-hidden="true" className="mt-2.5 size-1.5 flex-none rounded-full bg-current" /><span>{p}</span></li>)}
         </ul>
@@ -472,7 +473,7 @@ function Pitfalls({ concept }: { concept: ConceptView }) {
   return (
     <Card tone="raised" size="sm" aria-label="Common pitfalls">
       <div className="px-(--card-spacing)">
-        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold tracking-[-0.02em]"><TriangleAlert className="size-5" strokeWidth={1.5} aria-hidden="true" /> Common pitfalls</h2>
+        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold tracking-[-0.02em]"><TriangleAlert className="size-5" strokeWidth={1.5} aria-hidden="true" /> Common pitfalls</h2>
         <ul className="grid gap-2.5 text-[15px]">
           {concept.pitfalls.map(p => <li key={p} className="flex gap-2.5"><span aria-hidden="true" className="mt-2.5 size-1.5 flex-none rounded-full bg-muted-foreground" /><span>{p}</span></li>)}
         </ul>

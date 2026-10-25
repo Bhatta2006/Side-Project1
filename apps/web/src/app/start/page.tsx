@@ -15,6 +15,7 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Progress } from '@/components/ui/progress';
+import { Soc } from '@/components/socrat/illustration';
 
 const MINUTES = [15, 20, 30, 45, 60, 90, 120] as const;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -37,11 +38,16 @@ function detectTimezone() {
   }
 }
 
+/** Each onboarding step is one of Soc's questions: he asks it from the margin. */
 function Heading({ title, body }: { title: string; body: string }) {
   return (
-    <div>
-      <h1 className="type-display-l">{title}</h1>
-      <p className="mt-3 text-base text-muted-foreground">{body}</p>
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">quick question</p>
+        <h1 className="type-display-l mt-1">{title}</h1>
+        <p className="mt-3 text-base text-muted-foreground">{body}</p>
+      </div>
+      <Soc size={96} mood="curious" className="mt-2 hidden sm:block" />
     </div>
   );
 }
@@ -333,7 +339,7 @@ export default function Start() {
         {step === 'review' && course ? (
           <form onSubmit={enroll} className="grid gap-8">
             <Heading title="Check your choices" body="Your plan is built from these. You can change study time later in Settings." />
-            <dl className="rounded-card border bg-card px-5">
+            <dl className="paper rounded-card px-5">
               <Summary label="Course" value={course.title} onEdit={() => setStep('course')} />
               <Summary label="Starting level" value={course.levels.find(l => l.id === level)?.label ?? 'Not chosen'} onEdit={() => setStep('level')} />
               <Summary label="Language" value={language ? LANGUAGE_LABEL[language] : 'Not chosen'} onEdit={() => setStep('language')} />

@@ -20,6 +20,7 @@ import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from '@/compon
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Illustration } from '@/components/socrat/illustration';
 
 interface Meta {
   platforms: Record<string, number>;
@@ -266,8 +267,9 @@ export default function Library() {
       {recs ? (
         <Reveal index={1} className="mb-8 grid grid-cols-[minmax(0,1fr)] gap-3 sm:gap-4 lg:grid-cols-12 lg:gap-6">
           {top ? (
-            <section className="relative flex min-h-64 flex-col gap-4 rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:col-span-6 lg:p-8" data-tone="hero" aria-labelledby="for-you-heading">
-              <p id="for-you-heading" className="type-label">Recommended for you</p>
+            <section className="doodle-host relative flex min-h-64 flex-col gap-4 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:col-span-6 lg:p-8" data-tone="hero" aria-labelledby="for-you-heading">
+              <Illustration name="target" className="pointer-events-none absolute top-4 right-4 size-28 [--illo-line:#fff] lg:size-32" />
+              <p id="for-you-heading" className="font-hand origin-left -rotate-2 text-[22px] text-white/90">picked for you</p>
               <h2 className="type-display-m max-w-[18ch]">{top.title}</h2>
               <p className="max-w-md text-[15px]">{top.reason}</p>
               <div className="flex flex-wrap gap-2"><Badge>{top.platform}</Badge><Level problem={top} /></div>
@@ -285,23 +287,23 @@ export default function Library() {
             </section>
           ) : (
             <section className="self-start rounded-card border p-6 lg:col-span-6" aria-labelledby="for-you-heading">
-              <h2 id="for-you-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Recommended for you</h2>
+              <h2 id="for-you-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Recommended for you</h2>
               <p className="mt-2 text-[15px] text-muted-foreground">Finish your first lesson and recommendations start here.</p>
               <Button asChild variant="outline" className="mt-4"><Link href="/today">Go to {NAME.today}</Link></Button>
             </section>
           )}
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:col-span-6 lg:gap-6">
             {rest.slice(0, 2).map(p => (
-              <div key={p.id} className="flex min-w-0 flex-col gap-3 rounded-card border bg-card p-5">
+              <div key={p.id} className="flex min-w-0 flex-col gap-3 paper rounded-card p-5">
                 <ProblemName problem={p} className="text-base" />
                 <p className="text-sm text-muted-foreground">{p.reason}</p>
                 <div className="mt-auto flex flex-wrap items-center gap-2"><PlatformTag platform={p.platform} /><Level problem={p} /></div>
               </div>
             ))}
-            <Link href="/sprint" className="group flex min-h-40 flex-col justify-between gap-4 rounded-card bg-secondary p-5 text-secondary-foreground transition-colors hover:bg-[color-mix(in_srgb,var(--secondary),white_8%)]">
+            <Link href="/sprint" className="group flex min-h-40 flex-col justify-between gap-4 rounded-card bg-cream p-5 text-cream-foreground shadow-[0_10px_24px_-18px_rgb(21_22_30/0.35)] transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:-rotate-[0.4deg]">
               <span className="type-label">{NAME.sprint}</span>
               <span className="flex items-end justify-between gap-3">
-                <span className="font-display text-lg leading-tight font-bold tracking-[-0.02em]">3 problems, 45 minutes</span>
+                <span className="font-display text-lg leading-tight font-semibold tracking-[-0.02em]">3 problems, 45 minutes</span>
                 <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </span>
             </Link>
@@ -315,7 +317,7 @@ export default function Library() {
 
       {contests.length ? (
         <section className="mb-8 rounded-card border p-5" aria-labelledby="contests-heading">
-          <h2 id="contests-heading" className="font-display text-lg font-bold tracking-[-0.02em]">Upcoming rated rounds</h2>
+          <h2 id="contests-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Upcoming rated rounds</h2>
           <ul className="mt-3 grid gap-2 text-[15px]">
             {contests.map(c => (
               <li key={c.id} className="flex flex-wrap items-center justify-between gap-2">
@@ -404,7 +406,7 @@ export default function Library() {
           {page ? <Pager total={page.total} offset={offset} setOffset={setOffset} /> : null}
 
           {/* Desktop: dense table. Phone: card rows. */}
-          <div className={cn('hidden overflow-hidden rounded-card border bg-card transition-opacity md:block', loading && 'opacity-60')} aria-busy={loading}>
+          <div className={cn('hidden overflow-hidden paper rounded-card transition-opacity md:block', loading && 'opacity-60')} aria-busy={loading}>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -447,7 +449,7 @@ export default function Library() {
           </div>
           <ul className={cn('grid gap-3 md:hidden', loading && 'opacity-60')} aria-busy={loading}>
             {page?.items.map(p => (
-              <li key={p.id} data-problem-row="" className="grid gap-3 rounded-card border bg-card p-4">
+              <li key={p.id} data-problem-row="" className="grid gap-3 paper rounded-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <ProblemName problem={p} className="text-base" onOpened={() => replaceItem(p.id, { status: p.status ?? 'attempted' })} />
                   <StatusIcon status={p.status === 'solved' ? 'practised' : 'not_seen'} size={24} title={p.status === 'solved' ? 'Solved' : p.status === 'attempted' ? 'Attempted' : 'Not solved yet'} />

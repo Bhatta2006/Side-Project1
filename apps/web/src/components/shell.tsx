@@ -36,6 +36,7 @@ import { CommandMenu } from '@/components/command-menu';
 import { ReportProblem, openReportProblem } from '@/components/report-problem';
 import { Tour } from '@/components/tour';
 import { Wordmark } from '@/components/socrat/wordmark';
+import { Soc } from '@/components/socrat/illustration';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -93,7 +94,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Account menu" data-tour="settings">
           <Avatar className="size-9">
-            <AvatarFallback className="bg-secondary text-[13px] font-bold text-secondary-foreground">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarFallback className="border-2 border-[var(--soc-outline)] bg-[var(--highlight)] text-[13px] font-semibold text-[#15161E]">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -189,16 +190,17 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
   return (
     <aside
       className={cn(
-        'sticky top-0 hidden h-dvh flex-none flex-col border-r bg-card md:flex',
+        // The sidebar is the notebook's margin: same paper, edged by the red margin line.
+        'sticky top-0 hidden h-dvh flex-none flex-col border-r-[1.5px] border-r-margin-line bg-sidebar md:flex',
         'w-[72px]',
         !collapsed && 'lg:w-[248px]',
       )}
       data-collapsed={collapsed}
     >
-      <div className={cn('flex h-16 items-center px-[22px]', !collapsed && 'lg:px-5')}>
+      <div className={cn('flex h-16 items-center px-[24px]', !collapsed && 'lg:px-6')}>
         <Link href="/today" aria-label="Socrat, Today" className="rounded-full">
           <span className={cn('hidden', !collapsed && 'lg:inline')}><Wordmark /></span>
-          <span className={cn(!collapsed && 'lg:hidden')}><Wordmark compact /></span>
+          <span className={cn(!collapsed && 'lg:hidden')}><Wordmark compact size={24} /></span>
         </Link>
       </div>
       <nav aria-label="Main" className="flex-1 px-3 pt-2">
@@ -213,15 +215,15 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
                 data-tour={item.key}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  'relative isolate flex h-12 items-center gap-3 rounded-[18px] px-3 text-[15px] font-medium transition-colors',
-                  current ? 'font-bold text-primary-foreground' : 'text-muted-foreground hover:bg-raised hover:text-foreground',
+                  'relative isolate flex h-11 items-center gap-3 rounded-full px-3 text-[15px] tracking-[-0.01em] transition-colors',
+                  current ? 'font-medium text-ink-foreground' : 'text-muted-foreground hover:bg-card hover:text-foreground',
                 )}
               >
-                {current ? <span className="absolute inset-0 -z-10 rounded-[18px] bg-primary animate-in fade-in duration-200" /> : null}
-                <Icon className={cn('size-6 flex-none')} strokeWidth={1.5} aria-hidden="true" />
+                {current ? <span className="absolute inset-0 -z-10 rounded-full bg-ink animate-in fade-in duration-200" /> : null}
+                <Icon className={cn('size-[22px] flex-none')} strokeWidth={1.6} aria-hidden="true" />
                 <span className={cn('sr-only', !collapsed && 'lg:not-sr-only')}>{item.label}</span>
                 {flagged ? (
-                  <span className={cn('absolute top-2.5 left-8 size-2 rounded-full bg-secondary ring-2 ring-card', !collapsed && 'lg:static lg:ml-auto')}>
+                  <span className={cn('absolute top-2.5 left-8 size-2.5 rounded-full bg-[var(--highlight)] ring-2 ring-[var(--soc-outline)]', !collapsed && 'lg:static lg:ml-auto')}>
                     <span className="sr-only">: weekly assessment available</span>
                   </span>
                 ) : null}
@@ -238,11 +240,15 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
           })}
         </ul>
       </nav>
+      <div className={cn('mx-3 mb-2 hidden items-end gap-2 rounded-[18px] border border-dashed border-border-strong p-3', !collapsed && 'lg:flex')}>
+        <Soc size={44} mood="wink" />
+        <p className="font-hand pb-1 text-[18px] leading-tight text-pen">one question at a time</p>
+      </div>
       <div className="grid gap-1 border-t px-3 py-3">
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent('socrat:search'))}
-          className="flex h-12 items-center gap-3 rounded-full px-3 text-[15px] font-medium text-muted-foreground transition-colors hover:bg-raised hover:text-foreground"
+          className="flex h-11 items-center gap-3 rounded-full px-3 text-[15px] text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
           aria-label="Search Socrat"
         >
           <svg viewBox="0 0 24 24" className="size-6 flex-none" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
@@ -252,7 +258,7 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
         <button
           type="button"
           onClick={onToggle}
-          className="hidden h-12 items-center gap-3 rounded-full px-3 text-[15px] font-medium text-muted-foreground transition-colors hover:bg-raised hover:text-foreground lg:flex"
+          className="hidden h-11 items-center gap-3 rounded-full px-3 text-[15px] text-muted-foreground transition-colors hover:bg-card hover:text-foreground lg:flex"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
         >
@@ -280,12 +286,12 @@ function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean })
                 aria-current={current ? 'page' : undefined}
                 className={cn('relative grid h-full content-center justify-items-center gap-1 text-xs font-medium text-muted-foreground', current && 'font-bold text-foreground')}
               >
-                <span className={cn('relative isolate grid h-8 w-14 place-items-center rounded-full transition-colors', current && 'text-primary-foreground')}>
-                  {current ? <span className="absolute inset-0 -z-10 rounded-full bg-primary animate-in fade-in zoom-in-90 duration-200" /> : null}
+                <span className={cn('relative isolate grid h-8 w-14 place-items-center rounded-full transition-colors', current && 'text-ink-foreground')}>
+                  {current ? <span className="absolute inset-0 -z-10 rounded-full bg-ink animate-in fade-in zoom-in-90 duration-200" /> : null}
                   <Icon className="size-6" strokeWidth={1.5} aria-hidden="true" />
                 </span>
                 {item.label}
-                {ready && item.key === 'evidence' ? <span className="absolute top-2 right-[calc(50%-22px)] size-2 rounded-full bg-secondary"><span className="sr-only">: weekly assessment available</span></span> : null}
+                {ready && item.key === 'evidence' ? <span className="absolute top-2 right-[calc(50%-22px)] size-2.5 rounded-full bg-[var(--highlight)] ring-2 ring-[var(--soc-outline)]"><span className="sr-only">: weekly assessment available</span></span> : null}
               </Link>
             </li>
           );
@@ -304,7 +310,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
       <a href="#main" className="skip-link">Skip to content</a>
       <DevBanner />
       {ownChrome ? null : (
-        <header className="sticky top-0 z-40 border-b bg-background">
+        <header className="sticky top-0 z-40 border-b bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-md">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
             <Link href={profile ? '/today' : '/'} aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
             <nav className="flex items-center gap-2" aria-label="Site">
@@ -350,7 +356,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       <Sidebar active={active} collapsed={collapsed} onToggle={toggle} ready={ready} />
       <div className="flex min-w-0 flex-1 flex-col">
         <DevBanner />
-        <header style={{ viewTransitionName: 'app-header' }} className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b bg-background px-4 lg:px-10">
+        <header style={{ viewTransitionName: 'app-header' }} className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b bg-[color-mix(in_srgb,var(--background)_88%,transparent)] px-4 backdrop-blur-md lg:px-10">
           <Link href="/today" className="rounded-full md:hidden" aria-label="Socrat, Today"><Wordmark size={26} /></Link>
           <div className="min-w-0 flex-1"><CommandMenu /></div>
           <div className="ml-auto flex items-center gap-1.5">
