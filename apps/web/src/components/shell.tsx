@@ -358,7 +358,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
               ) : (
                 <>
                   <Button asChild variant="link" size="sm"><Link href="/login">Log in</Link></Button>
-                  <Button asChild size="sm"><Link href="/login">Get started</Link></Button>
+                  <Button asChild size="sm"><Link href="/start">Get started</Link></Button>
                 </>
               )}
             </nav>

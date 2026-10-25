@@ -12,6 +12,7 @@ import { ErrorNote, Page, PageHeader } from '@/components/common';
 import { SuccessLine } from '@/components/socrat/states';
 import { Button } from '@/components/ui/button';
 
+const RANK: Record<PlanId, number> = { free: 0, plus: 1, pro: 2 };
 const PLANS: { id: PlanId; name: string; blurb: string; features: string[] }[] = [
   { id: 'free', name: 'Free', blurb: 'Try Socrat.', features: ['First 2 modules of every course', '5 messages with Soc each week', 'Visual playground locked'] },
   { id: 'plus', name: 'Plus', blurb: 'Everything, at a steady pace.', features: ['Every topic and skill unlocked', '10 messages with Soc a day', '3 playground visuals a day'] },
@@ -21,12 +22,16 @@ const PLANS: { id: PlanId; name: string; blurb: string; features: string[] }[] =
 export default function PricingPage() {
   const { profile, refresh } = useSession();
   const [status, setStatus] = useState<BillingStatus | null>(null);
+  const [prices, setPrices] = useState<BillingStatus['prices'] | null>(null);
   const [currency, setCurrency] = useState<Currency>('INR');
   const [interval, setInterval] = useState<Interval>('month');
   const [busy, setBusy] = useState<PlanId | null>(null);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
+  useEffect(() => {
+    api.get<BillingStatus['prices']>('/billing/prices').then(setPrices).catch(() => undefined); // public: shown before sign-in
+  }, []);
   useEffect(() => {
     if (profile) api.get<BillingStatus>('/billing/status').then(setStatus).catch(() => undefined);
   }, [profile]);
@@ -47,14 +52,13 @@ export default function PricingPage() {
     }
   }
 
-  const prices = status?.prices;
   return (
     <Page wide>
       <PageHeader title="Plans" description="Start free. Upgrade when you want every topic and more time with Soc. Plans renew automatically and you can cancel any time." />
       <div className="mt-6 flex flex-wrap gap-3" role="group" aria-label="Billing options">
         <div className="inline-flex rounded-full border p-1">
           {(['month', 'year'] as const).map(i => (
-            <Button key={i} size="sm" variant={interval === i ? 'default' : 'ghost'} aria-pressed={interval === i} onClick={() => setInterval(i)}>{i === 'month' ? 'Monthly' : 'Yearly'}</Button>
+            <Button key={i} size="sm" variant={interval === i ? 'default' : 'ghost'} aria-pressed={interval === i} onClick={() => setInterval(i)}>{i === 'month' ? 'Monthly' : 'Yearly · save 20%'}</Button>
           ))}
         </div>
         <div className="inline-flex rounded-full border p-1">
@@ -85,11 +89,9 @@ export default function PricingPage() {
                   <Button variant="outline" disabled>Your plan</Button>
                 ) : plan.id === 'free' ? null : !profile ? (
                   <Button asChild><Link href="/login?next=/pricing">Log in to upgrade</Link></Button>
-                ) : status?.plan !== 'free' ? (
-                  <Button variant="outline" asChild><Link href="/settings#plan-heading">Manage in Settings</Link></Button>
-                ) : (
+                ) : status && RANK[plan.id] < RANK[status.plan] ? null : (
                   <Button onClick={() => void choose(plan.id as 'plus' | 'pro')} disabled={busy !== null || !status?.enabled} aria-busy={busy === plan.id}>
-                    {busy === plan.id ? 'Opening checkout' : `Get ${plan.name}`}
+                    {busy === plan.id ? 'Opening checkout' : status && status.plan !== 'free' ? `Upgrade to ${plan.name}` : `Get ${plan.name}`}
                   </Button>
                 )}
               </div>
@@ -98,7 +100,7 @@ export default function PricingPage() {
         })}
       </div>
       <p className="mt-6 max-w-2xl text-[13px] text-muted-foreground">
-        Payments are handled by Razorpay. Yearly plans cost about 7.5 months. Cancel in Settings and you keep access until the period you paid for ends. See the <Link href="/terms" className="underline underline-offset-4">terms</Link>.
+        Payments are handled by Razorpay. Yearly plans save 20%. Upgrading starts the new plan today and ends the old one. Cancel in Settings and you keep access until the period you paid for ends. See the <Link href="/terms" className="underline underline-offset-4">terms</Link> and the <Link href="/refunds" className="underline underline-offset-4">refund policy</Link>.
       </p>
     </Page>
   );

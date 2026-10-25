@@ -32,9 +32,9 @@ const TryTutor = dynamic(() => import('@/components/landing/try-tutor').then(m =
 
 /** The hero's opening question. Each answer changes how Soc reacts and where the button goes. */
 const GOALS: { id: string; label: string; mood: SocMood; say: string; cta: string; href: string }[] = [
-  { id: 'zero', label: 'Learn to code from zero', mood: 'happy', say: 'Lovely. So what is a variable, really?', cta: 'Start from zero', href: '/login' },
-  { id: 'interview', label: 'Crack DSA interviews', mood: 'curious', say: 'Why does a hash map make it fast?', cta: 'Prep for interviews', href: '/login' },
-  { id: 'competitive', label: 'Win coding contests', mood: 'proud', say: 'Can you prove it runs in time?', cta: 'Train for contests', href: '/login' },
+  { id: 'zero', label: 'Learn to code from zero', mood: 'happy', say: 'Lovely. So what is a variable, really?', cta: 'Start from zero', href: '/start?course=zero' },
+  { id: 'interview', label: 'Crack DSA interviews', mood: 'curious', say: 'Why does a hash map make it fast?', cta: 'Prep for interviews', href: '/start?course=dsa' },
+  { id: 'competitive', label: 'Win coding contests', mood: 'proud', say: 'Can you prove it runs in time?', cta: 'Train for contests', href: '/start?course=cp' },
   { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then try one problem below. No sign-up.', cta: 'Try a problem', href: '#try' },
 ];
 
@@ -159,7 +159,7 @@ export function LandingPage() {
     return () => { active = false; };
   }, []);
 
-  const links = [['#how', 'How it works'], ['#tutor', 'The tutor'], ['#try', 'Try it'], ['#paths', 'Paths'], ['#faq', 'FAQ']] as const;
+  const links = [['#how', 'How it works'], ['#tutor', 'The tutor'], ['#try', 'Try it'], ['#paths', 'Paths'], ['/pricing', 'Pricing'], ['#faq', 'FAQ']] as const;
   const chosen = GOALS.find(g => g.id === goal) ?? null;
   const skills = courses.reduce((sum, c) => sum + c.concept_count, 0);
   const problems = courses.reduce((sum, c) => sum + c.problem_count, 0);
@@ -178,7 +178,7 @@ export function LandingPage() {
           <div className="flex items-center gap-1 sm:gap-3">
             <ThemeToggle />
             <Link href="/login" className="hidden min-h-11 items-center px-2 text-[15px] font-medium underline-offset-4 hover:underline sm:inline-flex">Log in</Link>
-            <Button asChild className="max-sm:h-10 max-sm:px-4 max-sm:[&_[data-slot=arrow]]:hidden"><Link href="/login">Get started<ArrowCircle /></Link></Button>
+            <Button asChild className="max-sm:h-10 max-sm:px-4 max-sm:[&_[data-slot=arrow]]:hidden"><Link href="/start">Get started<ArrowCircle /></Link></Button>
             <Button data-menu-button variant="ghost" size="icon" className="lg:hidden" aria-label={menu ? 'Close navigation' : 'Open navigation'} aria-expanded={menu} aria-controls={menu ? 'landing-mobile-nav' : undefined} onClick={() => setMenu(!menu)}>
               {menu ? <X /> : <Menu />}
             </Button>
@@ -226,7 +226,7 @@ export function LandingPage() {
                     );
                   })}
                   <Button asChild size="lg" className="lg:h-11">
-                    <Link href={chosen?.href ?? '/login'}>{chosen?.cta ?? 'Get started'}<ArrowCircle /></Link>
+                    <Link href={chosen?.href ?? '/start'}>{chosen?.cta ?? 'Get started'}<ArrowCircle /></Link>
                   </Button>
                 </div>
                 <p className="mt-4 text-[14px] text-muted-foreground">Free while in beta. The first problem needs no sign-up.</p>
@@ -318,7 +318,7 @@ export function LandingPage() {
               return (
                 <InView key={path.id} index={i} className="doodle-host group">
                   <Link
-                    href="/login"
+                    href={`/start?course=${path.id}`}
                     aria-label={`Get started with ${path.name}`}
                     className={cn('relative flex min-h-[22rem] flex-col gap-3 overflow-hidden rounded-[20px] border-2 border-[var(--soc-outline)] p-6 shadow-[6px_6px_0_var(--soc-outline)] transition-[transform,box-shadow] duration-300 ease-[var(--ease-soft)] group-hover:-translate-x-0.5 group-hover:-translate-y-1 group-hover:shadow-[9px_10px_0_var(--soc-outline)] lg:p-8', path.color)}
                   >
@@ -385,9 +385,11 @@ export function LandingPage() {
             <a href="#how" className="hover:text-foreground">How it works</a>
             <a href="#tutor" className="hover:text-foreground">The tutor</a>
             <a href="#paths" className="hover:text-foreground">Paths</a>
+            <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
             <a href="#faq" className="hover:text-foreground">FAQ</a>
             <Link href="/login" className="hover:text-foreground">Log in</Link>
             <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
+            <Link href="/refunds" className="hover:text-foreground">Refunds</Link>
             <Link href="/terms" className="hover:text-foreground">Terms</Link>
             <Link href="/attribution" className="hover:text-foreground">Attribution</Link>
           </nav>

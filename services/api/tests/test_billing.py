@@ -125,3 +125,32 @@ def test_webhook_needs_a_valid_signature_and_sets_the_renewal_date(paid):
     assert ok.status_code == 200
     status = api.get("/api/v1/billing/status").json()
     assert status["plan"] == "pro" and status["renews_at"] == 4_000_000_000
+
+
+def test_plus_upgrades_to_pro_without_losing_access_and_cancels_the_old_plan(paid, monkeypatch):
+    api, headers, calls = paid
+    made = iter(["sub_plus", "sub_pro"])
+    monkeypatch.setattr(
+        billing,
+        "razorpay",
+        lambda _s, _m, path, **b: (
+            calls.append(path) or {"id": next(made) if path == "/subscriptions" else "plan_1"}
+        ),
+    )
+    pay = lambda sub: dict(  # noqa: E731
+        razorpay_payment_id="pay",
+        razorpay_subscription_id=sub,
+        razorpay_signature=billing.sign("secret", f"pay|{sub}"),
+    )
+    plus = dict(plan="plus", interval="month", currency="INR")
+    api.post("/api/v1/billing/checkout", json=plus, headers=headers)
+    api.post("/api/v1/billing/verify", json=pay("sub_plus"), headers=headers)
+    assert api.post("/api/v1/billing/checkout", json=plus, headers=headers).status_code == 409
+    started = api.post("/api/v1/billing/checkout", json=dict(plus, plan="pro"), headers=headers)
+    assert started.status_code == 200
+    assert api.get("/api/v1/billing/status").json()["plan"] == "plus"  # still Plus while paying
+    assert (
+        api.post("/api/v1/billing/verify", json=pay("sub_pro"), headers=headers).status_code == 200
+    )
+    assert api.get("/api/v1/billing/status").json()["plan"] == "pro"
+    assert "/subscriptions/sub_plus/cancel" in calls

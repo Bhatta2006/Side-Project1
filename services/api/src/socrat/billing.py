@@ -24,11 +24,12 @@ from socrat.models import BillingPlan, Subscription, now
 router = APIRouter(prefix="/api/v1/billing")
 API = "https://api.razorpay.com/v1"
 
-# plan -> interval -> currency -> minor units (paise / cents). Yearly is about 7.5 months.
+# plan -> interval -> currency -> minor units (paise / cents). Yearly = 12 months less 20%.
 PRICES = {
-    "plus": {"month": {"INR": 19900, "USD": 299}, "year": {"INR": 149900, "USD": 1799}},
-    "pro": {"month": {"INR": 59900, "USD": 799}, "year": {"INR": 449900, "USD": 5399}},
+    "plus": {"month": {"INR": 49900, "USD": 500}, "year": {"INR": 479000, "USD": 4800}},
+    "pro": {"month": {"INR": 99900, "USD": 1000}, "year": {"INR": 959000, "USD": 9600}},
 }
+RANK = {"free": 0, "plus": 1, "pro": 2}
 # interval -> (Razorpay period, billing cycles to authorise, seconds granted until the webhook)
 PERIOD = {"month": ("monthly", 120, 31 * 86400), "year": ("yearly", 10, 366 * 86400)}
 
@@ -73,7 +74,8 @@ def sign(secret: str, message: str) -> str:
 
 
 def plan_id(db: Session, settings, body: Checkout) -> str:
-    key = f"{body.plan}:{body.interval}:{body.currency}"
+    amount = PRICES[body.plan][body.interval][body.currency]
+    key = f"{body.plan}:{body.interval}:{body.currency}:{amount}"  # a new price is a new Razorpay plan
     cached = db.get(BillingPlan, key)
     if cached:
         return cached.razorpay_plan_id
@@ -85,12 +87,17 @@ def plan_id(db: Session, settings, body: Checkout) -> str:
         interval=1,
         item=dict(
             name=f"Socrat {body.plan.title()} ({PERIOD[body.interval][0]})",
-            amount=PRICES[body.plan][body.interval][body.currency],
+            amount=amount,
             currency=body.currency,
         ),
     )
     db.add(BillingPlan(key=key, razorpay_plan_id=made["id"]))
     return made["id"]
+
+
+@router.get("/prices")
+def prices():
+    return PRICES
 
 
 @router.get("/status")
@@ -119,7 +126,8 @@ def checkout(body: Checkout, request: Request):
         raise HTTPException(404, "not_found")
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
-        if entitlements.plan_of(db, user.id) != "free":
+        current = entitlements.plan_of(db, user.id)
+        if RANK[body.plan] <= RANK[current]:  # only moving up is allowed while subscribed
             raise HTTPException(409, "already_subscribed")
         made = razorpay(
             settings,
@@ -131,12 +139,17 @@ def checkout(body: Checkout, request: Request):
             notes=dict(user_id=user.id),
         )
         sub = db.get(Subscription, user.id)
-        if sub is None:
-            sub = Subscription(user_id=user.id, razorpay_subscription_id=made["id"])
-            db.add(sub)
-        sub.plan, sub.interval, sub.currency = body.plan, body.interval, body.currency
-        sub.status, sub.razorpay_subscription_id = "created", made["id"]
-        sub.current_end, sub.cancel_at_period_end, sub.updated_at = 0, False, now()
+        if current != "free":
+            # Upgrade: keep the paid plan working until the new payment is verified.
+            sub.pending = f"{body.plan}:{body.interval}:{body.currency}:{made['id']}"
+        else:
+            if sub is None:
+                sub = Subscription(user_id=user.id, razorpay_subscription_id=made["id"])
+                db.add(sub)
+            sub.plan, sub.interval, sub.currency = body.plan, body.interval, body.currency
+            sub.status, sub.razorpay_subscription_id = "created", made["id"]
+            sub.current_end, sub.cancel_at_period_end, sub.pending = 0, False, None
+        sub.updated_at = now()
         return dict(
             key_id=settings.razorpay_key_id,
             subscription_id=made["id"],
@@ -157,10 +170,24 @@ def verify(body: Verify, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
         sub = db.get(Subscription, user.id)
-        if sub is None or sub.razorpay_subscription_id != body.razorpay_subscription_id:
+        upgrading = sub is not None and (sub.pending or "").endswith(
+            f":{body.razorpay_subscription_id}"
+        )
+        if sub is None or not (
+            upgrading or sub.razorpay_subscription_id == body.razorpay_subscription_id
+        ):
             raise HTTPException(400, "payment_signature_invalid")
-        # The webhook later sets the exact renewal date; until then grant the paid period.
         stamp = now()
+        if upgrading:
+            old = sub.razorpay_subscription_id
+            sub.plan, sub.interval, sub.currency, _ = sub.pending.split(":")
+            sub.razorpay_subscription_id, sub.pending = body.razorpay_subscription_id, None
+            sub.current_end, sub.cancel_at_period_end = 0, False  # the new plan starts now
+            try:  # stop billing the old plan; no proration, the new period starts today
+                razorpay(settings, "POST", f"/subscriptions/{old}/cancel", cancel_at_cycle_end=0)
+            except HTTPException:
+                pass  # ponytail: a failed cancel needs a manual look in the Razorpay dashboard
+        # The webhook later sets the exact renewal date; until then grant the paid period.
         sub.status = "active"
         sub.current_end = max(sub.current_end, stamp + PERIOD[sub.interval][2])
         sub.updated_at = stamp

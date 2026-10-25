@@ -17,6 +17,7 @@ import { Illustration, Soc } from '@/components/socrat/illustration';
 import { SocFigure } from '@/components/socrat/soc';
 import { StatusIcon, statusFromBand, statusFromRoadmap } from '@/components/socrat/status';
 import { SkillGrid } from '@/components/socrat/skill-grid';
+import { usePlanLocks } from '@/lib/billing';
 import { WeekStrip } from '@/components/socrat/week-strip';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +100,7 @@ function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
 
 export default function TodayPage() {
   const allowed = useGuard('active');
+  const planLocked = usePlanLocks();
   const { profile } = useSession();
   const [today, setToday] = useState<Today | null>(null);
   const [error, setError] = useState('');
@@ -300,7 +302,7 @@ export default function TodayPage() {
                 <p id="map-heading" className="type-label mb-5 text-muted-foreground">Your skill map: {goal.title}</p>
                 <SkillGrid
                   label={goal.title}
-                  nodes={goal.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: statusFromRoadmap(c), current: c.concept === goal.current, reviewDue: c.review_due }))}
+                  nodes={goal.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: planLocked(c.concept) ? 'locked' : statusFromRoadmap(c), current: c.concept === goal.current, reviewDue: c.review_due }))}
                 />
               </div>
             </Card>

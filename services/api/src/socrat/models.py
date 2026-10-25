@@ -587,6 +587,8 @@ class Subscription(Base):
     razorpay_subscription_id: Mapped[str] = mapped_column(String(64), unique=True)
     current_end: Mapped[int] = mapped_column(Integer, default=0)
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
+    # An upgrade awaiting payment: "plan:interval:currency:razorpay_subscription_id".
+    pending: Mapped[str | None] = mapped_column(String(96), nullable=True)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
@@ -594,5 +596,5 @@ class BillingPlan(Base):
     """Razorpay plan ids, created on first use (key: plan:interval:currency)."""
 
     __tablename__ = "billing_plans"
-    key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    key: Mapped[str] = mapped_column(String(48), primary_key=True)
     razorpay_plan_id: Mapped[str] = mapped_column(String(64))

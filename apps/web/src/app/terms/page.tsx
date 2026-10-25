@@ -25,7 +25,8 @@ export default function TermsPage() {
         <p>
           {LEGAL.product} is in beta. Features may change, appear or go away, and things will sometimes break. We
           will try hard to keep your progress safe and to tell you before changes that matter. Socrat has a free
-          plan and paid plans, described on the <Link href="/pricing">plans page</Link>.
+          plan and paid plans, described on the <Link href="/pricing">plans page</Link>. Paid plans renew automatically until
+          you cancel; renewal, cancellation and refunds are explained in the <Link href="/refunds">refund policy</Link>.
         </p>
       </section>
 
