@@ -131,7 +131,7 @@ class MessageInput(BaseModel):
     message: str = Field(default="", max_length=4000)
     intent: Literal["chat", "hint", "reveal", "reveal_confirmed"] = "chat"
     code: str = Field(default="", max_length=64_000)
-    new_attempt: bool = False
+    new_attempt: bool = False  # Compatibility hint; completed runs are verified by the server.
 
 
 class WorkerInput(Strict):

@@ -363,6 +363,20 @@ def prepare(
             raise HTTPException(404, "not_found")
         problem = catalog.problem(problem_id)
         ladder = socratic.Ladder.from_dict(thread.ladder.get("state"))
+        attempts = (
+            db.scalar(
+                select(func.count())
+                .select_from(Submission)
+                .where(
+                    Submission.user_id == user.id,
+                    Submission.problem_id == problem_id,
+                    Submission.status == "done",
+                )
+            )
+            or 0
+        )
+        # A client flag cannot manufacture effort or reuse the same completed run.
+        new_attempt = attempts > int(thread.ladder.get("attempts_seen", 0))
         ladder = socratic.advance(ladder, message, new_attempt)
         failed = failed_submits(db, user.id, problem.id)
         if intent in {"reveal", "reveal_confirmed"}:
@@ -372,7 +386,7 @@ def prepare(
             elif intent == "reveal_confirmed":
                 ladder = socratic.Ladder(ladder.ceiling, ladder.turns_at_ceiling, revealed=True)
         allowed = 5 if ladder.revealed else ladder.ceiling
-        thread.ladder = {**thread.ladder, "state": ladder.to_dict()}
+        thread.ladder = {**thread.ladder, "state": ladder.to_dict(), "attempts_seen": attempts}
         course_id = catalog.problems[problem_id][0]
         title = catalog.concept(f"{course_id}:{problem.concepts[0]}").title
         sections.update(problem_sections(db, problem, user.id, code, language, allowed, title))
@@ -461,6 +475,7 @@ async def stream_reply(
         yield "done", {"text": text, "level": min(plan.allowed, 4), "provider": "policy"}
         return
     reference = plan.problem.reference if plan.problem else ""
+    guarded = plan.problem is not None
     raw = ""
     shown = ""
     level: int | None = None
@@ -494,17 +509,18 @@ async def stream_reply(
                 level, body = socratic.parse_level(raw)
                 level = plan.allowed if level is None else min(level, plan.allowed)
                 shown = body
-                if shown:
+                if shown and not guarded:
                     yield "delta", {"text": shown}
                 continue
             if plan.problem is not None and plan.allowed < 5 and opens_code(raw):
                 raise ProviderError("leak_guard")
             shown += delta
-            yield "delta", {"text": delta}
+            if not guarded:
+                yield "delta", {"text": delta}
         if level is None:
             level, shown = socratic.parse_level(raw)
             level = plan.allowed if level is None else min(level, plan.allowed)
-            if shown:
+            if shown and not guarded:
                 yield "delta", {"text": shown}
         if plan.problem is not None and socratic.leaks(
             shown, plan.allowed, reference, plan.problem.approach
@@ -512,6 +528,9 @@ async def stream_reply(
             raise ProviderError("leak_guard")
         if not shown.strip():
             raise ProviderError("empty_reply")
+        if guarded:
+            # Validate the complete answer before any protected problem text reaches SSE.
+            yield "delta", {"text": shown}
         yield "done", {"text": shown.strip(), "level": level, "provider": provider.name}
     except ProviderError as exc:
         text = plan.fallback
