@@ -212,6 +212,7 @@ quiz:
     explanation: The right side is evaluated using the old total, then the result replaces it.
     difficulty: 1
   - id: int-division-types
+    languages: [python]
     kind: mcq
     prompt: "In Python, which expression has the value 2 and type int?"
     options:

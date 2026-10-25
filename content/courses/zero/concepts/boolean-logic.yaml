@@ -176,13 +176,14 @@ quiz:
     explanation: "De Morgan's law: not (a and b) is true when at least one of a, b is false."
     difficulty: 4
   - id: guard-first
+    languages: [python]
     kind: mcq
     prompt: "xs may be empty. Which condition is safe to evaluate?"
     options:
       - "len(xs) > 0 and xs[0] == 5"
       - "xs[0] == 5 and len(xs) > 0"
       - "xs[0] == 5 or len(xs) > 0"
-      - "Both of the first two"
+      - "None of them"
     answer: 0
     explanation: "and stops at the first false operand, so the length check must come first to protect xs[0]."
     difficulty: 5

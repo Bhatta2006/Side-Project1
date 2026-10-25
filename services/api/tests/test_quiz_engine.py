@@ -90,7 +90,7 @@ def test_legacy_bank_wraps_every_item_with_bands_and_pools():
     total = sum(len(c.quiz) for c in catalog.concepts.values())
     assert len(items) == total >= 284
     assert len({i.key for i in items}) == total
-    assert {i.band for i in items} <= {1, 2, 3, 5, 6}  # difficulty 4 and 5 map to bands 5 and 6
+    assert {i.band for i in items} <= {1, 2, 3, 4, 5}  # difficulty n is band n, so no band is empty
     assert all(i.d_prior == DEFAULT.prior(i.band) for i in items)
     assert all(i.status == "provisional" and i.reviewed for i in items)
     counts = pools.summary(items)
@@ -101,8 +101,8 @@ def test_legacy_bank_wraps_every_item_with_bands_and_pools():
 def test_code_items_start_at_band_two():
     assert pools.band_for_difficulty(1, has_code=False) == 1
     assert pools.band_for_difficulty(1, has_code=True) == 2
-    assert pools.band_for_difficulty(4, has_code=False) == 5
-    assert pools.band_for_difficulty(5, has_code=True) == 6
+    assert pools.band_for_difficulty(4, has_code=False) == 4
+    assert pools.band_for_difficulty(5, has_code=True) == 5
 
 
 def test_keep_practice_rescues_a_concept_with_only_assessment_items():

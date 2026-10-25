@@ -7,14 +7,15 @@ import { cn } from '@/lib/utils';
  * in docs/redesign/DESIGN-SYSTEM.md. "Mastered" is used instead of "Shown independently"
  * because the backend's mastery estimate also counts (down-weighted) assisted successes.
  */
-export type Status = 'not_seen' | 'locked' | 'read' | 'assumed' | 'practised' | 'mastered' | 'review' | 'needs_practice';
+export type Status = 'not_seen' | 'locked' | 'read' | 'assumed' | 'practised' | 'learned' | 'mastered' | 'review' | 'needs_practice';
 
 export const STATUS_LABEL: Record<Status, string> = {
   not_seen: 'Not seen yet',
   locked: 'Locked',
   read: 'Read',
-  assumed: 'Assumed from placement',
-  practised: 'Practised with help',
+  assumed: 'To confirm (placement)',
+  practised: 'Practised',
+  learned: 'Learned, check passed',
   mastered: 'Mastered',
   review: 'Review due',
   needs_practice: 'Still building',
@@ -31,7 +32,7 @@ export function statusFromRoadmap(item: Pick<RoadmapItem, 'status' | 'lesson_don
     case 'locked': return 'locked';
     case 'mastered': return 'mastered';
     case 'assumed': return 'assumed';
-    case 'practiced': return 'practised';
+    case 'practiced': return 'learned';
     case 'in_progress': return item.quiz_done || !item.lesson_done ? 'practised' : 'read';
     default: return item.lesson_done ? 'read' : 'not_seen';
   }
@@ -61,6 +62,12 @@ export function StatusIcon({ status, size = 20, className, title }: { status: St
       </g>
     ),
     practised: <circle cx="12" cy="12" r="8" stroke="var(--status-practised, var(--primary))" fill="none" strokeWidth="2.5" />,
+    learned: (
+      <g fill="none" stroke="var(--status-practised, var(--primary))" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8" strokeWidth="2.5" />
+        <path d="M8.6 12.2l2.3 2.3 4.5-4.6" strokeWidth="2" />
+      </g>
+    ),
     mastered: (
       <g>
         <circle cx="12" cy="12" r="9" fill="var(--proof)" stroke="var(--proof-stroke)" strokeWidth="1.5" data-fill="" />

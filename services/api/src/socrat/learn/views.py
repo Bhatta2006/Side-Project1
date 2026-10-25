@@ -132,9 +132,14 @@ def today_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment
         study_day=learn.local_day(user, now).weekday() in set(enrollment.weekdays),
         streak=learn.streak(db, user, enrollment, now),
         days_away=learn.days_away(db, user, enrollment, now),
-        minutes=dict(done=day.minutes if day else 0, goal=budget),
+        minutes=dict(
+            done=day.minutes if day else 0,
+            goal=budget,
+            reached=bool(day and day.minutes >= budget),
+        ),
         done=done,
         next=pending[0] if pending else None,
+        current_module=current_module(plan, pending[0]["concept"] if pending else None),
         queue=pending[1:],
         pace=plan.pace,
         pace_reason=plan.pace_reason,
@@ -150,17 +155,35 @@ def today_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment
     )
 
 
+OPEN = {"assumed", "upcoming", "in_progress", "locked"}
+
+
 def progress_numbers(plan: Plan) -> dict:
-    total = len(plan.roadmap)
-    # Assumed-from-placement skills are not evidence, so they stay out of "finished".
-    finished = sum(1 for r in plan.roadmap if r["status"] in {"mastered", "practiced"})
-    assumed = sum(1 for r in plan.roadmap if r["status"] == "assumed")
+    # Skills the learner set aside are not part of finishing the course.
+    path = [r for r in plan.roadmap if r["status"] not in {"optional", "skipped"}]
+    total = len(path)
+    # "Learned" = every step done and the check passed; "mastered" = proven again after a gap.
+    # Assumed-from-placement skills are not evidence: they count only once confirmed.
+    mastered = sum(1 for r in path if r["status"] == "mastered")
+    learned = sum(1 for r in path if r["status"] == "practiced")
+    finished = mastered + learned
     return dict(
         total=total,
         finished=finished,
-        assumed=assumed,
+        mastered=mastered,
+        learned=learned,
+        assumed=sum(1 for r in path if r["status"] == "assumed"),
         percent=round(100 * finished / total) if total else 0,
+        complete=bool(total) and finished == total,
     )
+
+
+def current_module(plan: Plan, next_concept: str | None) -> str | None:
+    """The module the learner is working in: where the next step is, else the first unfinished."""
+    rows = {r["concept"]: r for r in plan.roadmap}
+    if next_concept in rows:
+        return rows[next_concept]["module"]
+    return next((r["module"] for r in plan.roadmap if r["status"] in OPEN), None)
 
 
 def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int) -> dict:
@@ -209,6 +232,7 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
     target = enrollment.goal.get("target_date")
     on_track = plan.forecast.get("on_track")
     current = next((r for r in plan.roadmap if r["status"] in {"in_progress", "upcoming"}), None)
+    first = plan.days[0]["items"][0] if plan.days and plan.days[0]["items"] else None
     return dict(
         style=plan.style,
         focus=plan.focus,
@@ -223,6 +247,7 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
         target_date=target,
         on_track=on_track,
         current_concept=current["concept"] if current else None,
+        current_module=current_module(plan, first["concept"] if first else None),
         modules=modules,
         days=plan.days,
         reasons=plan.reasons,
@@ -390,6 +415,9 @@ def progress_view(
                 confidence=round(state.confidence, 3),
                 evidence=state.evidence_count,
                 next_review=state.next_review_at or None,
+                status=item["status"],
+                independent=state.independent_successes,
+                assisted=state.assisted_successes,
             )
         )
     today = learn.local_day(user, now)

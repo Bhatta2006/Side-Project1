@@ -152,8 +152,8 @@ export function Loading({ label = 'Loading', variant = 'page' }: { label?: strin
 }
 
 /** Kept for existing call sites: the shared inline error with a retry. */
-export function ErrorNote({ message, retry, className }: { message: string; retry?: () => void; className?: string }) {
-  return <ErrorState message={message} retry={retry} className={className} />;
+export function ErrorNote({ message, retry, className, title }: { message: string; retry?: () => void; className?: string; title?: string }) {
+  return <ErrorState message={message} retry={retry} className={className} title={title} />;
 }
 
 /** Progress ring: 4 px round-capped stroke, track in the hairline colour, the real value in the centre. */

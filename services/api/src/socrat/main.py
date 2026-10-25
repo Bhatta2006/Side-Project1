@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import secrets
+import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -45,6 +46,13 @@ class DevIdentity(BaseModel):
     display_name: str | None = Field(default=None, max_length=80)
 
 
+def warm_quiz_bank() -> None:
+    from socrat.catalog.registry import default_catalog
+    from socrat.quiz import service as quiz_service
+
+    quiz_service.bank(default_catalog())
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     engine = make_engine(settings.database_url_value)
@@ -54,6 +62,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background = None
         if settings.codeforces_autosync:
             background = asyncio.create_task(autosync.run_forever(engine))
+        if settings.adaptive_quiz_enabled and settings.environment != "test":
+            # Building the item bank runs every generator (~20 s); do it before the first check.
+            threading.Thread(target=warm_quiz_bank, daemon=True).start()
         yield
         if background is not None:
             background.cancel()

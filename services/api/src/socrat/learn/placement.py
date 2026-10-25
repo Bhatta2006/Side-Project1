@@ -97,6 +97,8 @@ def answer(
     q = placement.question(catalog, state)
     if q is None or q.id != item_id:
         raise HTTPException(409, "stale_question")
+    if choice is not None and not 0 <= choice < len(q.options):
+        raise HTTPException(422, "invalid_choice")
     # "I don't know" is an honest, valid answer; it counts as not yet known.
     placement.answer(catalog, state, choice if choice is not None else -1)
     enrollment.placement = state.to_dict()
@@ -108,19 +110,15 @@ def answer(
 def finish(
     db: Session, catalog: Catalog, enrollment: Enrollment, state: placement.PlacementState, now: int
 ):
-    for concept, known in placement.result(state, _own(catalog, enrollment)).items():
+    for concept, known in placement.result(state).items():
         learn.set_state(db, enrollment, concept, placed(known, now), now)
     enrollment.status = "active"
     enrollment.placement = state.to_dict()
 
 
-def _own(catalog: Catalog, enrollment: Enrollment) -> set[str]:
-    return set(catalog.course_concepts(enrollment.course_id))
-
-
 def summary(catalog: Catalog, enrollment: Enrollment) -> dict:
     state = current(catalog, enrollment)
-    known = placement.result(state, _own(catalog, enrollment))
+    known = placement.result(state)
     start = next((c for c in state.path if not known[c]), None)
     return {
         "asked": len(state.asked),

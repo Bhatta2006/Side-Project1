@@ -86,8 +86,9 @@ def ladder(steps: list[Step], ctx: Context, cfg: EngineConfig = DEFAULT) -> Ladd
     if not done:
         estimate = min(band_for(min(ctx.thetas[p] for p in ctx.patterns), cfg), top)
         if ctx.mode.win_first:
+            # Never above the estimate before the first answer, even when easy items run out.
             start = max(1, estimate - 1)
-            return Ladder((1, top), (start, start), "cold_start")
+            return Ladder((1, max(estimate, start)), (start, start), "cold_start")
         return Ladder((1, top), (estimate, estimate), "target")
     last = done[-1]
     cur = last.band
@@ -167,6 +168,11 @@ def select(
         rule = Ladder(hard, (min(rule.preferred[0], cap), min(rule.preferred[1], cap)), rule.reason)
     pool = [i for i in candidates(items, steps, ctx) if rule.hard[0] <= i.band <= rule.hard[1]]
     if not pool:
+        done = answered(steps)
+        wrongs = sum(s.outcome == "wrong" for s in done)
+        # Out of questions after repeated misses: teach first instead of serving harder ones.
+        if done and done[-1].outcome == "wrong" and wrongs >= 2:
+            return Choice(None, "needs_lesson")
         return Choice(None, "exhausted")
     # The ladder overrides variety: choose the band first, then vary within it.
     gap = min(distance(i.band, rule.preferred) for i in pool)

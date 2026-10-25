@@ -121,6 +121,10 @@ def activity_path(activity_id: str) -> str:
         return f"/learn/{segments}"
     if kind == "problem":
         return f"/problems/{segments}"
+    if kind in {"example", "explain", "checkin", "stretch"}:
+        return f"/learn/{segments}?step={kind}"
+    if kind == "quiz":
+        return f"/quiz/{segments}"
     return f"/quiz/{kind}/{segments}"
 
 
@@ -244,7 +248,13 @@ def adaptive_section(db: Session, catalog: Catalog, enrollment, plan, states, no
 
 
 def problem_sections(
-    db: Session, problem: Problem, user_id: str, code: str, language: str, allowed: int
+    db: Session,
+    problem: Problem,
+    user_id: str,
+    code: str,
+    language: str,
+    allowed: int,
+    concept_title: str = "",
 ) -> dict[str, str]:
     last = db.scalar(
         select(Submission)
@@ -266,13 +276,15 @@ def problem_sections(
                 f"Errors:\n{(failing.get('stderr') or '')[:1500]}"
             )
     examples = "\n".join(f"Input:\n{e.input}\nOutput:\n{e.output}" for e in problem.examples)
+    notes = "\n".join(f"- {h}" for h in problem.hints[:allowed])
+    if allowed >= 4:
+        notes += f"\nApproach: {problem.approach}"
     sections = {
-        "practice_problem": f"{problem.title}\n{problem.statement}\nInput: {problem.input_format}\n"
+        "practice_problem": f"Concept: {concept_title}\n{problem.title}\n{problem.statement}\n"
+        f"Input: {problem.input_format}\n"
         f"Output: {problem.output_format}\nConstraints: {'; '.join(problem.constraints)}\n"
         f"Examples:\n{examples}",
-        "tutor_notes": "Progressive hints (for you, reveal only as the level allows):\n"
-        + "\n".join(f"- {h}" for h in problem.hints)
-        + f"\nIntended approach (do not reveal below level 4): {problem.approach}",
+        "tutor_notes": f"Hints you may use at this level:\n{notes}" if notes else "",
         "learner_code": f"Language: {LANGUAGE_NAMES.get(language, language)}\n{code[:12000] or '(empty)'}",
         "latest_result": result,
         "help_policy": f"ALLOWED_LEVEL: {allowed} — {socratic.LEVELS[allowed]}",
@@ -361,7 +373,9 @@ def prepare(
                 ladder = socratic.Ladder(ladder.ceiling, ladder.turns_at_ceiling, revealed=True)
         allowed = 5 if ladder.revealed else ladder.ceiling
         thread.ladder = {**thread.ladder, "state": ladder.to_dict()}
-        sections.update(problem_sections(db, problem, user.id, code, language, allowed))
+        course_id = catalog.problems[problem_id][0]
+        title = catalog.concept(f"{course_id}:{problem.concepts[0]}").title
+        sections.update(problem_sections(db, problem, user.id, code, language, allowed, title))
     elif scope.startswith("concept:"):
         qualified = scope.removeprefix("concept:")
         if qualified not in catalog.concepts:
@@ -492,7 +506,9 @@ async def stream_reply(
             level = plan.allowed if level is None else min(level, plan.allowed)
             if shown:
                 yield "delta", {"text": shown}
-        if plan.problem is not None and socratic.leaks(shown, plan.allowed, reference):
+        if plan.problem is not None and socratic.leaks(
+            shown, plan.allowed, reference, plan.problem.approach
+        ):
             raise ProviderError("leak_guard")
         if not shown.strip():
             raise ProviderError("empty_reply")

@@ -61,6 +61,8 @@ class Activity:
     title: str
     minutes: int
     reason: str = ""
+    # Machine-readable why, so the learner sees which adaptation put this here.
+    code: str = "path"
 
     def to_dict(self) -> dict:
         return self.__dict__.copy()
@@ -162,6 +164,7 @@ def concept_activities(
     style: str = "balanced",
     support: str | None = None,
     support_reason: str = "",
+    support_code: str = "stuck_support",
 ) -> list[Activity]:
     concept = catalog.concept(qualified)
     est = concept.estimated_minutes
@@ -199,16 +202,17 @@ def concept_activities(
             "explain": f"{concept.title}, explained another way",
             "checkin": f"Talk it through: {concept.title}",
         }
-        items.append(
-            Activity(
-                f"{support}:{qualified}",
-                support,  # type: ignore[arg-type]
-                qualified,
-                titles[support],
-                SUPPORT_MINUTES[support],
-                reason=support_reason,
-            )
+        step = Activity(
+            f"{support}:{qualified}",
+            support,  # type: ignore[arg-type]
+            qualified,
+            titles[support],
+            SUPPORT_MINUTES[support],
+            reason=support_reason,
+            code=support_code,
         )
+        # After a missed check, re-teach before the retake; other support follows the check.
+        items.insert(1 if support_code == "failed_check_refresh" else len(items), step)
     share = est * 0.55 / max(1, len(problems))
     items += [
         Activity(
@@ -379,6 +383,7 @@ def build_plan(
                 f"Test out: {title}",
                 TESTOUT_MINUTES if kind == "testout" else CHECKPOINT_MINUTES,
                 reason="You chose to prove what you know; passing skips ahead.",
+                code="chosen_testout",
             )
         )
     for probe in sorted(probes):
@@ -391,6 +396,7 @@ def build_plan(
                     f"Quick check: {catalog.concept(probe).title} and its foundations",
                     TESTOUT_MINUTES,
                     reason="Finds which building block is the real gap.",
+                    code="probe",
                 )
             )
     skipped = 0
@@ -425,9 +431,25 @@ def build_plan(
             roadmap.append({**entry_base, "status": "locked", "locked_by": locked[qualified]})
             continue
         why = ""
-        if state.mastered(now) or (state.assumed and state.evidence_count == 0):
-            status = "mastered" if state.mastered(now) else "assumed"
+        if state.mastered(now):
+            status = "mastered"
+        elif state.assumed and state.evidence_count == 0:
+            # Placement only believes this: a short hard check must prove it before it counts.
+            status, why = "assumed", "Placement suggests you know this; a short check confirms it."
             skipped += 1
+            if f"testout:{qualified}" not in completed:
+                queue.append(
+                    Activity(
+                        f"testout:{qualified}",
+                        "testout",
+                        qualified,
+                        f"Confirm: {concept.title}",
+                        TESTOUT_MINUTES,
+                        reason="Placement suggests you know this. Pass a short check to skip "
+                        "the lesson; miss and you'll learn it properly.",
+                        code="assumed_confirm",
+                    )
+                )
         else:
             c_pace, c_reason = concept_pace(qualified, history, pace, adaptive)
             stuck = adaptive.stuck.get(qualified)
@@ -440,8 +462,19 @@ def build_plan(
                 rung = next_rung(stuck, tried, weak is not None)
                 if rung and not rung[1]:
                     support, support_reason = rung[0], stuck.summary
+            support_code = "stuck_support"
+            failed_check = (
+                f"lesson:{qualified}" in completed
+                and f"quiz:{qualified}" not in completed
+                and state.failures > 0
+            )
+            if support is None and failed_check and f"explain:{qualified}" not in completed:
+                support, support_code = "explain", "failed_check_refresh"
+                support_reason = (
+                    "Your check missed; a different explanation first, then a fresh check."
+                )
             activities = concept_activities(
-                catalog, qualified, state, c_pace, style, support, support_reason
+                catalog, qualified, state, c_pace, style, support, support_reason, support_code
             )
             pending = [a for a in activities if a.id not in completed]
             status = "upcoming"
@@ -449,7 +482,7 @@ def build_plan(
                 status = "in_progress"
             if not pending:
                 status = "practiced"
-            if (state.failures >= 2 and state.mean < 0.5) or stuck is not None:
+            if (state.failures >= 1 and state.mean < 0.5) or stuck is not None:
                 if weak:
                     needs_repair[qualified] = weak
             for weak_concept, for_concept in sorted(repairs):
@@ -463,6 +496,7 @@ def build_plan(
                             _minutes(15, c_pace, style),
                             reason=f"{concept.title} depends on "
                             f"{catalog.concept(weak_concept).title}; you approved a refresher.",
+                            code="approved_refresh",
                         )
                     )
             queue.extend(pending)
@@ -475,6 +509,7 @@ def build_plan(
                         f"Stretch: a harder {concept.title} problem",
                         _minutes(20, c_pace, style),
                         reason="One problem a step above your level, as you asked.",
+                        code="stretch",
                     )
                 )
             if stuck is not None:
@@ -519,6 +554,7 @@ def build_plan(
                                     f"Review: {catalog.concept(weak).title}",
                                     REVIEW_MINUTES,
                                     reason=f"Strengthen this before retrying the {title} checkpoint.",
+                                    code="checkpoint_retry",
                                 )
                             )
                 else:
@@ -535,12 +571,16 @@ def build_plan(
                             f"Checkpoint: {title}",
                             CHECKPOINT_MINUTES,
                             reason="Questions get harder as you get them right." + unlocks,
+                            code="checkpoint",
                         )
                     )
         roadmap.append({**entry_base, "status": status, **({"why": why} if why else {})})
     queue = front + queue
     if skipped:
-        reasons.append(f"Skipped {skipped} concept(s) you already know; they'll get quick reviews.")
+        reasons.append(
+            f"Placement suggests you know {skipped} concept(s); each gets a short confirmation "
+            "check before it counts."
+        )
     if aside:
         reasons.append(f"{len(aside)} concept(s) set aside as optional for your goal.")
     if locked:
@@ -549,15 +589,21 @@ def build_plan(
             f"Later modules unlock as you pass checkpoints — next up: "
             f"{gates_title(catalog, first_gate.removeprefix('checkpoint:'))} checkpoint."
         )
+    queued_reviews = {a.concept for a in queue if a.kind in {"review", "testout"}}
     reviews = sorted(
         (states[q].next_review_at, q)
         for q in path
-        if q in states and states[q].next_review_at and q not in {a.concept for a in queue[:3]}
+        if q in states
+        and states[q].next_review_at
+        and q not in queued_reviews
+        and q not in {a.concept for a in queue[:3]}
+        # Only what was actually taught or proven gets reviewed.
+        and (f"lesson:{q}" in completed or states[q].mastered(now))
     )
     days: list[dict] = []
     pending_queue = list(queue)
     for day in study_days(today, weekdays, HORIZON_DAYS):
-        end = now + ((day - today).days + 1) * DAY
+        end = now + (day - today).days * DAY  # due by this time that day, never a day early
         budget = minutes_per_day
         items: list[dict] = []
         due = [q for at, q in reviews if at <= end][:MAX_REVIEWS_PER_DAY]
@@ -570,7 +616,12 @@ def build_plan(
                     q,
                     f"Review: {catalog.concept(q).title}",
                     REVIEW_MINUTES,
-                    reason="Spaced review keeps it from fading.",
+                    reason=(
+                        "You missed this last time; a short refresher keeps it from slipping."
+                        if states[q].failures
+                        else "Spaced review keeps it from fading."
+                    ),
+                    code="review_due",
                 ).to_dict()
             )
             budget -= REVIEW_MINUTES

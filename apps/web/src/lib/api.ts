@@ -25,8 +25,19 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   });
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ApiError(response.status, data?.error?.code ?? 'request_failed');
+  if (!response.ok) {
+    if (response.status === 401 && path !== '/me' && !path.startsWith('/auth')) toLogin();
+    throw new ApiError(response.status, data?.error?.code ?? 'request_failed');
+  }
   return data as T;
+}
+
+const PUBLIC = /^\/(login|privacy|terms|attribution|passport)?(\/|$)/;
+
+function toLogin() {
+  if (typeof window === 'undefined' || PUBLIC.test(window.location.pathname)) return;
+  const next = window.location.pathname + window.location.search;
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
 }
 
 export const api = {
@@ -92,6 +103,7 @@ const MESSAGES: Record<string, string> = {
   csrf_rejected: 'Your session token expired. Reload the page.',
   language_not_offered: 'That course is not offered in this language.',
   placement_in_progress: 'Finish the placement check first.',
+  already_enrolled: 'You already have a course. Continue it from Today.',
   validation_failed: 'Some details are not valid. Check the form and try again.',
   authentication_required: 'Your session ended. Sign in again.',
   codeforces_handle_not_found: "Codeforces doesn't know that handle. Check the spelling.",

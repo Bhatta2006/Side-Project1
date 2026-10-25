@@ -230,14 +230,20 @@ def meta(db: Session, catalog: Catalog, user: User, now: int) -> dict:
         for sheet in p["sheets"]:
             sheets[sheet] = sheets.get(sheet, 0) + 1
     concepts = []
-    for course_id in catalog.courses:
-        for concept in catalog.course_concepts(course_id):
+    # Only the enrolled course's own skills: bridge topics stay reachable from the plan, not search.
+    if enrollment is not None:
+        course = catalog.course(enrollment.course_id)
+        locked = learn.locked_concepts(db, catalog, enrollment, now)
+        modules = {m.id: m.title for m in course.modules}
+        for concept in catalog.course_concepts(course.id):
             if concept in scope:
                 concepts.append(
                     dict(
                         id=concept,
                         title=catalog.concept(concept).title,
-                        course=catalog.course(course_id).title,
+                        course=course.title,
+                        module=modules[catalog.module_of(concept)],
+                        locked=concept in locked,
                         problems=sum(
                             learner.can_practice(index.problems[i])
                             for i in index.by_concept.get(concept, [])

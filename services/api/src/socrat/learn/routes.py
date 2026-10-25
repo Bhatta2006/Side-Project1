@@ -367,6 +367,9 @@ def enroll(body: EnrollInput, request: Request):
         user = user_of(request, db, write=True)
         if user.birth_year is None:
             raise HTTPException(409, "profile_incomplete")
+        # Course switching is off for now: one course per learner.
+        if learn.active_enrollment(db, user.id) is not None:
+            raise HTTPException(409, "already_enrolled")
         goal = {
             k: v
             for k, v in dict(

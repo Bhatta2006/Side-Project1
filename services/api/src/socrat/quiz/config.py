@@ -90,7 +90,7 @@ class EngineConfig:
     theta_min: float = 600.0
     theta_max: float = 2000.0
     # Unmastered prerequisites cap the band (and so θ) a learner is served.
-    prerequisite_cap_band: int = 4
+    prerequisite_cap_band: int = 5
     # θ may sit this far above the prior of the highest allowed band.
     band_headroom: float = 150.0
     tie_tolerance: float = 0.05

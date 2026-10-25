@@ -170,14 +170,16 @@ function Momentum() {
 }
 
 /** Whether this week's assessment is waiting: shown as a dot on Evidence. */
-function useAssessmentReady() {
+function useAssessmentReady(learning: boolean) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    // Only an active learner has an assessment; elsewhere the call can only fail.
+    if (!learning) return;
     api.get<{ current: { state: string } }>('/assessments')
       .then(r => setReady(r.current.state === 'available' || r.current.state === 'in_progress'))
       .catch(() => setReady(false));
-  }, [pathname]);
+  }, [pathname, learning]);
   return ready;
 }
 
@@ -340,7 +342,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   useEffect(() => {
     try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === 'true'); } catch { /* default expanded */ }
   }, []);
-  const ready = useAssessmentReady();
+  const ready = useAssessmentReady(learning);
 
   if (!learning) return <MarketingShell>{children}</MarketingShell>;
 

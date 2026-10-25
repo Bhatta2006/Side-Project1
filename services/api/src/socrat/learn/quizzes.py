@@ -31,6 +31,7 @@ KINDS: dict[str, EvidenceKind] = {
 # Test-outs are graded at the end, like checkpoints: no per-question feedback to game.
 TESTOUTS = {"testout", "moduletest"}
 TESTOUT_PASS = 0.8
+CHECK_PASS = 0.8  # a concept check counts as done at 4 of 5
 TESTOUT_CONCEPT_PASS = 0.75
 PROBE_PREREQS = 3
 
@@ -123,8 +124,11 @@ def choose_items(
     kind, _, target = activity_id.partition(":")
     rng = random.Random(f"{enrollment.id}:{activity_id}:{seed}")
     if kind == "quiz":
+        # A retake leads with questions the learner hasn't just seen, easiest first.
+        seen = recent or set()
         quiz = sorted(
-            fitting(catalog, target, enrollment.language), key=lambda q: (q.difficulty, q.id)
+            fitting(catalog, target, enrollment.language),
+            key=lambda q: (q.id in seen, q.difficulty, rng.random()),
         )
         return [[target, q.id] for q in quiz[:5]]
     if kind in {"review", "remedial"}:
@@ -235,7 +239,7 @@ def open_session(
             enrollment,
             activity_id,
             now // 86400 if kind != "checkpoint" else now,
-            recent_items(db, enrollment, now) if kind == "checkpoint" else None,
+            recent_items(db, enrollment, now) if kind in {"checkpoint", "quiz"} else None,
         ),
         answers={},
         created_at=now,
@@ -450,7 +454,16 @@ def finish(
                 "retry_at": now + gates.COOLDOWN_SECONDS,
             }
             learn.bump_daily(db, user, now, minutes=max(1, round(elapsed / 60)))
-    elif session.activity_id.startswith(("quiz:", "remedial:", "probe:")):
+    elif session.activity_id.startswith("quiz:"):
+        settle_check(
+            db,
+            user,
+            enrollment,
+            session.activity_id,
+            score_of(catalog, session, enrollment.language),
+            now,
+        )
+    elif session.activity_id.startswith(("remedial:", "probe:")):
         learn.complete_activity(
             db,
             user,
@@ -459,17 +472,34 @@ def finish(
             now,
             outcome={"score": score_of(catalog, session, enrollment.language)},
         )
-        if session.activity_id.startswith("quiz:"):  # Taking the check means the lesson was read.
-            learn.complete_activity(
-                db,
-                user,
-                enrollment,
-                "lesson:" + session.activity_id.removeprefix("quiz:"),
-                now,
-                outcome={"via": "concept_check"},
-            )
     else:  # Reviews recur on a schedule; count the effort without completing them forever.
         learn.bump_daily(db, user, now, minutes=max(1, round(elapsed / 60)))
+
+
+def settle_check(
+    db: Session, user: User, enrollment: Enrollment, activity_id: str, score: float, now: int
+) -> bool:
+    """Close a concept check, whichever engine served it. Returns whether it passed."""
+    passed = score >= CHECK_PASS
+    if passed:
+        learn.complete_activity(db, user, enrollment, activity_id, now, outcome={"score": score})
+    else:
+        # A missed check is not done: the plan adds a different explanation and a fresh check.
+        record = learn.start_activity(db, enrollment, activity_id, now)
+        if record.completed_at is None:
+            record.outcome = {"score": score, "passed": False}
+        elapsed = learn.elapsed(db, enrollment, activity_id, now)
+        learn.bump_daily(db, user, now, minutes=max(1, round(elapsed / 60)))
+    # Taking the check means the lesson was read.
+    learn.complete_activity(
+        db,
+        user,
+        enrollment,
+        "lesson:" + activity_id.removeprefix("quiz:"),
+        now,
+        outcome={"via": "concept_check"},
+    )
+    return passed
 
 
 def finish_testout(

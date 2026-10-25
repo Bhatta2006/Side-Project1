@@ -33,6 +33,14 @@ class Captured:
     limit: str = ""
 
 
+def strip_directory(text: str, directory: Path) -> str:
+    """Remove the job's temp path (it embeds the server username) from learner-visible output."""
+    for base in {str(directory), str(directory.resolve())}:
+        for form in (base, base.replace("\\", "/")):
+            text = text.replace(form + os.sep, "").replace(form + "/", "").replace(form, "")
+    return text
+
+
 def scrubbed_environment(directory: Path, commands: list[str]) -> dict[str, str]:
     values = {
         "PATH": os.pathsep.join(dict.fromkeys(str(Path(x).resolve().parent) for x in commands)),
@@ -309,8 +317,12 @@ class LocalProcessBackend:
                             index=index,
                             status=status,
                             wall_ms=result.wall_ms,
-                            stdout=result.stdout[:16000] if public else "",
-                            stderr=result.stderr[:16000] if public else "",
+                            stdout=strip_directory(result.stdout, directory)[:16000]
+                            if public
+                            else "",
+                            stderr=strip_directory(result.stderr, directory)[:16000]
+                            if public
+                            else "",
                         )
                     )
                 )

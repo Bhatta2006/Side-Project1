@@ -25,7 +25,7 @@ import { Illustration } from '@/components/socrat/illustration';
 interface Meta {
   platforms: Record<string, number>;
   sheets: Record<string, number>;
-  concepts: { id: string; title: string; course: string; problems: number }[];
+  concepts: { id: string; title: string; course: string; module: string; locked: boolean; problems: number }[];
 }
 interface PageData { total: number; items: LibraryProblem[]; level: PracticeLevel }
 
@@ -159,7 +159,7 @@ export default function Library() {
 
   const grouped = useMemo(() => {
     const groups: Record<string, Meta['concepts']> = {};
-    for (const c of meta?.concepts ?? []) (groups[c.course] ??= []).push(c);
+    for (const c of meta?.concepts ?? []) (groups[c.module] ??= []).push(c);
     return groups;
   }, [meta]);
 

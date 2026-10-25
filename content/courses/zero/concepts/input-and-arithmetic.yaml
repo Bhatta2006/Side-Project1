@@ -167,6 +167,7 @@ quiz:
     explanation: Dividing by 10 leaves the last digit as the remainder.
     difficulty: 2
   - id: input-is-text
+    languages: [python]
     kind: mcq
     prompt: "In Python, `x = input()` and the user types 5. What is `x + x`?"
     options: ['"55" — text joined together', "10", "An error", "25"]

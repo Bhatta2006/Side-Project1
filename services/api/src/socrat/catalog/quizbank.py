@@ -37,7 +37,7 @@ FamilyId = Annotated[
 ]
 # Existing 1-5 difficulty -> 1-7 band (M0 decision D11). Code-bearing items read code, so
 # they start at band 2 (predict) at least.
-BAND_FOR_DIFFICULTY = {1: 1, 2: 2, 3: 3, 4: 5, 5: 6}
+BAND_FOR_DIFFICULTY = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 LEGACY_FORMAT: dict[str, ItemFormat] = {
     "mcq": "mcq",
     "output": "output_prediction",

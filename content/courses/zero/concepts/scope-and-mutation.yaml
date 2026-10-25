@@ -194,6 +194,7 @@ quiz:
     explanation: "The & declares a reference parameter. Add const if the function should not modify it."
     difficulty: 2
   - id: alias
+    languages: [python]
     kind: output
     prompt: "In Python: a = [1, 2]; b = a; b.append(3); print(len(a)). What is printed?"
     options: ["3", "2", "1", "An error"]

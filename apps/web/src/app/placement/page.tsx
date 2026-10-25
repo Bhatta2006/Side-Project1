@@ -64,12 +64,12 @@ export default function Placement() {
         <p className="text-[15px] text-muted-foreground">Placement complete. {summary.correct} of {summary.asked} answered correctly.</p>
         <h1 className="type-display-l mt-2">Your plan is <span className="hl hl-draw">ready</span></h1>
         <p className="mt-3 text-base text-muted-foreground">
-          {summary.starting_concept ? <>You start with <strong className="text-foreground">{summary.starting_concept}</strong>, at the edge of what you know.</> : 'You answered everything we asked. Reviews will confirm it over the coming days.'}
+          {summary.starting_concept ? <>You start with <strong className="text-foreground">{summary.starting_concept}</strong>, at the edge of what you know.</> : 'You answered everything we asked. Short confirmation checks prove it before anything counts as learned.'}
         </p>
         {summary.known_concepts.length ? (
           <section className="mt-8 paper rounded-card p-5 lg:p-6" aria-labelledby="skip-heading">
-            <h2 id="skip-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Topics you can skip</h2>
-            <p className="mt-1 text-[15px] text-muted-foreground">These are assumptions from placement, not evidence. Short reviews confirm them over the coming days.</p>
+            <h2 id="skip-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Lessons you can skip, once confirmed</h2>
+            <p className="mt-1 text-[15px] text-muted-foreground">Placement suggests you know these. They are not counted as learned yet: each gets a short, harder confirmation check on your plan. Pass it and the skill counts; miss it and you learn it properly, no harm done.</p>
             <ul className="mt-4 grid gap-2">
               {summary.known_concepts.map(c => (
                 <li key={c} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-[16px] bg-raised px-4 py-2.5">
