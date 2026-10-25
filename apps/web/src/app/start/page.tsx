@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, Code2, Target, Trophy } from 'lucide-react';
-import { api, explain } from '@/lib/api';
-import { useGuard, useSession } from '@/lib/session';
+import { ApiError, api, explain } from '@/lib/api';
+import { useSession } from '@/lib/session';
 import { LANGUAGE_LABEL, hours } from '@/lib/routes';
 import type { Course, Language } from '@/lib/types';
 import { ErrorNote, Loading } from '@/components/common';
@@ -29,6 +29,18 @@ type Step = 'about' | 'course' | 'level' | 'language' | 'schedule' | 'review';
 const ORDER: Step[] = ['about', 'course', 'level', 'language', 'schedule', 'review'];
 const COURSE_ICON: Record<string, typeof BookOpen> = { zero: BookOpen, dsa: Target, cp: Trophy };
 const DRAFT_KEY = 'socrat:onboarding';
+const MIN_AGE = 13;
+
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
+      <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z" />
+      <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z" />
+      <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z" />
+      <path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z" />
+    </svg>
+  );
+}
 
 function detectTimezone() {
   try {
@@ -69,8 +81,8 @@ function Summary({ label, value, onEdit }: { label: string; value: string; onEdi
 const retryable = (message: string) => !/age|valid|details|already/i.test(message);
 
 export default function Start() {
-  const allowed = useGuard('signed-in');
-  const { profile, refresh } = useSession();
+  const { profile, features, loading, refresh } = useSession();
+  const allowed = !loading; // the questions come first; signing in happens at the end
   const router = useRouter();
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [step, setStep] = useState<Step>('about');
@@ -79,6 +91,9 @@ export default function Start() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [restored, setRestored] = useState(false);
+  // Set once a signed-out learner heads to sign in: on return the plan is created from the saved answers.
+  const [pending, setPending] = useState(false);
+  const finishing = useRef(false);
 
   const [name, setName] = useState('');
   const [birthYear, setBirthYear] = useState('');
@@ -113,7 +128,11 @@ export default function Start() {
     setRestored(true);
     try {
       const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null') as Record<string, unknown> | null;
-      if (!saved) return;
+      if (!saved) {
+        const wanted = courses.find(c => c.id === new URLSearchParams(window.location.search).get('course'));
+        if (wanted) { setCourse(wanted); if (wanted.languages.length === 1) setLanguage(wanted.languages[0]); }
+        return;
+      }
       const savedCourse = courses.find(c => c.id === saved.course) ?? null;
       if (typeof saved.name === 'string' && saved.name) setName(saved.name);
       if (typeof saved.birthYear === 'string') setBirthYear(saved.birthYear);
@@ -126,17 +145,18 @@ export default function Start() {
       if (typeof saved.targetRole === 'string') setTargetRole(saved.targetRole);
       if (typeof saved.targetRating === 'string') setTargetRating(saved.targetRating);
       if (typeof saved.motivation === 'string') setMotivation(saved.motivation);
+      if (saved.pending === true) setPending(true);
       const savedStep = saved.step as Step;
       // Never skip the profile step for an incomplete profile.
-      if (profile?.birth_year && ORDER.includes(savedStep) && savedStep !== 'about' && (savedCourse || savedStep === 'course')) setStep(savedStep);
+      if ((profile?.birth_year || (saved.name && saved.birthYear)) && ORDER.includes(savedStep) && savedStep !== 'about' && (savedCourse || savedStep === 'course')) setStep(savedStep);
     } catch { /* start fresh */ }
   }, [courses, restored, profile?.birth_year]);
   useEffect(() => {
     if (!restored) return;
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, name, birthYear, course: course?.id, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation }));
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, name, birthYear, course: course?.id, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation, pending }));
     } catch { /* per-viewer nicety only */ }
-  }, [restored, step, name, birthYear, course, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation]);
+  }, [restored, step, name, birthYear, course, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation, pending]);
 
   const thisYear = new Date().getFullYear();
   const years = useMemo(() => Array.from({ length: 90 }, (_, i) => thisYear - 13 - i), [thisYear]);
@@ -144,8 +164,16 @@ export default function Start() {
 
   async function saveAbout(event: React.FormEvent) {
     event.preventDefault();
-    setBusy(true);
     setError('');
+    if (thisYear - Number(birthYear) < MIN_AGE || (borderline && !birthdayPassed)) {
+      setError(explain(new ApiError(422, 'minimum_age')));
+      return;
+    }
+    if (!profile) { // saved with the plan once they sign in
+      setStep(course ? 'level' : 'course');
+      return;
+    }
+    setBusy(true);
     try {
       await api.patch('/me', {
         display_name: name.trim() || undefined,
@@ -164,10 +192,29 @@ export default function Start() {
 
   async function enroll(event: React.FormEvent) {
     event.preventDefault();
+    if (!profile) { setPending(true); return; } // show the sign-in options
+    await submitPlan();
+  }
+
+  async function devSignIn() {
+    setError('');
+    try {
+      const subject = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64) || 'learner';
+      await api.post('/auth/dev-login', { subject, display_name: name.trim() });
+      await refresh();
+    } catch (e) {
+      setError(explain(e));
+    }
+  }
+
+  async function submitPlan() {
     if (!course || !language || !level) return;
     setBusy(true);
     setError('');
     try {
+      if (!profile?.birth_year) {
+        await api.patch('/me', { display_name: name.trim() || undefined, birth_year: Number(birthYear), birthday_passed: borderline ? birthdayPassed : true, timezone: detectTimezone() });
+      }
       const body: Record<string, unknown> = { course: course.id, language, level, minutes_per_day: minutes, weekdays };
       if (targetDate) body.target_date = targetDate;
       if (targetRole) body.target_role = targetRole;
@@ -179,9 +226,18 @@ export default function Start() {
       router.replace(result.status === 'placement' ? '/placement' : '/today');
     } catch (e) {
       setError(explain(e));
+      setPending(false);
       setBusy(false);
     }
   }
+
+  // Back from signing in with a finished set of answers: create the plan without asking again.
+  useEffect(() => {
+    if (!restored || !pending || !profile || finishing.current || !course || !language || !level) return;
+    if (!profile.birth_year && !birthYear) return;
+    finishing.current = true;
+    void submitPlan();
+  });
 
   if (!allowed || !courses) return error ? <div className="mx-auto max-w-2xl p-6"><ErrorNote message={error} /></div> : <Loading variant="form" label="Loading setup" />;
 
@@ -348,9 +404,28 @@ export default function Start() {
               <Summary label="Study time" value={`${hours(minutes)} on ${weekdays.map(i => DAYS[i]).join(', ')}`} onEdit={() => setStep('schedule')} />
               {targetDate ? <Summary label="Target date" value={new Date(`${targetDate}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })} onEdit={() => setStep('schedule')} /> : null}
             </dl>
-            <Button size="lg" className="justify-self-start" disabled={busy || !level || !language} aria-busy={busy}>
-              {busy ? 'Creating your plan' : 'Create my plan'}<ArrowCircle loading={busy} />
-            </Button>
+            {!profile && pending ? (
+              <div className="paper grid gap-4 rounded-card p-5" role="region" aria-label="Sign in to save your plan">
+                <div>
+                  <h2 className="font-display text-xl font-bold tracking-[-0.02em]">Save your plan</h2>
+                  <p className="mt-1 text-[15px] text-muted-foreground">Sign in so your plan and progress are kept. Your answers are already filled in.</p>
+                </div>
+                {features?.oidc_login ? (
+                  <Button asChild variant="outline" size="lg" className="w-full"><a href="/api/v1/auth/login"><GoogleMark /> Continue with Google</a></Button>
+                ) : null}
+                {features?.dev_login ? (
+                  <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => void devSignIn()}>Continue as {name.trim() || 'a simulated learner'} (development)</Button>
+                ) : null}
+                {features && !features.oidc_login && !features.dev_login ? <p className="text-[15px] text-muted-foreground">Sign-in is not configured on this server.</p> : null}
+                <p className="text-[13px] text-muted-foreground">
+                  By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms of service</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
+                </p>
+              </div>
+            ) : (
+              <Button size="lg" className="justify-self-start" disabled={busy || !level || !language} aria-busy={busy}>
+                {busy ? 'Creating your plan' : profile ? 'Create my plan' : 'Save my plan'}<ArrowCircle loading={busy} />
+              </Button>
+            )}
             {!level || !language ? <p className="text-sm text-muted-foreground">Choose a level and a language first.</p> : null}
           </form>
         ) : null}

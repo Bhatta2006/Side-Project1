@@ -97,6 +97,8 @@ jobs:
           EXPLAINER_KWARGS: ${{ vars.SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS }}
           CONTENT_ADMINS: ${{ vars.SOCRAT_CONTENT_ADMIN_IDENTITIES }}
           ADMIN_SUBJECTS: ${{ vars.SOCRAT_ADMIN_SUBJECTS }}
+          BILLING_ENABLED: ${{ vars.SOCRAT_BILLING_ENABLED }}
+          RAZORPAY_KEY_ID: ${{ vars.SOCRAT_RAZORPAY_KEY_ID }}
         run: |
           set -euo pipefail
           ssh_opts=(-i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes)
@@ -114,6 +116,7 @@ jobs:
             SOCRAT_AI_PROVIDER="'$AI_PROVIDER'" SOCRAT_OPENAI_BASE_URL="'$OPENAI_BASE_URL'" SOCRAT_OPENAI_MODEL="'$OPENAI_MODEL'" \
             SOCRAT_EXPLAINER_MODEL="'$EXPLAINER_MODEL'" SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS="'$EXPLAINER_KWARGS'" \
             SOCRAT_CONTENT_ADMIN_IDENTITIES="'$CONTENT_ADMINS'" SOCRAT_ADMIN_SUBJECTS="'$ADMIN_SUBJECTS'" \
+            SOCRAT_BILLING_ENABLED="'$BILLING_ENABLED'" SOCRAT_RAZORPAY_KEY_ID="'$RAZORPAY_KEY_ID'" \
             bash "$REMOTE/runtime/deploy-production.sh"
 
       - name: Remove SSH material

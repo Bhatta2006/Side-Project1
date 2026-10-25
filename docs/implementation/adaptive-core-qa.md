@@ -11,7 +11,7 @@ human review record.
 | Item | Result |
 | --- | --- |
 | Browser suites | Reran `learner-journey`, `keyboard`, `learning-scope`, `login-design`, plus `landing`, against local dev servers. Final result is recorded below. |
-| Pull request | Prepared this branch for a pull request into `main`; no merge or deployment performed. |
+| Pull request | PR #39 is open into `main`. This branch now includes the latest `main`; the PR itself remains unmerged and nothing was deployed. |
 | Landing copy | Replaced “Practised with help” with “Check passed” and explained that a missed check brings support and another check. Updated the old landing assertions to the current design. |
 | Small quiz banks | Added 60 original, language-neutral questions in 15 Zero-course families. Every live Zero concept now has at least five practice items available per supported language. The new families remain provisional, without human approval. |
 | Draft concepts | Confirmed 81 live and 44 draft concepts. Kept all 44 drafts hidden; authoring complete lessons is a separate content pass. |
@@ -37,6 +37,8 @@ matches this repository's existing lockfile.
   hydration. It now uses the existing hydration-safe hook.
 - Attribution's table and the shared loading skeleton could widen a phone page. Their grid
   tracks now allow shrinking; the table itself remains horizontally scrollable.
+- The fixed landing login link lost contrast when dark mode placed it over a yellow course card.
+  It now has an opaque theme surface. Landing calls to action follow the updated `/start` flow.
 - The first request could build the catalog and adaptive bank while a browser waited. Demo
   and e2e servers now prewarm them before accepting requests. Unit fixtures keep prewarming off.
 - A client could manufacture effort with repeated `new_attempt: true`. Help escalation now

@@ -18,11 +18,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 from starlette.middleware.sessions import SessionMiddleware
 
-from socrat import errors
+from socrat import entitlements, errors
 from socrat.adaptive.routes import router as adaptive_router
 from socrat.admin.routes import router as admin_router
 from socrat.assessments.routes import router as assessments_router
 from socrat.auth import COOKIE, establish_session, require_csrf, require_session
+from socrat.billing import router as billing_router
 from socrat.config import Settings
 from socrat.database import make_engine, record_event
 from socrat.explainer.routes import router as explainer_router
@@ -93,6 +94,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(vitals_router)
     app.include_router(passport_router)
     app.include_router(trial_router)
+    app.include_router(billing_router)
+    entitlements.ENABLED = settings.billing_enabled
     app.include_router(errors.router)
     app.add_middleware(
         SessionMiddleware,
@@ -130,7 +133,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
         started = time.perf_counter()
-        worker_call = request.url.path.startswith("/api/v1/execution/worker/")
+        # Workers and the Razorpay webhook are server-to-server: they authenticate by signature.
+        worker_call = request.url.path.startswith(
+            ("/api/v1/execution/worker/", "/api/v1/billing/webhook")
+        )
         if (
             request.method in {"POST", "PATCH", "PUT", "DELETE"}
             and not worker_call

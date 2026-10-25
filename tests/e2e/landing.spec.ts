@@ -11,7 +11,7 @@ test('landing hero, paths, questions and navigation work on desktop and phone', 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Quick question before we start: what do you want to be able to do?');
-  await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/login');
+  await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/start');
   await expect(page.locator('.path-count')).toHaveText('18 skills · 25 judged problems');
   // How it works introduces the status system with shapes and labels.
   for (const label of ['Read', 'Check passed', 'Mastered']) await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
@@ -54,5 +54,5 @@ test('landing remains usable without the course API', async ({ page }) => {
   await expect(page.getByRole('link', { name: /Get started with/ })).toHaveCount(3);
   await expect(page.locator('.path-count')).toHaveCount(0);
   await page.getByRole('link', { name: 'Get started', exact: true }).nth(1).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/start$/);
 });

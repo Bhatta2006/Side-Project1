@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal } from '@/components/common';
 import { LockedState } from '@/components/socrat/states';
 import { NodeMap } from '@/components/socrat/node-map';
+import { usePlanLocks } from '@/lib/billing';
 import { StatusLabel, StatusLegend, statusFromRoadmap } from '@/components/socrat/status';
 import { Badge } from '@/components/ui/badge';
 import { Soc } from '@/components/socrat/illustration';
@@ -67,6 +68,7 @@ function Disclosure({ id, title, children, defaultOpen = false }: { id: string; 
 
 export default function PlanPage() {
   const allowed = useGuard('active');
+  const planLocked = usePlanLocks();
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [error, setError] = useState('');
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
@@ -180,7 +182,7 @@ export default function PlanPage() {
                 <h2 id="map-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Skill map: {current.title}</h2>
                 <NodeMap
                   label={current.title}
-                  nodes={current.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: statusFromRoadmap(c), current: c.concept === plan.current_concept, reviewDue: c.review_due }))}
+                  nodes={current.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: planLocked(c.concept) ? 'locked' : statusFromRoadmap(c), current: c.concept === plan.current_concept, reviewDue: c.review_due }))}
                 />
               </div>
             </Card>
@@ -222,7 +224,8 @@ export default function PlanPage() {
                       ) : null}
                       <ul className="grid gap-2">
                         {module.concepts.map(c => {
-                          const status = statusFromRoadmap(c);
+                          const byPlan = planLocked(c.concept);
+                          const status = byPlan ? 'locked' : statusFromRoadmap(c);
                           const here = c.concept === plan.current_concept;
                           return (
                             <li key={c.concept}>
@@ -231,7 +234,7 @@ export default function PlanPage() {
                                   <span className="font-semibold">{c.title}</span>
                                   {c.why ? <span className="block text-[13px] text-muted-foreground">{c.why}</span> : null}
                                 </span>
-                                <StatusLabel status={status} detail={status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
+                                <StatusLabel status={status} detail={byPlan ? 'Plus and Pro' : status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
                                 <span className="flex flex-wrap gap-1.5">
                                   {here ? <Badge>Current</Badge> : null}
                                   {c.review_due ? <Badge>Review due</Badge> : null}

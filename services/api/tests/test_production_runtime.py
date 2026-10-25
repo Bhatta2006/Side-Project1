@@ -49,6 +49,8 @@ def test_production_secrets_are_files_and_never_inline():
         "SOCRAT_OIDC_CLIENT_SECRET_FILE",
         "SOCRAT_OPENAI_API_KEY_FILE",
         "SOCRAT_EXPLAINER_CHECKER_SECRET_FILE",
+        "SOCRAT_RAZORPAY_KEY_SECRET_FILE",
+        "SOCRAT_RAZORPAY_WEBHOOK_SECRET_FILE",
     ):
         assert env[key].startswith("/run/secrets/")
     for key in env:
@@ -60,6 +62,8 @@ def test_production_secrets_are_files_and_never_inline():
         "metrics_token",
         "ai_api_key",
         "explainer_checker_secret",
+        "razorpay_key_secret",
+        "razorpay_webhook_secret",
     }
     sandbox = env["SOCRAT_EXPLAINER_SANDBOX_ORIGIN"]
     assert sandbox.startswith("https://${SANDBOX_HOST")

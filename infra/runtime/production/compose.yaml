@@ -118,6 +118,11 @@ services:
       SOCRAT_EXPLAINER_SANDBOX_ORIGIN: "https://${SANDBOX_HOST:?Set SANDBOX_HOST to a DNS name on a different registrable domain}"
       SOCRAT_EXPLAINER_CHECKER_URL: http://explainer-checker:8010/check
       SOCRAT_EXPLAINER_CHECKER_SECRET_FILE: /run/secrets/explainer_checker_secret
+      # Paid plans (Razorpay Subscriptions). The key id is public; the secrets are mounted files.
+      SOCRAT_BILLING_ENABLED: "${SOCRAT_BILLING_ENABLED:-false}"
+      SOCRAT_RAZORPAY_KEY_ID: "${SOCRAT_RAZORPAY_KEY_ID:-}"
+      SOCRAT_RAZORPAY_KEY_SECRET_FILE: /run/secrets/razorpay_key_secret
+      SOCRAT_RAZORPAY_WEBHOOK_SECRET_FILE: /run/secrets/razorpay_webhook_secret
     secrets:
       - postgres_password
       - session_secret
@@ -125,6 +130,8 @@ services:
       - metrics_token
       - ai_api_key
       - explainer_checker_secret
+      - razorpay_key_secret
+      - razorpay_webhook_secret
     networks:
       - backend
       # Outbound HTTPS for OIDC discovery and the AI provider. Not a destination allow-list.
@@ -302,6 +309,10 @@ secrets:
     file: "${SOCRAT_SECRETS_DIR:?Set SOCRAT_SECRETS_DIR}/ai_api_key"
   explainer_checker_secret:
     file: "${SOCRAT_SECRETS_DIR:?Set SOCRAT_SECRETS_DIR}/explainer_checker_secret"
+  razorpay_key_secret:
+    file: "${SOCRAT_SECRETS_DIR:?Set SOCRAT_SECRETS_DIR}/razorpay_key_secret"
+  razorpay_webhook_secret:
+    file: "${SOCRAT_SECRETS_DIR:?Set SOCRAT_SECRETS_DIR}/razorpay_webhook_secret"
 
 networks:
   edge:
