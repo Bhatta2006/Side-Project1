@@ -2,9 +2,10 @@ name: deploy-production
 
 # Continuous delivery to the Oracle Cloud VM.
 #
-# Runs after the `continuous-integration` workflow succeeds on main (CI has already built, scanned and
-# attested the images tagged `sha-<commit>`). It can also be started by hand for any commit that has
-# published images. The `production` GitHub environment should require a reviewer.
+# Runs after the `continuous-integration` workflow succeeds on main (CI has already built and scanned
+# the images tagged `sha-<commit>` and publishes GitHub artifact attestations where supported). It can
+# also be started by hand for any commit that has published images. The `production` GitHub environment
+# should require a reviewer.
 #
 # Required repository/environment configuration is listed in docs/operations/oracle-deploy.md.
 
