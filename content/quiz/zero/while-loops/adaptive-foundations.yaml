@@ -1,0 +1,63 @@
+id: quiz:zero:while-loops:adaptive-foundations
+family: adaptive-foundations
+concept: zero:while-loops
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A while condition is false before the first iteration. How many times does its body run?
+  options:
+  - '0'
+  - '1'
+  - '2'
+  - Forever
+  answer: 0
+  explanation: A while loop checks its condition before executing its body.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: A counter starts at 0. While it is less than 3, the body increases it by 1. What is its value
+    when the loop ends?
+  options:
+  - '3'
+  - '2'
+  - '4'
+  - '0'
+  answer: 0
+  explanation: The loop visits starting counter values 0, 1 and 2, then stops with the counter at 3.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A loop should stop when a counter reaches 5. Which change can prevent termination?
+  options:
+  - Removing the counter update while its condition stays true
+  - Checking the condition before each iteration
+  - Starting the counter below 5
+  - Increasing the counter toward 5
+  answer: 0
+  explanation: Without an update or another exit, a true condition can remain true forever.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A loop removes one item while a queue is nonempty. Starting with 4 items and adding none, how
+    many removals occur?
+  options:
+  - '4'
+  - '3'
+  - '5'
+  - '0'
+  answer: 0
+  explanation: Each iteration removes one of the four items and the empty queue stops the loop.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

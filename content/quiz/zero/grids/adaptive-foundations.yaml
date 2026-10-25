@@ -1,0 +1,62 @@
+id: quiz:zero:grids:adaptive-foundations
+family: adaptive-foundations
+concept: zero:grids
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: How many cells does a grid with 3 rows and 4 columns contain?
+  options:
+  - '12'
+  - '7'
+  - '3'
+  - '4'
+  answer: 0
+  explanation: Each of the 3 rows contains 4 cells, so there are 3 times 4 cells.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: In row-column notation, what does a grid position identify?
+  options:
+  - A row and a column together
+  - Only the row length
+  - The sum of every cell
+  - The number of rows only
+  answer: 0
+  explanation: Both coordinates are needed to locate a particular cell.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A zero-indexed grid has 2 rows and 3 columns. Which position is outside it?
+  options:
+  - Row 2, column 0
+  - Row 0, column 0
+  - Row 1, column 2
+  - Row 0, column 2
+  answer: 0
+  explanation: Valid row indices are 0 and 1. Row index 2 is outside the grid.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A cell is at the top-left corner of a grid with at least 2 rows and columns. How many neighbors
+    share a side with it?
+  options:
+  - '2'
+  - '3'
+  - '4'
+  - '8'
+  answer: 0
+  explanation: Only the cells below and to the right are side neighbors; up and left leave the grid.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

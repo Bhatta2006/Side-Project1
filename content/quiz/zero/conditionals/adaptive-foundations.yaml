@@ -1,0 +1,62 @@
+id: quiz:zero:conditionals:adaptive-foundations
+family: adaptive-foundations
+concept: zero:conditionals
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: An if statement tests a false condition and has an else branch. Which branch runs?
+  options:
+  - The else branch
+  - The if branch
+  - Both branches
+  - Neither branch
+  answer: 0
+  explanation: The else branch handles the case where the if condition is false.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: The rule is "discount if age is less than 12". Does a 12-year-old qualify?
+  options:
+  - 'No'
+  - 'Yes'
+  - Only on weekends
+  - The comparison includes 12
+  answer: 0
+  explanation: Less than 12 excludes the boundary value 12.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: An if/else-if chain has two true conditions. Which matching branch runs?
+  options:
+  - The first matching branch
+  - The last matching branch
+  - Every matching branch
+  - No branch
+  answer: 0
+  explanation: A mutually exclusive chain stops at its first matching condition.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A condition checks whether a quantity is at least 10. Which pair checks the boundary from both
+    sides?
+  options:
+  - 9 and 10
+  - 1 and 2
+  - 11 and 12
+  - 20 and 30
+  answer: 0
+  explanation: 9 should fail and 10 should pass, directly testing where the behavior changes.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

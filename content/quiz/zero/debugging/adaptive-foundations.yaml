@@ -1,0 +1,61 @@
+id: quiz:zero:debugging:adaptive-foundations
+family: adaptive-foundations
+concept: zero:debugging
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A program gives a wrong result on a particular input. What is a useful first debugging step?
+  options:
+  - Reproduce that input and record expected and actual results
+  - Rewrite the entire program immediately
+  - Delete the input
+  - Assume the judge is wrong
+  answer: 0
+  explanation: A reproducible example makes the difference between intended and actual behavior observable.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: What does tracing a variable help reveal?
+  options:
+  - Where its value first differs from the expected state
+  - The author's password
+  - An automatic proof that all inputs work
+  - Only compilation errors
+  answer: 0
+  explanation: Following values step by step localizes the first incorrect state change.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A bug appears only for an empty list. Which regression test directly guards against it?
+  options:
+  - A test with an empty list and a specified expected result
+  - A test with 100 ordinary positive numbers
+  - A test that only checks whether the file exists
+  - A test that prints a greeting
+  answer: 0
+  explanation: A regression test must exercise the condition that exposed the defect.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: Why reduce a failing input to a smaller example?
+  options:
+  - To isolate which conditions are necessary for the failure
+  - To change the expected answer until the test passes
+  - To guarantee that the program becomes faster
+  - To remove the need to understand the bug
+  answer: 0
+  explanation: Removing irrelevant parts makes the causal conditions easier to inspect.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

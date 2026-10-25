@@ -1,0 +1,61 @@
+id: quiz:zero:variables-and-types:adaptive-foundations
+family: adaptive-foundations
+concept: zero:variables-and-types
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A variable stores a score of 4. Its value is replaced by 9. What is its current score?
+  options:
+  - '9'
+  - '4'
+  - '13'
+  - '49'
+  answer: 0
+  explanation: Assignment replaces the stored value; it does not add or concatenate the old one.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: Which value is naturally represented as a Boolean?
+  options:
+  - Whether the door is open
+  - A temperature in degrees
+  - A person's full name
+  - The number of seats
+  answer: 0
+  explanation: A Boolean represents one of two truth values.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: Why keep a telephone number as text when leading zeros matter?
+  options:
+  - Text preserves the original sequence of digits
+  - Text automatically adds missing zeros
+  - Numbers cannot contain any zeros
+  - Text automatically verifies the owner
+  answer: 0
+  explanation: A phone number is an identifier; numeric conversion can discard leading zeros.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A counter starts at 3 and is increased by 1 twice. What is its value?
+  options:
+  - '5'
+  - '4'
+  - '6'
+  - '3'
+  answer: 0
+  explanation: Two increments add 2 to the initial value of 3.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

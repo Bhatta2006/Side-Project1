@@ -1,0 +1,62 @@
+id: quiz:zero:programs-and-output:adaptive-foundations
+family: adaptive-foundations
+concept: zero:programs-and-output
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A program outputs the literal text "6 + 2". What appears?
+  options:
+  - 6 + 2
+  - '8'
+  - '62'
+  - Nothing
+  answer: 0
+  explanation: Literal text is copied as text; it is not evaluated as an arithmetic expression.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: Two instructions output A and then B on separate lines. Which line appears first?
+  options:
+  - A
+  - B
+  - AB
+  - The order is random
+  answer: 0
+  explanation: Sequential instructions run in their written order.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A program calculates a value but never outputs it. What can the user see in its standard output?
+  options:
+  - Nothing from that calculation
+  - Every intermediate value
+  - The source code
+  - The variable names
+  answer: 0
+  explanation: Calculating a value and sending it to standard output are separate operations.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A judge expects exactly "Hello". Which output changes the required spelling?
+  options:
+  - hello
+  - Hello followed by a newline
+  - Hello
+  - Hello followed by a trailing space
+  answer: 0
+  explanation: Uppercase and lowercase letters differ. This judge ignores trailing spaces and surrounding
+    newlines, not letter case.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved
