@@ -16,7 +16,7 @@ import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
-import { LockedState } from '@/components/socrat/states';
+import { EmptyState, LockedState } from '@/components/socrat/states';
 import { FeelControls, SupportStep } from '@/components/socrat/support-step';
 import { SUPPORT_STEPS } from '@/lib/routes';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -146,6 +146,7 @@ export default function Lesson() {
   const qualified = joinSegments(params.concept);
   const [concept, setConcept] = useState<ConceptView | null>(null);
   const [error, setError] = useState('');
+  const [upgrade, setUpgrade] = useState(false);
   const [locked, setLocked] = useState(false);
   const [variant, setVariant] = useState<{ style: string; content: string } | null>(null);
   const [explaining, setExplaining] = useState('');
@@ -164,6 +165,7 @@ export default function Lesson() {
     setError('');
     api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(e => {
       setLocked(e instanceof ApiError && e.code === 'concept_locked');
+      setUpgrade(e instanceof ApiError && e.code === 'upgrade_required');
       setError(explain(e));
     });
   }, [qualified]);
@@ -203,6 +205,15 @@ export default function Lesson() {
   }
 
   if (!allowed || (!concept && !error)) return <Loading variant="article" label="Loading the lesson" />;
+  if (!concept && upgrade) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <EmptyState title="This topic is on a paid plan" action={<Button asChild><Link href="/pricing">See plans</Link></Button>}>
+          The free plan covers the first two modules of each course. Plus and Pro unlock every topic.
+        </EmptyState>
+      </div>
+    );
+  }
   if (!concept && locked) {
     return (
       <div className="mx-auto max-w-3xl p-6">

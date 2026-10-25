@@ -17,6 +17,7 @@ export function LegalPage({ title, summary, children }: { title: string; summary
       <nav aria-label="Legal" className="mt-12 flex flex-wrap gap-6 border-t pt-6 text-sm text-muted-foreground">
         <Link href="/privacy">Privacy policy</Link>
         <Link href="/terms">Terms of service</Link>
+        <Link href="/refunds">Refunds and cancellation</Link>
         <Link href="/attribution">Attribution</Link>
         <a href={`mailto:${LEGAL.contact}`}>{LEGAL.contact}</a>
       </nav>

@@ -8,7 +8,7 @@ import { api, explain } from '@/lib/api';
 import { useReducedMotion } from '@/lib/motion';
 import { useGuard, useSession } from '@/lib/session';
 import { LANGUAGE_LABEL, NAME, hours } from '@/lib/routes';
-import type { Course, Language, Profile } from '@/lib/types';
+import type { BillingStatus, Course, Language, Profile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { Pill } from '@/components/choice';
@@ -44,6 +44,38 @@ function Section({ id, title, description, children, className }: { id: string; 
       {description ? <p className="mt-1 text-[15px] text-muted-foreground">{description}</p> : null}
       <div className="mt-5">{children}</div>
     </section>
+  );
+}
+
+/** Current plan, what is left of it this period, and cancelling. */
+function PlanSection() {
+  const [status, setStatus] = useState<BillingStatus | null>(null);
+  const [error, setError] = useState('');
+  const load = () => api.get<BillingStatus>('/billing/status').then(setStatus).catch(() => undefined);
+  useEffect(() => { void load(); }, []);
+  if (!status?.enabled) return null;
+  const paid = status.plan !== 'free';
+  const left = (k: 'chat' | 'playground') => {
+    const u = status.usage[k];
+    return u.limit ? `${Math.max(0, u.limit - u.used)} of ${u.limit} left ${u.window === 'week' ? 'this week' : 'today'}` : 'locked on this plan';
+  };
+  async function cancel() {
+    setError('');
+    try { await api.post('/billing/cancel'); await load(); } catch (e) { setError(explain(e)); }
+  }
+  return (
+    <Section id="plan-heading" title="Plan" description={<>You are on <strong className="capitalize">{status.plan}</strong>.</>}>
+      <ul className="grid gap-1 text-[15px] text-muted-foreground">
+        <li>Soc messages: {left('chat')}</li>
+        <li>Playground: {left('playground')}</li>
+        {paid && status.renews_at ? <li>{status.cancel_at_period_end ? 'Ends' : 'Renews'} on {new Date(status.renews_at * 1000).toLocaleDateString()}</li> : null}
+      </ul>
+      {error ? <ErrorNote message={error} className="mt-3" /> : null}
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button asChild variant="outline"><a href="/pricing">{paid ? 'Change plan' : 'See plans'}</a></Button>
+        {paid && !status.cancel_at_period_end ? <Button variant="outline" onClick={() => void cancel()}>Cancel renewal</Button> : null}
+      </div>
+    </Section>
   );
 }
 
@@ -280,6 +312,8 @@ export default function Settings() {
         </Section>
 
         <CodeforcesLink />
+
+        <PlanSection />
 
         <AppSection />
 

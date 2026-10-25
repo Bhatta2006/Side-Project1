@@ -29,6 +29,15 @@ export default function PrivacyPage() {
         </p>
       </section>
 
+      <section aria-labelledby="payments">
+        <h2 id="payments">Payments</h2>
+        <p>
+          Paid plans are processed by Razorpay. Your card, UPI or bank details are entered with Razorpay and are never
+          sent to or stored by {LEGAL.product}. We keep your plan, its billing period, the currency and Razorpay&apos;s
+          subscription reference so we can give you access and handle cancellations and refunds.
+        </p>
+      </section>
+
       <section aria-labelledby="collect">
         <h2 id="collect">What we collect</h2>
         <ul>

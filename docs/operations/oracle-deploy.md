@@ -37,6 +37,8 @@ openssl rand -base64 64 | tr -d '\n' > session_secret            # >= 48 chars
 openssl rand -base64 48 | tr -d '\n' > metrics_token             # >= 32 chars
 openssl rand -base64 48 | tr -d '\n' > explainer_checker_secret  # >= 32 chars
 printf '%s' 'YOUR_OIDC_CLIENT_SECRET' > oidc_client_secret
+printf '%s' 'YOUR_RAZORPAY_KEY_SECRET' > razorpay_key_secret          # Razorpay -> Settings -> API Keys
+printf '%s' 'YOUR_RAZORPAY_WEBHOOK_SECRET' > razorpay_webhook_secret  # the secret you set on the webhook
 printf '%s' 'YOUR_AI_PROVIDER_API_KEY' > ai_api_key
 chmod 600 *
 
@@ -70,6 +72,8 @@ Create a **`production` environment** (Settings → Environments) and add requir
 | `SOCRAT_SANDBOX_ORIGIN` | yes | `https://socrat-visuals.net`. **Baked into the web image at CI build time** (CSP `frame-src`), so set it before the first build |
 | `SOCRAT_OIDC_ISSUER` | yes | `https://accounts.google.com` |
 | `SOCRAT_OIDC_CLIENT_ID` | yes | OIDC client id |
+| `SOCRAT_BILLING_ENABLED` | for paid plans | `true` turns on Free/Plus/Pro limits and checkout; default `false` |
+| `SOCRAT_RAZORPAY_KEY_ID` | for paid plans | Razorpay Key ID (`rzp_live_...`). Public, so a variable, not a secret |
 | `SOCRAT_AI_PROVIDER` | recommended | `openai` (any OpenAI-compatible endpoint) or `anthropic`; default `openai` |
 | `SOCRAT_OPENAI_BASE_URL` | for Nebius etc. | `https://api.tokenfactory.us-central1.nebius.com/v1/` |
 | `SOCRAT_OPENAI_MODEL` | yes for `openai` | tutor model id |
