@@ -70,11 +70,11 @@ def test_artifact_validation_and_compiler_boundaries():
     with pytest.raises(artifact.ArtifactError):
         artifact.Validator.check_css('background:url("https://example.com/image")')
     dark, _ = artifact.compile_document(HTML, "frame-id", "http://localhost:3000", "dark")
-    assert "color-scheme:dark" in dark and "--primary: #7034F4" in dark
+    assert "color-scheme:dark" in dark and "--primary: #4A63FF" in dark
     light, _ = artifact.compile_document(HTML, "frame-id", "http://localhost:3000")
-    assert "--primary: #7034F4" in light
-    # Proof (lime) is a host concept and never reaches generated documents.
-    assert "--proof" not in dark and "--proof" not in light and "#C6FF33" not in dark + light
+    assert "--primary: #2340E8" in light
+    # Proof (highlighter yellow) is a host concept and never reaches generated documents.
+    assert "--proof" not in dark and "--proof" not in light and "#F7E33E" not in dark + light
     for bad in [
         HTML.replace("<main>", '<main onclick="alert(1)">'),
         HTML.replace("<main>", "<iframe></iframe><main>"),

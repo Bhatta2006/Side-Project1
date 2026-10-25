@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,7 +19,6 @@ import { runInBrowser, warm, type RunnerStage } from '@/lib/runner';
 import CodeEditor from '@/components/code-editor';
 import { parseDiagnostics } from '@/components/code-editor/diagnostics';
 import Markdown from '@/components/markdown';
-import Assistant from '@/components/assistant';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { AttentionIcon, LockedState } from '@/components/socrat/states';
 import { Soc } from '@/components/socrat/illustration';
@@ -35,6 +35,9 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+
+// The tutor panel opens on demand: load it after hydration so it stays out of first-load JS.
+const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 type Tone = 'success' | 'info' | 'error' | 'warning';
 const VERDICT: Record<string, { label: string; tone: Tone }> = {
