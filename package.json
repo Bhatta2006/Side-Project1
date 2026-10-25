@@ -15,7 +15,7 @@
     "dev": "npm run dev --workspace @socrat/web",
     "build": "npm run build --workspace @socrat/web",
     "typecheck": "npm run typecheck --workspace @socrat/web",
-    "test:m0": "node --test prototypes/concierge/model.test.mjs",
+    "test:m0": "node --test prototypes/concierge/model.test.mjs scripts/explainer/check-artifact.test.mjs",
     "test:e2e": "playwright test",
     "test:visual": "playwright test --config playwright.visual.config.ts"
   },
