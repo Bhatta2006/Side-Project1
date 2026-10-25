@@ -53,7 +53,7 @@ def container_args(job: JobEnvelope, name: str):
         "/opt/socrat/launch.py",
         manifest.language,
         str(limits.compile_seconds),
-        str(limits.wall_seconds),
+        str(manifest.run_seconds),
         str(limits.cpu_seconds),
     ]
 

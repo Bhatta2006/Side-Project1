@@ -181,6 +181,7 @@ def create(
         pack_digest=hashed(problem.id.encode()),
         mode="submit" if mode == "submit" else "run",
         limits=profile.limits,
+        time_limit_ms=problem.time_limit_ms,
         compile_config=COMMANDS[profile.language],
     ).model_dump()
     submission = Submission(

@@ -63,7 +63,7 @@ def capture_process(
     directory: Path,
     env: dict[str, str],
     *,
-    seconds: int,
+    seconds: float,
     memory_mb: int,
     pids: int,
     output_bytes: int,
@@ -119,7 +119,10 @@ def capture_process(
             except (BrokenPipeError, OSError, ValueError):
                 pass
             finally:
-                process.stdin.close()
+                try:
+                    process.stdin.close()
+                except (BrokenPipeError, OSError, ValueError):
+                    pass
 
         for target, args in ((read, (process.stdout, 0)), (read, (process.stderr, 1)), (write, ())):
             thread = threading.Thread(target=target, args=args, daemon=True)
@@ -292,7 +295,7 @@ class LocalProcessBackend:
                         test.input,
                         directory,
                         env,
-                        seconds=limits.wall_seconds,
+                        seconds=job.manifest.run_seconds,
                         memory_mb=limits.memory_mb,
                         pids=limits.pids,
                         output_bytes=limits.output_bytes,
