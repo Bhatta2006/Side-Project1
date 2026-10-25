@@ -31,7 +31,7 @@ import { NAV, navFor, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { useInstall } from '@/lib/pwa';
 import { useCommunityUrl } from '@/components/community-link';
-import type { Today } from '@/lib/types';
+import type { BillingStatus, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
 import { ReportProblem, openReportProblem } from '@/components/report-problem';
@@ -185,6 +185,41 @@ function useAssessmentReady() {
 
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 
+const PLAN_NAME = { free: 'Free', plus: 'Plus', pro: 'Pro' } as const;
+
+/** Current plan with the next step up: Free and Plus can upgrade, Pro manages. Hidden while billing is off. */
+function PlanCard({ collapsed }: { collapsed: boolean }) {
+  const pathname = usePathname();
+  const [status, setStatus] = useState<BillingStatus | null>(null);
+  useEffect(() => {
+    api.get<BillingStatus>('/billing/status').then(setStatus).catch(() => setStatus(null));
+  }, [pathname]); // re-read after checkout or cancelling
+  if (!status?.enabled) return null;
+  const { plan } = status;
+  const top = plan === 'pro';
+  const label = top ? 'Manage plan' : plan === 'free' ? 'Upgrade' : 'Upgrade to Pro';
+  const href = top ? '/settings#plan-heading' : '/pricing';
+  const hint = status.cancel_at_period_end && status.renews_at ? `Ends ${new Date(status.renews_at * 1000).toLocaleDateString()}` : plan === 'free' ? 'First 2 modules, 5 Soc messages a week' : 'Every topic unlocked';
+  return (
+    <div className="px-3 pb-2">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href={href} aria-label={`${PLAN_NAME[plan]} plan. ${label}`} className={cn('flex h-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-card hover:text-foreground', !collapsed && 'lg:hidden')}>
+            <Sparkles className="size-[22px]" strokeWidth={1.6} aria-hidden="true" />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right">{PLAN_NAME[plan]} plan · {label}</TooltipContent>
+      </Tooltip>
+      <section aria-label="Your plan" className={cn('hidden rounded-[18px] border border-border-strong bg-card p-3', !collapsed && 'lg:block')}>
+        <p className="text-xs text-muted-foreground">Your plan</p>
+        <p className="font-display text-lg font-bold tracking-[-0.02em]">{PLAN_NAME[plan]}</p>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p>
+        <Button asChild size="sm" variant={top ? 'outline' : 'default'} className="mt-3 w-full"><Link href={href}>{label}</Link></Button>
+      </section>
+    </div>
+  );
+}
+
 /** Desktop: 248 px sidebar, collapsible to a 72 px rail. Tablet: rail only. */
 function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null; collapsed: boolean; onToggle: () => void; ready: boolean }) {
   const [mac, setMac] = useState(false);
@@ -242,6 +277,7 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
           })}
         </ul>
       </nav>
+      <PlanCard collapsed={collapsed} />
       <div className={cn('mx-3 mb-2 hidden items-end gap-2 rounded-[18px] border border-dashed border-border-strong p-3', !collapsed && 'lg:flex')}>
         <Soc size={44} mood="wink" />
         <p className="font-hand pb-1 text-[18px] leading-tight text-pen">one question at a time</p>
