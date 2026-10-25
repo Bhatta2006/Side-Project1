@@ -163,17 +163,21 @@ class PlanGrant(BaseModel):
 
 
 def plan_row(user: User, sub: Subscription | None, stamp: int) -> dict:
-    live = sub is not None and sub.plan in entitlements.PLANS and sub.current_end > stamp
+    live = (
+        sub
+        if sub is not None and sub.plan in entitlements.PLANS and sub.current_end > stamp
+        else None
+    )
     return dict(
         id=user.id,
         name=user.display_name,
         subject=user.subject,
         joined_at=user.created_at,
-        plan=sub.plan if live else "free",
+        plan=live.plan if live else "free",
         status=sub.status if sub else None,
-        interval=sub.interval if live else None,
-        ends_at=sub.current_end if live else None,
-        cancelling=bool(live and sub.cancel_at_period_end),
+        interval=live.interval if live else None,
+        ends_at=live.current_end if live else None,
+        cancelling=bool(live and live.cancel_at_period_end),
         comped=bool(sub and sub.razorpay_subscription_id.startswith("comp_")),
     )
 

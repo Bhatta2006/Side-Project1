@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal } from '@/components/common';
 import { LockedState } from '@/components/socrat/states';
 import { NodeMap } from '@/components/socrat/node-map';
-import { usePlanLocks } from '@/lib/billing';
+import { usePlanLocks } from '@/lib/plan-locks';
 import { StatusLabel, StatusLegend, statusFromRoadmap } from '@/components/socrat/status';
 import { Badge } from '@/components/ui/badge';
 import { Soc } from '@/components/socrat/illustration';

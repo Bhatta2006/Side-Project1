@@ -31,7 +31,6 @@ import { api } from '@/lib/api';
 import { NAV, navFor, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { PLAN_NAME } from '@/lib/plans';
-import { money } from '@/lib/billing';
 import { useInstall } from '@/lib/pwa';
 import { useCommunityUrl } from '@/components/community-link';
 import type { BillingStatus, Today } from '@/lib/types';
@@ -204,7 +203,7 @@ function PlanCard({ collapsed }: { collapsed: boolean }) {
   const free = plan === 'free';
   const label = top ? 'Manage plan' : free ? 'Become a Founding Member' : 'Upgrade to Pro';
   const href = top ? '/settings#plan-heading' : '/pricing';
-  const hint = status.cancel_at_period_end && status.renews_at ? `Ends ${new Date(status.renews_at * 1000).toLocaleDateString()}` : free ? `Every topic, daily Soc, for ${money(status.prices.plus.month.INR, 'INR')} a month` : 'Every topic unlocked · company questions on Pro';
+  const hint = status.cancel_at_period_end && status.renews_at ? `Ends ${new Date(status.renews_at * 1000).toLocaleDateString()}` : free ? `Every topic, daily Soc, for ₹${status.prices.plus.month.INR / 100} a month` : 'Every topic unlocked · company questions on Pro';
   return (
     <div className="px-3 pb-2">
       <Tooltip>

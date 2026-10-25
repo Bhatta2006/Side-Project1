@@ -1,18 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Check, Lock, Minus, ShieldCheck } from 'lucide-react';
-import { PAYWALL_EVENT, api, explain, openPaywall } from '@/lib/api';
+import { explain, openPaywall } from '@/lib/api';
 import { money, subscribe } from '@/lib/billing';
-import { COMPARE, PAYWALL_REASON, PLAN_NAME, PLUS_WAS_INR } from '@/lib/plans';
+import { PLAN_NAME, PLUS_WAS_INR } from '@/lib/plans';
 import { useSession } from '@/lib/session';
 import type { BillingStatus, PlanId } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
-const WELCOME_KEY = 'socrat:paywall-welcome:';
+// Mirrors `entitlements.PLANS`; kept here so the copy only loads with the paywall.
+type Cell = boolean | string;
+const COMPARE: { label: string; free: Cell; plus: Cell; pro: Cell }[] = [
+  { label: 'Lessons and topics', free: 'First 2 modules', plus: 'Every topic, every course', pro: 'Every topic, every course' },
+  { label: 'Messages with Soc', free: '5 a week', plus: '10 a day', pro: '50 a day' },
+  { label: 'Checkpoints and module tests', free: 'First 2 modules', plus: true, pro: true },
+  { label: 'Practice problem library', free: 'A few starter problems', plus: true, pro: true },
+  { label: 'Weekly assessment', free: false, plus: true, pro: true },
+  { label: 'Visual playground', free: false, plus: '3 a day', pro: '15 a day' },
+  { label: 'Company interview questions', free: false, plus: false, pro: true },
+  { label: 'Company sprint plans', free: false, plus: false, pro: true },
+];
+
+/** What a paywall says depending on what the learner just ran into. */
+const PAYWALL_REASON: Record<string, { title: string; body: string; plan: 'plus' | 'pro' }> = {
+  welcome: { title: 'Start with the whole course, not a sample', body: 'Free covers the first 2 modules. Founding Members unlock every topic, daily time with Soc and the weekly assessment.', plan: 'plus' },
+  upgrade_required: { title: 'This part is for Founding Members', body: 'You have finished what the free plan covers here. Unlock every topic, checkpoint and practice problem to keep your streak going.', plan: 'plus' },
+  pro_required: { title: 'Company questions are a Pro feature', body: 'See the questions top companies actually ask, sorted by how often and how recently, plus a sprint plan for your target company.', plan: 'pro' },
+  chat_week_limit: { title: "You've used this week's messages with Soc", body: 'Free includes 5 a week. Founding Members get 10 every day, so you never get stuck mid-problem.', plan: 'plus' },
+  assessment: { title: 'The weekly assessment is for members', body: 'A timed check built from what you studied this week, so you can prove it stuck. Included with Founding Member and Pro.', plan: 'plus' },
+};
 
 function Mark({ value }: { value: boolean | string }) {
   if (value === true) return <Check className="mx-auto size-4" aria-label="Included" />;
@@ -49,35 +69,15 @@ export function PlanCompare({ highlight = 'plus', className }: { highlight?: Pla
   );
 }
 
-/** The paywall: opens on any locked feature (402), on the weekly chat limit, and once after first sign-in. */
-export function PaywallHost() {
-  const { profile, refresh } = useSession();
-  const [reason, setReason] = useState<string | null>(null);
-  const [status, setStatus] = useState<BillingStatus | null>(null);
+/** The paywall dialog. Loaded on demand by `PaywallHost`, so pages don't carry it until it opens. */
+export function PaywallDialog({ reason, status, onClose }: { reason: string; status: BillingStatus; onClose: () => void }) {
+  const { refresh } = useSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const show = (e: Event) => setReason(current => current ?? String((e as CustomEvent).detail));
-    window.addEventListener(PAYWALL_EVENT, show);
-    return () => window.removeEventListener(PAYWALL_EVENT, show);
-  }, []);
-
-  useEffect(() => {
-    if (!profile) return setStatus(null);
-    api.get<BillingStatus>('/billing/status').then(s => {
-      setStatus(s);
-      // Right after sign-in, once per account: the plans, before the learner settles into Free.
-      let seen = true;
-      try { seen = localStorage.getItem(WELCOME_KEY + profile.id) !== null; localStorage.setItem(WELCOME_KEY + profile.id, '1'); } catch { /* storage unavailable: skip the welcome */ }
-      if (s.enabled && s.plan === 'free' && !seen) setReason(current => current ?? 'welcome');
-    }).catch(() => undefined);
-  }, [profile]);
-
-  const copy = reason ? PAYWALL_REASON[reason] ?? PAYWALL_REASON.upgrade_required : null;
-  const plan = copy?.plan === 'pro' || status?.plan === 'plus' ? 'pro' : 'plus';
-  const minor = status?.prices[plan].month.INR;
-  const open = Boolean(copy && status?.enabled && status.plan !== 'pro');
+  const copy = PAYWALL_REASON[reason] ?? PAYWALL_REASON.upgrade_required;
+  const plan = copy.plan === 'pro' || status.plan === 'plus' ? 'pro' : 'plus';
+  const minor = status.prices[plan].month.INR;
 
   async function buy() {
     setError('');
@@ -95,12 +95,12 @@ export function PaywallHost() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={next => { if (!next) setReason(null); }}>
+    <Dialog open onOpenChange={next => { if (!next) onClose(); }}>
       <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto p-0 sm:max-w-[560px]">
         <div className="px-6 pt-6 pb-4">
-          <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Lock className="size-3.5" aria-hidden="true" /> {status?.plan === 'plus' ? `You're a ${PLAN_NAME.plus}` : "You're on Free"}</p>
-          <DialogTitle className="mt-2 font-display text-2xl font-bold tracking-[-0.03em]">{copy?.title}</DialogTitle>
-          <DialogDescription className="mt-1.5 text-[15px]">{copy?.body}</DialogDescription>
+          <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Lock className="size-3.5" aria-hidden="true" /> {status.plan === 'plus' ? `You're a ${PLAN_NAME.plus}` : "You're on Free"}</p>
+          <DialogTitle className="mt-2 font-display text-2xl font-bold tracking-[-0.03em]">{copy.title}</DialogTitle>
+          <DialogDescription className="mt-1.5 text-[15px]">{copy.body}</DialogDescription>
         </div>
 
         <section aria-label={`${PLAN_NAME[plan]} plan`} className="mx-6 rounded-[18px] border-[1.5px] border-proof-stroke bg-proof text-proof-foreground p-4">
@@ -110,13 +110,13 @@ export function PaywallHost() {
           </div>
           <p className="mt-1 font-display text-3xl font-bold tabular-nums">
             {plan === 'plus' ? <s className="mr-2 text-lg font-medium text-proof-foreground/60" aria-label={`was ${money(PLUS_WAS_INR, 'INR')}`}>{money(PLUS_WAS_INR, 'INR')}</s> : null}
-            {minor === undefined ? '—' : money(minor, 'INR')}<span className="text-base font-medium text-proof-foreground/70"> / month</span>
+            {money(minor, 'INR')}<span className="text-base font-medium text-proof-foreground/70"> / month</span>
           </p>
           <p className="mt-1 text-[13px] text-proof-foreground/75">
             {plan === 'plus' ? 'Less than ₹4 a day. Your founding price stays the same for as long as you stay subscribed.' : 'Everything in Founding Member, plus every company question and sprint plan.'}
           </p>
           {error ? <p role="alert" className="mt-3 text-sm text-destructive">{error}</p> : null}
-          <Button size="lg" variant="ink" className="mt-4 w-full" onClick={() => void buy()} disabled={busy || minor === undefined} aria-busy={busy}>
+          <Button size="lg" variant="ink" className="mt-4 w-full" onClick={() => void buy()} disabled={busy} aria-busy={busy}>
             {busy ? 'Opening checkout' : plan === 'plus' ? 'Become a Founding Member' : 'Get Pro'}
           </Button>
         </section>
@@ -128,8 +128,8 @@ export function PaywallHost() {
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-4 pb-6">
           <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" aria-hidden="true" /> Secure checkout by Razorpay · cancel any time</p>
           <div className="flex gap-2">
-            <Button asChild variant="ghost" size="sm" onClick={() => setReason(null)}><Link href="/pricing">Compare plans</Link></Button>
-            <Button variant="ghost" size="sm" onClick={() => setReason(null)}>Maybe later</Button>
+            <Button asChild variant="ghost" size="sm" onClick={() => onClose()}><Link href="/pricing">Compare plans</Link></Button>
+            <Button variant="ghost" size="sm" onClick={() => onClose()}>Maybe later</Button>
           </div>
         </div>
       </DialogContent>
