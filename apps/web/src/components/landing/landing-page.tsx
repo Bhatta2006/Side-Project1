@@ -177,7 +177,7 @@ export function LandingPage() {
           </nav>
           <div className="flex items-center gap-1 sm:gap-3">
             <ThemeToggle />
-            <Link href="/login" className="hidden min-h-11 items-center px-2 text-[15px] font-medium underline-offset-4 hover:underline sm:inline-flex">Log in</Link>
+            <Link href="/login" className="hidden min-h-11 items-center rounded-full border border-border bg-background px-3 text-[15px] font-medium text-foreground underline-offset-4 hover:underline sm:inline-flex">Log in</Link>
             <Button asChild className="max-sm:h-10 max-sm:px-4 max-sm:[&_[data-slot=arrow]]:hidden"><Link href="/login">Get started<ArrowCircle /></Link></Button>
             <Button data-menu-button variant="ghost" size="icon" className="lg:hidden" aria-label={menu ? 'Close navigation' : 'Open navigation'} aria-expanded={menu} aria-controls={menu ? 'landing-mobile-nav' : undefined} onClick={() => setMenu(!menu)}>
               {menu ? <X /> : <Menu />}
