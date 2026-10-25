@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { api, explain } from '@/lib/api';
+import { ArrowLeft, ChevronLeft, ChevronRight, Lock, Search } from 'lucide-react';
+import { api, explain, openPaywall } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, conceptHref } from '@/lib/routes';
 import type { CompanyProblem } from '@/lib/types';
@@ -41,6 +41,39 @@ function Frequency({ value }: { value: number }) {
   );
 }
 
+/** Not on Pro: the companies and how many questions each has, behind a lock that opens the paywall. */
+function LockedCompanies({ companies, query, onQuery }: { companies: Company[]; query: string; onQuery: (q: string) => void }) {
+  const total = companies.reduce((sum, c) => sum + c.problems, 0);
+  return (
+    <Page wide>
+      <PracticeNav />
+      <PageHeader eyebrow={NAME.practice} title={NAME.companies} description="The questions top companies actually ask, ordered by how often and how recently." />
+      <section className="mb-6 flex flex-col gap-4 rounded-card border-[1.5px] border-proof-stroke bg-proof text-proof-foreground p-5 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <p className="inline-flex items-center gap-1.5 text-xs font-bold"><Lock className="size-3.5" aria-hidden="true" /> Pro feature</p>
+          <p className="mt-1 font-display text-xl font-bold tracking-[-0.02em]">{total.toLocaleString()}+ real interview questions from {companies.length}{companies.length >= 60 ? '+' : ''} companies</p>
+          <p className="mt-1 text-[15px] text-proof-foreground/75">See what Google, Amazon and others asked in the last 30 days, and get a week-by-week sprint plan for your target company.</p>
+        </div>
+        <Button size="lg" variant="ink" onClick={() => openPaywall('pro_required')}>Unlock with Pro</Button>
+      </section>
+      <div className="relative mb-4 max-w-sm">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <input value={query} onChange={e => onQuery(e.target.value)} placeholder="Find a company" aria-label="Find a company" className="h-11 w-full rounded-full border border-border-strong bg-card pr-4 pl-9 text-[15px]" />
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {companies.map(c => (
+          <li key={c.slug}>
+            <button type="button" onClick={() => openPaywall('pro_required')} className="flex w-full items-center justify-between gap-3 rounded-[14px] border bg-card px-4 py-3 text-left transition-colors hover:border-foreground/40">
+              <span className="min-w-0 truncate font-semibold">{c.name}</span>
+              <span className="inline-flex flex-none items-center gap-1.5 text-[13px] text-muted-foreground tabular-nums"><Lock className="size-3.5" aria-hidden="true" />{c.problems} questions</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Page>
+  );
+}
+
 export default function Companies() {
   const allowed = useGuard('active');
   const [query, setQuery] = useState('');
@@ -52,6 +85,7 @@ export default function Companies() {
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState('');
   const [phone, setPhone] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   // Selection lives in the URL so back and reload keep it.
   useEffect(() => {
@@ -71,9 +105,11 @@ export default function Companies() {
   useEffect(() => {
     if (!allowed) return;
     const timer = setTimeout(() => {
-      api.get<{ items: Company[] }>(`/companies?q=${encodeURIComponent(query)}&limit=60`)
+      api.get<{ items: Company[]; locked: boolean }>(`/companies?q=${encodeURIComponent(query)}&limit=60`)
         .then(r => {
           setCompanies(r.items);
+          setLocked(r.locked);
+          if (r.locked) return;
           // Desktop shows a company straight away; phones start with the list.
           if (!window.matchMedia('(max-width: 1023px)').matches) setSelected(s => s || r.items[0]?.slug || '');
         })
@@ -83,15 +119,16 @@ export default function Companies() {
   }, [allowed, query]);
 
   const load = useCallback(() => {
-    if (!selected) { setView(null); return; }
+    if (!selected || locked) { setView(null); return; }
     setError('');
     api.get<CompanyView>(`/companies/${selected}?window=${range}&difficulty=${difficulty}&offset=${offset}&limit=${PAGE}`)
       .then(setView)
       .catch(e => setError(explain(e)));
-  }, [selected, range, difficulty, offset]);
+  }, [selected, range, difficulty, offset, locked]);
   useEffect(load, [load]);
 
   if (!allowed || !companies) return <Loading variant="list" label="Loading company questions" />;
+  if (locked) return <LockedCompanies companies={companies} query={query} onQuery={setQuery} />;
 
   const unlocked = companies.reduce((sum, c) => sum + c.problems, 0);
   const nothingUnlocked = !companies.length && !query;

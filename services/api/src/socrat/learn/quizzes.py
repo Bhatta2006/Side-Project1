@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import QuizItem
 from socrat.learn import service as learn
@@ -192,6 +193,8 @@ def open_session(
     targets = gates.module_concepts(catalog, target) if modular else [target]
     if not any(concept in scope for concept in targets):
         raise HTTPException(404, "not_found")
+    # Before reusing an open session: one started earlier is no way around the plan.
+    entitlements.require_concept(db, catalog, enrollment.user_id, targets[0], now)
     session = db.scalar(
         select(QuizSession)
         .where(
@@ -203,11 +206,10 @@ def open_session(
     )
     if session is not None:
         return session
+    locked = learn.locked_concepts(db, catalog, enrollment, now)
     if kind == "checkpoint":
-        if gates.module_concepts(catalog, target)[0] in learn.locked_concepts(
-            db, catalog, enrollment, now
-        ):
-            raise HTTPException(423, "concept_locked")
+        if gates.module_concepts(catalog, target)[0] in locked:
+            raise learn.lock_error(locked[gates.module_concepts(catalog, target)[0]])
         record = db.get(ActivityRecord, (enrollment.id, activity_id))
         retry_at = int((record.outcome or {}).get("retry_at", 0)) if record else 0
         if record is not None and record.completed_at is None and retry_at > now:
@@ -223,12 +225,12 @@ def open_session(
             if last is not None:
                 return last
     elif kind == "moduletest":
-        if targets[0] in learn.locked_concepts(db, catalog, enrollment, now):
-            raise HTTPException(423, "concept_locked")
+        if targets[0] in locked:
+            raise learn.lock_error(locked[targets[0]])
         if _finished(db, enrollment, activity_id):
             return _latest(db, enrollment, activity_id)
-    elif target in learn.locked_concepts(db, catalog, enrollment, now):
-        raise HTTPException(423, "concept_locked")
+    elif target in locked:
+        raise learn.lock_error(locked[target])
     elif kind in {"testout", "probe"} and _finished(db, enrollment, activity_id):
         return _latest(db, enrollment, activity_id)
     session = QuizSession(

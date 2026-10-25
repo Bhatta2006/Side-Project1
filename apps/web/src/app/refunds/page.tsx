@@ -22,7 +22,7 @@ export default function RefundsPage() {
       <section aria-labelledby="plans">
         <h2 id="plans">Plans and renewal</h2>
         <ul>
-          <li>{LEGAL.product} has a free plan and two paid plans, Plus and Pro. Features and prices are on the <Link href="/pricing">plans page</Link>.</li>
+          <li>{LEGAL.product} has a free plan and two paid plans, Founding Member (Plus) and Pro. Features and prices are on the <Link href="/pricing">plans page</Link>.</li>
           <li>Paid plans are billed monthly or yearly, in Indian rupees or US dollars, and renew automatically until you cancel. The amount shown at checkout is the amount charged.</li>
           <li>Yearly plans are priced at 12 months less 20%.</li>
           <li>If we change a price, the new price applies from your next renewal, and a plan you already paid for is not affected.</li>
@@ -50,8 +50,8 @@ export default function RefundsPage() {
       <section aria-labelledby="upgrades">
         <h2 id="upgrades">Upgrading</h2>
         <p>
-          Moving from Plus to Pro starts Pro as soon as the payment goes through and ends your Plus plan at that moment.
-          The remaining time on Plus is not credited toward Pro. Moving to a lower plan is done by cancelling and
+          Moving from Founding Member to Pro starts Pro as soon as the payment goes through and ends your Founding Member plan at that moment.
+          The remaining time on Founding Member is not credited toward Pro. Moving to a lower plan is done by cancelling and
           subscribing again after the current period ends.
         </p>
       </section>

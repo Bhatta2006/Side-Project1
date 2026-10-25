@@ -9,6 +9,7 @@ import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { CompanySprintPlan } from '@/components/socrat/company-sprint-plan';
 import { CompanySprintSetup } from '@/components/socrat/company-sprint-setup';
 import { PracticeNav } from '@/components/socrat/practice-nav';
+import { UpgradeBanner } from '@/components/paywall';
 import { EmptyState } from '@/components/socrat/states';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -62,6 +63,11 @@ export default function CompanySprint() {
         ) : null}
       />
       {error ? <ErrorNote message={error} retry={load} className="mb-6" /> : null}
+      {overview?.locked && !current ? (
+        <UpgradeBanner reason="pro_required" title="Plan your sprint for a target company" className="mb-6">
+          Pick Google, Amazon or any of hundreds of companies and get a week-by-week plan built from the questions they actually ask.
+        </UpgradeBanner>
+      ) : null}
       {current ? <CompanySprintPlan sprint={current} onDecided={load} /> : overview && overview.companies.length ? (
         <CompanySprintSetup overview={overview} onStarted={view => setOverview({ ...overview, current: view })} />
       ) : overview ? (

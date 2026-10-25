@@ -15,6 +15,7 @@ export interface Enrollment {
 
 export interface Profile {
   id: string;
+  admin: boolean;
   display_name: string | null;
   birth_year: number | null;
   timezone: string | null;
@@ -755,6 +756,8 @@ export interface CompanySprintOverview {
   companies: { slug: string; name: string; questions: number }[];
   roles: { id: string; label: string }[];
   weeks: number[];
+  /** Company sprints need Pro. */
+  locked?: boolean;
 }
 
 export interface TryProblem {

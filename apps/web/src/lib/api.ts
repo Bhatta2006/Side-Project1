@@ -27,9 +27,17 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401 && path !== '/me' && !path.startsWith('/auth')) toLogin();
-    throw new ApiError(response.status, data?.error?.code ?? 'request_failed');
+    const code = data?.error?.code ?? 'request_failed';
+    // Any locked feature, from any page, opens the paywall (components/paywall.tsx).
+    if (response.status === 402 || code === 'chat_week_limit') openPaywall(code);
+    throw new ApiError(response.status, code);
   }
   return data as T;
+}
+
+export const PAYWALL_EVENT = 'socrat:paywall';
+export function openPaywall(reason: string) {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(PAYWALL_EVENT, { detail: reason }));
 }
 
 const PUBLIC = /^\/(login|privacy|terms|attribution|passport)?(\/|$)/;
@@ -61,7 +69,9 @@ export async function* stream(path: string, body: unknown, signal?: AbortSignal)
   });
   if (!response.ok || !response.body) {
     const data = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, data?.error?.code ?? 'request_failed');
+    const code = data?.error?.code ?? 'request_failed';
+    if (response.status === 402 || code === 'chat_week_limit') openPaywall(code);
+    throw new ApiError(response.status, code);
   }
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = '';
@@ -126,7 +136,8 @@ const MESSAGES: Record<string, string> = {
   playground_idempotency_conflict: 'This request could not be resumed. Please generate it again.',
   playground_artifact_reported: 'This visual was reported and removed. Generate a new one.',
   playground_frame_expired: 'This preview link expired. Reopen the visual from your saved explorations.',
-  upgrade_required: 'This is part of a paid plan. See the plans to unlock it.',
+  upgrade_required: 'This is part of the Founding Member plan. See the plans to unlock it.',
+  pro_required: 'Company questions are part of the Pro plan. See the plans to unlock them.',
   chat_week_limit: "You've used this week's free messages with Soc. They reset on Monday, or upgrade for daily messages.",
   chat_day_limit: "You've used today's messages with Soc. They reset at midnight, or move up a plan for more.",
   playground_day_limit: "You've used today's visual generations. They reset at midnight, or move up a plan for more.",

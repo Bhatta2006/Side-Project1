@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.catalog import practice
 from socrat.database import record_event
 from socrat.learn import service as learn_service
@@ -263,6 +264,7 @@ def company_sprint_overview(request: Request, q: str = ""):
             "companies": company_sprint.companies(cat, scope, q[:60]),
             "roles": [dict(id=k, label=v) for k, v in company_sprint.ROLE_LABEL.items()],
             "weeks": list(company_sprint.WEEKS),
+            "locked": not entitlements.has(db, user.id, "companies"),
         }
 
 
@@ -271,6 +273,7 @@ def start_company_sprint(body: CompanySprintInput, request: Request):
     cat = catalog()
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
+        entitlements.require(db, user.id, "companies")
         enrollment = active(db, user)
         stamp = now()
         sprint = company_sprint.start(

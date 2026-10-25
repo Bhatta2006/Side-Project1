@@ -17,7 +17,7 @@ import { Illustration, Soc } from '@/components/socrat/illustration';
 import { SocFigure } from '@/components/socrat/soc';
 import { StatusIcon, statusFromBand, statusFromRoadmap } from '@/components/socrat/status';
 import { SkillGrid } from '@/components/socrat/skill-grid';
-import { usePlanLocks } from '@/lib/billing';
+import { usePlanLocks } from '@/lib/plan-locks';
 import { WeekStrip } from '@/components/socrat/week-strip';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

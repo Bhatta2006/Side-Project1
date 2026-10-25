@@ -21,13 +21,15 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Illustration } from '@/components/socrat/illustration';
+import { UpgradeBanner } from '@/components/paywall';
+import { PLAN_NAME } from '@/lib/plans';
 
 interface Meta {
   platforms: Record<string, number>;
   sheets: Record<string, number>;
   concepts: { id: string; title: string; course: string; module: string; locked: boolean; problems: number }[];
 }
-interface PageData { total: number; items: LibraryProblem[]; level: PracticeLevel }
+interface PageData { total: number; items: LibraryProblem[]; level: PracticeLevel; plan_locked?: number }
 
 const PLATFORMS = ['LeetCode', 'CSES', 'Codeforces'] as const;
 const STATUSES = [
@@ -478,6 +480,11 @@ export default function Library() {
             )
           ) : null}
 
+          {page?.plan_locked ? (
+            <UpgradeBanner title={`${page.plan_locked.toLocaleString()} more problems match, on topics past the free plan`}>
+              Free includes problems from the first 2 modules. {PLAN_NAME.plus}s practise every topic, with Soc there when they get stuck.
+            </UpgradeBanner>
+          ) : null}
           {page ? <Pager total={page.total} offset={offset} setOffset={setOffset} /> : null}
           {error ? <ErrorNote message={error} retry={load} /> : null}
           <p className="text-[13px] text-muted-foreground">Names, ratings and tags only. Statements stay on the original sites. Mark problems solved here, or link Codeforces in {NAME.settings} to sync.</p>

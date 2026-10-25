@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.catalog import practice
 from socrat.catalog.registry import Catalog
 from socrat.learn import service as learn
@@ -193,6 +194,11 @@ def listing(
     elif status == "todo":
         ids = {pid for pid, m in marks.items() if m.status == "todo"}
     items = index.search(q, platforms, concept, difficulty, rating_min, rating_max, sheet, ids)
+    paid_only = entitlements.plan_locked(db, catalog, user.id, now)
+    # Free learners see how much a paid plan opens: problems on topics outside their plan.
+    plan_locked = (
+        sum(bool(paid_only.intersection(p["concepts"])) for p in items) if paid_only else 0
+    )
     items = [p for p in items if learner.can_practice(p)]
     if status == "unsolved":
         items = [p for p in items if p["id"] not in learner.solved]
@@ -213,6 +219,7 @@ def listing(
         "total": len(items),
         "items": [row(catalog, learner, p, marks) for p in page],
         "level": recommend.level_view(learner.rating),
+        "plan_locked": plan_locked,
     }
 
 

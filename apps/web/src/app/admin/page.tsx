@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, Gauge, MessageSquare, ShieldAlert, ThumbsUp, Users } from 'lucide-react';
+import { notFound } from 'next/navigation';
+import { Activity, Gauge, MessageSquare, ThumbsUp, Users } from 'lucide-react';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { ErrorNote, Loading, Page, PageHeader, StatCard } from '@/components/common';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ReviewQueue } from '@/components/review-queue';
+import { AdminUsers } from '@/components/admin-users';
+import { useSession } from '@/lib/session';
 
 interface Overview {
   funnel: { step: string; learners: number; share: number }[];
@@ -170,6 +172,7 @@ function Funnel({ steps }: { steps: Overview['funnel'] }) {
 
 export default function Admin() {
   const allowed = useGuard('signed-in');
+  const { profile } = useSession();
   const [data, setData] = useState<Overview | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState('');
@@ -180,27 +183,16 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    if (!allowed) return;
+    if (!allowed || !profile?.admin) return;
     api.get<Overview>('/admin/overview')
       .then(setData)
       .catch(e => (e instanceof ApiError && e.status === 403 ? setForbidden(true) : setError(explain(e))));
     api.get<AICosts>('/admin/ai-costs').then(setCosts).catch(() => undefined);
     api.get<{ items: ErrorItem[] }>('/admin/errors').then(r => setErrorItems(r.items)).catch(() => undefined);
-  }, [allowed]);
+  }, [allowed, profile?.admin]);
 
-  if (forbidden) {
-    return (
-      <Page narrow>
-        <Empty className="mt-16">
-          <EmptyHeader>
-            <EmptyMedia variant="icon"><ShieldAlert /></EmptyMedia>
-            <EmptyTitle>Admin access only</EmptyTitle>
-            <EmptyDescription>Add your account to SOCRAT_ADMIN_SUBJECTS on the server to see owner metrics.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </Page>
-    );
-  }
+  // Not on the allow-list: the page does not exist, as far as they can tell.
+  if (forbidden || (profile && !profile.admin)) notFound();
   if (!allowed || (!data && !error)) return <Loading variant="list" />;
   if (!data) return <Page><ErrorNote message={error} /></Page>;
 
@@ -212,8 +204,10 @@ export default function Admin() {
       <Tabs defaultValue="metrics" className="gap-6">
         <TabsList>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="users">Users and plans</TabsTrigger>
           <TabsTrigger value="review">Review queue</TabsTrigger>
         </TabsList>
+        <TabsContent value="users"><AdminUsers /></TabsContent>
         <TabsContent value="review"><ReviewQueue /></TabsContent>
         <TabsContent value="metrics">
 

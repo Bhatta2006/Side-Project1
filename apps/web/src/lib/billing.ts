@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { api } from './api';
-import type { BillingStatus, PlanId } from './types';
+import type { PlanId } from './types';
 
 export type Currency = 'INR' | 'USD';
 export type Interval = 'month' | 'year';
@@ -48,15 +47,4 @@ export async function subscribe(plan: Exclude<PlanId, 'free'>, interval: Interva
     checkout.on('payment.failed', failure => reject(new Error(failure.error.description)));
     checkout.open();
   });
-}
-
-/** Which topics sit outside the learner's plan. Free learners only get the first modules. */
-export function usePlanLocks(): (concept: string) => boolean {
-  const [free, setFree] = useState<Set<string> | null>(null);
-  useEffect(() => {
-    api.get<BillingStatus>('/billing/status')
-      .then(s => setFree(s.enabled && s.free_concepts ? new Set(s.free_concepts) : null))
-      .catch(() => setFree(null));
-  }, []);
-  return concept => free !== null && !free.has(concept);
 }

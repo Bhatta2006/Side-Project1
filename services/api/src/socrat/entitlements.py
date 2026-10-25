@@ -18,6 +18,10 @@ from socrat.models import AssistantMessage, AssistantThread, Subscription, User,
 ENABLED = False
 PLAYGROUND_SCOPE = "playground:visual"
 FREE_MODULES = 2  # per course
+PLAN_GATE = "plan"  # the gate `learn.locked_concepts` reports for content outside the plan
+RANK = {"free": 0, "plus": 1, "pro": 2}
+# Features beyond lessons and chat: feature -> the lowest plan that includes it.
+TIER = {"assessment": "plus", "companies": "pro"}
 
 # feature -> (messages, window). 0 messages = locked.
 PLANS = {
@@ -44,9 +48,25 @@ def free_concepts(catalog: Catalog) -> set[str]:
     }
 
 
+def plan_locked(db: Session, catalog: Catalog, user_id: str, stamp: int) -> set[str]:
+    """Concepts the learner's plan does not include."""
+    if not ENABLED or plan_of(db, user_id, stamp) != "free":
+        return set()
+    return set(catalog.concepts) - free_concepts(catalog)
+
+
 def require_concept(db: Session, catalog: Catalog, user_id: str, concept: str, stamp: int):
-    if ENABLED and plan_of(db, user_id, stamp) == "free" and concept not in free_concepts(catalog):
+    if concept in plan_locked(db, catalog, user_id, stamp):
         raise HTTPException(402, "upgrade_required")
+
+
+def has(db: Session, user_id: str, feature: str, stamp: int | None = None) -> bool:
+    return not ENABLED or RANK[plan_of(db, user_id, stamp)] >= RANK[TIER[feature]]
+
+
+def require(db: Session, user_id: str, feature: str, stamp: int | None = None):
+    if not has(db, user_id, feature, stamp):
+        raise HTTPException(402, "pro_required" if TIER[feature] == "pro" else "upgrade_required")
 
 
 def window_start(user: User | None, unit: str, stamp: int) -> int:

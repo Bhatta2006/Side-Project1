@@ -11,6 +11,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.assistant import budget
 from socrat.assistant import service as assistant
 from socrat.assistant.gateway import make_provider
@@ -176,10 +177,22 @@ def age_ok(birth_year: int | None, birthday_passed: bool, today: date) -> bool:
     return age >= MIN_AGE
 
 
-def profile_view(db: Session, user: User, csrf: str) -> dict:
+def is_admin(request: Request, user: User) -> bool:
+    settings = request.app.state.settings
+    allowed = settings.admin_subjects
+    emails = {e.lower() for e in settings.admin_emails}
+    return (
+        f"{user.issuer}|{user.subject}" in allowed
+        or user.subject in allowed
+        or (user.admin_email is not None and user.admin_email in emails)
+    )
+
+
+def profile_view(db: Session, user: User, csrf: str, admin: bool = False) -> dict:
     enrollment = learn.active_enrollment(db, user.id)
     return dict(
         id=user.id,
+        admin=admin,
         display_name=user.display_name,
         birth_year=user.birth_year,
         timezone=user.timezone,
@@ -212,7 +225,11 @@ def auth_status(request: Request):
         except HTTPException:
             return {"profile": None}
         user = db.get(User, session.user_id)
-        return {"profile": profile_view(db, user, session.csrf_token) if user else None}
+        return {
+            "profile": profile_view(db, user, session.csrf_token, is_admin(request, user))
+            if user
+            else None
+        }
 
 
 @router.get("/me")
@@ -222,7 +239,7 @@ def me(request: Request):
         user = db.get(User, session.user_id)
         if user is None:
             raise HTTPException(401, "authentication_required")
-        return profile_view(db, user, session.csrf_token)
+        return profile_view(db, user, session.csrf_token, is_admin(request, user))
 
 
 @router.get("/me/summary")
@@ -257,7 +274,7 @@ def update_me(body: ProfileUpdate, request: Request):
         if body.timezone is not None:
             user.timezone = body.timezone
         record_event(db, user.id, "profile.updated")
-        return profile_view(db, user, session.csrf_token)
+        return profile_view(db, user, session.csrf_token, is_admin(request, user))
 
 
 @router.post("/me/tour", status_code=204)
@@ -435,7 +452,7 @@ def update_enrollment(body: ScheduleUpdate, request: Request):
             )
         record_event(db, user.id, "enrollment.updated", enrollment.id)
         session = require_session(request, db)
-        return profile_view(db, user, session.csrf_token)
+        return profile_view(db, user, session.csrf_token, is_admin(request, user))
 
 
 @router.get("/placement")
@@ -569,6 +586,8 @@ def guard_instruction(db: Session, cat: Catalog, user: User, qualified: str | No
         raise HTTPException(423, "independent_work_in_progress")
     if qualified is not None and enrollment.status == "active":
         learn.require_unlocked(db, cat, enrollment, qualified, now())
+    elif qualified is not None:  # a paused or finished course still keeps to the plan
+        entitlements.require_concept(db, cat, user.id, qualified, now())
 
 
 def activity_concept(cat: Catalog, activity_id: str) -> str | None:
@@ -680,12 +699,16 @@ def companies(request: Request, q: str = "", limit: int = 60):
         learner = library.learner_for(
             db, catalog(), user, learn.active_enrollment(db, user.id), now()
         )
+        unlocked = entitlements.has(db, user.id, "companies")
     needle = q.strip().lower()
     items = [
         dict(
             slug=slug,
             name=c["name"],
-            problems=sum(
+            # Locked: the full bank size, as a preview of what Pro opens.
+            problems=len(c["problems"])
+            if not unlocked
+            else sum(
                 library_problem in index.problems
                 and learner.can_practice(index.problems[library_problem])
                 for library_problem, _, _ in c["problems"]
@@ -696,7 +719,11 @@ def companies(request: Request, q: str = "", limit: int = 60):
     ]
     items = [c for c in items if c["problems"]]
     items.sort(key=lambda c: (-c["problems"], c["name"]))
-    return {"items": items[: max(1, min(limit, 700))], "total": len(items)}
+    return {
+        "items": items[: max(1, min(limit, 700))],
+        "total": len(items),
+        "locked": not unlocked,  # names show as a preview; the questions need Pro
+    }
 
 
 @router.get("/companies/{slug}")
@@ -717,6 +744,7 @@ def company(
     cat = catalog()
     with Session(engine(request)) as db:
         user = user_of(request, db)
+        entitlements.require(db, user.id, "companies")
         enrollment = learn.active_enrollment(db, user.id)
         states = learn.states_for(db, enrollment) if enrollment else {}
         stamp = now()
@@ -766,6 +794,15 @@ def problem_or_404(cat: Catalog, problem_id: str):
     return cat.problem(problem_id)
 
 
+def problem_in_scope(
+    db: Session, cat: Catalog, user: User, enrollment: Enrollment | None, problem_id: str
+) -> None:
+    concept = f"{cat.problems[problem_id][0]}:{cat.problem(problem_id).concepts[0]}"
+    if enrollment is None or concept not in learn.curriculum(cat, enrollment):
+        raise HTTPException(404, "not_found")
+    entitlements.require_concept(db, cat, user.id, concept, now())
+
+
 @router.get("/runtimes")
 def runtimes(request: Request):
     settings = request.app.state.settings
@@ -783,12 +820,7 @@ def problem(problem_id: str, request: Request, language: str | None = None):
     with Session(engine(request)) as db:
         user = user_of(request, db)
         enrollment = learn.active_enrollment(db, user.id)
-        if (
-            enrollment is None
-            or f"{cat.problems[problem_id][0]}:{cat.problem(problem_id).concepts[0]}"
-            not in learn.curriculum(cat, enrollment)
-        ):
-            raise HTTPException(404, "not_found")
+        problem_in_scope(db, cat, user, enrollment, problem_id)
         lang = (
             language
             if language in {"python", "cpp", "java"}
@@ -804,11 +836,7 @@ def save_draft(problem_id: str, body: SourceInput, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
         enrollment = learn.require_enrollment(db, user.id)
-        if (
-            f"{cat.problems[problem_id][0]}:{cat.problem(problem_id).concepts[0]}"
-            not in learn.curriculum(cat, enrollment)
-        ):
-            raise HTTPException(404, "not_found")
+        problem_in_scope(db, cat, user, enrollment, problem_id)
         language = body.language or (enrollment.language if enrollment else "python")
         draft = db.get(Draft, (user.id, problem_id, language))
         if draft is None:
@@ -833,10 +861,7 @@ def queue(problem_id: str, body: RunInput, request: Request, mode: str):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
         enrollment = learn.require_enrollment(db, user.id)
-        if f"{cat.problems[problem_id][0]}:{problem_obj.concepts[0]}" not in learn.curriculum(
-            cat, enrollment
-        ):
-            raise HTTPException(404, "not_found")
+        problem_in_scope(db, cat, user, enrollment, problem_id)
         language = body.language or (enrollment.language if enrollment else "python")
         if enrollment is not None and enrollment.status == "active":
             guard(db, cat, enrollment, f"problem:{problem_id}")
