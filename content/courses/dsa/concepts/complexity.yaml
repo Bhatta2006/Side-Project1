@@ -173,6 +173,7 @@ quiz:
     explanation: 200,000 × 18 ≈ 3.6·10^6 is fast; n² is 4·10^10.
     difficulty: 2
   - id: hidden-cost
+    languages: [python]
     kind: mcq
     prompt: Inside a loop over n items you check `if x in my_list` (a Python list of size n). Total time?
     options: ["O(n²)", "O(n)", "O(1)", "O(log n)"]

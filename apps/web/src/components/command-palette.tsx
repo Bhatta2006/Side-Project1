@@ -29,7 +29,7 @@ const PAGES = [
   { href: '/settings', label: NAME.settings, icon: Settings, keywords: 'account theme' },
 ];
 
-interface Concept { id: string; title: string; course: string }
+interface Concept { id: string; title: string; module: string; locked: boolean }
 
 /** The ⌘K dialog; loaded on first use so cmdk stays out of every page's bundle. */
 export default function CommandPalette({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
@@ -42,7 +42,7 @@ export default function CommandPalette({ open, setOpen }: { open: boolean; setOp
     if (!open) return;
     let active = true;
     setConcepts([]);
-    api.get<{ concepts: Concept[] }>('/library/meta').then(m => { if (active) setConcepts(m.concepts); }).catch(() => undefined);
+    api.get<{ concepts: Concept[] }>('/library/meta').then(m => { if (active) setConcepts(m.concepts.filter(c => !c.locked)); }).catch(() => undefined);
     return () => { active = false; };
   }, [open]);
   useEffect(() => {
@@ -97,9 +97,9 @@ export default function CommandPalette({ open, setOpen }: { open: boolean; setOp
             <CommandSeparator />
             <CommandGroup heading="Skills">
               {concepts.map(c => (
-                <CommandItem key={c.id} value={`lesson ${c.title} ${c.course}`} onSelect={() => go(conceptHref(c.id))}>
+                <CommandItem key={c.id} value={`lesson ${c.title} ${c.module}`} onSelect={() => go(conceptHref(c.id))}>
                   <BookOpen /> <span className="truncate">{c.title}</span>
-                  <span className="ml-auto text-[13px] text-muted-foreground">{c.course}</span>
+                  <span className="ml-auto text-[13px] text-muted-foreground">{c.module}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

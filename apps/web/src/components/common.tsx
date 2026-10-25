@@ -42,7 +42,7 @@ type LoadingVariant = 'page' | 'inline' | 'article' | 'workspace' | 'list' | 'qu
 
 function HeaderSkeleton() {
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-12 w-96 max-w-full" />
       <Skeleton className="h-4 w-[28rem] max-w-full" />
@@ -152,8 +152,8 @@ export function Loading({ label = 'Loading', variant = 'page' }: { label?: strin
 }
 
 /** Kept for existing call sites: the shared inline error with a retry. */
-export function ErrorNote({ message, retry, className }: { message: string; retry?: () => void; className?: string }) {
-  return <ErrorState message={message} retry={retry} className={className} />;
+export function ErrorNote({ message, retry, className, title }: { message: string; retry?: () => void; className?: string; title?: string }) {
+  return <ErrorState message={message} retry={retry} className={className} title={title} />;
 }
 
 /** Progress ring: 4 px round-capped stroke, track in the hairline colour, the real value in the centre. */

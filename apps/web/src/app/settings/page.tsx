@@ -289,28 +289,6 @@ export default function Settings() {
           </Section>
         </form>
 
-        <Section id="course-heading" title="Course">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[13px] text-muted-foreground">Current course</p>
-              <p className="font-semibold">{course?.title ?? profile.enrollment.course}</p>
-            </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild><Button variant="outline">Switch course</Button></AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Switch course</AlertDialogTitle>
-                  <AlertDialogDescription>Starting a new course pauses your current plan. Your progress, results and code history are kept, and you can come back to it.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep this course</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => router.push('/start')}>Choose a course</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </Section>
-
         <CodeforcesLink />
 
         <PlanSection />

@@ -161,6 +161,7 @@ quiz:
     explanation: A corner is on two edges, so two of its four directions leave the grid.
     difficulty: 2
   - id: python-shared-rows
+    languages: [python]
     kind: mcq
     prompt: "In Python, g = [[0] * 3] * 2 and then g[0][0] = 5. What is g[1][0]?"
     options: ["5", "0", "An error", "3"]

@@ -5,7 +5,15 @@ import hmac
 import json
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 Language = Literal["python", "cpp", "java"]
 
@@ -117,7 +125,21 @@ class JobManifest(Contract):
     pack_digest: Hash
     mode: Literal["run", "submit"]
     limits: Limits
+    time_limit_ms: int | None = Field(default=None, ge=500, le=10000)
     compile_config: dict
+
+    @model_serializer(mode="wrap")
+    def signed_fields(self, handler: SerializerFunctionWrapHandler) -> dict:
+        fields = handler(self)
+        # Preserve signatures of queued jobs issued before per-problem limits.
+        if self.time_limit_ms is None:
+            fields.pop("time_limit_ms", None)
+        return fields
+
+    @property
+    def run_seconds(self) -> float:
+        problem = self.time_limit_ms / 1000 if self.time_limit_ms is not None else float("inf")
+        return min(self.limits.wall_seconds, problem)
 
     @model_validator(mode="after")
     def fixed_commands(self):

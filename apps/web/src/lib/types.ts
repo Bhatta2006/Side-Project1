@@ -45,6 +45,7 @@ export interface Features {
   /** WhatsApp community invite for beta learners; null hides it. */
   community_url?: string | null;
   try_tutor?: boolean;
+  adaptive_quiz?: boolean;
 }
 
 export interface Course {
@@ -102,7 +103,48 @@ export interface Activity {
   title: string;
   minutes?: number;
   reason?: string;
+  /** Which adaptation put this here (see ReasonChip). */
+  code?: ReasonCode;
   status?: 'done' | 'pending';
+}
+
+export type ReasonCode =
+  | 'path' | 'assumed_confirm' | 'failed_check_refresh' | 'stuck_support' | 'review_due'
+  | 'checkpoint' | 'checkpoint_retry' | 'chosen_testout' | 'probe' | 'approved_refresh' | 'stretch';
+
+/** A concept check or review served by the adaptive engine. */
+export interface AdaptiveSession {
+  id: string;
+  engine: 'adaptive';
+  mode: string;
+  concepts: string[];
+  served: number;
+  max_items: number;
+  finished: boolean;
+  stop_reason: 'max_items' | 'ceiling' | 'stable' | 'exhausted' | 'needs_lesson' | null;
+  score?: number | null;
+  passed?: boolean | null;
+  current: {
+    item: string;
+    concept: string;
+    pattern: string;
+    format: string;
+    band: number;
+    prompt: string;
+    code: string | null;
+    options: string[];
+    hints_used: number;
+    hints_available: number;
+    micro_lesson: { pattern: string; concept: string } | null;
+  } | null;
+}
+
+export interface AdaptiveAnswer {
+  outcome: 'correct' | 'wrong' | 'skipped';
+  answer: number;
+  explanation: string | null;
+  misconception: string | null;
+  session: AdaptiveSession;
 }
 
 export interface Revision {
@@ -216,9 +258,14 @@ export interface Streak {
 export interface ProgressNumbers {
   total: number;
   finished: number;
-  /** Skills placed as known without evidence; not part of `finished`. */
+  /** Skills placed as known without evidence; not part of `finished` until confirmed. */
   assumed: number;
+  /** Check passed (learned) and proven again after a gap (mastered); together = finished. */
+  learned?: number;
+  mastered?: number;
   percent: number;
+  /** Every skill on the path is learned or mastered. */
+  complete?: boolean;
 }
 
 export interface Today {
@@ -229,9 +276,11 @@ export interface Today {
   study_day: boolean;
   streak: Streak;
   days_away: number;
-  minutes: { done: number; goal: number };
+  minutes: { done: number; goal: number; reached?: boolean };
   done: Activity[];
   next: Activity | null;
+  /** The module the learner is working in (where the next step is). */
+  current_module?: string | null;
   queue: Activity[];
   pace: Pace;
   pace_reason: string;
@@ -247,6 +296,7 @@ export interface Today {
 }
 
 export interface RoadmapItem {
+  reason_codes: ReasonCode[];
   lesson_done: boolean;
   quiz_done: boolean;
   review_due: boolean;
@@ -282,6 +332,8 @@ export interface PlanView {
   target_date: string | null;
   on_track: boolean | null;
   current_concept: string | null;
+  /** The module the next step is in. */
+  current_module?: string | null;
   modules: {
     id: string;
     title: string;
@@ -325,6 +377,10 @@ export interface ProgressView {
       confidence: number;
       evidence: number;
       next_review: number | null;
+      /** Roadmap status: practiced = every step done and the check passed. */
+      status?: RoadmapItem['status'];
+      independent?: number;
+      assisted?: number;
     }[];
   }[];
   progress: ProgressNumbers;

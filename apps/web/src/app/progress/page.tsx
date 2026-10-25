@@ -111,12 +111,15 @@ export default function ProgressPage() {
                   </summary>
                   <ul className="grid gap-2 px-5 pb-5 lg:px-6">
                     {m.concepts.map(c => {
-                      const status = statusFromBand(c.band, c.next_review !== null && c.next_review <= now);
+                      const due = c.next_review !== null && c.next_review <= now;
+                      const status = due && c.band !== 'not_started' ? 'review' : c.status === 'practiced' ? 'learned' : c.status === 'assumed' ? 'assumed' : statusFromBand(c.band, due);
+                      const helped = (c.assisted ?? 0) > (c.independent ?? 0);
                       return (
                         <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[16px] bg-raised px-4 py-3">
                           <Link href={conceptHref(c.id)} transitionTypes={['nav-forward']} className="min-w-0 flex-1 basis-40 font-semibold underline-offset-4 hover:underline">{c.title}</Link>
                           <StatusLabel status={status} className="text-[13px]" />
-                          {c.band === 'needs_practice' ? (
+                          {helped ? <span className="text-[13px] text-muted-foreground">mostly with help</span> : null}
+                          {status === 'needs_practice' ? (
                             <span className="flex basis-full flex-wrap gap-2 sm:basis-auto">
                               <Button asChild size="sm"><Link href={conceptHref(c.id)}>Practice this</Link></Button>
                               <Button asChild size="sm" variant="outline"><Link href={`/playground?concept=${encodeURIComponent(c.id)}`}>Explore in {NAME.playground}</Link></Button>
@@ -129,7 +132,7 @@ export default function ProgressPage() {
                 </details>
               );
             })}
-            <div className="rounded-card border p-5"><StatusLegend only={['not_seen', 'assumed', 'practised', 'mastered', 'review', 'needs_practice']} /></div>
+            <div className="rounded-card border p-5"><StatusLegend only={['not_seen', 'assumed', 'practised', 'learned', 'mastered', 'review', 'needs_practice']} /></div>
           </section>
 
           <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4 lg:col-span-4 lg:gap-6" aria-label="Activity and results">

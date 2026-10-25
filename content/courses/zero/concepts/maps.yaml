@@ -203,6 +203,7 @@ quiz:
     explanation: "\"banana\" has three a's; get returns the default 0 for a missing key instead of raising KeyError."
     difficulty: 4
   - id: key-types
+    languages: [python]
     kind: mcq
     prompt: "Which of these can be a dictionary key in Python?"
     options:

@@ -1,0 +1,65 @@
+id: quiz:zero:nested-loops:adaptive-foundations
+family: adaptive-foundations
+concept: zero:nested-loops
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: An outer loop runs 3 times and its inner loop runs 2 times on each visit. How many inner-body
+    executions occur?
+  options:
+  - '6'
+  - '5'
+  - '3'
+  - '2'
+  answer: 0
+  explanation: 'Each of the 3 outer iterations contributes 2 inner iterations: 3 times 2.'
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: A loop visits each row and another visits each column in that row. What does one inner iteration
+    process?
+  options:
+  - One cell
+  - Every row
+  - The whole grid
+  - Only a column heading
+  answer: 0
+  explanation: A row choice together with a column choice identifies one cell.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A triangular traversal visits 1 cell in row one, 2 in row two and 3 in row three. How many cells
+    are visited?
+  options:
+  - '6'
+  - '9'
+  - '3'
+  - '5'
+  answer: 0
+  explanation: The row lengths add to 1 + 2 + 3 = 6; the inner loop length varies by row.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: Two loops run one after another, each for 4 iterations. How many body executions occur in total?
+  options:
+  - '8'
+  - '16'
+  - '4'
+  - '0'
+  answer: 0
+  explanation: Sequential loops add their work. Multiplication applies to a nested inner loop repeated
+    by an outer loop.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

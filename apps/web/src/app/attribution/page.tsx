@@ -27,8 +27,8 @@ export default function AttributionPage() {
       {error ? <ErrorNote message={error} /> : null}
       {!data && !error ? <Loading /> : null}
       {data ? (
-        <div className="grid gap-10">
-          <section aria-labelledby="adapted-title" className="grid gap-3">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-10">
+          <section aria-labelledby="adapted-title" className="grid min-w-0 gap-3">
             <SectionTitle id="adapted-title">Adapted material</SectionTitle>
             {data.adapted.length ? (
               <ul className="grid gap-3">
@@ -50,7 +50,7 @@ export default function AttributionPage() {
               <p className="text-base text-muted-foreground">No lesson, quiz or problem currently adapts third-party text. Everything is written by Socrat.</p>
             )}
           </section>
-          <section aria-labelledby="sources-title" className="grid gap-3">
+          <section aria-labelledby="sources-title" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
             <SectionTitle id="sources-title">Sources</SectionTitle>
             <p className="text-base text-muted-foreground">
               Licenses marked unverified come from secondary reports and are not relied on until checked on the source&apos;s own page.

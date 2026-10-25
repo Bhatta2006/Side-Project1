@@ -1,0 +1,61 @@
+id: quiz:zero:problem-solving:adaptive-foundations
+family: adaptive-foundations
+concept: zero:problem-solving
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: Before implementing a solution, what should be clear?
+  options:
+  - What inputs are allowed and what output is required
+  - Which keyboard color to use
+  - How many comments every file needs
+  - The judge's internal server name
+  answer: 0
+  explanation: The input/output contract defines the problem the algorithm must solve.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: Why work through a small example by hand?
+  options:
+  - To check the intended behavior and expose edge cases
+  - To replace testing all implementations
+  - To guarantee linear complexity
+  - To avoid reading the statement
+  answer: 0
+  explanation: A hand-worked example tests understanding before implementation adds more detail.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A brute-force solution is slow but correct on small inputs. How can it help?
+  options:
+  - It can check an optimized solution on many small cases
+  - It proves every optimized solution is correct
+  - It removes all memory limits
+  - It makes input constraints unnecessary
+  answer: 0
+  explanation: Comparing independent implementations on small cases is useful differential testing.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: An algorithm works on the sample but fails on other valid inputs. What follows?
+  options:
+  - The sample alone was insufficient evidence of correctness
+  - The other inputs must be invalid
+  - Every sample must be changed
+  - The language cannot solve the problem
+  answer: 0
+  explanation: Samples illustrate behavior; correctness must cover the full set of allowed inputs.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

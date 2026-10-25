@@ -24,6 +24,7 @@ from socrat.catalog.quizbank import (
 from socrat.quiz.config import DEFAULT, EngineConfig, Pool
 
 POOL_SALT = "socrat-pool-v1"
+LANGUAGES = ("python", "cpp", "java")
 
 
 @dataclass(frozen=True)
@@ -89,7 +90,8 @@ def legacy_bank(catalog, cfg: EngineConfig = DEFAULT) -> list[Item]:
                     d_prior=cfg.prior(band),
                     pool=pool_for_key(key, cfg),
                     status="provisional",
-                    languages=tuple(q.code),
+                    # Same language rules as the fixed checks: tags, "In C++ ..." prompts, code.
+                    languages=tuple(x for x in LANGUAGES if q.fits(x)),
                 )
             )
     return items

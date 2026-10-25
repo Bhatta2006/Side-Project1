@@ -1,0 +1,65 @@
+id: quiz:zero:scope-and-mutation:adaptive-foundations
+family: adaptive-foundations
+concept: zero:scope-and-mutation
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A variable is local to one function. Can a separate function defined outside that variable's
+    lexical scope refer to it directly by that local name?
+  options:
+  - No, it needs an appropriate input or shared reference
+  - Yes, all variable names are global
+  - Only after two calls
+  - Only when its name has one letter
+  answer: 0
+  explanation: Local scope restricts where that binding can be accessed.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: Two names refer to the same mutable list. One name appends an item. What does the other name
+    refer to?
+  options:
+  - The same list, now containing the appended item
+  - An automatically copied old list
+  - An empty list
+  - A number
+  answer: 0
+  explanation: Aliases share one object, so a mutation is visible through either reference.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: What is the difference between rebinding a name and mutating an object?
+  options:
+  - Rebinding changes which object a name denotes; mutation changes the state of an object
+  - Rebinding always changes every object in memory
+  - Mutation always creates a new local name
+  - The two operations always have identical effects
+  answer: 0
+  explanation: 'Names and objects are separate: redirecting a name does not itself change the old object,
+    while mutation changes that object''s contents.'
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A local variable has the same name as an outer variable. Which value does that local name normally
+    identify inside its scope?
+  options:
+  - The local variable
+  - Both values added together
+  - The outer variable only
+  - No value can be used
+  answer: 0
+  explanation: The nearer binding shadows the outer binding within that local scope.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

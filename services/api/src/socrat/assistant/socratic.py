@@ -20,6 +20,12 @@ REVEAL_MIN_FAILED_SUBMITS = 2
 REVEAL_MIN_TURNS_AT_FOUR = 3
 _CODE_FENCE = re.compile(r"```([a-zA-Z+#]*)\n(.*?)```", re.S)
 _CODE_LANGS = {"python", "py", "cpp", "c++", "java", "c", "javascript", "js"}
+_CODE_LINE = re.compile(
+    r"\s*(def |for .+ in |while .+:|if .+:|return\b|print\(|[A-Za-z_]\w*(\[.*\])?\s*[-+*/]?=[^=]"
+    r"|[A-Za-z_][\w.]*\(.*\)\s*;?\s*$)"
+)
+_STEPS = re.compile(r"^\s*\d+[.)]\s", re.M)
+_ASSIGN = re.compile(r"\b[A-Za-z_]\w*\s*=\s*[^=\s]")
 # Asking for the answer, or saying you're lost, is not work (X1): it must not raise the level.
 _PRESSURE = re.compile(
     r"\b(give|send|show|tell|write)\s+(me\s+)?(the\s+)?(full\s+|whole\s+|complete\s+)?"
@@ -48,7 +54,7 @@ def genuine(message: str, new_attempt: bool) -> bool:
     if new_attempt:
         return True
     text = message.strip()
-    if "\n" in text and any(ch in text for ch in "=();{}[]:"):
+    if any(_CODE_LINE.match(line) for line in text.splitlines()):
         return True
     if _PRESSURE.search(text):
         return False
@@ -60,6 +66,9 @@ def advance(ladder: Ladder, message: str, new_attempt: bool) -> Ladder:
         return ladder
     if not genuine(message, new_attempt):
         return Ladder(ladder.ceiling, ladder.turns_at_ceiling, False)
+    # Talk alone tops out at level 2; level 3+ needs a new Run/Submit.
+    if not new_attempt and ladder.ceiling >= 2:
+        return Ladder(ladder.ceiling, ladder.turns_at_ceiling, False)
     if ladder.ceiling < 4:
         return Ladder(ladder.ceiling + 1, 0, False)
     return Ladder(4, ladder.turns_at_ceiling + 1, False)
@@ -70,7 +79,11 @@ def reveal_eligibility(ladder: Ladder, failed_submits: int) -> tuple[bool, str]:
         return True, "already_revealed"
     if failed_submits >= REVEAL_MIN_FAILED_SUBMITS and ladder.ceiling >= 3:
         return True, "struggled_after_attempts"
-    if ladder.ceiling >= 4 and ladder.turns_at_ceiling >= REVEAL_MIN_TURNS_AT_FOUR:
+    if (
+        failed_submits >= 1
+        and ladder.ceiling >= 4
+        and ladder.turns_at_ceiling >= REVEAL_MIN_TURNS_AT_FOUR
+    ):
         return True, "struggled_after_hints"
     needed = []
     if failed_submits < REVEAL_MIN_FAILED_SUBMITS:
@@ -90,10 +103,17 @@ def _normalized_lines(code: str) -> set[str]:
     return lines
 
 
-def leaks(message: str, level: int, reference: str = "") -> bool:
+def leaks(message: str, level: int, reference: str = "", approach: str = "") -> bool:
     """True when a reply reveals more than the level allows."""
     if level >= 5:
         return False
+    if level < 4 and (len(_STEPS.findall(message)) >= 4 or len(_ASSIGN.findall(message)) >= 3):
+        return True
+    squashed = re.sub(r"\s+", " ", message).lower()
+    for sentence in re.split(r"(?<=[.!?])\s+|\n", approach):
+        sentence = re.sub(r"\s+", " ", sentence).strip().lower()
+        if len(sentence) >= 30 and sentence in squashed:
+            return True
     for language, body in _CODE_FENCE.findall(message):
         lang = language.lower()
         lines = [x for x in body.splitlines() if x.strip()]

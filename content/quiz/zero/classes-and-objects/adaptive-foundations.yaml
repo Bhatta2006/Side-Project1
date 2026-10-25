@@ -1,0 +1,62 @@
+id: quiz:zero:classes-and-objects:adaptive-foundations
+family: adaptive-foundations
+concept: zero:classes-and-objects
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A class describes accounts with a balance. What does one account object represent?
+  options:
+  - One instance with its own state
+  - Every account's balance added together
+  - Only a function name
+  - The source file itself
+  answer: 0
+  explanation: An object is an instance of the class, carrying its particular state.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: Two account objects have separate balance fields. Changing one balance normally changes which
+    state?
+  options:
+  - That object's balance
+  - Every object's balance
+  - The class name
+  - No state can change
+  answer: 0
+  explanation: Instance fields belong to individual objects unless explicitly shared.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: What is the usual job of a constructor?
+  options:
+  - Initialize a new object's state
+  - Destroy every existing object
+  - Sort all objects automatically
+  - Print the source code
+  answer: 0
+  explanation: A constructor establishes the state needed for a newly created object.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: An account method withdraws money. Why keep the balance update inside that method?
+  options:
+  - To enforce the account's rules at the point where its state changes
+  - To guarantee unlimited funds
+  - To make the balance a global variable
+  - To remove the need for inputs
+  answer: 0
+  explanation: A method can validate a withdrawal and preserve invariants when it changes the object.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

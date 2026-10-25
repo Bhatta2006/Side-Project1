@@ -1,0 +1,61 @@
+id: quiz:zero:input-and-arithmetic:adaptive-foundations
+family: adaptive-foundations
+concept: zero:input-and-arithmetic
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A program must add two supplied numbers. What must it do before computing their sum?
+  options:
+  - Read the supplied numbers
+  - Print its source code
+  - Sort every input value
+  - Guess the first number
+  answer: 0
+  explanation: The calculation needs the values read from input.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: What is the remainder when 17 is divided by 5?
+  options:
+  - '2'
+  - '3'
+  - '5'
+  - '12'
+  answer: 0
+  explanation: 17 equals 3 times 5 plus 2.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A box holds 4 items. How many boxes hold 13 items if a partial box also counts?
+  options:
+  - '4'
+  - '3'
+  - '5'
+  - '13'
+  answer: 0
+  explanation: Three boxes hold only 12 items, so one additional box is needed.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: Five identical tickets cost 35 in total. What is the cost of one ticket?
+  options:
+  - '7'
+  - '30'
+  - '40'
+  - '175'
+  answer: 0
+  explanation: 'Divide the total cost by the number of identical tickets: 35 / 5 = 7.'
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

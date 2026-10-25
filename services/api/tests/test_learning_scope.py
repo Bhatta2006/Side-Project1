@@ -158,10 +158,10 @@ def test_course_scope_holds_for_search_direct_urls_and_tutor(client):  # noqa: F
 def test_bridge_topics_remain_in_enrolled_course_scope(client):  # noqa: F811
     headers = login(client)
     onboard(client, headers, course="dsa", level="new-to-programming")
+    # Search (Ctrl K, library filters) lists only the enrolled course; bridges open from the plan.
     concepts = client.get("/api/v1/library/meta").json()["concepts"]
-    assert any(c["id"].startswith("zero:") for c in concepts)
-    assert any(c["id"].startswith("dsa:") for c in concepts)
-    assert not any(c["id"].startswith("cp:") for c in concepts)
+    assert concepts and all(c["id"].startswith("dsa:") for c in concepts)
+    assert all(c["module"] and isinstance(c["locked"], bool) for c in concepts)
     assert client.get("/api/v1/concepts/zero:programs-and-output").status_code == 200
     assert client.get("/api/v1/concepts/cp:fast-io").status_code == 404
 

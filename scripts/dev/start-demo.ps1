@@ -20,7 +20,7 @@ if ($PrepareOnly) { exit 0 }
 $children = @()
 try {
   foreach ($port in 8000, 3000) { if (Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue) { throw "Port $port is in use. Stop that project's server before starting the demo." } }
-  $children += Start-Process -FilePath '.venv/Scripts/python.exe' -ArgumentList '-m uvicorn socrat.main:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log' -WindowStyle Hidden -PassThru -RedirectStandardOutput .cache/native-api.log -RedirectStandardError .cache/native-api-error.log
+  $children += Start-Process -FilePath '.venv/Scripts/python.exe' -ArgumentList '-m uvicorn socrat.main:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log --loop socrat.dev_loop:loop_factory' -WindowStyle Hidden -PassThru -RedirectStandardOutput .cache/native-api.log -RedirectStandardError .cache/native-api-error.log
   $deadline = (Get-Date).AddSeconds(90)
   do {
     try { $ready = Invoke-RestMethod 'http://127.0.0.1:8000/api/health/ready' -TimeoutSec 2 } catch { $ready = $null }
@@ -37,7 +37,18 @@ try {
     if (-not $webReady) { Start-Sleep -Milliseconds 500 }
   } until ($webReady)
   Write-Host 'Native demo ready: http://localhost:3000 — no Docker or WSL required. Ctrl+C stops these demo processes.'
-  while ($true) { foreach ($child in $children) { if ($child.HasExited) { throw 'A demo process stopped; inspect .cache/native-*.log' } }; Start-Sleep -Seconds 2 }
+  $apiMisses = 0
+  $nextProbe = Get-Date
+  while ($true) {
+    foreach ($child in $children) { if ($child.HasExited) { throw 'A demo process stopped; inspect .cache/native-*.log' } }
+    if ((Get-Date) -ge $nextProbe) {
+      try { $apiAlive = (Invoke-WebRequest 'http://127.0.0.1:8000/api/health/live' -TimeoutSec 3 -UseBasicParsing).StatusCode -eq 200 } catch { $apiAlive = $false }
+      if ($apiAlive) { $apiMisses = 0 } else { $apiMisses++ }
+      if ($apiMisses -ge 3) { throw 'API stopped responding; inspect .cache/native-api-error.log' }
+      $nextProbe = (Get-Date).AddSeconds(10)
+    }
+    Start-Sleep -Seconds 2
+  }
 } finally {
   foreach ($child in $children) { if (-not $child.HasExited) { taskkill.exe /PID $child.Id /T /F | Out-Null } }
 }

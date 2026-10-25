@@ -33,6 +33,14 @@ class Captured:
     limit: str = ""
 
 
+def strip_directory(text: str, directory: Path) -> str:
+    """Remove the job's temp path (it embeds the server username) from learner-visible output."""
+    for base in {str(directory), str(directory.resolve())}:
+        for form in (base, base.replace("\\", "/")):
+            text = text.replace(form + os.sep, "").replace(form + "/", "").replace(form, "")
+    return text
+
+
 def scrubbed_environment(directory: Path, commands: list[str]) -> dict[str, str]:
     values = {
         "PATH": os.pathsep.join(dict.fromkeys(str(Path(x).resolve().parent) for x in commands)),
@@ -55,7 +63,7 @@ def capture_process(
     directory: Path,
     env: dict[str, str],
     *,
-    seconds: int,
+    seconds: float,
     memory_mb: int,
     pids: int,
     output_bytes: int,
@@ -111,7 +119,10 @@ def capture_process(
             except (BrokenPipeError, OSError, ValueError):
                 pass
             finally:
-                process.stdin.close()
+                try:
+                    process.stdin.close()
+                except (BrokenPipeError, OSError, ValueError):
+                    pass
 
         for target, args in ((read, (process.stdout, 0)), (read, (process.stderr, 1)), (write, ())):
             thread = threading.Thread(target=target, args=args, daemon=True)
@@ -284,7 +295,7 @@ class LocalProcessBackend:
                         test.input,
                         directory,
                         env,
-                        seconds=limits.wall_seconds,
+                        seconds=job.manifest.run_seconds,
                         memory_mb=limits.memory_mb,
                         pids=limits.pids,
                         output_bytes=limits.output_bytes,
@@ -309,8 +320,12 @@ class LocalProcessBackend:
                             index=index,
                             status=status,
                             wall_ms=result.wall_ms,
-                            stdout=result.stdout[:16000] if public else "",
-                            stderr=result.stderr[:16000] if public else "",
+                            stdout=strip_directory(result.stdout, directory)[:16000]
+                            if public
+                            else "",
+                            stderr=strip_directory(result.stderr, directory)[:16000]
+                            if public
+                            else "",
                         )
                     )
                 )

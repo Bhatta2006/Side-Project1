@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Soc } from '@/components/socrat/illustration';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { ReasonChip } from '@/components/socrat/reason-chip';
 
 const FINISHED = ['mastered', 'practiced'];
 const FOCUS_LABEL = { foundations: 'programming foundations', interview: 'coding interviews', contest: 'contests' } as const;
@@ -101,7 +102,7 @@ export default function PlanPage() {
   if (!allowed || (!plan && !error)) return <Loading label="Loading your skills" />;
   if (!plan) return <Page><ErrorNote message={error} retry={load} /></Page>;
 
-  const current = plan.modules.find(m => m.concepts.some(c => c.concept === plan.current_concept)) ?? plan.modules.find(m => !m.locked_by) ?? plan.modules[0];
+  const current = plan.modules.find(m => m.id === plan.current_module) ?? plan.modules.find(m => m.concepts.some(c => c.concept === plan.current_concept)) ?? plan.modules[0];
   const currentDone = current ? current.concepts.filter(c => FINISHED.includes(c.status)).length : 0;
   const guides = plan.modules.flatMap(m => m.concepts).filter(c => c.status !== 'locked' && c.roadmap_resources?.length);
   // The next checkpoint stays in view: the first locked module starts open.
@@ -147,7 +148,7 @@ export default function PlanPage() {
                 <Soc size={176} mood="proud" className="pointer-events-none absolute top-1/2 right-8 hidden -translate-y-1/2 lg:block" />
                 <div className="relative grid gap-5 px-(--card-spacing) lg:max-w-[62%]">
                   <p className="type-label text-(--card-muted)">Current module{current.bridge ? `, bridge from ${current.course}` : ''}</p>
-                  <h2 id="module-heading" className="type-display-l">{current.title}</h2>
+                  <h2 id="module-heading" className="type-display-m break-words">{current.title}</h2>
                   <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                     <div><dt className="text-sm text-(--card-muted)">Skills done</dt><dd className="type-display-m tabular-nums">{currentDone}/{current.concepts.length}</dd></div>
                     <div><dt className="text-sm text-(--card-muted)">Study left</dt><dd className="font-display text-2xl font-semibold tracking-[-0.03em] tabular-nums">{hours(plan.remaining_minutes)}</dd></div>
@@ -239,6 +240,7 @@ export default function PlanPage() {
                                   {c.review_due ? <Badge>Review due</Badge> : null}
                                   {c.lesson_done ? <Badge variant="secondary">Lesson read</Badge> : null}
                                   {c.quiz_done ? <Badge variant="secondary">Concept check done</Badge> : null}
+                                  {c.reason_codes?.map(code => <ReasonChip key={code} code={code} />)}
                                   <OverrideBadges item={c} undo={undo} />
                                 </span>
                               </Link>

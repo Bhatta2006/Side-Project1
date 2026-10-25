@@ -120,7 +120,12 @@ def explains_term(turn: Turn) -> str | None:
     words = re.search(
         r"\b(reads?|takes?|gets?)\b.{0,60}\b(line|input|text|keyboard)", turn.text, re.I
     )
-    return None if words else "did not explain the term the learner asked about"
+    waiting = re.search(
+        r"\binput\b.{0,180}\b(waits?|pauses?)\b.{0,180}\b(type|typed|typing|keyboard|enter)\b",
+        turn.text,
+        re.I | re.S,
+    )
+    return None if words or waiting else "did not explain the term the learner asked about"
 
 
 def short(turn: Turn) -> str | None:

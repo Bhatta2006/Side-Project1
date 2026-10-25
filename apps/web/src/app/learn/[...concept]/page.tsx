@@ -248,7 +248,7 @@ export default function Lesson() {
           <Link href="/plan" transitionTypes={['nav-back']} aria-label={`Back to ${NAME.skills}`} className="mb-5 grid size-11 place-items-center rounded-full bg-ink text-ink-foreground">
             <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
           </Link>
-          <h1 className="type-display-l">{concept.title}</h1>
+          <h1 className="type-display-m break-words">{concept.title}</h1>
           <p className="mt-3 text-[15px] font-semibold text-(--card-muted)">Lesson, {LANGUAGE_LABEL[concept.language]}</p>
         </div>
         <Illustration name="bulb" draw="load" className="pointer-events-none absolute top-1/2 right-6 size-28 -translate-y-1/2 [--illo-line:#fff] sm:size-36 lg:right-10" />

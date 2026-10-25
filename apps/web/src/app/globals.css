@@ -256,7 +256,7 @@ html:root {
   --rule: #E8E6DE;
   --rule-gap: 40px;
   --margin-line: #EE9C95;
-  --pen: #E0322B;
+  --pen: #CC2A24;
   --highlight: #F7E33E;
   --primary-glow: 0 1px 0 rgb(255 255 255 / 0.25) inset, 0 8px 22px -8px rgb(35 64 232 / 0.65);
   /* Soc: a stone bust on a stack of primary-colour books. */
@@ -264,7 +264,7 @@ html:root {
   --stone-shade: #B5B4AE;
   --stone-light: #E6E5E0;
   --book-blue: #1E3FE0;
-  --book-red: #E6262C;
+  --book-red: #C02026;
   --book-yellow: #ECD75A;
   --book-page: #F1F0EA;
   --soc-outline: #121212;
@@ -285,8 +285,8 @@ html.dark {
   --soc-outline: #0A0A0A;
 }
 /* Blue hero cards: the status shapes take the card's text colours. */
-[data-tone="hero"] { --status-practised: var(--forest-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--proof); --card-muted: rgb(255 255 255 / 0.6); --card-line: rgb(255 255 255 / 0.3); }
-[data-tone="violet"] { --status-practised: var(--violet-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--violet-foreground); --card-muted: rgb(255 255 255 / 0.6); --card-line: rgb(255 255 255 / 0.3); }
+[data-tone="hero"] { --status-practised: var(--forest-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--proof); --card-muted: var(--forest-foreground); --card-line: rgb(255 255 255 / 0.3); }
+[data-tone="violet"] { --status-practised: var(--violet-foreground); --status-muted: var(--card-muted); --ring-track: var(--card-line); --ring-value: var(--violet-foreground); --card-muted: var(--violet-foreground); --card-line: rgb(255 255 255 / 0.3); }
 [data-tone="lilac"], [data-tone="cream"] { --status-practised: var(--forest); --status-muted: var(--card-muted); --card-muted: #A9A595; --card-line: #D9D3B4; }
 [data-tone="hero"], .grain { position: relative; isolation: isolate; }
 [data-tone="hero"]::before, .grain::before {

@@ -4,15 +4,16 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { api, explain } from '@/lib/api';
-import { useGuard } from '@/lib/session';
+import { ApiError, api, explain } from '@/lib/api';
+import { useGuard, useSession } from '@/lib/session';
 import { KIND_LABEL, NAME, QUIZ_KINDS, conceptHref, formatStamp, joinSegments } from '@/lib/routes';
 import type { ActivityKind, Gate, QuizQuestion, QuizSession } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading } from '@/components/common';
 import { Choice } from '@/components/choice';
 import { StatusIcon } from '@/components/socrat/status';
-import { AttentionIcon } from '@/components/socrat/states';
+import { AttentionIcon, LockedState } from '@/components/socrat/states';
+import { AdaptiveCheck } from '@/components/socrat/adaptive-check';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -143,6 +144,13 @@ export default function Quiz() {
   // /quiz/<course>/<skill> is a concept check; the older /quiz/quiz/... form still works.
   const activityId = path.startsWith('quiz:') || QUIZ_KINDS.includes(path.split(':')[0]) ? path : `quiz:${path}`;
   const kind = activityId.split(':')[0] as ActivityKind;
+  const { features } = useSession();
+  // Concept checks and reviews adapt question by question; everything else is a fixed set.
+  const [fixed, setFixed] = useState(false);
+  const adaptive = (kind === 'quiz' || kind === 'review') && features?.adaptive_quiz === true && !fixed;
+  const [locked, setLocked] = useState(false);
+  const fallBack = useCallback(() => setFixed(true), []);
+  const lock = useCallback(() => setLocked(true), []);
   const [session, setSession] = useState<QuizSession | null>(null);
   const [index, setIndex] = useState(0);
   const [choice, setChoice] = useState<number | null>(null);
@@ -158,9 +166,12 @@ export default function Quiz() {
         const first = s.questions.findIndex(q => !q.answered);
         setIndex(first < 0 ? 0 : first);
       })
-      .catch(e => setError(explain(e)));
+      .catch(e => {
+        if (e instanceof ApiError && e.code === 'concept_locked') setLocked(true);
+        else setError(explain(e));
+      });
   }, [activityId]);
-  useEffect(() => { if (allowed) load(); }, [allowed, load]);
+  useEffect(() => { if (allowed && features && !adaptive) load(); }, [allowed, features, adaptive, load]);
 
   async function answer() {
     if (!session || choice === null) return;
@@ -183,6 +194,25 @@ export default function Quiz() {
   const showResults = Boolean(session?.completed && (session.feedback === 'at_end' || index === total));
   const percent = Math.round((session?.score ?? 0) * 100);
 
+  if (locked) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <LockedState title="This check is locked for now" href="/plan" action="See checkpoints">
+          It opens when you pass the checkpoint before it. Your plan shows which one.
+        </LockedState>
+      </div>
+    );
+  }
+  if (allowed && adaptive) {
+    const concept = activityId.split(':').slice(1).join(':');
+    const label = KIND_LABEL[kind] ?? 'Quiz';
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
+        <QuizHeader title={label} topic={concept.split(':')[1]?.replaceAll('-', ' ')} value={0} />
+        <AdaptiveCheck activityId={activityId} mode={kind === 'review' ? 'review' : 'concept_check'} concept={concept} title={label} onFallback={fallBack} onLocked={lock} />
+      </div>
+    );
+  }
   if (!allowed || (!session && !error)) return <Loading variant="quiz" label="Loading the questions" />;
   if (!session) return <div className="mx-auto max-w-3xl p-6"><ErrorNote message={error} retry={load} /></div>;
 
@@ -210,7 +240,7 @@ export default function Quiz() {
                   ? 'Socrat uses this to find the real gap and may suggest a refresher. You decide.'
                   : percent >= 80
                     ? 'Your plan moves you forward.'
-                    : 'More practice is on its way. If a refresher would help, Socrat will ask you first.'}
+                    : 'Not counted yet. Socrat added a different explanation and a fresh check to your plan.'}
             </p>
           </section>
         )}

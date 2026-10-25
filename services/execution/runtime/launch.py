@@ -52,7 +52,7 @@ try:
     result = subprocess.run(
         run_command,
         input=payload["stdin"].encode(),
-        timeout=int(wall_seconds),
+        timeout=float(wall_seconds),
         preexec_fn=restrict_cpu,
     )
 except subprocess.TimeoutExpired:

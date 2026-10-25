@@ -597,6 +597,7 @@ resources:
   languages: [java]
 quiz:
 - id: split-seconds
+  languages: [python]
   kind: mcq
   prompt: t = 3725. What does t % 3600 // 60 give?
   options:
@@ -619,6 +620,7 @@ quiz:
   explanation: Take the minutes from what is left after the hours.
   difficulty: 2
 - id: negative-floor
+  languages: [python]
   kind: mcq
   prompt: What is -7 // 2 in Python?
   options:

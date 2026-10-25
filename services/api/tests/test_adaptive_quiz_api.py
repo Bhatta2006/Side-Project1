@@ -140,7 +140,9 @@ def test_concept_check_round_trip_writes_ratings_responses_and_evidence(on):
         assert {r.item_id for r in responses} == set(keys)
         assert all(r.pool == "practice" and r.mode == "concept_check" for r in responses)
         evidence = list(db.scalars(select(Evidence).where(Evidence.kind == "quiz")))
-        assert len(evidence) == len(keys) and all(e.score == 1.0 for e in evidence)
+        reviewed = [key for key in keys if service.item_by_key(default_catalog(), key).reviewed]
+        assert len(evidence) == len(reviewed) and all(e.score == 1.0 for e in evidence)
+        assert {e.details["item"] for e in evidence} == set(reviewed)
         assert all(e.activity_id == f"adaptive:concept_check:{CONCEPT}" for e in evidence)
         assert db.get(LearnerAbility, (responses[0].enrollment_id, CONCEPT)).n == len(keys)
         cat = default_catalog()
@@ -191,7 +193,8 @@ def test_wrong_skip_and_guard_rails(on):
         assert all(r.item_id != view["id"] for r in responses)
         assert len(responses) == (0 if view["finished"] else 1)
         evidence = list(db.scalars(select(Evidence).where(Evidence.kind == "quiz")))
-        assert [e.score for e in evidence] == ([] if view["finished"] else [0.0])
+        reviewed = not view["finished"] and service.item_by_key(default_catalog(), key).reviewed
+        assert [e.score for e in evidence] == ([0.0] if reviewed else [])
         stored = db.get(QuizEngineSession, session_id)
         assert stored.state["steps"][0]["outcome"] == "skipped"
 

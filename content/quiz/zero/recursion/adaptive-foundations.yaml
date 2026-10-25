@@ -1,0 +1,61 @@
+id: quiz:zero:recursion:adaptive-foundations
+family: adaptive-foundations
+concept: zero:recursion
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: What is a base case in a recursive function?
+  options:
+  - A case that returns without making another recursive call
+  - The first variable assigned
+  - A call with the largest possible input
+  - A loop that never ends
+  answer: 0
+  explanation: A base case supplies an answer directly so that recursive calls can stop.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: A recursive countdown decreases n by 1 until n is 0. Starting at 2, which arguments are visited?
+  options:
+  - 2, 1, 0
+  - 2, 0, -2
+  - 0, 1, 2
+  - 2, 2, 2
+  answer: 0
+  explanation: Each call reduces the argument by one until it reaches the base case 0.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: Why must recursive calls make progress toward a base case?
+  options:
+  - Otherwise the calls may continue until the call stack is exhausted
+  - To ensure every call prints a line
+  - To turn every recursive algorithm into constant time
+  - Because base cases may not return values
+  answer: 0
+  explanation: A base case helps only if the recursive path eventually reaches it.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A recurrence defines sum(0) = 0 and sum(n) = n + sum(n - 1). What is sum(3)?
+  options:
+  - '6'
+  - '3'
+  - '9'
+  - '0'
+  answer: 0
+  explanation: Expanding gives 3 + 2 + 1 + 0 = 6.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

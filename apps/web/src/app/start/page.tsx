@@ -77,6 +77,9 @@ function Summary({ label, value, onEdit }: { label: string; value: string; onEdi
   );
 }
 
+/** Validation answers (age, missing details) are fixed in the form, not by retrying. */
+const retryable = (message: string) => !/age|valid|details|already/i.test(message);
+
 export default function Start() {
   const { profile, features, loading, refresh } = useSession();
   const allowed = !loading; // the questions come first; signing in happens at the end
@@ -113,9 +116,11 @@ export default function Start() {
   }, []);
   useEffect(() => {
     if (!profile) return;
+    // One course per learner for now: an enrolled learner never re-onboards.
+    if (profile.enrollment) { router.replace(profile.enrollment.status === 'placement' ? '/placement' : '/today'); return; }
     setName(n => n || profile.display_name || '');
     if (profile.birth_year) setStep(s => (s === 'about' ? 'course' : s));
-  }, [profile]);
+  }, [profile, router]);
 
   // Choices survive moving between steps and a reload within this browser session.
   useEffect(() => {
@@ -154,7 +159,7 @@ export default function Start() {
   }, [restored, step, name, birthYear, course, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation, pending]);
 
   const thisYear = new Date().getFullYear();
-  const years = useMemo(() => Array.from({ length: 90 }, (_, i) => thisYear - 8 - i), [thisYear]);
+  const years = useMemo(() => Array.from({ length: 90 }, (_, i) => thisYear - 13 - i), [thisYear]);
   const borderline = Number(birthYear) === thisYear - 13;
 
   async function saveAbout(event: React.FormEvent) {
@@ -250,9 +255,6 @@ export default function Start() {
         </div>
         <Progress value={(100 * (position + 1)) / ORDER.length} aria-label={`Step ${position + 1} of ${ORDER.length}`} />
       </div>
-      {profile?.enrollment && step === 'course' ? (
-        <p className="mb-6 rounded-[20px] border px-4 py-3 text-[15px]">You are already enrolled. Starting a new course pauses your current plan. Your history is kept.</p>
-      ) : null}
 
       <div key={step} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
         {step === 'about' ? (
@@ -429,7 +431,7 @@ export default function Start() {
         ) : null}
       </div>
 
-      {error ? <ErrorNote message={error} /> : null}
+      {error ? <ErrorNote message={error} title={retryable(error) ? undefined : 'Check this'} /> : null}
     </div>
   );
 }

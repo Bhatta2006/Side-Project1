@@ -131,7 +131,7 @@ class MessageInput(BaseModel):
     message: str = Field(default="", max_length=4000)
     intent: Literal["chat", "hint", "reveal", "reveal_confirmed"] = "chat"
     code: str = Field(default="", max_length=64_000)
-    new_attempt: bool = False
+    new_attempt: bool = False  # Compatibility hint; completed runs are verified by the server.
 
 
 class WorkerInput(Strict):
@@ -367,6 +367,9 @@ def enroll(body: EnrollInput, request: Request):
         user = user_of(request, db, write=True)
         if user.birth_year is None:
             raise HTTPException(409, "profile_incomplete")
+        # Course switching is off for now: one course per learner.
+        if learn.active_enrollment(db, user.id) is not None:
+            raise HTTPException(409, "already_enrolled")
         goal = {
             k: v
             for k, v in dict(

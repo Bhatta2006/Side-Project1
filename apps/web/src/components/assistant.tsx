@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, explain, stream } from '@/lib/api';
+import { ApiError, api, explain, stream } from '@/lib/api';
 import type { ChatMessage, Proposal, ProposalsView } from '@/lib/types';
 import { ProposalList } from '@/components/socrat/proposals';
 import { Check, Lightbulb, SendHorizontal, ThumbsDown, ThumbsUp, X } from 'lucide-react';
@@ -126,6 +126,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
     setActivity([]);
     let reply = '';
     let proposed = false;
+    let finished = false;
     const update = (content: string, level?: number, id?: string) =>
       setMessages(m => [...m.slice(0, -1), { role: 'assistant', content, level, id }]);
     try {
@@ -139,6 +140,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
         else if (event === 'delta') { reply += String(data.text ?? ''); update(reply); }
         else if (event === 'replace') { reply = String(data.text ?? ''); update(reply); }
         else if (event === 'done') {
+          finished = true;
           reply = String(data.text ?? reply);
           update(reply, Number(data.level), data.message_id ? String(data.message_id) : undefined);
           if (problem) {
@@ -147,6 +149,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           }
         }
       }
+      if (!finished) throw new ApiError(0, 'request_failed');
       if (proposed) loadProposals();
       refreshReveal();
       onSent?.();

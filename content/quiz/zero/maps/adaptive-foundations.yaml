@@ -1,0 +1,63 @@
+id: quiz:zero:maps:adaptive-foundations
+family: adaptive-foundations
+concept: zero:maps
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A map associates each key with what?
+  options:
+  - A value
+  - A mandatory consecutive array index
+  - A duplicate copy of every other key
+  - Only a Boolean
+  answer: 0
+  explanation: A map stores key-value associations; keys need not be consecutive integers.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: A map contains key cat with value 2. Setting cat to 5 leaves what value under that key?
+  options:
+  - '5'
+  - '2'
+  - '7'
+  - Two separate cat keys
+  answer: 0
+  explanation: Updating an existing key replaces its associated value rather than creating a duplicate
+    key.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A frequency map counts letters in "aba". What are the counts of a and b?
+  options:
+  - 'a: 2, b: 1'
+  - 'a: 1, b: 2'
+  - 'a: 1, b: 1'
+  - 'a: 3, b: 0'
+  answer: 0
+  explanation: The letter a appears twice and b appears once.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: A key is present with the value 0. Is checking whether the key exists the same as checking whether
+    its value is nonzero?
+  options:
+  - No, the key can exist with value 0
+  - Yes, zero values always delete keys
+  - Yes, maps cannot store zero
+  - Only string keys can store zero
+  answer: 0
+  explanation: Membership concerns the presence of a key, independent of the value stored under it.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

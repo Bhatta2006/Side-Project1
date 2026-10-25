@@ -1,0 +1,62 @@
+id: quiz:zero:functions:adaptive-foundations
+family: adaptive-foundations
+concept: zero:functions
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: A function is defined but never called. Does its body run just because it was defined?
+  options:
+  - 'No'
+  - Yes, once
+  - Yes, after every statement
+  - Only if its name is short
+  answer: 0
+  explanation: Defining a function makes it available; calling it executes its body.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: What does a function parameter represent?
+  options:
+  - An input supplied to that function
+  - A value that must always be printed
+  - The number of calls made
+  - A mandatory global variable
+  answer: 0
+  explanation: Parameters give names to the inputs used within a function call.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: A function returns a value to its caller. Does that alone guarantee visible output?
+  options:
+  - No, the caller must output it if needed
+  - Yes, return always prints
+  - Yes, every local variable is printed
+  - Only for numeric results
+  answer: 0
+  explanation: Returning transfers a value to the caller; printing sends it to an output stream.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: Why split a repeated calculation into a function?
+  options:
+  - To keep one named implementation that callers can reuse
+  - To guarantee constant running time
+  - To remove all edge cases
+  - To make every variable global
+  answer: 0
+  explanation: Reuse centralizes the calculation and gives it a clear interface; it does not change its
+    inherent complexity.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

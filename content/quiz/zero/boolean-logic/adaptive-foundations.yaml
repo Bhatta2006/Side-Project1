@@ -1,0 +1,63 @@
+id: quiz:zero:boolean-logic:adaptive-foundations
+family: adaptive-foundations
+concept: zero:boolean-logic
+format: mcq
+tracks:
+- foundations
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: foundation-1
+  band: 1
+  pool: practice
+  prompt: Entry requires a valid ticket AND an open gate. The ticket is valid but the gate is closed.
+    Is entry allowed?
+  options:
+  - 'No'
+  - 'Yes'
+  - Only if the ticket is printed
+  - The ticket decides alone
+  answer: 0
+  explanation: AND is true only when each required condition is true.
+- id: foundation-2
+  band: 1
+  pool: practice
+  prompt: A warning appears if the battery is low OR storage is full. Only storage is full. Does the warning
+    appear?
+  options:
+  - 'Yes'
+  - 'No'
+  - Only when both are true
+  - Only if the battery is low
+  answer: 0
+  explanation: OR is true when at least one of its conditions is true.
+- id: foundation-3
+  band: 2
+  pool: practice
+  prompt: The condition "the list is empty" is false. What is its logical negation?
+  options:
+  - 'True'
+  - 'False'
+  - An empty list
+  - The list length
+  answer: 0
+  explanation: Logical negation reverses a Boolean truth value.
+- id: foundation-4
+  band: 2
+  pool: practice
+  prompt: Which condition describes a number strictly between 2 and 7?
+  options:
+  - Greater than 2 AND less than 7
+  - Greater than 2 OR less than 7
+  - Less than 2 AND greater than 7
+  - Equal to 2 OR equal to 7
+  answer: 0
+  explanation: Both strict bounds must hold. OR would also accept values outside the interval.
+provenance:
+  origin: original
+  author: Socrat Learning (Codex-assisted draft)
+  rights: Socrat original, all rights reserved

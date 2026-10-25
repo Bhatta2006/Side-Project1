@@ -11,8 +11,8 @@ import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal, Ring } from '@/components/common';
 import { Level, PlatformTag, ProblemName } from '@/components/practice';
 import Assistant from '@/components/assistant';
-import Markdown from '@/components/markdown';
-import { ProposalList } from '@/components/socrat/proposals';
+import { AdaptingCard } from '@/components/socrat/adapting';
+import { ReasonChip } from '@/components/socrat/reason-chip';
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { SocFigure } from '@/components/socrat/soc';
 import { StatusIcon, statusFromBand, statusFromRoadmap } from '@/components/socrat/status';
@@ -60,17 +60,17 @@ function greeting(name: string) {
   return `${hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'}, ${name}`;
 }
 
-/** The current module from the plan: the next milestone, with real counts only. */
-function milestone(plan: PlanView | null) {
+/** The module the next step is in (from the server), with real counts only. */
+function milestone(plan: PlanView | null, current?: string | null) {
   if (!plan) return null;
-  const module = plan.modules.find(m => m.concepts.some(c => c.concept === plan.current_concept)) ?? plan.modules.find(m => !m.locked_by);
+  const module = plan.modules.find(m => m.id === (current ?? plan.current_module)) ?? plan.modules.find(m => m.concepts.some(c => c.concept === plan.current_concept));
   if (!module) return null;
   const finished = module.concepts.filter(c => ['mastered', 'practiced'].includes(c.status)).length;
   return { title: module.title, finished, total: module.concepts.length, concepts: module.concepts, current: plan.current_concept };
 }
 
-/** Progress with a violet-to-lilac fill that grows in once on load. */
-function GradientBar({ value, label }: { value: number; label: string }) {
+/** Progress with a solid fill that grows in once on load (no gradients, per the design system). */
+function GrowBar({ value, label }: { value: number; label: string }) {
   const [drawn, setDrawn] = useState(false);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setDrawn(true));
@@ -78,7 +78,7 @@ function GradientBar({ value, label }: { value: number; label: string }) {
   }, []);
   return (
     <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)} className="h-2.5 flex-1 overflow-hidden rounded-full bg-raised">
-      <div className="h-full rounded-full bg-gradient-to-r from-primary to-[#A98BFF] transition-[width] duration-700 ease-[var(--ease-soft)]" style={{ width: drawn ? `${Math.max(2, Math.min(100, value))}%` : '0%' }} />
+      <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-[var(--ease-soft)]" style={{ width: drawn ? `${Math.max(2, Math.min(100, value))}%` : '0%' }} />
     </div>
   );
 }
@@ -92,6 +92,7 @@ function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
           <span className={cn('block font-semibold', done && 'text-muted-foreground')}>{activity.title}</span>
           <span className="text-[13px] text-muted-foreground">{KIND_LABEL[activity.kind]}{activity.minutes ? `, ${activity.minutes} min` : ''}{done ? ', done' : ''}</span>
         </span>
+        {!done ? <ReasonChip code={activity.code} className="hidden sm:inline-flex" /> : null}
         {!done ? <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
       </Link>
     </li>
@@ -122,13 +123,15 @@ export default function TodayPage() {
   if (!today) return <Page><ErrorNote message={error} retry={load} /></Page>;
 
   const name = profile?.display_name || today.greeting.split(', ').slice(1).join(', ') || 'there';
-  const minutePercent = today.minutes.goal ? (100 * today.minutes.done) / today.minutes.goal : 0;
+  const minutePercent = today.minutes.goal ? Math.min(100, (100 * today.minutes.done) / today.minutes.goal) : 0;
   const next = today.next;
   const review = today.queue.find(a => a.kind === 'review');
   const weak = recs?.topics.find(t => t.band === 'needs_practice');
-  const goal = milestone(plan);
+  const goal = milestone(plan, today.current_module);
   const goalPercent = goal && goal.total ? (100 * goal.finished) / goal.total : 0;
-  const mastered = plan ? plan.modules.reduce((n, mod) => n + mod.concepts.filter(c => c.status === 'mastered').length, 0) : today.progress.finished;
+  const learned = today.progress.finished;
+  const mastered = today.progress.mastered ?? 0;
+  const complete = today.progress.complete === true;
   const assessmentOpen = assessment && (assessment.state === 'available' || assessment.state === 'in_progress');
   const queue = next ? [...today.queue].sort((x, y) => Number(y.id === next.id) - Number(x.id === next.id)) : today.queue;
   const session = [...today.done.map(a => ({ a, done: true })), ...queue.map(a => ({ a, done: false }))];
@@ -172,53 +175,6 @@ export default function TodayPage() {
         </Reveal>
       ) : null}
 
-      {/* Soc opens the day: yesterday's work, today's first step, and anything to decide. */}
-      {today.checkin || today.proposals.length || today.nudges.some(n => n.kind !== 'proposals' && n.kind !== 'away') ? (
-        <Reveal>
-          <Card className="mb-6" aria-labelledby="checkin-heading">
-            <div className="grid gap-4 px-(--card-spacing)">
-              <div className="flex items-start gap-3">
-                <button type="button" onClick={() => setAskSoc(n => n + 1)} aria-haspopup="dialog" aria-label="Ask Soc about this check-in" className="flex-none rounded-full">
-                  <Soc size={40} />
-                </button>
-                <div className="min-w-0">
-                  <h2 id="checkin-heading" className="sr-only">Check-in from Soc</h2>
-                  {today.checkin ? <Markdown source={today.checkin.message} className="prose-compact text-[15px]" /> : null}
-                  {today.milestone ? (
-                    <p className="mt-1 text-[14px] text-muted-foreground">
-                      This week&apos;s milestone: {today.milestone.concepts.map(c => c.title).join(', ')}.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              {today.nudges.filter(n => n.kind !== 'proposals' && n.kind !== 'away').length ? (
-                <ul className="grid gap-2" aria-label="Things to look at">
-                  {today.nudges.filter(n => n.kind !== 'proposals' && n.kind !== 'away').map(n => (
-                    <li key={n.kind + n.title}>
-                      <Link href={n.href} className={cn('block rounded-[16px] border px-4 py-3 transition-colors hover:bg-raised', n.severity === 'high' && 'border-attention')}>
-                        <span className="font-semibold">{n.title}</span>
-                        <span className="block text-[14px] text-muted-foreground">{n.body}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {today.proposals.length ? (
-                <section aria-labelledby="today-proposals">
-                  <h3 id="today-proposals" className="type-label mb-2 text-muted-foreground">Socrat suggests</h3>
-                  <ProposalList compact proposals={today.proposals.slice(0, 3)} onDecided={load} />
-                  {today.proposals.length > 3 ? (
-                    <Link href="/plan#proposals" className="mt-2 inline-block text-[14px] font-semibold underline underline-offset-4">
-                      See all {today.proposals.length} suggestions
-                    </Link>
-                  ) : null}
-                </section>
-              ) : null}
-            </div>
-          </Card>
-        </Reveal>
-      ) : null}
-
       <div className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
         {/* 3. Week strip (phone and tablet). */}
         <Card className="col-span-12 lg:hidden" size="sm" aria-label="This week">
@@ -235,9 +191,9 @@ export default function TodayPage() {
               </div>
               <div className="pointer-events-none absolute top-6 right-6 hidden font-hand text-[24px] text-white/90 rotate-6 lg:block" aria-hidden="true">you&apos;ve got this ↓</div>
               <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[58%]">
-                <p className="type-label text-(--card-muted)">Today, goal {today.minutes.goal} min</p>
+                <p className="type-label text-(--card-muted)">{today.minutes.reached ? `Daily goal reached. Keep going or stop here.` : `Today, goal ${today.minutes.goal} min`}</p>
                 <div>
-                  <h2 id="next-heading" className="type-display-l max-w-[14ch] pr-8 [overflow-wrap:anywhere] sm:pr-0">{next.title}</h2>
+                  <h2 id="next-heading" className="type-display-m max-w-[20ch] break-words">{next.title}</h2>
                   <p className="mt-3 max-w-md text-base text-(--card-muted)">{next.reason || 'Next in your plan.'}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -260,18 +216,28 @@ export default function TodayPage() {
                 <SocFigure books mood={today.study_day ? 'proud' : 'sleepy'} idle className="h-auto w-full" />
               </div>
               <div className="relative flex flex-col gap-4 px-(--card-spacing) sm:max-w-[60%]">
-                <h2 id="next-heading" className="type-display-m">{today.study_day ? 'Done for today' : 'Rest day'}</h2>
+                <h2 id="next-heading" className="type-display-m">{complete ? `${today.course.title} complete` : today.study_day ? 'Done for today' : 'Rest day'}</h2>
                 <p className="max-w-md text-(--card-muted)">
-                  {today.study_day
-                    ? 'Everything planned for today is complete. You can keep going from your plan.'
-                    : 'Today is not one of your study days. You can work ahead from your plan.'}
+                  {complete
+                    ? `All ${today.progress.total} skills learned, each proven by a check. ${mastered} already mastered; spaced reviews prove the rest over the coming weeks.`
+                    : today.study_day
+                      ? 'Everything planned for today is complete. You can keep going from your plan.'
+                      : 'Today is not one of your study days. You can work ahead from your plan.'}
                 </p>
-                <div><Button asChild variant="ink" size="lg"><Link href="/plan">Open {NAME.skills}<ArrowCircle /></Link></Button></div>
+                <div className="flex flex-wrap gap-3">
+                  {complete ? <Button asChild variant="ink" size="lg"><Link href="/progress">See your evidence<ArrowCircle /></Link></Button> : <Button asChild variant="ink" size="lg"><Link href="/plan">Open {NAME.skills}<ArrowCircle /></Link></Button>}
+                  {complete ? <Button asChild variant="outline" size="lg"><Link href="/assessments">{NAME.assessment}</Link></Button> : null}
+                </div>
               </div>
             </Card>
           )}
         </Reveal>
 
+
+        {/* How Socrat is adapting: after the hero, so the next step stays the first action. */}
+        <Reveal index={2} className="col-span-12 lg:order-none">
+          <AdaptingCard today={today} onDecided={load} onAsk={() => setAskSoc(n => n + 1)} />
+        </Reveal>
 
         {/* Talk to your tutor. */}
         <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
@@ -314,8 +280,11 @@ export default function TodayPage() {
           <Reveal index={4}>
             <Link href="/progress" className="paper group flex items-center gap-4 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
               <StatusIcon status="mastered" size={48} />
-              <span className="font-display text-6xl leading-none font-semibold tracking-[-0.04em] tabular-nums">{mastered}</span>
-              <span className="min-w-0 flex-1 font-display text-xl leading-tight font-semibold tracking-[-0.02em]">{mastered === 1 ? 'skill' : 'skills'} mastered</span>
+              <span className="font-display text-6xl leading-none font-semibold tracking-[-0.04em] tabular-nums">{learned}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-xl leading-tight font-semibold tracking-[-0.02em]">{learned === 1 ? 'skill' : 'skills'} learned</span>
+                <span className="block text-[13px] text-muted-foreground">{mastered} mastered after review{today.progress.assumed ? `, ${today.progress.assumed} to confirm` : ''}</span>
+              </span>
               <ChevronRight className="size-5 flex-none text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </Link>
           </Reveal>
@@ -329,7 +298,7 @@ export default function TodayPage() {
                     {goal.total - goal.finished > 0 ? `Complete ${goal.total - goal.finished} more skill${goal.total - goal.finished === 1 ? '' : 's'} to reach this milestone.` : 'Milestone reached. The next module is opening up.'}
                   </p>
                   <div className="flex items-center gap-4">
-                    <GradientBar value={goalPercent} label={`${goal.title}: ${goal.finished} of ${goal.total} skills`} />
+                    <GrowBar value={goalPercent} label={`${goal.title}: ${goal.finished} of ${goal.total} skills`} />
                     <span className="text-sm font-semibold text-muted-foreground tabular-nums">{Math.round(goalPercent)}%</span>
                   </div>
                 </div>

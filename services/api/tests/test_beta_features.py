@@ -41,8 +41,11 @@ def test_try_ladder_is_replayed_and_capped_below_the_answer():
     effort = trial.TryTurn(role="user", content="I add every window of k values up from scratch")
     history = [effort] * 6
     ladder = trial.ladder_for(history, "still stuck, here is my idea again in words", False)
-    assert ladder.ceiling == 4  # the ladder rises with effort...
-    plan = trial.plan_turn(trial.catalog(), trial.TryMessage(history=history, message="more"))
+    assert ladder.ceiling == 2  # talk alone never climbs past a nudge...
+    assert trial.ladder_for(history, "here is my run", True).ceiling == 3  # ...a run does
+    plan = trial.plan_turn(
+        trial.catalog(), trial.TryMessage(history=history, message="more", new_attempt=True)
+    )
     assert plan.allowed == trial.MAX_LEVEL < 5  # ...but the demo never reaches code
     assert "reference_solution" not in plan.turns[-1].content
     assert socratic.LEVELS[trial.MAX_LEVEL] in plan.turns[-1].content

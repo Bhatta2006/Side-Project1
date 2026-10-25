@@ -90,6 +90,8 @@ class QuizItem(Model):
     provenance: Provenance | None = None
     # Ids this item had before a rename, so stored sessions and placements still resolve.
     former_ids: list[Slug] = Field(default_factory=list)
+    # Languages this item is valid for; empty means all (use for language-specific syntax).
+    languages: list[Language] = Field(default_factory=list)
 
     def matches(self, item_id: str) -> bool:
         return item_id == self.id or item_id in self.former_ids
@@ -103,6 +105,8 @@ class QuizItem(Model):
 
     def fits(self, language: str) -> bool:
         """False for items written about another language ("In C++, ...", id ``cpp-...``)."""
+        if self.languages and language not in self.languages:
+            return False
         names = {"c++": "cpp", "cpp": "cpp", "java": "java", "python": "python", "py": "python"}
         lead = re.match(
             r"\s*In ((?:C\+\+|Java|Python)(?:\s*(?:,|or|and)\s*(?:C\+\+|Java|Python))*)",

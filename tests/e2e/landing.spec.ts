@@ -10,23 +10,20 @@ test.beforeEach(async ({ page }) => {
 test('landing hero, paths, questions and navigation work on desktop and phone', async ({ page }, info) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('The tutor that asks back.');
-  await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/login');
-  await expect(page.locator('.path-count')).toHaveText('18 skills, 25 judged problems');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Quick question before we start: what do you want to be able to do?');
+  await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/start');
+  await expect(page.locator('.path-count')).toHaveText('18 skills · 25 judged problems');
   // How it works introduces the status system with shapes and labels.
-  for (const label of ['Read', 'Practised with help', 'Mastered']) await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
-  // Product frames are labelled as sample data.
-  await expect(page.getByText('Sample data')).toHaveCount(3);
-  // The chatbot comparison is the main highlight, right after the hero.
-  await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText('Why not just ask ChatGPT?');
+  for (const label of ['Read', 'Check passed', 'Mastered']) await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Your goal' })).toBeVisible();
   await page.getByText('Can I start without knowing how to code?', { exact: true }).click();
   await expect(page.locator('.landing-question', { hasText: 'Can I start without knowing how to code?' })).toHaveAttribute('open', '');
   await expect(page.getByRole('link', { name: /Get started with/ })).toHaveCount(3);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   // The nav floats as a pill just below the top edge.
   const nav = await page.locator('.landing-nav').boundingBox();
-  expect(nav?.y).toBeLessThanOrEqual(12);
-  expect(nav?.height).toBeLessThan(66);
+  expect(nav?.y).toBe(0);
+  expect(nav?.height).toBeLessThan(100);
   if (info.project.name === 'mobile') {
     await page.getByRole('button', { name: 'Open navigation' }).click();
     await expect(page.getByRole('navigation', { name: 'Mobile site' })).toBeVisible();
@@ -44,11 +41,11 @@ test('landing is flat: inline SVG illustration, no canvas or WebGL, nav stays pu
   await expect(page.locator('canvas')).toHaveCount(0);
   const hero = page.locator('section[aria-labelledby="hero-title"] svg[aria-hidden="true"]');
   await expect(hero.first()).toBeVisible();
-  // The nav rises into place on load, then stays pinned 12 px below the top while scrolling.
+  // The navigation wrapper remains fixed at the viewport top while scrolling.
   const navY = async () => (await page.locator('.landing-nav').boundingBox())?.y;
-  await expect.poll(navY).toBe(12);
+  await expect.poll(navY).toBe(0);
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await expect.poll(navY).toBe(12);
+  await expect.poll(navY).toBe(0);
 });
 
 test('landing remains usable without the course API', async ({ page }) => {
@@ -57,5 +54,5 @@ test('landing remains usable without the course API', async ({ page }) => {
   await expect(page.getByRole('link', { name: /Get started with/ })).toHaveCount(3);
   await expect(page.locator('.path-count')).toHaveCount(0);
   await page.getByRole('link', { name: 'Get started', exact: true }).nth(1).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/start$/);
 });

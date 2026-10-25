@@ -175,6 +175,7 @@ quiz:
     explanation: == compares object identity in Java; equals compares the characters.
     difficulty: 1
   - id: immutability
+    languages: [python]
     kind: mcq
     prompt: In Python, what does `name.upper()` do to the string stored in name?
     options:

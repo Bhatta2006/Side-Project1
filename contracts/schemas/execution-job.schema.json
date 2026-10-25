@@ -78,6 +78,20 @@
         "limits": {
           "$ref": "#/$defs/Limits"
         },
+        "time_limit_ms": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 500,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Limit Ms"
+        },
         "compile_config": {
           "additionalProperties": true,
           "title": "Compile Config",

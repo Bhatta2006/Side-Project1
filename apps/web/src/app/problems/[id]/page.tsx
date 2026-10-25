@@ -86,7 +86,7 @@ function CaseDetail({ c, index }: { c: Case; index: number }) {
           <span className="text-muted-foreground">{c.expected === null ? 'Your custom input' : `Example ${index + 1}`}</span>
         </span>
         <span className="flex items-center gap-2 text-[13px] text-muted-foreground tabular-nums">
-          {c.wall_ms ? `${c.wall_ms} ms` : ''}
+          {c.wall_ms && c.status !== 'timeout' ? `${c.wall_ms} ms` : ''}
           <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
         </span>
       </CollapsibleTrigger>

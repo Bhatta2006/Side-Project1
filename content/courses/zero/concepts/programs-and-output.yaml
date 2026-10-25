@@ -215,6 +215,7 @@ quiz:
     explanation: Comments exist only for human readers. The computer skips them.
     difficulty: 1
   - id: precise-instructions
+    languages: [python]
     kind: mcq
     prompt: You wrote `prnt("hi")` instead of `print("hi")` in Python. What happens?
     options:

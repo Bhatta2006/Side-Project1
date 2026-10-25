@@ -115,15 +115,9 @@ def answer(catalog: Catalog, state: PlacementState, choice: int) -> bool:
     return correct
 
 
-def result(state: PlacementState, own: set[str] | None = None) -> dict[str, bool]:
-    """Concept → believed known. Concepts in an unresolved gap are treated as unknown.
+def result(state: PlacementState) -> dict[str, bool]:
+    """Concept -> believed known (assumed, never mastered). Unresolved gaps count as unknown.
 
-    Concepts in ``own`` (the enrolled course's own topics) are only skipped when a question
-    on them was answered correctly; a few answers must not finish the course (C-1).
+    Assumed concepts still owe a confirmation check before they count as learned.
     """
-    confirmed = {x["concept"] for x in state.asked if x["correct"]}
-    return {
-        concept: index < state.frontier
-        and (own is None or concept not in own or concept in confirmed)
-        for index, concept in enumerate(state.path)
-    }
+    return {concept: index < state.frontier for index, concept in enumerate(state.path)}

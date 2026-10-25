@@ -152,6 +152,7 @@ quiz:
     explanation: Each element is in or out — 2^10 = 1024 (including the empty set).
     difficulty: 1
   - id: copy-bug
+    languages: [python]
     kind: mcq
     prompt: "In Python, result.append(current) instead of result.append(current[:]) causes..."
     options:

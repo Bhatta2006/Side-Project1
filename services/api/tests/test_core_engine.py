@@ -136,13 +136,20 @@ def test_plan_respects_prerequisites_and_is_deterministic():
     assert all(day["items"] for day in first.days)
 
 
-def test_known_concepts_are_skipped_and_reviewed():
+def test_assumed_concepts_skip_the_lesson_but_owe_a_confirmation_check():
     known = {c: placed(True, NOW) for c in ("basics:values", "basics:loops", "basics:functions")}
     result = plan(states=known)
-    assert all(a.concept.startswith("algo:") for a in result.queue if a.kind != "checkpoint")
-    assert any("Skipped 3" in r for r in result.reasons)
+    confirms = [a for a in result.queue if a.kind == "testout"]
+    assert {a.concept for a in confirms} == set(known)
+    assert all(a.code == "assumed_confirm" and a.title.startswith("Confirm:") for a in confirms)
+    # No lesson for what placement believes; everything else is the normal path.
+    taught = {a.concept for a in result.queue if a.kind == "lesson"}
+    assert not taught & set(known)
+    assert any("Placement suggests you know 3" in r for r in result.reasons)
+    assert {r["status"] for r in result.roadmap if r["concept"] in known} == {"assumed"}
+    # Unconfirmed knowledge gets no spaced review: the confirmation check comes first.
     reviews = [i for d in result.days for i in d["items"] if i["kind"] == "review"]
-    assert {r["concept"] for r in reviews} == set(known)
+    assert not reviews
 
 
 def test_fast_learner_accelerates_and_struggling_learner_gets_support():
@@ -249,7 +256,8 @@ def test_full_answer_requires_struggle():
     assert not reveal_eligibility(Ladder(ceiling=1), failed_submits=0)[0]
     assert not reveal_eligibility(Ladder(ceiling=2), failed_submits=5)[0]
     assert reveal_eligibility(Ladder(ceiling=3), failed_submits=2)[0]
-    assert reveal_eligibility(Ladder(ceiling=4, turns_at_ceiling=3), failed_submits=0)[0]
+    assert not reveal_eligibility(Ladder(ceiling=4, turns_at_ceiling=3), failed_submits=0)[0]
+    assert reveal_eligibility(Ladder(ceiling=4, turns_at_ceiling=3), failed_submits=1)[0]
 
 
 def test_leak_detection():
@@ -280,19 +288,19 @@ def test_options_are_shuffled_so_position_never_gives_the_answer_away():
         assert q.shown("session-1") == shown  # stable for the same session
 
 
-def test_placement_never_skips_unasked_course_topics():
+def test_placement_assumes_the_bracketed_prefix_but_never_masters_it():
     cat = catalog()
-    own = set(cat.course_concepts("algo"))
     path = cat.closure(cat.course_concepts("algo"))
     state = placement.start(cat, path, path[-1], seed=3)
     while not state.done:  # A strong learner answers everything correctly.
         item = placement.question(cat, state)
         placement.answer(cat, state, item.shown(placement.seed_of(state))["answer"])
-    known = placement.result(state, own)
-    asked = {x["concept"] for x in state.asked}
+    known = placement.result(state)
     capped = set(path[: state.frontier])  # the last stretch always stays to learn
-    assert all(known[c] == (c in asked and c in capped) for c in own)
-    assert all(known[c] == (c in capped) for c in path if c not in own)
+    assert all(known[c] == (c in capped) for c in path)
+    # Assumed knowledge owes a check: it is likely known, never mastered.
+    prior = placed(True, 0)
+    assert prior.assumed and not prior.mastered(0)
 
 
 def test_quiz_items_about_other_languages_do_not_fit():
@@ -308,6 +316,16 @@ def test_quiz_items_about_other_languages_do_not_fit():
     both = item("decl", "In C++ or Java you declare a type. Why?")
     assert both.fits("java") and not both.fits("python")
     assert item("plain", "What does a hash map store?").fits("python")
+    tagged = QuizItem(
+        id="t",
+        prompt="Plain?",
+        options=["a", "b"],
+        answer=0,
+        explanation="Because.",
+        difficulty=2,
+        languages=["python"],
+    )
+    assert tagged.fits("python") and not tagged.fits("cpp") and not tagged.fits("java")
 
 
 def test_reveal_message_counts_attempts_in_plain_english():

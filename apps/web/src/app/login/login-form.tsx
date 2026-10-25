@@ -27,6 +27,16 @@ function GoogleMark() {
 }
 
 /** The page a signed-out visitor first asked for; only same-site paths are honoured. */
+/** Dev sign-in id: the readable slug, plus a hash of the exact name whenever the slug loses
+ * characters (accents, other scripts, punctuation), so "日本語" and "Ελληνικά" never collide. */
+async function subjectFor(display: string) {
+  const slug = display.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (slug && display.trim().toLowerCase().replace(/\s+/g, '-') === slug) return slug.slice(0, 64);
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(display.normalize('NFKC'))));
+  const hash = Array.from(bytes.slice(0, 5), b => b.toString(16).padStart(2, '0')).join('');
+  return `${(slug || 'learner').slice(0, 53)}-${hash}`;
+}
+
 function requestedPath(): string | null {
   const next = new URLSearchParams(window.location.search).get('next');
   return next && next.startsWith('/') && !next.startsWith('//') ? next : null;
@@ -54,7 +64,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
     setBusy(true);
     setError('');
     try {
-      const subject = display.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64) || 'learner';
+      const subject = await subjectFor(display);
       await api.post('/auth/dev-login', { subject, display_name: display });
       const next = await refresh();
       router.replace(destination(next, 'active') ?? requestedPath() ?? '/today');

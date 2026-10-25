@@ -7,6 +7,7 @@ mastery ``Evidence`` through ``learn.record_evidence`` → ``mastery.apply`` (D4
 """
 
 import random
+import threading
 from dataclasses import asdict, replace
 from typing import cast
 
@@ -31,16 +32,20 @@ from socrat.quiz.pools import Item
 from socrat.quiz.selection import Context, Outcome, Step
 
 LEGACY_REASON = "assessment_pool_not_calibrated"
+SEEN_DAYS = 14  # an answered item stays out of rotation this long
 _BANKS: dict[str, list[Item]] = {}
+_BANK_LOCK = threading.Lock()
 
 
 def bank(cat: Catalog, cfg: EngineConfig = DEFAULT) -> list[Item]:
     """The item bank for this catalog, built once per catalog digest."""
     key = getattr(cat, "digest", "") or str(id(cat))
-    if key not in _BANKS:
-        _BANKS.clear()
-        _BANKS[key] = pools.bank(cat, cfg)
-    return _BANKS[key]
+    # Generators are not thread-safe: two first requests at once must not build it together.
+    with _BANK_LOCK:
+        if key not in _BANKS:
+            _BANKS.clear()
+            _BANKS[key] = pools.bank(cat, cfg)
+        return _BANKS[key]
 
 
 def spec_of(session: QuizEngineSession, cfg: EngineConfig = DEFAULT) -> ModeSpec:
@@ -148,13 +153,13 @@ def max_band(
     now: int,
     cfg: EngineConfig = DEFAULT,
 ) -> int:
-    """7, or the prerequisite cap while any prerequisite is not yet mastered."""
+    """7, or the prerequisite cap while any prerequisite is neither mastered nor assumed."""
     states = learn.states_for(db, enrollment)
     for concept in concepts:
         course = concept.split(":", 1)[0]
         for ref in cat.concept(concept).prerequisites:
             state = states.get(qualify(course, ref))
-            if state is None or not state.mastered(now):
+            if state is None or not (state.mastered(now) or state.assumed):
                 return cfg.prerequisite_cap_band
     return 7
 
@@ -225,8 +230,14 @@ def context(
             select(ItemRating).where(ItemRating.item_id.in_([i.key for i in items]))
         )
     }
+    # Items come back after a while, so a small bank never runs a learner dry.
     seen = frozenset(
-        db.scalars(select(QuizResponse.item_id).where(QuizResponse.enrollment_id == enrollment.id))
+        db.scalars(
+            select(QuizResponse.item_id).where(
+                QuizResponse.enrollment_id == enrollment.id,
+                QuizResponse.created_at > now - SEEN_DAYS * 86_400,
+            )
+        )
     )
     top = max_band(db, cat, enrollment, session.concepts, now, cfg)
     ctx = Context(
@@ -261,6 +272,20 @@ def advance(
     if choice.item is None:
         state.update(pending=None, stop=choice.reason)
         session.completed_at = now
+        if session.mode == "concept_check" and len(session.concepts) == 1:
+            # The adaptive check closes the same plan activity as the fixed one.
+            from socrat.learn import quizzes
+            from socrat.models import User
+
+            done = [s for s in steps_of(session) if s.outcome != "skipped"]
+            score = sum(s.outcome == "correct" for s in done) / len(done) if done else 0.0
+            user = db.get(User, enrollment.user_id)
+            if user is None:
+                raise HTTPException(401, "authentication_required")
+            state["passed"] = quizzes.settle_check(
+                db, user, enrollment, f"quiz:{session.concepts[0]}", score, now
+            )
+            state["score"] = round(score, 3)
     else:
         state["pending"] = dict(
             item=choice.item.key,
@@ -424,7 +449,12 @@ def answer(
                 now,
                 assistance=min(hints, 5),
                 elapsed_seconds=max(0, time_s),
-                details={"item": item.key, "band": item.band, "engine_session": session.id},
+                details={
+                    "item": item.key,
+                    "band": item.band,
+                    "engine_session": session.id,
+                    **({"misconception": tag} if tag else {}),
+                },
             )
     session.state = {
         **session.state,
@@ -477,6 +507,8 @@ def view(cat: Catalog, session: QuizEngineSession, language: str, cfg: EngineCon
         current=current,
         finished=session.completed_at is not None,
         stop_reason=session.state.get("stop"),
+        score=session.state.get("score"),
+        passed=session.state.get("passed"),
     )
 
 
