@@ -199,7 +199,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ghcr.io/${{ steps.owner.outputs.name }}/socrat-api:sha-${{ github.sha }}
+      # GitHub artifact attestations are unavailable for private, user-owned repositories.
+      # Keep image publishing enabled there and attest images when the repository is public.
       - name: Attest API image
+        if: ${{ github.event.repository.private == false }}
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ghcr.io/${{ steps.owner.outputs.name }}/socrat-api
@@ -218,6 +221,7 @@ jobs:
             NEXT_PUBLIC_EXPLAINER_SANDBOX_ORIGIN=${{ vars.SOCRAT_SANDBOX_ORIGIN || 'https://socrat.dathcodes.dev' }}
           tags: ghcr.io/${{ steps.owner.outputs.name }}/socrat-web:sha-${{ github.sha }}
       - name: Attest web image
+        if: ${{ github.event.repository.private == false }}
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ghcr.io/${{ steps.owner.outputs.name }}/socrat-web
@@ -233,6 +237,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ steps.owner.outputs.name }}/socrat-explainer:sha-${{ github.sha }}
       - name: Attest visual checker image
+        if: ${{ github.event.repository.private == false }}
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ghcr.io/${{ steps.owner.outputs.name }}/socrat-explainer
