@@ -151,7 +151,7 @@ async def create(body: CreateInput, request: Request):
             raise HTTPException(409, "playground_request_in_progress")
         if len(running) >= settings.explainer_concurrent_limit:
             raise HTTPException(503, "playground_busy")
-        assistant.check_quota(db, settings, user_id, now())
+        assistant.check_quota(db, settings, user_id, now(), "playground")
         used = (
             db.scalar(
                 select(func.count())

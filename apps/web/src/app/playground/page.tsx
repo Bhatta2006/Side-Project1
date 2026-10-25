@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, MoreHorizontal, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { ApiError, api, explain, stream } from '@/lib/api';
@@ -31,7 +32,7 @@ const PHASES = [
   ['repairing', 'Repairing it'],
 ] as const;
 // Errors where retrying cannot help right now.
-const NO_RETRY = new Set(['playground_daily_limit', 'playground_unavailable', 'playground_sandbox_unavailable']);
+const NO_RETRY = new Set(['upgrade_required', 'playground_day_limit', 'playground_daily_limit', 'playground_unavailable', 'playground_sandbox_unavailable']);
 
 function savedDate(seconds: number) {
   return new Date(seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -316,6 +317,7 @@ export default function PlaygroundPage() {
               message={failure.message}
               actions={
                 <>
+                  {failure.code === 'upgrade_required' || failure.code === 'playground_day_limit' ? <Button asChild size="sm"><Link href="/pricing">See plans</Link></Button> : null}
                   {retryable ? <Button size="sm" onClick={() => void generate(prompt, level)} disabled={!canGenerate}>Try again</Button> : null}
                   {validation ? <Button size="sm" variant="outline" onClick={() => void generate(prompt, 'simple')} disabled={!canGenerate}>Simplify the request</Button> : null}
                   {retryable ? <Button size="sm" variant="outline" onClick={() => input.current?.focus()}>Edit request</Button> : null}

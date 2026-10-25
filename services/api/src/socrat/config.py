@@ -137,6 +137,16 @@ class Settings(DatabaseSettings):
     ai_monthly_budget_usd: float = Field(default=400.0, ge=0, le=1_000_000)
     ai_user_calls_per_minute: int = Field(default=12, ge=1, le=600)
     explainer_enabled: bool = True
+    # Freemium plans (Razorpay Subscriptions). Off = no plan limits for anyone.
+    billing_enabled: bool = False
+    razorpay_key_id: str = Field(
+        default="", validation_alias=AliasChoices("socrat_razorpay_key_id", "razorpay_key_id")
+    )
+    razorpay_key_secret: SecretStr = Field(
+        default=SecretStr(""),
+        validation_alias=AliasChoices("socrat_razorpay_key_secret", "razorpay_key_secret"),
+    )
+    razorpay_webhook_secret: SecretStr = SecretStr("")
     # Content system (Content Master Plan §8), on for adaptive learning. Safe on thin content:
     # unreviewed quiz families write no mastery evidence, and a pattern plan that breaks a
     # placement rule falls back to the classic composer. SOCRAT_*_ENABLED=false turns off.

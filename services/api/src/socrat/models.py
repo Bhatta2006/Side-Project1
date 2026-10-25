@@ -571,3 +571,28 @@ class CompanySprint(Base):
     proposal_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     finished_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class Subscription(Base):
+    """A learner's paid plan. Paid access lasts until `current_end`; no row means Free."""
+
+    __tablename__ = "subscriptions"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    plan: Mapped[str] = mapped_column(String(16))  # plus | pro
+    interval: Mapped[str] = mapped_column(String(8))  # month | year
+    currency: Mapped[str] = mapped_column(String(3))
+    status: Mapped[str] = mapped_column(String(16), default="created")
+    razorpay_subscription_id: Mapped[str] = mapped_column(String(64), unique=True)
+    current_end: Mapped[int] = mapped_column(Integer, default=0)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class BillingPlan(Base):
+    """Razorpay plan ids, created on first use (key: plan:interval:currency)."""
+
+    __tablename__ = "billing_plans"
+    key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    razorpay_plan_id: Mapped[str] = mapped_column(String(64))

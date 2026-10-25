@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.assessments import service as assessments
 from socrat.assistant import socratic
 from socrat.assistant.gateway import Provider, ProviderError, ToolRunner, ToolSpec, Turn, complete
@@ -98,7 +99,8 @@ def history(db: Session, thread: AssistantThread) -> list[AssistantMessage]:
     return list(reversed(rows))
 
 
-def check_quota(db: Session, settings: Settings, user_id: str, now: int):
+def check_quota(db: Session, settings: Settings, user_id: str, now: int, feature: str = "chat"):
+    entitlements.enforce(db, user_id, feature, now)
     sent = db.scalar(
         select(func.count())
         .select_from(AssistantMessage)

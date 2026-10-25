@@ -24,9 +24,8 @@ export default function TermsPage() {
         <h2 id="beta">A beta product</h2>
         <p>
           {LEGAL.product} is in beta. Features may change, appear or go away, and things will sometimes break. We
-          will try hard to keep your progress safe and to tell you before changes that matter. The beta is free
-          unless we tell you otherwise in the app; if we introduce paid plans, we will show prices before you are
-          charged and you can keep using whatever stays free.
+          will try hard to keep your progress safe and to tell you before changes that matter. Socrat has a free
+          plan and paid plans, described on the <Link href="/pricing">plans page</Link>.
         </p>
       </section>
 

@@ -22,6 +22,7 @@ import {
   Settings,
   Shapes,
   SquareCode,
+  Sparkles,
   Sun,
   type LucideIcon,
 } from 'lucide-react';
@@ -104,6 +105,7 @@ function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link href="/settings"><Settings /> Settings</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link href="/pricing"><Sparkles /> Plans</Link></DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openReportProblem()}><MessageSquareWarning /> Report a problem</DropdownMenuItem>
         {community ? (
           <DropdownMenuItem asChild><a href={community} target="_blank" rel="noopener noreferrer"><MessageCircle /> WhatsApp community</a></DropdownMenuItem>

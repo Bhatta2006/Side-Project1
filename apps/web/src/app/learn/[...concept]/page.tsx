@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, explain } from '@/lib/api';
+import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@/lib/routes';
 import type { ConceptView, Resource } from '@/lib/types';
@@ -16,7 +16,7 @@ import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
 import { Soc } from '@/components/socrat/illustration';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
-import { LockedState } from '@/components/socrat/states';
+import { EmptyState, LockedState } from '@/components/socrat/states';
 import { FeelControls, SupportStep } from '@/components/socrat/support-step';
 import { SUPPORT_STEPS } from '@/lib/routes';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -146,6 +146,7 @@ export default function Lesson() {
   const qualified = joinSegments(params.concept);
   const [concept, setConcept] = useState<ConceptView | null>(null);
   const [error, setError] = useState('');
+  const [upgrade, setUpgrade] = useState(false);
   const [variant, setVariant] = useState<{ style: string; content: string } | null>(null);
   const [explaining, setExplaining] = useState('');
   const [completing, setCompleting] = useState(false);
@@ -161,7 +162,7 @@ export default function Lesson() {
 
   const load = useCallback(() => {
     setError('');
-    api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(e => setError(explain(e)));
+    api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(e => { setError(explain(e)); setUpgrade(e instanceof ApiError && e.code === 'upgrade_required'); });
   }, [qualified]);
   useEffect(() => {
     if (!allowed) return;
@@ -199,6 +200,15 @@ export default function Lesson() {
   }
 
   if (!allowed || (!concept && !error)) return <Loading variant="article" label="Loading the lesson" />;
+  if (!concept && upgrade) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <EmptyState title="This topic is on a paid plan" action={<Button asChild><Link href="/pricing">See plans</Link></Button>}>
+          The free plan covers the first two modules of each course. Plus and Pro unlock every topic.
+        </EmptyState>
+      </div>
+    );
+  }
   if (!concept) return <div className="mx-auto max-w-3xl p-6"><ErrorNote message={error} retry={load} /></div>;
 
   const weakPrereqs = concept.prerequisites.filter(p => p.band === 'needs_practice' || p.band === 'not_started');

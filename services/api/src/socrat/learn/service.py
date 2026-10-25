@@ -13,6 +13,7 @@ from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
 
+from socrat import entitlements
 from socrat.catalog.registry import Catalog
 from socrat.database import record_event
 from socrat.learn import streaks
@@ -298,6 +299,7 @@ def require_unlocked(
         raise HTTPException(404, "not_found")
     if concept in locked_concepts(db, catalog, enrollment, now):
         raise HTTPException(423, "concept_locked")
+    entitlements.require_concept(db, catalog, enrollment.user_id, concept, now)
 
 
 def curriculum(catalog: Catalog, enrollment: Enrollment | None) -> set[str]:

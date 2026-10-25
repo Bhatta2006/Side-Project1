@@ -24,6 +24,17 @@ export interface Profile {
   enrollment: Enrollment | null;
 }
 
+export type PlanId = 'free' | 'plus' | 'pro';
+export interface BillingStatus {
+  enabled: boolean;
+  plan: PlanId;
+  usage: Record<'chat' | 'playground', { limit: number; used: number; window: 'day' | 'week' }>;
+  free_concepts: string[] | null;
+  renews_at: number | null;
+  cancel_at_period_end: boolean;
+  prices: Record<'plus' | 'pro', Record<'month' | 'year', Record<'INR' | 'USD', number>>>;
+}
+
 export interface Features {
   dev_login: boolean;
   oidc_login: boolean;
