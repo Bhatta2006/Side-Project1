@@ -178,8 +178,14 @@ def age_ok(birth_year: int | None, birthday_passed: bool, today: date) -> bool:
 
 
 def is_admin(request: Request, user: User) -> bool:
-    allowed = request.app.state.settings.admin_subjects
-    return f"{user.issuer}|{user.subject}" in allowed or user.subject in allowed
+    settings = request.app.state.settings
+    allowed = settings.admin_subjects
+    emails = {e.lower() for e in settings.admin_emails}
+    return (
+        f"{user.issuer}|{user.subject}" in allowed
+        or user.subject in allowed
+        or (user.admin_email is not None and user.admin_email in emails)
+    )
 
 
 def profile_view(db: Session, user: User, csrf: str, admin: bool = False) -> dict:

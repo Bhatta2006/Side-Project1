@@ -166,6 +166,10 @@ class Settings(DatabaseSettings):
     explainer_checker_secret_file: str = ""
     # Who may open /admin: OIDC subjects (or "issuer|subject"). Empty = nobody.
     admin_subjects: list[str] = Field(default_factory=list, max_length=50)
+    # ...or verified Google emails. Only these addresses are ever stored (User.admin_email).
+    admin_emails: list[str] = Field(
+        default=["ramkrsnabhat@gmail.com", "sathishdutt0@gmail.com"], max_length=50
+    )
     # Content review queue: drafts are YAML files on an authoring checkout; approval moves
     # them into the course folder for a commit. Empty means the repository defaults.
     content_drafts_dir: str = ""

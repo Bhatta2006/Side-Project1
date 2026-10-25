@@ -40,6 +40,8 @@ class User(Base):
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # When the learner finished or skipped the first-run tour of the app; null until then.
     tour_seen_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Verified Google email, kept only for accounts on SOCRAT_ADMIN_EMAILS; null for learners.
+    admin_email: Mapped[str | None] = mapped_column(String(254), nullable=True)
 
 
 class LoginSession(Base):

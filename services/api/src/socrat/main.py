@@ -54,6 +54,13 @@ def warm_quiz_bank() -> None:
     quiz_service.bank(default_catalog())
 
 
+def owner_email(identity: dict, admin_emails: list[str]) -> str | None:
+    """The verified email when it is on the admin list; every other email is dropped unread."""
+    email = str(identity.get("email") or "").strip().lower()
+    verified = identity.get("email_verified") in (True, "true")
+    return email if verified and email in {e.lower() for e in admin_emails} else None
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     engine = make_engine(settings.database_url_value)
@@ -122,7 +129,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             client_id=settings.oidc_client_id,
             client_secret=settings.oidc_client_secret.get_secret_value(),
             server_metadata_url=f"{settings.oidc_issuer.rstrip('/')}/.well-known/openid-configuration",
-            client_kwargs={"scope": "openid profile", "code_challenge_method": "S256"},
+            client_kwargs={"scope": "openid profile email", "code_challenge_method": "S256"},
         )
 
     def error(code: str, status: int, request_id: str = ""):
@@ -281,17 +288,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             request, RedirectResponse("/start", status_code=303), identity["iss"], identity["sub"]
         )
         name = str(identity.get("given_name") or identity.get("name") or "")[:80]
-        if name:
-            with Session(engine) as db, db.begin():
-                from sqlalchemy import select
+        with Session(engine) as db, db.begin():
+            from sqlalchemy import select
 
-                user = db.scalar(
-                    select(User).where(
-                        User.issuer == identity["iss"], User.subject == identity["sub"]
-                    )
-                )
-                if user is not None and not user.display_name:
+            user = db.scalar(
+                select(User).where(User.issuer == identity["iss"], User.subject == identity["sub"])
+            )
+            if user is not None:
+                if name and not user.display_name:
                     user.display_name = name
+                user.admin_email = owner_email(identity, settings.admin_emails)
         return response
 
     @app.post("/api/v1/auth/logout", status_code=204)

@@ -42,9 +42,11 @@ export default function PrivacyPage() {
         <h2 id="collect">What we collect</h2>
         <ul>
           <li>
-            <strong>Sign-in.</strong> When you continue with Google we receive your Google account identifier
-            and your name (the <code>openid</code> and <code>profile</code> scopes). We do not ask Google for your
-            email address, contacts or anything else, and we never see your Google password.
+            <strong>Sign-in.</strong> When you continue with Google we receive your Google account identifier,
+            your name and your email address (the <code>openid</code>, <code>profile</code> and <code>email</code>
+            scopes). The email is only checked to recognise the founders&apos; own accounts; for everyone else it is
+            discarded at sign-in and never stored. We do not ask for contacts or anything else, and we never see
+            your Google password.
           </li>
           <li>
             <strong>Profile and plan.</strong> The name you choose, your birth year (to check the minimum age),
