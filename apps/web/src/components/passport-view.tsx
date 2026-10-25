@@ -6,7 +6,7 @@ import { Wordmark } from '@/components/socrat/wordmark';
 function Stat({ value, label, hint }: { value: number; label: string; hint?: string }) {
   return (
     <div className="rounded-[20px] border bg-card p-4">
-      <p className="font-display text-4xl leading-none font-bold tracking-[-0.04em] tabular-nums">{value}</p>
+      <p className="font-display text-4xl leading-none font-semibold tracking-[-0.04em] tabular-nums">{value}</p>
       <p className="mt-2 text-sm font-semibold">{label}</p>
       {hint ? <p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p> : null}
     </div>
@@ -38,8 +38,8 @@ export function PassportCard({ passport, headingLevel = 1 }: { passport: Passpor
         <Stat value={c.checkpoints} label="Checkpoints" hint={c.weekly_assessments ? `${c.weekly_assessments} weekly assessments` : 'Module test-outs'} />
       </section>
 
-      <section aria-labelledby="mastered-heading" className="rounded-card border bg-card p-5 lg:p-6">
-        <h2 id="mastered-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Mastered</h2>
+      <section aria-labelledby="mastered-heading" className="paper rounded-card p-5 lg:p-6">
+        <h2 id="mastered-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Mastered</h2>
         <p className="mt-1 text-[15px] text-muted-foreground">Shown in checks and judged code, and still holding up in spaced reviews.</p>
         {passport.mastered.length ? (
           <ul className="mt-4 flex flex-wrap gap-2">
@@ -63,8 +63,8 @@ export function PassportCard({ passport, headingLevel = 1 }: { passport: Passpor
       </section>
 
       {passport.badges.length ? (
-        <section aria-labelledby="badges-heading" className="rounded-card border bg-card p-5 lg:p-6">
-          <h2 id="badges-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Milestones</h2>
+        <section aria-labelledby="badges-heading" className="paper rounded-card p-5 lg:p-6">
+          <h2 id="badges-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Milestones</h2>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {passport.badges.map(b => (
               <li key={b.id} className="flex gap-3">

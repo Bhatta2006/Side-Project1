@@ -306,7 +306,7 @@ export default function Problem() {
         <Link href={conceptHref(problem.concept.id)} transitionTypes={['nav-back']} aria-label={`Back to ${problem.concept.title}`} className="grid size-11 flex-none place-items-center rounded-full border border-border-strong transition-colors hover:bg-raised">
           <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
         </Link>
-        <h1 id="problem-title" className="min-w-0 flex-1 basis-40 font-display sm:truncate text-2xl font-bold tracking-[-0.03em]">{problem.title}</h1>
+        <h1 id="problem-title" className="min-w-0 flex-1 basis-40 font-display sm:truncate text-2xl font-semibold tracking-[-0.03em]">{problem.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Difficulty level={problem.difficulty} />
           <Badge asChild><Link href={conceptHref(problem.concept.id)}>{problem.concept.title}</Link></Badge>
@@ -494,7 +494,7 @@ export default function Problem() {
               Submit solution<ArrowCircle loading={pending === 'submit'} />
             </Button>
             <Button variant="outline" className="w-full pl-1.5 sm:ml-auto sm:w-auto" onClick={() => setHintSignal(n => n + 1)} aria-haspopup="dialog">
-              <Soc size={32} /> Ask Soc
+              <Soc size={32} mood={pending ? 'thinking' : verdict?.tone === 'success' ? 'happy' : verdict?.tone === 'error' ? 'worried' : 'neutral'} /> Ask Soc
             </Button>
           </div>
           {problem.locked ? <p className="text-sm text-muted-foreground">Run and submit unlock after the {problem.locked.module} checkpoint.</p> : null}
@@ -517,9 +517,9 @@ export default function Problem() {
               </p>
             ) : null}
             {verdict && result ? (
-              <section ref={resultsRef} className={cn('grid scroll-mb-24 gap-3 rounded-card border bg-card p-4 animate-in fade-in duration-200 lg:p-5', TONE_CLASS[verdict.tone])} aria-label="Results">
+              <section ref={resultsRef} className={cn('grid scroll-mb-24 gap-3 paper rounded-card p-4 animate-in fade-in duration-200 lg:p-5', TONE_CLASS[verdict.tone])} aria-label="Results">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="font-display text-xl font-bold tracking-[-0.03em]">
+                  <h2 className="font-display text-xl font-semibold tracking-[-0.03em]">
                     {result.total && result.verdict !== 'ran' && result.verdict !== 'compile_error' ? `${result.passed} of ${result.total} tests passed` : verdict.label}
                   </h2>
                   <span className="text-[13px] font-semibold text-muted-foreground">{result.mode === 'submit' ? 'Submission' : 'Test run'}: {verdict.label}</span>

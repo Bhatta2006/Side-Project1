@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, LockedState, SuccessLine } from '@/components/s
 import { STATUS_LABEL, StatusIcon, StatusLabel, StatusLegend, type Status } from '@/components/socrat/status';
 import { WeekStrip } from '@/components/socrat/week-strip';
 import { Mark, Wordmark } from '@/components/socrat/wordmark';
+import { SocFigure, type SocMood } from '@/components/socrat/soc';
 import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -22,12 +23,13 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const STATUSES = Object.keys(STATUS_LABEL) as Status[];
-const ILLUSTRATIONS: IllustrationName[] = ['welcome', 'orbit', 'stack', 'ladder', 'empty'];
+const MOODS: SocMood[] = ['neutral', 'worried', 'curious', 'thinking', 'happy', 'proud', 'surprised', 'confused', 'sleepy', 'wink'];
+const ILLUSTRATIONS: IllustrationName[] = ['welcome', 'orbit', 'stack', 'ladder', 'empty', 'bulb', 'target', 'plane'];
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="grid gap-4 border-t py-8">
-      <h2 className="font-display text-2xl font-bold tracking-[-0.03em]">{title}</h2>
+      <h2 className="font-display text-2xl font-semibold tracking-[-0.03em]">{title}</h2>
       {children}
     </section>
   );
@@ -54,6 +56,16 @@ export default function Gallery() {
 
       <Block title="Brand">
         <div className="flex flex-wrap items-center gap-6"><Wordmark /><Mark size={48} /><Soc size={56} label="Ask Soc, your tutor" /></div>
+      </Block>
+
+      <Block title="Soc">
+        <div className="flex flex-wrap items-end gap-8">
+          <SocFigure books mood="worried" size={260} idle />
+          <div className="flex items-end gap-4"><Soc size={96} mood="happy" /><Soc size={48} /><Soc size={32} mood="thinking" /></div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+          {MOODS.map(mood => <figure key={mood} className="paper grid justify-items-center gap-2 rounded-card p-4"><SocFigure mood={mood} size={150} /><figcaption className="text-sm">{mood}</figcaption></figure>)}
+        </div>
       </Block>
 
       <Block title="Status system">
@@ -124,7 +136,7 @@ export default function Gallery() {
       </Block>
 
       <Block title="Illustrations">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">{ILLUSTRATIONS.map(name => <figure key={name} className="grid gap-2 rounded-card border p-4"><Illustration name={name} proof={name === 'welcome'} /><figcaption className="text-center text-sm">{name}</figcaption></figure>)}</div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">{ILLUSTRATIONS.map(name => <figure key={name} className="grid gap-2 rounded-card border p-4"><Illustration name={name} draw="load" /><figcaption className="text-center text-sm">{name}</figcaption></figure>)}</div>
       </Block>
     </Page>
   );

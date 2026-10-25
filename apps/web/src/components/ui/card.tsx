@@ -2,14 +2,14 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
-// Bento cards. Depth comes from surface steps and hairlines, never shadows.
+// Paper cards: white sheets on the notebook, a hairline and a soft lift (flat in dark mode).
 const cardVariants = cva(
   "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-card py-(--card-spacing) text-[15px] [--card-spacing:20px] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 lg:[--card-spacing:24px] data-[size=sm]:[--card-spacing:16px] data-[size=sm]:has-data-[slot=card-footer]:pb-0",
   {
     variants: {
       tone: {
-        surface: "border bg-card text-card-foreground",
-        hero: "bg-forest text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] [--card-line:color-mix(in_srgb,var(--forest-foreground),transparent_55%)] lg:[--card-spacing:32px] [--card-spacing:24px]",
+        surface: "border bg-card text-card-foreground shadow-[0_1px_0_rgb(21_22_30/0.03),0_12px_30px_-20px_rgb(21_22_30/0.22)] dark:shadow-none",
+        hero: "bg-forest text-forest-foreground shadow-[0_18px_40px_-22px_rgb(35_64_232/0.7)] dark:shadow-none [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] [--card-line:color-mix(in_srgb,var(--forest-foreground),transparent_55%)] lg:[--card-spacing:32px] [--card-spacing:24px]",
         violet: "bg-violet text-violet-foreground [--card-muted:color-mix(in_srgb,var(--violet-foreground),transparent_8%)] [--card-line:color-mix(in_srgb,var(--violet-foreground),transparent_55%)]",
         lilac: "bg-secondary text-secondary-foreground [--card-muted:color-mix(in_srgb,var(--secondary-foreground),transparent_22%)] [--card-line:color-mix(in_srgb,var(--secondary-foreground),transparent_50%)]",
         cream: "bg-cream text-cream-foreground [--card-muted:color-mix(in_srgb,var(--cream-foreground),transparent_22%)] [--card-line:color-mix(in_srgb,var(--cream-foreground),transparent_50%)]",

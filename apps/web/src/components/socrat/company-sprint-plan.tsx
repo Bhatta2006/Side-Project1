@@ -15,9 +15,9 @@ import { Progress } from '@/components/ui/progress';
 function Week({ week, current }: { week: CompanySprintWeek; current: boolean }) {
   const done = week.concepts.filter(c => c.done).length;
   return (
-    <li className={cn('grid gap-4 rounded-card border bg-card p-5 lg:p-6', current && 'border-primary ring-1 ring-primary')} aria-current={current ? 'step' : undefined}>
+    <li className={cn('grid gap-4 paper rounded-card p-5 lg:p-6', current && 'border-primary ring-1 ring-primary')} aria-current={current ? 'step' : undefined}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-display text-xl font-bold tracking-[-0.03em]">
+        <h3 className="font-display text-xl font-semibold tracking-[-0.03em]">
           Week {week.number}{week.review ? ': review and mixed practice' : ''}
         </h3>
         <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
@@ -94,8 +94,8 @@ export function CompanySprintPlan({ sprint, onDecided }: { sprint: CompanySprint
       </section>
 
       {sprint.proposal?.status === 'pending' ? (
-        <section aria-labelledby="sprint-proposal" className="rounded-card border bg-card p-5 lg:p-6">
-          <h2 id="sprint-proposal" className="font-display text-xl font-bold tracking-[-0.03em]">Point your roadmap at this sprint?</h2>
+        <section aria-labelledby="sprint-proposal" className="paper rounded-card p-5 lg:p-6">
+          <h2 id="sprint-proposal" className="font-display text-xl font-semibold tracking-[-0.03em]">Point your roadmap at this sprint?</h2>
           <p className="mt-1 mb-4 text-[15px] text-muted-foreground">Nothing in your plan changes until you accept.</p>
           <ProposalList proposals={[sprint.proposal]} onDecided={onDecided} />
         </section>

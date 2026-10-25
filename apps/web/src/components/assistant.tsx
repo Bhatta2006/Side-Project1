@@ -179,7 +179,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           data-tour="tutor"
           className="group/soc flex h-14 items-center gap-3 rounded-full bg-card p-1 shadow-floating ring-1 ring-border transition-transform duration-200 ease-[var(--ease-soft)] active:scale-[0.98] lg:pr-5"
         >
-          <Soc size={48} />
+          <Soc size={48} mood="wink" />
           <span className="hidden text-[15px] font-semibold lg:inline">Ask Soc</span>
         </button>
       </div>
@@ -200,9 +200,9 @@ export default function Assistant({ scope, title, language, context, onSent, ope
     >
       <header className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Soc size={40} />
+          <Soc size={44} mood={busy ? 'thinking' : 'neutral'} />
           <div className="min-w-0">
-            <h2 className="font-display text-lg font-bold tracking-[-0.02em]">{title}</h2>
+            <h2 className="font-display text-lg font-semibold tracking-[-0.02em]">{title}</h2>
             {problem ? (
               <div className="mt-1 flex items-center gap-2">
                 <div className="flex gap-0.5" aria-hidden="true">
@@ -215,9 +215,14 @@ export default function Assistant({ scope, title, language, context, onSent, ope
         </div>
         <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close tutor"><X /></Button>
       </header>
-      <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
+      {/* The conversation is written on a ruled page with a red margin. */}
+      <div ref={scroller} className="chat-page flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
         {!messages.length ? (
           <div className="text-[15px] text-muted-foreground">
+            <div className="mb-3 flex items-end gap-3">
+              <Soc size={84} mood="curious" />
+              <p className="font-hand pb-2 text-[22px] leading-tight text-pen">{problem ? 'show me what you tried.' : 'hi! ask me anything.'}</p>
+            </div>
             {problem
               ? 'Tell me what you tried and where it breaks. Hints get more specific as you keep working. Run your code or explain your thinking to unlock the next level.'
               : scope === 'general'
@@ -240,7 +245,9 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           m.role === 'user' ? (
             <div key={i} className="chat-bubble-user">{m.content}</div>
           ) : (
-            <div key={i} className="chat-bubble-assistant">
+            <div key={i} className="flex items-end gap-2">
+            <Soc size={28} mood={busy && i === messages.length - 1 ? 'thinking' : m.rating === 1 ? 'happy' : 'neutral'} className="mb-1" />
+            <div className="chat-bubble-assistant min-w-0 flex-1">
               {busy && i === messages.length - 1 && activity.length ? (
                 <ul className="mb-2 grid gap-1 text-xs text-muted-foreground" aria-label="What the tutor is checking">
                   {activity.map((a, j) => (
@@ -281,6 +288,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
                 </span>
               )}
             </div>
+            </div>
           ),
         )}
         {proposals.length && !busy ? (
@@ -306,7 +314,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           ) : null}
         </div>
       ) : null}
-      <form className="flex items-end gap-2 p-3" onSubmit={e => { e.preventDefault(); send('chat'); }}>
+      <form className="flex items-end gap-2 border-t p-3" onSubmit={e => { e.preventDefault(); send('chat'); }}>
         <label className="sr-only" htmlFor={`assistant-${scope}`}>Message</label>
         <Textarea
           id={`assistant-${scope}`}

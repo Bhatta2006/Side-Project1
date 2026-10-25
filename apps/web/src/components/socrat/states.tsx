@@ -6,6 +6,7 @@ import { Check, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Illustration } from './illustration';
+import { SocFigure } from './soc';
 import { StatusIcon } from './status';
 
 /** Coral triangle used for every error and attention message. */
@@ -18,9 +19,9 @@ export function EmptyState({ title, children, action, className, illustration = 
   title: string; children?: ReactNode; action?: ReactNode; className?: string; illustration?: boolean; as?: 'h2' | 'h3';
 }) {
   return (
-    <div className={cn('grid justify-items-center gap-3 rounded-card border border-dashed border-border-strong px-6 py-10 text-center', className)}>
-      {illustration ? <Illustration name="empty" className="size-24" /> : null}
-      <Heading className="font-display text-xl font-bold tracking-[-0.02em]">{title}</Heading>
+    <div className={cn('doodle-host grid justify-items-center gap-3 rounded-card border border-dashed border-border-strong px-6 py-10 text-center', className)}>
+      {illustration ? <Illustration name="empty" className="size-24" draw="load" /> : null}
+      <Heading className="font-display text-xl font-semibold tracking-[-0.02em]">{title}</Heading>
       {children ? <div className="max-w-md text-[15px] text-muted-foreground text-pretty">{children}</div> : null}
       {action ? <div className="mt-1">{action}</div> : null}
     </div>
@@ -56,10 +57,23 @@ export function LockedState({ title, children, href, action = 'Go to checkpoint'
     <div className={cn('flex flex-col items-start gap-4 rounded-card border border-border-strong px-5 py-5 sm:flex-row sm:items-center', className)}>
       <StatusIcon status="locked" size={32} />
       <div className="w-full min-w-0 flex-1">
-        <p className="font-display text-lg font-bold tracking-[-0.02em]">{title}</p>
+        <p className="font-display text-lg font-semibold tracking-[-0.02em]">{title}</p>
         {children ? <div className="mt-0.5 text-[15px] text-muted-foreground">{children}</div> : null}
       </div>
       {href ? <Button asChild variant="outline"><Link href={href}>{action}</Link></Button> : null}
+    </div>
+  );
+}
+
+/** Soc reacting to a whole-page moment (not found, crash): a big bust and a pen note. */
+export function SocMoment({ mood, note, children }: { mood: 'confused' | 'worried'; note: string; children: ReactNode }) {
+  return (
+    <div className="mx-auto grid min-h-[70dvh] max-w-xl place-items-center px-4 py-16">
+      <div className="grid justify-items-center gap-4 text-center">
+        <SocFigure books mood={mood} idle size={200} />
+        <p className="font-hand -rotate-2 text-[26px] text-pen">{note}</p>
+        {children}
+      </div>
     </div>
   );
 }
@@ -68,7 +82,7 @@ export function LockedState({ title, children, href, action = 'Go to checkpoint'
 export function SuccessLine({ children, action, className }: { children: ReactNode; action?: ReactNode; className?: string }) {
   return (
     <div role="status" className={cn('flex flex-wrap items-center gap-3 text-[15px]', className)}>
-      <span className="grid size-7 place-items-center rounded-full bg-cream text-cream-foreground"><Check className="size-4" aria-hidden="true" /></span>
+      <span className="grid size-7 place-items-center rounded-full bg-[var(--highlight)] text-[#15161E]"><Check className="size-4" aria-hidden="true" /></span>
       <span className="font-semibold">{children}</span>
       {action}
     </div>

@@ -12,11 +12,12 @@ import { WebVitals } from '@/components/web-vitals';
 import { ErrorReporter } from '@/components/error-reporter';
 import { PwaSetup } from '@/components/install-app';
 
-// Body and UI (SIL OFL 1.1, vendored in src/fonts). Display uses Geist Sans Bold.
-const figtree = localFont({
-  src: '../fonts/figtree-latin-wght.woff2',
-  variable: '--font-figtree',
-  weight: '300 900',
+// Geist Sans sets everything, display and body. Handwritten margin notes use Delicious Handrawn
+// (SIL OFL 1.1, vendored in src/fonts), only for asides.
+const delicious = localFont({
+  src: '../fonts/delicious-handrawn-latin-400.woff2',
+  variable: '--font-delicious',
+  weight: '400',
   display: 'swap',
 });
 const jetbrains = localFont({
@@ -38,14 +39,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F6F4FA' },
-    { media: '(prefers-color-scheme: dark)', color: '#0F0E14' },
+    { media: '(prefers-color-scheme: light)', color: '#F6F5F0' },
+    { media: '(prefers-color-scheme: dark)', color: '#121318' },
   ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${figtree.variable} ${jetbrains.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${GeistSans.variable} ${delicious.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_SCRIPT }} />
       </head>

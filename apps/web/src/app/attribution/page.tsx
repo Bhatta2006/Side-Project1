@@ -33,7 +33,7 @@ export default function AttributionPage() {
             {data.adapted.length ? (
               <ul className="grid gap-3">
                 {data.adapted.map(item => (
-                  <li key={item.record} className="rounded-card border bg-card p-4">
+                  <li key={item.record} className="paper rounded-card p-4">
                     <p className="font-semibold">{item.record}</p>
                     {item.attribution ? <p className="mt-1 text-sm text-muted-foreground">{item.attribution}</p> : null}
                     <ul className="mt-2 grid gap-1 text-sm">

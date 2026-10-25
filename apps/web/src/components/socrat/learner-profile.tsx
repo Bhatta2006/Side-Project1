@@ -25,8 +25,8 @@ export function LearnerProfileCard() {
   const rising = profile.concepts.filter(c => (c.trend ?? 0) >= 0.2).map(c => c.title);
   const leaning = profile.concepts.filter(c => c.hint_dependence >= 0.6 && c.attempts >= 3).map(c => c.title);
   return (
-    <section className="rounded-card border bg-card p-5 lg:p-6" aria-labelledby="model-heading">
-      <h2 id="model-heading" className="font-display text-xl font-bold tracking-[-0.03em]">How Socrat sees you</h2>
+    <section className="paper rounded-card p-5 lg:p-6" aria-labelledby="model-heading">
+      <h2 id="model-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">How Socrat sees you</h2>
       <p className="mt-1 text-sm text-muted-foreground">What your plan adapts to. Estimates from your evidence, not grades.</p>
       <dl className="mt-4 grid gap-3 text-[15px]">
         <div>
