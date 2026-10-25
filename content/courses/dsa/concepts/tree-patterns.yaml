@@ -1,0 +1,1203 @@
+id: tree-patterns
+title: Binary tree patterns
+summary: Return information from children, views and columns, root paths, lowest common ancestor, distance
+  K and width.
+module: trees
+prerequisites: [binary-trees]
+difficulty: 4
+estimated_minutes: 90
+lesson: |
+  The binary trees lesson covered the traversals. This one covers the questions interviews
+  ask on top of them. Almost every tree problem is one of a few shapes:
+
+  - each node **returns information** to its parent (height, best path, balanced or not);
+  - a **level-by-level** pass picks one node per level, or measures a level;
+  - a **downward pass** carries the path from the root (sums, maximums, the path itself);
+  - two nodes are compared through their **ancestors** (lowest common ancestor);
+  - the tree is treated as an **undirected graph** (distance K, spreading from a node).
+
+  **Input in this lesson.** Nodes are numbered 1 to n and node 1 is the root. The input is n,
+  then the n node values, then one line per node with its left and right child (0 = none).
+  Some problems add a last line (a target, two nodes, or a node and a distance).
+
+  **Deep trees.** A chain of 10⁵ nodes overflows the default recursion stack in Python and
+  Java. The templates therefore process nodes in **BFS order** and, for bottom-up answers, in
+  reverse BFS order, which visits every child before its parent. The recursive version is
+  shown first because it is easier to reason about.
+
+  ## Return info from children
+
+  ### Recognition cues
+
+  - The answer for a node depends on answers from its two subtrees: height, size, sum, "is it
+    balanced?", the best path that starts at the node and goes down.
+  - A **global** answer (the best path anywhere, the diameter) is updated at every node while
+    the node returns something **smaller** to its parent.
+  - The word "path" with "any node to any node".
+
+  ### State, transition, base cases, answer, loop order
+
+  For the **maximum path sum** (a path may start and end anywhere, values may be negative):
+
+  | Part | For maximum path sum |
+  |---|---|
+  | Returned value | `down[x]` = the best sum of a path that starts at x and goes **down one side** |
+  | Combine | `gl = max(0, down[left])`, `gr = max(0, down[right])`; `down[x] = val[x] + max(gl, gr)` |
+  | Global answer | `best = max(best, val[x] + gl + gr)`: the best path that **bends** at x |
+  | Base case | a missing child contributes 0 |
+  | Order | children before parents: post-order, or reverse BFS order |
+
+  The key split: what a node **returns** (one branch, because a parent can only continue a
+  path down one side) differs from what it **records** (both branches, because a path may
+  bend at the node).
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  order = [1]  # BFS order: every parent before its children
+  for x in order:
+      for c in (left[x], right[x]):
+          if c:
+              order.append(c)
+  down = [0] * (n + 1)  # down[x]: best path from x going down one side; down[0] = 0
+  best = -10**18
+  for x in reversed(order):  # children before parents
+      gl, gr = max(0, down[left[x]]), max(0, down[right[x]])  # drop negative branches
+      best = max(best, val[x] + gl + gr)  # a path may bend at x
+      down[x] = val[x] + max(gl, gr)  # the parent can continue only one side
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1, 0), down(n + 1, 0);  // down[x]: best path from x down one side
+      vector<int> left(n + 1, 0), right(n + 1, 0), order = {1};
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      for (size_t k = 0; k < order.size(); k++)  // BFS order: every parent before its children
+          for (int c : {left[order[k]], right[order[k]]}) if (c) order.push_back(c);
+      long long best = -1e18;
+      for (int k = n - 1; k >= 0; k--) {  // children before parents
+          int x = order[k];
+          long long gl = max(0LL, down[left[x]]), gr = max(0LL, down[right[x]]);  // drop negatives
+          best = max(best, val[x] + gl + gr);  // a path may bend at x
+          down[x] = val[x] + max(gl, gr);  // the parent can continue only one side
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] val = new long[n + 1], down = new long[n + 1];  // down[x]: best path from x down one side
+          int[] left = new int[n + 1], right = new int[n + 1], order = new int[n];
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          int size = 1;
+          order[0] = 1;
+          for (int k = 0; k < size; k++)  // BFS order: every parent before its children
+              for (int c : new int[] {left[order[k]], right[order[k]]}) if (c != 0) order[size++] = c;
+          long best = Long.MIN_VALUE;
+          for (int k = n - 1; k >= 0; k--) {  // children before parents
+              int x = order[k];
+              long gl = Math.max(0, down[left[x]]), gr = Math.max(0, down[right[x]]);  // drop negatives
+              best = Math.max(best, val[x] + gl + gr);  // a path may bend at x
+              down[x] = val[x] + Math.max(gl, gr);  // the parent can continue only one side
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: values 1 2 3 4 5
+
+  Node 1 (value 1) has children 2 and 3; node 2 (value 2) has children 4 and 5. The best path
+  is **11**: 4 → 2 → 5, or 5 → 2 → 1 → 3.
+
+  ```text
+  5
+  1 2 3 4 5
+  2 3
+  4 5
+  0 0
+  0 0
+  0 0
+  ```
+
+  **Brute force.** Treat every node as the top of the path and search both subtrees for their
+  best downward paths: correct, but each node re-walks its subtree, O(n²) on a chain.
+
+  **Wrong first attempt — return the bent path.** Let every node return the best path through
+  it, both sides included:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def through(x):
+      """WRONG: returns a path that uses both children."""
+      global best
+      if x == 0:
+          return 0
+      gl, gr = max(0, through(left[x])), max(0, through(right[x]))
+      best = max(best, val[x] + gl + gr)
+      return val[x] + gl + gr  # BUG: a parent cannot continue a path that already bends
+
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  best = -10**18
+  through(1)
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<long long> val;
+  vector<int> lft, rgt;
+  long long best = -1e18;
+
+  long long through(int x) {  // WRONG: returns a path that uses both children
+      if (x == 0) return 0;
+      long long gl = max(0LL, through(lft[x])), gr = max(0LL, through(rgt[x]));
+      best = max(best, val[x] + gl + gr);
+      return val[x] + gl + gr;  // BUG: a parent cannot continue a path that already bends
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      val.assign(n + 1, 0);
+      lft.assign(n + 1, 0);
+      rgt.assign(n + 1, 0);
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> lft[i] >> rgt[i];
+      through(1);
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static long[] val;
+      static int[] left, right;
+      static long best = Long.MIN_VALUE;
+
+      static long through(int x) {  // WRONG: returns a path that uses both children
+          if (x == 0) return 0;
+          long gl = Math.max(0, through(left[x])), gr = Math.max(0, through(right[x]));
+          best = Math.max(best, val[x] + gl + gr);
+          return val[x] + gl + gr;  // BUG: a parent cannot continue a path that already bends
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          val = new long[n + 1];
+          left = new int[n + 1];
+          right = new int[n + 1];
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          through(1);
+          System.out.println(best);
+      }
+  }
+  ```
+
+  It prints 15. Node 2 returns 4 + 2 + 5 = 11, and the root adds its own value and node 3:
+  1 + 11 + 3. That "path" visits node 2 with three neighbours (4, 5 and 1), which no path can
+  do.
+
+  **Optimal — return one side, record both.** The recursive form of the template:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def down(x):
+      """Best path that starts at x and goes down one side; updates best with paths bending at x."""
+      global best
+      if x == 0:
+          return 0
+      gl, gr = max(0, down(left[x])), max(0, down(right[x]))
+      best = max(best, val[x] + gl + gr)  # record: may use both sides
+      return val[x] + max(gl, gr)  # return: only one side
+
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  best = -10**18
+  down(1)
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<long long> val;
+  vector<int> lft, rgt;
+  long long best = -1e18;
+
+  long long down(int x) {  // best path from x down one side; records paths bending at x
+      if (x == 0) return 0;
+      long long gl = max(0LL, down(lft[x])), gr = max(0LL, down(rgt[x]));
+      best = max(best, val[x] + gl + gr);  // record: may use both sides
+      return val[x] + max(gl, gr);  // return: only one side
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      val.assign(n + 1, 0);
+      lft.assign(n + 1, 0);
+      rgt.assign(n + 1, 0);
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> lft[i] >> rgt[i];
+      down(1);
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static long[] val;
+      static int[] left, right;
+      static long best = Long.MIN_VALUE;
+
+      static long down(int x) {  // best path from x down one side; records paths bending at x
+          if (x == 0) return 0;
+          long gl = Math.max(0, down(left[x])), gr = Math.max(0, down(right[x]));
+          best = Math.max(best, val[x] + gl + gr);  // record: may use both sides
+          return val[x] + Math.max(gl, gr);  // return: only one side
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          val = new long[n + 1];
+          left = new int[n + 1];
+          right = new int[n + 1];
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          down(1);
+          System.out.println(best);
+      }
+  }
+  ```
+
+  Dry run (children first):
+
+  | node | value | gl | gr | path bending here | returns down[x] |
+  |---|---|---|---|---|---|
+  | 4 | 4 | 0 | 0 | 4 | 4 |
+  | 5 | 5 | 0 | 0 | 5 | 5 |
+  | 3 | 3 | 0 | 0 | 3 | 3 |
+  | 2 | 2 | 4 | 5 | **11** | 7 |
+  | 1 | 1 | 7 | 3 | **11** | 8 |
+
+  The best is 11. The template does the same in reverse BFS order, which avoids deep
+  recursion. Every node is visited once: O(n) time, O(n) memory.
+
+  ### Variants
+
+  1. *Balanced binary tree*: return the height, or −1 as soon as a subtree is unbalanced.
+  2. *Diameter of binary tree*: return the height, record left + right heights.
+  3. *Longest univalue path*: a child counts only if its value equals the parent's.
+  4. *Binary tree maximum path sum*: the anchor.
+  5. *Distribute coins in binary tree*: return the surplus, record |surplus| as moves.
+  6. *Binary tree cameras*: return one of three states (DP on trees).
+
+  ### Contrast
+
+  **What to return, and what to record?** The parent can only extend a path down one side, so
+  return the best **one-sided** value. A path anywhere may bend at the node, so record the
+  **two-sided** value in a global answer.
+
+  ### Common mistakes
+
+  - Returning the two-sided value, which builds impossible paths (the anchor's 15).
+  - Not dropping negative branches with `max(0, …)`.
+  - Starting `best` at 0 when every value can be negative: a single node is a valid path.
+  - Recursing 10⁵ levels deep in Python or Java.
+
+  ## Views and columns
+
+  ### Recognition cues
+
+  - "What do you see from the right (or left, top, bottom)?", "print each level", "vertical
+    order".
+  - One node per level, or nodes grouped by level or by column.
+
+  ### State, transition, base cases, answer, loop order
+
+  Process the tree **level by level** (BFS). The right view is the last node of each level and
+  the left view the first. For columns, give the root column 0, a left child column − 1 and a
+  right child column + 1, then group by column (sorting by row, then value, when the problem
+  asks).
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  level, view = [1], []
+  while level:
+      view.append(level[-1])  # the rightmost node of this level
+      level = [c for x in level for c in (left[x], right[x]) if c]  # next level, left to right
+  print(*view)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1);
+      vector<int> left(n + 1), right(n + 1), level = {1}, view;
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      while (!level.empty()) {
+          view.push_back(level.back());  // the rightmost node of this level
+          vector<int> next;  // next level, left to right
+          for (int x : level) {
+              if (left[x]) next.push_back(left[x]);
+              if (right[x]) next.push_back(right[x]);
+          }
+          level = next;
+      }
+      for (size_t i = 0; i < view.size(); i++) cout << view[i] << (i + 1 < view.size() ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] left = new int[n + 1], right = new int[n + 1];
+          for (int i = 1; i <= n; i++) in.nextLong();  // values are not needed here
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          List<Integer> level = new ArrayList<>(List.of(1));
+          StringBuilder out = new StringBuilder();
+          while (!level.isEmpty()) {
+              out.append(out.length() > 0 ? " " : "").append(level.get(level.size() - 1));  // rightmost
+              List<Integer> next = new ArrayList<>();  // next level, left to right
+              for (int x : level) {
+                  if (left[x] != 0) next.add(left[x]);
+                  if (right[x] != 0) next.add(right[x]);
+              }
+              level = next;
+          }
+          System.out.println(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: the right side view
+
+  Node 1 has children 2 and 3; node 2 has only a right child 5; node 3 has only a right child
+  4. The right view is **1 3 4**.
+
+  **Wrong first attempt — always go right.** Following right children from the root gives
+  1 3 4 here, but in a tree where the left side is deeper, the deeper left nodes are visible
+  from the right too and the walk misses them. Only a level-by-level pass sees every level.
+
+  ### Variants
+
+  1. *Binary tree right side view*: the anchor.
+  2. *Find bottom left tree value*: the first node of the last level.
+  3. *Binary tree zigzag level order traversal*: reverse every other level.
+  4. *Vertical order traversal*: group by column, then sort by row and value.
+
+  ### Contrast
+
+  **BFS or DFS?** Anything "per level" is natural in BFS. A DFS also works if it carries the
+  depth and visits the right child first, recording the first node seen at each depth.
+
+  ### Common mistakes
+
+  - Following only right children.
+  - Mixing levels by using one queue without knowing where a level ends.
+
+  ## Root paths
+
+  ### Recognition cues
+
+  - "Root-to-leaf paths with sum S", "numbers formed by root-to-leaf digits", "count nodes
+    with no larger ancestor".
+  - The answer at a node depends on everything **above** it: pass information down.
+
+  ### State, transition, base cases, answer, loop order
+
+  Carry a value from the root down: the running sum, the largest value so far, the number
+  formed so far. At a **leaf** (no children), check the condition. An explicit stack of
+  (node, value) pairs replaces recursion.
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  target = int(data[3 * n + 1])
+  count, stack = 0, [(1, val[1])]  # (node, sum from the root down to it)
+  while stack:
+      x, s = stack.pop()
+      if not left[x] and not right[x]:  # a leaf ends a root-to-leaf path
+          count += s == target
+      for c in (left[x], right[x]):
+          if c:
+              stack.append((c, s + val[c]))  # pass the running sum down
+  print(count)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <utility>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1);
+      vector<int> left(n + 1), right(n + 1);
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      long long target;
+      cin >> target;
+      int count = 0;
+      vector<pair<int, long long>> st = {{1, val[1]}};  // (node, sum from the root down to it)
+      while (!st.empty()) {
+          auto [x, s] = st.back();
+          st.pop_back();
+          if (!left[x] && !right[x] && s == target) count++;  // a leaf ends a root-to-leaf path
+          for (int c : {left[x], right[x]})
+              if (c) st.push_back({c, s + val[c]});  // pass the running sum down
+      }
+      cout << count << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] val = new long[n + 1];
+          int[] left = new int[n + 1], right = new int[n + 1];
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          long target = in.nextLong();
+          int count = 0;
+          Deque<long[]> st = new ArrayDeque<>();  // (node, sum from the root down to it)
+          st.push(new long[] {1, val[1]});
+          while (!st.isEmpty()) {
+              long[] top = st.pop();
+              int x = (int) top[0];
+              long s = top[1];
+              if (left[x] == 0 && right[x] == 0 && s == target) count++;  // a leaf ends a path
+              for (int c : new int[] {left[x], right[x]})
+                  if (c != 0) st.push(new long[] {c, s + val[c]});  // pass the running sum down
+          }
+          System.out.println(count);
+      }
+  }
+  ```
+
+  ### Anchor problem: paths summing to 22
+
+  Values `5 4 8 11 13 4 7 2 5 1`, the classic path-sum tree, target 22. The program prints
+  **2**: 5 → 4 → 11 → 2 and 5 → 8 → 4 → 5.
+
+  **Wrong first attempt.** Checking the sum at every node, not only at leaves, also counts
+  paths that stop halfway. Here 5 → 4 → 11 stops at sum 20, harmless, but with target 20 it
+  would be counted even though 11 is not a leaf.
+
+  ### Variants
+
+  1. *Path sum* and *path sum II*: yes/no, then list the paths.
+  2. *Sum root to leaf numbers*: carry `10 · number + digit`.
+  3. *Count good nodes in binary tree*: carry the largest value on the path.
+  4. *Path sum III*: paths that start anywhere; carry prefix sums in a hash map, like subarray
+     sums.
+
+  ### Contrast
+
+  **Pass down or return up?** If a node's answer depends on its ancestors (the path above
+  it), pass a value down. If it depends on its descendants, return a value up. Some problems
+  need both.
+
+  ### Common mistakes
+
+  - Treating a node with one child as a leaf.
+  - Checking the condition at every node instead of at leaves.
+  - Sharing one mutable path list between branches without undoing the change.
+
+  ## Lowest common ancestor
+
+  ### Recognition cues
+
+  - "The lowest node that has both u and v as descendants", "distance between two nodes",
+    "the path from u to v".
+  - A node counts as its own descendant.
+
+  ### State, transition, base cases, answer, loop order
+
+  Record each node's parent and depth with one BFS. Then lift the deeper node until both have
+  the same depth, and lift both together until they meet. The meeting node is the LCA. (The
+  recursive version returns "found u", "found v" or the LCA from each subtree.)
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  u, v = int(data[3 * n + 1]), int(data[3 * n + 2])
+  parent, depth, order = [0] * (n + 1), [0] * (n + 1), [1]
+  for x in order:  # BFS records every parent and depth
+      for c in (left[x], right[x]):
+          if c:
+              parent[c], depth[c] = x, depth[x] + 1
+              order.append(c)
+  while depth[u] > depth[v]:  # lift the deeper node first
+      u = parent[u]
+  while depth[v] > depth[u]:
+      v = parent[v]
+  while u != v:  # then lift both until they meet
+      u, v = parent[u], parent[v]
+  print(u)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1);
+      vector<int> left(n + 1), right(n + 1), parent(n + 1, 0), depth(n + 1, 0), order = {1};
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      int u, v;
+      cin >> u >> v;
+      for (size_t k = 0; k < order.size(); k++)  // BFS records every parent and depth
+          for (int c : {left[order[k]], right[order[k]]})
+              if (c) {
+                  parent[c] = order[k];
+                  depth[c] = depth[order[k]] + 1;
+                  order.push_back(c);
+              }
+      while (depth[u] > depth[v]) u = parent[u];  // lift the deeper node first
+      while (depth[v] > depth[u]) v = parent[v];
+      while (u != v) u = parent[u], v = parent[v];  // then lift both until they meet
+      cout << u << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] left = new int[n + 1], right = new int[n + 1], parent = new int[n + 1], depth = new int[n + 1];
+          for (int i = 1; i <= n; i++) in.nextLong();  // values are not needed here
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          int u = in.nextInt(), v = in.nextInt();
+          int[] order = new int[n];
+          int size = 0;
+          order[size++] = 1;
+          for (int k = 0; k < size; k++)  // BFS records every parent and depth
+              for (int c : new int[] {left[order[k]], right[order[k]]})
+                  if (c != 0) {
+                      parent[c] = order[k];
+                      depth[c] = depth[order[k]] + 1;
+                      order[size++] = c;
+                  }
+          while (depth[u] > depth[v]) u = parent[u];  // lift the deeper node first
+          while (depth[v] > depth[u]) v = parent[v];
+          while (u != v) { u = parent[u]; v = parent[v]; }  // then lift both until they meet
+          System.out.println(u);
+      }
+  }
+  ```
+
+  ### Anchor problem: nodes 4 and 9
+
+  The tree: 1 has children 2 and 3; 2 has 4 and 5; 3 has 6 and 7; 5 has 8 and 9. The LCA of
+  4 and 9 is **2**. The LCA of 2 and 9 is 2 itself, because a node is its own ancestor.
+
+  **Wrong first attempt — lift both at once.** Lifting u and v together before evening out
+  their depths makes them pass each other: from 4 (depth 2) and 9 (depth 3) you reach 2 and
+  5, then 1 and 2, then above the root and 1. They never stand on 2 at the same time.
+
+  ### Variants
+
+  1. *Lowest common ancestor of a binary tree*: the anchor.
+  2. *Lowest common ancestor of deepest leaves*: return (depth, LCA) from each subtree.
+  3. *Step-by-step directions from one node to another*: paths to the LCA from both ends.
+  4. *Company queries II* (CSES): many queries, so binary lifting (a CP topic).
+
+  ### Contrast
+
+  **One query or many?** For one pair, parents plus depths (or one recursion) is O(n). For
+  10⁵ queries, precompute binary lifting tables to answer each in O(log n).
+
+  ### Common mistakes
+
+  - Lifting both nodes before their depths are equal.
+  - Forgetting that one node may be the ancestor of the other.
+
+  ## Distance K
+
+  ### Recognition cues
+
+  - "All nodes at distance K from a target", "time for an infection to spread", "nearest
+    leaf to a node".
+  - Distances go **up** through parents as well as down.
+
+  ### State, transition, base cases, answer, loop order
+
+  Record each node's parent, then run a BFS from the target over the three neighbours of each
+  node (left, right, parent), marking visited nodes. The BFS layer number is the distance.
+
+  ### Template
+
+  ```python
+  import sys
+  from collections import deque
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  target, k = int(data[3 * n + 1]), int(data[3 * n + 2])
+  parent = [0] * (n + 1)
+  for x in range(1, n + 1):
+      for c in (left[x], right[x]):
+          if c:
+              parent[c] = x
+  dist = [-1] * (n + 1)  # -1: not reached yet
+  dist[target] = 0
+  queue = deque([target])
+  while queue:
+      x = queue.popleft()
+      for y in (left[x], right[x], parent[x]):  # the tree as an undirected graph
+          if y and dist[y] == -1:
+              dist[y] = dist[x] + 1
+              queue.append(y)
+  print(*[x for x in range(1, n + 1) if dist[x] == k])
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <queue>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1);
+      vector<int> left(n + 1), right(n + 1), parent(n + 1, 0), dist(n + 1, -1);  // -1: not reached
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      int target, k;
+      cin >> target >> k;
+      for (int x = 1; x <= n; x++)
+          for (int c : {left[x], right[x]})
+              if (c) parent[c] = x;
+      dist[target] = 0;
+      queue<int> q;
+      q.push(target);
+      while (!q.empty()) {
+          int x = q.front();
+          q.pop();
+          for (int y : {left[x], right[x], parent[x]})  // the tree as an undirected graph
+              if (y && dist[y] == -1) {
+                  dist[y] = dist[x] + 1;
+                  q.push(y);
+              }
+      }
+      vector<int> out;
+      for (int x = 1; x <= n; x++)
+          if (dist[x] == k) out.push_back(x);
+      for (size_t i = 0; i < out.size(); i++) cout << out[i] << (i + 1 < out.size() ? " " : "");
+      cout << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] left = new int[n + 1], right = new int[n + 1], parent = new int[n + 1], dist = new int[n + 1];
+          for (int i = 1; i <= n; i++) in.nextLong();  // values are not needed here
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          int target = in.nextInt(), k = in.nextInt();
+          for (int x = 1; x <= n; x++)
+              for (int c : new int[] {left[x], right[x]})
+                  if (c != 0) parent[c] = x;
+          Arrays.fill(dist, -1);  // -1: not reached yet
+          dist[target] = 0;
+          ArrayDeque<Integer> q = new ArrayDeque<>(List.of(target));
+          while (!q.isEmpty()) {
+              int x = q.poll();
+              for (int y : new int[] {left[x], right[x], parent[x]})  // the tree as an undirected graph
+                  if (y != 0 && dist[y] == -1) {
+                      dist[y] = dist[x] + 1;
+                      q.add(y);
+                  }
+          }
+          StringBuilder out = new StringBuilder();
+          for (int x = 1; x <= n; x++)
+              if (dist[x] == k) out.append(out.length() > 0 ? " " : "").append(x);
+          System.out.println(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: target 2, K = 2
+
+  The same tree as the LCA anchor. The program prints **3 8 9**: 8 and 9 are two steps down
+  from 2, and 3 is two steps away through the root (2 → 1 → 3).
+
+  **Wrong first attempt — only look down.** Searching the target's subtree finds 8 and 9 but
+  never 3, because the path to 3 goes up through the parent.
+
+  ### Variants
+
+  1. *All nodes distance K in binary tree*: the anchor.
+  2. *Amount of time for binary tree to be infected*: the largest BFS distance.
+  3. *Tree distances I* (CSES): the farthest node from every node, with two BFS passes or
+     rerooting.
+
+  ### Contrast
+
+  **Tree or graph?** Child pointers only go down. As soon as a question measures distance in
+  every direction, add parent edges and treat the tree as an undirected graph.
+
+  ### Common mistakes
+
+  - Searching only the target's subtree.
+  - Forgetting the visited marks, so the BFS walks back and forth between child and parent.
+
+  ## Width and indexing
+
+  ### Recognition cues
+
+  - "Maximum width of a binary tree", counting the empty positions between the end nodes of a
+    level.
+  - "Is this tree complete?"
+
+  ### State, transition, base cases, answer, loop order
+
+  Number the positions like an array heap: the root is 1, the children of position p are
+  2p and 2p + 1. A level's width is `last position − first position + 1`. Positions double
+  each level and overflow 64 bits on a deep chain, so subtract the level's first position from
+  every position before going down.
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  level, best = [(1, 0)], 0  # (node, position within the level)
+  while level:
+      best = max(best, level[-1][1] - level[0][1] + 1)
+      first = level[0][1]  # renumber from 0 so positions never overflow
+      nxt = []
+      for x, p in level:
+          p -= first
+          if left[x]:
+              nxt.append((left[x], 2 * p))
+          if right[x]:
+              nxt.append((right[x], 2 * p + 1))
+      level = nxt
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <utility>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1);
+      vector<int> left(n + 1), right(n + 1);
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      vector<pair<int, long long>> level = {{1, 0}};  // (node, position within the level)
+      long long best = 0;
+      while (!level.empty()) {
+          best = max(best, level.back().second - level.front().second + 1);
+          long long first = level.front().second;  // renumber from 0 so positions never overflow
+          vector<pair<int, long long>> next;
+          for (auto [x, p] : level) {
+              p -= first;
+              if (left[x]) next.push_back({left[x], 2 * p});
+              if (right[x]) next.push_back({right[x], 2 * p + 1});
+          }
+          level = next;
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] left = new int[n + 1], right = new int[n + 1];
+          for (int i = 1; i <= n; i++) in.nextLong();  // values are not needed here
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          List<long[]> level = new ArrayList<>(List.of(new long[] {1, 0}));  // (node, position)
+          long best = 0;
+          while (!level.isEmpty()) {
+              best = Math.max(best, level.get(level.size() - 1)[1] - level.get(0)[1] + 1);
+              long first = level.get(0)[1];  // renumber from 0 so positions never overflow
+              List<long[]> next = new ArrayList<>();
+              for (long[] e : level) {
+                  int x = (int) e[0];
+                  long p = e[1] - first;
+                  if (left[x] != 0) next.add(new long[] {left[x], 2 * p});
+                  if (right[x] != 0) next.add(new long[] {right[x], 2 * p + 1});
+              }
+              level = next;
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: width 4
+
+  Node 1 has children 2 and 3; node 2 has children 4 and 5; node 3 has only a right child 6.
+  The last level holds positions 0, 1 and 3 (the slot at 2 is empty), so the width is
+  **4**.
+
+  **Wrong first attempt — count the nodes.** The last level has three nodes, but the width
+  counts the empty slot between 5 and 6 as well.
+
+  ### Variants
+
+  1. *Maximum width of binary tree*: the anchor.
+  2. *Check completeness of a binary tree*: in BFS order, no node may appear after a missing
+     child.
+
+  ### Contrast
+
+  **Nodes or positions?** Counting nodes per level ignores gaps. Width questions need the
+  heap-style positions, renumbered per level.
+
+  ### Common mistakes
+
+  - Counting nodes instead of positions.
+  - Letting positions double for 60+ levels and overflow.
+
+  ## Worked walkthrough
+
+  **Problem (count good nodes).** A node is *good* if no node on the path from the root to it
+  has a larger value. Values: root 3 with children 1 and 4; node 1 has a left child 3; node 4
+  has children 1 and 5. How many nodes are good?
+
+  1. *Recognise.* The condition looks at ancestors: pass the largest value seen so far down
+     the tree.
+  2. *Root.* 3 is good (nothing above it); carry 3.
+  3. *Left side.* 1 < 3, not good; its child 3 ≥ 3, good.
+  4. *Right side.* 4 ≥ 3, good; carry 4. Its children 1 (no) and 5 (good).
+  5. *Answer.* 3, 3, 4 and 5: **4** good nodes.
+
+  ### Why this works
+
+  Each pattern maintains one invariant. Returning information works because a subtree's
+  answer depends only on that subtree, so children can be finished first. Passing
+  information down works because a node's condition depends only on the path above it, which
+  the carried value summarises. BFS levels give every node of one depth together, and the
+  parent array turns the tree into a graph so distances can go up. In every case each node is
+  handled a constant number of times: O(n).
+
+  ### Boundary cases and cost
+
+  - One node: it is a path, a view, a leaf and its own LCA.
+  - A chain of n nodes: the depth is n; avoid recursion or raise the limits.
+  - All values negative: the best path is the single largest value.
+  - Cost: O(n) time and O(n) memory for every template here.
+
+  ### Check your understanding
+
+  Root 1 (value −3) with children 2 (value 2) and 3 (value −1); node 2 has a left child 4
+  (value 4). What is the maximum path sum, and what does the "return both sides" version give?
+
+  Try it on paper before reading the reasoning below.
+
+  > The best path is 4 → 2 = 6 (adding −3 only lowers it). The wrong version gets the same 6
+  > here, because no node has two useful children. Bugs like that need a test where a node has
+  > two positive branches and a parent above it, like the anchor.
+key_points:
+- 'Return info: a node returns what its parent can extend and records the full answer in a global.'
+- For path sums, return one branch (val + max(gl, gr)) but record both (val + gl + gr).
+- Process children before parents with reverse BFS order to avoid deep recursion.
+- 'Views and levels: BFS level by level; take the first or last node of each level.'
+- 'Root paths: pass the running sum, maximum or number down; check at leaves.'
+- 'LCA: equalise depths, then lift both until they meet.'
+- 'Distance K and width: add parent edges for BFS; number positions 2p and 2p + 1, renumbered per level.'
+pitfalls:
+- Returning a two-sided path to the parent.
+- Not dropping negative branches, or starting the best at 0.
+- Following only right children for the right view.
+- Treating a node with one child as a leaf.
+- Lifting both nodes before their depths are equal.
+- Searching only downwards for distance K.
+resources:
+- title: Tree
+  url: https://www.techinterviewhandbook.org/algorithms/tree/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 15
+  level: core
+- title: Lowest Common Ancestor
+  url: https://cp-algorithms.com/graph/lca.html
+  kind: article
+  source: CP-Algorithms
+  minutes: 25
+  level: deep
+- title: 'Competitive Programmer''s Handbook, chapter 14: Tree algorithms'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 40
+  level: deep
+quiz:
+- id: return-vs-record
+  kind: mcq
+  prompt: In maximum path sum, what does a node return to its parent?
+  options:
+  - Its value plus the better of its two branches
+  - Its value plus both branches
+  - The best path anywhere in its subtree
+  - Its subtree's size
+  answer: 0
+  explanation: A parent can only extend a path down one side.
+  difficulty: 2
+- id: bent-path
+  kind: mcq
+  prompt: Values 1 2 3 4 5 (1 has children 2, 3; 2 has children 4, 5). Returning both branches gives 15.
+    What is the real maximum path sum?
+  options:
+  - '11'
+  - '15'
+  - '12'
+  - '9'
+  answer: 0
+  explanation: 4 → 2 → 5 or 5 → 2 → 1 → 3.
+  difficulty: 3
+- id: right-view
+  kind: mcq
+  prompt: How do you find the right side view of a tree?
+  options:
+  - Take the last node of every BFS level
+  - Follow right children from the root
+  - Take every right child
+  - Print the leaves from right to left
+  answer: 0
+  explanation: A deeper left subtree is also visible from the right.
+  difficulty: 1
+- id: leaf
+  kind: mcq
+  prompt: In root-to-leaf path sum, which nodes are leaves?
+  options:
+  - Nodes with no children
+  - Nodes with at most one child
+  - Nodes on the last level only
+  - Every node
+  answer: 0
+  explanation: A node with one child does not end a root-to-leaf path.
+  difficulty: 2
+- id: lca-self
+  kind: mcq
+  prompt: Node 2 is an ancestor of node 9. What is LCA(2, 9)?
+  options:
+  - '2'
+  - The parent of 2
+  - The root
+  - '9'
+  answer: 0
+  explanation: A node counts as its own descendant.
+  difficulty: 3
+- id: lca-lift
+  kind: mcq
+  prompt: u has depth 2 and v depth 5. What do you do first?
+  options:
+  - Lift v by 3 levels
+  - Lift both by one level at a time
+  - Lift u by 3 levels
+  - Swap them
+  answer: 0
+  explanation: Equal depths first, then lift both together.
+  difficulty: 3
+- id: distance-up
+  kind: mcq
+  prompt: Why does distance K need parent pointers?
+  options:
+  - Some nodes at distance K are reached by going up through ancestors
+  - To sort the answer
+  - To find the leaves
+  - It does not
+  answer: 0
+  explanation: Child pointers only lead down.
+  difficulty: 4
+- id: width
+  kind: mcq
+  prompt: A level has nodes at positions 0, 1 and 3. What is its width?
+  options:
+  - '4'
+  - '3'
+  - '2'
+  - '1'
+  answer: 0
+  explanation: The empty slot at position 2 counts.
+  difficulty: 4
+- id: good-nodes
+  kind: mcq
+  prompt: Root 3 with children 1 and 4; 1 has child 3; 4 has children 1 and 5. How many good nodes?
+  options:
+  - '4'
+  - '3'
+  - '5'
+  - '6'
+  answer: 0
+  explanation: 3, 3, 4 and 5 have no larger ancestor.
+  difficulty: 5
+problems:
+- balanced-splits
+- nearest-leaf
+practice_links:
+- title: Binary Tree Maximum Path Sum
+  url: https://leetcode.com/problems/binary-tree-maximum-path-sum/
+  platform: LeetCode
+  difficulty: hard
+- title: Balanced Binary Tree
+  url: https://leetcode.com/problems/balanced-binary-tree/
+  platform: LeetCode
+  difficulty: easy
+- title: Binary Tree Right Side View
+  url: https://leetcode.com/problems/binary-tree-right-side-view/
+  platform: LeetCode
+  difficulty: medium
+- title: Vertical Order Traversal of a Binary Tree
+  url: https://leetcode.com/problems/vertical-order-traversal-of-a-binary-tree/
+  platform: LeetCode
+  difficulty: hard
+- title: Path Sum II
+  url: https://leetcode.com/problems/path-sum-ii/
+  platform: LeetCode
+  difficulty: medium
+- title: Count Good Nodes in Binary Tree
+  url: https://leetcode.com/problems/count-good-nodes-in-binary-tree/
+  platform: LeetCode
+  difficulty: medium
+- title: Lowest Common Ancestor of a Binary Tree
+  url: https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/
+  platform: LeetCode
+  difficulty: medium
+- title: All Nodes Distance K in Binary Tree
+  url: https://leetcode.com/problems/all-nodes-distance-k-in-binary-tree/
+  platform: LeetCode
+  difficulty: medium
+- title: Maximum Width of Binary Tree
+  url: https://leetcode.com/problems/maximum-width-of-binary-tree/
+  platform: LeetCode
+  difficulty: medium
+- title: Subordinates
+  url: https://cses.fi/problemset/task/1674
+  platform: CSES
+  difficulty: easy
+provenance:
+  origin: original
+status: live

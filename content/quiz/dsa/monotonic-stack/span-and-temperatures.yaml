@@ -1,0 +1,63 @@
+id: quiz:dsa:monotonic-stack:span-and-temperatures
+family: span-and-temperatures
+concept: dsa:monotonic-stack
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: temperatures
+  band: 2
+  format: trace
+  prompt: Temperatures 30 40 35 50. How many days does the 40 wait for a warmer day?
+  options:
+  - '2'
+  - '1'
+  - '3'
+  - '0'
+  answer: 0
+  misconceptions:
+  - null
+  - mono-neighbour-only
+  - off-by-one-output
+  - mono-max-to-the-right
+  explanation: The 35 is colder; the 50 comes two days later.
+- id: span
+  band: 3
+  format: trace
+  prompt: Prices 100 80 60 70 60 75. What is the stock span of 75 (today plus earlier days at most 75)?
+  options:
+  - '4'
+  - '5'
+  - '1'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - mono-strictness
+  - off-by-one-output
+  - mono-neighbour-only
+  explanation: 75, 60, 70 and 60 are at most 75; the 80 stops it.
+- id: values-or-indexes
+  band: 4
+  format: bug_spot
+  prompt: The temperatures stack stores temperatures, not indexes. What breaks?
+  options:
+  - The waiting distance cannot be computed when a day is popped
+  - Nothing
+  - The order of pops
+  - It becomes O(n²)
+  answer: 0
+  misconceptions:
+  - null
+  - mono-stores-value-not-index
+  - mono-stores-value-not-index
+  - pattern-brute-force-default
+  explanation: The answer is j − i, which needs the positions.
+status: provisional
+provenance:
+  origin: original

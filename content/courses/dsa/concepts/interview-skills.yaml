@@ -1,0 +1,55 @@
+id: interview-skills
+title: Interview execution
+summary: A think-aloud framework from clarifying to testing, clean interview code, and naming the pattern
+  from the statement alone.
+module: design-and-practice
+prerequisites:
+- complexity
+- sliding-window
+- graph-traversal
+- dp-1d
+difficulty: 3
+estimated_minutes: 40
+status: draft
+lesson: '## Umpire walkthrough
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Pattern identification
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

@@ -1,0 +1,164 @@
+id: watchtowers
+title: Watchtowers on the trails
+concepts: [dp-on-trees]
+difficulty: medium
+statement: |
+  A park has `n` clearings numbered 1 to n, joined by trails that form a binary tree rooted at
+  clearing 1. Building a watchtower at clearing i costs `c_i`. Every trail must have a
+  watchtower at **at least one** of its two ends.
+
+  Print the smallest total cost.
+input_format: |
+  The first line contains n. The second line contains c_1 … c_n. Each of the next n lines
+  contains the left and right child of clearing i (0 = none).
+output_format: The smallest total cost.
+constraints:
+  - 1 ≤ n ≤ 10^5
+  - 1 ≤ c_i ≤ 10^9
+  - the input describes a binary tree rooted at clearing 1
+examples:
+  - input: "4\n5 1 1 1\n2 3\n4 0\n0 0\n0 0"
+    output: "2"
+    explanation: "Towers at clearings 2 and 3 cover trails 1–2, 1–3 and 2–4 for 1 + 1. A tower at clearing 1 alone would still leave trail 2–4 uncovered."
+  - input: "1\n7\n0 0"
+    output: "0"
+hints:
+  - "For each clearing, the cheapest answer for its subtree depends on whether it has a tower. Keep both."
+  - "with[x] = c_x + Σ min(with, without) over the children; without[x] = Σ with over the children, because every trail to a child then needs the child's tower."
+  - "Fill children before parents (reverse BFS order) and print min(with[1], without[1])."
+approach: |
+  Two-state tree DP, like rob-or-skip but minimising and with the opposite rule. with[x] is the
+  cheapest cover of x's subtree with a tower at x: each child may or may not have one.
+  without[x] has no tower at x, so each trail to a child forces a tower at the child:
+  without[x] = Σ with[child]. Missing children cost 0. Process nodes in reverse BFS order and
+  print min(with[1], without[1]). O(n) time; totals need 64-bit integers.
+reference: |
+  import sys
+  data = sys.stdin.buffer.read().split()
+  n = int(data[0])
+  cost = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  order = [1]
+  for x in order:
+      if left[x]:
+          order.append(left[x])
+      if right[x]:
+          order.append(right[x])
+  with_t, without = [0] * (n + 1), [0] * (n + 1)
+  for x in reversed(order):
+      l, r = left[x], right[x]
+      a = with_t[l] if with_t[l] < without[l] else without[l]
+      b = with_t[r] if with_t[r] < without[r] else without[r]
+      with_t[x] = cost[x] + a + b
+      without[x] = with_t[l] + with_t[r]
+  print(min(with_t[1], without[1]))
+brute: |
+  from itertools import combinations
+  n = int(input())
+  cost = [0] + list(map(int, input().split()))
+  edges = []
+  for i in range(1, n + 1):
+      for c in map(int, input().split()):
+          if c:
+              edges.append((i, c))
+  best = None
+  for k in range(n + 1):
+      for chosen in combinations(range(1, n + 1), k):
+          s = set(chosen)
+          if all(a in s or b in s for a, b in edges):
+              total = sum(cost[i] for i in chosen)
+              best = total if best is None or total < best else best
+  print(best)
+references:
+  cpp: |
+    #include <algorithm>
+    #include <cstdio>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        if (scanf("%d", &n) != 1) return 0;
+        vector<long long> cost(n + 1, 0), withT(n + 1, 0), without(n + 1, 0);
+        vector<int> left(n + 1), right(n + 1), order = {1};
+        for (int i = 1; i <= n; i++) scanf("%lld", &cost[i]);
+        for (int i = 1; i <= n; i++) scanf("%d %d", &left[i], &right[i]);
+        for (size_t k = 0; k < order.size(); k++)
+            for (int c : {left[order[k]], right[order[k]]}) if (c) order.push_back(c);
+        for (int k = n - 1; k >= 0; k--) {
+            int x = order[k], l = left[x], r = right[x];
+            withT[x] = cost[x] + min(withT[l], without[l]) + min(withT[r], without[r]);
+            without[x] = withT[l] + withT[r];
+        }
+        printf("%lld\n", min(withT[1], without[1]));
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            StreamTokenizer st = new StreamTokenizer(new BufferedReader(new InputStreamReader(System.in)));
+            st.nextToken();
+            int n = (int) st.nval;
+            long[] cost = new long[n + 1], withT = new long[n + 1], without = new long[n + 1];
+            int[] left = new int[n + 1], right = new int[n + 1], order = new int[n];
+            for (int i = 1; i <= n; i++) { st.nextToken(); cost[i] = (long) st.nval; }
+            for (int i = 1; i <= n; i++) {
+                st.nextToken(); left[i] = (int) st.nval;
+                st.nextToken(); right[i] = (int) st.nval;
+            }
+            int size = 1;
+            order[0] = 1;
+            for (int k = 0; k < size; k++)
+                for (int c : new int[] {left[order[k]], right[order[k]]}) if (c != 0) order[size++] = c;
+            for (int k = n - 1; k >= 0; k--) {
+                int x = order[k], l = left[x], r = right[x];
+                withT[x] = cost[x] + Math.min(withT[l], without[l]) + Math.min(withT[r], without[r]);
+                without[x] = withT[l] + withT[r];
+            }
+            System.out.println(Math.min(withT[1], without[1]));
+        }
+    }
+generator: |
+  def tree(rng, n, lo, hi, shape):
+      left, right = [0] * (n + 1), [0] * (n + 1)
+      for node in range(2, n + 1):
+          if shape == "chain":
+              (left if rng.random() < 0.5 else right)[node - 1] = node
+              continue
+          while True:
+              parent = rng.randint(max(1, node - 50), node - 1) if shape == "deep" else rng.randint(1, node - 1)
+              side = left if rng.random() < 0.5 else right
+              if side[parent] == 0:
+                  side[parent] = node
+                  break
+      costs = " ".join(str(rng.randint(lo, hi)) for _ in range(n))
+      return f"{n}\n{costs}\n" + "\n".join(f"{left[i]} {right[i]}" for i in range(1, n + 1))
+
+  def cases(rng):
+      yield "1\n1\n0 0"
+      yield "2\n1000000000 1\n2 0\n0 0"
+      yield tree(rng, 100000, 1, 10**9, "random")
+      yield tree(rng, 100000, 1, 10**9, "chain")
+      yield tree(rng, 100000, 1, 3, "deep")
+      yield tree(rng, 100000, 10**9, 10**9, "random")
+      yield tree(rng, 100000, 1, 10**9, "deep")
+      for _ in range(4):
+          yield tree(rng, rng.randint(1, 60), 1, 20, "random")
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 9)
+          left, right = [0] * (n + 1), [0] * (n + 1)
+          for node in range(2, n + 1):
+              while True:
+                  parent = rng.randint(1, node - 1)
+                  side = left if rng.random() < 0.5 else right
+                  if side[parent] == 0:
+                      side[parent] = node
+                      break
+          costs = " ".join(str(rng.randint(1, 9)) for _ in range(n))
+          yield f"{n}\n{costs}\n" + "\n".join(f"{left[i]} {right[i]}" for i in range(1, n + 1))

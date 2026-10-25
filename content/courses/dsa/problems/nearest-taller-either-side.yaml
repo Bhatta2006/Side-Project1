@@ -1,0 +1,159 @@
+id: nearest-taller-either-side
+title: Nearest taller neighbour
+concepts: [monotonic-stack]
+difficulty: medium
+statement: |
+  `n` buildings stand in a row, numbered 1 to n; building i has height `h_i`. For every
+  building, find the **closest** building that is strictly taller, looking both left and
+  right. If a taller building is equally close on both sides, choose the left one.
+
+  Print, for each building, the number of that taller building, or 0 if there is none.
+input_format: |
+  The first line contains n. The second line contains h_1 … h_n.
+output_format: n numbers separated by spaces.
+constraints:
+  - 1 ≤ n ≤ 10^5
+  - 1 ≤ h_i ≤ 10^9
+examples:
+  - input: "5\n3 1 4 1 5"
+    output: "3 1 5 3 0"
+    explanation: "Building 2 (height 1) has taller buildings at distance 1 on both sides and takes the left one, 1. Building 4 also ties and takes building 3. Building 5 is the tallest."
+  - input: "3\n2 2 2"
+    output: "0 0 0"
+hints:
+  - "Split the question: the nearest taller building to the left, and the nearest taller building to the right. Each one is a classic stack scan."
+  - "Scan left to right keeping a decreasing stack to get the previous taller; scan right to left for the next taller."
+  - "Pop while the top is not taller (<=), so equal heights never answer each other. Then compare the two distances, preferring the left on a tie."
+approach: |
+  Two monotonic-stack passes. Left to right, pop every index whose height is at most h_i; the
+  top that remains (if any) is the nearest strictly taller building on the left. Right to
+  left, the same gives the nearest taller building on the right. For each i, pick the closer
+  of the two, the left one on a tie, or 0 if neither exists. O(n) time and memory.
+reference: |
+  import sys
+  data = sys.stdin.buffer.read().split()
+  n = int(data[0])
+  h = list(map(int, data[1:1 + n]))
+  left, right = [-1] * n, [-1] * n
+  st = []
+  for i in range(n):
+      while st and h[st[-1]] <= h[i]:
+          st.pop()
+      left[i] = st[-1] if st else -1
+      st.append(i)
+  st = []
+  for i in range(n - 1, -1, -1):
+      while st and h[st[-1]] <= h[i]:
+          st.pop()
+      right[i] = st[-1] if st else -1
+      st.append(i)
+  out = []
+  for i in range(n):
+      l, r = left[i], right[i]
+      if l == -1 and r == -1:
+          out.append(0)
+      elif r == -1 or (l != -1 and i - l <= r - i):
+          out.append(l + 1)
+      else:
+          out.append(r + 1)
+  print(" ".join(map(str, out)))
+brute: |
+  n = int(input())
+  h = list(map(int, input().split()))
+  out = []
+  for i in range(n):
+      best = 0
+      for d in range(1, n):
+          if i - d >= 0 and h[i - d] > h[i]:
+              best = i - d + 1
+              break
+          if i + d < n and h[i + d] > h[i]:
+              best = i + d + 1
+              break
+      out.append(best)
+  print(" ".join(map(str, out)))
+references:
+  cpp: |
+    #include <cstdio>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        if (scanf("%d", &n) != 1) return 0;
+        vector<long long> h(n);
+        for (auto& x : h) scanf("%lld", &x);
+        vector<int> left(n, -1), right(n, -1), st;
+        for (int i = 0; i < n; i++) {
+            while (!st.empty() && h[st.back()] <= h[i]) st.pop_back();
+            left[i] = st.empty() ? -1 : st.back();
+            st.push_back(i);
+        }
+        st.clear();
+        for (int i = n - 1; i >= 0; i--) {
+            while (!st.empty() && h[st.back()] <= h[i]) st.pop_back();
+            right[i] = st.empty() ? -1 : st.back();
+            st.push_back(i);
+        }
+        for (int i = 0; i < n; i++) {
+            int l = left[i], r = right[i], ans;
+            if (l == -1 && r == -1) ans = 0;
+            else if (r == -1 || (l != -1 && i - l <= r - i)) ans = l + 1;
+            else ans = r + 1;
+            printf("%d%c", ans, i + 1 < n ? ' ' : '\n');
+        }
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            int n = Integer.parseInt(in.readLine().trim());
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            long[] h = new long[n];
+            for (int i = 0; i < n; i++) h[i] = Long.parseLong(st.nextToken());
+            int[] left = new int[n], right = new int[n], stack = new int[n];
+            int top = 0;
+            for (int i = 0; i < n; i++) {
+                while (top > 0 && h[stack[top - 1]] <= h[i]) top--;
+                left[i] = top > 0 ? stack[top - 1] : -1;
+                stack[top++] = i;
+            }
+            top = 0;
+            for (int i = n - 1; i >= 0; i--) {
+                while (top > 0 && h[stack[top - 1]] <= h[i]) top--;
+                right[i] = top > 0 ? stack[top - 1] : -1;
+                stack[top++] = i;
+            }
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < n; i++) {
+                int l = left[i], r = right[i], ans;
+                if (l == -1 && r == -1) ans = 0;
+                else if (r == -1 || (l != -1 && i - l <= r - i)) ans = l + 1;
+                else ans = r + 1;
+                out.append(ans).append(i + 1 < n ? " " : "\n");
+            }
+            System.out.print(out);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1\n7"
+      yield "2\n5 5"
+      yield "3\n1 2 1"
+      n = 100000
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(i + 1) for i in range(n))
+      yield f"{n}\n" + " ".join(str(n - i) for i in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 3)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(min(i, n - 1 - i) + 1) for i in range(n))
+      for _ in range(4):
+          m = rng.randint(1, 60)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 10)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          m = rng.randint(1, 10)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 5)) for _ in range(m))

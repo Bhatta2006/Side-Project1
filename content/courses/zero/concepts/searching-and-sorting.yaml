@@ -1,0 +1,716 @@
+id: searching-and-sorting
+title: Searching and sorting basics
+summary: Linear and binary search, selection, bubble and insertion sort traced by hand, and sorting by
+  a key with the built-in sort.
+module: functions-module
+prerequisites:
+- lists
+- functions
+difficulty: 3
+estimated_minutes: 60
+lesson: |
+  ## The big idea
+
+  Two questions come up in almost every program that holds a list: **is this value in it?**
+  and **put it in order**. Searching and sorting are where you first see that the same answer
+  can take wildly different amounts of work. A linear search looks at every element; binary
+  search, on a sorted list, halves the list each step. Simple sorts like bubble sort move one
+  value at a time, and the built-in sort does it far faster. You will rarely write a sort by
+  hand in real code, but tracing one is how you learn to reason about loops over lists.
+
+  ## Linear search
+
+  ### Recognition cues
+
+  - Is x in the list, and where is it first?
+  - The list is **not sorted**, or it is short.
+
+  ### Template
+
+  Input: n, then n numbers, then x. Print the index of the first x, or −1.
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  x = int(input())
+  found = -1
+  for i in range(n):
+      if a[i] == x:
+          found = i
+          break  # the first match is enough
+  print(found)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, x;
+      cin >> n;
+      vector<int> a(n);
+      for (auto& v : a) cin >> v;
+      cin >> x;
+      int found = -1;
+      for (int i = 0; i < n; i++)
+          if (a[i] == x) { found = i; break; }  // the first match is enough
+      cout << found << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          int x = in.nextInt(), found = -1;
+          for (int i = 0; i < n; i++)
+              if (a[i] == x) { found = i; break; }  // the first match is enough
+          System.out.println(found);
+      }
+  }
+  ```
+
+  ### Anchor problem: find 2
+
+  `5`, `4 2 7 2 9`, `2` prints **1**: the first 2 is at index 1.
+
+  **Wrong first attempt — decide too early.** Setting `found = -1` in an `else` branch inside
+  the loop overwrites a match whenever a later element differs, so this list ends with −1.
+  "Not found" is only known **after** the whole list has been checked, so it is the starting
+  value, and the loop only ever changes it on a match.
+
+  ### Variants
+
+  1. *Check if N and its double exist*: search for 2 · a[i] for every i.
+  2. *Find target indices after sorting array*: count the smaller values instead of sorting.
+
+  ### Contrast
+
+  **First match or every match?** `break` stops at the first; dropping it and appending each
+  index collects them all.
+
+  ### Common mistakes
+
+  - Deciding "not found" inside the loop.
+  - Forgetting `break`, which returns the last match instead of the first.
+  - Using the value as the index.
+
+  ## Iterative binary search
+
+  ### Recognition cues
+
+  - The list is **sorted**, and you need to find a value or where it would go.
+  - The list is long, so looking at every element is too slow.
+
+  ### Template
+
+  Input: n, then n numbers in increasing order, then x. Print an index of x, or −1.
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))  # sorted in increasing order
+  x = int(input())
+  lo, hi = 0, n - 1
+  found = -1
+  while lo <= hi:  # x, if present, is somewhere in a[lo..hi]
+      mid = (lo + hi) // 2
+      if a[mid] == x:
+          found = mid
+          break
+      elif a[mid] < x:
+          lo = mid + 1  # x can only be to the right of mid
+      else:
+          hi = mid - 1  # x can only be to the left of mid
+  print(found)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, x;
+      cin >> n;
+      vector<int> a(n);  // sorted in increasing order
+      for (auto& v : a) cin >> v;
+      cin >> x;
+      int lo = 0, hi = n - 1, found = -1;
+      while (lo <= hi) {  // x, if present, is somewhere in a[lo..hi]
+          int mid = lo + (hi - lo) / 2;
+          if (a[mid] == x) { found = mid; break; }
+          if (a[mid] < x) lo = mid + 1;  // x can only be to the right of mid
+          else hi = mid - 1;  // x can only be to the left of mid
+      }
+      cout << found << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] a = new int[n];  // sorted in increasing order
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          int x = in.nextInt(), lo = 0, hi = n - 1, found = -1;
+          while (lo <= hi) {  // x, if present, is somewhere in a[lo..hi]
+              int mid = lo + (hi - lo) / 2;
+              if (a[mid] == x) { found = mid; break; }
+              if (a[mid] < x) lo = mid + 1;  // x can only be to the right of mid
+              else hi = mid - 1;  // x can only be to the left of mid
+          }
+          System.out.println(found);
+      }
+  }
+  ```
+
+  ### Anchor problem: find 7
+
+  `6`, `1 3 5 7 9 11`, `7` prints **3**. Three looks: mid = 2 (5 < 7, go right), mid = 4
+  (9 > 7, go left), mid = 3 (found).
+
+  **Wrong first attempt — `lo = mid`.** Without the `+ 1`, when lo and hi are neighbours mid
+  equals lo again and the loop never ends. Since a[mid] has just been checked, it can be left
+  out: `mid + 1` and `mid − 1`. And `while lo < hi` would stop before checking the last
+  remaining element. The DSA course turns this into the lower-bound template.
+
+  ### Variants
+
+  1. *Binary search*: the anchor.
+  2. *Search insert position*: when x is missing, `lo` ends where it belongs.
+  3. *Find first and last position of element in sorted array*: keep searching after a match.
+  4. *Count negative numbers in a sorted matrix*: one search per row.
+
+  ### Contrast
+
+  **Linear or binary?** Linear search works on any list in O(n). Binary search needs the list
+  sorted but takes O(log n): about 20 looks for a million elements. Sorting first costs
+  O(n log n), which pays off when you search many times.
+
+  ### Common mistakes
+
+  - Binary searching an unsorted list.
+  - `lo = mid` or `hi = mid`, which can loop forever here.
+  - `while lo < hi`, which skips the last candidate.
+
+  ## Simple sorts
+
+  ### Recognition cues
+
+  - Put the values in order, and the task asks you to trace or write the sort itself.
+  - Questions like "what does the list look like after two passes?" or "how many swaps?".
+
+  ### Template
+
+  Bubble sort. Input: n, then n numbers. Print them in increasing order.
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  for p in range(n - 1):  # after pass p, the last p + 1 values are in place
+      swapped = False
+      for j in range(n - 1 - p):
+          if a[j] > a[j + 1]:  # neighbours out of order: swap them
+              a[j], a[j + 1] = a[j + 1], a[j]
+              swapped = True
+      if not swapped:
+          break  # a pass with no swaps means the list is sorted
+  print(" ".join(map(str, a)))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> a(n);
+      for (auto& v : a) cin >> v;
+      for (int p = 0; p < n - 1; p++) {  // after pass p, the last p + 1 values are in place
+          bool swapped = false;
+          for (int j = 0; j < n - 1 - p; j++)
+              if (a[j] > a[j + 1]) {  // neighbours out of order: swap them
+                  swap(a[j], a[j + 1]);
+                  swapped = true;
+              }
+          if (!swapped) break;  // a pass with no swaps means the list is sorted
+      }
+      for (int i = 0; i < n; i++) cout << a[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          for (int p = 0; p < n - 1; p++) {  // after pass p, the last p + 1 values are in place
+              boolean swapped = false;
+              for (int j = 0; j < n - 1 - p; j++)
+                  if (a[j] > a[j + 1]) {  // neighbours out of order: swap them
+                      int t = a[j]; a[j] = a[j + 1]; a[j + 1] = t;
+                      swapped = true;
+                  }
+              if (!swapped) break;  // a pass with no swaps means the list is sorted
+          }
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) out.append(a[i]).append(i + 1 < n ? " " : "\n");
+          System.out.print(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: 5 1 4 2 8
+
+  ```text
+  5
+  5 1 4 2 8
+  ```
+
+  The sorted order is **1 2 4 5 8**.
+
+  **Step 1 — the first idea: pick the smallest, again and again.** Find the smallest value
+  left, move it to a new list, repeat:
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  result = []
+  while a:
+      smallest = min(a)  # scan everything that is left
+      a.remove(smallest)
+      result.append(smallest)
+  print(" ".join(map(str, result)))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> a(n), result;
+      for (auto& v : a) cin >> v;
+      while (!a.empty()) {
+          auto smallest = min_element(a.begin(), a.end());  // scan everything that is left
+          result.push_back(*smallest);
+          a.erase(smallest);
+      }
+      for (int i = 0; i < n; i++) cout << result[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          List<Integer> a = new ArrayList<>(), result = new ArrayList<>();
+          for (int i = 0; i < n; i++) a.add(in.nextInt());
+          while (!a.isEmpty()) {
+              Integer smallest = Collections.min(a);  // scan everything that is left
+              a.remove(smallest);  // removes the value, not the index
+              result.add(smallest);
+          }
+          StringJoiner out = new StringJoiner(" ");
+          for (int v : result) out.add(String.valueOf(v));
+          System.out.println(out);
+      }
+  }
+  ```
+
+  It prints 1 2 4 5 8. This is **selection sort** with a second list: n scans of up to n
+  elements, O(n²). Done inside one list, by swapping the smallest into place, it needs no
+  extra list.
+
+  **Step 2 — wrong first attempt: one pass of swaps.** Swap every pair of neighbours that is
+  out of order, once from left to right:
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  for j in range(n - 1):  # a single pass
+      if a[j] > a[j + 1]:
+          a[j], a[j + 1] = a[j + 1], a[j]
+  print(" ".join(map(str, a)))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> a(n);
+      for (auto& v : a) cin >> v;
+      for (int j = 0; j < n - 1; j++)  // a single pass
+          if (a[j] > a[j + 1]) swap(a[j], a[j + 1]);
+      for (int i = 0; i < n; i++) cout << a[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          for (int j = 0; j < n - 1; j++)  // a single pass
+              if (a[j] > a[j + 1]) { int t = a[j]; a[j] = a[j + 1]; a[j + 1] = t; }
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) out.append(a[i]).append(i + 1 < n ? " " : "\n");
+          System.out.print(out);
+      }
+  }
+  ```
+
+  It prints **1 4 2 5 8**. One pass carries the largest value, 8, to the end (here it was
+  already there, and 5 moved up next to it), but a small value only moves **one step left**
+  per pass: the 2 needs another pass to get past the 4.
+
+  **Step 3 — repeat the pass.** The template repeats it until a pass makes no swaps. Dry run:
+
+  | pass | comparisons and swaps | list after the pass |
+  |---|---|---|
+  | 1 | 5 > 1 swap, 5 > 4 swap, 5 > 2 swap, 5 < 8 | 1 4 2 5 8 |
+  | 2 | 1 < 4, 4 > 2 swap, 4 < 5 | 1 2 4 5 8 |
+  | 3 | 1 < 2, 2 < 4 (no swaps) | stop: sorted |
+
+  After pass p the largest p values are in their final places, so each pass can stop one
+  element earlier. In the worst case (a reversed list) that is n − 1 passes: O(n²).
+  **Insertion sort** grows a sorted front instead, sliding each new value left until it fits;
+  it is fast on lists that are almost sorted. Real code uses the built-in sort, O(n log n).
+
+  ### Variants
+
+  1. *Sort an array*: any correct sort; the simple sorts pass small tests only.
+  2. *Height checker*: sort a copy and compare.
+  3. *Gravity flip* (Codeforces 405A): sorting is the whole answer.
+  4. *Helpful maths* (Codeforces 339A): split, sort, join.
+  5. *Sort colors*: three values, sorted by counting.
+  6. *Sort the array* (Codeforces 451B): is one reversal enough to sort?
+
+  ### Contrast
+
+  **Bubble, selection or insertion?** All three are O(n²). Bubble sort swaps neighbours,
+  selection sort picks the smallest remaining value, and insertion sort slides each value into
+  a sorted front. Trace questions depend on which one is running.
+
+  ### Common mistakes
+
+  - Running one pass and expecting a sorted list.
+  - Copying `a[j] = a[j + 1]` instead of swapping.
+  - The inner loop running one step too far (an index error) or too short (the last pair is
+    never compared).
+  - `>` versus `<` deciding increasing or decreasing order.
+
+  ## Key sort
+
+  ### Recognition cues
+
+  - Sort by something other than the plain values: length, a score, the second field.
+  - Ties need a rule: "by length, then alphabetically".
+
+  ### Template
+
+  Input: n, then n words. Print them by length, ties in alphabetical order.
+
+  ```python
+  n = int(input())
+  words = input().split()
+  words.sort(key=lambda w: (len(w), w))  # first by length, then alphabetically
+  print(" ".join(words))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<string> words(n);
+      for (auto& w : words) cin >> w;
+      sort(words.begin(), words.end(), [](const string& x, const string& y) {
+          if (x.size() != y.size()) return x.size() < y.size();  // first by length
+          return x < y;  // then alphabetically
+      });
+      for (int i = 0; i < n; i++) cout << words[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          List<String> words = new ArrayList<>();
+          for (int i = 0; i < n; i++) words.add(in.next());
+          words.sort(Comparator.comparingInt(String::length)  // first by length
+                  .thenComparing(Comparator.naturalOrder()));  // then alphabetically
+          System.out.println(String.join(" ", words));
+      }
+  }
+  ```
+
+  ### Anchor problem: five fruits
+
+  `5` then `pear fig apple kiwi date` prints **fig date kiwi pear apple**.
+
+  **Wrong first attempt — the length only.** With `key=len`, Python keeps the three
+  four-letter words in their input order (pear kiwi date), because its sort is **stable**. In
+  C++, `std::sort` is not stable, so the order of ties is not even predictable. When the
+  problem defines a tie rule, put it in the key.
+
+  ### Variants
+
+  1. *Sort the people*: sort names by height, tallest first.
+  2. *Sort integers by the number of 1 bits*: key (bit count, value).
+  3. *Sort array by increasing frequency*: key (count, −value).
+  4. *Relative sort array*: key = position in a second list.
+
+  ### Contrast
+
+  **Key or comparator?** A key function maps each item to something that sorts naturally,
+  such as a tuple; a comparator compares two items directly. Keys are shorter in Python and
+  Java; C++ uses a comparator that must answer "is x strictly before y?".
+
+  ### Common mistakes
+
+  - Forgetting the tie rule.
+  - A C++ comparator that returns true for equal items (`<=`), which breaks `std::sort`.
+  - Sorting descending with `-len(w)` but also reversing the alphabetical part by accident.
+
+  ## Worked walkthrough
+
+  **Problem.** Height checker: students stand in a line with heights `1 1 4 2 1 3`. How many
+  are not where they would be if the line were sorted by height?
+
+  1. *Sort a copy.* `1 1 1 2 3 4`. Keep the original for comparing.
+  2. *Compare position by position.* Index 2 (4 vs 1), index 4 (1 vs 3) and index 5 (3 vs 4)
+     differ.
+  3. *Answer.* 3 students.
+  4. *Cost.* The built-in sort, O(n log n), plus one pass.
+
+  ### Why this works
+
+  A bubble sort pass compares every neighbouring pair of the unsorted part from left to
+  right, so the largest unsorted value is swapped along until it reaches the end of that part
+  and never moves again. After n − 1 passes, every value but the smallest is in its final
+  place, so the list is sorted. A pass with no swaps means every neighbouring pair is in
+  order, which already means the whole list is sorted, so stopping early is safe. Binary
+  search works because, in a sorted list, comparing x with a[mid] rules out a whole half.
+
+  ### Things to watch for
+
+  - Binary search only on sorted lists; sort first if needed.
+  - `lo = mid + 1` and `hi = mid − 1`, never just `mid`, in this form of binary search.
+  - Swaps need both values; copying one over the other loses data.
+  - Give every key sort a full tie rule.
+
+  ### Check your understanding
+
+  After **two** passes of bubble sort, what does `4 3 2 1` look like?
+
+  Try it on paper before reading the reasoning below.
+
+  > Pass 1: 3 4 2 1 → 3 2 4 1 → 3 2 1 4. Pass 2: 2 3 1 4 → 2 1 3 4 (the 4 is already in place,
+  > so the pass stops before it). The list is 2 1 3 4.
+key_points:
+- Linear search checks every element; "not found" is only known after the loop.
+- Binary search needs a sorted list and halves the candidates each step, O(log n).
+- Move lo to mid + 1 and hi to mid − 1, and loop while lo ≤ hi.
+- One bubble pass carries the largest unsorted value to the end; repeat until no swaps.
+- Selection picks the smallest remaining value; insertion slides values into a sorted front.
+- Simple sorts are O(n²); the built-in sort is O(n log n).
+- Sort by a key, and include the tie rule in it.
+pitfalls:
+- Deciding "not found" inside the loop.
+- Binary searching an unsorted list, or using lo = mid.
+- Expecting one pass of swaps to sort the list.
+- Copying instead of swapping.
+- Leaving ties to chance in a key sort.
+resources:
+- title: Sorting visualized
+  url: https://visualgo.net/en/sorting
+  kind: visualizer
+  source: VisuAlgo
+  minutes: 20
+  level: core
+- title: Python Tutor – step through arithmetic
+  url: https://pythontutor.com/
+  kind: visualizer
+  source: Python Tutor
+  minutes: 10
+  level: intro
+- title: "Tech Interview Handbook: Sorting and searching"
+  url: https://www.techinterviewhandbook.org/algorithms/sorting-searching/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 10
+  level: deep
+quiz:
+- id: lin-not-found
+  kind: mcq
+  prompt: When do you know that x is not in an unsorted list?
+  options:
+  - Only after checking every element
+  - As soon as one element differs
+  - After checking the first element
+  - When the list has odd length
+  answer: 0
+  explanation: Any later element could be x.
+  difficulty: 1
+- id: lin-first
+  kind: mcq
+  prompt: 4 2 7 2 9 and x = 2. What index does the linear search with break print?
+  options:
+  - '1'
+  - '3'
+  - '2'
+  - '-1'
+  answer: 0
+  explanation: The first 2 is at index 1.
+  difficulty: 1
+- id: bin-needs-sorted
+  kind: mcq
+  prompt: Which list can binary search be used on?
+  options:
+  - 1 3 5 7 9
+  - 5 1 4 2 8
+  - 9 3 7 1
+  - Any list
+  answer: 0
+  explanation: It needs the values in order.
+  difficulty: 2
+- id: bin-looks
+  kind: mcq
+  prompt: 1 3 5 7 9 11 and x = 7. Which indexes does binary search look at?
+  options:
+  - 2, 4, then 3
+  - 0, 1, 2, 3
+  - 3 only
+  - 5, 4, 3
+  answer: 0
+  explanation: mid = 2 (5 < 7), mid = 4 (9 > 7), mid = 3.
+  difficulty: 2
+- id: bin-lo-mid
+  kind: mcq
+  prompt: The search moves lo = mid instead of lo = mid + 1. What can happen?
+  options:
+  - With lo and hi next to each other, mid stays the same and the loop never ends
+  - It gets faster
+  - It finds the last copy of x
+  - Nothing changes
+  answer: 0
+  explanation: a[mid] was already checked, so skip it.
+  difficulty: 3
+- id: one-pass
+  kind: mcq
+  prompt: After one bubble pass over 5 1 4 2 8, what is the list?
+  options:
+  - 1 4 2 5 8
+  - 1 2 4 5 8
+  - 1 5 4 2 8
+  - 5 4 2 1 8
+  answer: 0
+  explanation: Each out-of-order neighbour pair is swapped once.
+  difficulty: 3
+- id: two-passes
+  kind: mcq
+  prompt: After two bubble passes, what is 4 3 2 1?
+  options:
+  - 2 1 3 4
+  - 1 2 3 4
+  - 3 2 1 4
+  - 3 4 2 1
+  answer: 0
+  explanation: Each pass puts the next-largest value in place.
+  difficulty: 4
+- id: sort-cost
+  kind: mcq
+  prompt: About how many comparisons does bubble sort make on a reversed list of 1000 values?
+  options:
+  - About 500 000
+  - About 1000
+  - About 10 000
+  - About 20
+  answer: 0
+  explanation: (n − 1) + (n − 2) + … + 1 ≈ n² / 2.
+  difficulty: 4
+- id: key-tie
+  kind: mcq
+  prompt: Sorting pear fig apple kiwi date by length, then alphabetically. What comes second?
+  options:
+  - date
+  - pear
+  - kiwi
+  - apple
+  answer: 0
+  explanation: fig, then the four-letter words date, kiwi, pear.
+  difficulty: 5
+problems:
+- exam-ranking
+- swap-count
+practice_links:
+- title: Binary Search
+  url: https://leetcode.com/problems/binary-search/
+  platform: LeetCode
+  difficulty: easy
+- title: Search Insert Position
+  url: https://leetcode.com/problems/search-insert-position/
+  platform: LeetCode
+  difficulty: easy
+- title: Height Checker
+  url: https://leetcode.com/problems/height-checker/
+  platform: LeetCode
+  difficulty: easy
+- title: Gravity Flip
+  url: https://codeforces.com/problemset/problem/405/A
+  platform: Codeforces
+  difficulty: easy
+- title: Helpful Maths
+  url: https://codeforces.com/problemset/problem/339/A
+  platform: Codeforces
+  difficulty: easy
+- title: Sort the People
+  url: https://leetcode.com/problems/sort-the-people/
+  platform: LeetCode
+  difficulty: easy
+- title: Sort Integers by The Number of 1 Bits
+  url: https://leetcode.com/problems/sort-integers-by-the-number-of-1-bits/
+  platform: LeetCode
+  difficulty: easy
+provenance:
+  origin: original
+status: live

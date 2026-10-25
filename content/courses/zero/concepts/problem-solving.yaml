@@ -78,7 +78,7 @@ lesson: |
 
   Use a chain of decisions: clarify the contract, produce examples, choose state, describe how state changes, prove that change preserves meaning, then implement. A trace connects the informal idea to actual code and makes hidden assumptions visible.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   List empty, smallest, largest, duplicate-heavy and negative cases when they belong to the contract. If no valid answer exists, agree on a sentinel or error rather than improvising one midway through implementation.
 

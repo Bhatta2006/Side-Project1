@@ -1,0 +1,87 @@
+id: square-tiles
+title: Tiling the floor
+concepts: [math-on-numbers]
+difficulty: easy
+statement: |
+  A floor is `w` by `h` centimetres. It must be covered exactly with square tiles, all the
+  same size, with a whole number of centimetres per side and no cutting.
+
+  Print the side of the **largest** tile that works, then how many of those tiles are needed.
+input_format: The only line contains w and h.
+output_format: The tile side and the number of tiles, separated by a space.
+constraints:
+  - 1 ≤ w, h ≤ 10^9
+examples:
+  - input: "12 18"
+    output: "6 6"
+    explanation: "Tiles of side 6 fit 2 across and 3 down: 6 tiles. A side of 9 does not fit across 12."
+  - input: "7 5"
+    output: "1 35"
+hints:
+  - "A tile side must divide both w and h. The largest such number is their greatest common divisor."
+  - "Use Euclid: replace (x, y) by (y, x % y) until y is 0."
+  - "The count is (w / g) · (h / g), which can reach 10^18: use 64-bit integers."
+approach: |
+  The tile side s must divide w and h, so the largest one is g = gcd(w, h), computed with
+  Euclid's algorithm in O(log min(w, h)) steps. Then w / g tiles fit across and h / g down,
+  for (w / g) · (h / g) tiles. The product is at most 10^18, which fits in a signed 64-bit
+  integer.
+reference: |
+  w, h = map(int, input().split())
+  x, y = w, h
+  while y:
+      x, y = y, x % y
+  print(x, (w // x) * (h // x))
+brute: |
+  w, h = map(int, input().split())
+  side = max(s for s in range(1, min(w, h) + 1) if w % s == 0 and h % s == 0)
+  print(side, (w // side) * (h // side))
+references:
+  cpp: |
+    #include <iostream>
+    using namespace std;
+
+    int main() {
+        long long w, h;
+        cin >> w >> h;
+        long long x = w, y = h;
+        while (y != 0) {
+            long long r = x % y;
+            x = y;
+            y = r;
+        }
+        cout << x << " " << (w / x) * (h / x) << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            long w = in.nextLong(), h = in.nextLong(), x = w, y = h;
+            while (y != 0) {
+                long r = x % y;
+                x = y;
+                y = r;
+            }
+            System.out.println(x + " " + (w / x) * (h / x));
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1"
+      yield "1000000000 1"
+      yield "1000000000 1000000000"
+      yield "999999937 999999929"
+      yield "1000000000 999999999"
+      yield "832040 514229"
+      yield "701408733 433494437"
+      for _ in range(4):
+          g = rng.randint(1, 1000)
+          yield f"{g * rng.randint(1, 10**6)} {g * rng.randint(1, 10**6)}"
+      for _ in range(3):
+          yield f"{rng.randint(1, 10**9)} {rng.randint(1, 10**9)}"
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          yield f"{rng.randint(1, 60)} {rng.randint(1, 60)}"

@@ -1,0 +1,134 @@
+id: warehouse-trading
+title: Warehouse trading
+concepts: [dp-stocks]
+difficulty: medium
+statement: |
+  A trader watches the price of one kind of crate for `n` days; on day i a crate costs `p_i`.
+  Each day the trader may do **one** of: buy one crate, sell one crate, or do nothing. The
+  warehouse holds at most `H` crates, and it starts and must end empty.
+
+  Print the largest total profit.
+input_format: |
+  The first line contains n and H. The second line contains p_1 … p_n.
+output_format: The largest profit.
+constraints:
+  - 1 ≤ n ≤ 50000
+  - 1 ≤ H ≤ 10
+  - 1 ≤ p_i ≤ 10^6
+examples:
+  - input: "4 2\n1 1 5 5"
+    output: "8"
+    explanation: "Buy on days 1 and 2, sell on days 3 and 4: (5 − 1) + (5 − 1) = 8. With H = 1 only one crate fits, so the answer would be 4."
+  - input: "3 3\n5 4 3"
+    output: "0"
+hints:
+  - "This is the stock state machine, but the state is no longer 'holding or not'. What must the state remember instead?"
+  - "Let best[h] be the most money at the end of a day while holding h crates, h = 0..H. Holding is impossible at the start except h = 0."
+  - "Each day: new[h] = max(best[h], best[h − 1] − p, best[h + 1] + p). The answer is best[0] after the last day."
+approach: |
+  A state machine over the number of crates held. best[h] is the most money at the end of the
+  day with h crates; initially best[0] = 0 and the rest are −∞. Each day, staying, buying one
+  (from h − 1) or selling one (from h + 1) gives the new value of every h, computed from
+  yesterday's values. The answer is best[0] at the end. O(n·H) time, O(H) memory; profits
+  need 64-bit integers.
+reference: |
+  n, H = map(int, input().split())
+  p = list(map(int, input().split()))
+  NEG = -10**18
+  best = [0] + [NEG] * H
+  for price in p:
+      new = best[:]
+      for h in range(H + 1):
+          if h > 0 and best[h - 1] - price > new[h]:
+              new[h] = best[h - 1] - price
+          if h < H and best[h + 1] + price > new[h]:
+              new[h] = best[h + 1] + price
+      best = new
+  print(best[0])
+brute: |
+  from functools import lru_cache
+  n, H = map(int, input().split())
+  p = list(map(int, input().split()))
+
+  @lru_cache(maxsize=None)
+  def go(day, held):
+      if day == n:
+          return 0 if held == 0 else -10**18
+      result = go(day + 1, held)
+      if held < H:
+          result = max(result, -p[day] + go(day + 1, held + 1))
+      if held > 0:
+          result = max(result, p[day] + go(day + 1, held - 1))
+      return result
+
+  print(go(0, 0))
+references:
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, H;
+        cin >> n >> H;
+        const long long NEG = -1e18;
+        vector<long long> best(H + 1, NEG), next;
+        best[0] = 0;
+        for (int d = 0; d < n; d++) {
+            long long price;
+            cin >> price;
+            next = best;
+            for (int h = 0; h <= H; h++) {
+                if (h > 0 && best[h - 1] > NEG) next[h] = max(next[h], best[h - 1] - price);
+                if (h < H && best[h + 1] > NEG) next[h] = max(next[h], best[h + 1] + price);
+            }
+            best = next;
+        }
+        cout << best[0] << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            int n = Integer.parseInt(st.nextToken()), H = Integer.parseInt(st.nextToken());
+            final long NEG = (long) -1e18;
+            long[] best = new long[H + 1];
+            Arrays.fill(best, NEG);
+            best[0] = 0;
+            st = new StringTokenizer(in.readLine());
+            for (int d = 0; d < n; d++) {
+                long price = Long.parseLong(st.nextToken());
+                long[] next = best.clone();
+                for (int h = 0; h <= H; h++) {
+                    if (h > 0 && best[h - 1] > NEG) next[h] = Math.max(next[h], best[h - 1] - price);
+                    if (h < H && best[h + 1] > NEG) next[h] = Math.max(next[h], best[h + 1] + price);
+                }
+                best = next;
+            }
+            System.out.println(best[0]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1\n5"
+      yield "2 1\n1 1000000"
+      yield "2 10\n1000000 1"
+      n = 50000
+      yield f"{n} 10\n" + " ".join(str(rng.randint(1, 10**6)) for _ in range(n))
+      yield f"{n} 1\n" + " ".join(str(rng.randint(1, 10**6)) for _ in range(n))
+      yield f"{n} 10\n" + " ".join(str(1 if i % 20 < 10 else 10**6) for i in range(n))
+      yield f"{n} 5\n" + " ".join(str(n - i) for i in range(n))
+      yield f"{n} 7\n" + " ".join(str(rng.randint(1, 5)) for _ in range(n))
+      for _ in range(4):
+          m = rng.randint(1, 60)
+          yield f"{m} {rng.randint(1, 4)}\n" + " ".join(str(rng.randint(1, 20)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          m = rng.randint(1, 9)
+          yield f"{m} {rng.randint(1, 3)}\n" + " ".join(str(rng.randint(1, 9)) for _ in range(m))

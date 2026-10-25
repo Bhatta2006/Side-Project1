@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, explain, stream } from '@/lib/api';
 import type { ChatMessage, Proposal, ProposalsView } from '@/lib/types';
 import { ProposalList } from '@/components/socrat/proposals';
@@ -48,6 +48,8 @@ export default function Assistant({ scope, title, language, context, onSent, ope
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmReveal, setConfirmReveal] = useState(false);
+  // Whether the server would show the full solution now, and what is left if not.
+  const [reveal, setReveal] = useState<{ ok: boolean; needs: string } | null>(null);
   const [activity, setActivity] = useState<string[]>([]);
   // Plan changes Soc proposed in chat; they apply only when the learner accepts them here.
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -72,13 +74,22 @@ export default function Assistant({ scope, title, language, context, onSent, ope
 
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
   useEffect(() => { setLoaded(false); setMessages([]); setLadder({}); }, [scope]);
-  useEffect(() => {
-    if (!open || loaded) return;
+  const refreshReveal = useCallback(() => {
+    if (!problem) return;
     api
-      .get<{ messages: ChatMessage[]; ladder: Ladder }>(`/assistant/thread?scope=${encodeURIComponent(scope)}`)
-      .then(t => { setMessages(t.messages); setLadder(t.ladder ?? {}); setLoaded(true); })
+      .get<{ reveal: { ok: boolean; needs: string } | null }>(`/assistant/thread?scope=${encodeURIComponent(scope)}`)
+      .then(t => setReveal(t.reveal))
+      .catch(() => undefined);
+  }, [problem, scope]);
+  useEffect(() => {
+    if (!open) return;
+    // Submits made on the page since the panel last opened can unlock the solution.
+    if (loaded) { refreshReveal(); return; }
+    api
+      .get<{ messages: ChatMessage[]; ladder: Ladder; reveal: { ok: boolean; needs: string } | null }>(`/assistant/thread?scope=${encodeURIComponent(scope)}`)
+      .then(t => { setMessages(t.messages); setLadder(t.ladder ?? {}); setReveal(t.reveal); setLoaded(true); })
       .catch(e => setError(explain(e)));
-  }, [open, loaded, scope]);
+  }, [open, loaded, scope, refreshReveal]);
   useEffect(() => {
     if (!open || problem) return;
     loadProposals();
@@ -137,6 +148,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
         }
       }
       if (proposed) loadProposals();
+      refreshReveal();
       onSent?.();
     } catch (e) {
       setMessages(m => m.slice(0, -2));
@@ -167,7 +179,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           data-tour="tutor"
           className="group/soc flex h-14 items-center gap-3 rounded-full bg-card p-1 shadow-floating ring-1 ring-border transition-transform duration-200 ease-[var(--ease-soft)] active:scale-[0.98] lg:pr-5"
         >
-          <Soc size={48} />
+          <Soc size={48} mood="wink" />
           <span className="hidden text-[15px] font-semibold lg:inline">Ask Soc</span>
         </button>
       </div>
@@ -188,9 +200,9 @@ export default function Assistant({ scope, title, language, context, onSent, ope
     >
       <header className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Soc size={40} />
+          <Soc size={44} mood={busy ? 'thinking' : 'neutral'} />
           <div className="min-w-0">
-            <h2 className="font-display text-lg font-bold tracking-[-0.02em]">{title}</h2>
+            <h2 className="font-display text-lg font-semibold tracking-[-0.02em]">{title}</h2>
             {problem ? (
               <div className="mt-1 flex items-center gap-2">
                 <div className="flex gap-0.5" aria-hidden="true">
@@ -203,9 +215,14 @@ export default function Assistant({ scope, title, language, context, onSent, ope
         </div>
         <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close tutor"><X /></Button>
       </header>
-      <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
+      {/* The conversation is written on a ruled page with a red margin. */}
+      <div ref={scroller} className="chat-page flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
         {!messages.length ? (
           <div className="text-[15px] text-muted-foreground">
+            <div className="mb-3 flex items-end gap-3">
+              <Soc size={84} mood="curious" />
+              <p className="font-hand pb-2 text-[22px] leading-tight text-pen">{problem ? 'show me what you tried.' : 'hi! ask me anything.'}</p>
+            </div>
             {problem
               ? 'Tell me what you tried and where it breaks. Hints get more specific as you keep working. Run your code or explain your thinking to unlock the next level.'
               : scope === 'general'
@@ -228,7 +245,9 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           m.role === 'user' ? (
             <div key={i} className="chat-bubble-user">{m.content}</div>
           ) : (
-            <div key={i} className="chat-bubble-assistant">
+            <div key={i} className="flex items-end gap-2">
+            <Soc size={28} mood={busy && i === messages.length - 1 ? 'thinking' : m.rating === 1 ? 'happy' : 'neutral'} className="mb-1" />
+            <div className="chat-bubble-assistant min-w-0 flex-1">
               {busy && i === messages.length - 1 && activity.length ? (
                 <ul className="mb-2 grid gap-1 text-xs text-muted-foreground" aria-label="What the tutor is checking">
                   {activity.map((a, j) => (
@@ -269,6 +288,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
                 </span>
               )}
             </div>
+            </div>
           ),
         )}
         {proposals.length && !busy ? (
@@ -287,12 +307,14 @@ export default function Assistant({ scope, title, language, context, onSent, ope
               <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => send('reveal_confirmed', '')}>Yes, show it</Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmReveal(false)}>Keep trying</Button>
             </span>
+          ) : reveal && !reveal.ok && !ladder.revealed ? (
+            <span className="text-xs text-muted-foreground">Full solution unlocks after you {reveal.needs}.</span>
           ) : level >= 3 ? ( // the walkthrough is offered only once real help has been given
             <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => setConfirmReveal(true)}>Show solution</Button>
           ) : null}
         </div>
       ) : null}
-      <form className="flex items-end gap-2 p-3" onSubmit={e => { e.preventDefault(); send('chat'); }}>
+      <form className="flex items-end gap-2 border-t p-3" onSubmit={e => { e.preventDefault(); send('chat'); }}>
         <label className="sr-only" htmlFor={`assistant-${scope}`}>Message</label>
         <Textarea
           id={`assistant-${scope}`}

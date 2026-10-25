@@ -20,6 +20,13 @@ REVEAL_MIN_FAILED_SUBMITS = 2
 REVEAL_MIN_TURNS_AT_FOUR = 3
 _CODE_FENCE = re.compile(r"```([a-zA-Z+#]*)\n(.*?)```", re.S)
 _CODE_LANGS = {"python", "py", "cpp", "c++", "java", "c", "javascript", "js"}
+# Asking for the answer, or saying you're lost, is not work (X1): it must not raise the level.
+_PRESSURE = re.compile(
+    r"\b(give|send|show|tell|write)\s+(me\s+)?(the\s+)?(full\s+|whole\s+|complete\s+)?"
+    r"(code|answer|solution)\b|\bjust\s+(give|tell|show)\b|\b(full|whole|complete)\s+(code|solution)\b"
+    r"|\bdon'?t\s+(know|get|understand)\b|\bno\s+idea\b",
+    re.I,
+)
 
 
 @dataclass(frozen=True)
@@ -43,6 +50,8 @@ def genuine(message: str, new_attempt: bool) -> bool:
     text = message.strip()
     if "\n" in text and any(ch in text for ch in "=();{}[]:"):
         return True
+    if _PRESSURE.search(text):
+        return False
     return len(re.findall(r"[A-Za-z0-9]+", text)) >= 6
 
 
@@ -65,7 +74,8 @@ def reveal_eligibility(ladder: Ladder, failed_submits: int) -> tuple[bool, str]:
         return True, "struggled_after_hints"
     needed = []
     if failed_submits < REVEAL_MIN_FAILED_SUBMITS:
-        needed.append(f"submit {REVEAL_MIN_FAILED_SUBMITS - failed_submits} more attempt(s)")
+        left = REVEAL_MIN_FAILED_SUBMITS - failed_submits
+        needed.append(f"submit {left} more attempt{'' if left == 1 else 's'}")
     if ladder.ceiling < 4:
         needed.append("work through a few more hints with Socrat")
     return False, " or ".join(needed)

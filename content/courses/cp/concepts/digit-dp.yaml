@@ -1,0 +1,30 @@
+id: digit-dp
+title: Digit DP
+summary: Count numbers in [L, R] with a digit property using the state position, tight, started and extra.
+module: dp-module
+prerequisites:
+- dp-classics
+difficulty: 5
+estimated_minutes: 55
+status: draft
+lesson: '## Digit state
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

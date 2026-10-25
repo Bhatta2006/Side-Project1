@@ -310,6 +310,12 @@ STARTERS = {
     "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    // Your solution here\n    return 0;\n}\n",
     "java": "import java.io.*;\nimport java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) throws IOException {\n        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));\n        // Your solution here\n    }\n}\n",
 }
+# Programming from Zero uses only what its first lessons teach: line-by-line input and print (Z-1).
+ZERO_STARTERS = {
+    "python": "# Read each input line with input().\n# Show your answer with print().\n",
+    "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read input with cin >> (or getline(cin, line) for a whole line).\n    // Show your answer with cout.\n    return 0;\n}\n",
+    "java": "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner in = new Scanner(System.in);\n        // Read input with in.nextLine() or in.nextInt().\n        // Show your answer with System.out.println.\n    }\n}\n",
+}
 
 
 def problem_view(
@@ -340,7 +346,8 @@ def problem_view(
         constraints=problem.constraints,
         examples=[e.model_dump() for e in problem.examples],
         language=language,
-        starter=problem.starter.get(language) or STARTERS[language],  # type: ignore[call-overload]
+        starter=problem.starter.get(language)  # type: ignore[call-overload]
+        or (ZERO_STARTERS if course_id == "zero" else STARTERS)[language],
         draft=draft.source if draft else None,
         solved=problem_id in solved_problems(db, user.id),
         locked=lock_info(db, catalog, enrollment, concept),

@@ -1,0 +1,63 @@
+id: quiz:dsa:hashing:group-by-key
+family: group-by-key
+concept: dsa:hashing
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: collision
+  band: 2
+  format: mcq
+  prompt: Grouping anagrams by the sum of the letter codes. Which pair is wrongly grouped together?
+  options:
+  - '"ad" and "bc"'
+  - '"ab" and "ba"'
+  - '"abc" and "cab"'
+  - '"a" and "a"'
+  answer: 0
+  misconceptions:
+  - null
+  - hash-key-collision
+  - hash-key-collision
+  - double-count
+  explanation: Both sum to 197 but are not anagrams.
+- id: pattern-key
+  band: 3
+  format: trace
+  prompt: Key each word by the index where each letter first appears. What is the key of "paper"?
+  options:
+  - 0 1 0 3 4
+  - 0 1 0 2 3
+  - 1 2 1 3 4
+  - p a p e r
+  answer: 0
+  misconceptions:
+  - null
+  - trace-step-slip
+  - off-by-one-output
+  - confuse-index-value
+  explanation: p first at 0, a at 1, p again at 0, e at 3, r at 4. "title" has the same key.
+- id: not-transitive
+  band: 4
+  format: classify
+  prompt: Group words that differ by exactly one letter. Why does a canonical key not work?
+  options:
+  - The relation is not transitive, so it does not split words into groups
+  - The words are too long
+  - Hash maps cannot hold strings
+  - It works fine
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - hash-key-collision
+  - hash-key-collision
+  explanation: cat ~ cot ~ dot, but cat and dot differ in two letters.
+status: provisional
+provenance:
+  origin: original

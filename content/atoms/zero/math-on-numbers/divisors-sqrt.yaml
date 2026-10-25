@@ -1,0 +1,124 @@
+concept: zero:math-on-numbers
+pattern: zero:math-on-numbers/divisors-sqrt
+concept_version: 1.0.1
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the divisors up to the square root pattern pack (syllabus expansion, Phase 4).
+rollback: remove content/atoms/zero/math-on-numbers/divisors-sqrt.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: divisors-worked
+  kind: worked
+  title: 'Worked: the divisors of 36'
+  objective: Find every divisor from the pairs.
+  seconds: 90
+  body: 'i = 1 finds 1 and 36, i = 2 finds 2 and 18, i = 3 finds 3 and 12, i = 4 finds 4 and 9. 5 does not
+    divide 36. i = 6 finds 6, whose partner 36 // 6 is 6 again, so it counts once. At i = 7, 7 · 7 = 49 >
+    36 and the loop stops: 9 divisors, adding up to 91.'
+  why: Every divisor above the root is the partner of one below it.
+- id: divisors-faded
+  kind: faded
+  title: 'Your turn: the divisors of 20'
+  objective: Apply the pairs yourself.
+  seconds: 90
+  body: The loop runs while i · i ≤ 20.
+  steps:
+  - state: i = 1 and i = 2.
+    prompt: Which divisors do they find?
+    options:
+    - 1, 20, 2 and 10
+    - 1 and 2 only
+    - 1, 2 and 20
+    answer: 0
+    explanation: Each comes with its partner.
+  - state: i = 3 and i = 4.
+    prompt: Which divisors do they add?
+    options:
+    - 4 and 5
+    - 3 and 4
+    - None
+    answer: 0
+    explanation: 3 does not divide 20; 4 · 5 = 20.
+  - state: i = 5 is next.
+    prompt: Does the loop test it?
+    options:
+    - No; 5 · 5 = 25 > 20, so it stops with 6 divisors
+    - Yes, and finds 5 again
+    - Yes, and finds 4
+    answer: 0
+    explanation: 5 was already found as the partner of 4.
+- id: divisors-visualizer
+  kind: visualizer
+  title: 'Step through: the square root of a square'
+  objective: See why the root is counted once.
+  seconds: 100
+  body: n = 49, with the loop adding 2 for every divisor i it finds.
+  steps:
+  - state: i = 1 divides 49.
+    prompt: Which divisors does it stand for?
+    options:
+    - 1 and 49
+    - 1 only
+    - 49 only
+    answer: 0
+    explanation: Its partner is 49 // 1.
+  - state: i = 7 divides 49.
+    prompt: What is its partner?
+    options:
+    - 7 itself
+    - '1'
+    - '49'
+    answer: 0
+    explanation: 49 // 7 = 7.
+  - state: Adding 2 for i = 7 gives 4 divisors.
+    prompt: How many does 49 really have?
+    options:
+    - 3, which are 1, 7 and 49
+    - '4'
+    - '2'
+    answer: 0
+    explanation: The root must be counted once.
+- id: divisors-micro
+  kind: micro
+  title: 'Pitfall: counting the square root twice'
+  objective: Count a square's root once.
+  seconds: 70
+  misconception: div-square-twice
+  body: 'Divisors come in pairs i and n // i, one on each side of the square root. When n is a perfect
+    square, the root is paired with itself: for 36, the pair at i = 6 is 6 and 6. Add the partner only
+    when i != n // i, or a square gets one divisor too many.'
+  why: A pair of equal numbers is still one divisor.
+- id: divisors-classify
+  kind: classify
+  title: Which number tool?
+  objective: Pick the right technique for each question.
+  seconds: 80
+  body: For each question, choose the tool that answers it.
+  steps:
+  - state: How many divisors does 10^12 have?
+    prompt: Which tool?
+    options:
+    - Divisor pairs up to the square root
+    - Try every number up to n
+    - Euclid's GCD
+    answer: 0
+    explanation: A million steps instead of a trillion.
+  - state: Can 84 / 126 be simplified, and to what?
+    prompt: Which tool?
+    options:
+    - Euclid's GCD
+    - Digit extraction
+    - Primality test
+    answer: 0
+    explanation: Divide both by their GCD, 42.
+  - state: Is the sum of the digits of n even?
+    prompt: Which tool?
+    options:
+    - Digit extraction with % 10 and // 10
+    - Divisor pairs
+    - Fibonacci variables
+    answer: 0
+    explanation: Take the digits one at a time.

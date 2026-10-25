@@ -1,0 +1,117 @@
+id: heaviest-rise
+title: Heaviest rising chain
+concepts: [dp-lis]
+difficulty: medium
+statement: |
+  You are given `n` positive numbers in a row. Choose some of them, keeping their order, so
+  that the chosen numbers are **strictly increasing**. The weight of a choice is the **sum**
+  of the chosen numbers.
+
+  Print the largest possible weight.
+input_format: |
+  The first line contains n. The second line contains a_1 … a_n.
+output_format: The largest weight.
+constraints:
+  - 1 ≤ n ≤ 2000
+  - 1 ≤ a_i ≤ 10^9
+examples:
+  - input: "6\n1 101 2 3 100 4"
+    output: "106"
+    explanation: "1 2 3 100 sums to 106. The longest chain 1 2 3 4 only sums to 10."
+  - input: "3\n5 4 3"
+    output: "5"
+hints:
+  - "This is the LIS table, but each chain is worth the sum of its numbers instead of its length. What does dp[i] hold now?"
+  - "dp[i] = the heaviest strictly increasing chain that ends at a[i]. It starts at a[i] alone."
+  - "dp[i] = a[i] + max(dp[j]) over j < i with a[j] < a[i]. The answer is the largest dp[i]; sums need 64-bit integers."
+approach: |
+  Weighted LIS. dp[i] is the heaviest strictly increasing chain ending at a[i]: a[i] plus the
+  best dp[j] over earlier, smaller a[j], or a[i] alone. The answer is max(dp), since the best
+  chain can end anywhere. O(n²) time, O(n) memory; sums reach 2·10^12, so use 64-bit
+  integers. Patience sorting does not apply directly, because a heavier chain is not always a
+  longer one.
+reference: |
+  n = int(input())
+  a = list(map(int, input().split()))
+  dp = a[:]
+  for i in range(n):
+      x = a[i]
+      best = 0
+      for j in range(i):
+          if a[j] < x and dp[j] > best:
+              best = dp[j]
+      dp[i] = x + best
+  print(max(dp))
+brute: |
+  from itertools import combinations
+  n = int(input())
+  a = list(map(int, input().split()))
+  best = 0
+  for size in range(1, n + 1):
+      for keep in combinations(range(n), size):
+          if all(a[x] < a[y] for x, y in zip(keep, keep[1:])):
+              best = max(best, sum(a[i] for i in keep))
+  print(best)
+references:
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<long long> a(n), dp(n);
+        for (auto& x : a) cin >> x;
+        long long answer = 0;
+        for (int i = 0; i < n; i++) {
+            long long best = 0;
+            for (int j = 0; j < i; j++)
+                if (a[j] < a[i]) best = max(best, dp[j]);
+            dp[i] = a[i] + best;
+            answer = max(answer, dp[i]);
+        }
+        cout << answer << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            int n = Integer.parseInt(in.readLine().trim());
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            long[] a = new long[n], dp = new long[n];
+            for (int i = 0; i < n; i++) a[i] = Long.parseLong(st.nextToken());
+            long answer = 0;
+            for (int i = 0; i < n; i++) {
+                long best = 0;
+                for (int j = 0; j < i; j++)
+                    if (a[j] < a[i]) best = Math.max(best, dp[j]);
+                dp[i] = a[i] + best;
+                answer = Math.max(answer, dp[i]);
+            }
+            System.out.println(answer);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1\n7"
+      yield "2\n5 5"
+      yield "2\n1 1000000000"
+      n = 2000
+      yield f"{n}\n" + " ".join(str(i + 1) for i in range(n))
+      yield f"{n}\n" + " ".join(str(10**9 - i) for i in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 50)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(10**9 - n + i) for i in range(n))
+      for _ in range(4):
+          m = rng.randint(1, 60)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 100)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          m = rng.randint(1, 9)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 12)) for _ in range(m))

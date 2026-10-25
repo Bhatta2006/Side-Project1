@@ -1,0 +1,80 @@
+id: quiz:dsa:knapsack-unbounded:combinations-vs-permutations
+family: combinations-vs-permutations
+concept: dsa:knapsack-unbounded
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: which-outer
+  band: 1
+  format: classify
+  prompt: Count ways where 1 + 2 and 2 + 1 are the same. Which loop is outside?
+  options:
+  - The coins
+  - The amount
+  - Either
+  - A third loop over counts
+  answer: 0
+  misconceptions:
+  - null
+  - dp-loop-order
+  - pattern-ordered-vs-unordered-ways
+  - dp-vague-state
+  explanation: Coins outer builds each multiset in one fixed order.
+- id: small-case
+  band: 2
+  format: mcq
+  prompt: Coins 1 and 2, amount 3. How many combinations and how many ordered ways?
+  options:
+  - 2 and 3
+  - 3 and 3
+  - 2 and 2
+  - 3 and 2
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-ordered-vs-unordered-ways
+  - dp-loop-order
+  - pattern-ordered-vs-unordered-ways
+  explanation: 'Combinations: 1+1+1, 1+2. Orders: 111, 12, 21.'
+- id: base-one
+  band: 3
+  format: mcq
+  prompt: What must ways[0] be before the loops run?
+  options:
+  - 1, the empty choice
+  - '0'
+  - The number of coins
+  - It does not matter
+  answer: 0
+  misconceptions:
+  - null
+  - subset-sum-empty-base
+  - count-vs-sum
+  - dp-wrong-base-case
+  explanation: Every way ends by reaching 0; with ways[0] = 0 every count is 0.
+- id: dice
+  band: 4
+  format: classify
+  prompt: Count the ways to roll a die repeatedly so the faces sum to n, where the order of rolls matters.
+    Which loop is outside?
+  options:
+  - The sum
+  - The faces 1 to 6
+  - Either
+  - Neither; it is 0/1 knapsack
+  answer: 0
+  misconceptions:
+  - null
+  - dp-loop-order
+  - pattern-ordered-vs-unordered-ways
+  - unbounded-vs-01
+  explanation: Different roll orders are different outcomes, so count permutations.
+status: provisional
+provenance:
+  origin: original

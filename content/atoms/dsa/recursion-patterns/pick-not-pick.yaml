@@ -1,0 +1,125 @@
+concept: dsa:recursion-patterns
+pattern: dsa:recursion-patterns/pick-not-pick
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the pick or not pick pattern pack (syllabus expansion, Phase 3).
+rollback: remove content/atoms/dsa/recursion-patterns/pick-not-pick.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: pnp-worked
+  kind: worked
+  title: 'Worked: 1 2 0 3 with k = 3'
+  objective: Follow the two branches from the top.
+  seconds: 100
+  body: 'ways(0, 0) takes 1 (ways(1, 1)) or skips it (ways(1, 0)). ways(1, 1) takes 2 to reach ways(2, 3),
+    where the remaining 0 and 3 can be skipped, or the 0 taken: 2 ways. Skipping 2 leaves a total of 1
+    that 0 and 3 cannot make 3: 0 ways. ways(1, 0) finds 3 and 0 3: 2 ways. The total is 4.'
+  why: Every leaf of the tree is one full choice, counted once.
+- id: pnp-faded
+  kind: faded
+  title: 'Your turn: 2 1 1 with k = 2'
+  objective: Count with the two branches yourself.
+  seconds: 90
+  body: The call ways(0, 0) decides the 2 first.
+  steps:
+  - state: Take the 2, so ways(1, 2) decides the two 1s.
+    prompt: How many ways does ways(1, 2) return?
+    options:
+    - 1, skipping both 1s
+    - '3'
+    - '0'
+    answer: 0
+    explanation: Any 1 taken would pass 2.
+  - state: Skip the 2, so ways(1, 0) needs the two 1s to make 2.
+    prompt: How many ways does ways(1, 0) return?
+    options:
+    - 1, taking both
+    - '2'
+    - '0'
+    answer: 0
+    explanation: Only 1 + 1 reaches 2.
+  - state: Add the branches.
+    prompt: What is the answer?
+    options:
+    - '2'
+    - '3'
+    - '8'
+    answer: 0
+    explanation: The subsequences 2 and 1 1.
+- id: pnp-visualizer
+  kind: visualizer
+  title: 'Step through: why the base case waits for i = n'
+  objective: See an early return lose a subsequence.
+  seconds: 110
+  body: The array 1 2 0 3 with k = 3, where the call has just taken 1 and 2.
+  steps:
+  - state: The total is 3 at index 2, and the 0 and the 3 are still undecided.
+    prompt: How many subsequences extend this prefix and still sum to 3?
+    options:
+    - Two, with and without the 0
+    - One
+    - None
+    answer: 0
+    explanation: 1 2 and 1 2 0.
+  - state: An early return gives 1 here.
+    prompt: What does that lose?
+    options:
+    - The subsequence 1 2 0
+    - The subsequence 3
+    - Nothing
+    answer: 0
+    explanation: Returning early never decides the 0.
+  - state: The template waits until every index is decided.
+    prompt: Where is the sum checked?
+    options:
+    - At i = n only
+    - After every take
+    - At i = 0
+    answer: 0
+    explanation: A choice is finished only at the bottom of the tree.
+- id: pnp-micro
+  kind: micro
+  title: 'Pitfall: stopping when the sum is reached'
+  objective: Finish every choice before counting it.
+  seconds: 80
+  misconception: pnp-stop-at-target
+  body: 'Returning 1 as soon as the total equals k looks efficient, but later elements are still
+    undecided. With zeros, or with negative numbers, those elements can be taken without changing the
+    hit, and each way is a different subsequence. Count only at i = n, when every index has been
+    decided.'
+  why: The tree has one leaf per choice; an early return merges several leaves into one.
+- id: pnp-classify
+  kind: classify
+  title: Which recursion shape?
+  objective: Pick the right recursion pattern.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Count the ways to choose some coins (each at most once) worth exactly 50.
+    prompt: Which approach?
+    options:
+    - Pick or not pick, counting at i = n
+    - Fast power
+    - Divide and reduce
+    answer: 0
+    explanation: Each coin is in or out.
+  - state: List every string of n pairs of balanced brackets.
+    prompt: Which approach?
+    options:
+    - String generation, extending only valid prefixes
+    - Pick or not pick over the positions
+    - Sort and filter
+    answer: 0
+    explanation: Check the rule on the prefix before each extension.
+  - state: The survivor of n people in a circle when every k-th leaves.
+    prompt: Which approach?
+    options:
+    - Divide and reduce, shifting the smaller answer by k
+    - Pick or not pick
+    - Recursive stack ops
+    answer: 0
+    explanation: The answer for n follows from the answer for n − 1.

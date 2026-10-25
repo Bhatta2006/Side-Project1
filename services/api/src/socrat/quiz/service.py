@@ -79,7 +79,7 @@ def track_for(enrollment: Enrollment) -> Track:
 def render(cat: Catalog, item: Item, seed: str, language: str) -> dict:
     """What the learner sees, plus the server-side answer in display order."""
     if not item.family:
-        q = next(q for q in cat.concept(item.concept).quiz if q.id == item.item_id)
+        q = next(q for q in cat.concept(item.concept).quiz if q.matches(item.item_id))
         order = q.order(seed)
         return dict(
             prompt=q.prompt,

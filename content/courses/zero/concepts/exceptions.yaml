@@ -1,0 +1,52 @@
+id: exceptions
+title: Errors and exceptions
+summary: Catch, raise and clean up after errors; validate input; know the common exceptions in Python,
+  C++ and Java.
+module: craft
+prerequisites:
+- functions
+difficulty: 3
+estimated_minutes: 40
+status: draft
+lesson: '## Try catch finally
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Input validation
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

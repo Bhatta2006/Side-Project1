@@ -121,8 +121,20 @@ def views(
         )
     )
 
+    course = set(catalog.course_concepts(enrollment.course_id))
+
+    def known(concept: str) -> bool:
+        state = states.get(concept, ConceptState())
+        return state.assumed or state.mastered(now)
+
     def gated(concept: str) -> bool:
-        return concept in locked or any(p in locked for p in catalog.prerequisites.get(concept, []))
+        # A pattern waits for its course prerequisites, so an unlocked module is still taught in order.
+        prerequisites = catalog.prerequisites.get(concept, [])
+        return (
+            concept in locked
+            or any(p in locked for p in prerequisites)
+            or any(p in course and not known(p) for p in prerequisites)
+        )
 
     blocked = [p for p in mine if gated(p.concept)]
     result = []

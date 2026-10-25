@@ -1,0 +1,129 @@
+id: zero:searching-and-sorting/simple-sorts
+concept: zero:searching-and-sorting
+title: 'Bubble sort: passes of neighbour swaps until nothing moves'
+tracks:
+- foundations
+recognise:
+- Put the values in order, writing or tracing the sort yourself
+- Questions such as "what does the list look like after two passes?" or "how many swaps?"
+- Each pass swaps neighbours that are out of order
+state: after p passes, the largest p values sit in their final places at the end
+transition: one pass compares a[j] and a[j + 1] for j below n − 1 − p and swaps them when out of order
+base_cases:
+- a pass with no swaps means the list is sorted
+complexity:
+  time: O(n²) in the worst case, O(n) on a sorted list
+  space: O(1)
+template:
+  python: |
+    n = int(input())
+    a = list(map(int, input().split()))
+    for p in range(n - 1):  # after pass p, the last p + 1 values are in place
+        swapped = False
+        for j in range(n - 1 - p):
+            if a[j] > a[j + 1]:  # neighbours out of order: swap them
+                a[j], a[j + 1] = a[j + 1], a[j]
+                swapped = True
+        if not swapped:
+            break  # a pass with no swaps means the list is sorted
+    print(" ".join(map(str, a)))
+  cpp: |
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<int> a(n);
+        for (auto& v : a) cin >> v;
+        for (int p = 0; p < n - 1; p++) {  // after pass p, the last p + 1 values are in place
+            bool swapped = false;
+            for (int j = 0; j < n - 1 - p; j++)
+                if (a[j] > a[j + 1]) {  // neighbours out of order: swap them
+                    swap(a[j], a[j + 1]);
+                    swapped = true;
+                }
+            if (!swapped) break;  // a pass with no swaps means the list is sorted
+        }
+        for (int i = 0; i < n; i++) cout << a[i] << (i + 1 < n ? " " : "\n");
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();
+            int[] a = new int[n];
+            for (int i = 0; i < n; i++) a[i] = in.nextInt();
+            for (int p = 0; p < n - 1; p++) {  // after pass p, the last p + 1 values are in place
+                boolean swapped = false;
+                for (int j = 0; j < n - 1 - p; j++)
+                    if (a[j] > a[j + 1]) {  // neighbours out of order: swap them
+                        int t = a[j]; a[j] = a[j + 1]; a[j + 1] = t;
+                        swapped = true;
+                    }
+                if (!swapped) break;  // a pass with no swaps means the list is sorted
+            }
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < n; i++) out.append(a[i]).append(i + 1 < n ? " " : "\n");
+            System.out.print(out);
+        }
+    }
+template_io:
+  stdin: |
+    5
+    5 1 4 2 8
+  expected: 1 2 4 5 8
+variants:
+- id: gravity
+  band: 1
+  title: Sorting is the whole answer
+  problem: cf:405A
+- id: helpful-maths
+  band: 1
+  title: Split, sort, join
+  problem: cf:339A
+- id: height-checker
+  band: 2
+  title: Sort a copy and compare
+  problem: leetcode:height-checker
+- id: sort-colors
+  band: 3
+  title: Three values, sorted in place
+  problem: leetcode:sort-colors
+- id: sort-the-array
+  band: 4
+  title: Is one reversal enough?
+  problem: cf:451B
+- id: sort-an-array
+  band: 5
+  title: Any correct sort, fast enough
+  problem: leetcode:sort-an-array
+pitfalls:
+- sort-pass-equals-sorted
+- sort-wrong-direction
+- sort-inner-bound-short
+- sort-overwrite-not-swap
+- sort-confuse-algorithms
+atoms:
+- sorts-worked
+- sorts-faded
+- sorts-visualizer
+- sorts-micro
+- sorts-classify
+quiz_family: quiz:zero:searching-and-sorting:simple-sorts
+problems:
+  external:
+  - cf:405A
+  - cf:339A
+  - leetcode:height-checker
+  - leetcode:sort-colors
+  - cf:451B
+  - leetcode:sort-an-array
+showcase:
+- 'Why one pass over 5 1 4 2 8 leaves 1 4 2 5 8: a small value moves only one step left per pass'
+status: provisional
+provenance:
+  origin: original

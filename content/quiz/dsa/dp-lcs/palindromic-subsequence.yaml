@@ -1,0 +1,80 @@
+id: quiz:dsa:dp-lcs:palindromic-subsequence
+family: palindromic-subsequence
+concept: dsa:dp-lcs
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: ends-match
+  band: 2
+  format: mcq
+  prompt: s[i] == s[j] with i < j. What is dp[i][j] for the longest palindromic subsequence?
+  options:
+  - dp[i + 1][j − 1] + 2
+  - dp[i + 1][j − 1] + 1
+  - max(dp[i + 1][j], dp[i][j − 1])
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - dp-missing-plus-one
+  - lcs-mismatch-diagonal
+  - dp-wrong-subproblem
+  explanation: Both ends join the palindrome found inside.
+- id: fill-order
+  band: 3
+  format: bug_spot
+  prompt: The loop runs i from 0 up to n − 1. What goes wrong?
+  options:
+  - dp[i + 1][…] is read before it is filled
+  - Nothing
+  - The diagonal is skipped
+  - It counts substrings instead
+  answer: 0
+  misconceptions:
+  - null
+  - lps-fill-order
+  - dp-wrong-base-case
+  - pattern-palindrome-subsequence-vs-substring
+  explanation: Row i depends on row i + 1, so fill from the bottom up.
+- id: insertions
+  band: 4
+  format: mcq
+  prompt: s has length 7 and its longest palindromic subsequence has length 4. Fewest insertions to make
+    s a palindrome?
+  options:
+  - '3'
+  - '4'
+  - '7'
+  - '11'
+  answer: 0
+  misconceptions:
+  - null
+  - scs-forget-lcs
+  - off-by-one-output
+  - count-vs-sum
+  explanation: Each character outside the palindrome needs a mirror partner, so 7 − 4 = 3.
+- id: substring-version
+  band: 5
+  format: classify
+  prompt: Find the longest palindromic substring (contiguous). Does the subsequence table answer it?
+  options:
+  - No; the substring needs the inside to be a palindrome too, so use centres or a yes/no table
+  - Yes, the same table
+  - Yes, after reversing s
+  - Only for even lengths
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-palindrome-subsequence-vs-substring
+  - pattern-palindrome-subsequence-vs-substring
+  - lps-fill-order
+  explanation: A subsequence can skip characters inside; a substring cannot.
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,62 @@
+id: quiz:zero:operators-and-expressions:short-circuit
+family: short-circuit
+concept: zero:operators-and-expressions
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: guard
+  band: 1
+  format: mcq
+  prompt: d may be 0. Which condition never divides by zero?
+  options:
+  - d != 0 and n % d == 0
+  - n % d == 0 and d != 0
+  - n % d == 0 or d != 0
+  - n % d == 0
+  answer: 0
+  misconceptions:
+  - null
+  - short-circuit-order
+  - short-circuit-order
+  - short-circuit-order
+  explanation: and stops at the first false, so the guard must come first.
+- id: or-stop
+  band: 2
+  format: trace
+  prompt: x = 5. In x > 3 or y > 10, is y > 10 evaluated?
+  options:
+  - No; the left side is already true
+  - Yes, always
+  - Only if y exists
+  - It raises an error
+  answer: 0
+  misconceptions:
+  - null
+  - short-circuit-order
+  - boolean-logic-repair
+  - short-circuit-order
+  explanation: or stops at the first true.
+- id: single-amp
+  band: 3
+  format: classify
+  prompt: In Java, why is (d != 0 & n % d == 0) unsafe for d = 0?
+  options:
+  - '& evaluates both sides, so n % 0 still runs'
+  - '& is not allowed on booleans'
+  - It is safe
+  - '& only checks the right side'
+  answer: 0
+  misconceptions:
+  - null
+  - syntax-delimiters
+  - short-circuit-order
+  - short-circuit-order
+  explanation: Only && and || short-circuit.
+status: provisional
+provenance:
+  origin: original

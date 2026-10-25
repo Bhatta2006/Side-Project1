@@ -1,0 +1,62 @@
+id: quiz:zero:operators-and-expressions:math-library
+family: math-library
+concept: zero:operators-and-expressions
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: ceil-formula
+  band: 2
+  format: trace
+  prompt: What is (7 + 2 - 1) // 2?
+  options:
+  - '4'
+  - '3'
+  - '5'
+  - '3.5'
+  answer: 0
+  misconceptions:
+  - null
+  - ceil-vs-floor
+  - ceil-plus-one
+  - python-slash-decimal
+  explanation: It is ⌈7 / 2⌉ without decimals.
+- id: plus-one
+  band: 3
+  format: trace
+  prompt: Rounding up 8 / 2 with 8 // 2 + 1 gives what, and what is right?
+  options:
+  - 5, but the right answer is 4
+  - 4, which is right
+  - 5, which is right
+  - 3, but the right answer is 4
+  answer: 0
+  misconceptions:
+  - null
+  - ceil-plus-one
+  - ceil-plus-one
+  - ceil-vs-floor
+  explanation: When b divides a, rounding up changes nothing.
+- id: float-root
+  band: 4
+  format: classify
+  prompt: Which gives the exact whole-number square root of 9999999999999999 in Python?
+  options:
+  - math.isqrt(n), which gives 99999999
+  - int(math.sqrt(n)), which gives 100000000
+  - round(math.sqrt(n))
+  - n ** 0.5
+  answer: 0
+  misconceptions:
+  - null
+  - float-sqrt-trust
+  - float-sqrt-trust
+  - float-sqrt-trust
+  explanation: The decimal versions round n before taking the root.
+status: provisional
+provenance:
+  origin: original

@@ -163,7 +163,8 @@ quiz:
     answer: 0
     explanation: u and v were already connected, so adding the edge creates a cycle.
     difficulty: 2
-  - id: components
+  - id: union-components
+    former_ids: [components]
     kind: mcq
     prompt: n nodes, then 5 successful unions. How many components remain?
     options: ["n − 5", "n", "5", "n + 5"]

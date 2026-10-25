@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { NAME } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
+import { Soc } from '@/components/socrat/illustration';
 
 /** Settings › "Replay tour" fires this; the shell's Tour listens. */
 export const TOUR_EVENT = 'socrat:tour';
@@ -200,15 +201,16 @@ export function Tour() {
             tabIndex={-1}
             className={
               centred
-                ? 'absolute top-1/2 left-1/2 w-[min(400px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-card border bg-card p-6 text-card-foreground shadow-floating outline-none'
-                : 'absolute rounded-card border bg-card p-5 text-card-foreground shadow-floating outline-none'
+                ? 'absolute top-1/2 left-1/2 w-[min(400px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 paper rounded-card p-6 text-card-foreground shadow-floating outline-none'
+                : 'absolute paper rounded-card p-5 text-card-foreground shadow-floating outline-none'
             }
             style={centred ? undefined : { left: place.left, top: place.top, bottom: place.bottom, width: Math.min(WIDTH, window.innerWidth - 32) }}
           >
-            <p className="text-[13px] font-semibold text-muted-foreground tabular-nums" aria-live="polite">
+            <Soc size={56} mood={last ? 'happy' : index === 0 ? 'wink' : 'curious'} className="float-right -mt-1 -mr-1 ml-3" />
+            <p className="font-hand text-[19px] text-pen tabular-nums" aria-live="polite">
               {index + 1} of {steps.length}
             </p>
-            <h2 id="tour-title" className="mt-1 font-display text-xl font-bold tracking-[-0.03em]">{step.title}</h2>
+            <h2 id="tour-title" className="mt-1 font-display text-xl font-semibold tracking-[-0.03em]">{step.title}</h2>
             <p id="tour-body" className="mt-2 text-[15px] text-muted-foreground">{step.body}</p>
             <div className="mt-4 flex items-center gap-1" aria-hidden="true">
               {steps.map((_, i) => (

@@ -1,0 +1,63 @@
+id: quiz:dsa:tree-patterns:lca-binary-tree
+family: lca-binary-tree
+concept: dsa:tree-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: self
+  band: 2
+  format: mcq
+  prompt: u is an ancestor of v. What is LCA(u, v)?
+  options:
+  - u
+  - The parent of u
+  - The root
+  - v
+  answer: 0
+  misconceptions:
+  - null
+  - lca-not-self
+  - lca-not-self
+  - confuse-index-value
+  explanation: A node counts as its own descendant.
+- id: lift-order
+  band: 3
+  format: bug_spot
+  prompt: The code lifts u and v together from depths 2 and 3. What goes wrong?
+  options:
+  - They can pass each other and miss the LCA
+  - Nothing
+  - It is too slow
+  - It crashes on the root
+  answer: 0
+  misconceptions:
+  - null
+  - lca-lift-before-equal
+  - lca-lift-before-equal
+  - pattern-brute-force-default
+  explanation: Bring the deeper node up to the same depth first.
+- id: trace
+  band: 4
+  format: trace
+  prompt: 1 has children 2, 3; 2 has 4, 5; 5 has 8, 9. What is LCA(8, 4)?
+  options:
+  - '2'
+  - '5'
+  - '1'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - lca-lift-before-equal
+  - lca-not-self
+  - off-by-one-output
+  explanation: 8 goes up to 5 then 2; 4's parent is 2.
+status: provisional
+provenance:
+  origin: original

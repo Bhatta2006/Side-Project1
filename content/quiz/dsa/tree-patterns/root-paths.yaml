@@ -1,0 +1,65 @@
+id: quiz:dsa:tree-patterns:root-paths
+family: root-paths
+concept: dsa:tree-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: leaf
+  band: 2
+  format: mcq
+  prompt: A node has a left child but no right child. Is it a leaf?
+  options:
+  - No; only nodes with no children end a root-to-leaf path
+  - Yes, it has a missing child
+  - Only if it is on the last level
+  - Only if its value is 0
+  answer: 0
+  misconceptions:
+  - null
+  - tree-one-child-is-leaf
+  - tree-one-child-is-leaf
+  - confuse-index-value
+  explanation: A path ending there does not reach a leaf.
+- id: carry
+  band: 3
+  format: mcq
+  prompt: Sum root to leaf numbers. A node with digit 4 receives 13 from its parent. What does it pass
+    down?
+  options:
+  - '134'
+  - '17'
+  - '13'
+  - '52'
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - off-by-one-output
+  - product-not-sum
+  explanation: 10 · 13 + 4.
+- id: good
+  band: 4
+  format: trace
+  prompt: Root 3; left child 1 with left child 3; right child 4 with children 1 and 5. How many nodes have
+    no larger ancestor?
+  options:
+  - '4'
+  - '3'
+  - '5'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - tree-pass-down-vs-return-up
+  - count-vs-sum
+  - off-by-one-output
+  explanation: 3, 3, 4 and 5.
+status: provisional
+provenance:
+  origin: original

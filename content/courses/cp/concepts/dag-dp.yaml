@@ -1,0 +1,73 @@
+id: dag-dp
+title: DP on DAGs
+summary: 'Topological order plus DP: longest paths, counting paths and games on directed acyclic graphs.'
+module: graph-module
+prerequisites:
+- dsa:topological-sort
+- dp-classics
+difficulty: 4
+estimated_minutes: 45
+status: draft
+lesson: '## Longest path
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Count paths
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Game on dag
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

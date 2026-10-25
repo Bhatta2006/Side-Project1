@@ -1,0 +1,145 @@
+id: longest-divisible-run
+title: Longest evenly shared run
+concepts: [hashing]
+difficulty: medium
+statement: |
+  A cooperative records its daily profit or loss as integers `a_1 … a_n` (losses are
+  negative). Some days' takings can be shared evenly among the `m` members only if their
+  total is a multiple of `m` (0 counts, and so do negative multiples).
+
+  Find the length of the **longest run of consecutive days** whose total is a multiple of
+  `m`. Print 0 if no run works.
+input_format: |
+  The first line contains n and m. The second line contains a_1 … a_n.
+output_format: The length of the longest run, or 0.
+constraints:
+  - 1 ≤ n ≤ 10^5
+  - 1 ≤ m ≤ 10^9
+  - -10^9 ≤ a_i ≤ 10^9
+examples:
+  - input: "6 5\n2 7 -3 4 1 6"
+    output: "5"
+    explanation: "Days 2 to 6 total 7 - 3 + 4 + 1 + 6 = 15, a multiple of 5. All six days total 17, which is not."
+  - input: "3 5\n1 1 1"
+    output: "0"
+hints:
+  - "A run a_(j+1) … a_i is a multiple of m exactly when the prefix totals p_i and p_j leave the same remainder modulo m."
+  - "Scan once, keeping for each remainder the first day after which it appeared; the empty prefix has remainder 0 before day 1."
+  - "In C++ and Java, % can be negative for negative totals: use ((p % m) + m) % m. Totals reach 10^14, so use 64-bit integers."
+approach: |
+  Prefix state hash map with remainders as keys. Let p_i be the total of the first i days.
+  Days j+1 … i form a valid run when p_i ≡ p_j (mod m). Keep first[r] = the smallest j with
+  p_j mod m = r, seeded with first[0] = 0 for the empty prefix. At each day i, if the current
+  remainder r is stored, the run of length i − first[r] works; otherwise store it. Keeping
+  the first occurrence makes every run found as long as possible. O(n) expected time and
+  O(n) memory; normalise negative remainders and use 64-bit totals.
+reference: |
+  import sys
+  data = sys.stdin.buffer.read().split()
+  n, m = int(data[0]), int(data[1])
+  first = {0: 0}
+  total = 0
+  best = 0
+  for i in range(1, n + 1):
+      total += int(data[1 + i])
+      r = total % m
+      j = first.get(r)
+      if j is None:
+          first[r] = i
+      elif i - j > best:
+          best = i - j
+  print(best)
+brute: |
+  n, m = map(int, input().split())
+  a = list(map(int, input().split()))
+  best = 0
+  for lo in range(n):
+      total = 0
+      for hi in range(lo, n):
+          total += a[hi]
+          if total % m == 0:
+              best = max(best, hi - lo + 1)
+  print(best)
+references:
+  cpp: |
+    #include <cstdio>
+    #include <unordered_map>
+    using namespace std;
+
+    int main() {
+        int n;
+        long long m;
+        if (scanf("%d %lld", &n, &m) != 2) return 0;
+        unordered_map<long long, int> first;
+        first.reserve(2 * n + 1);
+        first[0] = 0;
+        long long total = 0;
+        int best = 0;
+        for (int i = 1; i <= n; i++) {
+            long long x;
+            scanf("%lld", &x);
+            total += x;
+            long long r = ((total % m) + m) % m;
+            auto it = first.find(r);
+            if (it == first.end()) first[r] = i;
+            else if (i - it->second > best) best = i - it->second;
+        }
+        printf("%d\n", best);
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            DataInputStream in = new DataInputStream(new BufferedInputStream(System.in, 1 << 16));
+            int n = (int) next(in);
+            long m = next(in);
+            HashMap<Long, Integer> first = new HashMap<>(2 * n + 2);
+            first.put(0L, 0);
+            long total = 0;
+            int best = 0;
+            for (int i = 1; i <= n; i++) {
+                total += next(in);
+                long r = ((total % m) + m) % m;
+                Integer j = first.get(r);
+                if (j == null) first.put(r, i);
+                else if (i - j > best) best = i - j;
+            }
+            System.out.println(best);
+        }
+
+        static long next(DataInputStream in) throws IOException {
+            int c = in.read();
+            while (c != '-' && (c < '0' || c > '9')) c = in.read();
+            boolean neg = c == '-';
+            if (neg) c = in.read();
+            long v = 0;
+            while (c >= '0' && c <= '9') { v = v * 10 + (c - '0'); c = in.read(); }
+            return neg ? -v : v;
+        }
+    }
+generator: |
+  def line(n, m, values):
+      return f"{n} {m}\n" + " ".join(map(str, values))
+
+  def cases(rng):
+      yield "1 1\n-5"
+      yield "1 7\n3"
+      yield "2 1000000000\n1000000000 -1000000000"
+      n = 100000
+      yield line(n, 1, [rng.randint(-10**9, 10**9) for _ in range(n)])
+      yield line(n, 1000000000, [rng.randint(1, 1000) for _ in range(n)])
+      yield line(n, 999999937, [rng.randint(-10**9, 10**9) for _ in range(n)])
+      yield line(n, 7, [rng.randint(-10**9, 10**9) for _ in range(n)])
+      yield line(n, 100000, [rng.randint(-10**9, -1) for _ in range(n)])
+      yield line(n, 2, [rng.choice([1, 3]) for _ in range(n)])
+      for _ in range(4):
+          k = rng.randint(1, 50)
+          yield line(k, rng.randint(1, 12), [rng.randint(-20, 20) for _ in range(k)])
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 10)
+          m = rng.randint(1, 9)
+          yield f"{n} {m}\n" + " ".join(str(rng.randint(-15, 15)) for _ in range(n))

@@ -1,0 +1,79 @@
+id: party-packs
+title: Party packs
+concepts: [operators-and-expressions]
+difficulty: easy
+statement: |
+  Plates for a party come in packs of `p`. There are `n` guests and every guest needs one
+  plate.
+
+  Print the number of packs to buy (the fewest that give every guest a plate), then the
+  number of plates that will be left over.
+input_format: The only line contains n and p.
+output_format: Two numbers on one line, the packs and the plates left over.
+constraints:
+  - 1 ≤ n, p ≤ 10^18
+examples:
+  - input: "25 12"
+    output: "3 11"
+    explanation: "Two packs hold 24 plates, one short, so 3 packs (36 plates) are needed and 11 are left over."
+  - input: "24 12"
+    output: "2 0"
+hints:
+  - "The number of packs is n / p rounded up."
+  - "Round up without decimals: (n + p - 1) // p in Python, (n + p - 1) / p in C++ and Java. Decimals cannot hold numbers near 10^18 exactly."
+  - "The leftover is packs · p − n. In C++ and Java, use 64-bit integers; n + p − 1 still fits below 2 · 10^18."
+approach: |
+  Whole-number division rounded up: packs = (n + p − 1) // p, which is n // p plus one exactly
+  when n % p is not 0. The leftover plates are packs · p − n, which is less than p. Everything
+  stays below 2 · 10^18, so 64-bit integers are enough in C++ and Java; decimals are not,
+  because they round numbers this large.
+reference: |
+  n, p = map(int, input().split())
+  packs = (n + p - 1) // p
+  print(packs, packs * p - n)
+brute: |
+  n, p = map(int, input().split())
+  packs = 0
+  while packs * p < n:
+      packs += 1
+  print(packs, packs * p - n)
+references:
+  cpp: |
+    #include <iostream>
+    using namespace std;
+
+    int main() {
+        long long n, p;
+        cin >> n >> p;
+        long long packs = (n + p - 1) / p;
+        cout << packs << " " << packs * p - n << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            long n = in.nextLong(), p = in.nextLong();
+            long packs = (n + p - 1) / p;
+            System.out.println(packs + " " + (packs * p - n));
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1"
+      yield "1 1000000000000000000"
+      yield "1000000000000000000 1"
+      yield "1000000000000000000 1000000000000000000"
+      yield "999999999999999999 1000000000000000000"
+      yield "1000000000000000000 999999999999999999"
+      yield "1000000000000000000 3"
+      yield "999999999999999997 7"
+      for _ in range(5):
+          yield f"{rng.randint(1, 10**18)} {rng.randint(1, 10**18)}"
+      for _ in range(5):
+          yield f"{rng.randint(1, 10**18)} {rng.randint(1, 1000)}"
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          yield f"{rng.randint(1, 60)} {rng.randint(1, 15)}"

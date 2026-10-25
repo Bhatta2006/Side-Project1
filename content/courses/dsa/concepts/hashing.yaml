@@ -1,0 +1,831 @@
+id: hashing
+title: Hashing patterns
+summary: Complement lookups, grouping by a key, prefix sums with a hash map for subarray counts, and set-based
+  sequence problems.
+module: foundations
+prerequisites:
+- arrays-hashing
+- prefix-sums
+difficulty: 3
+estimated_minutes: 60
+lesson: |
+  A hash map answers one question in O(1) on average: **"have I seen this before, and what
+  did I store with it?"** Every pattern in this lesson is that question asked about a
+  different thing: a value that would complete a pair, a canonical form of a word, a running
+  prefix sum, or a neighbour of a number. Arrays and hashing introduced the map itself and
+  prefix sums introduced counting subarrays with sum k; this lesson turns both into four
+  reusable patterns.
+
+  The skill is choosing the **key** (what you look up) and the **value** (what you store with
+  it: a count, a first index, a list).
+
+  ## Complement lookup
+
+  ### Recognition cues
+
+  - Pairs `i < j` with a relation between `a[i]` and `a[j]`: a sum, a difference, a product.
+  - For each element, the partner it needs can be **computed** from it: `k − x`, `x + d`.
+  - O(n²) "try every pair" is too slow for n around 10⁵.
+
+  ### Template
+
+  Count the pairs `i < j` with `a[i] + a[j] = k`. Input: n and k, then the n numbers.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+  seen = {}  # value -> how many times it appeared to the left
+  pairs = 0
+  for x in a:
+      pairs += seen.get(k - x, 0)  # look up before inserting, so x never pairs with itself
+      seen[x] = seen.get(x, 0) + 1
+  print(pairs)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <unordered_map>
+  using namespace std;
+
+  int main() {
+      int n;
+      long long k;
+      cin >> n >> k;
+      unordered_map<long long, long long> seen;  // value -> how many times it appeared to the left
+      long long pairs = 0;
+      for (int i = 0; i < n; i++) {
+          long long x;
+          cin >> x;
+          auto it = seen.find(k - x);  // look up before inserting, so x never pairs with itself
+          if (it != seen.end()) pairs += it->second;
+          seen[x]++;
+      }
+      cout << pairs << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long k = in.nextLong();
+          Map<Long, Long> seen = new HashMap<>();  // value -> how many times it appeared to the left
+          long pairs = 0;
+          for (int i = 0; i < n; i++) {
+              long x = in.nextLong();
+              pairs += seen.getOrDefault(k - x, 0L);  // look up before inserting: no self-pairs
+              seen.merge(x, 1L, Long::sum);
+          }
+          System.out.println(pairs);
+      }
+  }
+  ```
+
+  ### Anchor problem: pairs that sum to k
+
+  `6 6` then `3 3 3 1 5 2`. The pairs summing to 6 are the three pairs of 3s and the pair
+  (1, 5): **4**.
+
+  **Wrong first attempt — count everything, then halve.** Build the full frequency map first,
+  add `count[k − x]` for every x and divide by 2. Each 3 finds three 3s, *including itself*:
+  3 + 3 + 3 + 1 + 1 + 0 = 11, and 11 // 2 = 5. Looking up **before** inserting means x only
+  ever meets elements to its left, so every pair is counted exactly once and never with
+  itself.
+
+  ### Variants
+
+  1. *Two Sum*: store value → index and return the first hit.
+  2. *Count pairs with absolute difference k*: look up both `x − k` and `x + k`.
+  3. *K-diff pairs*: distinct pairs only; for k = 0 count values that appear at least twice.
+  4. *4Sum II*: four lists; hash every sum `a + b`, then look up `−(c + d)`, O(n²) instead of
+     O(n⁴).
+  5. *Contains duplicate II*: the value stored is the last index, and the relation is "same
+     value, index gap at most k".
+
+  ### Contrast
+
+  **Hash map or two pointers?** On a sorted array, two pointers find a pair in O(1) extra
+  memory. On an unsorted array, sorting costs O(n log n) and loses the original indices (Two
+  Sum asks for them), while one hash map pass is O(n).
+
+  ### Common mistakes
+
+  - Inserting before looking up, so x pairs with itself when `k = 2x`.
+  - Storing only "seen or not" when duplicates matter: pairs need a **count**.
+  - Counting each unordered pair twice.
+
+  ## Group by key
+
+  ### Recognition cues
+
+  - Items are "the same" under some rule: anagrams, same letter pattern, same shift, equal
+    subtrees.
+  - The output groups them, counts groups, or finds duplicates.
+  - Comparing every pair of items is O(n²) comparisons.
+
+  ### Template
+
+  Map every item to a **canonical key** that two items share exactly when they belong
+  together. Here: group anagrams, printing each group in order of first appearance. Input: n,
+  then n words.
+
+  ```python
+  import sys
+
+  words = sys.stdin.read().split()[1:]
+  groups = {}  # canonical key -> words with that key, in input order
+  for w in words:
+      groups.setdefault("".join(sorted(w)), []).append(w)  # anagrams share their sorted letters
+  for g in groups.values():
+      print(" ".join(g))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <unordered_map>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      unordered_map<string, int> id;  // canonical key -> group number, in first-seen order
+      vector<vector<string>> groups;
+      for (int i = 0; i < n; i++) {
+          string w;
+          cin >> w;
+          string key = w;
+          sort(key.begin(), key.end());  // anagrams share their sorted letters
+          if (!id.count(key)) { id[key] = groups.size(); groups.push_back({}); }
+          groups[id[key]].push_back(w);
+      }
+      for (auto& g : groups)
+          for (size_t j = 0; j < g.size(); j++) cout << g[j] << (j + 1 < g.size() ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          Map<String, List<String>> groups = new LinkedHashMap<>();  // key -> words, first-seen order
+          for (int i = 0; i < n; i++) {
+              String w = in.next();
+              char[] letters = w.toCharArray();
+              Arrays.sort(letters);  // anagrams share their sorted letters
+              groups.computeIfAbsent(new String(letters), x -> new ArrayList<>()).add(w);
+          }
+          for (List<String> g : groups.values()) System.out.println(String.join(" ", g));
+      }
+  }
+  ```
+
+  ### Anchor problem: group anagrams
+
+  `6` then `eat tea tan ate nat bat` prints three groups: `eat tea ate`, `tan nat` and `bat`.
+
+  **Wrong first attempt — a key that is not canonical.** Keying by the sum of the letter codes
+  is cheap, but "ad" and "bc" both sum to 197 and land in one group. Keying by the *set* of
+  letters merges "aab" and "abb". A key must be equal **exactly** when the items belong
+  together: sorted letters, or a 26-count tuple (O(L) per word instead of O(L log L)).
+
+  ### Variants
+
+  1. *Group anagrams*: the anchor.
+  2. *Isomorphic strings* and *word pattern*: key each string by the index at which each symbol
+     first appears, so "egg" and "add" both become 0 1 1.
+  3. *Group shifted strings*: key by the gaps between neighbouring letters, mod 26.
+  4. *Find duplicate subtrees*: key each subtree by its serialization.
+
+  ### Contrast
+
+  **Canonical key or pairwise check?** If "belong together" is an equivalence (anagram of,
+  shift of), a canonical key turns grouping into one map pass. If it is not transitive
+  ("differ by one letter"), keys cannot capture it; you need a graph or a different trick.
+
+  ### Common mistakes
+
+  - A key that collides (sum of codes, set of letters).
+  - Using a mutable list as a key in Python: convert it to a tuple or a string.
+  - Expecting groups in input order from an unordered map; keep an order list.
+
+  ## Prefix state hash map
+
+  ### Recognition cues
+
+  - **Contiguous** subarrays, with a condition on their **sum** (or on a count turned into a
+    sum): equals k, divisible by m, equal numbers of two kinds.
+  - The array may contain **negative numbers**, so a sliding window cannot decide when to
+    shrink.
+  - Asked for the longest, the shortest, or the number of such subarrays.
+
+  ### Template
+
+  A subarray `a[j + 1 .. i]` has sum `p[i] − p[j]`, where p is the running prefix sum. It
+  equals k exactly when `p[j] = p[i] − k`. So scan once and keep a map from each prefix sum to
+  what you need about it: its **first index** for the longest subarray, its **count** for the
+  number of subarrays. The empty prefix (sum 0) ends at index −1.
+
+  Longest subarray with sum k. Input: n and k, then the n numbers.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+  first = {0: -1}  # prefix sum -> first index where it ends; the empty prefix ends at -1
+  total = best = 0
+  for i, x in enumerate(a):
+      total += x
+      if total - k in first:  # a[first[total - k] + 1 .. i] sums to k
+          best = max(best, i - first[total - k])
+      first.setdefault(total, i)  # keep the FIRST index: it gives the longest subarray
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <unordered_map>
+  using namespace std;
+
+  int main() {
+      int n;
+      long long k, total = 0;
+      cin >> n >> k;
+      unordered_map<long long, int> first = {{0, -1}};  // prefix sum -> first index; empty prefix: -1
+      int best = 0;
+      for (int i = 0; i < n; i++) {
+          long long x;
+          cin >> x;
+          total += x;
+          auto it = first.find(total - k);
+          if (it != first.end()) best = max(best, i - it->second);  // a[it->second + 1 .. i] sums to k
+          first.insert({total, i});  // insert never overwrites: the FIRST index is kept
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long k = in.nextLong(), total = 0;
+          Map<Long, Integer> first = new HashMap<>();  // prefix sum -> first index where it ends
+          first.put(0L, -1);  // the empty prefix ends at -1
+          int best = 0;
+          for (int i = 0; i < n; i++) {
+              total += in.nextLong();
+              Integer j = first.get(total - k);
+              if (j != null) best = Math.max(best, i - j);  // a[j + 1 .. i] sums to k
+              first.putIfAbsent(total, i);  // keep the FIRST index: it gives the longest subarray
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: longest subarray with sum k
+
+  ```text
+  5 3
+  1 -1 5 -2 3
+  ```
+
+  The longest subarray summing to 3 is `1 -1 5 -2` (indices 0 to 3): **4**.
+
+  **Step 1 — brute force.** Fix the start, extend the end and keep a running sum:
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+  best = 0
+  for lo in range(n):
+      total = 0
+      for hi in range(lo, n):  # every subarray a[lo..hi]
+          total += a[hi]
+          if total == k:
+              best = max(best, hi - lo + 1)
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      long long k;
+      cin >> n >> k;
+      vector<long long> a(n);
+      for (auto& x : a) cin >> x;
+      int best = 0;
+      for (int lo = 0; lo < n; lo++) {
+          long long total = 0;
+          for (int hi = lo; hi < n; hi++) {  // every subarray a[lo..hi]
+              total += a[hi];
+              if (total == k) best = max(best, hi - lo + 1);
+          }
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long k = in.nextLong();
+          long[] a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          int best = 0;
+          for (int lo = 0; lo < n; lo++) {
+              long total = 0;
+              for (int hi = lo; hi < n; hi++) {  // every subarray a[lo..hi]
+                  total += a[hi];
+                  if (total == k) best = Math.max(best, hi - lo + 1);
+              }
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  It is correct and prints 4, but it is O(n²): 2·10¹⁰ steps for n = 2·10⁵.
+
+  **Step 2 — wrong first attempt: a sliding window.** Grow the right end and shrink from the
+  left while the sum is too big:
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+  best = total = lo = 0
+  for hi in range(n):
+      total += a[hi]
+      while total > k and lo <= hi:  # shrink while too big: assumes no negatives
+          total -= a[lo]
+          lo += 1
+      if total == k:
+          best = max(best, hi - lo + 1)
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      long long k, total = 0;
+      cin >> n >> k;
+      vector<long long> a(n);
+      for (auto& x : a) cin >> x;
+      int best = 0, lo = 0;
+      for (int hi = 0; hi < n; hi++) {
+          total += a[hi];
+          while (total > k && lo <= hi) total -= a[lo++];  // shrink while too big: assumes no negatives
+          if (total == k) best = max(best, hi - lo + 1);
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long k = in.nextLong(), total = 0;
+          long[] a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          int best = 0, lo = 0;
+          for (int hi = 0; hi < n; hi++) {
+              total += a[hi];
+              while (total > k && lo <= hi) total -= a[lo++];  // shrink while too big: assumes no negatives
+              if (total == k) best = Math.max(best, hi - lo + 1);
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  It prints **0**. At index 2 the sum 1 − 1 + 5 = 5 is too big, so the window throws away the
+  1 and the −1 for good; but the −2 that comes next would have brought the sum back to 3.
+  With negative numbers, "too big now" does not mean "too big forever", so no shrink rule is
+  safe.
+
+  **Step 3 — prefix sums and a map of first indexes.** The template. Dry run (`need` is
+  `total − k`):
+
+  | i | a[i] | total | need | first[need]? | length | best | first after |
+  |---|---|---|---|---|---|---|---|
+  | — | — | 0 | — | — | — | 0 | {0: −1} |
+  | 0 | 1 | 1 | −2 | no | — | 0 | {0: −1, 1: 0} |
+  | 1 | −1 | 0 | −3 | no | — | 0 | 0 already stored: keep −1 |
+  | 2 | 5 | 5 | 2 | no | — | 0 | adds 5: 2 |
+  | 3 | −2 | 3 | 0 | −1 | 3 − (−1) = **4** | 4 | adds 3: 3 |
+  | 4 | 3 | 6 | 3 | 3 | 4 − 3 = 1 | 4 | adds 6: 4 |
+
+  The answer is 4. Two lines carry the whole idea:
+
+  - At i = 1 the prefix sum 0 appears again. Overwriting it with index 1 would shrink the hit
+    at i = 3 to length 2; the longest subarray needs the **first** index.
+  - Without the empty prefix `{0: −1}`, the hit at i = 3 is never found (it starts at index 0)
+    and the program prints 2.
+
+  One pass, O(n) time on average, O(n) memory.
+
+  ### Variants
+
+  1. *Maximum size subarray sum equals k*: the anchor.
+  2. *Subarray sum equals k*: the **count**; store how many times each prefix sum appeared,
+     seeded with `{0: 1}` (prefix sums lesson).
+  3. *Contiguous array*: map 0 to −1 and 1 to +1, then find the longest subarray with sum 0.
+  4. *Count number of nice subarrays*: odd numbers become 1, even become 0, count sum = k.
+  5. *Subarray sums divisible by k*: the key is the remainder `total mod k`; make it
+     non-negative in C++ and Java.
+  6. *Longest well-performing interval*: +1 / −1 per day, longest subarray with sum > 0.
+  7. *Make sum divisible by p*: the **shortest** subarray to remove, so keep the **last**
+     index of each remainder.
+
+  ### Contrast
+
+  **First index or last index?** For the longest subarray, keep the first time each prefix
+  value appeared (`setdefault`, `insert`, `putIfAbsent`). For the shortest, keep the most
+  recent one (plain assignment). For a count, keep how many times it appeared. Same scan,
+  different value in the map.
+
+  **Window or prefix map?** If every number is non-negative, a sliding window is O(1) memory
+  and enough. Negative numbers break the window's shrink rule; the prefix map does not care.
+
+  ### Common mistakes
+
+  - Forgetting the empty prefix, so subarrays that start at index 0 are missed.
+  - Seeding it at index 0 instead of −1, so those subarrays come out one element short.
+  - Overwriting the stored index when the longest subarray is wanted.
+  - A negative remainder in C++ and Java: `((total % m) + m) % m`.
+  - 32-bit totals overflowing for long arrays of large values.
+
+  ## Set sequences
+
+  ### Recognition cues
+
+  - Only **membership** matters: is `x − 1` present, is `x + 1` present, have I seen this state.
+  - Asked for runs of consecutive values in an unsorted array, in O(n) instead of sorting.
+  - A process that might loop: detect a repeated state.
+
+  ### Template
+
+  Longest run of consecutive integers. Input: n, then n numbers.
+
+  ```python
+  import sys
+
+  nums = set(int(x) for x in sys.stdin.read().split()[1:])
+  best = 0
+  for x in nums:
+      if x - 1 not in nums:  # x starts a run; walking from inside a run would recount it
+          y = x
+          while y + 1 in nums:
+              y += 1
+          best = max(best, y - x + 1)
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <unordered_set>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      unordered_set<long long> nums;
+      for (int i = 0; i < n; i++) {
+          long long x;
+          cin >> x;
+          nums.insert(x);
+      }
+      long long best = 0;
+      for (long long x : nums)
+          if (!nums.count(x - 1)) {  // x starts a run; walking from inside a run would recount it
+              long long y = x;
+              while (nums.count(y + 1)) y++;
+              best = max(best, y - x + 1);
+          }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          Set<Long> nums = new HashSet<>();
+          for (int i = 0; i < n; i++) nums.add(in.nextLong());
+          long best = 0;
+          for (long x : nums)
+              if (!nums.contains(x - 1)) {  // x starts a run; walking from inside would recount it
+                  long y = x;
+                  while (nums.contains(y + 1)) y++;
+                  best = Math.max(best, y - x + 1);
+              }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: longest consecutive sequence
+
+  `8` then `100 4 200 1 3 2 2 101`. The runs are 1 2 3 4 and 100 101, so the answer is **4**.
+
+  **Wrong first attempt — walk from every element.** Without the `x − 1` check, the walk
+  starts again from 2, 3 and 4 inside the run 1 to 4. On the input 1, 2, …, n that is
+  n + (n − 1) + … + 1 steps: O(n²). With the check, only the start of each run walks, so
+  every number is stepped over once: O(n) in total.
+
+  ### Variants
+
+  1. *Longest consecutive sequence*: the anchor.
+  2. *Happy number*: keep a set of the numbers seen; a repeat means the process loops.
+  3. *Longest harmonious subsequence*: count each value, then check `count[x] + count[x + 1]`.
+  4. *First missing positive*: membership of 1, 2, 3, …; the O(1)-memory version reuses the
+     array itself as the set.
+
+  ### Contrast
+
+  **Set or sort?** Sorting finds runs too, in O(n log n) with no extra memory, and is fine
+  unless O(n) is required. The set wins when only membership matters and the order of the
+  input does not.
+
+  ### Common mistakes
+
+  - Walking from every element instead of only from run starts.
+  - Counting duplicates twice: put the values into a set first.
+  - Iterating over the input list instead of the set, which repeats walks for duplicates.
+
+  ## Worked walkthrough
+
+  **Problem.** A binary array `0 1 1 0 1 1 1 0`. Find the longest subarray with equally many
+  0s and 1s.
+
+  1. *Turn the count into a sum.* Replace each 0 by −1. Equal numbers of 0s and 1s now means
+     sum 0, so this is the prefix state pattern with k = 0.
+  2. *Prefix sums.* −1 0 1 0 1 2 3 2.
+  3. *Scan with first indexes,* starting from `{0: −1}`. At i = 1 the total is 0, stored at
+     −1: length 2. At i = 3 the total is 0 again: length 4. At i = 4 the total 1 was first
+     seen at 2: length 2. At i = 7 the total 2 was first seen at 5: length 2.
+  4. *Answer.* 4: indices 0 to 3, `0 1 1 0`.
+
+  ### Why this works
+
+  Every subarray is the difference of two prefixes: `a[j + 1 .. i]` sums to `p[i] − p[j]`. So
+  for each end i, the subarrays ending at i with sum k correspond one-to-one to earlier
+  prefixes with value `p[i] − k`. The map holds exactly those earlier prefixes (it is updated
+  after the lookup), and for each value it keeps the one that matters: the earliest gives the
+  longest subarray, the count gives how many there are. Scanning every i therefore considers
+  every subarray, in one pass.
+
+  ### Boundary cases and cost
+
+  - The whole array is the answer: found through the empty prefix at −1.
+  - No subarray has sum k: print 0.
+  - k = 0 and an element equal to 0: a length-1 subarray, found because the map is updated
+    after the lookup.
+  - Cost: O(n) expected time and O(n) memory. Hash maps degrade on adversarial keys; in C++ an
+    `unordered_map` can be attacked in contests, where a sorted `map` (O(n log n)) is safer.
+
+  ### Check your understanding
+
+  `1 2 -3 3` with k = 3. What does the scan print, and which index does the prefix sum 0
+  keep?
+
+  Try it on paper before reading the reasoning below.
+
+  > Prefix sums 1 3 0 3. At i = 1, need 0 at −1: length 2. At i = 2 the total 0 is already
+  > stored at −1, which it keeps. At i = 3, need 0 at −1: length 4. The answer is 4.
+key_points:
+- 'A hash map answers "have I seen this, and what did I store with it?" in O(1) on average.'
+- Choose the key (what you look up) and the value (a count, a first index, a list).
+- 'Complement lookup: look up k − x before inserting x, so no element pairs with itself.'
+- 'Group by key: a canonical key equal exactly when two items belong together.'
+- 'Prefix state: a subarray sums to k when an earlier prefix equals total − k; seed the empty prefix.'
+- Longest keeps the first index, shortest keeps the last, a count keeps how many.
+- 'Set sequences: only walk from run starts, where x − 1 is missing.'
+pitfalls:
+- Inserting before looking up, so x pairs with itself.
+- A grouping key that collides, such as the sum of the letter codes.
+- Forgetting the empty prefix at index −1.
+- Overwriting the first index when the longest subarray is wanted.
+- A sliding window on an array with negative numbers.
+- Walking a run from every element instead of only from its start.
+resources:
+- title: "Tech Interview Handbook: Hash table cheatsheet"
+  url: https://www.techinterviewhandbook.org/algorithms/hash-table/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 10
+  level: core
+- title: Two Sum – HashMap
+  url: https://www.youtube.com/watch?v=KLlXCFG5TnA
+  kind: video
+  source: NeetCode
+  minutes: 8
+  level: core
+- title: "USACO Guide: Introduction to prefix sums"
+  url: https://usaco.guide/silver/prefix-sums
+  kind: article
+  source: USACO Guide
+  minutes: 30
+  level: core
+- title: Hash tables visualized
+  url: https://visualgo.net/en/hashtable
+  kind: visualizer
+  source: VisuAlgo
+  minutes: 15
+  level: deep
+quiz:
+- id: lookup-first
+  kind: mcq
+  prompt: Counting pairs that sum to k in one pass, why look up k − x before inserting x?
+  options:
+  - So x never pairs with itself and each pair is counted once
+  - It is faster
+  - So the map stays sorted
+  - It makes no difference
+  answer: 0
+  explanation: Elements only meet partners to their left.
+  difficulty: 1
+- id: pairs-of-three
+  kind: mcq
+  prompt: The values 3 3 3 and k = 6. How many pairs i < j sum to k?
+  options:
+  - '3'
+  - '9'
+  - '6'
+  - '4'
+  answer: 0
+  explanation: Three 3s make 3 pairs.
+  difficulty: 2
+- id: canonical
+  kind: mcq
+  prompt: Which key groups anagrams correctly?
+  options:
+  - The sorted letters of the word
+  - The sum of the letter codes
+  - The set of letters
+  - The first letter and the length
+  answer: 0
+  explanation: Sorted letters are equal exactly for anagrams.
+  difficulty: 2
+- id: empty-prefix
+  kind: mcq
+  prompt: For the longest subarray with sum k, what does the map start with?
+  options:
+  - Prefix sum 0 at index −1
+  - Prefix sum 0 at index 0
+  - Nothing
+  - Prefix sum k at index −1
+  answer: 0
+  explanation: The empty prefix ends just before index 0.
+  difficulty: 2
+- id: first-index
+  kind: mcq
+  prompt: A prefix sum appears again later. For the longest subarray, which index do you keep?
+  options:
+  - The first one
+  - The latest one
+  - Both, in a list
+  - Neither
+  answer: 0
+  explanation: The earliest start gives the longest subarray.
+  difficulty: 3
+- id: longest-trace
+  kind: mcq
+  prompt: 'a = 1 -1 5 -2 3 and k = 3. What is the length of the longest subarray with sum k?'
+  options:
+  - '4'
+  - '2'
+  - '0'
+  - '1'
+  answer: 0
+  explanation: 1 −1 5 −2, found through the empty prefix.
+  difficulty: 3
+- id: window-negatives
+  kind: mcq
+  prompt: Why does a sliding window fail for "longest subarray with sum k" when numbers can be negative?
+  options:
+  - A sum that is too big now may come back down, so no shrink is safe
+  - Windows cannot hold negative numbers
+  - It is too slow
+  - It counts each subarray twice
+  answer: 0
+  explanation: The window's shrink rule needs non-negative numbers.
+  difficulty: 3
+- id: remainder-key
+  kind: mcq
+  prompt: Counting subarrays whose sum is divisible by m, what is the key?
+  options:
+  - The prefix sum modulo m, made non-negative
+  - The prefix sum itself
+  - The index modulo m
+  - The element modulo m
+  answer: 0
+  explanation: Two prefixes with the same remainder bound a divisible subarray.
+  difficulty: 4
+- id: run-start
+  kind: mcq
+  prompt: In longest consecutive sequence, when does the walk start from x?
+  options:
+  - Only when x − 1 is not in the set
+  - From every element
+  - Only from the smallest element
+  - When x + 1 is not in the set
+  answer: 0
+  explanation: Starting only at run starts keeps the total O(n).
+  difficulty: 4
+- id: shortest-last
+  kind: mcq
+  prompt: You need the shortest subarray with a given prefix condition. Which index do you store per key?
+  options:
+  - The latest one
+  - The first one
+  - The middle one
+  - Only the count
+  answer: 0
+  explanation: The closest earlier prefix gives the shortest subarray.
+  difficulty: 5
+problems:
+- longest-divisible-run
+- balanced-segments
+practice_links:
+- title: Maximum Size Subarray Sum Equals k
+  url: https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/
+  platform: LeetCode
+  difficulty: medium
+- title: Contiguous Array
+  url: https://leetcode.com/problems/contiguous-array/
+  platform: LeetCode
+  difficulty: medium
+- title: Subarray Sums Divisible by K
+  url: https://leetcode.com/problems/subarray-sums-divisible-by-k/
+  platform: LeetCode
+  difficulty: medium
+- title: Count Number of Nice Subarrays
+  url: https://leetcode.com/problems/count-number-of-nice-subarrays/
+  platform: LeetCode
+  difficulty: medium
+- title: 4Sum II
+  url: https://leetcode.com/problems/4sum-ii/
+  platform: LeetCode
+  difficulty: medium
+- title: Isomorphic Strings
+  url: https://leetcode.com/problems/isomorphic-strings/
+  platform: LeetCode
+  difficulty: easy
+- title: Longest Consecutive Sequence
+  url: https://leetcode.com/problems/longest-consecutive-sequence/
+  platform: LeetCode
+  difficulty: medium
+- title: Subarray Divisibility
+  url: https://cses.fi/problemset/task/1662
+  platform: CSES
+  difficulty: medium
+provenance:
+  origin: original
+status: live

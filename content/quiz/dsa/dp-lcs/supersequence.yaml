@@ -1,0 +1,79 @@
+id: quiz:dsa:dp-lcs:supersequence
+family: supersequence
+concept: dsa:dp-lcs
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: length
+  band: 2
+  format: mcq
+  prompt: a = abac, b = cab, and their LCS is ab. How long is the shortest common supersequence?
+  options:
+  - '5'
+  - '7'
+  - '2'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - scs-forget-lcs
+  - pattern-value-vs-choice
+  - off-by-one-output
+  explanation: 4 + 3 − 2 = 5, for example cabac.
+- id: match-once
+  band: 3
+  format: bug_spot
+  prompt: While walking back, the code writes both a[i−1] and b[j−1] on a match. What happens?
+  options:
+  - The result is longer than necessary
+  - The result misses characters
+  - Nothing
+  - It loops forever
+  answer: 0
+  misconceptions:
+  - null
+  - scs-forget-lcs
+  - double-count
+  - dp-reconstruct-forward
+  explanation: A shared character must be written once.
+- id: leftovers
+  band: 4
+  format: bug_spot
+  prompt: The walk stops when i or j reaches 0 and prints what it has. What is missing?
+  options:
+  - The remaining prefix of the other string
+  - Nothing
+  - The LCS characters
+  - The first character of a
+  answer: 0
+  misconceptions:
+  - null
+  - dp-reconstruct-forward
+  - scs-forget-lcs
+  - loop-bound-off-by-one
+  explanation: When one string is used up, the rest of the other must still be copied.
+- id: full-table
+  band: 5
+  format: classify
+  prompt: You must print the supersequence, not just its length. Can you keep only two rows?
+  options:
+  - No; walking back needs the whole table or a record of choices
+  - Yes, always
+  - Yes, if the strings are short
+  - Only with greedy matching
+  answer: 0
+  misconceptions:
+  - null
+  - dp-compressed-loses-path
+  - pattern-value-vs-choice
+  - lcs-greedy-match
+  explanation: The walk back visits cells from earlier rows.
+status: provisional
+provenance:
+  origin: original

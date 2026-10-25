@@ -1,0 +1,80 @@
+id: quiz:dsa:dp-lis:lis-variants
+family: lis-variants
+concept: dsa:dp-lis
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: parent
+  band: 2
+  format: mcq
+  prompt: To print one LIS, what do you store for each i?
+  options:
+  - The index j whose chain a[i] extended
+  - The value of the LIS so far
+  - Whether a[i] is the largest so far
+  - Nothing; tails is the answer
+  answer: 0
+  misconceptions:
+  - null
+  - dp-compressed-loses-path
+  - dp-vague-state
+  - lis-tails-is-sequence
+  explanation: Walk the parents back from the best ending index and reverse.
+- id: envelope-sort
+  band: 3
+  format: mcq
+  prompt: Envelopes (5,4) (6,4) (6,7) (2,3). After sorting by width ascending, height descending, what
+    is the LIS of the heights?
+  options:
+  - '3'
+  - '4'
+  - '2'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - lis-envelope-tie-order
+  - lis-non-strict-compare
+  - off-by-one-output
+  explanation: Heights 3 4 7 4 give 3; (2,3) → (5,4) → (6,7).
+- id: mountain
+  band: 4
+  format: mcq
+  prompt: For a mountain (rise, then fall) through index i, which values combine?
+  options:
+  - LIS ending at i from the left plus LIS ending at i from the right, minus 1
+  - The LIS of the whole array
+  - Two separate LIS added
+  - The longest run around i
+  answer: 0
+  misconceptions:
+  - null
+  - lis-answer-last-cell
+  - double-count
+  - pattern-subsequence-vs-substring
+  explanation: The peak a[i] is counted in both halves, so subtract 1.
+- id: count-ties
+  band: 5
+  format: bug_spot
+  prompt: To count LIS, count[i] adds count[j] for every smaller earlier a[j]. What is wrong?
+  options:
+  - Only j whose dp[j] + 1 equals the best dp[i] should add
+  - Nothing
+  - count should be multiplied
+  - count[i] should start at 0
+  answer: 0
+  misconceptions:
+  - null
+  - count-all-not-each
+  - count-vs-sum
+  - dp-wrong-base-case
+  explanation: Shorter chains through a[i] are not longest chains.
+status: provisional
+provenance:
+  origin: original

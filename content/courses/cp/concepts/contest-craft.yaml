@@ -1,0 +1,53 @@
+id: contest-craft
+title: Contest craft
+summary: Reading the whole set, ordering problems, interactive problems, guessing the technique from constraints,
+  and your template library.
+module: contest-craft
+prerequisites:
+- stress-testing
+- complete-search
+difficulty: 3
+estimated_minutes: 40
+status: draft
+lesson: '## Interactive
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Technique from constraints
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

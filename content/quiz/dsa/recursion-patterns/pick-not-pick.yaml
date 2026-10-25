@@ -1,0 +1,237 @@
+id: quiz:dsa:recursion-patterns:pick-not-pick
+family: pick-not-pick
+concept: dsa:recursion-patterns
+pattern: dsa:recursion-patterns/pick-not-pick
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: pick_not_pick
+  params:
+    length:
+    - 4
+    - 6
+    value:
+    - 0
+    - 5
+    k:
+    - 2
+    - 8
+  reference: count_brute(a, k)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: return as soon as the sum reaches k
+  misconception: pnp-stop-at-target
+- rule: count contiguous subarrays instead
+  misconception: pattern-subset-vs-subarray
+- rule: count every choice, 2^n
+  misconception: pnp-base-ignores-target
+- rule: count each choice twice
+  misconception: double-count
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is pick or not pick?
+  options:
+  - How many ways can some of the n items (each at most once) weigh exactly W?
+  - What is the largest item?
+  - How many contiguous runs sum to W?
+  - Sort the items by weight
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-vs-scan
+  - pattern-subset-vs-subarray
+  - pattern-sort-breaks-order
+  explanation: Each item is in or out.
+- id: branches
+  band: 1
+  format: mcq
+  prompt: What are the two recursive calls at index i?
+  options:
+  - ways(i + 1, total + a[i]) and ways(i + 1, total)
+  - ways(i + 1, total) twice
+  - ways(i, total + a[i]) and ways(i + 1, total)
+  - ways(i − 1, total) and ways(i + 1, total)
+  answer: 0
+  misconceptions:
+  - null
+  - pnp-take-without-element
+  - unbounded-advance-after-take
+  - confuse-index-value
+  explanation: Take a[i] or leave it, then move to the next index.
+- id: base
+  band: 2
+  format: mcq
+  prompt: What does the base case at i = n return?
+  options:
+  - 1 if the total equals k, else 0
+  - Always 1
+  - The total
+  - Always 0
+  answer: 0
+  misconceptions:
+  - null
+  - pnp-base-ignores-target
+  - count-vs-sum
+  - dp-wrong-base-case
+  explanation: A finished choice counts only if it hits the target.
+- id: trace-small
+  band: 2
+  format: trace
+  prompt: a = 2 1 1 and k = 2. How many subsequences sum to 2?
+  options:
+  - '2'
+  - '3'
+  - '1'
+  - '8'
+  answer: 0
+  misconceptions:
+  - null
+  - double-count
+  - pnp-stop-at-target
+  - pnp-base-ignores-target
+  explanation: The subsequences 2 and 1 1.
+- id: early
+  band: 3
+  format: trace
+  prompt: a = 1 2 0 3 and k = 3, with a base case that returns 1 as soon as the total is 3. What is printed?
+  options:
+  - '3'
+  - '4'
+  - '2'
+  - '16'
+  answer: 0
+  misconceptions:
+  - null
+  - pnp-stop-at-target
+  - pattern-subset-vs-subarray
+  - pnp-base-ignores-target
+  explanation: It misses 1 2 0, because it never decides the 0.
+- id: anchor
+  band: 3
+  format: trace
+  prompt: a = 1 2 0 3 and k = 3. What does the correct recursion print?
+  options:
+  - '4'
+  - '3'
+  - '2'
+  - '5'
+  answer: 0
+  misconceptions:
+  - null
+  - pnp-stop-at-target
+  - pattern-subset-vs-subarray
+  - double-count
+  explanation: 1 2, 1 2 0, 3 and 0 3.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: n elements. How many calls does the recursion make?
+  options:
+  - About 2^(n+1)
+  - About n
+  - About n²
+  - About n log n
+  answer: 0
+  misconceptions:
+  - null
+  - subsets-linear
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  explanation: A full binary tree with 2^n leaves.
+- id: prune
+  band: 4
+  format: classify
+  prompt: All numbers are positive and the total already exceeds k. What can the call do?
+  options:
+  - Return 0 at once; no extension can come back down
+  - Keep going, a later element may fix it
+  - Return 1
+  - Reset the total to 0
+  answer: 0
+  misconceptions:
+  - null
+  - window-with-negatives
+  - pnp-stop-at-target
+  - reset-inside-loop
+  explanation: With positive numbers the total only grows.
+- id: subarray
+  band: 5
+  format: classify
+  prompt: The question changes to "how many contiguous subarrays sum to k?". What changes?
+  options:
+  - It is no longer pick or not pick; use prefix sums with a hash map
+  - Nothing
+  - Add a third branch
+  - Start the recursion at index 1
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subset-vs-subarray
+  - pattern-brute-force-default
+  - skip-first-element
+  explanation: Subarrays are contiguous, so there are only n(n + 1)/2 of them.
+- id: memo
+  band: 5
+  format: classify
+  prompt: The numbers are at most 100 and n is 200. How can the recursion still work?
+  options:
+  - Memoize ways(i, total); there are at most n · (sum + 1) states
+  - Use bitmasks instead
+  - Sort the array
+  - It cannot
+  answer: 0
+  misconceptions:
+  - null
+  - subsets-linear
+  - pattern-sort-breaks-order
+  - dp-no-overlap
+  explanation: That is the subset-count DP of the 0/1 knapsack lesson.
+- id: target-sum
+  band: 6
+  format: classify
+  prompt: Put + or − before each number so the total is S. How does the template change?
+  options:
+  - The two branches add or subtract a[i]
+  - It needs three branches
+  - The base case checks only i
+  - It becomes fast power
+  answer: 0
+  misconceptions:
+  - null
+  - pnp-forget-skip
+  - pnp-base-ignores-target
+  - pattern-brute-force-default
+  explanation: Still two choices per index.
+- id: combination-sum
+  band: 6
+  format: classify
+  prompt: Each number may be used any number of times. What changes in the take branch?
+  options:
+  - It stays at index i, so a[i] can be taken again
+  - It moves to i + 2
+  - It adds a[i] twice
+  - Nothing
+  answer: 0
+  misconceptions:
+  - null
+  - confuse-index-value
+  - double-count
+  - unbounded-vs-01
+  explanation: Only the skip branch moves on.
+status: provisional
+provenance:
+  origin: original

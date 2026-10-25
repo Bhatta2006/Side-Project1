@@ -15,6 +15,7 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Progress } from '@/components/ui/progress';
+import { Soc } from '@/components/socrat/illustration';
 
 const MINUTES = [15, 20, 30, 45, 60, 90, 120] as const;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -37,11 +38,16 @@ function detectTimezone() {
   }
 }
 
+/** Each onboarding step is one of Soc's questions: he asks it from the margin. */
 function Heading({ title, body }: { title: string; body: string }) {
   return (
-    <div>
-      <h1 className="type-display-l">{title}</h1>
-      <p className="mt-3 text-base text-muted-foreground">{body}</p>
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">quick question</p>
+        <h1 className="type-display-l mt-1">{title}</h1>
+        <p className="mt-3 text-base text-muted-foreground">{body}</p>
+      </div>
+      <Soc size={96} mood="curious" className="mt-2 hidden sm:block" />
     </div>
   );
 }
@@ -84,8 +90,11 @@ export default function Start() {
   const [targetRating, setTargetRating] = useState('');
   const [motivation, setMotivation] = useState('');
 
+  const [runtimes, setRuntimes] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     api.get<{ items: Course[] }>('/courses').then(r => setCourses(r.items)).catch(e => setError(explain(e)));
+    api.get<{ languages: Record<string, boolean> }>('/runtimes').then(r => setRuntimes(r.languages)).catch(() => undefined);
   }, []);
   useEffect(() => {
     if (!profile) return;
@@ -258,12 +267,22 @@ export default function Start() {
           <div className="grid gap-6">
             <Heading title="Which language?" body="Lessons, examples, checks and your code editor all follow this choice. Not sure? Python reads closest to plain English." />
             <div className="grid gap-3 sm:grid-cols-3">
-              {course.languages.map(l => (
-                <Choice key={l} selected={language === l} aria-pressed={language === l} className="min-h-[72px] items-center justify-center" onClick={() => { setLanguage(l); setStep('schedule'); }}>
-                  <span className="choice-title block text-center text-lg font-semibold">{LANGUAGE_LABEL[l]}</span>
-                  {l === 'python' ? <span aria-hidden="true" className="mt-0.5 block text-center text-[13px] text-muted-foreground">Easiest to start with</span> : null}
-                </Choice>
-              ))}
+              {course.languages.map(l => {
+                // Don't sell a language whose code can't run yet (D-7).
+                const offline = Object.keys(runtimes).length > 0 && !runtimes[l];
+                return (
+                  <Choice key={l} disabled={offline} selected={language === l} aria-pressed={language === l} className="min-h-[72px] items-center justify-center disabled:opacity-60" onClick={() => { setLanguage(l); setStep('schedule'); }}>
+                    <span className="block">
+                      <span className="choice-title block text-center text-lg font-semibold">{LANGUAGE_LABEL[l]}</span>
+                      {offline ? (
+                        <span className="block text-center text-sm text-muted-foreground">Coming soon: code can't run yet</span>
+                      ) : l === 'python' ? (
+                        <span aria-hidden="true" className="mt-0.5 block text-center text-[13px] text-muted-foreground">Easiest to start with</span>
+                      ) : null}
+                    </span>
+                  </Choice>
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -320,7 +339,7 @@ export default function Start() {
         {step === 'review' && course ? (
           <form onSubmit={enroll} className="grid gap-8">
             <Heading title="Check your choices" body="Your plan is built from these. You can change study time later in Settings." />
-            <dl className="rounded-card border bg-card px-5">
+            <dl className="paper rounded-card px-5">
               <Summary label="Course" value={course.title} onEdit={() => setStep('course')} />
               <Summary label="Starting level" value={course.levels.find(l => l.id === level)?.label ?? 'Not chosen'} onEdit={() => setStep('level')} />
               <Summary label="Language" value={language ? LANGUAGE_LABEL[language] : 'Not chosen'} onEdit={() => setStep('language')} />

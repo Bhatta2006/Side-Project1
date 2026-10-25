@@ -1,0 +1,149 @@
+id: dsa:dp-advanced-patterns/bitmask-subsets
+concept: dsa:dp-advanced-patterns
+title: 'Bitmask DP: the set of used items is the state'
+tracks:
+- interview
+- competitive
+recognise:
+- At most about 20 items, and which ones are used matters, not only how many
+- Each exactly once - assign, visit every city, split into groups
+- n! orders are too many, but 2^n sets fit
+state: dp[mask] = best cost for the items in mask (the next worker is popcount(mask))
+transition: 'for each free j: dp[mask | 1<<j] = min(dp[mask | 1<<j], dp[mask] + cost[popcount(mask)][j])'
+base_cases:
+- dp[0] = 0, every other mask infinity
+complexity:
+  time: O(2^n · n)
+  space: O(2^n)
+template:
+  python: |
+    n = int(input())
+    cost = [list(map(int, input().split())) for _ in range(n)]  # cost[worker][job]
+    INF = float("inf")
+    dp = [INF] * (1 << n)  # dp[mask]: cheapest way to fill the jobs in mask
+    dp[0] = 0
+    for mask in range(1 << n):  # a superset is always a larger number
+        i = bin(mask).count("1")  # the next worker to place
+        if i == n or dp[mask] == INF:
+            continue
+        for j in range(n):
+            if not mask & (1 << j):  # job j is still free
+                nxt = mask | (1 << j)
+                dp[nxt] = min(dp[nxt], dp[mask] + cost[i][j])
+    print(dp[(1 << n) - 1])
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<vector<long long>> cost(n, vector<long long>(n));  // cost[worker][job]
+        for (auto& row : cost) for (auto& x : row) cin >> x;
+        const long long INF = 1e18;
+        vector<long long> dp(1 << n, INF);  // dp[mask]: cheapest way to fill the jobs in mask
+        dp[0] = 0;
+        for (int mask = 0; mask < (1 << n); mask++) {  // a superset is always a larger number
+            int i = __builtin_popcount(mask);  // the next worker to place
+            if (i == n || dp[mask] == INF) continue;
+            for (int j = 0; j < n; j++)
+                if (!(mask & (1 << j))) {  // job j is still free
+                    int nxt = mask | (1 << j);
+                    dp[nxt] = min(dp[nxt], dp[mask] + cost[i][j]);
+                }
+        }
+        cout << dp[(1 << n) - 1] << "\n";
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();
+            long[][] cost = new long[n][n];  // cost[worker][job]
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < n; j++) cost[i][j] = in.nextLong();
+            final long INF = Long.MAX_VALUE;
+            long[] dp = new long[1 << n];  // dp[mask]: cheapest way to fill the jobs in mask
+            Arrays.fill(dp, INF);
+            dp[0] = 0;
+            for (int mask = 0; mask < (1 << n); mask++) {  // a superset is always a larger number
+                int i = Integer.bitCount(mask);  // the next worker to place
+                if (i == n || dp[mask] == INF) continue;
+                for (int j = 0; j < n; j++)
+                    if ((mask & (1 << j)) == 0) {  // job j is still free
+                        int nxt = mask | (1 << j);
+                        dp[nxt] = Math.min(dp[nxt], dp[mask] + cost[i][j]);
+                    }
+            }
+            System.out.println(dp[(1 << n) - 1]);
+        }
+    }
+template_io:
+  stdin: |
+    3
+    9 2 7
+    6 4 3
+    5 8 1
+  expected: '9'
+variants:
+- id: k-equal-subsets
+  band: 3
+  title: Fill buckets one at a time
+  problem: leetcode:partition-to-k-equal-sum-subsets
+- id: cookies
+  band: 3
+  title: Split a set among k children
+  problem: leetcode:fair-distribution-of-cookies
+- id: work-sessions
+  band: 4
+  title: (sessions used, time in the last one)
+  problem: leetcode:minimum-number-of-work-sessions-to-finish-the-tasks
+- id: elevator
+  band: 5
+  title: (rides, weight in the last ride)
+  problem: cses:1653
+- id: visit-all
+  band: 5
+  title: Mask plus the current node
+  problem: leetcode:shortest-path-visiting-all-nodes
+- id: hamiltonian
+  band: 6
+  title: Count Hamiltonian paths
+  problem: cses:1690
+pitfalls:
+- bitmask-greedy-assign
+- bitmask-check-bit
+- bitmask-worker-index
+- pattern-bitmask-vs-knapsack
+atoms:
+- bm-worked
+- bm-faded
+- bm-visualizer
+- bm-micro
+- bm-classify
+quiz_family: quiz:dsa:dp-advanced-patterns:bitmask-subsets
+problems:
+  external:
+  - leetcode:partition-to-k-equal-sum-subsets
+  - leetcode:fair-distribution-of-cookies
+  - leetcode:minimum-number-of-work-sessions-to-finish-the-tasks
+  - cses:1653
+  - leetcode:shortest-path-visiting-all-nodes
+  - cses:1690
+  - leetcode:find-the-shortest-superstring
+  - cses:1097
+  - leetcode:predict-the-winner
+  - leetcode:can-i-win
+  - leetcode:student-attendance-record-ii
+  - leetcode:knight-dialer
+  - cses:2220
+  - leetcode:number-of-digit-one
+showcase:
+- 'Three workers, three jobs: why the cheapest free job is not enough'
+status: provisional
+provenance:
+  origin: original

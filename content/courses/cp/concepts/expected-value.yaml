@@ -1,0 +1,74 @@
+id: expected-value
+title: Expected value and probability
+summary: Linearity of expectation, indicator variables, expected-value DP and probabilities as modular
+  fractions.
+module: math-2
+prerequisites:
+- combinatorics
+- modular-arithmetic
+difficulty: 5
+estimated_minutes: 60
+status: draft
+lesson: '## Linearity indicators
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Expectation dp
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Modular probability
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

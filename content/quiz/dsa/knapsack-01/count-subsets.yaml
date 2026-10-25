@@ -1,0 +1,79 @@
+id: quiz:dsa:knapsack-01:count-subsets
+family: count-subsets
+concept: dsa:knapsack-01
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: ways-base
+  band: 1
+  format: mcq
+  prompt: 'Counting subsets with sum K: what is ways[0] before any element?'
+  options:
+  - '1'
+  - '0'
+  - K
+  - n
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - dp-wrong-base-case
+  - dp-wrong-base-case
+  explanation: The empty subset is one way to make 0.
+- id: zeros
+  band: 3
+  format: bug_spot
+  prompt: The inner loop runs s from K down to x + 1. Input 0 0 1, K = 1 prints 1. What is wrong?
+  options:
+  - s must reach x, so each 0 doubles ways[0]
+  - ways[0] should be 0
+  - Loop forwards
+  - Sort first
+  answer: 0
+  misconceptions:
+  - null
+  - knapsack-zero-skipped
+  - dp-wrong-base-case
+  - knapsack-forward-capacity-loop
+  explanation: With x = 0 the loop must include s = 0; the right answer is 4.
+- id: difference-target
+  band: 4
+  format: mcq
+  prompt: Total 9, wanted difference D = 4. How many partitions are there?
+  options:
+  - 0, because 9 + 4 is odd
+  - Count subsets with sum 6
+  - Count subsets with sum 4
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - count-target-transform
+  - count-target-transform
+  - count-target-transform
+  explanation: s1 = (total + D) / 2 must be a whole number.
+- id: count-not-exists
+  band: 5
+  format: classify
+  prompt: A boolean subset-sum table is built. Can it report how many subsets reach K?
+  options:
+  - 'No: rebuild with counts and +'
+  - 'Yes: count the true cells'
+  - 'Yes: multiply by n'
+  - Only for small K
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-count-vs-exists
+  - pattern-count-vs-exists
+  - pattern-count-vs-exists
+  explanation: true/false loses how many ways led there.
+status: provisional
+provenance:
+  origin: original

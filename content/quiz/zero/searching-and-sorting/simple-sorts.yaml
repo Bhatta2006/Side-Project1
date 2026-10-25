@@ -1,0 +1,233 @@
+id: quiz:zero:searching-and-sorting:simple-sorts
+family: simple-sorts
+concept: zero:searching-and-sorting
+pattern: zero:searching-and-sorting/simple-sorts
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+generator:
+  template: bubble_passes
+  params:
+    length:
+    - 5
+    - 7
+    passes:
+    - 1
+    - 3
+  reference: bubble_text(a, passes)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: assume the list is sorted after any number of passes
+  misconception: sort-pass-equals-sorted
+- rule: run one pass more or fewer
+  misconception: loop-bound-off-by-one
+- rule: trace selection sort instead
+  misconception: sort-confuse-algorithms
+- rule: sort in the opposite direction
+  misconception: sort-wrong-direction
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which description is bubble sort?
+  options:
+  - Repeated passes that swap neighbours that are out of order
+  - Pick the smallest remaining value and put it next
+  - Slide each new value left into a sorted front
+  - Halve the list each step
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-bubble-selection-insertion
+  - sort-confuse-algorithms
+  - pattern-search-vs-scan
+  explanation: Selection picks the smallest; insertion slides into a sorted front.
+- id: swap-or-not
+  band: 1
+  format: mcq
+  prompt: Sorting in increasing order, neighbours 7 and 3 are compared. What happens?
+  options:
+  - They swap, giving 3 7
+  - Nothing
+  - 7 is removed
+  - They swap only on the last pass
+  answer: 0
+  misconceptions:
+  - null
+  - sort-wrong-direction
+  - sort-overwrite-not-swap
+  - sort-pass-equals-sorted
+  explanation: The left value is bigger, so they are out of order.
+- id: one-pass
+  band: 2
+  format: trace
+  prompt: After one bubble pass, what is 5 1 4 2 8?
+  options:
+  - 1 4 2 5 8
+  - 1 2 4 5 8
+  - 1 5 4 2 8
+  - 8 5 4 2 1
+  answer: 0
+  misconceptions:
+  - null
+  - sort-pass-equals-sorted
+  - trace-step-slip
+  - sort-wrong-direction
+  explanation: 5 is carried right until it meets 8.
+- id: largest
+  band: 2
+  format: mcq
+  prompt: What is always true after the first bubble pass?
+  options:
+  - The largest value is at the end
+  - The smallest value is at the front
+  - The list is sorted
+  - The middle value is in place
+  answer: 0
+  misconceptions:
+  - null
+  - sort-confuse-algorithms
+  - sort-pass-equals-sorted
+  - trace-step-slip
+  explanation: The largest value is carried all the way right.
+- id: two-passes
+  band: 3
+  format: trace
+  prompt: After two bubble passes, what is 4 3 2 1?
+  options:
+  - 2 1 3 4
+  - 1 2 3 4
+  - 3 2 1 4
+  - 1 4 3 2
+  answer: 0
+  misconceptions:
+  - null
+  - sort-pass-equals-sorted
+  - loop-bound-off-by-one
+  - sort-confuse-algorithms
+  explanation: Each pass fixes one more value at the end.
+- id: copy
+  band: 3
+  format: bug_spot
+  prompt: The swap is written a[j] = a[j + 1]. What goes wrong?
+  options:
+  - The old a[j] is lost, so one value appears twice and another disappears
+  - Nothing
+  - It sorts in descending order
+  - It loops forever
+  answer: 0
+  misconceptions:
+  - null
+  - sort-overwrite-not-swap
+  - sort-wrong-direction
+  - infinite-loop-condition
+  explanation: A swap needs both values, through a tuple or a temporary variable.
+- id: early-stop
+  band: 4
+  format: mcq
+  prompt: Why may bubble sort stop after a pass with no swaps?
+  options:
+  - Every neighbouring pair is in order, so the list is sorted
+  - It is a guess that is usually right
+  - Only the end of the list is sorted
+  - It may not stop early
+  answer: 0
+  misconceptions:
+  - null
+  - sort-pass-equals-sorted
+  - sort-pass-equals-sorted
+  - loop-bound-off-by-one
+  explanation: If all neighbours are in order, the whole list is.
+- id: cost
+  band: 4
+  format: complexity
+  prompt: Bubble sort on a reversed list of n values. How many comparisons, roughly?
+  options:
+  - About n² / 2
+  - About n
+  - About n log n
+  - About log n
+  answer: 0
+  misconceptions:
+  - null
+  - subsets-linear
+  - sort-confuse-algorithms
+  - pattern-search-vs-scan
+  explanation: (n − 1) + (n − 2) + … + 1.
+- id: inner-bound
+  band: 5
+  format: bug_spot
+  prompt: The inner loop runs j < n − 2 − p instead of j < n − 1 − p. What goes wrong?
+  options:
+  - The last unsorted pair is never compared, so the list can stay unsorted
+  - Nothing; it is just faster
+  - An index error
+  - It sorts descending
+  answer: 0
+  misconceptions:
+  - null
+  - sort-inner-bound-short
+  - loop-bound-off-by-one
+  - sort-wrong-direction
+  explanation: On 2 1, no comparison happens at all.
+- id: selection-trace
+  band: 5
+  format: trace
+  prompt: Selection sort (swap the smallest remaining value into place) on 5 1 4 2 8. What is the list after two steps?
+  options:
+  - 1 2 4 5 8
+  - 1 4 2 5 8
+  - 1 5 4 2 8
+  - 1 2 5 4 8
+  answer: 0
+  misconceptions:
+  - null
+  - sort-confuse-algorithms
+  - trace-step-slip
+  - trace-step-slip
+  explanation: Step 1 swaps 1 to the front; step 2 swaps 2 with 5.
+- id: insertion
+  band: 6
+  format: classify
+  prompt: Which simple sort is fastest on a list that is already almost sorted?
+  options:
+  - Insertion sort, because each value slides only a little
+  - Selection sort
+  - All are equally fast
+  - None; they all do n² / 2 comparisons
+  answer: 0
+  misconceptions:
+  - null
+  - sort-confuse-algorithms
+  - pattern-brute-force-default
+  - sort-confuse-algorithms
+  explanation: Bubble sort with the early stop is fast too; selection always scans everything.
+- id: builtin
+  band: 6
+  format: classify
+  prompt: Real code needs to sort a million numbers. What should it use?
+  options:
+  - The built-in sort, O(n log n)
+  - Bubble sort with early stopping
+  - Selection sort
+  - Binary search
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  - pattern-search-vs-scan
+  explanation: n² is 10¹² comparisons.
+status: provisional
+provenance:
+  origin: original

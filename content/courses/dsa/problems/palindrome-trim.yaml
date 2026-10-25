@@ -1,0 +1,111 @@
+id: palindrome-trim
+title: Palindrome trimming
+concepts: [dp-lcs]
+difficulty: medium
+statement: |
+  You have a word `s` of lowercase letters. Deleting a letter costs its position in the
+  alphabet: `a` costs 1, `b` costs 2, …, `z` costs 26.
+
+  Delete some letters (possibly none) so that the remaining word reads the same forwards and
+  backwards. Print the smallest total cost. An empty word counts as a palindrome.
+input_format: A single line with the word s.
+output_format: The smallest total deletion cost.
+constraints:
+  - 1 ≤ |s| ≤ 1000
+  - s contains only lowercase English letters
+examples:
+  - input: "abca"
+    output: "2"
+    explanation: "Delete b (cost 2) to get aca. Deleting c instead costs 3."
+  - input: "zaz"
+    output: "0"
+hints:
+  - "Compare the two ends of s[i..j]. If they are equal, both can stay. If not, at least one of them must go."
+  - "Let dp[i][j] be the cheapest cost for s[i..j]. On unequal ends, try deleting s[i] (cost + dp[i + 1][j]) or s[j] (cost + dp[i][j − 1])."
+  - "dp[i][j] reads row i + 1, so fill i from n − 1 down to 0. Single letters and empty ranges cost 0."
+approach: |
+  Interval DP on the two ends, like the longest palindromic subsequence but minimising a
+  cost. dp[i][j] = cheapest deletions that turn s[i..j] into a palindrome; ranges of length 0
+  or 1 cost 0. If s[i] == s[j], keep both: dp[i + 1][j − 1]. Otherwise delete one end:
+  min(cost(s[i]) + dp[i + 1][j], cost(s[j]) + dp[i][j − 1]). Keeping equal ends is never
+  worse (any solution that deletes one of them can keep it instead, paired with the other).
+  Fill i downwards. O(n²) time and memory.
+reference: |
+  s = input().strip()
+  n = len(s)
+  cost = [ord(ch) - 96 for ch in s]
+  dp = [[0] * n for _ in range(n)]  # dp[i][j]: cheapest deletions for s[i..j]
+  for i in range(n - 2, -1, -1):
+      row, below = dp[i], dp[i + 1]
+      for j in range(i + 1, n):
+          if s[i] == s[j]:
+              row[j] = below[j - 1] if j - 1 > i else 0
+          else:
+              x, y = cost[i] + below[j], cost[j] + row[j - 1]
+              row[j] = x if x < y else y
+  print(dp[0][n - 1])
+brute: |
+  from itertools import combinations
+  s = input().strip()
+  n = len(s)
+  total = sum(ord(ch) - 96 for ch in s)
+  best = total
+  for size in range(1, n + 1):
+      for keep in combinations(range(n), size):
+          t = "".join(s[i] for i in keep)
+          if t == t[::-1]:
+              best = min(best, total - sum(ord(ch) - 96 for ch in t))
+  print(best)
+references:
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        string s;
+        cin >> s;
+        int n = s.size();
+        vector<vector<int>> dp(n, vector<int>(n, 0));  // dp[i][j]: cheapest deletions for s[i..j]
+        for (int i = n - 2; i >= 0; i--)
+            for (int j = i + 1; j < n; j++) {
+                if (s[i] == s[j]) dp[i][j] = j - 1 > i ? dp[i + 1][j - 1] : 0;
+                else dp[i][j] = min((s[i] - 'a' + 1) + dp[i + 1][j], (s[j] - 'a' + 1) + dp[i][j - 1]);
+            }
+        cout << dp[0][n - 1] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            String s = new Scanner(System.in).next();
+            int n = s.length();
+            int[][] dp = new int[n][n];  // dp[i][j]: cheapest deletions for s[i..j]
+            for (int i = n - 2; i >= 0; i--)
+                for (int j = i + 1; j < n; j++) {
+                    if (s.charAt(i) == s.charAt(j)) dp[i][j] = j - 1 > i ? dp[i + 1][j - 1] : 0;
+                    else dp[i][j] = Math.min((s.charAt(i) - 'a' + 1) + dp[i + 1][j],
+                                             (s.charAt(j) - 'a' + 1) + dp[i][j - 1]);
+                }
+            System.out.println(dp[0][n - 1]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "a"
+      yield "ab"
+      yield "aa"
+      yield "z" * 1000
+      yield "".join(rng.choice("ab") for _ in range(1000))
+      yield "".join(rng.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(1000))
+      yield "".join(rng.choice("xyz") for _ in range(999))
+      yield "abcdefghijklmnopqrstuvwxyz" * 38
+      for _ in range(4):
+          yield "".join(rng.choice("abcde") for _ in range(rng.randint(1, 80)))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          yield "".join(rng.choice("abcz") for _ in range(rng.randint(1, 10)))

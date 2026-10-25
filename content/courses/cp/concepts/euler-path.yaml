@@ -1,0 +1,31 @@
+id: euler-path
+title: Euler paths and circuits
+summary: When an Euler path exists and how Hierholzer's algorithm builds it, with De Bruijn sequences
+  as an application.
+module: graph-module
+prerequisites:
+- graph-techniques
+difficulty: 5
+estimated_minutes: 40
+status: draft
+lesson: '## Hierholzer
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

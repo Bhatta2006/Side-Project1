@@ -27,23 +27,23 @@ modules:
   - id: foundations
     title: Foundations
     summary: Measure efficiency and master the array and hash map toolkit.
-    concepts: [complexity, arrays-hashing, prefix-sums]
+    concepts: [complexity, arrays-hashing, prefix-sums, hashing]
   - id: linear-patterns
     title: Linear patterns
     summary: Two pointers, sliding windows, stacks and binary search.
-    concepts: [two-pointers, sliding-window, stacks, binary-search]
+    concepts: [two-pointers, sliding-window, stacks, monotonic-stack, binary-search, binary-search-on-answer, binary-search-2d]
   - id: ordering
     title: Sorting and greedy
     summary: Sort to reveal structure, then make provably safe greedy choices.
     concepts: [sorting, intervals, greedy]
   - id: recursive-structures
-    title: Linked structures and backtracking
-    summary: Pointers, nodes and exhaustive search done cleanly.
-    concepts: [linked-lists, backtracking]
+    title: Linked structures, recursion and backtracking
+    summary: Pointers and nodes, recursion patterns, and exhaustive search done cleanly.
+    concepts: [linked-lists, recursion-patterns, backtracking]
   - id: trees
     title: Trees and heaps
     summary: Recursive data, ordered trees, priority queues and prefix trees.
-    concepts: [binary-trees, bst, heaps, tries]
+    concepts: [binary-trees, tree-patterns, tree-construction, bst, heaps, tries]
   - id: graphs
     title: Graphs
     summary: Traverse, order, connect and find shortest paths.
@@ -51,4 +51,12 @@ modules:
   - id: dynamic-programming
     title: Dynamic programming and bits
     summary: Turn exponential search into polynomial tables; use bits as tools.
-    concepts: [dp-1d, dp-2d, bit-manipulation]
+    concepts: [dp-introduction, dp-1d, dp-2d, knapsack-01, knapsack-unbounded, dp-lcs, dp-edit-distance, dp-stocks, dp-lis, dp-partition, dp-squares, dp-on-trees, bit-manipulation, dp-advanced-patterns]
+  - id: math-and-strings
+    title: Math and strings
+    summary: Interview math, then string matching with hashes, KMP and the Z-function.
+    concepts: [interview-math, string-algorithms]
+  - id: design-and-practice
+    title: Design and interview practice
+    summary: Design data structures, meet advanced structures and practise running an interview.
+    concepts: [design-data-structures, advanced-data-structures, interview-skills]

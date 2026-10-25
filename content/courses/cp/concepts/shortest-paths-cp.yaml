@@ -1,0 +1,95 @@
+id: shortest-paths-cp
+title: Shortest paths for contests
+summary: Dijkstra with extra state, counting and reconstructing paths, 0-1 BFS, Bellman-Ford and negative
+  cycles.
+module: graph-module
+prerequisites:
+- graph-techniques
+- dsa:shortest-paths
+difficulty: 4
+estimated_minutes: 65
+status: draft
+lesson: '## Dijkstra with state
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Count and reconstruct
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Zero one bfs
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Negative cycles
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

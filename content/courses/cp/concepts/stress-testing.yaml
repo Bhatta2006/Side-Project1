@@ -1,0 +1,52 @@
+id: stress-testing
+title: Stress testing and debugging
+summary: Brute force plus random generator plus checker to find the smallest failing case, with sanitizers
+  and debug macros.
+module: contest-basics
+prerequisites:
+- fast-io
+difficulty: 2
+estimated_minutes: 40
+status: draft
+lesson: '## Brute gen checker
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Sanitizers
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

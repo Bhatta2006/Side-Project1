@@ -19,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { SocFigure } from '@/components/socrat/soc';
 
 interface Overview {
   current: AssessmentStatus;
@@ -63,10 +64,11 @@ function Locked({ status }: { status: AssessmentStatus }) {
 
 function Available({ status, onStart, busy }: { status: AssessmentStatus; onStart: (timed: boolean) => void; busy: boolean }) {
   return (
-    <section className="flex flex-col gap-5 rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:p-8" data-tone="hero" aria-labelledby="available-heading">
+    <section className="relative flex flex-col gap-5 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:p-8" data-tone="hero" aria-labelledby="available-heading">
+      <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[180px] lg:block"><SocFigure books mood="thinking" idle className="h-auto w-full" /></div>
       <div className="flex flex-wrap gap-2"><Badge>Available</Badge><Badge>Week {status.week.split('-W')[1]}</Badge></div>
       <h2 id="available-heading" className="type-display-l">{NAME.assessment}</h2>
-      <p className="max-w-2xl text-base">
+      <p className="max-w-2xl text-base lg:pr-[200px]">
         {status.questions} questions from what you studied in the last seven days, weighted toward what is still shaky, plus a coding task. Answers are shown at the end. No tutor or learning help until you submit.
       </p>
       <ul className="flex flex-wrap gap-2">{status.topics.map(t => <li key={t}><Badge>{t}</Badge></li>)}</ul>
@@ -177,8 +179,8 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
 
       <aside className="grid content-start gap-4 lg:sticky lg:top-24 lg:self-start" aria-label="Assessment">
         {view.coding.length ? (
-          <section className="rounded-card border bg-card p-5" aria-labelledby="coding-heading">
-            <h2 id="coding-heading" className="font-display text-lg font-bold tracking-[-0.02em]">Coding tasks</h2>
+          <section className="paper rounded-card p-5" aria-labelledby="coding-heading">
+            <h2 id="coding-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Coding tasks</h2>
             <p className="mt-1 text-sm text-muted-foreground">Submit them in the editor. They count if accepted before you finish.</p>
             <ul className="mt-3 grid gap-2">
               {view.coding.map(c => (
@@ -190,7 +192,7 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
             </ul>
           </section>
         ) : null}
-        <section className="grid gap-3 rounded-card border bg-card p-5" aria-label="Submit">
+        <section className="grid gap-3 paper rounded-card p-5" aria-label="Submit">
           <p className="text-[15px] text-muted-foreground">{answered === total ? 'All questions answered.' : `${total - answered} question${total - answered === 1 ? '' : 's'} left.`} You can submit at any time.</p>
           <AlertDialog>
             <AlertDialogTrigger asChild><Button disabled={busy}>Submit assessment</Button></AlertDialogTrigger>
@@ -229,8 +231,8 @@ function Report({ view }: { view: AssessmentView }) {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
-        <section className="rounded-card border bg-card p-5 lg:p-6" aria-labelledby="topics-heading">
-          <h2 id="topics-heading" className="font-display text-xl font-bold tracking-[-0.03em]">By topic</h2>
+        <section className="paper rounded-card p-5 lg:p-6" aria-labelledby="topics-heading">
+          <h2 id="topics-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">By topic</h2>
           <p className="mt-1 text-sm text-muted-foreground">Status after this assessment, with the mastery estimate before and after.</p>
           <ul className="mt-4 grid gap-3">
             {report.topics.map(t => (
@@ -248,8 +250,8 @@ function Report({ view }: { view: AssessmentView }) {
           </ul>
         </section>
         <div className="grid content-start gap-4 lg:gap-6">
-          <section className="rounded-card border bg-card p-5 lg:p-6" aria-labelledby="focus-heading">
-            <h2 id="focus-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Topics to focus on</h2>
+          <section className="paper rounded-card p-5 lg:p-6" aria-labelledby="focus-heading">
+            <h2 id="focus-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Topics to focus on</h2>
             {report.focus.length ? (
               <ul className="mt-3 grid gap-3">
                 {report.focus.map(f => (
@@ -265,15 +267,15 @@ function Report({ view }: { view: AssessmentView }) {
             ) : <p className="mt-2 text-[15px] text-muted-foreground">Nothing urgent. Your plan keeps stretching you.</p>}
           </section>
           {report.strengths.length ? (
-            <section className="rounded-card border bg-card p-5 lg:p-6" aria-labelledby="strengths-heading">
-              <h2 id="strengths-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Strengths</h2>
+            <section className="paper rounded-card p-5 lg:p-6" aria-labelledby="strengths-heading">
+              <h2 id="strengths-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Strengths</h2>
               <ul className="mt-3 flex flex-wrap gap-2">{report.strengths.map(s => <li key={s}><Badge>{s}</Badge></li>)}</ul>
             </section>
           ) : null}
         </div>
       </div>
 
-      <details className="group rounded-card border bg-card">
+      <details className="group paper rounded-card">
         <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 font-semibold [&::-webkit-details-marker]:hidden">
           Review every question
           <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden="true" />
@@ -336,7 +338,7 @@ export default function Assessments() {
   return (
     <Page>
       {inProgress ? (
-        <h1 className="mb-6 font-display text-3xl font-bold tracking-[-0.03em]">{NAME.assessment}</h1>
+        <h1 className="mb-6 font-display text-3xl font-semibold tracking-[-0.03em]">{NAME.assessment}</h1>
       ) : (
         <PageHeader eyebrow={NAME.evidence} title={NAME.assessment} description="A short check each week, built from what you studied. It is a proof event: no help while you take it." />
       )}
@@ -346,9 +348,9 @@ export default function Assessments() {
       {error ? <ErrorNote message={error} /> : null}
 
       {history.length && !inProgress ? (
-        <section className="mt-10 rounded-card border bg-card p-5 lg:p-6" aria-labelledby="history-heading">
+        <section className="mt-10 paper rounded-card p-5 lg:p-6" aria-labelledby="history-heading">
           <div className="mb-4 flex items-baseline justify-between gap-3">
-            <h2 id="history-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Past weeks</h2>
+            <h2 id="history-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Past weeks</h2>
             <span className="text-sm font-semibold text-muted-foreground">{history.length} completed</span>
           </div>
           <ol className="flex h-36 items-end gap-2" aria-label="Weekly assessment scores">

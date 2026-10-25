@@ -1,0 +1,63 @@
+id: quiz:dsa:design-data-structures:iterator-design
+family: iterator-design
+concept: dsa:design-data-structures
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: empty
+  band: 2
+  format: trace
+  prompt: Rows 1 2, (empty), 3. Operations next, next, hasNext, next, hasNext. What is printed?
+  options:
+  - 1 2 true 3 false
+  - 1 2 false 3 false
+  - 1 2 true 3 true
+  - 1 2 true, then a crash
+  answer: 0
+  misconceptions:
+  - null
+  - iterator-no-skip
+  - iterator-no-skip
+  - trace-step-slip
+  explanation: hasNext skips the empty row and finds 3.
+- id: trailing
+  band: 3
+  format: mcq
+  prompt: hasNext only checks row < number of rows. With rows 1 and (empty), what does it say after next returns 1?
+  options:
+  - true, which is wrong
+  - 'false'
+  - It crashes
+  - It returns 1 again
+  answer: 0
+  misconceptions:
+  - null
+  - iterator-no-skip
+  - trace-step-slip
+  - double-count
+  explanation: It must skip empty rows before answering.
+- id: lazy
+  band: 4
+  format: classify
+  prompt: Why not copy every value into one list in the constructor?
+  options:
+  - It costs O(total) memory up front and fails for huge or endless inputs
+  - It gives wrong answers
+  - Lists cannot hold integers
+  - It is always better
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - confuse-index-value
+  - pattern-brute-force-default
+  explanation: A cursor keeps only its position.
+status: provisional
+provenance:
+  origin: original

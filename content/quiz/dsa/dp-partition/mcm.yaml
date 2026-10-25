@@ -1,0 +1,235 @@
+id: quiz:dsa:dp-partition:mcm
+family: mcm
+concept: dsa:dp-partition
+pattern: dsa:dp-partition/mcm
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: matrix_chain
+  params:
+    matrices:
+    - 3
+    - 5
+    dim:
+    - 1
+    - 9
+  reference: cheapest(p)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: multiply left to right, or the cheapest pair first
+  misconception: mcm-greedy-order
+- rule: use p[i]·p[k]·p[j] for the join
+  misconception: mcm-cost-index
+- rule: take the maximum instead of the minimum
+  misconception: min-vs-max
+- rule: fill row by row from the top
+  misconception: mcm-length-order
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which problem is interval (partition) DP?
+  options:
+  - Cheapest order to merge a row of piles, two neighbours at a time
+  - Fewest coins for an amount
+  - Longest increasing subsequence
+  - Count paths in a grid
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-interval-vs-front-partition
+  - pattern-interval-vs-front-partition
+  - dp-vague-state
+  explanation: The last merge splits the range into two parts merged independently.
+- id: state
+  band: 1
+  format: mcq
+  prompt: What does dp[i][j] mean in matrix chain multiplication?
+  options:
+  - The cheapest cost to multiply matrices i..j
+  - The cost of multiplying matrix i by matrix j
+  - The dimension of the product i..j
+  - Whether i..j can be multiplied
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - confuse-index-value
+  - dp-count-vs-exists
+  explanation: The state is a whole range, not a pair.
+- id: base
+  band: 2
+  format: mcq
+  prompt: What is dp[i][i]?
+  options:
+  - '0'
+  - p[i] · p[i+1]
+  - '1'
+  - Infinity
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-cost-index
+  - dp-wrong-base-case
+  - dp-wrong-base-case
+  explanation: A single matrix needs no multiplication.
+- id: join
+  band: 2
+  format: mcq
+  prompt: Matrix i is p[i] × p[i+1]. What does the last multiplication of i..j split after k cost?
+  options:
+  - p[i] · p[k+1] · p[j+1]
+  - p[i] · p[k] · p[j]
+  - p[k] · p[k+1] · p[k+2]
+  - p[i] · p[j+1]
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-cost-index
+  - mcm-cost-index
+  - dp-missing-plus-one
+  explanation: The two products are p[i] × p[k+1] and p[k+1] × p[j+1].
+- id: split-range
+  band: 3
+  format: mcq
+  prompt: Which split points k does dp[i][j] try?
+  options:
+  - i ≤ k < j
+  - i < k < j
+  - i ≤ k ≤ j
+  - Only k = (i + j) / 2
+  answer: 0
+  misconceptions:
+  - null
+  - skip-first-element
+  - loop-bound-off-by-one
+  - mcm-greedy-order
+  explanation: Both halves i..k and k+1..j must be non-empty.
+- id: order
+  band: 3
+  format: bug_spot
+  prompt: The table is filled row by row, i from 0 up. What goes wrong?
+  options:
+  - dp[k+1][j] is read before its row is filled
+  - Nothing
+  - The answer is too large
+  - It runs forever
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-length-order
+  - min-vs-max
+  - mcm-length-order
+  explanation: Fill by length, or i from n − 1 down.
+- id: greedy
+  band: 3
+  format: classify
+  prompt: Why does multiplying the cheapest neighbouring pair first fail?
+  options:
+  - A cheap step can leave an expensive shape for later
+  - Pairs cannot be compared
+  - It counts multiplications twice
+  - It never fails
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-greedy-order
+  - mcm-cost-index
+  - mcm-greedy-order
+  explanation: 40 20 30 10 30 gives 36000 that way; the best is 26000.
+- id: value
+  band: 4
+  format: trace
+  prompt: Dimensions 10 30 5 60. What is the cheapest cost?
+  options:
+  - '4500'
+  - '27000'
+  - '10500'
+  - '1500'
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-greedy-order
+  - mcm-cost-index
+  - dp-missing-plus-one
+  explanation: (AB)C = 1500 + 3000.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: n matrices. Time and memory of the table?
+  options:
+  - O(n³) time, O(n²) memory
+  - O(n²) time, O(n) memory
+  - O(4^n) time
+  - O(n log n) time
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-interval-vs-front-partition
+  - dp-recompute-subproblems
+  - pattern-search-vs-scan
+  explanation: n² ranges, each trying up to n splits.
+- id: front-transfer
+  band: 5
+  format: classify
+  prompt: Cut a string into palindromes with the fewest cuts. Interval DP or a prefix DP?
+  options:
+  - Prefix DP over the last piece, O(n²) with a palindrome table
+  - Interval DP over every range, O(n³)
+  - Greedy longest palindrome first
+  - Two pointers
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-interval-vs-front-partition
+  - front-greedy-longest
+  - pattern-two-pointers-vs-lcs
+  explanation: Only the last piece interacts with the prefix before it.
+- id: burst-transfer
+  band: 6
+  format: classify
+  prompt: Bursting a balloon scores the product with its current neighbours. Which balloon defines the split
+    of a range?
+  options:
+  - The last one burst in the range
+  - The first one burst
+  - The largest one
+  - The middle one
+  answer: 0
+  misconceptions:
+  - null
+  - burst-first-not-last
+  - mcm-greedy-order
+  - mcm-greedy-order
+  explanation: The last balloon sees only the fixed walls, so the two sides are independent.
+- id: stones-transfer
+  band: 6
+  format: classify
+  prompt: Merging two adjacent piles costs their total size. What is the join cost for range i..j?
+  options:
+  - The sum of all piles in i..j, from a prefix sum
+  - The product of the end piles
+  - The size of pile k
+  - Zero
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-cost-index
+  - confuse-index-value
+  - dp-wrong-base-case
+  explanation: The final merge creates the whole range, so it costs the range sum.
+status: provisional
+provenance:
+  origin: original

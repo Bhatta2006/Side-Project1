@@ -2,7 +2,7 @@ id: boolean-logic
 title: Combining conditions
 summary: Use and, or and not to express exact rules, and reason about them precisely.
 module: control-flow
-prerequisites: [conditionals]
+prerequisites: [conditionals, operators-and-expressions]
 difficulty: 2
 estimated_minutes: 35
 lesson: |
@@ -89,11 +89,11 @@ lesson: |
 
   Translate the specification into a truth table before code. AND means every requirement holds; OR means at least one does. Negating a compound condition flips both the comparisons and the connective: not(A and B) equals not A or not B.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Test exact thresholds and values immediately below them. Short-circuiting can protect an operation, such as checking a list is nonempty before reading its first element. Put the guard first.
 
-  A fixed number of boolean tests costs O(1); avoid repeatedly computing an expensive predicate inside a loop.
+  A few true/false tests are instant. If a test is slow to compute, work it out once before a loop instead of inside it.
 
   ### Check your understanding
 

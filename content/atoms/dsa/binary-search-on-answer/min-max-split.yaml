@@ -1,0 +1,124 @@
+concept: dsa:binary-search-on-answer
+pattern: dsa:binary-search-on-answer/min-max-split
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the min max split pattern pack (syllabus expansion, Phase 3).
+rollback: remove content/atoms/dsa/binary-search-on-answer/min-max-split.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: split-worked
+  kind: worked
+  title: 'Worked: 3 1 4 1 5 9 2 6 into 3 parts'
+  objective: Run the cap search with its greedy check.
+  seconds: 110
+  body: 'The search runs from 9 (the largest element) to 31 (the total). Cap 20 needs 2 parts and cap
+    14 needs 3, so both work and hi drops to 14. Cap 11 needs 4 parts (3 1 4 1 | 5 | 9 2 | 6), so lo
+    becomes 12; cap 13 also needs 4, so lo becomes 14. The answer is 14: 3 1 4 1 5 | 9 2 | 6.'
+  why: Each check answers "is this cap enough?", and the answers flip from no to yes exactly once.
+- id: split-faded
+  kind: faded
+  title: 'Your turn: 7 2 5 10 8 into 2 parts'
+  objective: Apply the search yourself.
+  seconds: 100
+  body: The search starts with lo = 10 and hi = 32.
+  steps:
+  - state: mid = 21.
+    prompt: How many parts does greedy filling need?
+    options:
+    - 2, so hi = 21
+    - 3, so lo = 22
+    - 1, so hi = 21
+    answer: 0
+    explanation: 7 2 5 | 10 8.
+  - state: lo = 10, hi = 21, mid = 15.
+    prompt: What happens?
+    options:
+    - 3 parts, so lo = 16
+    - 2 parts, so hi = 15
+    - 4 parts, so lo = 16
+    answer: 0
+    explanation: 7 2 5 | 10 | 8 needs three parts.
+  - state: The search continues and ends.
+    prompt: What is the answer?
+    options:
+    - '18'
+    - '16'
+    - '21'
+    answer: 0
+    explanation: 7 2 5 | 10 8, with largest part 18.
+- id: split-visualizer
+  kind: visualizer
+  title: 'Step through: why the average misleads'
+  objective: See a locally safe cut ruin a later part.
+  seconds: 110
+  body: The array 3 1 4 1 5 9 2 6 into 3 parts; the total is 31 and the average about 11.
+  steps:
+  - state: Filling toward 11, the first part is 3 1 4 1 = 9; adding 5 would make 14.
+    prompt: What does the average rule do?
+    options:
+    - Cuts before the 5
+    - Adds the 5
+    - Stops
+    answer: 0
+    explanation: 14 overshoots 11.
+  - state: The second part is 5; adding 9 would make 14, so it cuts again.
+    prompt: What is left for the last part?
+    options:
+    - 9 2 6, which sums to 17
+    - 9 2, which sums to 11
+    - 6 alone
+    answer: 0
+    explanation: Only one part remains, so it takes everything.
+  - state: The best split keeps the 5 in the first part.
+    prompt: What is the best largest part?
+    options:
+    - '14'
+    - '17'
+    - '11'
+    answer: 0
+    explanation: 3 1 4 1 5 | 9 2 | 6.
+- id: split-micro
+  kind: micro
+  title: 'Pitfall: cutting near the average'
+  objective: Search the cap instead of guessing a plan.
+  seconds: 80
+  misconception: split-average-greedy
+  body: 'The average part sum is a lower bound on the answer, not a plan. Cutting whenever a part would
+    pass the average can leave too much for the last part: 3 1 4 1 | 5 | 9 2 6 has a part of 17, while
+    the best split has 14. Ask "is cap c enough?" instead, answer it greedily, and binary search on c.'
+  why: A greedy pass is right for checking a fixed cap, not for choosing the cap.
+- id: split-classify
+  kind: classify
+  title: Which shape?
+  objective: Pick the right search.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Paint n boards in order with k painters; minimise the time of the slowest painter.
+    prompt: Which approach?
+    options:
+    - Min max split, searching the first cap that works
+    - Max min distance, searching the last gap that fits
+    - Sort the boards
+    answer: 0
+    explanation: Contiguous pieces, minimise the largest.
+  - state: Place k routers on a street to maximise the smallest distance between any two.
+    prompt: Which approach?
+    options:
+    - Max min distance, rounding mid up
+    - Min max split
+    - Prefix sums
+    answer: 0
+    explanation: Maximise the minimum gap.
+  - state: The median of two sorted arrays in O(log) time.
+    prompt: Which approach?
+    options:
+    - Binary search on how many come from the first array
+    - Merge both arrays
+    - Search the cap greedily
+    answer: 0
+    explanation: Kth of two sorted, with k = half the total.

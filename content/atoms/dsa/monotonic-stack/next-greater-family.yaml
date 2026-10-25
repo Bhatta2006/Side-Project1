@@ -1,0 +1,124 @@
+concept: dsa:monotonic-stack
+pattern: dsa:monotonic-stack/next-greater-family
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the next greater pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/monotonic-stack/next-greater-family.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: mono-worked
+  kind: worked
+  title: 'Worked: 2 1 2 4 3'
+  objective: Run the stack and read every answer.
+  seconds: 100
+  body: 'Push 2, then 1 (smaller, so it waits on top). The second 2 pops the 1 (answer 2) and waits. The
+    4 pops both 2s (answer 4 for each) and waits. The 3 is smaller than 4, so it waits too. 4 and 3 are
+    never popped: −1. Result 4 2 4 −1 −1.'
+  why: An element is answered by the first bigger element that arrives after it.
+- id: mono-faded
+  kind: faded
+  title: 'Your turn: 5 3 4 6'
+  objective: Apply the pop rule yourself.
+  seconds: 90
+  body: The stack holds values; it starts empty.
+  steps:
+  - state: After 5 and 3, the stack is 5 3. Now 4 arrives.
+    prompt: What is popped?
+    options:
+    - '3'
+    - 5 and 3
+    - Nothing
+    answer: 0
+    explanation: 3 < 4, but 5 > 4 stops the popping.
+  - state: Stack 5 4. Now 6 arrives.
+    prompt: Which answers does 6 give?
+    options:
+    - 4 and 5 both get 6
+    - Only 4 gets 6
+    - Only 5 gets 6
+    answer: 0
+    explanation: Both are smaller than 6, so both are popped.
+  - state: The input ends with 6 on the stack.
+    prompt: What is the full answer?
+    options:
+    - 6 4 6 −1
+    - 6 6 6 −1
+    - 4 4 6 −1
+    answer: 0
+    explanation: 5 → 6, 3 → 4, 4 → 6, 6 → none.
+- id: mono-visualizer
+  kind: visualizer
+  title: 'Step through: why it is O(n)'
+  objective: Count pushes and pops.
+  seconds: 110
+  body: Input 4 3 2 1 5, the worst case for a single step.
+  steps:
+  - state: 4, 3, 2, 1 are pushed; nothing is popped.
+    prompt: How many pops happen when 5 arrives?
+    options:
+    - '4'
+    - '1'
+    - '0'
+    answer: 0
+    explanation: All four waiting values are smaller.
+  - state: Over the whole input, how many pushes are there?
+    prompt: Pushes?
+    options:
+    - '5'
+    - '10'
+    - '25'
+    answer: 0
+    explanation: Each index is pushed exactly once.
+  - state: One step popped 4, but the others popped nothing.
+    prompt: What bounds the total number of pops?
+    options:
+    - The number of pushes, n
+    - n²
+    - n log n
+    answer: 0
+    explanation: An index can be popped only once, after it was pushed.
+- id: mono-micro
+  kind: micro
+  title: 'Pitfall: the biggest value to the right'
+  objective: Separate "next greater" from "maximum to the right".
+  seconds: 80
+  misconception: mono-max-to-the-right
+  body: 'A running maximum from the right is quick, but it answers a different question. In 2 1 2 4 3, the
+    biggest value right of the 1 is 4, while the first greater value is the 2 right next to it. The next
+    greater element needs every value not yet beaten, which is exactly what the stack keeps.'
+  why: Next means nearest, not largest.
+- id: mono-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate the monotonic stack from its neighbours.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: For each building, the nearest taller building to its right.
+    prompt: Which approach?
+    options:
+    - Monotonic stack
+    - Running maximum from the right
+    - Sort the heights
+    answer: 0
+    explanation: Nearest greater to the right.
+  - state: The maximum of every window of 5 consecutive readings.
+    prompt: Which approach?
+    options:
+    - Monotonic deque
+    - Monotonic stack
+    - Prefix sums
+    answer: 0
+    explanation: Old readings also expire from the front.
+  - state: The largest value anywhere after each position.
+    prompt: Which approach?
+    options:
+    - Running maximum from the right
+    - Monotonic stack
+    - Binary search
+    answer: 0
+    explanation: The largest, not the nearest greater; one variable is enough.

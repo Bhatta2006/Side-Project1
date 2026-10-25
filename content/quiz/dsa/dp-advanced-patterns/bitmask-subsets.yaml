@@ -1,0 +1,234 @@
+id: quiz:dsa:dp-advanced-patterns:bitmask-subsets
+family: bitmask-subsets
+concept: dsa:dp-advanced-patterns
+pattern: dsa:dp-advanced-patterns/bitmask-subsets
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: bitmask_assignment
+  params:
+    workers:
+    - 2
+    - 4
+    cost:
+    - 1
+    - 9
+  reference: cheapest(c)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: each worker takes the cheapest free job
+  misconception: bitmask-greedy-assign
+- rule: let a job be used twice (sum of row minima)
+  misconception: bitmask-check-bit
+- rule: take the maximum instead of the minimum
+  misconception: min-vs-max
+- rule: charge worker 0 for every job
+  misconception: bitmask-worker-index
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which problem fits bitmask DP?
+  options:
+  - Assign 15 tasks to 15 people, one each, at the lowest cost
+  - Fewest coins for an amount up to 10^5
+  - Longest increasing subsequence of 10^5 numbers
+  - Pick items under a weight budget of 1000
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-bitmask-vs-knapsack
+  - pattern-bitmask-vs-knapsack
+  - pattern-bitmask-vs-knapsack
+  explanation: Which tasks are taken matters, and 2^15 sets fit.
+- id: mask-meaning
+  band: 1
+  format: mcq
+  prompt: What does bit j of mask mean in the assignment DP?
+  options:
+  - Job j is already taken
+  - Worker j has finished
+  - Job j costs j
+  - Job j is free
+  answer: 0
+  misconceptions:
+  - null
+  - bitmask-worker-index
+  - confuse-index-value
+  - bitmask-check-bit
+  explanation: The mask is the set of taken jobs.
+- id: worker
+  band: 2
+  format: mcq
+  prompt: mask = 1011 in binary. Which worker is next?
+  options:
+  - Worker 3
+  - Worker 1
+  - Worker 4
+  - Worker 0
+  answer: 0
+  misconceptions:
+  - null
+  - bitmask-worker-index
+  - off-by-one-output
+  - bitmask-worker-index
+  explanation: Three jobs are taken, so workers 0, 1 and 2 are done.
+- id: free-test
+  band: 2
+  format: mcq
+  prompt: Which test says job j is still free?
+  options:
+  - (mask & (1 << j)) == 0
+  - (mask & (1 << j)) != 0
+  - (mask & j) == 0
+  - mask == j
+  answer: 0
+  misconceptions:
+  - null
+  - bitmask-check-bit
+  - bit-test-wrong
+  - confuse-index-value
+  explanation: A clear bit means the job has not been taken.
+- id: order
+  band: 3
+  format: mcq
+  prompt: Why is increasing numeric order a valid fill order for the masks?
+  options:
+  - Every transition adds a bit, which makes the number larger
+  - Masks with more bits are always smaller
+  - Order does not matter
+  - Because popcount is monotone in the number
+  answer: 0
+  misconceptions:
+  - null
+  - dp-loop-order
+  - dp-loop-order
+  - dp-vague-state
+  explanation: mask | (1 << j) is larger than mask when bit j was clear.
+- id: greedy
+  band: 3
+  format: classify
+  prompt: Costs 9 2 7 / 6 4 3 / 5 8 1. Why does the cheapest free job per worker fail?
+  options:
+  - Worker 1 takes job 2, which worker 2 needed for its cost of 1
+  - Worker 0 takes too much
+  - Greedy never fails
+  - The matrix is not square
+  answer: 0
+  misconceptions:
+  - null
+  - bitmask-greedy-assign
+  - bitmask-greedy-assign
+  - bitmask-check-bit
+  explanation: Greedy pays 10; the best is 9.
+- id: cell
+  band: 3
+  format: trace
+  prompt: dp[010] = 2 (worker 0 took job 1). Worker 1 costs 6 for job 0. dp[011] was 13. What is it now?
+  options:
+  - '8'
+  - '13'
+  - '6'
+  - '15'
+  answer: 0
+  misconceptions:
+  - null
+  - overwrite-best
+  - dp-missing-plus-one
+  - min-vs-max
+  explanation: min(13, 2 + 6) = 8.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: n = 20 workers. Roughly how many steps does the template take?
+  options:
+  - About 2·10^7 (2^20 masks × 20 jobs)
+  - About 20! ≈ 2·10^18
+  - About 400
+  - About 10^6 × 10^6
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - pattern-search-vs-scan
+  - pattern-brute-force-default
+  explanation: 2^n masks, each with n candidate jobs.
+- id: init
+  band: 4
+  format: bug_spot
+  prompt: Every dp[mask] starts at 0. What does the program print?
+  options:
+  - 0, because every minimum stays 0
+  - The right answer
+  - The largest cost
+  - It crashes
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - min-vs-max
+  - dp-wrong-base-case
+  explanation: Only dp[0] is 0; the rest must start at infinity.
+- id: tsp-transfer
+  band: 5
+  format: classify
+  prompt: Visit all cities once, ending anywhere. What does the state need besides the mask?
+  options:
+  - The current city
+  - Nothing
+  - The total distance
+  - The first city only
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - dp-vague-state
+  - pattern-bitmask-vs-knapsack
+  explanation: The next leg's cost depends on where you are now.
+- id: limit
+  band: 6
+  format: classify
+  prompt: n = 40 items, and you must know which ones are used. Is plain bitmask DP feasible?
+  options:
+  - No; 2^40 states is too many, so look for structure or meet in the middle
+  - Yes, always
+  - Yes, with long long masks
+  - Only in C++
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-bitmask-vs-knapsack
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  explanation: 2^40 ≈ 10^12 states.
+- id: knapsack-transfer
+  band: 6
+  format: classify
+  prompt: 60 items, pick some so the total weight is at most 500 and the value is largest. Bitmask or knapsack?
+  options:
+  - Knapsack over the weight
+  - Bitmask over the items
+  - Interval DP
+  - Digit DP
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-bitmask-vs-knapsack
+  - mcm-greedy-order
+  - pattern-digit-dp-vs-brute-force
+  explanation: Only the total weight matters, and it is small.
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,79 @@
+id: quiz:dsa:dp-advanced-patterns:state-machine-count
+family: state-machine-count
+concept: dsa:dp-advanced-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: state
+  band: 2
+  format: mcq
+  prompt: Count records over P, A, L with fewer than 2 A's and no LLL. Which state is enough?
+  options:
+  - (A's so far, L's at the end)
+  - A's so far
+  - The last letter
+  - The whole record
+  answer: 0
+  misconceptions:
+  - null
+  - state-forgets-rule
+  - state-forgets-rule
+  - pattern-state-remembers-rules
+  explanation: Those are exactly what the two rules look back at.
+- id: count
+  band: 3
+  format: trace
+  prompt: How many records of length 2 are allowed?
+  options:
+  - '8'
+  - '9'
+  - '6'
+  - '7'
+  answer: 0
+  misconceptions:
+  - null
+  - state-forgets-rule
+  - off-by-one-output
+  - count-vs-sum
+  explanation: Every two-letter record except AA.
+- id: forget
+  band: 4
+  format: bug_spot
+  prompt: The state keeps only the number of A's. What does it count for n = 3?
+  options:
+  - 20, because LLL is allowed
+  - '19'
+  - '27'
+  - '8'
+  answer: 0
+  misconceptions:
+  - null
+  - state-forgets-rule
+  - pattern-state-remembers-rules
+  - count-vs-sum
+  explanation: The late rule needs the length of the L run at the end.
+- id: in-place
+  band: 5
+  format: bug_spot
+  prompt: The day's moves update ways in place instead of building a new table. What goes wrong?
+  options:
+  - Some records get extended twice on the same day
+  - Nothing
+  - The modulus is skipped
+  - The answer is always 0
+  answer: 0
+  misconceptions:
+  - null
+  - dp-rolling-update-order
+  - mod-only-at-end
+  - dp-wrong-base-case
+  explanation: A state updated earlier in the day is read again as if it were yesterday's.
+status: provisional
+provenance:
+  origin: original

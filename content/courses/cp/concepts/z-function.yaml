@@ -1,0 +1,51 @@
+id: z-function
+title: Z-function and Manacher
+summary: The Z-array for matching, periods and compression, plus Manacher's linear-time palindromes.
+module: strings-module
+prerequisites:
+- kmp
+difficulty: 5
+estimated_minutes: 55
+status: draft
+lesson: '## Z matching
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Manacher
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

@@ -1,0 +1,73 @@
+id: dsu-advanced
+title: DSU with extra data
+summary: Union-find that tracks size, sums or parity per component, and offline processing of deletions
+  in reverse.
+module: graph-module
+prerequisites:
+- dsa:union-find
+difficulty: 4
+estimated_minutes: 45
+status: draft
+lesson: '## Dsu with data
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Offline reverse
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Parity dsu
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

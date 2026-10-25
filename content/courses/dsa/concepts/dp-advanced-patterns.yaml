@@ -1,0 +1,956 @@
+id: dp-advanced-patterns
+title: More interview DP patterns
+summary: Bitmask DP on small sets, minimax games, state-machine counting and a first look at digit DP.
+module: dynamic-programming
+prerequisites: [knapsack-01, dp-partition, bit-manipulation]
+difficulty: 5
+estimated_minutes: 90
+lesson: |
+  The DP method never changes: name the state, write the transition, fill in dependency order.
+  What changes is **what the state has to remember**. This concept collects four kinds of
+  state that interviews keep returning to:
+
+  - a **set** of things already used, stored as a bitmask;
+  - a **game position**, valued from the point of view of the player to move;
+  - the **last few events** of a sequence, when rules forbid certain patterns;
+  - a **prefix of a number's digits**, with a flag saying whether it still matches the limit.
+
+  ## Bitmask DP over subsets
+
+  ### Recognition cues
+
+  - At most about 20 items, and the answer depends on **which** items are used, not just how
+    many: assign jobs to workers, visit every city, split tasks into sessions.
+  - Trying every order (n!) is too slow, but 2ⁿ sets is fine: 2²⁰ ≈ 10⁶.
+  - The words "each exactly once", "all of them", "visit every".
+
+  ### State, transition, base cases, answer, loop order
+
+  Bit j of `mask` is 1 when job j is already taken. Workers take jobs in order, so the next
+  worker is the number of set bits.
+
+  | Part | For the assignment problem |
+  |---|---|
+  | State | `dp[mask]` = the cheapest cost to give the jobs in `mask` to the first `popcount(mask)` workers |
+  | Transition | worker `i = popcount(mask)` takes a free job j: `dp[mask | 1<<j] = min(…, dp[mask] + cost[i][j])` |
+  | Base cases | `dp[0] = 0`; every other mask starts at infinity |
+  | Answer | `dp[(1<<n) − 1]`, every job taken |
+  | Loop order | masks in increasing numeric order: adding a bit always makes a larger number |
+
+  ### Template
+
+  ```python
+  n = int(input())
+  cost = [list(map(int, input().split())) for _ in range(n)]  # cost[worker][job]
+  INF = float("inf")
+  dp = [INF] * (1 << n)  # dp[mask]: cheapest way to fill the jobs in mask
+  dp[0] = 0
+  for mask in range(1 << n):  # a superset is always a larger number
+      i = bin(mask).count("1")  # the next worker to place
+      if i == n or dp[mask] == INF:
+          continue
+      for j in range(n):
+          if not mask & (1 << j):  # job j is still free
+              nxt = mask | (1 << j)
+              dp[nxt] = min(dp[nxt], dp[mask] + cost[i][j])
+  print(dp[(1 << n) - 1])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<vector<long long>> cost(n, vector<long long>(n));  // cost[worker][job]
+      for (auto& row : cost) for (auto& x : row) cin >> x;
+      const long long INF = 1e18;
+      vector<long long> dp(1 << n, INF);  // dp[mask]: cheapest way to fill the jobs in mask
+      dp[0] = 0;
+      for (int mask = 0; mask < (1 << n); mask++) {  // a superset is always a larger number
+          int i = __builtin_popcount(mask);  // the next worker to place
+          if (i == n || dp[mask] == INF) continue;
+          for (int j = 0; j < n; j++)
+              if (!(mask & (1 << j))) {  // job j is still free
+                  int nxt = mask | (1 << j);
+                  dp[nxt] = min(dp[nxt], dp[mask] + cost[i][j]);
+              }
+      }
+      cout << dp[(1 << n) - 1] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[][] cost = new long[n][n];  // cost[worker][job]
+          for (int i = 0; i < n; i++)
+              for (int j = 0; j < n; j++) cost[i][j] = in.nextLong();
+          final long INF = Long.MAX_VALUE;
+          long[] dp = new long[1 << n];  // dp[mask]: cheapest way to fill the jobs in mask
+          Arrays.fill(dp, INF);
+          dp[0] = 0;
+          for (int mask = 0; mask < (1 << n); mask++) {  // a superset is always a larger number
+              int i = Integer.bitCount(mask);  // the next worker to place
+              if (i == n || dp[mask] == INF) continue;
+              for (int j = 0; j < n; j++)
+                  if ((mask & (1 << j)) == 0) {  // job j is still free
+                      int nxt = mask | (1 << j);
+                      dp[nxt] = Math.min(dp[nxt], dp[mask] + cost[i][j]);
+                  }
+          }
+          System.out.println(dp[(1 << n) - 1]);
+      }
+  }
+  ```
+
+  ### Anchor problem: three workers, three jobs
+
+  Costs (rows are workers, columns jobs):
+
+  | | job 0 | job 1 | job 2 |
+  |---|---|---|---|
+  | worker 0 | 9 | 2 | 7 |
+  | worker 1 | 6 | 4 | 3 |
+  | worker 2 | 5 | 8 | 1 |
+
+  The cheapest assignment costs **9**: worker 0 → job 1 (2), worker 1 → job 0 (6), worker 2
+  → job 2 (1). Input is n, then the n rows.
+
+  **Wrong first attempt — each worker takes the cheapest free job.**
+
+  ```python
+  n = int(input())
+  cost = [list(map(int, input().split())) for _ in range(n)]
+  used, total = set(), 0
+  for i in range(n):
+      j = min((j for j in range(n) if j not in used), key=lambda j: cost[i][j])  # cheapest free job
+      used.add(j)
+      total += cost[i][j]
+  print(total)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<vector<long long>> cost(n, vector<long long>(n));
+      for (auto& row : cost)
+          for (auto& x : row) cin >> x;
+      vector<bool> used(n, false);
+      long long total = 0;
+      for (int i = 0; i < n; i++) {
+          int best = -1;
+          for (int j = 0; j < n; j++)
+              if (!used[j] && (best == -1 || cost[i][j] < cost[i][best])) best = j;  // cheapest free job
+          used[best] = true;
+          total += cost[i][best];
+      }
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[][] cost = new long[n][n];
+          for (int i = 0; i < n; i++)
+              for (int j = 0; j < n; j++) cost[i][j] = in.nextLong();
+          boolean[] used = new boolean[n];
+          long total = 0;
+          for (int i = 0; i < n; i++) {
+              int best = -1;
+              for (int j = 0; j < n; j++)
+                  if (!used[j] && (best == -1 || cost[i][j] < cost[i][best])) best = j;  // cheapest free job
+              used[best] = true;
+              total += cost[i][best];
+          }
+          System.out.println(total);
+      }
+  }
+  ```
+
+  It prints 10: worker 1 grabs job 2 (3), so worker 2 is left with job 0 (5) instead of its
+  cheap job 2 (1). A choice that is cheap for one worker can be expensive for the others.
+
+  **Step 1 — recursion.** Worker i chooses a free job; the rest is the same problem with one
+  more job taken:
+
+  ```python
+  def best(i, mask):
+      """Cheapest cost for workers i, i + 1, ... given the jobs already taken in mask."""
+      if i == n:
+          return 0
+      return min(cost[i][j] + best(i + 1, mask | (1 << j)) for j in range(n) if not mask & (1 << j))
+
+
+  n = int(input())
+  cost = [list(map(int, input().split())) for _ in range(n)]
+  print(best(0, 0))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <climits>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n;
+  vector<vector<long long>> cost;
+
+  long long best(int i, int mask) {  // workers i.. with the jobs in mask already taken
+      if (i == n) return 0;
+      long long result = LLONG_MAX;
+      for (int j = 0; j < n; j++)
+          if (!(mask & (1 << j))) result = min(result, cost[i][j] + best(i + 1, mask | (1 << j)));
+      return result;
+  }
+
+  int main() {
+      cin >> n;
+      cost.assign(n, vector<long long>(n));
+      for (auto& row : cost)
+          for (auto& x : row) cin >> x;
+      cout << best(0, 0) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int n;
+      static long[][] cost;
+
+      static long best(int i, int mask) {  // workers i.. with the jobs in mask already taken
+          if (i == n) return 0;
+          long result = Long.MAX_VALUE;
+          for (int j = 0; j < n; j++)
+              if ((mask & (1 << j)) == 0) result = Math.min(result, cost[i][j] + best(i + 1, mask | (1 << j)));
+          return result;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          cost = new long[n][n];
+          for (int i = 0; i < n; i++)
+              for (int j = 0; j < n; j++) cost[i][j] = in.nextLong();
+          System.out.println(best(0, 0));
+      }
+  }
+  ```
+
+  This tries all n! orders. But `i` is always the number of bits in `mask`, so the state is
+  really just the mask: 2ⁿ states.
+
+  **Step 2 — memoization.** Store one answer per mask:
+
+  ```python
+  def best(mask):
+      i = bin(mask).count("1")  # the worker is determined by the mask
+      if i == n:
+          return 0
+      if memo[mask] is None:  # solve each set of taken jobs once
+          memo[mask] = min(cost[i][j] + best(mask | (1 << j)) for j in range(n) if not mask & (1 << j))
+      return memo[mask]
+
+
+  n = int(input())
+  cost = [list(map(int, input().split())) for _ in range(n)]
+  memo = [None] * (1 << n)
+  print(best(0))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <climits>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n;
+  vector<vector<long long>> cost;
+  vector<long long> memo;  // -1 = not solved yet
+
+  long long best(int mask) {
+      int i = __builtin_popcount(mask);  // the worker is determined by the mask
+      if (i == n) return 0;
+      if (memo[mask] == -1) {  // solve each set of taken jobs once
+          long long result = LLONG_MAX;
+          for (int j = 0; j < n; j++)
+              if (!(mask & (1 << j))) result = min(result, cost[i][j] + best(mask | (1 << j)));
+          memo[mask] = result;
+      }
+      return memo[mask];
+  }
+
+  int main() {
+      cin >> n;
+      cost.assign(n, vector<long long>(n));
+      for (auto& row : cost)
+          for (auto& x : row) cin >> x;
+      memo.assign(1 << n, -1);
+      cout << best(0) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static int n;
+      static long[][] cost;
+      static long[] memo;  // -1 = not solved yet
+
+      static long best(int mask) {
+          int i = Integer.bitCount(mask);  // the worker is determined by the mask
+          if (i == n) return 0;
+          if (memo[mask] == -1) {  // solve each set of taken jobs once
+              long result = Long.MAX_VALUE;
+              for (int j = 0; j < n; j++)
+                  if ((mask & (1 << j)) == 0) result = Math.min(result, cost[i][j] + best(mask | (1 << j)));
+              memo[mask] = result;
+          }
+          return memo[mask];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          cost = new long[n][n];
+          for (int i = 0; i < n; i++)
+              for (int j = 0; j < n; j++) cost[i][j] = in.nextLong();
+          memo = new long[1 << n];
+          Arrays.fill(memo, -1);
+          System.out.println(best(0));
+      }
+  }
+  ```
+
+  **Step 3 — tabulation.** Push forwards from each mask to the masks with one more bit; since
+  those are larger numbers, increasing order is a valid fill order. That is the template.
+
+  Dry run (masks written as bits for jobs 2 1 0):
+
+  | mask | 000 | 001 | 010 | 011 | 100 | 101 | 110 | 111 |
+  |---|---|---|---|---|---|---|---|---|
+  | dp | 0 | 9 | 2 | 8 | 7 | 12 | 5 | **9** |
+
+  Read one cell: `dp[011] = 8` means jobs 0 and 1 went to workers 0 and 1; the best way is
+  worker 0 → job 1 (2) and worker 1 → job 0 (6). Then worker 2 takes job 2 for 1 more: 9.
+
+  **Step 4 — the table is the minimum.** There is nothing to drop: every mask can be read by a
+  larger one. Cost O(2ⁿ · n) time and O(2ⁿ) memory: about 2·10⁷ steps for n = 20.
+
+  ### Variants
+
+  1. *Partition to K equal sum subsets*: dp[mask] = the fill of the current bucket.
+  2. *Elevator rides* (CSES) and *minimum work sessions*: dp[mask] = (rides used, weight in the
+     last ride).
+  3. *Hamiltonian flights* (CSES), *shortest path visiting all nodes*: the state adds the
+     current city, dp[mask][v].
+  4. *Fair distribution of cookies*: split a set among k children, over submasks.
+  5. *Find the shortest superstring*: travelling salesman over words with overlap costs.
+
+  ### Contrast
+
+  **Bitmask DP or knapsack?** If only the **total** used matters (weight, sum), the state is
+  that number: knapsack. If **which** items are used matters, because they interact (jobs and
+  workers, cities and order), the state must be the set itself, and n must be small.
+
+  ### Common mistakes
+
+  - Testing a bit with `mask & 1 << j == 0` in languages where `==` binds tighter than `&`:
+    use brackets.
+  - Using the loop index instead of `popcount(mask)` as the worker.
+  - Starting every `dp` at 0, which makes every minimum 0.
+  - n = 25 or more: 2²⁵ states with an inner loop is too slow; look for another idea.
+
+  ## Game minimax
+
+  ### Recognition cues
+
+  - Two players alternate, both play **optimally**, and you report the final score or who wins.
+  - Moves take items from the ends of a row, from a pile, or pick numbers.
+  - The position (what is left) is small enough to index.
+
+  ### State, transition, base cases, answer, loop order
+
+  Value every position from the point of view of **the player about to move**:
+  `diff[i][j]` = the best (my score − opponent's score) on the row `a[i..j]`. Taking `a[i]`
+  leaves the opponent to move on `i+1..j`, so I get `a[i] − diff[i+1][j]`. Base: an empty row
+  is 0. The first player's total is `(sum + diff[0][n−1]) / 2`. Fill by length.
+
+  ### Template
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  diff = [[0] * (n + 1) for _ in range(n + 1)]  # diff[i][j]: best (mover - other) on a[i..j-1]
+  for length in range(1, n + 1):
+      for i in range(n - length + 1):
+          j = i + length  # the row is a[i..j-1]
+          diff[i][j] = max(a[i] - diff[i + 1][j], a[j - 1] - diff[i][j - 1])  # take left or right
+  print((sum(a) + diff[0][n]) // 2)  # the first player's total
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> a(n);
+      long long total = 0;
+      for (auto& x : a) cin >> x, total += x;
+      // diff[i][j]: best (mover - other) on a[i..j-1]
+      vector<vector<long long>> diff(n + 1, vector<long long>(n + 1, 0));
+      for (int length = 1; length <= n; length++)
+          for (int i = 0; i + length <= n; i++) {
+              int j = i + length;
+              diff[i][j] = max(a[i] - diff[i + 1][j], a[j - 1] - diff[i][j - 1]);  // take left or right
+          }
+      cout << (total + diff[0][n]) / 2 << "\n";  // the first player's total
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] a = new long[n];
+          long total = 0;
+          for (int i = 0; i < n; i++) { a[i] = in.nextLong(); total += a[i]; }
+          long[][] diff = new long[n + 1][n + 1];  // diff[i][j]: best (mover - other) on a[i..j-1]
+          for (int length = 1; length <= n; length++)
+              for (int i = 0; i + length <= n; i++) {
+                  int j = i + length;
+                  diff[i][j] = Math.max(a[i] - diff[i + 1][j], a[j - 1] - diff[i][j - 1]);  // left or right
+              }
+          System.out.println((total + diff[0][n]) / 2);  // the first player's total
+      }
+  }
+  ```
+
+  ### Anchor problem: 4 5 1 3
+
+  The program prints **8**: the first player takes 3, the second must open up 4 or 1, and the
+  first player ends with 3 + 5 = 8.
+
+  **Wrong first attempt — take the larger end.** The first player takes 4, the second takes 5,
+  and the first player ends with 4 + 3 = 7. Grabbing the bigger end handed the opponent the 5.
+
+  ### Variants
+
+  1. *Removal game* (CSES) and *predict the winner*: the anchor.
+  2. *Stone game*: an even number of piles; the first player can always win, but the DP still
+     answers by how much.
+  3. *Stone game II* and *can I win*: the state adds a move limit, or a bitmask of numbers
+     already chosen.
+
+  ### Contrast
+
+  **Greedy or minimax?** Greedy picks the best move for now; minimax assumes the opponent then
+  plays their best move too. Store the score difference for the player to move, so one table
+  serves both players.
+
+  ### Common mistakes
+
+  - Adding the opponent's best score instead of subtracting it.
+  - Storing "my score" without knowing whose turn it is.
+  - Filling the table row by row instead of by length.
+
+  ## State-machine counting
+
+  ### Recognition cues
+
+  - Count the strings or sequences of length n that avoid forbidden patterns: no two absences,
+    no three late days in a row, knight moves on a dial pad.
+  - n is large (up to 10⁵ or more) and the answer is taken modulo 10⁹ + 7.
+
+  ### State, transition, base cases, answer, loop order
+
+  The state is exactly **what the rules look back at**. For attendance records over P
+  (present), A (absent) and L (late), with fewer than 2 A's and never 3 L's in a row, that is
+  (A's so far: 0 or 1, L's at the end: 0, 1 or 2): six states. Each day, every state moves
+  with P, A or L to a new state, or is forbidden. Start with one empty record in (0, 0); the
+  answer is the sum over all states after n days.
+
+  ### Template
+
+  ```python
+  MOD = 10**9 + 7
+  n = int(input())
+  ways = [[0] * 3 for _ in range(2)]  # ways[a][l]: records with a absences, l lates at the end
+  ways[0][0] = 1
+  for _ in range(n):
+      nxt = [[0] * 3 for _ in range(2)]
+      for a in range(2):
+          for l in range(3):
+              w = ways[a][l]
+              if not w:
+                  continue
+              nxt[a][0] = (nxt[a][0] + w) % MOD  # P resets the late run
+              if a == 0:
+                  nxt[1][0] = (nxt[1][0] + w) % MOD  # A: only one allowed
+              if l < 2:
+                  nxt[a][l + 1] = (nxt[a][l + 1] + w) % MOD  # L: at most two in a row
+      ways = nxt
+  print(sum(map(sum, ways)) % MOD)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      const long long MOD = 1000000007;
+      int n;
+      cin >> n;
+      long long ways[2][3] = {{1, 0, 0}, {0, 0, 0}};  // ways[a][l]: a absences, l lates at the end
+      for (int d = 0; d < n; d++) {
+          long long nxt[2][3] = {{0, 0, 0}, {0, 0, 0}};
+          for (int a = 0; a < 2; a++)
+              for (int l = 0; l < 3; l++) {
+                  long long w = ways[a][l];
+                  nxt[a][0] = (nxt[a][0] + w) % MOD;  // P resets the late run
+                  if (a == 0) nxt[1][0] = (nxt[1][0] + w) % MOD;  // A: only one allowed
+                  if (l < 2) nxt[a][l + 1] = (nxt[a][l + 1] + w) % MOD;  // L: at most two in a row
+              }
+          for (int a = 0; a < 2; a++)
+              for (int l = 0; l < 3; l++) ways[a][l] = nxt[a][l];
+      }
+      long long total = 0;
+      for (int a = 0; a < 2; a++)
+          for (int l = 0; l < 3; l++) total = (total + ways[a][l]) % MOD;
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          final long MOD = 1_000_000_007L;
+          int n = new Scanner(System.in).nextInt();
+          long[][] ways = new long[2][3];  // ways[a][l]: a absences, l lates at the end
+          ways[0][0] = 1;
+          for (int d = 0; d < n; d++) {
+              long[][] nxt = new long[2][3];
+              for (int a = 0; a < 2; a++)
+                  for (int l = 0; l < 3; l++) {
+                      long w = ways[a][l];
+                      nxt[a][0] = (nxt[a][0] + w) % MOD;  // P resets the late run
+                      if (a == 0) nxt[1][0] = (nxt[1][0] + w) % MOD;  // A: only one allowed
+                      if (l < 2) nxt[a][l + 1] = (nxt[a][l + 1] + w) % MOD;  // L: at most two in a row
+                  }
+              ways = nxt;
+          }
+          long total = 0;
+          for (long[] row : ways) for (long w : row) total = (total + w) % MOD;
+          System.out.println(total);
+      }
+  }
+  ```
+
+  ### Anchor problem: records of length 2
+
+  The program prints **8**: all 9 two-day records except `AA`. For n = 3 it prints 19, and for
+  n = 10101 it prints 183236316.
+
+  **Wrong first attempt — a state that forgets.** Tracking only the number of A's cannot tell
+  whether the record ends in `LL`, so it allows `LLL`: for n = 3 it counts 20 records
+  instead of 19.
+
+  ### Variants
+
+  1. *Student attendance record II*: the anchor.
+  2. *Count vowels permutation*: five states, one per last vowel.
+  3. *Knight dialer*: ten states, one per key; moves follow the knight jumps.
+  4. *Domino and tromino tiling*, *number of ways to paint an n × 3 grid*: the state is the
+     shape or colouring of the last column.
+
+  ### Contrast
+
+  **What must the state remember?** Exactly the part of the past that a rule can look back
+  at: the last character, the length of the current run, a count capped at the limit. Less
+  than that allows forbidden strings; more than that only wastes states.
+
+  ### Common mistakes
+
+  - A state that forgets part of a rule (the anchor's wrong attempt).
+  - Updating `ways` in place, so one day's moves are counted twice; build `nxt` first.
+  - Forgetting the modulus inside the loop.
+
+  ## Digit DP (a first look)
+
+  ### Recognition cues
+
+  - Count the numbers in [1, N] (or [A, B]) with a digit property: digit sum S, no two equal
+    neighbouring digits, contains a 7.
+  - N is huge (up to 10¹⁸), so looping over the numbers is impossible, but N has at most 19
+    digits.
+
+  ### State, transition, base cases, answer, loop order
+
+  Build the number digit by digit from the left. The state is (position, what the property
+  needs so far, **tight**), where tight means "the digits so far equal N's prefix". While
+  tight, the next digit may go up to N's digit at that position; otherwise up to 9. At the end,
+  count 1 if the property holds. For a range [A, B], compute `count(B) − count(A − 1)`.
+
+  ### Template
+
+  ```python
+  import sys
+  from functools import lru_cache
+
+  N, S = input().split()
+  S = int(S)
+  digits = list(map(int, N))  # N as a list of digits
+
+
+  @lru_cache(maxsize=None)
+  def count(pos, total, tight):
+      """Ways to fill digits pos.. so the full digit sum is S."""
+      if total > S:
+          return 0
+      if pos == len(digits):
+          return 1 if total == S else 0
+      limit = digits[pos] if tight else 9  # tight: we may not exceed N here
+      return sum(count(pos + 1, total + d, tight and d == limit) for d in range(limit + 1))
+
+
+  print(count(0, 0, True) - (1 if S == 0 else 0))  # leave out the number 0
+  ```
+
+  ```cpp
+  #include <cstring>
+  #include <iostream>
+  #include <string>
+  using namespace std;
+
+  string N;
+  int S;
+  long long memo[20][200][2];  // -1 = not solved yet
+
+  long long countWays(int pos, int total, int tight) {  // fill digits pos.. so the digit sum is S
+      if (total > S) return 0;
+      if (pos == (int)N.size()) return total == S ? 1 : 0;
+      long long& slot = memo[pos][total][tight];
+      if (slot != -1) return slot;
+      int limit = tight ? N[pos] - '0' : 9;  // tight: we may not exceed N here
+      slot = 0;
+      for (int d = 0; d <= limit; d++) slot += countWays(pos + 1, total + d, tight && d == limit);
+      return slot;
+  }
+
+  int main() {
+      cin >> N >> S;
+      memset(memo, -1, sizeof memo);
+      cout << countWays(0, 0, 1) - (S == 0 ? 1 : 0) << "\n";  // leave out the number 0
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static String N;
+      static int S;
+      static long[][][] memo;  // -1 = not solved yet
+
+      static long count(int pos, int total, int tight) {  // fill digits pos.. so the digit sum is S
+          if (total > S) return 0;
+          if (pos == N.length()) return total == S ? 1 : 0;
+          if (memo[pos][total][tight] != -1) return memo[pos][total][tight];
+          int limit = tight == 1 ? N.charAt(pos) - '0' : 9;  // tight: we may not exceed N here
+          long result = 0;
+          for (int d = 0; d <= limit; d++) result += count(pos + 1, total + d, tight == 1 && d == limit ? 1 : 0);
+          return memo[pos][total][tight] = result;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          N = in.next();
+          S = in.nextInt();
+          memo = new long[N.length()][S + 1][2];
+          for (long[][] a : memo) for (long[] b : a) Arrays.fill(b, -1);
+          System.out.println(count(0, 0, 1) - (S == 0 ? 1 : 0));  // leave out the number 0
+      }
+  }
+  ```
+
+  ### Anchor problem: N = 23, S = 5
+
+  The program prints **3**: 5, 14 and 23. Shorter numbers are handled by leading zeros (05 is
+  the number 5), which do not change the digit sum.
+
+  **Wrong first attempt — forgetting tight.** Letting every digit run to 9 counts every
+  two-digit string with sum 5: 05, 14, 23, 32, 41 and 50, so 6. The numbers 32, 41 and 50 are
+  above 23.
+
+  ### Variants
+
+  1. *Counting numbers* (CSES): no two neighbouring digits equal, over a range [A, B]; the
+     state adds the previous digit and a flag for leading zeros.
+  2. *Number of digit one*: count the 1 digits in all numbers up to N.
+  3. *Numbers at most N given digit set*, *count numbers with unique digits*.
+
+  ### Contrast
+
+  **Loop over the numbers, or over their digits?** Up to about 10⁷ numbers, a plain loop is
+  fine and safer. Beyond that, count by digits: the state has at most 19 positions, a small
+  property value and the tight flag.
+
+  ### Common mistakes
+
+  - Forgetting the tight flag, which counts numbers above N.
+  - Leading zeros: harmless for digit sums, but they break properties like "no two equal
+    neighbouring digits" (00 is not a real pair).
+  - Counting 0 itself when the range starts at 1.
+
+  ## Worked walkthrough
+
+  **Problem (removal game).** Numbers `4 5 1 3`; players take from either end; both play
+  their best. What does the first player score?
+
+  1. *State.* The row that is left, `a[i..j]`, and the player to move. Store the best
+     difference for whoever moves.
+  2. *Length 1.* Taking the only number gives a difference equal to it: 4, 5, 1, 3.
+  3. *Length 2.* `4 5`: take 5 and leave 4: 5 − 4 = 1. `5 1`: 4. `1 3`: 2.
+  4. *Longer.* `4 5 1`: take 4 then face `5 1` (4), so 0; or take 1 then face `4 5` (1), so 0.
+     Best 0. `5 1 3`: max(5 − 2, 3 − 4) = 3. Whole row: max(4 − 3, 3 − 0) = 3.
+  5. *Answer.* The difference is 3 and the sum is 13, so the first player gets (13 + 3) / 2 = 8.
+
+  ### Why this works
+
+  In each pattern, the state holds everything the future depends on: the set of used items,
+  the remaining row and whose turn it is (folded into "the mover"), the part of the past the
+  rules can see, or the digits placed so far with the tight flag. Given such a state, the best
+  continuation does not depend on how you got there, so solving every state once and combining
+  them over the possible next moves gives the optimum (or the exact count).
+
+  ### Boundary cases and cost
+
+  - Bitmask: n = 0 or 1 is immediate; check that 2ⁿ · n fits the time limit.
+  - Games: a single item goes to the first player; ties are allowed.
+  - Counting: n = 0 gives one empty sequence; take the modulus everywhere.
+  - Digit DP: N with one digit; S larger than 9 times the number of digits gives 0.
+  - Costs: bitmask O(2ⁿ · n); games O(n²); state machines O(n · states · moves); digit DP
+    O(digits · values · 10).
+
+  ### Check your understanding
+
+  Numbers `2 9 4`, removal game. What does the first player score, and why is "take the
+  larger end" wrong here?
+
+  Try it on paper before reading the reasoning below.
+
+  > Taking 4 leaves `2 9`, and the opponent takes 9: first player 4 + 2 = 6. Taking 2 leaves
+  > `9 4`; the opponent takes 9: first player 2 + 4 = 6. Either way 6. Greedy also takes 4
+  > and gets 6 here, but it never considers what the move opens for the opponent: with
+  > `4 9 1 2` it takes 4, hands over the 9, and ends with 6 instead of 11.
+key_points:
+- The state is exactly what the future depends on - a set, a position, a recent history or a digit prefix.
+- 'Bitmask DP: dp[mask] over used items; the next worker is popcount(mask); O(2ⁿ · n).'
+- Increasing mask order is a valid fill order, because adding a bit makes a larger number.
+- 'Games: store the best score difference for the player to move; mine = (sum + diff) / 2.'
+- 'State-machine counting: remember only what the rules look back at; build the next day in a new table.'
+- 'Digit DP: (position, property so far, tight); a range is count(B) − count(A − 1).'
+pitfalls:
+- Greedy choices in assignment or in games.
+- Using a loop index instead of popcount(mask) for the current worker.
+- Adding the opponent's best instead of subtracting it.
+- A counting state that forgets part of a rule.
+- Forgetting the tight flag in digit DP.
+resources:
+- title: Bitmask DP
+  url: https://usaco.guide/gold/dp-bitmasks
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: Range DP
+  url: https://usaco.guide/gold/dp-ranges
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 10: Bit manipulation'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: bitmask-size
+  kind: mcq
+  prompt: Assignment of n workers to n jobs with bitmask DP. How many states are there?
+  options:
+  - 2^n
+  - n!
+  - n²
+  - 2n
+  answer: 0
+  explanation: One state per set of taken jobs; the worker is popcount(mask).
+  difficulty: 1
+- id: bitmask-order
+  kind: mcq
+  prompt: Why can the masks be filled in increasing numeric order?
+  options:
+  - Adding a bit always gives a larger number
+  - Because masks are sorted by popcount
+  - Any order works for minimum problems
+  - It is only a convention
+  answer: 0
+  explanation: Every transition goes from a mask to a strictly larger one.
+  difficulty: 2
+- id: greedy-assign
+  kind: mcq
+  prompt: Costs 9 2 7 / 6 4 3 / 5 8 1. Each worker taking the cheapest free job costs 10. What is the
+    best?
+  options:
+  - '9'
+  - '10'
+  - '8'
+  - '7'
+  answer: 0
+  explanation: Worker 0 → job 1, worker 1 → job 0, worker 2 → job 2 = 2 + 6 + 1.
+  difficulty: 3
+- id: game-diff
+  kind: mcq
+  prompt: In the removal game, diff[i][j] is the best (mover − other). What does taking a[i] give?
+  options:
+  - a[i] − diff[i+1][j]
+  - a[i] + diff[i+1][j]
+  - diff[i+1][j] − a[i]
+  - a[i]
+  answer: 0
+  explanation: After the move, the opponent is the mover on the rest.
+  difficulty: 3
+- id: game-value
+  kind: mcq
+  prompt: Removal game on 4 5 1 3. What does the first player score?
+  options:
+  - '8'
+  - '7'
+  - '9'
+  - '5'
+  answer: 0
+  explanation: Take 3 first; greedy (take 4) ends with 7.
+  difficulty: 4
+- id: state-machine
+  kind: mcq
+  prompt: Counting records with fewer than 2 A's and no 3 L's in a row. What is the state?
+  options:
+  - (A's so far, L's at the end)
+  - A's so far only
+  - The whole record
+  - The last letter only
+  answer: 0
+  explanation: Those are exactly what the two rules look back at.
+  difficulty: 3
+- id: records
+  kind: mcq
+  prompt: How many attendance records of length 2 are allowed?
+  options:
+  - '8'
+  - '9'
+  - '7'
+  - '6'
+  answer: 0
+  explanation: All 9 except AA.
+  difficulty: 2
+- id: tight
+  kind: mcq
+  prompt: In digit DP, what does the tight flag mean?
+  options:
+  - The digits so far equal N's prefix, so the next digit is limited by N
+  - The digit sum is already too large
+  - The number has no leading zeros
+  - The current digit is 9
+  answer: 0
+  explanation: Without it, the count includes numbers larger than N.
+  difficulty: 4
+- id: tight-count
+  kind: mcq
+  prompt: Numbers from 1 to 23 with digit sum 5. How many?
+  options:
+  - '3'
+  - '6'
+  - '2'
+  - '5'
+  answer: 0
+  explanation: 5, 14 and 23. Ignoring tight would count 32, 41 and 50 too.
+  difficulty: 5
+problems:
+- lab-partners
+- two-coin-take
+practice_links:
+- title: Partition to K Equal Sum Subsets
+  url: https://leetcode.com/problems/partition-to-k-equal-sum-subsets/
+  platform: LeetCode
+  difficulty: medium
+- title: Elevator Rides
+  url: https://cses.fi/problemset/task/1653
+  platform: CSES
+  difficulty: hard
+- title: Hamiltonian Flights
+  url: https://cses.fi/problemset/task/1690
+  platform: CSES
+  difficulty: hard
+- title: Removal Game
+  url: https://cses.fi/problemset/task/1097
+  platform: CSES
+  difficulty: medium
+- title: Predict the Winner
+  url: https://leetcode.com/problems/predict-the-winner/
+  platform: LeetCode
+  difficulty: medium
+- title: Can I Win
+  url: https://leetcode.com/problems/can-i-win/
+  platform: LeetCode
+  difficulty: medium
+- title: Student Attendance Record II
+  url: https://leetcode.com/problems/student-attendance-record-ii/
+  platform: LeetCode
+  difficulty: hard
+- title: Knight Dialer
+  url: https://leetcode.com/problems/knight-dialer/
+  platform: LeetCode
+  difficulty: medium
+- title: Counting Numbers
+  url: https://cses.fi/problemset/task/2220
+  platform: CSES
+  difficulty: hard
+- title: Number of Digit One
+  url: https://leetcode.com/problems/number-of-digit-one/
+  platform: LeetCode
+  difficulty: hard
+provenance:
+  origin: original
+status: live

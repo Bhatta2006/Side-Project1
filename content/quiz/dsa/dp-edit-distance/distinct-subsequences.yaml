@@ -1,0 +1,63 @@
+id: quiz:dsa:dp-edit-distance:distinct-subsequences
+family: distinct-subsequences
+concept: dsa:dp-edit-distance
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: base
+  band: 1
+  format: mcq
+  prompt: What is ways[0], the number of ways the empty t appears?
+  options:
+  - '1'
+  - '0'
+  - The length of s
+  - It depends on s
+  answer: 0
+  misconceptions:
+  - null
+  - subset-sum-empty-base
+  - confuse-index-value
+  - dp-wrong-base-case
+  explanation: The empty string appears exactly once, by choosing nothing.
+- id: rabbit
+  band: 2
+  format: trace
+  prompt: How many ways does rabbit appear as a subsequence of rabbbit?
+  options:
+  - '3'
+  - '1'
+  - '6'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-count-vs-exists
+  - distinct-subseq-forward-loop
+  - off-by-one-output
+  explanation: Choose which two of the three b's to use.
+- id: direction
+  band: 3
+  format: bug_spot
+  prompt: The one-row loop runs j forwards. What goes wrong?
+  options:
+  - One character of s can fill two positions of t
+  - Nothing
+  - It counts too few
+  - It only fails when t is empty
+  answer: 0
+  misconceptions:
+  - null
+  - distinct-subseq-forward-loop
+  - distinct-subseq-forward-loop
+  - subset-sum-empty-base
+  explanation: rabbbit then gives 6. Loop backwards, as in 0/1 knapsack.
+status: provisional
+provenance:
+  origin: original

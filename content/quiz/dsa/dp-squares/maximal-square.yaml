@@ -1,0 +1,238 @@
+id: quiz:dsa:dp-squares:maximal-square
+family: maximal-square
+concept: dsa:dp-squares
+pattern: dsa:dp-squares/maximal-square
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: maximal_square
+  params:
+    rows:
+    - 3
+    - 4
+    cols:
+    - 3
+    - 5
+    fill:
+    - 55
+    - 85
+  reference: largest_square(g)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: leave out the diagonal neighbour
+  misconception: sq-missing-diagonal
+- rule: print the side instead of the area
+  misconception: sq-side-not-area
+- rule: count the ones
+  misconception: count-vs-sum
+- rule: answer with the largest rectangle
+  misconception: pattern-square-vs-rectangle
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question fits the maximal square DP?
+  options:
+  - The largest square block of free seats in a theatre map
+  - The largest rectangular block of free seats
+  - The longest row of free seats
+  - The number of free seats
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-square-vs-rectangle
+  - pattern-subsequence-vs-substring
+  - count-vs-sum
+  explanation: Squares have one size parameter per corner.
+- id: state
+  band: 1
+  format: mcq
+  prompt: What does dp[i][j] store?
+  options:
+  - The side of the largest all-ones square whose bottom-right corner is (i, j)
+  - The area of that square
+  - The number of ones above (i, j)
+  - The largest square seen anywhere so far
+  answer: 0
+  misconceptions:
+  - null
+  - sq-side-not-area
+  - count-vs-sum
+  - overwrite-best
+  explanation: Sides combine with min; areas do not.
+- id: zero
+  band: 2
+  format: mcq
+  prompt: The cell is 0. What is dp[i][j]?
+  options:
+  - '0'
+  - 1 + min of the neighbours
+  - The up value
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - sq-zero-cell-kept
+  - sq-zero-cell-kept
+  - dp-wrong-base-case
+  explanation: No square of ones can end on a 0.
+- id: cell
+  band: 2
+  format: trace
+  prompt: The cell is 1; up = 3, left = 2, up-left = 3. What is dp[i][j]?
+  options:
+  - '3'
+  - '4'
+  - '2'
+  - '9'
+  answer: 0
+  misconceptions:
+  - null
+  - min-vs-max
+  - dp-missing-plus-one
+  - sq-side-not-area
+  explanation: 1 + min(3, 2, 3).
+- id: diagonal
+  band: 3
+  format: classify
+  prompt: Why is the up-left neighbour needed?
+  options:
+  - It is the only one that checks the square's far corner region
+  - It makes the code faster
+  - Up and left already cover everything
+  - Only for the first row
+  answer: 0
+  misconceptions:
+  - null
+  - sq-missing-diagonal
+  - sq-missing-diagonal
+  - dp-loop-order
+  explanation: 101 / 001 / 011 fools the two-neighbour version.
+- id: area
+  band: 3
+  format: bug_spot
+  prompt: The code prints best instead of best * best. What does it report for a 3 × 3 square?
+  options:
+  - '3'
+  - '9'
+  - '6'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - sq-side-not-area
+  - count-vs-sum
+  - off-by-one-output
+  explanation: best is a side length.
+- id: one-row
+  band: 4
+  format: bug_spot
+  prompt: In the one-row version, the code overwrites dp[j] and then uses it as the next cell's diagonal.
+    What goes wrong?
+  options:
+  - The diagonal is read from the current row instead of the previous one
+  - Nothing
+  - The left value is stale
+  - It uses too much memory
+  answer: 0
+  misconceptions:
+  - null
+  - dp-rolling-update-order
+  - sq-one-row-left-stale
+  - pattern-value-vs-choice
+  explanation: Save the old dp[j] before writing, and use it as the diagonal.
+- id: count
+  band: 4
+  format: mcq
+  prompt: How do you count all square submatrices of ones?
+  options:
+  - Add up every dp[i][j]
+  - Count the cells with dp > 0
+  - Square the largest dp
+  - Add the areas dp²
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - sq-side-not-area
+  - sq-side-not-area
+  explanation: A cell with side k ends k squares.
+- id: complexity
+  band: 5
+  format: complexity
+  prompt: An r × c grid. Time and memory of the template?
+  options:
+  - O(r · c) time, O(c) memory
+  - O(r · c · min(r, c)) time
+  - O(r² · c²) time
+  - O(r · c) time and memory, always
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  - pattern-value-vs-choice
+  explanation: Each cell does O(1) work and reads one previous row.
+- id: rectangle
+  band: 5
+  format: classify
+  prompt: The question asks for the largest rectangle of ones. Does the square DP work?
+  options:
+  - No; build a histogram per row and use the monotonic stack
+  - Yes, unchanged
+  - Yes, with max instead of min
+  - Only for square grids
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-square-vs-rectangle
+  - min-vs-max
+  - pattern-square-vs-rectangle
+  explanation: A rectangle has two free sides.
+- id: bordered-transfer
+  band: 6
+  format: classify
+  prompt: Only the border of the square must be ones. What do you store per cell instead?
+  options:
+  - Consecutive ones going up and going left
+  - The same square side
+  - The number of ones in the row
+  - A histogram height only
+  answer: 0
+  misconceptions:
+  - null
+  - sq-missing-diagonal
+  - count-vs-sum
+  - pattern-square-vs-rectangle
+  explanation: Then check each candidate side against the other two edges.
+- id: obstacle-transfer
+  band: 6
+  format: classify
+  prompt: Largest square with no obstacle cells, grid 2000 × 2000. Which approach?
+  options:
+  - The one-row square DP, treating obstacles as 0
+  - Try every square, O(n³)
+  - BFS from every cell
+  - Binary search alone
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  - pattern-search-vs-scan
+  explanation: 4·10^6 cells with O(1) work each.
+status: provisional
+provenance:
+  origin: original

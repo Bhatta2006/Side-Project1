@@ -1,0 +1,141 @@
+id: dsa:dp-on-trees/rob-or-skip
+concept: dsa:dp-on-trees
+title: 'Rob or skip: two states per node, children before parents'
+tracks:
+- interview
+- competitive
+recognise:
+- Choose nodes with a rule about neighbours, such as no two adjacent
+- Maximise or minimise the total value of the chosen nodes
+- The parent's choice depends on whether each child was chosen
+state: take[x], skip[x] = best total in x's subtree with x chosen / not chosen
+transition: take[x] = val[x] + Σ skip(children); skip[x] = Σ max(take, skip)(children)
+base_cases:
+- a missing child has take = skip = 0
+complexity:
+  time: O(n)
+  space: O(n)
+template:
+  python: |
+    import sys
+
+    data = sys.stdin.read().split()
+    n = int(data[0])
+    val = [0] + [int(x) for x in data[1:n + 1]]
+    left, right = [0] * (n + 1), [0] * (n + 1)
+    for i in range(1, n + 1):
+        left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+    order = [1]  # BFS order: parents before children
+    for x in order:
+        order.extend(c for c in (left[x], right[x]) if c)
+    take, skip = [0] * (n + 1), [0] * (n + 1)  # index 0 stands for a missing child
+    for x in reversed(order):  # children before parents
+        l, r = left[x], right[x]
+        take[x] = val[x] + skip[l] + skip[r]  # x chosen: its children must be skipped
+        skip[x] = max(take[l], skip[l]) + max(take[r], skip[r])  # x skipped: children are free
+    print(max(take[1], skip[1]))
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<long long> val(n + 1, 0), take(n + 1, 0), skip(n + 1, 0);  // index 0: missing child
+        vector<int> left(n + 1, 0), right(n + 1, 0), order = {1};
+        for (int i = 1; i <= n; i++) cin >> val[i];
+        for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+        for (size_t k = 0; k < order.size(); k++)  // BFS order: parents before children
+            for (int c : {left[order[k]], right[order[k]]}) if (c) order.push_back(c);
+        for (int k = n - 1; k >= 0; k--) {  // children before parents
+            int x = order[k], l = left[x], r = right[x];
+            take[x] = val[x] + skip[l] + skip[r];  // x chosen: its children must be skipped
+            skip[x] = max(take[l], skip[l]) + max(take[r], skip[r]);  // x skipped: children are free
+        }
+        cout << max(take[1], skip[1]) << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();
+            long[] val = new long[n + 1], take = new long[n + 1], skip = new long[n + 1];  // 0: missing child
+            int[] left = new int[n + 1], right = new int[n + 1], order = new int[n];
+            for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+            for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+            int size = 1;
+            order[0] = 1;
+            for (int k = 0; k < size; k++)  // BFS order: parents before children
+                for (int c : new int[] {left[order[k]], right[order[k]]}) if (c != 0) order[size++] = c;
+            for (int k = n - 1; k >= 0; k--) {  // children before parents
+                int x = order[k], l = left[x], r = right[x];
+                take[x] = val[x] + skip[l] + skip[r];  // x chosen: its children must be skipped
+                skip[x] = Math.max(take[l], skip[l]) + Math.max(take[r], skip[r]);  // children are free
+            }
+            System.out.println(Math.max(take[1], skip[1]));
+        }
+    }
+template_io:
+  stdin: |
+    5
+    10 1 1 10 1
+    2 5
+    3 0
+    4 0
+    0 0
+    0 0
+  expected: '20'
+variants:
+- id: robber-iii
+  band: 2
+  title: No two adjacent houses
+  problem: leetcode:house-robber-iii
+- id: tree-matching
+  band: 3
+  title: Most edges with no shared node
+  problem: cses:1130
+- id: univalue
+  band: 3
+  title: Path through a node, equal labels
+  problem: leetcode:longest-univalue-path
+- id: max-path
+  band: 4
+  title: Path through a node, values
+  problem: leetcode:binary-tree-maximum-path-sum
+- id: coins
+  band: 5
+  title: Return the surplus per subtree
+  problem: leetcode:distribute-coins-in-binary-tree
+- id: cameras
+  band: 6
+  title: Three cover states
+  problem: leetcode:binary-tree-cameras
+pitfalls:
+- rob-alternate-levels
+- rob-take-adds-take
+- rob-skip-forces-take
+- pattern-one-answer-vs-states
+atoms:
+- rob-worked
+- rob-faded
+- rob-visualizer
+- rob-micro
+- rob-classify
+quiz_family: quiz:dsa:dp-on-trees:rob-or-skip
+problems:
+  external:
+  - leetcode:house-robber-iii
+  - cses:1130
+  - leetcode:longest-univalue-path
+  - leetcode:binary-tree-maximum-path-sum
+  - leetcode:distribute-coins-in-binary-tree
+  - leetcode:binary-tree-cameras
+showcase:
+- 'Why alternating levels misses houses 1 and 4: 12 instead of 20'
+status: provisional
+provenance:
+  origin: original

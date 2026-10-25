@@ -1,0 +1,124 @@
+concept: dsa:dp-lis
+pattern: dsa:dp-lis/lis-quadratic
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the LIS pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/dp-lis/lis-quadratic.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: lis-worked
+  kind: worked
+  title: 'Worked: 10 9 2 5 3 7 101 18'
+  objective: Fill dp left to right and read the answer.
+  seconds: 100
+  body: '10, 9 and 2 have no smaller earlier number: dp = 1. 5 extends 2: 2. 3 extends 2: 2. 7 extends
+    5 or 3: 3. 101 extends 7: 4. 18 extends 7 as well: 4. The answer is the largest cell, 4, reached
+    twice: 2 5 7 101 and 2 3 7 18.'
+  why: Each element picks the best chain it can extend, looking at every earlier smaller element.
+- id: lis-faded
+  kind: faded
+  title: 'Your turn: 3 1 4 1 5'
+  objective: Apply the transition yourself.
+  seconds: 90
+  body: dp starts as 1 1 1 1 1.
+  steps:
+  - state: i = 2, a[i] = 4. Earlier smaller values are 3 and 1, both with dp 1.
+    prompt: What is dp[2]?
+    options:
+    - '2'
+    - '3'
+    - '1'
+    answer: 0
+    explanation: 1 + max(1, 1) = 2.
+  - state: i = 3, a[i] = 1. No earlier value is smaller than 1.
+    prompt: What is dp[3]?
+    options:
+    - '1'
+    - '2'
+    - '0'
+    answer: 0
+    explanation: Equal is not smaller, so the element stands alone.
+  - state: i = 4, a[i] = 5. Earlier dp values are 1 1 2 1.
+    prompt: What is dp[4]?
+    options:
+    - '3'
+    - '2'
+    - '5'
+    answer: 0
+    explanation: 1 + dp[2] = 3, the chain 3 4 5 (or 1 4 5).
+- id: lis-visualizer
+  kind: visualizer
+  title: 'Step through: why greedy extension fails'
+  objective: See a committed choice block a longer chain.
+  seconds: 110
+  body: Numbers 10 2 3 4. Greedy takes the first number and extends with anything bigger.
+  steps:
+  - state: Greedy starts at 10.
+    prompt: Which later numbers can it take?
+    options:
+    - None
+    - 2, 3 and 4
+    - Only 4
+    answer: 0
+    explanation: All of them are smaller than 10, so greedy reports 1.
+  - state: The table instead computes dp = 1 1 2 3.
+    prompt: What is the LIS?
+    options:
+    - '3'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: 2 3 4.
+  - state: Greedy could restart at every element.
+    prompt: Does that fix it in general?
+    options:
+    - No; inside a chain it still commits to the first bigger number
+    - Yes, always
+    - Only for sorted input
+    answer: 0
+    explanation: For 1 5 2 3, starting at 1 greedy takes 5 and gets 2 instead of 3.
+- id: lis-micro
+  kind: micro
+  title: 'Pitfall: reading only the last cell'
+  objective: Know why the answer is the maximum over all dp[i].
+  seconds: 80
+  misconception: lis-answer-last-cell
+  body: 'dp[i] is the best chain that ends exactly at a[i]. The last element may be tiny and end only a
+    short chain: for 1 2 3 0, dp = 1 2 3 1, and dp[3] = 1. The longest chain ends at 3, so the answer is
+    max(dp) = 3. Keep a running maximum, or take max(dp) at the end.'
+  why: The state says ends at i, so the answer must look at every ending.
+- id: lis-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate LIS from its neighbours.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Fewest elements to delete so the array strictly increases, n = 3000.
+    prompt: Which approach?
+    options:
+    - n − LIS with the O(n²) table
+    - Longest increasing run
+    - Sort the array
+    answer: 0
+    explanation: What stays is an increasing subsequence; keep the longest.
+  - state: Longest stretch of consecutive days with rising temperature.
+    prompt: Which approach?
+    options:
+    - One pass over neighbours
+    - LIS table
+    - Patience sorting
+    answer: 0
+    explanation: Consecutive days are a contiguous run.
+  - state: Boxes (w, h) nest only if both are strictly smaller; longest nesting chain, 10^5 boxes.
+    prompt: Which approach?
+    options:
+    - Sort by w ascending, h descending, then LIS on h with binary search
+    - LIS on the input order
+    - Greedy by area
+    answer: 0
+    explanation: Boxes have no order of their own; sort one key, LIS on the other.

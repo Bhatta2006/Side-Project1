@@ -1,0 +1,63 @@
+id: quiz:dsa:dp-lcs:longest-common-substring
+family: longest-common-substring
+concept: dsa:dp-lcs
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: reset
+  band: 1
+  format: mcq
+  prompt: In the common substring table, a[i−1] != b[j−1]. What is dp[i][j]?
+  options:
+  - '0'
+  - max(up, left)
+  - up-left
+  - up-left + 1
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subsequence-vs-substring
+  - lcs-mismatch-diagonal
+  - dp-missing-plus-one
+  explanation: The block ending here is broken, so its length is 0.
+- id: answer-cell
+  band: 2
+  format: mcq
+  prompt: Where is the answer to longest common substring?
+  options:
+  - The largest cell anywhere in the table
+  - dp[n][m]
+  - dp[0][0]
+  - The last row only
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subsequence-vs-substring
+  - dp-wrong-base-case
+  - loop-bound-off-by-one
+  explanation: A cell is the block ending at that pair, which can be anywhere.
+- id: value
+  band: 3
+  format: trace
+  prompt: What is the longest common substring of abcde and abfde?
+  options:
+  - '2'
+  - '4'
+  - '3'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subsequence-vs-substring
+  - lcs-greedy-match
+  - off-by-one-output
+  explanation: ab or de; c and f break every longer block. The LCS would be 4.
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,125 @@
+concept: dsa:hashing
+pattern: dsa:hashing/prefix-sum-hashmap
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the prefix state hash map pattern pack (syllabus expansion, Phase 3).
+rollback: remove content/atoms/dsa/hashing/prefix-sum-hashmap.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: prefix-map-worked
+  kind: worked
+  title: 'Worked: 1 -1 5 -2 3 with k = 3'
+  objective: Run the scan with first indexes.
+  seconds: 100
+  body: 'Start with {0: −1}. Totals are 1, 0, 5, 3, 6. At index 1 the total 0 is already stored at −1,
+    so it keeps −1. At index 3 the total is 3 and total − k = 0 was first seen at −1: length 3 − (−1) =
+    4. At index 4, total − k = 3 was first seen at 3: length 1. The answer is 4, the subarray 1 −1 5
+    −2.'
+  why: The earliest prefix with the needed value gives the longest subarray ending here.
+- id: prefix-map-faded
+  kind: faded
+  title: 'Your turn: 2 -2 3 with k = 3'
+  objective: Apply the scan yourself.
+  seconds: 90
+  body: The map starts as {0 at −1}; totals are 2, 0, 3.
+  steps:
+  - state: Index 0, total 2, need −1.
+    prompt: What happens?
+    options:
+    - No hit; store 2 at index 0
+    - A hit of length 1
+    - Store 2 at index −1
+    answer: 0
+    explanation: −1 is not in the map, and 2 is new.
+  - state: Index 1, total 0, need −3.
+    prompt: What happens to the stored 0?
+    options:
+    - It keeps index −1
+    - It becomes index 1
+    - It is removed
+    answer: 0
+    explanation: For the longest subarray the first index is kept.
+  - state: Index 2, total 3, need 0.
+    prompt: What is the length found?
+    options:
+    - '3'
+    - '1'
+    - '2'
+    answer: 0
+    explanation: 2 − (−1) = 3, the whole array.
+- id: prefix-map-visualizer
+  kind: visualizer
+  title: 'Step through: why the window gives up too early'
+  objective: See a negative number undo a "too big" sum.
+  seconds: 110
+  body: The array 1 -1 5 -2 and k = 3, scanned by a shrinking window.
+  steps:
+  - state: The window holds 1 −1 5, sum 5, which is above k.
+    prompt: What does the window do?
+    options:
+    - Drops elements from the left until the sum is at most 3
+    - Waits for the next element
+    - Stops the scan
+    answer: 0
+    explanation: Its rule is to shrink while the sum is too big.
+  - state: It dropped 1, then −1, then 5; the window is empty.
+    prompt: The next element is −2. Can the window still find 1 −1 5 −2?
+    options:
+    - No; its start has moved past index 0 for good
+    - Yes, it moves back
+    - Only if k changes
+    answer: 0
+    explanation: Windows only move forward.
+  - state: The prefix map instead remembers the total 0 at index −1.
+    prompt: At index 3 the total is 3. What length does the map report?
+    options:
+    - '4'
+    - '1'
+    - '0'
+    answer: 0
+    explanation: 3 − (−1) = 4.
+- id: prefix-map-micro
+  kind: micro
+  title: 'Pitfall: forgetting the empty prefix'
+  objective: Seed the map before the scan.
+  seconds: 80
+  misconception: prefix-missing-empty
+  body: 'A subarray that starts at index 0 is the difference between the prefix ending at i and the empty
+    prefix, whose sum is 0 and which ends at index −1. Start the map with {0: −1} for longest problems
+    and {0: 1} for counting problems; without it, every subarray that starts at the front is missed.'
+  why: The empty prefix is a real prefix, just one with no elements.
+- id: prefix-map-classify
+  kind: classify
+  title: Which pattern?
+  objective: Pick the hashing pattern.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: The longest subarray with equally many 0s and 1s.
+    prompt: Which approach?
+    options:
+    - Map 0 to −1 and find the longest prefix-map subarray with sum 0
+    - A sliding window
+    - Sort the array
+    answer: 0
+    explanation: A count difference becomes a sum.
+  - state: How many pairs i < j have a[i] + a[j] = k?
+    prompt: Which approach?
+    options:
+    - Complement lookup, looking up before inserting
+    - Prefix state hash map
+    - Group by key
+    answer: 0
+    explanation: Each element needs a computable partner.
+  - state: The longest run of consecutive integers in an unsorted array, in O(n).
+    prompt: Which approach?
+    options:
+    - A set, walking only from run starts
+    - Sort and scan
+    - Prefix sums
+    answer: 0
+    explanation: Only membership of x − 1 and x + 1 matters.

@@ -106,3 +106,227 @@ defects:
     kind: wrong-update
     misconception: confuse-index-value
     description: The subset sum adds the index i instead of the value a[i].
+  - id: dp-rolling-update-order
+    kind: wrong-update
+    misconception: dp-rolling-update-order
+    description: A rolling update overwrites prev with the new term before cur has used the old prev.
+  - id: rec-print-next-term
+    kind: wrong-output
+    misconception: loop-bound-off-by-one
+    description: After n steps the code prints cur, which already holds term n + 1, instead of prev.
+  - id: knapsack-forward-loop
+    kind: wrong-update
+    misconception: knapsack-forward-capacity-loop
+    description: The one-row capacity loop runs upwards, so an item can be taken more than once.
+  - id: knapsack-capacity-boundary
+    kind: off-by-one
+    misconception: knapsack-capacity-boundary
+    description: The capacity loop stops at c > w, so an item that exactly fills capacity c is never taken.
+  - id: knapsack-weight-for-value
+    kind: wrong-update
+    misconception: knapsack-weight-for-value
+    description: The take branch adds the item's weight instead of its value.
+  - id: unbounded-backward-loop
+    kind: wrong-update
+    misconception: unbounded-vs-01
+    description: The one-row capacity loop runs downwards, so each reusable item is taken at most once.
+  - id: lcs-mismatch-diagonal
+    kind: wrong-update
+    misconception: lcs-mismatch-diagonal
+    description: On a mismatch the cell copies up-left, dropping both characters instead of one.
+  - id: lcs-mismatch-reset
+    kind: wrong-update
+    misconception: pattern-subsequence-vs-substring
+    description: On a mismatch the cell resets to 0, which measures common substrings instead of subsequences.
+  - id: lcs-match-no-plus-one
+    kind: wrong-update
+    misconception: dp-missing-plus-one
+    description: On a match the cell copies up-left without adding 1 for the matched pair.
+  - id: edit-base-zero
+    kind: wrong-update
+    misconception: edit-base-zero
+    description: The base column stays 0, so erasing a whole prefix of a costs nothing.
+  - id: edit-missing-replace
+    kind: wrong-update
+    misconception: edit-missing-replace
+    description: The mismatch minimum leaves out the diagonal, so a replace costs a delete plus an insert.
+  - id: edit-match-costs-one
+    kind: wrong-update
+    misconception: edit-match-costs-one
+    description: Equal last characters add 1 instead of copying the diagonal for free.
+  - id: stock-buy-wrong-count
+    kind: wrong-update
+    misconception: stock-buy-wrong-count
+    description: The buy reads cash[t] instead of cash[t - 1], so buying never uses up a transaction.
+  - id: stock-sell-sign
+    kind: wrong-update
+    misconception: stock-sell-sign
+    description: The sell subtracts the price instead of adding it.
+  - id: stock-hold-init-zero
+    kind: wrong-update
+    misconception: stock-hold-init-zero
+    description: hold starts at 0, so a share can be sold before it was ever bought.
+  - id: lis-non-strict-compare
+    kind: wrong-update
+    misconception: lis-non-strict-compare
+    description: The comparison uses <=, so equal values extend a strictly increasing chain.
+  - id: lis-overwrite-best
+    kind: wrong-update
+    misconception: overwrite-best
+    description: dp[i] is overwritten by dp[j] + 1 for every smaller a[j], so a later shorter chain replaces a longer one.
+  - id: lis-answer-last-cell
+    kind: wrong-output
+    misconception: lis-answer-last-cell
+    description: The answer keeps only the last dp[i] instead of the maximum over all i.
+  - id: mcm-cost-index
+    kind: wrong-update
+    misconception: mcm-cost-index
+    description: The join cost uses p[i]·p[k]·p[j] instead of p[i]·p[k + 1]·p[j + 1].
+  - id: mcm-keep-last-split
+    kind: wrong-update
+    misconception: overwrite-best
+    description: dp[i][j] is overwritten by each split's cost, so only the last split is kept.
+  - id: mcm-start-zero
+    kind: wrong-update
+    misconception: dp-wrong-base-case
+    description: dp[i][j] starts at 0 before taking the minimum over splits, so every range costs 0.
+  - id: bitmask-check-bit
+    kind: wrong-update
+    misconception: bitmask-check-bit
+    description: The free-job test is inverted, so only jobs already taken are tried.
+  - id: bitmask-worker-index
+    kind: wrong-update
+    misconception: bitmask-worker-index
+    description: Every job is charged at worker 0's cost instead of worker popcount(mask).
+  - id: bitmask-start-zero
+    kind: wrong-update
+    misconception: dp-wrong-base-case
+    description: Every mask starts at 0 instead of infinity, so the minimum stays 0.
+  - id: mono-non-strict-pop
+    kind: wrong-update
+    misconception: mono-strictness
+    description: The stack pops on <=, so an equal value is recorded as the next greater one.
+  - id: mono-wrong-direction
+    kind: wrong-update
+    misconception: mono-wrong-direction
+    description: The stack pops larger values, so it finds the next smaller element instead.
+  - id: mono-stores-index
+    kind: wrong-output
+    misconception: confuse-index-value
+    description: The answer records the index i instead of the value a[i].
+  - id: tree-return-both-branches
+    kind: wrong-update
+    misconception: tree-return-both-branches
+    description: The node returns val + both branches, so a parent extends a path that already bends.
+  - id: tree-negative-branch
+    kind: wrong-update
+    misconception: tree-negative-branch
+    description: A branch is not clamped at 0, so a negative branch lowers paths that should leave it out.
+  - id: tree-best-only-downward
+    kind: wrong-update
+    misconception: tree-best-only-downward
+    description: The global best records only one branch, so paths bending at their highest node are missed.
+  - id: sq-missing-diagonal
+    kind: wrong-update
+    misconception: sq-missing-diagonal
+    description: The minimum leaves out the up-left neighbour, so a square with an empty inner corner is accepted.
+  - id: sq-side-not-area
+    kind: wrong-output
+    misconception: sq-side-not-area
+    description: The program prints the largest side instead of its square, the area.
+  - id: sq-overwrite-best
+    kind: wrong-update
+    misconception: overwrite-best
+    description: best is overwritten by every 1 cell's side instead of keeping the maximum.
+  - id: rob-take-adds-take
+    kind: wrong-update
+    misconception: rob-take-adds-take
+    description: take[x] adds take of the children, so a house and its child are both robbed.
+  - id: rob-skip-forces-take
+    kind: wrong-update
+    misconception: rob-skip-forces-take
+    description: skip[x] adds only take of the children, as if skipping x forced them to be robbed.
+  - id: rob-answer-take-only
+    kind: wrong-output
+    misconception: rob-answer-take-only
+    description: The answer is take of the root only, although the root may also be skipped.
+  - id: prefix-store-last-index
+    kind: wrong-update
+    misconception: prefix-store-last-index
+    description: Every prefix sum overwrites the stored index, so the map keeps the last index and the longest subarray is missed.
+  - id: prefix-missing-empty
+    kind: missing-update
+    misconception: prefix-missing-empty
+    description: The map starts empty, so no subarray that starts at index 0 is found.
+  - id: prefix-seed-index-zero
+    kind: wrong-init
+    misconception: prefix-seed-index-zero
+    description: The empty prefix is stored at index 0 instead of -1, so subarrays from the front are one element short.
+  - id: split-low-start
+    kind: wrong-init
+    misconception: search-range-confusion
+    description: The cap search starts at 1, below the largest element, where the greedy count still puts that element in a part and accepts a cap that cannot work.
+  - id: split-strict-parts
+    kind: wrong-comparison
+    misconception: predicate-boundary
+    description: A cap is accepted only when it needs fewer than k parts, so using exactly k parts is wrongly rejected.
+  - id: pnp-forget-skip
+    kind: missing-update
+    misconception: pnp-forget-skip
+    description: The call returns only the take branch, so only the subsequence that takes every element is ever counted.
+  - id: pnp-take-without-element
+    kind: wrong-update
+    misconception: pnp-take-without-element
+    description: The take branch does not add a[i] to the total, so taking and skipping are the same call.
+  - id: pnp-base-ignores-target
+    kind: wrong-output
+    misconception: pnp-base-ignores-target
+    description: The base case returns 1 for every finished choice, counting all 2^n subsequences.
+  - id: lru-get-no-refresh
+    kind: missing-update
+    misconception: lru-get-no-refresh
+    description: A successful get keeps the key's old last-use time, so a key that was just read can be evicted as if it were stale.
+  - id: lru-evict-most-recent
+    kind: wrong-comparison
+    misconception: lru-evict-most-recent
+    description: Eviction picks the largest last-use time, removing the most recently used key instead of the least.
+  - id: lru-evict-on-update
+    kind: wrong-comparison
+    misconception: lru-evict-on-update
+    description: The full-cache check ignores whether the key is already stored, so updating a key evicts another one.
+  - id: mod-chain-missing
+    kind: wrong-update
+    misconception: mod-chain-missing
+    description: The minutes are taken from the whole total with t // 60, so the minutes inside the hours are counted again.
+  - id: mod-swap-div
+    kind: wrong-update
+    misconception: mod-swap-div
+    description: The hours use % instead of whole-number division, giving what is left over instead of how many hours fit.
+  - id: mod-wrong-divisor
+    kind: wrong-update
+    misconception: mod-wrong-divisor
+    description: The seconds are taken modulo 3600, which still contains the minutes.
+  - id: div-square-twice
+    kind: wrong-comparison
+    misconception: div-square-twice
+    description: The partner n // i is added whenever i <= n // i, so a perfect square's root is counted twice.
+  - id: div-sqrt-bound-strict
+    kind: off-by-one
+    misconception: div-sqrt-bound-strict
+    description: The loop runs while i * i < n, so the square root of a perfect square is never tried.
+  - id: mod-operands-swapped
+    kind: wrong-comparison
+    misconception: mod-operands-swapped
+    description: The test i % n == 0 asks whether n divides i instead of whether i divides n.
+  - id: sort-wrong-direction
+    kind: wrong-comparison
+    misconception: sort-wrong-direction
+    description: Neighbours are swapped when the left value is smaller, which pushes big values to the front and sorts in descending order.
+  - id: sort-inner-bound-short
+    kind: off-by-one
+    misconception: sort-inner-bound-short
+    description: Each pass stops one pair early, so the last two unsorted values are never compared.
+  - id: sort-overwrite-not-swap
+    kind: wrong-update
+    misconception: sort-overwrite-not-swap
+    description: The swap copies a[j + 1] over a[j], losing a[j], so one value appears twice and another disappears.

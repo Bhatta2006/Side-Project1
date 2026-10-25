@@ -1,0 +1,63 @@
+id: quiz:dsa:design-data-structures:design-with-hashing
+family: design-with-hashing
+concept: dsa:design-data-structures
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: hole
+  band: 2
+  format: trace
+  prompt: The array is 5 7 9 and the map is 5 → 0, 7 → 1, 9 → 2. After remove 5, what is the array?
+  options:
+  - 9 7
+  - 7 9
+  - 7 9 5
+  - 9 7 5
+  answer: 0
+  misconceptions:
+  - null
+  - design-shift-delete
+  - trace-step-slip
+  - design-stale-index
+  explanation: The last value moves into the hole at index 0.
+- id: index
+  band: 3
+  format: mcq
+  prompt: After moving 9 into index 0, which map entry must change?
+  options:
+  - 9 → 0
+  - 5 → 2
+  - 7 → 0
+  - None
+  answer: 0
+  misconceptions:
+  - null
+  - confuse-index-value
+  - trace-step-slip
+  - design-stale-index
+  explanation: Every move in the array must be mirrored in the map.
+- id: random
+  band: 4
+  format: classify
+  prompt: Why keep an array at all, when the map already has every value?
+  options:
+  - A random pick needs an index below n; a hash map has no indexes
+  - Arrays use less memory
+  - To keep the values sorted
+  - To detect duplicates
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  - distinct-vs-frequency
+  explanation: getRandom picks vals[random index].
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,63 @@
+id: quiz:dsa:recursion-patterns:recursive-stack-ops
+family: recursive-stack-ops
+concept: dsa:recursion-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: push-back
+  band: 2
+  format: trace
+  prompt: reverse() pops the top, calls reverse() on the rest, then pushes the top back on top. What is 1 2 3 (3 on top) afterwards?
+  options:
+  - 1 2 3
+  - 3 2 1
+  - 2 3 1
+  - Empty
+  answer: 0
+  misconceptions:
+  - null
+  - stack-push-back-on-top
+  - trace-step-slip
+  - missing-reset
+  explanation: Every element goes back where it was.
+- id: insert-bottom
+  band: 3
+  format: mcq
+  prompt: What does insert_bottom(x) do with the top it pops?
+  options:
+  - Holds it in the call and pushes it back after x is placed below
+  - Throws it away
+  - Pushes it under x
+  - Moves it to a second stack
+  answer: 0
+  misconceptions:
+  - null
+  - stack-push-back-on-top
+  - stack-push-back-on-top
+  - pattern-brute-force-default
+  explanation: The call stack is the only extra storage.
+- id: cost
+  band: 4
+  format: complexity
+  prompt: Reversing a stack of n with insert_bottom. Total time?
+  options:
+  - O(n²)
+  - O(n)
+  - O(n log n)
+  - O(2^n)
+  answer: 0
+  misconceptions:
+  - null
+  - subsets-linear
+  - pattern-sort-breaks-order
+  - pattern-brute-force-default
+  explanation: Each of n inserts walks down the stack.
+status: provisional
+provenance:
+  origin: original

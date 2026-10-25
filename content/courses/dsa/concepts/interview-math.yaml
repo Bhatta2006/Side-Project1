@@ -1,0 +1,95 @@
+id: interview-math
+title: Math for interviews
+summary: GCD and LCM, sieves and factorisation, modular power, nCr and Catalan numbers, and randomised
+  sampling.
+module: math-and-strings
+prerequisites:
+- complexity
+- zero:math-on-numbers
+difficulty: 3
+estimated_minutes: 55
+status: draft
+lesson: '## Sieve and factor
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Mod power
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Ncr catalan
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Random sampling
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

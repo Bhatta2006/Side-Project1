@@ -1163,6 +1163,306 @@
         }
       ],
       "exercises": []
+    },
+    "dsa:dp-introduction": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": [
+        {
+          "number": 66,
+          "title": "Fibonacci recurrence",
+          "url": "https://github.com/zhiwehu/Python-programming-exercises/blob/master/100%2B%20Python%20challenging%20programming%20exercises%20for%20Python%203.md#question-66",
+          "language": "python",
+          "guidance": "Solve it with the ideas in this lesson, then test a boundary case. Use Python 3; some upstream examples use older syntax."
+        }
+      ]
+    },
+    "dsa:knapsack-01": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:knapsack-unbounded": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-lcs": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-edit-distance": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-stocks": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-lis": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-partition": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-advanced-patterns": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:monotonic-stack": {
+      "roadmap": [
+        {
+          "title": "Stacks",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/stacks@jvKRykGNy140FlquF2fcK.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:tree-patterns": {
+      "roadmap": [
+        {
+          "title": "Binary Trees",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/binary-trees@RPU5CGp2Li5lk0UB-zNHT.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Tree Traversal",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/tree-traversal@2Od5lNc6fCM6Gyj_axj4n.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-squares": {
+      "roadmap": [
+        {
+          "title": "Dynamic Programming",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/dynamic-programming@jKAZNybU9cxufNBdFsqsP.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:dp-on-trees": {
+      "roadmap": [
+        {
+          "title": "Binary Trees",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/binary-trees@RPU5CGp2Li5lk0UB-zNHT.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Tree Traversal",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/tree-traversal@2Od5lNc6fCM6Gyj_axj4n.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:hashing": {
+      "roadmap": [
+        {
+          "title": "Hash Tables",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/hash-tables@kSy-8ubESdmIX4Fyl8TSu.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:binary-search-on-answer": {
+      "roadmap": [
+        {
+          "title": "Binary Search",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/binary-search@Wt74MRKaZcs8lYvfqjffT.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:recursion-patterns": {
+      "roadmap": [
+        {
+          "title": "Backtracking",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/backtracking@mKoC5o__gLSTjAlq8iXkV.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "dsa:design-data-structures": {
+      "roadmap": [
+        {
+          "title": "Hash Tables",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/hash-tables@kSy-8ubESdmIX4Fyl8TSu.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Linked Lists",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/datastructures-and-algorithms/content/linked-lists@bRu9u8pEAQ1TmKygjIjyI.md",
+          "language": null,
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "zero:operators-and-expressions": {
+      "roadmap": [
+        {
+          "title": "Type Casting",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/python/content/type-casting@R9DQNc0AyAQ2HLpP4HOk6.md",
+          "language": "python",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Operators",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/python/content/operators@so95CO6Qw3I0S98ISENS-.md",
+          "language": "python",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Iostream",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/cpp/content/iostream@VeVxZ230xkesQsIDig8zQ.md",
+          "language": "cpp",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Arithmetic Operators",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/cpp/content/arithmetic-operators@8aOSpZLWwZv_BEYiurhyR.md",
+          "language": "cpp",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Io Operations",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/java/content/io-operations@M0ybgK1JCycXhZ1dEpCFo.md",
+          "language": "java",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Math Operations",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/java/content/math-operations@ziD_XwzJSFQP_3iLjq9pA.md",
+          "language": "java",
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "zero:math-on-numbers": {
+      "roadmap": [
+        {
+          "title": "Loops",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/python/content/loops@Dvy7BnNzK55qbh_SgOk8m.md",
+          "language": "python",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "For / While / Do While Loops",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/cpp/content/for--while--do-while-loops@_IP_e1K9LhNHilYTDh7L5.md",
+          "language": "cpp",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Loops",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/java/content/loops@JHUhVEjWFXTn6-wKcKevg.md",
+          "language": "java",
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
+    },
+    "zero:searching-and-sorting": {
+      "roadmap": [
+        {
+          "title": "Lists",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/python/content/lists@UT_SR7G-LYtzqooWrEtF1.md",
+          "language": "python",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Containers",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/cpp/content/containers@1pydf-SR0QUfVNuBEyvzc.md",
+          "language": "cpp",
+          "source": "Developer Roadmap"
+        },
+        {
+          "title": "Array Vs Arraylist",
+          "url": "https://github.com/nilbuild/developer-roadmap/blob/8e62a35a8c113d9b52267046941b49f52e3f621e/roadmaps/java/content/array-vs-arraylist@a-EQiBUlSgdZba1mW36op.md",
+          "language": "java",
+          "source": "Developer Roadmap"
+        }
+      ],
+      "exercises": []
     }
   }
 }

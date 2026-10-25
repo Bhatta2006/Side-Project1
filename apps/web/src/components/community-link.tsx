@@ -34,9 +34,9 @@ export function CommunityCard({ className }: { className?: string }) {
   const url = useCommunityUrl();
   if (!url) return null;
   return (
-    <section aria-labelledby="community-title" className={cn('flex flex-col gap-4 rounded-card border bg-card p-5 sm:flex-row sm:items-center sm:justify-between lg:p-6', className)}>
+    <section aria-labelledby="community-title" className={cn('flex flex-col gap-4 paper rounded-card p-5 sm:flex-row sm:items-center sm:justify-between lg:p-6', className)}>
       <div>
-        <h2 id="community-title" className="font-display text-xl font-bold tracking-[-0.03em]">Learn with the beta cohort</h2>
+        <h2 id="community-title" className="font-display text-xl font-semibold tracking-[-0.03em]">Learn with the beta cohort</h2>
         <p className="mt-1 max-w-xl text-[15px] text-muted-foreground">Weekly challenges, study partners and a direct line to the people building Socrat. Tell us what to fix next.</p>
       </div>
       <CommunityButton className="self-start sm:self-auto" />

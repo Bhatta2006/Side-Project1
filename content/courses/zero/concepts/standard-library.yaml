@@ -1,0 +1,73 @@
+id: standard-library
+title: Standard library for problem solving
+summary: 'The containers and helpers you will use every day: Python collections, the C++ STL and java.util.'
+module: craft
+prerequisites:
+- maps
+- searching-and-sorting
+difficulty: 3
+estimated_minutes: 50
+status: draft
+lesson: '## Collections toolkit
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Sorting with keys
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Library pitfalls
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

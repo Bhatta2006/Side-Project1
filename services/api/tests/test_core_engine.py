@@ -236,6 +236,10 @@ def test_socratic_ladder_needs_real_work_to_escalate():
         ladder = advance(ladder, "help", new_attempt=False)
     assert ladder.ceiling == 0
     assert genuine("I tried a loop but it prints the wrong total for the second test", False)
+    assert not genuine(
+        "i dont get it. just give me the full code pls, i have interview tmrw", False
+    )
+    assert not genuine("I don't know where to start", False)
     for _ in range(10):
         ladder = advance(ladder, "", new_attempt=True)
     assert ladder.ceiling == 4 and ladder.turns_at_ceiling == 6
@@ -274,3 +278,157 @@ def test_options_are_shuffled_so_position_never_gives_the_answer_away():
         assert q.is_correct("session-1", shown["answer"])
         assert not q.is_correct("session-1", -1)
         assert q.shown("session-1") == shown  # stable for the same session
+
+
+def test_placement_never_skips_unasked_course_topics():
+    cat = catalog()
+    own = set(cat.course_concepts("algo"))
+    path = cat.closure(cat.course_concepts("algo"))
+    state = placement.start(cat, path, path[-1], seed=3)
+    while not state.done:  # A strong learner answers everything correctly.
+        item = placement.question(cat, state)
+        placement.answer(cat, state, item.shown(placement.seed_of(state))["answer"])
+    known = placement.result(state, own)
+    asked = {x["concept"] for x in state.asked}
+    capped = set(path[: state.frontier])  # the last stretch always stays to learn
+    assert all(known[c] == (c in asked and c in capped) for c in own)
+    assert all(known[c] == (c in capped) for c in path if c not in own)
+
+
+def test_quiz_items_about_other_languages_do_not_fit():
+    from socrat.catalog.schema import QuizItem
+
+    def item(id, prompt):
+        return QuizItem(
+            id=id, prompt=prompt, options=["a", "b"], answer=0, explanation="Because.", difficulty=2
+        )
+
+    cpp = item("cpp-ref", "In C++, what does the & mean?")
+    assert cpp.fits("cpp") and not cpp.fits("python")
+    both = item("decl", "In C++ or Java you declare a type. Why?")
+    assert both.fits("java") and not both.fits("python")
+    assert item("plain", "What does a hash map store?").fits("python")
+
+
+def test_reveal_message_counts_attempts_in_plain_english():
+    assert reveal_eligibility(Ladder(), failed_submits=1)[1].startswith("submit 1 more attempt or")
+    assert "2 more attempts" in reveal_eligibility(Ladder(), failed_submits=0)[1]
+
+
+def _course_dir(root, concepts: list[dict], modules: list[dict]):
+    import yaml
+
+    folder = root / "courses" / "mini"
+    (folder / "concepts").mkdir(parents=True)
+    (folder / "problems").mkdir()
+    course = dict(
+        id="mini",
+        title="Mini course",
+        tagline="A tiny course",
+        description="A tiny course used to test draft concepts.",
+        version="1.0.0",
+        languages=["python"],
+        levels=[
+            dict(id="new", label="New", description="New"),
+            dict(id="some", label="Some", description="Some", start_concept="basics"),
+        ],
+        modules=modules,
+    )
+    (folder / "course.yaml").write_text(yaml.safe_dump(course), encoding="utf-8")
+    for concept in concepts:
+        (folder / "concepts" / f"{concept['id']}.yaml").write_text(
+            yaml.safe_dump(concept), encoding="utf-8"
+        )
+    return root / "courses"
+
+
+def _concept(cid, module, prerequisites=(), status="live"):
+    live = dict(
+        lesson="x" * 200,
+        key_points=["one", "two"],
+        resources=[
+            dict(
+                title=f"Doc {i}",
+                url=f"https://example.com/{i}",
+                kind="docs",
+                source="Ex",
+                minutes=5,
+            )
+            for i in range(2)
+        ],
+        quiz=[
+            dict(
+                id=f"q{i}",
+                prompt="Pick one.",
+                options=["a", "b"],
+                answer=0,
+                explanation="Because.",
+                difficulty=1,
+            )
+            for i in range(2)
+        ],
+    )
+    return dict(
+        id=cid,
+        title=cid.title(),
+        summary="A concept for testing.",
+        module=module,
+        prerequisites=list(prerequisites),
+        difficulty=1,
+        estimated_minutes=20,
+        status=status,
+        **(live if status == "live" else {"lesson": "## Recognition cues"}),
+    )
+
+
+def test_draft_concepts_are_validated_but_never_served(tmp_path):
+    from socrat.catalog.registry import load
+
+    root = _course_dir(
+        tmp_path,
+        [_concept("basics", "start"), _concept("later", "next", ["basics"], status="draft")],
+        [
+            dict(id="start", title="Start", summary="The first module.", concepts=["basics"]),
+            dict(id="next", title="Next", summary="A module still in draft.", concepts=["later"]),
+        ],
+    )
+    cat = load(root, tests_root=None)
+    assert cat.course_concepts("mini") == ["mini:basics"]
+    assert [m.id for m in cat.course("mini").modules] == ["start"]
+    assert "mini:later" not in cat.concepts
+
+
+def test_a_live_concept_cannot_depend_on_a_draft(tmp_path):
+    from socrat.catalog.registry import load
+
+    root = _course_dir(
+        tmp_path,
+        [_concept("basics", "start", ["later"]), _concept("later", "start", status="draft")],
+        [
+            dict(
+                id="start", title="Start", summary="The first module.", concepts=["later", "basics"]
+            )
+        ],
+    )
+    with pytest.raises(CatalogError, match="unknown prerequisite"):
+        load(root, tests_root=None)
+
+
+def test_drafts_must_fit_the_graph_and_live_concepts_must_be_complete(tmp_path):
+    from socrat.catalog.registry import load
+    from socrat.catalog.schema import Concept
+
+    root = _course_dir(
+        tmp_path,
+        [_concept("basics", "start"), _concept("later", "start", ["nowhere"], status="draft")],
+        [
+            dict(
+                id="start", title="Start", summary="The first module.", concepts=["basics", "later"]
+            )
+        ],
+    )
+    with pytest.raises(CatalogError, match="unknown prerequisite"):
+        load(root, tests_root=None)
+    incomplete = _concept("basics", "start") | {"resources": []}
+    with pytest.raises(ValueError, match="at least 2 resources"):
+        Concept.model_validate(incomplete)

@@ -1,0 +1,79 @@
+id: quiz:dsa:dp-introduction:reconstruct-choice
+family: reconstruct-choice
+concept: dsa:dp-introduction
+format: trace
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: walk-back
+  band: 3
+  format: trace
+  prompt: came = [−1, −1, 0, 1, 3] for stairs 0 to 4 (top). Which stairs were used?
+  options:
+  - 1 3
+  - 3 1
+  - 0 2 4
+  - 0 1 3
+  answer: 0
+  misconceptions:
+  - null
+  - dp-reconstruct-forward
+  - dp-reconstruct-forward
+  - dp-reconstruct-forward
+  explanation: 'From the top: 4 came from 3, 3 came from 1, and 1 is a start. Reversed: 1 3.'
+- id: needs-table
+  band: 3
+  format: mcq
+  prompt: You compressed the stairs DP to two variables. Can you still print the path?
+  options:
+  - 'No: the choices for earlier stairs are gone'
+  - 'Yes: walk forward again'
+  - 'Yes: the last two values are enough'
+  - Only for even n
+  answer: 0
+  misconceptions:
+  - null
+  - dp-compressed-loses-path
+  - pattern-value-vs-choice
+  - dp-compressed-loses-path
+  explanation: Reconstruction needs the winning choice at every cell.
+- id: forget-reverse
+  band: 4
+  format: bug_spot
+  prompt: The walk-back collects 3, then 1. The program prints 3 1. What is missing?
+  options:
+  - Reversing the collected path
+  - A larger table
+  - A memo
+  - Sorting the costs
+  answer: 0
+  misconceptions:
+  - null
+  - dp-reconstruct-forward
+  - dp-recompute-subproblems
+  - pattern-sort-breaks-order
+  explanation: Walking back visits the path from the end; reverse it before printing.
+- id: record-when
+  band: 4
+  format: mcq
+  prompt: When should came[i] be written?
+  options:
+  - While computing dp[i], when you know which option won
+  - After the whole table is filled, by guessing
+  - Before any dp value is known
+  - Only for the top stair
+  answer: 0
+  misconceptions:
+  - null
+  - dp-reconstruct-forward
+  - dp-reconstruct-forward
+  - dp-compressed-loses-path
+  explanation: The winning option is known exactly when dp[i] is computed.
+status: provisional
+provenance:
+  origin: original

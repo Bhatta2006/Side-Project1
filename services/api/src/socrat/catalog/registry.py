@@ -42,7 +42,11 @@ def _read(path: Path) -> dict:
     return value
 
 
-def load_course(folder: Path, tests_root: Path | None = TESTS_ROOT) -> Course:
+def load_course(
+    folder: Path, tests_root: Path | None = TESTS_ROOT, include_drafts: bool = False
+) -> Course:
+    """Draft concepts are validated here but left out unless ``include_drafts``: learners,
+    placement and planning only ever see live concepts."""
     payload = _read(folder / "course.yaml")
     payload["concepts"] = [_read(p) for p in sorted((folder / "concepts").glob("*.yaml"))]
     problems = []
@@ -60,9 +64,22 @@ def load_course(folder: Path, tests_root: Path | None = TESTS_ROOT) -> Course:
         problems.append(problem)
     payload["problems"] = problems
     try:
-        return Course.model_validate(payload)
+        course = Course.model_validate(payload)
     except ValueError as exc:
         raise CatalogError(f"{folder.name}: {exc}") from exc
+    drafts = {c.id for c in course.concepts if c.status == "draft"}
+    if include_drafts or not drafts:
+        return course
+    modules = [
+        m.model_copy(update={"concepts": [c for c in m.concepts if c not in drafts]})
+        for m in course.modules
+    ]
+    return course.model_copy(
+        update={
+            "concepts": [c for c in course.concepts if c.id not in drafts],
+            "modules": [m for m in modules if m.concepts],
+        }
+    )
 
 
 @dataclass
@@ -178,6 +195,9 @@ def load(root: Path = CONTENT_ROOT, tests_root: Path | None = TESTS_ROOT) -> Cat
     from socrat.catalog import atoms
 
     catalog = build([load_course(folder, tests_root) for folder in folders])
+    # Drafts must still fit the graph: known prerequisites, one module each, no cycles.
+    # A live concept that needs a draft fails the build above as an unknown prerequisite.
+    build([load_course(folder, None, include_drafts=True) for folder in folders])
     try:
         catalog.atom_packs = atoms.load(root.parent / "atoms", catalog.concepts, catalog.courses)
         catalog.pattern_atoms = atoms.load_pattern_packs(

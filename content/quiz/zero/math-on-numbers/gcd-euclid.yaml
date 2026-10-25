@@ -1,0 +1,62 @@
+id: quiz:zero:math-on-numbers:gcd-euclid
+family: gcd-euclid
+concept: zero:math-on-numbers
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: steps
+  band: 2
+  format: trace
+  prompt: Euclid on (12, 18). What is the GCD?
+  options:
+  - '6'
+  - '3'
+  - '36'
+  - '12'
+  answer: 0
+  misconceptions:
+  - null
+  - trace-step-slip
+  - gcd-vs-lcm
+  - trace-step-slip
+  explanation: (12, 18) → (18, 12) → (12, 6) → (6, 0).
+- id: lcm
+  band: 3
+  format: trace
+  prompt: What is the LCM of 4 and 6?
+  options:
+  - '12'
+  - '24'
+  - '2'
+  - '10'
+  answer: 0
+  misconceptions:
+  - null
+  - gcd-vs-lcm
+  - gcd-vs-lcm
+  - count-vs-sum
+  explanation: 4 // 2 · 6 = 12.
+- id: subtract
+  band: 4
+  format: classify
+  prompt: Why use x % y rather than subtracting y from x repeatedly?
+  options:
+  - The remainder does all the subtractions at once, so huge inputs stay fast
+  - Subtraction gives a different GCD
+  - Remainders avoid negative numbers
+  - There is no difference
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - mod-wrong-modulus
+  - pattern-brute-force-default
+  explanation: gcd(10^18, 1) would take 10^18 subtractions.
+status: provisional
+provenance:
+  origin: original

@@ -61,6 +61,11 @@ test('Python: submit is judged from the browser run, failures show their reason'
   results = await runWith(page, headers, 'python', 'name = input()\nprint(1 // 0)\n', 'Run tests');
   await expect(results).toContainText('Runtime error');
   await expect(results).toContainText('ZeroDivisionError');
+  await expect(results).not.toContainText('__socrat_run');
+
+  results = await runWith(page, headers, 'python', 'print("hi"\n', 'Run tests');
+  await expect(results).toContainText('Syntax error');
+  await expect(results).toContainText('SyntaxError');
 
   results = await runWith(page, headers, 'python', 'while True:\n    pass\n', 'Run tests');
   await expect(results).toContainText('Time limit exceeded');

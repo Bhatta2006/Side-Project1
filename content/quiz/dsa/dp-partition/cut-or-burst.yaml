@@ -1,0 +1,63 @@
+id: quiz:dsa:dp-partition:cut-or-burst
+family: cut-or-burst
+concept: dsa:dp-partition
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: sentinels
+  band: 2
+  format: mcq
+  prompt: Before the cut-a-stick table, what do you do with the cut positions?
+  options:
+  - Sort them and add 0 and L at the ends
+  - Nothing
+  - Sort them only
+  - Remove duplicates only
+  answer: 0
+  misconceptions:
+  - null
+  - cut-unsorted-positions
+  - cut-unsorted-positions
+  - dp-wrong-base-case
+  explanation: The ranges between neighbouring sentinels are the pieces.
+- id: stick
+  band: 3
+  format: trace
+  prompt: A stick of length 7 with cuts at 1 3 4 5. What is the cheapest total cost?
+  options:
+  - '16'
+  - '20'
+  - '7'
+  - '13'
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-greedy-order
+  - dp-missing-plus-one
+  - mcm-cost-index
+  explanation: Cut at 3 (7), then 5 (4), then 1 (3), then 4 (2).
+- id: last-balloon
+  band: 4
+  format: classify
+  prompt: Why does burst balloons choose the last balloon in a range?
+  options:
+  - Its neighbours at that moment are the fixed walls, so both sides are independent
+  - It is the largest
+  - The first balloon would be cheaper
+  - It is required by the problem
+  answer: 0
+  misconceptions:
+  - null
+  - mcm-greedy-order
+  - burst-first-not-last
+  - burst-first-not-last
+  explanation: Bursting first glues its neighbours together, so the halves interact.
+status: provisional
+provenance:
+  origin: original

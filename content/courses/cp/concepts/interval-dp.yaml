@@ -1,0 +1,51 @@
+id: interval-dp
+title: Interval DP and games
+summary: 'DP over ranges [l, r]: merging slimes, removal games and optimal play on a deque.'
+module: dp-module
+prerequisites:
+- dp-classics
+difficulty: 5
+estimated_minutes: 55
+status: draft
+lesson: '## Merge interval
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Removal game
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

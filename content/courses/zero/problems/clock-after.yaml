@@ -1,0 +1,87 @@
+id: clock-after
+title: The clock after a wait
+concepts: [operators-and-expressions]
+difficulty: easy
+statement: |
+  A 24-hour clock shows `hh:mm`. After waiting `k` more minutes, what does it show, and how
+  many times did it pass midnight?
+
+  Print the new time as `hh:mm` with two digits for each part, then the number of midnights
+  passed.
+input_format: The first line contains hh and mm. The second line contains k.
+output_format: The new time hh:mm and the number of midnights, separated by a space.
+constraints:
+  - 0 ≤ hh ≤ 23 and 0 ≤ mm ≤ 59
+  - 0 ≤ k ≤ 10^12
+examples:
+  - input: "23 50\n15"
+    output: "00:05 1"
+    explanation: "Ten minutes reach midnight, five more give 00:05."
+  - input: "9 5\n130"
+    output: "11:15 0"
+hints:
+  - "Count everything in minutes since the start of the current day: hh · 60 + mm + k."
+  - "One day is 1440 minutes. Whole days passed is the total divided by 1440; what is left is the time of day."
+  - "Split the time of day into hours and minutes with // 60 and % 60, and print each with two digits."
+approach: |
+  Turn the time into minutes since the start of today, add k, and split the total with whole
+  division and remainder: days = total // 1440 is the number of midnights passed, and
+  left = total % 1440 is the time of the new day, which splits into left // 60 hours and
+  left % 60 minutes. Print each with a leading zero when it is below 10. Totals reach about
+  10^12, so C++ and Java need 64-bit integers.
+reference: |
+  hh, mm = map(int, input().split())
+  k = int(input())
+  total = hh * 60 + mm + k
+  left = total % 1440
+  print(f"{left // 60:02d}:{left % 60:02d} {total // 1440}")
+brute: |
+  hh, mm = map(int, input().split())
+  k = int(input())
+  days = 0
+  for _ in range(k):
+      mm += 1
+      if mm == 60:
+          mm, hh = 0, hh + 1
+      if hh == 24:
+          hh, days = 0, days + 1
+  print(f"{hh:02d}:{mm:02d} {days}")
+references:
+  cpp: |
+    #include <cstdio>
+
+    int main() {
+        long long hh, mm, k;
+        if (scanf("%lld %lld %lld", &hh, &mm, &k) != 3) return 0;
+        long long total = hh * 60 + mm + k;
+        long long left = total % 1440;
+        printf("%02lld:%02lld %lld\n", left / 60, left % 60, total / 1440);
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            long hh = in.nextLong(), mm = in.nextLong(), k = in.nextLong();
+            long total = hh * 60 + mm + k;
+            long left = total % 1440;
+            System.out.printf("%02d:%02d %d%n", left / 60, left % 60, total / 1440);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "0 0\n0"
+      yield "23 59\n1"
+      yield "0 0\n1440"
+      yield "12 30\n1000000000000"
+      yield "23 59\n1000000000000"
+      yield "0 0\n999999999999"
+      for _ in range(6):
+          yield f"{rng.randint(0, 23)} {rng.randint(0, 59)}\n{rng.randint(0, 10**12)}"
+      for _ in range(4):
+          yield f"{rng.randint(0, 23)} {rng.randint(0, 59)}\n{rng.randint(0, 5000)}"
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          yield f"{rng.randint(0, 23)} {rng.randint(0, 59)}\n{rng.randint(0, 4000)}"

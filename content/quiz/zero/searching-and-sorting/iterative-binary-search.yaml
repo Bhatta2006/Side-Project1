@@ -1,0 +1,62 @@
+id: quiz:zero:searching-and-sorting:iterative-binary-search
+family: iterative-binary-search
+concept: zero:searching-and-sorting
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: looks
+  band: 2
+  format: trace
+  prompt: 1 3 5 7 9 11 and x = 11. How many elements does binary search look at?
+  options:
+  - '3'
+  - '6'
+  - '1'
+  - '5'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-vs-scan
+  - stop-after-first
+  - trace-step-slip
+  explanation: mid = 2, then 4, then 5.
+- id: unsorted
+  band: 3
+  format: trace
+  prompt: Binary search for 2 in the unsorted list 5 1 4 2 8. What happens?
+  options:
+  - It reports −1, because it throws away the half that holds 2
+  - It finds index 3
+  - It crashes
+  - It sorts the list first
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-needs-sorted-input
+  - lo-hi-confusion
+  - pattern-search-needs-sorted-input
+  explanation: a[2] = 4 > 2 sends it left, but the 2 is at index 3.
+- id: million
+  band: 4
+  format: complexity
+  prompt: About how many looks does binary search need in a sorted list of a million numbers?
+  options:
+  - '20'
+  - '1000'
+  - '500000'
+  - '1000000'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-vs-scan
+  - pattern-search-vs-scan
+  - pattern-search-vs-scan
+  explanation: 2²⁰ is about a million.
+status: provisional
+provenance:
+  origin: original

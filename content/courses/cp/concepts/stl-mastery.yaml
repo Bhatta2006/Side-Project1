@@ -1,0 +1,74 @@
+id: stl-mastery
+title: Sorting and STL mastery
+summary: Comparators, ordered sets and multisets with their traps, priority queues, coordinate compression
+  and ordered statistics.
+module: contest-basics
+prerequisites:
+- fast-io
+- dsa:sorting
+difficulty: 2
+estimated_minutes: 50
+status: draft
+lesson: '## Ordered containers
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Coordinate compression
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Pbds
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

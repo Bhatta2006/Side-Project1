@@ -1,0 +1,237 @@
+id: quiz:dsa:dp-stocks:stock-state-machine
+family: stock-state-machine
+concept: dsa:dp-stocks
+pattern: dsa:dp-stocks/stock-state-machine
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: stock_transactions
+  params:
+    days:
+    - 4
+    - 8
+    price:
+    - 1
+    - 9
+    trades:
+    - 1
+    - 3
+  reference: best_profit(p, k)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: sum every rise, ignoring the limit
+  misconception: stock-unlimited-when-limited
+- rule: keep the k biggest rising runs
+  misconception: stock-greedy-runs
+- rule: max price minus min price, in any order
+  misconception: stock-sell-before-buy
+- rule: buy from cash[t] instead of cash[t − 1]
+  misconception: stock-buy-wrong-count
+items:
+- id: states
+  band: 1
+  format: mcq
+  prompt: For at most k transactions, which facts form the state at the end of a day?
+  options:
+  - Holding or not, and buys used
+  - Today's price only
+  - The best price seen so far only
+  - The number of days left only
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - stock-greedy-runs
+  - dp-vague-state
+  explanation: Those two facts decide every future move.
+- id: sell-before-buy
+  band: 1
+  format: mcq
+  prompt: Prices 7 1 5 3 6 4, one trade. What is the best profit?
+  options:
+  - '5'
+  - '6'
+  - '4'
+  - '0'
+  answer: 0
+  misconceptions:
+  - null
+  - stock-sell-before-buy
+  - stock-greedy-runs
+  - stock-hold-init-zero
+  explanation: Buy at 1, sell at 6. 7 − 1 would sell before buying.
+- id: unlimited
+  band: 2
+  format: mcq
+  prompt: Prices 1 2 3 4 5, unlimited trades. What is the best profit?
+  options:
+  - '4'
+  - '10'
+  - '1'
+  - '5'
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - stock-buy-wrong-count
+  - off-by-one-output
+  explanation: Every daily rise of 1, four times; the same as one trade 1→5.
+- id: hold-init
+  band: 2
+  format: bug_spot
+  prompt: hold starts at 0. Prices 5 1, k = 1. What does the buggy machine print?
+  options:
+  - 5, as if a share were free
+  - '0'
+  - '4'
+  - '−4'
+  answer: 0
+  misconceptions:
+  - null
+  - stock-hold-init-zero
+  - stock-sell-before-buy
+  - stock-sell-sign
+  explanation: Selling from hold = 0 at price 5 gives 5. The right answer is 0.
+- id: sell-update
+  band: 3
+  format: trace
+  prompt: Yesterday cash[1] = 2 and hold[1] = −1. Today's price is 5. What is cash[1] today?
+  options:
+  - '4'
+  - '2'
+  - '6'
+  - '−6'
+  answer: 0
+  misconceptions:
+  - null
+  - knapsack-always-take
+  - dp-missing-plus-one
+  - stock-sell-sign
+  explanation: max(2, −1 + 5) = 4.
+- id: buy-index
+  band: 3
+  format: mcq
+  prompt: Why does a buy read cash[t − 1]?
+  options:
+  - The buy is the t-th transaction, so it starts from at most t − 1 used
+  - To avoid an index error
+  - Because buying is cheaper
+  - It should read cash[t]
+  answer: 0
+  misconceptions:
+  - null
+  - lcs-index-offset
+  - stock-greedy-runs
+  - stock-buy-wrong-count
+  explanation: Reading cash[t] lets you buy without spending a transaction.
+- id: runs
+  band: 4
+  format: classify
+  prompt: Why does keeping the k biggest rising runs fail?
+  options:
+  - Two runs separated by a small dip can be worth more as one trade
+  - Runs are hard to find
+  - It overcounts every rise
+  - It never fails
+  answer: 0
+  misconceptions:
+  - null
+  - stock-greedy-runs
+  - stock-unlimited-when-limited
+  - stock-greedy-runs
+  explanation: 1 2 4 2 5 7 2 4 9 0 with k = 2 gives 12 that way; merging 1→7 gives 13.
+- id: fee
+  band: 4
+  format: mcq
+  prompt: Unlimited trades with a fee. Where does the fee go?
+  options:
+  - Subtract it once per trade, for example on the sell
+  - Subtract it on the buy and the sell
+  - Subtract it every day you hold
+  - Ignore it unless the profit is negative
+  answer: 0
+  misconceptions:
+  - null
+  - stock-fee-twice
+  - stock-fee-twice
+  - knapsack-ignore-capacity
+  explanation: One completed trade pays one fee.
+- id: cooldown
+  band: 5
+  format: mcq
+  prompt: One day of rest after every sale. A buy on day d reads which cash?
+  options:
+  - Day d − 2
+  - Day d − 1
+  - Day d
+  - Day 0
+  answer: 0
+  misconceptions:
+  - null
+  - stock-cooldown-yesterday
+  - knapsack-forward-capacity-loop
+  - dp-wrong-base-case
+  explanation: If you sold on day d − 1, day d must be a rest day.
+- id: complexity
+  band: 5
+  format: complexity
+  prompt: n days, at most k transactions. Time and memory of the template?
+  options:
+  - O(n · k) time, O(k) memory
+  - O(n) time, O(1) memory
+  - O(2^n) time
+  - O(n · k) time and memory
+  answer: 0
+  misconceptions:
+  - null
+  - stock-unlimited-when-limited
+  - dp-recompute-subproblems
+  - pattern-value-vs-choice
+  explanation: k updates per day, one array per state.
+- id: limited-vs-unlimited
+  band: 6
+  format: classify
+  prompt: k = 1000 and there are 1500 days. What is the fastest correct approach?
+  options:
+  - Treat it as unlimited, since k ≥ n / 2, and sum every rise
+  - The full k-transaction table
+  - Keep the 1000 biggest runs
+  - Brute force
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-stock-unlimited-vs-limited
+  - stock-greedy-runs
+  - pattern-brute-force-default
+  explanation: At most n / 2 trades can ever be made, so the limit never binds.
+- id: inventory
+  band: 6
+  format: classify
+  prompt: You may hold up to 3 shares at once, unlimited trades, one action per day. What changes?
+  options:
+  - The state becomes the number of shares held, 0 to 3
+  - Nothing
+  - Sum every rise three times
+  - Use k = 3 transactions
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-stock-unlimited-vs-limited
+  - stock-unlimited-when-limited
+  - stock-buy-wrong-count
+  explanation: The machine gains states; the moves stay buy, sell and rest.
+status: provisional
+provenance:
+  origin: original

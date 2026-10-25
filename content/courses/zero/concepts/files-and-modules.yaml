@@ -1,0 +1,53 @@
+id: files-and-modules
+title: Files, modules and libraries
+summary: Read and write text files line by line, handle simple CSV, and import standard-library modules
+  or your own.
+module: craft
+prerequisites:
+- strings
+- exceptions
+difficulty: 3
+estimated_minutes: 45
+status: draft
+lesson: '## Read process write
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Modules and imports
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

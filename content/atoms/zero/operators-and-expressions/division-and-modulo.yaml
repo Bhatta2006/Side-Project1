@@ -1,0 +1,123 @@
+concept: zero:operators-and-expressions
+pattern: zero:operators-and-expressions/division-and-modulo
+concept_version: 1.0.1
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the division and modulo pattern pack (syllabus expansion, Phase 4).
+rollback: remove content/atoms/zero/operators-and-expressions/division-and-modulo.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: divmod-worked
+  kind: worked
+  title: 'Worked: 3725 seconds'
+  objective: Split a total into hours, minutes and seconds.
+  seconds: 90
+  body: '3725 // 3600 is 1, so there is 1 whole hour. 3725 % 3600 is 125: the seconds left after it.
+    125 // 60 is 2 whole minutes, and 3725 % 60 is 5 seconds. The answer is 1 2 5.'
+  why: Each smaller unit comes from what is left after the bigger one.
+- id: divmod-faded
+  kind: faded
+  title: 'Your turn: 7384 seconds'
+  objective: Apply the split yourself.
+  seconds: 90
+  body: t is 7384.
+  steps:
+  - state: The hours first.
+    prompt: What is 7384 // 3600?
+    options:
+    - '2'
+    - '3'
+    - '184'
+    answer: 0
+    explanation: 2 · 3600 = 7200 fits, 3 · 3600 does not.
+  - state: 7384 % 3600 is 184.
+    prompt: How many whole minutes are in 184 seconds?
+    options:
+    - '3'
+    - '123'
+    - '4'
+    answer: 0
+    explanation: 3 · 60 = 180.
+  - state: The seconds are what is left.
+    prompt: What is 7384 % 60?
+    options:
+    - '4'
+    - '184'
+    - '3'
+    answer: 0
+    explanation: 7384 = 123 · 60 + 4.
+- id: divmod-visualizer
+  kind: visualizer
+  title: 'Step through: why the minutes need the remainder'
+  objective: See a unit counted twice.
+  seconds: 100
+  body: t is 3725, and the code computes m = t // 60.
+  steps:
+  - state: t // 60 is 62.
+    prompt: Which minutes does 62 count?
+    options:
+    - Every minute in t, including the 60 inside the hour
+    - Only the minutes after the hour
+    - The seconds
+    answer: 0
+    explanation: It divides the whole total.
+  - state: The hour has already been counted.
+    prompt: How many of the 62 minutes are inside that hour?
+    options:
+    - '60'
+    - '2'
+    - '1'
+    answer: 0
+    explanation: One hour is 60 minutes.
+  - state: Take the minutes from t % 3600 = 125 instead.
+    prompt: What is 125 // 60?
+    options:
+    - '2'
+    - '62'
+    - '5'
+    answer: 0
+    explanation: The right minutes part.
+- id: divmod-micro
+  kind: micro
+  title: 'Pitfall: minutes from the whole total'
+  objective: Take each smaller unit from the remainder.
+  seconds: 70
+  misconception: mod-chain-missing
+  body: 't // 60 counts every minute in t, so for 3725 seconds it gives 62, although 60 of those
+    minutes already make up the hour. After taking out the hours with t // 3600, work only with what
+    is left, t % 3600, and divide that by 60.'
+  why: A unit must be counted once, in the biggest unit that holds it.
+- id: divmod-classify
+  kind: classify
+  title: Divide or remainder?
+  objective: Pick the right operator.
+  seconds: 80
+  body: For each question, choose the operation that answers it.
+  steps:
+  - state: How many full boxes of 12 can 100 eggs fill?
+    prompt: Which operation?
+    options:
+    - 100 // 12
+    - 100 % 12
+    - 100 / 12 in Python
+    answer: 0
+    explanation: Whole groups is division.
+  - state: How many eggs are left over?
+    prompt: Which operation?
+    options:
+    - 100 % 12
+    - 100 // 12
+    - 100 - 12
+    answer: 0
+    explanation: What is left is the remainder.
+  - state: Is the number n even?
+    prompt: Which test?
+    options:
+    - n % 2 == 0
+    - n // 2 == 0
+    - n / 2 == 2
+    answer: 0
+    explanation: Even numbers leave no remainder when divided by 2.

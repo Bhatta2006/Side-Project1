@@ -101,11 +101,11 @@ lesson: |
 
   The useful invariant is that total equals the sum of items already processed. It is true for the empty prefix, each iteration preserves it by adding one item, and termination makes the processed prefix the whole list. This is a small correctness proof, not merely an example.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Test an empty list, a one-item list and negative-only data. A maximum initialized to zero is wrong for negative-only input; summation's identity is zero but maximum's is not.
 
-  One constant-work visit per item is O(n) time and O(1) extra space for an accumulator.
+  The loop visits each item once, so twice as many items take about twice as long. The running total needs only one variable, however long the list is.
 
   ### Check your understanding
 

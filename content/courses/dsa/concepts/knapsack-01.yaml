@@ -1,0 +1,1179 @@
+id: knapsack-01
+title: 0/1 knapsack family
+summary: 'Take or skip each item once: knapsack, subset sum, equal partition, counting subsets, minimum
+  difference and two capacities.'
+module: dynamic-programming
+prerequisites: [dp-2d]
+difficulty: 4
+estimated_minutes: 90
+lesson: |
+  In the 0/1 knapsack family, every item is either **taken once or skipped**. That single
+  decision per item, under a budget, covers a surprising number of problems: packing a bag,
+  splitting numbers into two fair piles, counting subsets that hit a target, and choosing
+  words under two budgets at once. All of them use the same table: items on one axis, the
+  budget on the other.
+
+  This concept builds on DP on grids: the knapsack table is a grid whose rows are items and
+  whose columns are capacities.
+
+  ## 0/1 knapsack
+
+  ### Recognition cues
+
+  - Each item can be **used at most once**, and there is a **budget**: weight, cost, time or
+    a target sum.
+  - You maximise or minimise a total, decide whether a total is reachable, or count the ways
+    to reach it.
+  - The budget is small enough to index an array (up to about 10⁵), while trying all 2ⁿ
+    subsets is too slow.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For 0/1 knapsack |
+  |---|---|
+  | State | `dp[i][c]` = the best value using only the first i items with capacity c |
+  | Transition | skip item i: `dp[i−1][c]`; take it (if `w ≤ c`): `dp[i−1][c−w] + v`; keep the larger |
+  | Base cases | `dp[0][c] = 0` for every c: no items, no value |
+  | Answer | `dp[n][W]` |
+  | Loop order | items in any order, outer; capacity inner. In the one-row version, capacity runs **from W down** |
+
+  ### Template
+
+  One row of size W + 1, filled backwards for each item:
+
+  ```python
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  dp = [0] * (W + 1)  # dp[c]: best value within capacity c, using the items so far
+  for i in range(n):
+      for c in range(W, w[i] - 1, -1):  # backwards, so item i is used at most once
+          dp[c] = max(dp[c], dp[c - w[i]] + v[i])
+  print(dp[W])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, W;
+      cin >> n >> W;
+      vector<int> w(n);
+      vector<long long> v(n), dp(W + 1, 0);  // dp[c]: best value within capacity c
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      for (int i = 0; i < n; i++)
+          for (int c = W; c >= w[i]; c--)  // backwards, so item i is used at most once
+              dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
+      cout << dp[W] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), W = in.nextInt();
+          int[] w = new int[n];
+          long[] v = new long[n], dp = new long[W + 1];  // dp[c]: best value within capacity c
+          for (int i = 0; i < n; i++) w[i] = in.nextInt();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          for (int i = 0; i < n; i++)
+              for (int c = W; c >= w[i]; c--)  // backwards, so item i is used at most once
+                  dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
+          System.out.println(dp[W]);
+      }
+  }
+  ```
+
+  ### Anchor problem: packing a bag
+
+  Four items with weights `1 3 4 5` and values `1 4 5 7`, and a bag that holds weight 7.
+  Input is `n W`, then the weights, then the values. The best total value is **9** (the items
+  of weight 3 and 4).
+
+  **Wrong first attempt — greedy by value per weight.** Sort the items by value ÷ weight and
+  take each one that still fits:
+
+  ```python
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  order = sorted(range(n), key=lambda i: v[i] / w[i], reverse=True)  # best value per kilo first
+  cap, total = W, 0
+  for i in order:
+      if w[i] <= cap:
+          cap -= w[i]
+          total += v[i]
+  print(total)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <numeric>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, W;
+      cin >> n >> W;
+      vector<long long> w(n), v(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      vector<int> order(n);
+      iota(order.begin(), order.end(), 0);
+      sort(order.begin(), order.end(), [&](int a, int b) {
+          return v[a] * w[b] > v[b] * w[a];  // best value per kilo first
+      });
+      long long cap = W, total = 0;
+      for (int i : order)
+          if (w[i] <= cap) cap -= w[i], total += v[i];
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), W = in.nextInt();
+          long[] w = new long[n], v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextLong();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          Integer[] order = new Integer[n];
+          for (int i = 0; i < n; i++) order[i] = i;
+          Arrays.sort(order, (a, b) -> Long.compare(v[b] * w[a], v[a] * w[b]));  // best per kilo first
+          long cap = W, total = 0;
+          for (int i : order)
+              if (w[i] <= cap) { cap -= w[i]; total += v[i]; }
+          System.out.println(total);
+      }
+  }
+  ```
+
+  It prints 8. The ratios are 1.4 (weight 5), 1.33 (weight 3), 1.25 (weight 4) and 1.0
+  (weight 1). Greedy takes the weight-5 item first, which leaves room for only the
+  weight-1 item: 7 + 1 = 8. Weights 3 and 4 fill the bag exactly for 4 + 5 = 9. Greedy is
+  correct only when items can be cut into fractions (the *fractional* knapsack).
+
+  **Step 1 — recursion.** For each item, try both choices:
+
+  ```python
+  def best(i, cap):
+      """Best value from items i, i + 1, ... with cap capacity left."""
+      if i == n:
+          return 0
+      result = best(i + 1, cap)  # skip item i
+      if w[i] <= cap:
+          result = max(result, v[i] + best(i + 1, cap - w[i]))  # take item i
+      return result
+
+
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  print(best(0, W))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n, W;
+  vector<long long> w, v;
+
+  long long best(int i, long long cap) {  // items i.. with cap left
+      if (i == n) return 0;
+      long long result = best(i + 1, cap);  // skip item i
+      if (w[i] <= cap) result = max(result, v[i] + best(i + 1, cap - w[i]));  // take it
+      return result;
+  }
+
+  int main() {
+      cin >> n >> W;
+      w.resize(n);
+      v.resize(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      cout << best(0, W) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int n;
+      static long[] w, v;
+
+      static long best(int i, long cap) {  // items i.. with cap left
+          if (i == n) return 0;
+          long result = best(i + 1, cap);  // skip item i
+          if (w[i] <= cap) result = Math.max(result, v[i] + best(i + 1, cap - w[i]));  // take it
+          return result;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          int W = in.nextInt();
+          w = new long[n];
+          v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextLong();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          System.out.println(best(0, W));
+      }
+  }
+  ```
+
+  That is 2ⁿ paths: about 10⁶ for n = 20 and 10¹⁸ for n = 60. Yet the only things that
+  matter at any point are *which item is next* and *how much capacity is left*, and those
+  pairs repeat.
+
+  **Step 2 — memoization.** Store the answer for each (item, capacity) pair. There are only
+  n × (W + 1) of them:
+
+  ```python
+  def best(i, cap):
+      if i == n:
+          return 0
+      if memo[i][cap] is None:  # solve each (item, capacity) pair once
+          result = best(i + 1, cap)
+          if w[i] <= cap:
+              result = max(result, v[i] + best(i + 1, cap - w[i]))
+          memo[i][cap] = result
+      return memo[i][cap]
+
+
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  memo = [[None] * (W + 1) for _ in range(n)]
+  print(best(0, W))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n, W;
+  vector<long long> w, v;
+  vector<vector<long long>> memo;  // -1 = not solved yet
+
+  long long best(int i, int cap) {
+      if (i == n) return 0;
+      long long& slot = memo[i][cap];
+      if (slot == -1) {  // solve each (item, capacity) pair once
+          slot = best(i + 1, cap);
+          if (w[i] <= cap) slot = max(slot, v[i] + best(i + 1, cap - (int)w[i]));
+      }
+      return slot;
+  }
+
+  int main() {
+      cin >> n >> W;
+      w.resize(n);
+      v.resize(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      memo.assign(n, vector<long long>(W + 1, -1));
+      cout << best(0, W) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static int n;
+      static long[] w, v;
+      static long[][] memo;  // -1 = not solved yet
+
+      static long best(int i, int cap) {
+          if (i == n) return 0;
+          if (memo[i][cap] == -1) {  // solve each (item, capacity) pair once
+              long result = best(i + 1, cap);
+              if (w[i] <= cap) result = Math.max(result, v[i] + best(i + 1, cap - (int) w[i]));
+              memo[i][cap] = result;
+          }
+          return memo[i][cap];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          int W = in.nextInt();
+          w = new long[n];
+          v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextLong();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          memo = new long[n][W + 1];
+          for (long[] row : memo) Arrays.fill(row, -1);
+          System.out.println(best(0, W));
+      }
+  }
+  ```
+
+  **Step 3 — tabulation.** Fill `dp[i][c]` row by row:
+
+  ```python
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  # dp[i][c]: best value using only the first i items with capacity c
+  dp = [[0] * (W + 1) for _ in range(n + 1)]
+  for i in range(1, n + 1):
+      for c in range(W + 1):
+          dp[i][c] = dp[i - 1][c]  # skip item i - 1
+          if w[i - 1] <= c:
+              dp[i][c] = max(dp[i][c], dp[i - 1][c - w[i - 1]] + v[i - 1])  # take it
+  print(dp[n][W])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, W;
+      cin >> n >> W;
+      vector<long long> w(n), v(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      // dp[i][c]: best value using only the first i items with capacity c
+      vector<vector<long long>> dp(n + 1, vector<long long>(W + 1, 0));
+      for (int i = 1; i <= n; i++)
+          for (int c = 0; c <= W; c++) {
+              dp[i][c] = dp[i - 1][c];  // skip item i - 1
+              if (w[i - 1] <= c) dp[i][c] = max(dp[i][c], dp[i - 1][c - w[i - 1]] + v[i - 1]);
+          }
+      cout << dp[n][W] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), W = in.nextInt();
+          int[] w = new int[n];
+          long[] v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextInt();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          // dp[i][c]: best value using only the first i items with capacity c
+          long[][] dp = new long[n + 1][W + 1];
+          for (int i = 1; i <= n; i++)
+              for (int c = 0; c <= W; c++) {
+                  dp[i][c] = dp[i - 1][c];  // skip item i - 1
+                  if (w[i - 1] <= c) dp[i][c] = Math.max(dp[i][c], dp[i - 1][c - w[i - 1]] + v[i - 1]);
+              }
+          System.out.println(dp[n][W]);
+      }
+  }
+  ```
+
+  Dry run (rows are "items used so far", columns are capacities 0 to 7):
+
+  | items used | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+  |---|---|---|---|---|---|---|---|---|
+  | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+  | + (w 1, v 1) | 0 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+  | + (w 3, v 4) | 0 | 1 | 1 | 4 | 5 | 5 | 5 | 5 |
+  | + (w 4, v 5) | 0 | 1 | 1 | 4 | 5 | 6 | 6 | **9** |
+  | + (w 5, v 7) | 0 | 1 | 1 | 4 | 5 | 7 | 8 | **9** |
+
+  Read one cell: in row "+ (w 4, v 5)", capacity 7 is the larger of *skip* (5, from the row
+  above) and *take* (5 + the row above at capacity 3, which is 4): 9.
+
+  **Step 4 — one row, filled backwards.** Each row reads only the row above, so one row can
+  hold both, as long as the cells you still need are not overwritten first. Cell c reads
+  cell c − w, which is to its **left**. Going from right to left means the left cells still
+  hold the previous row's values when you read them. That is the template above.
+
+  Going left to right is a real bug, not a style choice. With items (w 2, v 3) and
+  (w 3, v 4) and capacity 4, the right answer is 4. The forward loop prints 6:
+
+  ```python
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  dp = [0] * (W + 1)
+  for i in range(n):
+      for c in range(w[i], W + 1):  # BUG: forwards lets item i be taken again
+          dp[c] = max(dp[c], dp[c - w[i]] + v[i])
+  print(dp[W])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, W;
+      cin >> n >> W;
+      vector<int> w(n);
+      vector<long long> v(n), dp(W + 1, 0);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      for (int i = 0; i < n; i++)
+          for (int c = w[i]; c <= W; c++)  // BUG: forwards lets item i be taken again
+              dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
+      cout << dp[W] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), W = in.nextInt();
+          int[] w = new int[n];
+          long[] v = new long[n], dp = new long[W + 1];
+          for (int i = 0; i < n; i++) w[i] = in.nextInt();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          for (int i = 0; i < n; i++)
+              for (int c = w[i]; c <= W; c++)  // BUG: forwards lets item i be taken again
+                  dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
+          System.out.println(dp[W]);
+      }
+  }
+  ```
+
+  | c (item w 2, v 3, forwards) | 2 | 3 | 4 |
+  |---|---|---|---|
+  | dp[c] | 0 + 3 = 3 | 0 + 3 = 3 | **dp[2] + 3 = 6** |
+
+  At c = 4 it reads dp[2], which already contains this same item, so the item is taken
+  twice. A forward loop is exactly the *unbounded* knapsack, which is the next concept.
+
+  Costs: recursion O(2ⁿ); memo and table O(n·W) time and O(n·W) memory; one row O(n·W)
+  time and O(W) memory.
+
+  ### Variants
+
+  1. *Book Shop* (CSES): the anchor with prices as weights and pages as values.
+  2. *Partition equal subset sum*: value = weight, and the question is whether a total of
+     exactly sum / 2 is reachable. See "Subset sum" below.
+  3. *Money sums* (CSES): print every reachable total, not just one.
+  4. *Last stone weight II*: get one pile as close to half of the total as possible.
+  5. *Target sum*: count sign assignments, which reduces to counting subsets.
+  6. *Ones and zeroes*: two budgets at once.
+  7. *Profitable schemes*: count plans under a member budget with a minimum profit.
+
+  ### Contrast
+
+  **0/1 or unbounded?** If an item can be taken again and again (coins, rods you may cut
+  into any number of equal pieces), it is unbounded: loop the capacity **forwards**. If each
+  item exists once, loop **backwards**. **0/1 or fractional?** If items can be split, sort
+  by value per weight and take greedily; the DP is needed only when items are whole.
+
+  ### Common mistakes
+
+  - Looping the capacity forwards in the one-row version, which reuses items.
+  - Sorting by value per weight and taking greedily on whole items.
+  - Starting `dp` with a large negative or "impossible" value when every capacity at most W
+    is allowed. For "at most W", zeros are the right start; for "exactly W", see below.
+  - Using the n × W table when W is up to 10⁹: then the value is small, so swap roles and
+    index by value instead (CSES/AtCoder "Knapsack 2").
+
+  ## Subset sum
+
+  ### Recognition cues
+
+  - "Is there a subset with sum exactly T?" or "Can the array be split into two parts with
+    equal sums?"
+  - Each number used at most once; the sum is small enough to index.
+  - The answer is yes or no (or the set of all reachable sums).
+
+  ### State, transition, base cases, answer, loop order
+
+  `can[s]` = some subset of the numbers seen so far sums to exactly s. For each number x and
+  each s from T down to x: `can[s] = can[s] or can[s − x]`. Base case `can[0] = true` (the
+  empty subset). Answer `can[T]`. It is knapsack with value = weight and `or` instead of
+  `max`.
+
+  ### Template
+
+  ```python
+  n, target = map(int, input().split())
+  a = list(map(int, input().split()))
+  can = [False] * (target + 1)  # can[s]: some subset of the items so far sums to s
+  can[0] = True  # the empty subset
+  for x in a:
+      for s in range(target, x - 1, -1):  # backwards: each number once
+          if can[s - x]:
+              can[s] = True
+  print("YES" if can[target] else "NO")
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, target;
+      cin >> n >> target;
+      vector<bool> can(target + 1, false);  // can[s]: some subset so far sums to s
+      can[0] = true;  // the empty subset
+      for (int k = 0; k < n; k++) {
+          int x;
+          cin >> x;
+          for (int s = target; s >= x; s--)  // backwards: each number once
+              if (can[s - x]) can[s] = true;
+      }
+      cout << (can[target] ? "YES" : "NO") << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), target = in.nextInt();
+          boolean[] can = new boolean[target + 1];  // can[s]: some subset so far sums to s
+          can[0] = true;  // the empty subset
+          for (int k = 0; k < n; k++) {
+              int x = in.nextInt();
+              for (int s = target; s >= x; s--)  // backwards: each number once
+                  if (can[s - x]) can[s] = true;
+          }
+          System.out.println(can[target] ? "YES" : "NO");
+      }
+  }
+  ```
+
+  ### Anchor problem: is 9 reachable?
+
+  Numbers `3 34 4 12 5 2`, target 9.
+
+  | after number | reachable sums up to 9 |
+  |---|---|
+  | (start) | 0 |
+  | 3 | 0, 3 |
+  | 34 | 0, 3 (34 is larger than 9) |
+  | 4 | 0, 3, 4, 7 |
+  | 12 | 0, 3, 4, 7 |
+  | 5 | 0, 3, 4, 5, 7, 8, 9 |
+  | 2 | 0, 2, 3, 4, 5, 6, 7, 8, 9 |
+
+  9 is reachable (4 + 5), so the program prints `YES`.
+
+  **Wrong first attempt.** Starting with every `can` value false, including `can[0]`, means
+  nothing can ever become true: every sum is built on top of the empty subset.
+
+  **Equal partition.** Split into two parts with equal sums: if the total is odd, the answer
+  is no immediately; otherwise ask whether total / 2 is reachable. For `1 5 11 5`, the
+  total is 22 and 11 is reachable (11, or 1 + 5 + 5), so yes.
+
+  ### Variants
+
+  1. *Partition equal subset sum*: target = total / 2, with the parity check first.
+  2. *Money sums* (CSES): print every s with `can[s]` true.
+  3. *Baby Ehab partitions again* (Codeforces): uses the equal-partition check, then removes
+     one number to break it.
+
+  ### Contrast
+
+  **Subset or subarray?** A subset may skip elements; a subarray is contiguous. "Is there a
+  contiguous run with sum T?" is a prefix-sum or sliding-window question, not knapsack. Check
+  whether the statement says *contiguous*.
+
+  ### Common mistakes
+
+  - Forgetting `can[0] = true`.
+  - Looping s forwards, which lets one number be used twice.
+  - Skipping the odd-total check in the equal-partition version.
+
+  ## Minimum difference partition
+
+  ### Recognition cues
+
+  - "Split the numbers into two groups to minimise the difference of their sums."
+  - "Smash stones together; what is the smallest possible last stone?" (the same problem in
+    disguise).
+  - Values are small enough that the total fits in an array.
+
+  ### State, transition, base cases, answer, loop order
+
+  Use the subset-sum table up to `half = total // 2`. If one group sums to s, the other sums
+  to total − s, and the difference is total − 2s. So find the largest reachable s ≤ half.
+  Answer: `total − 2 · best`.
+
+  ### Template
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  total = sum(a)
+  half = total // 2
+  can = [False] * (half + 1)  # can[s]: some subset sums to s
+  can[0] = True
+  for x in a:
+      for s in range(half, x - 1, -1):
+          if can[s - x]:
+              can[s] = True
+  best = max(s for s in range(half + 1) if can[s])  # the side closest to half
+  print(total - 2 * best)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <numeric>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> a(n);
+      for (auto& x : a) cin >> x;
+      int total = accumulate(a.begin(), a.end(), 0), half = total / 2;
+      vector<bool> can(half + 1, false);  // can[s]: some subset sums to s
+      can[0] = true;
+      for (int x : a)
+          for (int s = half; s >= x; s--)
+              if (can[s - x]) can[s] = true;
+      int best = half;
+      while (!can[best]) best--;  // the side closest to half
+      cout << total - 2 * best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), total = 0;
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) { a[i] = in.nextInt(); total += a[i]; }
+          int half = total / 2;
+          boolean[] can = new boolean[half + 1];  // can[s]: some subset sums to s
+          can[0] = true;
+          for (int x : a)
+              for (int s = half; s >= x; s--)
+                  if (can[s - x]) can[s] = true;
+          int best = half;
+          while (!can[best]) best--;  // the side closest to half
+          System.out.println(total - 2 * best);
+      }
+  }
+  ```
+
+  ### Anchor problem: numbers 1 6 11 5
+
+  The total is 23 and half is 11. 11 is reachable (11 alone, or 6 + 5), so the difference
+  is 23 − 22 = **1**.
+
+  **Wrong first attempt — greedy.** Put each number, largest first, into the lighter pile.
+  For `3 3 2 2 2` this gives piles {3, 2, 2} = 7 and {3, 2} = 5, a difference of 2.
+  {3, 3} and {2, 2, 2} both sum to 6, a difference of 0. Greedy commits too early; the
+  table considers every reachable sum.
+
+  ### Variants
+
+  1. *Last stone weight II*: identical once you see that smashing assigns + and − signs.
+  2. *Tallest billboard*: two groups with **equal** sums, maximising the shared height. The
+     state becomes the difference between the groups.
+  3. *Minimize the difference between target and chosen elements*: one number from each row,
+     with the sum as close as possible to a target. The same reachable-sums idea, grouped by row.
+
+  ### Contrast
+
+  **Greedy balancing or DP?** Greedy balancing is a good heuristic but has small
+  counterexamples, as above. When the values are small, the reachable-sums table is exact.
+  When the values are huge and n ≤ 40, use meet in the middle instead (a CP technique).
+
+  ### Common mistakes
+
+  - Searching reachable sums up to the total instead of up to half, then picking the wrong
+    side.
+  - Forgetting that the answer is total − 2·best, not half − best.
+
+  ## Counting subsets with a target sum
+
+  ### Recognition cues
+
+  - "How many subsets sum to K?", "Count the ways to assign + and − to reach T", "Count the
+    partitions whose difference is D".
+  - Each element used at most once; large counts are taken modulo 10⁹ + 7.
+  - Zeros may appear in the input.
+
+  ### State, transition, base cases, answer, loop order
+
+  `ways[s]` = the number of subsets of the elements seen so far with sum s. For each x and
+  each s from K down to x: `ways[s] += ways[s − x]`. Base case `ways[0] = 1` (the empty
+  subset). Answer `ways[K]`.
+
+  ### Template
+
+  ```python
+  MOD = 10**9 + 7
+  n, k = map(int, input().split())
+  a = list(map(int, input().split()))
+  ways = [0] * (k + 1)  # ways[s]: number of subsets of the items so far with sum s
+  ways[0] = 1  # the empty subset
+  for x in a:
+      for s in range(k, x - 1, -1):  # include s == x, so a 0 doubles ways[0]
+          ways[s] = (ways[s] + ways[s - x]) % MOD
+  print(ways[k])
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      const long long MOD = 1000000007;
+      int n, k;
+      cin >> n >> k;
+      vector<long long> ways(k + 1, 0);  // ways[s]: subsets so far with sum s
+      ways[0] = 1;  // the empty subset
+      for (int i = 0; i < n; i++) {
+          int x;
+          cin >> x;
+          for (int s = k; s >= x; s--)  // include s == x, so a 0 doubles ways[0]
+              ways[s] = (ways[s] + ways[s - x]) % MOD;
+      }
+      cout << ways[k] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          final long MOD = 1_000_000_007L;
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), k = in.nextInt();
+          long[] ways = new long[k + 1];  // ways[s]: subsets so far with sum s
+          ways[0] = 1;  // the empty subset
+          for (int i = 0; i < n; i++) {
+              int x = in.nextInt();
+              for (int s = k; s >= x; s--)  // include s == x, so a 0 doubles ways[0]
+                  ways[s] = (ways[s] + ways[s - x]) % MOD;
+          }
+          System.out.println(ways[k]);
+      }
+  }
+  ```
+
+  ### Anchor problem: numbers 1 2 3 3, target 6
+
+  | after | ways[0..6] |
+  |---|---|
+  | (start) | 1 0 0 0 0 0 0 |
+  | 1 | 1 1 0 0 0 0 0 |
+  | 2 | 1 1 1 1 0 0 0 |
+  | 3 | 1 1 1 2 1 1 1 |
+  | 3 | 1 1 1 3 2 2 **3** |
+
+  Three subsets sum to 6: {1, 2, 3}, {1, 2, 3′} and {3, 3′}. The two 3s are different
+  elements, so both subsets that use one of them count.
+
+  **Zeros.** For `0 0 1` and K = 1 the answer is 4: each 0 can be in or out, which doubles
+  every count. The loop handles it only if it includes s = x. For x = 0 that means it must
+  reach s = 0, and `ways[0] += ways[0]` doubles it. A loop that stops at s > x silently
+  ignores zeros and prints 1.
+
+  **Transforms.**
+  - *Count partitions with difference D:* if one group sums to s1, then s1 − (total − s1) =
+    D, so s1 = (total + D) / 2. Count subsets with that sum. If total + D is odd or D > total,
+    the answer is 0.
+  - *Target sum (±):* the + numbers sum to P and the − numbers to N, with P − N = T and
+    P + N = total. The same formula gives P.
+
+  ### Variants
+
+  1. *Target sum*: the ± transform above.
+  2. *Two sets II* (CSES): count the ways to split 1..n into two equal halves, modulo
+     10⁹ + 7.
+  3. *Number of great partitions*: count the complement, the partitions where one side is
+     below K.
+
+  ### Contrast
+
+  **Count or exists?** The table is the same; only the operation changes. `or` answers
+  *whether*, `+` answers *how many*, and `max`/`min` answer *how good*. A boolean table can
+  never be turned into counts later.
+
+  ### Common mistakes
+
+  - `ways[0] = 0`, which makes every count zero.
+  - An inner loop that excludes s = x, which ignores zeros.
+  - Forgetting the parity and range checks in the difference transform.
+  - Forgetting the modulus on large counts.
+
+  ## Two capacities
+
+  ### Recognition cues
+
+  - Each item uses **two** resources (zeros and ones, people and money, count and sum), and
+    both have limits.
+  - Still take or skip each item once.
+  - Both limits are small (up to about 100–200 each).
+
+  ### State, transition, base cases, answer, loop order
+
+  `dp[z][o]` = the best value within z of the first resource and o of the second. For each
+  item, loop **both** budgets backwards:
+  `dp[z][o] = max(dp[z][o], dp[z − a][o − b] + value)`. Base case: all zeros. Answer
+  `dp[Z][O]`.
+
+  ### Template
+
+  ```python
+  k, zero_cap, one_cap = map(int, input().split())
+  words = input().split()
+  # dp[z][o]: most words that fit within z zeros and o ones
+  dp = [[0] * (one_cap + 1) for _ in range(zero_cap + 1)]
+  for word in words:
+      zeros, ones = word.count("0"), word.count("1")
+      for z in range(zero_cap, zeros - 1, -1):  # both budgets backwards
+          for o in range(one_cap, ones - 1, -1):
+              dp[z][o] = max(dp[z][o], dp[z - zeros][o - ones] + 1)
+  print(dp[zero_cap][one_cap])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int k, zeroCap, oneCap;
+      cin >> k >> zeroCap >> oneCap;
+      // dp[z][o]: most words that fit within z zeros and o ones
+      vector<vector<int>> dp(zeroCap + 1, vector<int>(oneCap + 1, 0));
+      for (int i = 0; i < k; i++) {
+          string word;
+          cin >> word;
+          int zeros = count(word.begin(), word.end(), '0'), ones = (int)word.size() - zeros;
+          for (int z = zeroCap; z >= zeros; z--)  // both budgets backwards
+              for (int o = oneCap; o >= ones; o--)
+                  dp[z][o] = max(dp[z][o], dp[z - zeros][o - ones] + 1);
+      }
+      cout << dp[zeroCap][oneCap] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int k = in.nextInt(), zeroCap = in.nextInt(), oneCap = in.nextInt();
+          int[][] dp = new int[zeroCap + 1][oneCap + 1];  // most words within z zeros, o ones
+          for (int i = 0; i < k; i++) {
+              String word = in.next();
+              int zeros = (int) word.chars().filter(ch -> ch == '0').count();
+              int ones = word.length() - zeros;
+              for (int z = zeroCap; z >= zeros; z--)  // both budgets backwards
+                  for (int o = oneCap; o >= ones; o--)
+                      dp[z][o] = Math.max(dp[z][o], dp[z - zeros][o - ones] + 1);
+          }
+          System.out.println(dp[zeroCap][oneCap]);
+      }
+  }
+  ```
+
+  ### Anchor problem: ones and zeroes
+
+  Words `10 0001 111001 1 0`, at most 5 zeros and 3 ones. The answer is **4**:
+  "10", "0001", "1" and "0" use 5 zeros and 3 ones. "111001" alone uses 4 ones, so it never
+  fits.
+
+  **Wrong first attempt.** Treating each budget separately (best by zeros, then best by ones)
+  cannot see that one word uses both. A single 2D table with both budgets is required. And
+  if only one of the two loops runs backwards, a word can still be reused through the other
+  dimension.
+
+  ### Variants
+
+  1. *Ones and zeroes*: the anchor.
+  2. *Profitable schemes*: count plans with at most G members and at least P profit; the
+     profit dimension is capped at P.
+  3. *Split array with same average*: choose k numbers summing to a target, so the state is
+     (count, sum).
+
+  ### Contrast
+
+  **Two budgets or two bags?** Two budgets means every item spends from both limits at
+  once, so the state is 2D. Two bags means each item goes into bag A, bag B or neither: a
+  three-way choice per item, with the state being both bags' fill levels. Read whether one
+  item consumes two resources, or one resource in one of two places.
+
+  ### Common mistakes
+
+  - Running only one of the two budget loops backwards.
+  - Using a 3D table (item × z × o) when a 2D one filled backwards is enough, which wastes
+    memory.
+
+  ## Worked walkthrough
+
+  **Problem.** Numbers `1 1 1 1 1`. Put `+` or `−` in front of each one so that the total is
+  3. How many ways are there?
+
+  1. *Recognise.* Each number gets one of two choices; the result is a count; the totals are
+     small. Counting knapsack.
+  2. *Transform.* Let P be the sum of the + numbers and N the sum of the − numbers. Then
+     P − N = 3 and P + N = 5, so P = 4.
+  3. *Reduce.* Count subsets of `1 1 1 1 1` with sum 4.
+  4. *Fill.* After the five 1s, ways[4] is the number of ways to choose four of them: 5.
+  5. *Check.* The five answers are "make one of the five numbers negative": −1+1+1+1+1 and
+     so on.
+
+  So the answer is 5, and the template above computes it with input `5 4` and `1 1 1 1 1`.
+
+  ### Why this works
+
+  Look at the last item. Every subset either contains it or does not, and those two groups
+  never overlap. So the best value (or the number of ways) for "first i items, capacity c"
+  is the better of (or the sum of) the two groups, and each group is a smaller instance of
+  the same problem. By induction over the items, every cell is correct. In the one-row
+  version, the cells read during item i's pass still hold row i − 1's values, because the
+  pass moves away from them (right to left).
+
+  ### Boundary cases and cost
+
+  - Capacity 0, or every item heavier than the capacity: the answer is 0 (or `can[0]` only).
+  - A single item: either it fits or it does not.
+  - Zeros in counting problems double the count; zero-weight items in value problems are
+    always worth taking.
+  - The total of values can exceed 32 bits: use 64-bit integers.
+  - Cost: O(n·W) time. Memory O(n·W) for the full table, O(W) for one row. With
+    n = 100 and W = 10⁵ that is 10⁷ steps: fast. With W = 10⁹, index by value instead.
+
+  ### Check your understanding
+
+  Weights `2 3`, values `3 4`, capacity 5. What does the backwards one-row template print, and
+  what would the forwards loop print?
+
+  Try it on paper before reading the reasoning below.
+
+  > Backwards: both items fit together (2 + 3 = 5), so the answer is 3 + 4 = 7. Forwards: the
+  > weight-2 item can be taken twice (weight 4, value 6), but 2 + 3 still gives 7, so it also
+  > prints 7. Bugs that only show on some inputs are why you test with small cases where
+  > reuse would win, such as capacity 4 here: backwards gives 4, forwards gives 6.
+key_points:
+- '0/1 knapsack: each item is taken once or skipped; dp over (items, budget).'
+- dp[i][c] = max(dp[i−1][c], dp[i−1][c−w] + v); base row all zeros.
+- One row is enough if capacity is filled from W down, so no item is reused.
+- Subset sum uses or; counting uses +; the best total uses max. Same table.
+- Count partitions with difference D by counting subsets with sum (total + D) / 2.
+- Two budgets give a 2D state; loop both budgets backwards.
+- Greedy by value per weight is only correct for the fractional knapsack.
+pitfalls:
+- Looping capacity forwards in the one-row version, which reuses items.
+- Greedy by value per weight on whole items.
+- can[0] or ways[0] left at false or 0, which makes nothing reachable.
+- An inner loop that stops before s == x, which silently ignores zeros when counting.
+- Missing the parity check when the target is (total + D) / 2.
+resources:
+- title: Knapsack Problem
+  url: https://cp-algorithms.com/dynamic_programming/knapsack.html
+  kind: article
+  source: CP-Algorithms
+  minutes: 25
+  level: core
+- title: Knapsack DP
+  url: https://usaco.guide/gold/knapsack
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: take-or-skip
+  kind: mcq
+  prompt: What makes a problem 0/1 knapsack rather than unbounded?
+  options:
+  - Each item can be used at most once
+  - Items can be reused
+  - Items can be split
+  - There is no capacity
+  answer: 0
+  explanation: 0/1 means take once or skip; reuse is the unbounded family.
+  difficulty: 1
+- id: greedy-ratio
+  kind: mcq
+  prompt: Weights 1 3 4 5, values 1 4 5 7, capacity 7. Greedy by value per weight gets 8. What is the
+    best?
+  options:
+  - '9'
+  - '8'
+  - '10'
+  - '12'
+  answer: 0
+  explanation: 'Weights 3 and 4 fill the bag exactly: 4 + 5 = 9.'
+  difficulty: 2
+- id: backwards-why
+  kind: mcq
+  prompt: Why does the one-row 0/1 knapsack loop capacity from W down?
+  options:
+  - So dp[c − w] still holds the value from before this item
+  - Because it is faster
+  - To sort the items
+  - So the answer ends up in dp[0]
+  answer: 0
+  explanation: Going down reads cells not yet updated for this item, so it is used once.
+  difficulty: 3
+- id: forward-output
+  kind: output
+  prompt: Items (w 2, v 3) and (w 3, v 4), capacity 4. What does this print?
+  code:
+    python: |
+      w, v, W = [2, 3], [3, 4], 4
+      dp = [0] * (W + 1)
+      for i in range(2):
+          for c in range(w[i], W + 1):
+              dp[c] = max(dp[c], dp[c - w[i]] + v[i])
+      print(dp[W])
+    cpp: |
+      int w[] = {2, 3}, v[] = {3, 4}, W = 4;
+      vector<int> dp(W + 1, 0);
+      for (int i = 0; i < 2; i++)
+          for (int c = w[i]; c <= W; c++)
+              dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
+      cout << dp[W];
+    java: |
+      int[] w = {2, 3}, v = {3, 4};
+      int W = 4;
+      int[] dp = new int[W + 1];
+      for (int i = 0; i < 2; i++)
+          for (int c = w[i]; c <= W; c++)
+              dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
+      System.out.print(dp[W]);
+  options:
+  - '6'
+  - '4'
+  - '3'
+  - '7'
+  answer: 0
+  explanation: 'The forward loop takes the weight-2 item twice: 3 + 3 = 6. The correct 0/1 answer is 4.'
+  difficulty: 4
+- id: subset-base
+  kind: mcq
+  prompt: In subset sum, what must can[0] be before any number is processed?
+  options:
+  - true, because the empty subset sums to 0
+  - 'false'
+  - 1 only if 0 is in the input
+  - It does not matter
+  answer: 0
+  explanation: Every reachable sum is built on top of the empty subset.
+  difficulty: 2
+- id: equal-partition-odd
+  kind: mcq
+  prompt: Numbers 1 2 4 sum to 7. Can they be split into two equal-sum halves?
+  options:
+  - 'No: an odd total can never split evenly'
+  - 'Yes: 1 + 2 + 4'
+  - 'Yes: {4} and {1, 2}'
+  - Only if sorted first
+  answer: 0
+  explanation: Equal halves need an even total; 7 is odd.
+  difficulty: 2
+- id: count-zeros
+  kind: mcq
+  prompt: How many subsets of 0 0 1 sum to 1?
+  options:
+  - '4'
+  - '1'
+  - '2'
+  - '3'
+  answer: 0
+  explanation: 'Each 0 can be in or out (2 × 2), each with the 1: 4.'
+  difficulty: 4
+- id: difference-transform
+  kind: mcq
+  prompt: Numbers sum to 10. You want partitions whose sums differ by 4. Which subset sum do you count?
+  options:
+  - '7'
+  - '4'
+  - '3'
+  - '6'
+  answer: 0
+  explanation: s1 − (10 − s1) = 4 gives s1 = (10 + 4) / 2 = 7.
+  difficulty: 5
+problems:
+- exact-change-festival
+- fair-teams
+practice_links:
+- title: Partition Equal Subset Sum
+  url: https://leetcode.com/problems/partition-equal-subset-sum/
+  platform: LeetCode
+  difficulty: medium
+- title: Money Sums
+  url: https://cses.fi/problemset/task/1745
+  platform: CSES
+  difficulty: easy
+- title: Baby Ehab Partitions Again
+  url: https://codeforces.com/problemset/problem/1516/C
+  platform: Codeforces
+  difficulty: medium
+- title: Last Stone Weight II
+  url: https://leetcode.com/problems/last-stone-weight-ii/
+  platform: LeetCode
+  difficulty: medium
+- title: Tallest Billboard
+  url: https://leetcode.com/problems/tallest-billboard/
+  platform: LeetCode
+  difficulty: hard
+- title: Minimize the Difference Between Target and Chosen Elements
+  url: https://leetcode.com/problems/minimize-the-difference-between-target-and-chosen-elements/
+  platform: LeetCode
+  difficulty: medium
+- title: Target Sum
+  url: https://leetcode.com/problems/target-sum/
+  platform: LeetCode
+  difficulty: medium
+- title: Two Sets II
+  url: https://cses.fi/problemset/task/1093
+  platform: CSES
+  difficulty: medium
+- title: Number of Great Partitions
+  url: https://leetcode.com/problems/number-of-great-partitions/
+  platform: LeetCode
+  difficulty: hard
+- title: Ones and Zeroes
+  url: https://leetcode.com/problems/ones-and-zeroes/
+  platform: LeetCode
+  difficulty: medium
+provenance:
+  origin: original
+status: live

@@ -1,0 +1,108 @@
+id: swap-count
+title: Counting the swaps
+concepts: [searching-and-sorting]
+difficulty: medium
+statement: |
+  Bubble sort puts a list in increasing order by repeatedly swapping **neighbouring** values
+  that are out of order (the left one is bigger), until no such pair is left.
+
+  Without running the sort, or by running it, find out **how many swaps** bubble sort makes on
+  the given list.
+input_format: The first line contains n. The second line contains the n values.
+output_format: The number of swaps.
+constraints:
+  - 1 ≤ n ≤ 1000
+  - 1 ≤ value ≤ 10^9
+examples:
+  - input: "5\n5 1 4 2 8"
+    output: "4"
+    explanation: "Pass 1 swaps 5 with 1, 4 and 2 (three swaps); pass 2 swaps 4 and 2 (one swap)."
+  - input: "3\n2 2 1"
+    output: "2"
+    explanation: "Equal values are never swapped, so only the 1 moves past both 2s."
+hints:
+  - "You can simply run bubble sort and count the swaps: n ≤ 1000 makes about half a million comparisons."
+  - "Each swap fixes exactly one pair (i, j) with i < j whose values are in the wrong order, and creates no new ones."
+  - "So the answer is the number of pairs i < j with a[i] > a[j]. Use a 64-bit counter to be safe."
+approach: |
+  Each swap of neighbours that are out of order removes exactly one inversion, a pair i < j
+  with a[i] > a[j], and changes no other pair. Bubble sort stops when no inversion is left, so
+  it makes exactly as many swaps as the list has inversions. Count the pairs with a double
+  loop in O(n²), or simulate the sort and count; both are fast for n ≤ 1000. The count can
+  reach about 500 000.
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  a = [int(x) for x in data[1:n + 1]]
+  count = 0
+  for i in range(n):
+      x = a[i]
+      for y in a[i + 1:]:
+          if x > y:
+              count += 1
+  print(count)
+brute: |
+  n = int(input())
+  a = list(map(int, input().split()))
+  swaps = 0
+  changed = True
+  while changed:
+      changed = False
+      for j in range(n - 1):
+          if a[j] > a[j + 1]:
+              a[j], a[j + 1] = a[j + 1], a[j]
+              swaps += 1
+              changed = True
+  print(swaps)
+references:
+  cpp: |
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<long long> a(n);
+        for (auto& x : a) cin >> x;
+        long long count = 0;
+        for (int i = 0; i < n; i++)
+            for (int j = i + 1; j < n; j++)
+                if (a[i] > a[j]) count++;
+        cout << count << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();
+            long[] a = new long[n];
+            for (int i = 0; i < n; i++) a[i] = in.nextLong();
+            long count = 0;
+            for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++)
+                    if (a[i] > a[j]) count++;
+            System.out.println(count);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1\n7"
+      yield "2\n2 1"
+      yield "4\n3 3 3 3"
+      n = 1000
+      yield f"{n}\n" + " ".join(str(n - i) for i in range(n))
+      yield f"{n}\n" + " ".join(str(i + 1) for i in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 3)) for _ in range(n))
+      for _ in range(4):
+          k = rng.randint(1, 50)
+          yield f"{k}\n" + " ".join(str(rng.randint(1, 20)) for _ in range(k))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 9)
+          yield f"{n}\n" + " ".join(str(rng.randint(1, 6)) for _ in range(n))

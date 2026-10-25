@@ -92,11 +92,11 @@ lesson: |
 
   A map associates each key with one current value. It is not a list of all occurrences. Updating an existing key replaces its associated value; use old_count + 1 for counting. Use a set when you only need membership.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Missing and zero are different states in some tasks. Choose a default intentionally. Do not rely on iteration order when the output specification requires sorted keys; sorting is an additional operation.
 
-  Hash-map access is expected O(1), not a universal worst-case guarantee. Counting n items uses O(n) expected time and O(k) space for k distinct keys.
+  Looking up a key in a map is usually instant, however big the map is. Counting n items takes one quick step per item, and the map holds one entry per different key.
 
   ### Check your understanding
 

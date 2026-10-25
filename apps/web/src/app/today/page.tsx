@@ -13,7 +13,8 @@ import { Level, PlatformTag, ProblemName } from '@/components/practice';
 import Assistant from '@/components/assistant';
 import Markdown from '@/components/markdown';
 import { ProposalList } from '@/components/socrat/proposals';
-import { Soc } from '@/components/socrat/illustration';
+import { Illustration, Soc } from '@/components/socrat/illustration';
+import { SocFigure } from '@/components/socrat/soc';
 import { StatusIcon, statusFromBand, statusFromRoadmap } from '@/components/socrat/status';
 import { SkillGrid } from '@/components/socrat/skill-grid';
 import { WeekStrip } from '@/components/socrat/week-strip';
@@ -138,16 +139,16 @@ export default function TodayPage() {
       <Reveal>
         <header className="mb-6 flex items-center justify-between gap-4 lg:mb-8">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-11 flex-none place-items-center rounded-full bg-secondary text-[15px] font-bold text-secondary-foreground lg:hidden" aria-hidden="true">{name.slice(0, 2).toUpperCase()}</span>
+            <span className="grid size-11 flex-none place-items-center rounded-full border-2 border-[var(--soc-outline)] bg-[var(--highlight)] text-[15px] font-semibold text-[#15161E] lg:hidden" aria-hidden="true">{name.slice(0, 2).toUpperCase()}</span>
             <div className="min-w-0">
-              <p className="hidden text-base text-muted-foreground lg:block" data-visual-mask="">{formatDate(today.date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-              <h1 className="truncate font-display text-2xl font-bold tracking-[-0.03em] lg:type-display-l lg:whitespace-normal">
+              <p className="font-hand hidden origin-left -rotate-2 text-[22px] text-pen lg:block" data-visual-mask="">{formatDate(today.date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              <h1 className="truncate font-display text-2xl font-semibold tracking-[-0.03em] lg:type-display-l lg:whitespace-normal">
                 <span className="lg:hidden">Hi, {name}</span>
                 <span className="hidden lg:inline">{greeting(name)}</span>
               </h1>
               <p className="text-sm text-muted-foreground lg:mt-2 lg:text-lg" data-visual-mask="">
                 <span className="lg:hidden">{formatDate(today.date, { weekday: 'long', month: 'long', day: 'numeric' })}. {today.course.title}</span>
-                <span className="hidden lg:inline">Here&apos;s your learning plan for today.</span>
+                <span className="hidden lg:inline">Here&apos;s your <span className="hl text-foreground">learning plan</span> for today.</span>
               </p>
             </div>
           </div>
@@ -226,7 +227,12 @@ export default function TodayPage() {
         <Reveal index={1} className="col-span-12 lg:col-span-8">
           {next ? (
             <Card tone="hero" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
-              <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) lg:max-w-[60%]">
+              {/* Soc on his books, cheering the next step on. */}
+              <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[230px] sm:block lg:right-12 lg:w-[250px]">
+                <SocFigure books mood="happy" idle className="h-auto w-full drop-shadow-[0_18px_24px_rgb(0_0_0/0.25)]" />
+              </div>
+              <div className="pointer-events-none absolute top-6 right-6 hidden font-hand text-[24px] text-white/90 rotate-6 lg:block" aria-hidden="true">you&apos;ve got this ↓</div>
+              <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[58%]">
                 <p className="type-label text-(--card-muted)">Today, goal {today.minutes.goal} min</p>
                 <div>
                   <h2 id="next-heading" className="type-display-l max-w-[14ch] pr-8 [overflow-wrap:anywhere] sm:pr-0">{next.title}</h2>
@@ -247,8 +253,11 @@ export default function TodayPage() {
               </div>
             </Card>
           ) : (
-            <Card tone="hero" aria-labelledby="next-heading">
-              <div className="flex flex-col gap-4 px-(--card-spacing)">
+            <Card tone="hero" className="relative" aria-labelledby="next-heading">
+              <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[200px] sm:block">
+                <SocFigure books mood={today.study_day ? 'proud' : 'sleepy'} idle className="h-auto w-full" />
+              </div>
+              <div className="relative flex flex-col gap-4 px-(--card-spacing) sm:max-w-[60%]">
                 <h2 id="next-heading" className="type-display-m">{today.study_day ? 'Done for today' : 'Rest day'}</h2>
                 <p className="max-w-md text-(--card-muted)">
                   {today.study_day
@@ -266,18 +275,18 @@ export default function TodayPage() {
         <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
           <Card className="relative h-full min-h-72 overflow-hidden lg:min-h-80" aria-labelledby="soc-heading">
             <div className="relative flex h-full flex-col gap-4 px-(--card-spacing)">
-              <p className="type-label text-muted-foreground">Talk to your tutor</p>
+              <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">stuck? talk to me</p>
               <div className="max-w-[55%]">
                 <h2 id="soc-heading" className="type-display-m">Ask Soc</h2>
                 <p className="mt-3 text-base text-muted-foreground">Get unstuck, ask questions, or request a hint.</p>
               </div>
               {/* A bigger target for pointer users; keyboard users have the Ask Soc button below. */}
-              <button type="button" tabIndex={-1} aria-hidden="true" onClick={() => setAskSoc(n => n + 1)} className="absolute top-0 right-(--card-spacing) rounded-full">
-                <Soc size={96} />
+              <button type="button" tabIndex={-1} aria-hidden="true" onClick={() => setAskSoc(n => n + 1)} className="absolute -top-2 right-(--card-spacing) rounded-full">
+                <Soc size={120} mood="curious" />
               </button>
-              <button type="button" data-tour="tutor" onClick={() => setAskSoc(n => n + 1)} className="group/ask mt-auto flex h-14 items-center justify-between gap-3 rounded-full border border-border-strong pr-2 pl-6 text-[17px] font-semibold transition-colors hover:bg-raised" aria-haspopup="dialog">
+              <button type="button" data-tour="tutor" onClick={() => setAskSoc(n => n + 1)} className="group/ask mt-auto flex h-14 items-center justify-between gap-3 rounded-full border border-border-strong bg-card pr-2 pl-6 text-[17px] font-medium transition-colors hover:border-foreground/40" aria-haspopup="dialog">
                 Ask Soc
-                <span className="grid size-10 place-items-center rounded-full bg-foreground text-background transition-transform group-hover/ask:translate-x-0.5"><ArrowRight className="size-5" aria-hidden="true" /></span>
+                <span className="grid size-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--primary-glow)] transition-transform group-hover/ask:translate-x-0.5"><ArrowRight className="size-5" aria-hidden="true" /></span>
               </button>
             </div>
           </Card>
@@ -301,10 +310,10 @@ export default function TodayPage() {
         {/* Proof and milestone. */}
         <div className={cn('col-span-12 grid content-start gap-3 sm:gap-4 lg:gap-6', goal ? 'lg:col-span-4' : 'lg:col-span-12 lg:grid-cols-2')}>
           <Reveal index={4}>
-            <Link href="/progress" className="group flex items-center gap-4 rounded-card border bg-card p-5 transition-colors hover:bg-raised lg:p-6">
+            <Link href="/progress" className="paper group flex items-center gap-4 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
               <StatusIcon status="mastered" size={48} />
-              <span className="font-display text-6xl leading-none font-bold tracking-[-0.04em] tabular-nums">{mastered}</span>
-              <span className="min-w-0 flex-1 font-display text-xl leading-tight font-bold tracking-[-0.02em]">{mastered === 1 ? 'skill' : 'skills'} mastered</span>
+              <span className="font-display text-6xl leading-none font-semibold tracking-[-0.04em] tabular-nums">{mastered}</span>
+              <span className="min-w-0 flex-1 font-display text-xl leading-tight font-semibold tracking-[-0.02em]">{mastered === 1 ? 'skill' : 'skills'} mastered</span>
               <ChevronRight className="size-5 flex-none text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </Link>
           </Reveal>
@@ -313,7 +322,7 @@ export default function TodayPage() {
               <Card aria-labelledby="milestone-heading">
                 <div className="grid gap-3 px-(--card-spacing)">
                   <p className="type-label text-muted-foreground">Next milestone</p>
-                  <h2 id="milestone-heading" className="font-display text-2xl leading-tight font-bold tracking-[-0.03em]">{goal.title}</h2>
+                  <h2 id="milestone-heading" className="font-display text-2xl leading-tight font-semibold tracking-[-0.03em]">{goal.title}</h2>
                   <p className="text-[15px] text-muted-foreground">
                     {goal.total - goal.finished > 0 ? `Complete ${goal.total - goal.finished} more skill${goal.total - goal.finished === 1 ? '' : 's'} to reach this milestone.` : 'Milestone reached. The next module is opening up.'}
                   </p>
@@ -332,20 +341,21 @@ export default function TodayPage() {
           {/* 5. Review due and Playground. */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
             {review || today.reviews_due ? (
-              <Link href={review ? activityHref(review.id) : '/plan'} className="group flex min-h-28 flex-col justify-between gap-3 rounded-card bg-raised p-5 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_5%)] lg:p-6">
+              <Link href={review ? activityHref(review.id) : '/plan'} className="group flex min-h-28 flex-col justify-between gap-3 rounded-card bg-cream text-cream-foreground p-5 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--cream),var(--foreground)_4%)] lg:p-6">
                 <StatusIcon status="review" size={32} />
                 <span>
-                  <span className="block font-display text-lg leading-tight font-bold tracking-[-0.02em]">
+                  <span className="block font-display text-lg leading-tight font-semibold tracking-[-0.02em]">
                     Review due{review ? `: ${review.title.replace(/^Review:?\s*/i, '')}` : ''}
                   </span>
                   {today.reviews_due > 1 ? <span className="mt-1 block text-sm text-muted-foreground">{today.reviews_due} reviews due</span> : null}
                 </span>
               </Link>
             ) : null}
-            <Link href="/playground" className={cn('group flex min-h-28 flex-col justify-between gap-3 rounded-card border border-border-strong bg-card p-5 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-raised lg:p-6', !(review || today.reviews_due) && 'col-span-2')}>
+            <Link href="/playground" className={cn('paper doodle-host group relative flex min-h-28 flex-col justify-between gap-3 overflow-hidden rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6', !(review || today.reviews_due) && 'col-span-2')}>
               <span className="type-label text-brand">{NAME.playground}</span>
+              <Illustration name="orbit" className="pointer-events-none absolute -top-3 -right-3 size-24 opacity-90" />
               <span className="flex items-end justify-between gap-3">
-                <span className="font-display text-lg leading-tight font-bold tracking-[-0.02em]">{weak ? `Explore ${weak.title} visually` : 'Ask about any concept'}</span>
+                <span className="font-display text-lg leading-tight font-semibold tracking-[-0.02em]">{weak ? `Explore ${weak.title} visually` : 'Ask about any concept'}</span>
                 <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </span>
             </Link>
@@ -357,7 +367,7 @@ export default function TodayPage() {
               <div className="flex flex-wrap items-center justify-between gap-4 px-(--card-spacing)">
                 <div className="min-w-0">
                   <div className="mb-2"><Badge>{assessment.state === 'in_progress' ? 'In progress' : 'Available'}</Badge></div>
-                  <h2 id="assessment-heading" className="font-display text-lg font-bold tracking-[-0.02em]">{NAME.assessment}</h2>
+                  <h2 id="assessment-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">{NAME.assessment}</h2>
                   <p className="truncate text-sm text-muted-foreground">On what you studied: {assessment.topics.slice(0, 3).join(', ')}{assessment.topics.length > 3 ? ', and more' : ''}</p>
                 </div>
                 <Button asChild variant="outline"><Link href="/assessments">{assessment.state === 'in_progress' ? 'Continue assessment' : 'Open assessment'}</Link></Button>
@@ -371,7 +381,7 @@ export default function TodayPage() {
           {session.length ? (
             <Card aria-labelledby="agenda-heading">
               <div className="flex items-baseline justify-between gap-3 px-(--card-spacing)">
-                <h2 id="agenda-heading" className="font-display text-lg font-bold tracking-[-0.02em]">Today&apos;s session</h2>
+                <h2 id="agenda-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Today&apos;s session</h2>
                 <span className="text-sm font-semibold text-muted-foreground tabular-nums">{today.done.length ? `${today.done.length} of ${session.length} done` : `${session.length} step${session.length === 1 ? '' : 's'}, in order`}</span>
               </div>
               <ul className="grid px-[calc(var(--card-spacing)-12px)]">
@@ -384,12 +394,12 @@ export default function TodayPage() {
           {recs?.problems.length ? (
             <section aria-labelledby="practice-heading" className="min-w-0">
               <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h2 id="practice-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Practice picked for you</h2>
+                <h2 id="practice-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Practice picked for you</h2>
                 <Link href="/library" className="text-[15px] font-semibold underline underline-offset-4">See all problems</Link>
               </div>
               <ul className="-mx-4 flex scroll-pl-4 snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
                 {recs.problems.map(p => (
-                  <li key={p.id} className="flex w-[78%] flex-none snap-start flex-col gap-3 rounded-card border bg-card p-5 sm:w-auto">
+                  <li key={p.id} className="flex w-[78%] flex-none snap-start flex-col gap-3 paper rounded-card p-5 sm:w-auto">
                     <div className="flex items-start justify-between gap-3">
                       <ProblemName problem={p} className="text-base" />
                       <StatusIcon status={p.status === 'solved' ? 'practised' : 'not_seen'} size={22} title={p.status === 'solved' ? 'Solved' : 'Not solved yet'} />
@@ -408,7 +418,7 @@ export default function TodayPage() {
           <Card className="hidden lg:flex" aria-labelledby="week-heading">
             <div className="grid gap-4 px-(--card-spacing)">
               <div className="flex items-center justify-between gap-3">
-                <h2 id="week-heading" className="flex items-center gap-2 font-display text-lg font-bold tracking-[-0.02em]">
+                <h2 id="week-heading" className="flex items-center gap-2 font-display text-lg font-semibold tracking-[-0.02em]">
                   <Flame className="size-5" strokeWidth={1.5} aria-hidden="true" /> {fresh ? 'Start your streak today' : `${today.streak.current}-day streak`}
                 </h2>
                 <Ring value={minutePercent} size={56} ariaLabel={`${today.minutes.done} of ${today.minutes.goal} minutes today`} label={<span className="text-[13px]">{today.minutes.done}</span>} />
@@ -423,7 +433,7 @@ export default function TodayPage() {
           {recs?.topics.length ? (
             <Card aria-labelledby="learn-next-heading">
               <div className="px-(--card-spacing)">
-                <h2 id="learn-next-heading" className="mb-3 font-display text-lg font-bold tracking-[-0.02em]">Skills to learn next</h2>
+                <h2 id="learn-next-heading" className="mb-3 font-display text-lg font-semibold tracking-[-0.02em]">Skills to learn next</h2>
                 <ul className="grid gap-1">
                   {recs.topics.map(t => (
                     <li key={t.id}>
@@ -446,13 +456,13 @@ export default function TodayPage() {
             <div className="flex items-center gap-5 px-(--card-spacing)">
               <Ring value={today.progress.percent} size={80} label={<span className="text-base">{today.progress.percent}%</span>} ariaLabel={`Course ${today.progress.percent} percent complete`} />
               <div className="min-w-0">
-                <h2 id="course-heading" className="font-display text-lg font-bold tracking-[-0.02em]">Course progress</h2>
+                <h2 id="course-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Course progress</h2>
                 <p className="text-sm text-muted-foreground">{fresh ? `${today.progress.total} skills ahead of you.` : `${today.progress.finished} of ${today.progress.total} skills. ${PACE_LABEL[today.pace]} pace.`}</p>
                 <p className="mt-1 text-sm text-muted-foreground" data-visual-mask="">Projected finish {formatDate(today.projected_finish, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
               </div>
             </div>
           </Card>
-          <Link href="/progress" className="flex min-h-12 items-center justify-between gap-3 rounded-card border px-5 py-3 text-[15px] font-semibold transition-colors hover:bg-raised">
+          <Link href="/progress" className="flex min-h-12 items-center justify-between gap-3 rounded-card border border-dashed border-border-strong px-5 py-3 text-[15px] font-medium transition-colors hover:border-foreground/40 hover:bg-card">
             Check your progress in {NAME.evidence}
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>

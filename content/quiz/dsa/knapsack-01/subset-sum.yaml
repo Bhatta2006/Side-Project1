@@ -1,0 +1,79 @@
+id: quiz:dsa:knapsack-01:subset-sum
+family: subset-sum
+concept: dsa:knapsack-01
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: empty-subset
+  band: 1
+  format: mcq
+  prompt: Why is can[0] = true at the start?
+  options:
+  - The empty subset sums to 0
+  - 0 is always in the input
+  - It speeds up the loop
+  - To avoid an index error
+  answer: 0
+  misconceptions:
+  - null
+  - subset-sum-empty-base
+  - subset-sum-empty-base
+  - confuse-index-value
+  explanation: Every other sum is built by adding numbers to the empty subset.
+- id: reachable-trace
+  band: 2
+  format: trace
+  prompt: Reachable sums are 0 3 4 7. Number 5 arrives. Which sums are reachable now, up to 9?
+  options:
+  - 0 3 4 5 7 8 9
+  - 0 3 4 7 12
+  - 5 8 9
+  - 0 3 4 5 7
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subset-vs-subarray
+  - subset-sum-empty-base
+  - knapsack-forward-capacity-loop
+  explanation: 'Keep the old sums and add 5 to each: 5, 8, 9 (12 is over 9).'
+- id: odd-total
+  band: 3
+  format: mcq
+  prompt: 'Equal partition: the total is 15. What should the program print?'
+  options:
+  - No, without building the table
+  - 'Yes'
+  - It depends on the numbers
+  - Check whether 7 is reachable
+  answer: 0
+  misconceptions:
+  - null
+  - partition-odd-total
+  - partition-odd-total
+  - partition-odd-total
+  explanation: Two equal halves need an even total.
+- id: subset-vs-subarray
+  band: 4
+  format: classify
+  prompt: Is there a contiguous run summing to T, with positive numbers? Which tool?
+  options:
+  - Sliding window or prefix sums
+  - Subset-sum table
+  - Two capacities
+  - Count subsets
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subset-vs-subarray
+  - pattern-subset-vs-subarray
+  - pattern-count-vs-exists
+  explanation: Contiguous means subarray; subset-sum is for skipping elements.
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,124 @@
+concept: dsa:dp-stocks
+pattern: dsa:dp-stocks/stock-state-machine
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the stock state machine pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/dp-stocks/stock-state-machine.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: stk-worked
+  kind: worked
+  title: 'Worked: prices 3 2 6 5 0 3, at most 2 trades'
+  objective: Run the machine and read the answer.
+  seconds: 100
+  body: 'hold[1] becomes −3, then −2 at price 2. At price 6, cash[1] = −2 + 6 = 4. At price 0, hold[2] =
+    cash[1] − 0 = 4: the first profit is banked and a second share bought. At price 3, cash[2] = 4 + 3 =
+    7. Answer 7: 2→6 and 0→3.'
+  why: hold[2] builds on cash[1], so the second trade starts from the first trade's profit.
+- id: stk-faded
+  kind: faded
+  title: 'Your turn: prices 1 3 2 5, one trade'
+  objective: Apply the sell and buy updates yourself.
+  seconds: 90
+  body: k = 1. Start with cash = 0, hold = −∞.
+  steps:
+  - state: Day 1, price 1.
+    prompt: What is hold after day 1?
+    options:
+    - '−1'
+    - '0'
+    - '1'
+    answer: 0
+    explanation: Buy at 1, so hold = 0 − 1.
+  - state: Day 2, price 3. hold = −1.
+    prompt: What is cash after day 2?
+    options:
+    - '2'
+    - '3'
+    - '0'
+    answer: 0
+    explanation: Sell at 3, so cash = −1 + 3 = 2.
+  - state: Day 4, price 5. hold is still −1 (buying at 2 does not beat −1).
+    prompt: What is cash at the end?
+    options:
+    - '4'
+    - '5'
+    - '3'
+    answer: 0
+    explanation: −1 + 5 = 4, one trade 1→5.
+- id: stk-visualizer
+  kind: visualizer
+  title: 'Step through: the three moves'
+  objective: Match each update to a move of the machine.
+  seconds: 110
+  body: Two states, holding and not holding, and three moves.
+  steps:
+  - state: cash[t] = hold[t] + price.
+    prompt: Which move is this?
+    options:
+    - Sell
+    - Buy
+    - Rest
+    answer: 0
+    explanation: Holding becomes not holding and the price comes in.
+  - state: hold[t] = cash[t − 1] − price.
+    prompt: Which move is this?
+    options:
+    - Buy, using one more transaction
+    - Sell
+    - Rest
+    answer: 0
+    explanation: Not holding becomes holding; the price is paid and t − 1 becomes t.
+  - state: Keeping the old cash[t] or hold[t] in the max.
+    prompt: Which move is this?
+    options:
+    - Rest
+    - Buy
+    - Sell
+    answer: 0
+    explanation: Doing nothing keeps the state from yesterday.
+- id: stk-micro
+  kind: micro
+  title: 'Pitfall: hold starting at zero'
+  objective: Know why hold must start at minus infinity.
+  seconds: 80
+  misconception: stock-hold-init-zero
+  body: 'hold[t] is money while holding a share. Before any buy, no such state exists. Start it at 0 and
+    the first sell gives cash = 0 + price, a share for free. With prices 5 1, the answer becomes 5 instead
+    of 0. Start hold at a very negative number so a sale is only possible after a buy.'
+  why: Impossible states must never win a max.
+- id: stk-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate the state machine from greedy shortcuts.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Unlimited trades, no fee, no cooldown.
+    prompt: Which approach?
+    options:
+    - Sum every daily rise
+    - k-transaction table
+    - Keep the biggest rise only
+    answer: 0
+    explanation: With no limits, every rise can be its own trade.
+  - state: At most 3 trades over 10 000 days.
+    prompt: Which approach?
+    options:
+    - State machine with cash[t] and hold[t], t ≤ 3
+    - Sum every rise
+    - Keep the 3 biggest rising runs
+    answer: 0
+    explanation: A limit makes merging and skipping rises matter.
+  - state: Unlimited trades, but a 2-day rest after each sale.
+    prompt: Which approach?
+    options:
+    - State machine where a buy reads cash from 3 days ago
+    - Sum every rise
+    - Greedy by biggest rise
+    answer: 0
+    explanation: The cooldown changes only which past cash a buy may use.

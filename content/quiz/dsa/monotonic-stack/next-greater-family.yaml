@@ -1,0 +1,234 @@
+id: quiz:dsa:monotonic-stack:next-greater-family
+family: next-greater-family
+concept: dsa:monotonic-stack
+pattern: dsa:monotonic-stack/next-greater-family
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: next_greater
+  params:
+    length:
+    - 4
+    - 7
+    value:
+    - 1
+    - 9
+  reference: next_greater_ref(a)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: the maximum to the right instead of the nearest greater
+  misconception: mono-max-to-the-right
+- rule: pop on <= so equal values answer each other
+  misconception: mono-strictness
+- rule: pop larger values, which finds the next smaller
+  misconception: mono-wrong-direction
+- rule: compare only with the neighbour
+  misconception: mono-neighbour-only
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is a next greater element problem?
+  options:
+  - For each day, the next day with a higher price
+  - The highest price overall
+  - The average price of each week
+  - The two days with the biggest difference
+  answer: 0
+  misconceptions:
+  - null
+  - mono-max-to-the-right
+  - pattern-window-vs-prefix-sums
+  - pattern-brute-force-default
+  explanation: Nearest greater to the right, per element.
+- id: stack-holds
+  band: 1
+  format: mcq
+  prompt: What does the stack hold during the scan?
+  options:
+  - Indexes still waiting for their answer
+  - Every value seen so far
+  - The answers found so far
+  - The largest value only
+  answer: 0
+  misconceptions:
+  - null
+  - mono-max-to-the-right
+  - confuse-index-value
+  - mono-max-to-the-right
+  explanation: Answered indexes are popped; the rest wait.
+- id: order
+  band: 2
+  format: mcq
+  prompt: For next greater, how are the waiting values ordered from bottom to top?
+  options:
+  - Decreasing
+  - Increasing
+  - Unordered
+  - Equal
+  answer: 0
+  misconceptions:
+  - null
+  - mono-wrong-direction
+  - mono-top-vs-bottom
+  - mono-strictness
+  explanation: Anything smaller than a new value is popped, so what remains is decreasing.
+- id: neighbour
+  band: 2
+  format: trace
+  prompt: 3 1 4. What is the next greater element of 3?
+  options:
+  - '4'
+  - '1'
+  - '−1'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - mono-neighbour-only
+  - mono-neighbour-only
+  - mono-strictness
+  explanation: The neighbour 1 is smaller; the first greater is 4.
+- id: max-right
+  band: 3
+  format: classify
+  prompt: Why is "the largest value to the right" the wrong answer for next greater?
+  options:
+  - Next greater is the nearest bigger value, not the biggest
+  - It is too slow
+  - It ignores the last element
+  - It is the same thing
+  answer: 0
+  misconceptions:
+  - null
+  - mono-max-to-the-right
+  - pattern-brute-force-default
+  - pattern-next-greater-vs-max-right
+  explanation: In 2 1 2 4 3 the 1's next greater is 2, but the maximum to its right is 4.
+- id: equal
+  band: 3
+  format: bug_spot
+  prompt: The pop test is a[top] <= a[i]. What does 2 2 3 print?
+  options:
+  - 2 3 −1, so the first 2 is "answered" by an equal value
+  - 3 3 −1
+  - −1 −1 −1
+  - 2 2 3
+  answer: 0
+  misconceptions:
+  - null
+  - mono-strictness
+  - mono-wrong-direction
+  - confuse-index-value
+  explanation: Strictly greater needs <, which gives 3 3 −1.
+- id: amortised
+  band: 4
+  format: complexity
+  prompt: Total time of the stack pass on n elements?
+  options:
+  - O(n), since each index is pushed and popped at most once
+  - O(n²), because of the nested loop
+  - O(n log n)
+  - O(1)
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-search-vs-scan
+  - dp-vague-state
+  explanation: The inner loop's total work across the whole pass is at most n pops.
+- id: previous
+  band: 4
+  format: mcq
+  prompt: For the previous smaller element, when do you read the answer for index i?
+  options:
+  - After popping larger values, before pushing i
+  - After pushing i
+  - When i is popped
+  - At the very end
+  answer: 0
+  misconceptions:
+  - null
+  - mono-answer-wrong-element
+  - mono-answer-wrong-element
+  - mono-max-to-the-right
+  explanation: The top at that moment is the nearest smaller value to the left.
+- id: circular
+  band: 5
+  format: classify
+  prompt: The array is circular. How do you find the next greater element?
+  options:
+  - Scan the indexes twice, using i mod n
+  - Sort the array first
+  - Reverse the array
+  - Use a running maximum
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-sort-breaks-order
+  - mono-wrong-direction
+  - mono-max-to-the-right
+  explanation: The second pass lets the start of the array answer the end.
+- id: leftover
+  band: 5
+  format: mcq
+  prompt: When the scan ends, some indexes are still on the stack. What are their answers?
+  options:
+  - −1, nothing greater came after them
+  - The top of the stack
+  - The last element
+  - Their own value
+  answer: 0
+  misconceptions:
+  - null
+  - mono-answer-wrong-element
+  - off-by-one-output
+  - confuse-index-value
+  explanation: They were never popped, so no greater value followed.
+- id: span-transfer
+  band: 6
+  format: classify
+  prompt: For each day, how many days until a warmer day? What must the stack store?
+  options:
+  - Indexes, to compute the distance when popped
+  - Temperatures
+  - Distances
+  - The warmest day so far
+  answer: 0
+  misconceptions:
+  - null
+  - mono-stores-value-not-index
+  - mono-stores-value-not-index
+  - mono-max-to-the-right
+  explanation: The answer is a distance, which needs positions.
+- id: window-transfer
+  band: 6
+  format: classify
+  prompt: The maximum of every window of size k. Stack or deque?
+  options:
+  - A deque, because old indexes also expire from the front
+  - A stack
+  - A running maximum
+  - A heap with no removals
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-stack-vs-deque
+  - mono-max-to-the-right
+  - pattern-stack-vs-deque
+  explanation: Beaten values leave from the back, expired ones from the front.
+status: provisional
+provenance:
+  origin: original

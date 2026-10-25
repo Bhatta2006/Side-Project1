@@ -1,0 +1,74 @@
+id: binary-search-2d
+title: Binary search in 2D
+summary: Search sorted matrices with the staircase walk, treat a fully sorted matrix as one array, and
+  find rows by binary search.
+module: linear-patterns
+prerequisites:
+- binary-search
+- zero:grids
+difficulty: 3
+estimated_minutes: 35
+status: draft
+lesson: '## Staircase
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Flattened matrix
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Row search
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

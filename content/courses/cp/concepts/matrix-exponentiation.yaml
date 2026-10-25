@@ -1,0 +1,51 @@
+id: matrix-exponentiation
+title: Matrix exponentiation
+summary: Linear recurrences in O(log n) and counting walks of length k with matrix powers.
+module: math-2
+prerequisites:
+- modular-arithmetic
+difficulty: 4
+estimated_minutes: 45
+status: draft
+lesson: '## Linear recurrence
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Walks of length k
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

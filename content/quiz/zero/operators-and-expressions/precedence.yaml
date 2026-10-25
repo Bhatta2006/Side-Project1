@@ -1,0 +1,62 @@
+id: quiz:zero:operators-and-expressions:precedence
+family: precedence
+concept: zero:operators-and-expressions
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: average
+  band: 1
+  format: trace
+  prompt: a = 4, b = 5, c = 9. What is a + b + c // 3?
+  options:
+  - '12'
+  - '6'
+  - '18'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - precedence-left-to-right
+  - count-not-sum
+  - precedence-left-to-right
+  explanation: // runs before +, so only c is divided.
+- id: mod-level
+  band: 2
+  format: trace
+  prompt: What is 10 - 7 % 3?
+  options:
+  - '9'
+  - '0'
+  - '1'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - precedence-left-to-right
+  - mod-swap-div
+  - trace-step-slip
+  explanation: 7 % 3 = 1 first, then 10 − 1.
+- id: power-minus
+  band: 3
+  format: trace
+  prompt: In Python, what is -2 ** 2?
+  options:
+  - '-4'
+  - '4'
+  - '-2'
+  - An error
+  answer: 0
+  misconceptions:
+  - null
+  - precedence-left-to-right
+  - power-as-multiply
+  - syntax-delimiters
+  explanation: '** binds tighter than the minus sign, so it is −(2 ** 2).'
+status: provisional
+provenance:
+  origin: original

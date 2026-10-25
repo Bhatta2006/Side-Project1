@@ -1,0 +1,62 @@
+id: quiz:zero:math-on-numbers:iterative-sequences
+family: iterative-sequences
+concept: zero:math-on-numbers
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: update
+  band: 2
+  format: trace
+  prompt: a, b = 0, 1. The loop prints a, then runs a = b and b = a + b. What are the first five printed numbers?
+  options:
+  - 0 1 2 4 8
+  - 0 1 1 2 3
+  - 0 1 2 3 5
+  - 1 1 2 3 5
+  answer: 0
+  misconceptions:
+  - null
+  - seq-update-one-at-a-time
+  - seq-update-one-at-a-time
+  - off-by-one-output
+  explanation: b uses the new a, so it doubles.
+- id: python-tuple
+  band: 3
+  format: mcq
+  prompt: Why does a, b = b, a + b work in Python?
+  options:
+  - Both right-hand values are computed from the old pair before anything changes
+  - Python runs it from right to left
+  - It does not work
+  - It sorts the values
+  answer: 0
+  misconceptions:
+  - null
+  - seq-update-one-at-a-time
+  - seq-update-one-at-a-time
+  - pattern-sort-breaks-order
+  explanation: In C++ and Java, save the next value in a third variable.
+- id: overflow
+  band: 4
+  format: classify
+  prompt: Around which term do Fibonacci numbers stop fitting in a 32-bit int?
+  options:
+  - Around the 47th
+  - Around the 10th
+  - Never
+  - Around the 1000th
+  answer: 0
+  misconceptions:
+  - null
+  - digit-count-vs-value
+  - mod-only-at-end
+  - digit-count-vs-value
+  explanation: F(47) is 2971215073, above 2^31 − 1.
+status: provisional
+provenance:
+  origin: original

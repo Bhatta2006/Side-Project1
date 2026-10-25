@@ -1,0 +1,79 @@
+id: quiz:dsa:dp-advanced-patterns:digit-dp-intro
+family: digit-dp-intro
+concept: dsa:dp-advanced-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: tight
+  band: 2
+  format: mcq
+  prompt: N = 4728 and the digits so far are 47. What is the largest allowed next digit?
+  options:
+  - '2'
+  - '9'
+  - '7'
+  - '8'
+  answer: 0
+  misconceptions:
+  - null
+  - digit-ignore-tight
+  - confuse-index-value
+  - digit-ignore-tight
+  explanation: 47 matches N's prefix, so the next digit may not exceed N's digit 2.
+- id: count
+  band: 3
+  format: trace
+  prompt: How many numbers from 1 to 23 have digit sum 5?
+  options:
+  - '3'
+  - '6'
+  - '2'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - digit-ignore-tight
+  - off-by-one-output
+  - count-vs-sum
+  explanation: 5, 14 and 23.
+- id: range
+  band: 4
+  format: mcq
+  prompt: You can count matches in [1, N]. How do you count them in [A, B]?
+  options:
+  - count(B) − count(A − 1)
+  - count(B) − count(A)
+  - count(B − A)
+  - count(B) + count(A)
+  answer: 0
+  misconceptions:
+  - null
+  - off-by-one-output
+  - pattern-digit-dp-vs-brute-force
+  - count-vs-sum
+  explanation: Subtracting count(A − 1) keeps A itself.
+- id: when
+  band: 5
+  format: classify
+  prompt: Count numbers up to 10^18 with no two equal neighbouring digits. Loop or digit DP?
+  options:
+  - Digit DP over at most 19 positions
+  - Loop over every number
+  - Greedy
+  - Bitmask over the digits
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-digit-dp-vs-brute-force
+  - mcm-greedy-order
+  - pattern-bitmask-vs-knapsack
+  explanation: 10^18 numbers is far too many; 19 positions are few.
+status: provisional
+provenance:
+  origin: original

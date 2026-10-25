@@ -76,7 +76,7 @@ lesson: |
 
   Reduce a failure to the smallest input that still reproduces it. Compare expected and actual state at the first point where they diverge. Change one cause, rerun that failing case, and then run the cases that already worked.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Distinguish syntax errors, runtime failures and wrong answers. A program that does not crash is not necessarily correct. Boundary tests often reveal bugs that ordinary random-looking inputs miss.
 

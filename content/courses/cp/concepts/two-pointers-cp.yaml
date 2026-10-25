@@ -1,0 +1,53 @@
+id: two-pointers-cp
+title: Two pointers for contests
+summary: 'Two pointers over monotone conditions: counting good segments and pairs across two sorted arrays.'
+module: techniques
+prerequisites:
+- dsa:two-pointers
+- dsa:sliding-window
+- fast-io
+difficulty: 3
+estimated_minutes: 45
+status: draft
+lesson: '## Monotone segments
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Two arrays count
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

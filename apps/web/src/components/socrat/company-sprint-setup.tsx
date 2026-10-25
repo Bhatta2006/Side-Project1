@@ -43,8 +43,8 @@ export function CompanySprintSetup({ overview, onStarted }: { overview: CompanyS
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <section aria-labelledby="company-pick" className="rounded-card border bg-card p-4 sm:p-5">
-        <h2 id="company-pick" className="font-display text-xl font-bold tracking-[-0.03em]">1. Company</h2>
+      <section aria-labelledby="company-pick" className="paper rounded-card p-4 sm:p-5">
+        <h2 id="company-pick" className="font-display text-xl font-semibold tracking-[-0.03em]">1. Company</h2>
         <div className="relative mt-3">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <input type="search" placeholder="Search companies" aria-label="Search companies" value={query} onChange={e => setQuery(e.target.value)} className="h-12 w-full rounded-control border border-border-strong bg-card pr-3 pl-10 text-[15px] outline-none focus-visible:border-ring" />

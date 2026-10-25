@@ -111,11 +111,11 @@ lesson: |
 
   A while loop needs an initialization, a condition and a state change that makes progress toward termination. Identify a nonnegative quantity that strictly decreases, such as remaining digits. If a branch uses continue before updating that quantity, the same state may repeat forever.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Zero has one digit but a while n > 0 loop executes zero times. Handle that specification separately. For negative inputs, define whether to process the sign and use an absolute magnitude when appropriate.
 
-  Repeated division or multiplication by a constant greater than one typically takes O(log n) iterations.
+  Dividing by 10 each time finishes quickly: a number with 9 digits takes only 9 steps.
 
   ### Check your understanding
 

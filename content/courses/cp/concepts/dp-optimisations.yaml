@@ -1,0 +1,72 @@
+id: dp-optimisations
+title: DP optimisations
+summary: Convex hull trick, divide-and-conquer and Knuth optimisations for quadratic transitions.
+module: dp-advanced
+prerequisites:
+- dp-data-structures
+difficulty: 5
+estimated_minutes: 70
+status: draft
+lesson: '## Cht
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Divide conquer
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Knuth
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

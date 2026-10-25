@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
 type Turn = { role: 'user' | 'assistant'; content: string };
-type Outcome = { passed: number; total: number; failing: { input: string; expected: string; got: string; error: string } | null };
+type Outcome = { passed: number; total: number; failing: { input: string; expected: string; got: string; error: string; syntax: boolean } | null };
 
 const CODE_KEY = 'socrat.try.code';
 const STARTERS = ["I don't know where to start", 'My code is too slow', 'Why does my answer differ?'];
@@ -91,7 +91,7 @@ export function TryTutor() {
         const test = problem.tests.find(t => t.index === r.index)!;
         const ok = r.status === 'executed' && r.stdout.trim() === test.expected.trim();
         if (ok) passed += 1;
-        else failing ??= { input: test.input.trim(), expected: test.expected.trim(), got: r.status === 'timeout' ? '(ran out of time)' : r.stdout.trim(), error: r.stderr };
+        else failing ??= { input: test.input.trim(), expected: test.expected.trim(), got: r.status === 'timeout' ? '(ran out of time)' : r.stdout.trim(), error: r.stderr, syntax: r.status === 'compile_error' };
       }
       setOutcome({ passed, total: results.length, failing });
       attempted.current = true;
@@ -135,19 +135,19 @@ export function TryTutor() {
   const solved = outcome !== null && outcome.passed === outcome.total;
 
   return (
-    <section id="try" aria-labelledby="try-title" className="mx-auto max-w-[1440px] scroll-mt-20 px-4 py-16 sm:px-6 lg:px-10 lg:py-24">
-      <p className="type-label text-muted-foreground">No account needed</p>
-      <h2 id="try-title" className="type-display-m mt-2 max-w-2xl">Solve one problem with Soc, right now</h2>
-      <p className="mt-3 max-w-2xl text-base text-muted-foreground">Write Python, run the tests in your browser, and ask Soc when you get stuck. Watch what it does instead of giving you the answer.</p>
+    <section id="try" aria-labelledby="try-title" className="mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
+      <p className="font-hand origin-left -rotate-2 text-[24px] text-pen">no account needed, go on</p>
+      <h2 id="try-title" className="type-display-l mt-4 max-w-[20ch]">Solve one problem with Soc, <span className="hl">right now</span></h2>
+      <p className="type-body-l mt-4 max-w-2xl text-muted-foreground">Write Python, run the tests in your browser, and ask Soc when you get stuck. Watch what it does instead of giving you the answer.</p>
 
-      <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-6">
-        <div className="grid min-w-0 content-start gap-4 rounded-card border bg-card p-4 sm:p-6">
+      <div className="mt-12 grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-6">
+        <div className="paper grid min-w-0 content-start gap-4 rounded-card p-4 sm:p-6">
           {!problem ? (
             <div className="grid min-h-[420px] place-items-center" role="status"><Spinner /><span className="sr-only">Loading the problem</span></div>
           ) : (
             <>
               <div>
-                <h3 className="font-display text-2xl font-bold tracking-[-0.03em]">{problem.title}</h3>
+                <h3 className="font-display text-2xl font-semibold tracking-[-0.04em]">{problem.title}</h3>
                 <Markdown source={problem.statement} className="prose-compact mt-2 text-[15px]" />
                 <p className="mt-2 text-[13px] text-muted-foreground">{problem.input_format}</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -178,14 +178,17 @@ export function TryTutor() {
                 {runError ? <p role="alert" className="rounded-[16px] border border-attention px-4 py-3 text-sm">{runError}</p> : null}
                 {outcome ? (
                   <div className="rounded-[20px] border bg-background p-4">
-                    <p className="flex items-center gap-2 font-display text-lg font-bold tracking-[-0.02em]">
+                    <p className="flex items-center gap-2 font-display text-lg font-semibold tracking-[-0.03em]">
                       <StatusIcon status={solved ? 'practised' : 'needs_practice'} size={22} />
                       {outcome.passed} of {outcome.total} tests passed
                     </p>
                     {outcome.failing ? (
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {outcome.failing.error ? 'Your code raised an error on a test.' : outcome.failing.got === '(ran out of time)' ? 'Correct idea, perhaps, but too slow on a test.' : `Expected ${outcome.failing.expected.slice(0, 40)}, got ${outcome.failing.got.slice(0, 40) || 'nothing'}.`} Ask Soc about it.
+                        {outcome.failing.syntax ? 'Python could not read your code. Check the line below.' : outcome.failing.error ? 'Your code raised an error on a test.' : outcome.failing.got === '(ran out of time)' ? 'Correct idea, perhaps, but too slow on a test.' : `Expected ${outcome.failing.expected.slice(0, 40)}, got ${outcome.failing.got.slice(0, 40) || 'nothing'}.`} Ask Soc about it.
                       </p>
+                    ) : null}
+                    {outcome.failing?.error ? (
+                      <pre className="io-block mt-2 max-h-40 overflow-auto text-xs">{outcome.failing.error.trim().split('\n').slice(-6).join('\n')}</pre>
                     ) : null}
                   </div>
                 ) : null}
@@ -194,7 +197,7 @@ export function TryTutor() {
           )}
         </div>
 
-        <div className="flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-card border bg-card lg:max-h-[760px]">
+        <div className="paper flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-card lg:max-h-[760px]">
           <header className="flex items-center gap-3 border-b px-5 py-4">
             <button type="button" aria-label="Write to Soc" className="flex-none rounded-full" onClick={() => document.getElementById('try-message')?.focus()}>
               <Soc size={40} />
@@ -226,7 +229,7 @@ export function TryTutor() {
             ))}
             {solved ? (
               <div data-tone="hero" className="rounded-[20px] bg-forest p-5 text-forest-foreground">
-                <p className="font-display text-xl font-bold tracking-[-0.02em]">Solved{solvedIn !== null ? ` in ${clock(solvedIn)}` : ''}.</p>
+                <p className="font-display text-xl font-semibold tracking-[-0.03em]">Solved{solvedIn !== null ? ` in ${clock(solvedIn)}` : ''}.</p>
                 <p className="mt-1 text-sm">That is what Socrat feels like. Sign up to keep this as your first piece of evidence and get a plan built around your goal.</p>
                 <Button asChild variant="ink" className="mt-4"><Link href="/login">Create my plan<ArrowCircle /></Link></Button>
               </div>

@@ -2,7 +2,7 @@ id: bst
 title: Binary search trees
 summary: Keep keys ordered in a tree so search, insert and delete follow one root-to-leaf path.
 module: trees
-prerequisites: [binary-trees, binary-search]
+prerequisites: [binary-trees, binary-search, tree-patterns]
 difficulty: 3
 estimated_minutes: 50
 lesson: |

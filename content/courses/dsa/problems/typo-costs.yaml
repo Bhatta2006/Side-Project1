@@ -1,0 +1,139 @@
+id: typo-costs
+title: Priced typo fixes
+concepts: [dp-edit-distance]
+difficulty: medium
+statement: |
+  A text editor can fix a typed word `a` into the intended word `b` one character at a time.
+  Inserting a character costs `I`, deleting one costs `D`, and replacing one character with
+  another costs `R`.
+
+  Print the cheapest total cost of turning `a` into `b`.
+input_format: |
+  The first line contains I, D and R. The second line contains a, the third b.
+output_format: The cheapest total cost.
+constraints:
+  - 1 ≤ I, D, R ≤ 1000
+  - 1 ≤ |a|, |b| ≤ 1000
+  - a and b contain only lowercase English letters
+examples:
+  - input: "1 1 5\nab\nba"
+    output: "2"
+    explanation: "A replace costs 5, so delete a and insert it at the end: 1 + 1 = 2. Replacing both letters would cost 10."
+  - input: "2 3 1\ncat\ncut"
+    output: "1"
+hints:
+  - "This is edit distance, but each operation has its own price. Which cells of the table change, and by how much?"
+  - "dp[i][j] = cheapest cost turning a[:i] into b[:j]. The edges are no longer i and j: erasing a[:i] costs D·i, and building b[:j] costs I·j."
+  - "On a mismatch take min(dp[i−1][j] + D, dp[i][j−1] + I, dp[i−1][j−1] + R). A replace may be worse than delete plus insert, and the minimum handles that."
+approach: |
+  Weighted edit distance. dp[i][j] is the cheapest cost to turn a[:i] into b[:j], with
+  dp[i][0] = D·i and dp[0][j] = I·j. Equal last characters copy dp[i−1][j−1]; otherwise take
+  the cheapest of delete (up + D), insert (left + I) and replace (diagonal + R). Two rows give
+  O(|a|·|b|) time and O(|b|) memory.
+reference: |
+  ins, dele, rep = map(int, input().split())
+  a = input().strip()
+  b = input().strip()
+  m = len(b)
+  prev = [ins * j for j in range(m + 1)]
+  for i in range(1, len(a) + 1):
+      x = a[i - 1]
+      cur = [dele * i] + [0] * m
+      for j in range(1, m + 1):
+          if x == b[j - 1]:
+              cur[j] = prev[j - 1]
+          else:
+              best = prev[j] + dele
+              t = cur[j - 1] + ins
+              if t < best:
+                  best = t
+              t = prev[j - 1] + rep
+              if t < best:
+                  best = t
+              cur[j] = best
+      prev = cur
+  print(prev[m])
+brute: |
+  from functools import lru_cache
+  ins, dele, rep = map(int, input().split())
+  a = input().strip()
+  b = input().strip()
+
+  @lru_cache(maxsize=None)
+  def go(i, j):
+      if i == len(a):
+          return ins * (len(b) - j)
+      if j == len(b):
+          return dele * (len(a) - i)
+      options = [dele + go(i + 1, j), ins + go(i, j + 1), rep + go(i + 1, j + 1)]
+      if a[i] == b[j]:
+          options.append(go(i + 1, j + 1))
+      return min(options)
+
+  print(go(0, 0))
+references:
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        long long I, D, R;
+        string a, b;
+        cin >> I >> D >> R >> a >> b;
+        int n = a.size(), m = b.size();
+        vector<long long> prev(m + 1), cur(m + 1);
+        for (int j = 0; j <= m; j++) prev[j] = I * j;
+        for (int i = 1; i <= n; i++) {
+            cur[0] = D * i;
+            for (int j = 1; j <= m; j++)
+                cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1]
+                                              : min({prev[j] + D, cur[j - 1] + I, prev[j - 1] + R});
+            swap(prev, cur);
+        }
+        cout << prev[m] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            long I = in.nextLong(), D = in.nextLong(), R = in.nextLong();
+            String a = in.next(), b = in.next();
+            int n = a.length(), m = b.length();
+            long[] prev = new long[m + 1], cur = new long[m + 1];
+            for (int j = 0; j <= m; j++) prev[j] = I * j;
+            for (int i = 1; i <= n; i++) {
+                cur[0] = D * i;
+                for (int j = 1; j <= m; j++)
+                    cur[j] = a.charAt(i - 1) == b.charAt(j - 1) ? prev[j - 1]
+                            : Math.min(prev[j] + D, Math.min(cur[j - 1] + I, prev[j - 1] + R));
+                long[] t = prev; prev = cur; cur = t;
+            }
+            System.out.println(prev[m]);
+        }
+    }
+generator: |
+  def cases(rng):
+      letters = "abcdefghijklmnopqrstuvwxyz"
+      yield "1 1 1\na\na"
+      yield "1 1 1\na\nb"
+      yield "1000 1000 1\n" + "a" * 1000 + "\n" + "b" * 1000
+      yield "1 1 1000\n" + "a" * 1000 + "\n" + "b" * 1000
+      yield "3 7 2\n" + "".join(rng.choice("ab") for _ in range(1000)) + "\n" + "".join(rng.choice("ab") for _ in range(1000))
+      yield "5 5 5\n" + "".join(rng.choice(letters) for _ in range(1000)) + "\n" + "".join(rng.choice(letters) for _ in range(1000))
+      yield "1000 1 1000\n" + "z" * 1000 + "\nz"
+      yield "1 1000 1000\nz\n" + "z" * 1000
+      for _ in range(4):
+          yield (f"{rng.randint(1, 20)} {rng.randint(1, 20)} {rng.randint(1, 40)}\n"
+                 + "".join(rng.choice("abc") for _ in range(rng.randint(1, 60))) + "\n"
+                 + "".join(rng.choice("abc") for _ in range(rng.randint(1, 60))))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          yield (f"{rng.randint(1, 5)} {rng.randint(1, 5)} {rng.randint(1, 9)}\n"
+                 + "".join(rng.choice("abc") for _ in range(rng.randint(1, 7))) + "\n"
+                 + "".join(rng.choice("abc") for _ in range(rng.randint(1, 7))))

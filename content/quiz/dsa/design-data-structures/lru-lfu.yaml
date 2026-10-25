@@ -1,0 +1,237 @@
+id: quiz:dsa:design-data-structures:lru-lfu
+family: lru-lfu
+concept: dsa:design-data-structures
+pattern: dsa:design-data-structures/lru-lfu
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: lru_behaviour
+  params:
+    cap:
+    - 2
+    - 3
+    keys:
+    - 1
+    - 4
+    ops:
+    - 7
+    - 10
+  reference: lru(ops, cap)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: evict in arrival order, ignoring gets
+  misconception: lru-fifo-not-lru
+- rule: a get does not count as a use
+  misconception: lru-get-no-refresh
+- rule: evict the most recently used key
+  misconception: lru-evict-most-recent
+- rule: an update of a stored key evicts another key
+  misconception: lru-evict-on-update
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which requirement points to a hash map plus a doubly linked list?
+  options:
+  - O(1) get and put, evicting the least recently used key when full
+  - Sorted iteration over the keys
+  - The k-th smallest key
+  - A random key in O(1)
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-sort-breaks-order
+  - top-k-direction
+  - pattern-queue-vs-linked-list
+  explanation: The map finds a node; the list reorders it in O(1).
+- id: roles
+  band: 1
+  format: mcq
+  prompt: In the LRU design, what does the hash map store?
+  options:
+  - For each key, its node in the linked list
+  - For each key, its position in an array
+  - The use count of each key
+  - Nothing; the list is enough
+  answer: 0
+  misconceptions:
+  - null
+  - confuse-index-value
+  - lru-fifo-not-lru
+  - pattern-queue-vs-linked-list
+  explanation: Finding the node is what makes moving it O(1).
+- id: get-use
+  band: 2
+  format: trace
+  prompt: Capacity 2. put 1, put 2, get 1, put 3. Which keys remain?
+  options:
+  - 1 and 3
+  - 2 and 3
+  - 1 and 2
+  - 3 only
+  answer: 0
+  misconceptions:
+  - null
+  - lru-fifo-not-lru
+  - lru-capacity-off-by-one
+  - lru-evict-most-recent
+  explanation: get 1 made key 1 recent, so key 2 left.
+- id: update
+  band: 2
+  format: trace
+  prompt: Capacity 2. put 1 1, put 2 2, put 1 10, put 3 3, get 1, get 2. What do the gets print?
+  options:
+  - 10 and −1
+  - −1 and 2
+  - 1 and −1
+  - 10 and 2
+  answer: 0
+  misconceptions:
+  - null
+  - lru-get-no-refresh
+  - lru-evict-on-update
+  - lru-capacity-off-by-one
+  explanation: The update made key 1 recent, so put 3 evicted key 2.
+- id: anchor
+  band: 3
+  format: trace
+  prompt: 'Capacity 2: put 1 1, put 2 2, get 1, put 3 3, get 2, put 4 4, get 1, get 3, get 4. What do the gets print?'
+  options:
+  - 1 −1 −1 3 4
+  - 1 2 −1 3 4
+  - 1 −1 1 −1 4
+  - 1 −1 −1 −1 4
+  answer: 0
+  misconceptions:
+  - null
+  - lru-fifo-not-lru
+  - lru-evict-most-recent
+  - lru-get-no-refresh
+  explanation: put 3 evicts 2 and put 4 evicts 1.
+- id: tail
+  band: 3
+  format: mcq
+  prompt: With the most recent node next to the head, where is the key to evict?
+  options:
+  - Just before the tail sentinel
+  - Just after the head sentinel
+  - In the middle
+  - Wherever the map says
+  answer: 0
+  misconceptions:
+  - null
+  - lru-evict-most-recent
+  - confuse-index-value
+  - pattern-queue-vs-linked-list
+  explanation: The back of the use order is the least recently used.
+- id: queue
+  band: 3
+  format: classify
+  prompt: Why does a hash map plus a queue of arrivals fail?
+  options:
+  - A get moves a key out of the middle, which a queue cannot do in O(1)
+  - Queues use too much memory
+  - Hash maps cannot be combined with queues
+  - It does not fail
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-queue-vs-linked-list
+  - lru-fifo-not-lru
+  explanation: Removal from the middle needs a doubly linked list.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: Time of one get in the hash map plus doubly linked list design?
+  options:
+  - O(1)
+  - O(capacity)
+  - O(log capacity)
+  - O(number of operations)
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - top-k-direction
+  - subsets-linear
+  explanation: One map lookup and a constant number of link changes.
+- id: full-check
+  band: 4
+  format: mcq
+  prompt: When does put evict?
+  options:
+  - When the key is new and the cache already holds cap keys
+  - On every put
+  - Only after inserting, once the cache holds cap + 2 keys
+  - Whenever the key is already stored
+  answer: 0
+  misconceptions:
+  - null
+  - lru-evict-on-update
+  - lru-capacity-off-by-one
+  - lru-evict-on-update
+  explanation: Only a new key makes the cache grow.
+- id: forget-map
+  band: 5
+  format: bug_spot
+  prompt: The eviction unlinks the node before the tail but does not delete its key from the map. What goes wrong?
+  options:
+  - A later get finds the stale node and returns a value that was evicted
+  - Nothing
+  - The list grows forever
+  - Every get returns −1
+  answer: 0
+  misconceptions:
+  - null
+  - missing-reset
+  - lru-capacity-off-by-one
+  - lru-get-no-refresh
+  explanation: The map and the list must hold the same keys.
+- id: lfu
+  band: 6
+  format: classify
+  prompt: Now evict the least frequently used key, ties by least recent. What changes?
+  options:
+  - Keep one LRU list per frequency and the smallest frequency in use
+  - Nothing
+  - Sort the keys by frequency on every get
+  - Rebuild a heap of all keys on every get
+  answer: 0
+  misconceptions:
+  - null
+  - lru-fifo-not-lru
+  - pattern-sort-breaks-order
+  - pattern-brute-force-default
+  explanation: Frequency chooses the list, recency chooses inside it, all O(1).
+- id: browser
+  band: 6
+  format: classify
+  prompt: Browser history with visit, back(k) and forward(k). Which structure gives O(1) operations?
+  options:
+  - An array, a cursor and a bound for the newest reachable page
+  - An LRU cache
+  - A heap of pages
+  - A queue of pages
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-queue-vs-linked-list
+  - top-k-direction
+  - lru-fifo-not-lru
+  explanation: A visit moves the bound back, so forward pages vanish without being deleted.
+status: provisional
+provenance:
+  origin: original

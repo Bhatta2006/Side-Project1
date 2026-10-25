@@ -1,0 +1,79 @@
+id: quiz:dsa:dp-edit-distance:wildcard-regex
+family: wildcard-regex
+concept: dsa:dp-edit-distance
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: star-rule
+  band: 2
+  format: mcq
+  prompt: Wildcard matching, p[j−1] is *. What is match[i][j]?
+  options:
+  - match[i][j−1] or match[i−1][j]
+  - match[i−1][j−1]
+  - match[i][j−2]
+  - 'false'
+  answer: 0
+  misconceptions:
+  - null
+  - wildcard-star-one-char
+  - pattern-wildcard-vs-regex-star
+  - dp-wrong-base-case
+  explanation: The star matches nothing, or it also swallows s[i−1].
+- id: empty-row
+  band: 3
+  format: mcq
+  prompt: For which patterns is match[0][j] true?
+  options:
+  - Only while p[:j] is all stars
+  - Every j
+  - Only j = 0
+  - Whenever p[j−1] is ?
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - wildcard-star-one-char
+  - wildcard-star-one-char
+  explanation: Only stars can match the empty string; ? needs exactly one character.
+- id: regex-star
+  band: 4
+  format: classify
+  prompt: In regex matching, a* appears in the pattern. How is it skipped?
+  options:
+  - Jump back two pattern positions (j − 2)
+  - Jump back one position
+  - It cannot be skipped
+  - Treat it like a wildcard star
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-wildcard-vs-regex-star
+  - pattern-wildcard-vs-regex-star
+  - pattern-wildcard-vs-regex-star
+  explanation: x* is one unit meaning zero or more x.
+- id: one-char
+  band: 4
+  format: trace
+  prompt: Does adceb match *a*b?
+  options:
+  - Yes, the second star matches dce
+  - No, a star matches one character
+  - No, the pattern is shorter
+  - Only with regex rules
+  answer: 0
+  misconceptions:
+  - null
+  - wildcard-star-one-char
+  - edit-position-compare
+  - pattern-wildcard-vs-regex-star
+  explanation: Stars may match any sequence, including the empty one.
+status: provisional
+provenance:
+  origin: original

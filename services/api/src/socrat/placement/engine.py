@@ -24,6 +24,7 @@ class PlacementState:
     asked: list[dict] = field(default_factory=list)  # {concept, item, correct}
     pending: dict | None = None
     seed: int = 0
+    language: str | None = None  # questions about other languages are skipped (D-1)
 
     def to_dict(self) -> dict:
         return self.__dict__.copy()
@@ -43,20 +44,28 @@ class PlacementState:
 
 
 def start(
-    catalog: Catalog, path: list[str], start_concept: str | None, seed: int
+    catalog: Catalog,
+    path: list[str],
+    start_concept: str | None,
+    seed: int,
+    language: str | None = None,
 ) -> PlacementState:
     if start_concept is None:
         return PlacementState(path=path, lo=0, hi=0, seed=seed)  # Absolute beginner.
     anchor = path.index(start_concept) if start_concept in path else len(path) // 2
     # Self-report sets where to start probing, not where the learner is placed.
-    state = PlacementState(path=path, lo=0, hi=len(path), seed=seed)
+    state = PlacementState(path=path, lo=0, hi=len(path), seed=seed, language=language)
     state.pending = _probe(catalog, state, anchor)
     return state
 
 
 def _item(catalog: Catalog, state: PlacementState, concept: str) -> QuizItem:
     used = {x["item"] for x in state.asked}
-    items = [q for q in catalog.concept(concept).quiz if q.id not in used]
+    items = [
+        q
+        for q in catalog.concept(concept).quiz
+        if q.id not in used and (state.language is None or q.fits(state.language))
+    ]
     rng = random.Random(f"{state.seed}:{concept}:{len(state.asked)}")
     items.sort(key=lambda q: (abs(q.difficulty - 2), q.id))
     return rng.choice(items[:2]) if items else catalog.concept(concept).quiz[0]
@@ -72,7 +81,7 @@ def question(catalog: Catalog, state: PlacementState) -> QuizItem | None:
     if state.pending is None:
         return None
     concept = catalog.concept(state.pending["concept"])
-    return next(q for q in concept.quiz if q.id == state.pending["item"])
+    return next(q for q in concept.quiz if q.matches(state.pending["item"]))
 
 
 def seed_of(state: PlacementState) -> str:
@@ -106,6 +115,15 @@ def answer(catalog: Catalog, state: PlacementState, choice: int) -> bool:
     return correct
 
 
-def result(state: PlacementState) -> dict[str, bool]:
-    """Concept → believed known. Concepts in an unresolved gap are treated as unknown."""
-    return {concept: index < state.frontier for index, concept in enumerate(state.path)}
+def result(state: PlacementState, own: set[str] | None = None) -> dict[str, bool]:
+    """Concept → believed known. Concepts in an unresolved gap are treated as unknown.
+
+    Concepts in ``own`` (the enrolled course's own topics) are only skipped when a question
+    on them was answered correctly; a few answers must not finish the course (C-1).
+    """
+    confirmed = {x["concept"] for x in state.asked if x["correct"]}
+    return {
+        concept: index < state.frontier
+        and (own is None or concept not in own or concept in confirmed)
+        for index, concept in enumerate(state.path)
+    }

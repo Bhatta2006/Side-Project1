@@ -107,11 +107,11 @@ lesson: |
 
   An index identifies a current position, not a permanent item identity. Separate building a new filtered list from modifying the list you are iterating. A new list makes the invariant simple: it contains exactly the accepted items from the processed prefix, in order.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Check empty lists and one-item lists before reading endpoints. A copied outer list can still share inner lists. Python negative indices are convenient but can hide an unintended −1 result from a failed search.
 
-  Indexing is O(1), a full scan is O(n), and insertion or deletion near the front of an array-backed list is O(n).
+  Reading one position by index is instant. Looking through the whole list, or inserting or removing near the front, takes longer as the list grows, because other items have to move or be checked.
 
   ### Check your understanding
 
@@ -170,7 +170,8 @@ quiz:
     answer: 0
     explanation: Indexes start at 0, so the last of n elements is at n − 1.
     difficulty: 1
-  - id: neighbours
+  - id: list-neighbours
+    former_ids: [neighbours]
     kind: mcq
     prompt: You compare each element with the previous one using a[i] and a[i - 1]. Where should i start?
     options: ["1", "0", "-1", "n"]

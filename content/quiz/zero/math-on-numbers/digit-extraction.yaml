@@ -1,0 +1,62 @@
+id: quiz:zero:math-on-numbers:digit-extraction
+family: digit-extraction
+concept: zero:math-on-numbers
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: skip-first
+  band: 2
+  format: trace
+  prompt: Counting digits with while n > 9 instead of while n > 0. What does it report for 4729?
+  options:
+  - '3'
+  - '4'
+  - '5'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - digit-loop-stops-early
+  - off-by-one-output
+  - digit-loop-stops-early
+  explanation: It stops while one digit is still left.
+- id: zero
+  band: 3
+  format: mcq
+  prompt: How many digits does the while n > 0 loop count for n = 0?
+  options:
+  - 0, so 0 needs a special case
+  - '1'
+  - It loops forever
+  - It crashes
+  answer: 0
+  misconceptions:
+  - null
+  - digit-count-vs-value
+  - infinite-loop-condition
+  - syntax-delimiters
+  explanation: The loop never runs, but 0 has one digit.
+- id: reverse
+  band: 4
+  format: trace
+  prompt: reverse = d * 10 + reverse is used instead of reverse * 10 + d. What does it give for 123?
+  options:
+  - '60'
+  - '321'
+  - '123'
+  - '6'
+  answer: 0
+  misconceptions:
+  - null
+  - digit-reverse-order
+  - digit-reverse-order
+  - count-vs-sum
+  explanation: '30, then 20 + 30 = 50, then 10 + 50 = 60: each digit is multiplied by 10 only once.'
+status: provisional
+provenance:
+  origin: original

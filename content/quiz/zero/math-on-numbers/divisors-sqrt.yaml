@@ -1,0 +1,233 @@
+id: quiz:zero:math-on-numbers:divisors-sqrt
+family: divisors-sqrt
+concept: zero:math-on-numbers
+pattern: zero:math-on-numbers/divisors-sqrt
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+generator:
+  template: divisor_pairs
+  params:
+    n:
+    - 12
+    - 200
+    root:
+    - 3
+    - 14
+  reference: count_brute(n)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: add both partners even when they are the same number
+  misconception: div-square-twice
+- rule: stop before the square root
+  misconception: div-sqrt-bound-strict
+- rule: count only the divisors up to the square root
+  misconception: div-no-partner
+- rule: add the divisors instead of counting them
+  misconception: count-vs-sum
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is answered with divisor pairs up to the square root?
+  options:
+  - How many divisors does 10^12 have?
+  - What is the last digit of n?
+  - What is the GCD of 12 and 18?
+  - What is the 10th Fibonacci number?
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-root-vs-all
+  - pattern-root-vs-all
+  - pattern-brute-force-default
+  explanation: A trillion candidates shrink to a million.
+- id: partner
+  band: 1
+  format: mcq
+  prompt: 3 divides 48. Which other divisor does it reveal?
+  options:
+  - '16'
+  - '6'
+  - '45'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - double-count
+  - div-no-partner
+  - div-square-twice
+  explanation: 48 // 3 = 16.
+- id: bound
+  band: 2
+  format: mcq
+  prompt: For n = 50, what is the last i the loop tests?
+  options:
+  - '7'
+  - '50'
+  - '25'
+  - '8'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-root-vs-all
+  - pattern-root-vs-all
+  - div-sqrt-bound-strict
+  explanation: 7 · 7 = 49 ≤ 50 and 8 · 8 = 64 > 50.
+- id: count-20
+  band: 2
+  format: trace
+  prompt: How many divisors does 20 have?
+  options:
+  - '6'
+  - '3'
+  - '5'
+  - '42'
+  answer: 0
+  misconceptions:
+  - null
+  - div-no-partner
+  - div-forget-self
+  - count-vs-sum
+  explanation: 1, 2, 4, 5, 10 and 20.
+- id: square
+  band: 3
+  format: trace
+  prompt: Adding 2 for every divisor i found up to the root. What is reported for 36?
+  options:
+  - '10'
+  - '9'
+  - '5'
+  - '91'
+  answer: 0
+  misconceptions:
+  - null
+  - div-square-twice
+  - div-no-partner
+  - count-vs-sum
+  explanation: 6 is counted twice; the true count is 9.
+- id: strict
+  band: 3
+  format: trace
+  prompt: The loop uses while i * i < n. What does it report for n = 49?
+  options:
+  - 2, missing the 7
+  - '3'
+  - '4'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - div-sqrt-bound-strict
+  - div-square-twice
+  - div-no-partner
+  explanation: It stops at i = 6 and never tries 7.
+- id: cost
+  band: 4
+  format: complexity
+  prompt: How many steps does the loop take for n around 10^12?
+  options:
+  - About 10^6
+  - About 10^12
+  - About 12
+  - About 10^3
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-root-vs-all
+  - digit-count-vs-value
+  - pattern-root-vs-all
+  explanation: The loop runs up to √n.
+- id: sum
+  band: 4
+  format: trace
+  prompt: What is the sum of the divisors of 12?
+  options:
+  - '28'
+  - '6'
+  - '16'
+  - '15'
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - div-forget-self
+  - div-no-partner
+  explanation: 1 + 2 + 3 + 4 + 6 + 12.
+- id: perfect
+  band: 5
+  format: classify
+  prompt: A perfect number equals the sum of its divisors other than itself. How do you test n?
+  options:
+  - Sum the divisor pairs up to √n, subtract n, compare with n
+  - Check every number up to n
+  - Use Euclid's GCD
+  - Count the digits
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-root-vs-all
+  - pattern-brute-force-default
+  - digit-count-vs-value
+  explanation: 28 = 1 + 2 + 4 + 7 + 14.
+- id: three
+  band: 5
+  format: classify
+  prompt: Which numbers have exactly three divisors?
+  options:
+  - Squares of primes, such as 4, 9 and 25
+  - All primes
+  - All squares
+  - Even numbers
+  answer: 0
+  misconceptions:
+  - null
+  - div-forget-self
+  - div-square-twice
+  - pattern-brute-force-default
+  explanation: 1, p and p².
+- id: kth
+  band: 6
+  format: classify
+  prompt: The k-th smallest divisor of n in O(√n). In what order do the divisors come out?
+  options:
+  - The small ones in increasing order, then their partners in the reverse order
+  - Already all sorted
+  - Largest first
+  - In random order
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-sort-breaks-order
+  - order-matters-assumption
+  - div-no-partner
+  explanation: Partners of increasing i decrease.
+- id: overflow
+  band: 6
+  format: classify
+  prompt: In C++, n is about 10^12 and i is an int. What goes wrong in i * i <= n?
+  options:
+  - i * i overflows 32 bits once i passes about 46341
+  - Nothing
+  - The loop stops too early
+  - The modulo fails
+  answer: 0
+  misconceptions:
+  - null
+  - div-sqrt-bound-strict
+  - div-sqrt-bound-strict
+  - mod-wrong-modulus
+  explanation: Use 64-bit integers for i.
+status: provisional
+provenance:
+  origin: original

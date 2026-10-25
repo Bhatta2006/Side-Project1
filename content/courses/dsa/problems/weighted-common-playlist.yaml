@@ -1,0 +1,127 @@
+id: weighted-common-playlist
+title: Shared playlist
+concepts: [dp-lcs]
+difficulty: medium
+statement: |
+  Two friends each have a playlist: a list of song ratings, `a` of length n and `b` of length
+  m. They want one shared playlist that both can accept: a sequence of ratings that appears
+  **in order** (not necessarily consecutively) in both lists.
+
+  The shared playlist scores the **sum** of its ratings. Print the largest possible score. An
+  empty playlist scores 0.
+input_format: |
+  The first line contains n and m. The second line contains a_1 … a_n, the third b_1 … b_m.
+output_format: The largest score.
+constraints:
+  - 1 ≤ n, m ≤ 1000
+  - 1 ≤ a_i, b_j ≤ 10^6
+examples:
+  - input: "4 3\n5 1 9 2\n9 5 2"
+    output: "11"
+    explanation: "Both lists contain 9 then 2 in order (score 11), and 5 then 2 (score 7). 5 and 9 appear in opposite orders, so they cannot both be used."
+  - input: "2 2\n1 2\n3 4"
+    output: "0"
+hints:
+  - "This is a longest common subsequence, but each matched song is worth its rating instead of 1. Which step of the LCS table changes?"
+  - "dp[i][j] = best score using the first i songs of a and the first j of b. On a mismatch, keep the better of dropping a song from either list."
+  - "On a match, use dp[i − 1][j − 1] + a[i − 1]; ratings are positive, so taking a match never hurts. Scores can exceed 32 bits."
+approach: |
+  Weighted LCS. dp[i][j] is the best score for the prefixes a[:i] and b[:j], with row 0 and
+  column 0 equal to 0. If a[i − 1] == b[j − 1], the pair can end the shared playlist:
+  dp[i − 1][j − 1] + a[i − 1]. Otherwise drop one song: max(dp[i − 1][j], dp[i][j − 1]).
+  Because ratings are positive, taking a match never hurts. Two rows give O(n·m) time and
+  O(m) memory; the score can reach 10^9, so use 64-bit integers.
+reference: |
+  n, m = map(int, input().split())
+  a = list(map(int, input().split()))
+  b = list(map(int, input().split()))
+  prev = [0] * (m + 1)
+  for i in range(1, n + 1):
+      cur = [0] * (m + 1)
+      x = a[i - 1]
+      for j in range(1, m + 1):
+          if x == b[j - 1]:
+              cur[j] = prev[j - 1] + x
+          else:
+              cur[j] = prev[j] if prev[j] > cur[j - 1] else cur[j - 1]
+      prev = cur
+  print(prev[m])
+brute: |
+  from itertools import combinations
+  n, m = map(int, input().split())
+  a = list(map(int, input().split()))
+  b = list(map(int, input().split()))
+
+  def inside(seq, t):
+      it = iter(t)
+      return all(x in it for x in seq)
+
+  best = 0
+  for size in range(1, n + 1):
+      for keep in combinations(range(n), size):
+          seq = [a[i] for i in keep]
+          if inside(seq, b):
+              best = max(best, sum(seq))
+  print(best)
+references:
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, m;
+        cin >> n >> m;
+        vector<long long> a(n), b(m);
+        for (auto& x : a) cin >> x;
+        for (auto& x : b) cin >> x;
+        vector<long long> prev(m + 1, 0), cur(m + 1, 0);
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j <= m; j++)
+                cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1] + a[i - 1] : max(prev[j], cur[j - 1]);
+            swap(prev, cur);
+        }
+        cout << prev[m] << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            int n = Integer.parseInt(st.nextToken()), m = Integer.parseInt(st.nextToken());
+            long[] a = new long[n], b = new long[m];
+            st = new StringTokenizer(in.readLine());
+            for (int i = 0; i < n; i++) a[i] = Long.parseLong(st.nextToken());
+            st = new StringTokenizer(in.readLine());
+            for (int j = 0; j < m; j++) b[j] = Long.parseLong(st.nextToken());
+            long[] prev = new long[m + 1], cur = new long[m + 1];
+            for (int i = 1; i <= n; i++) {
+                for (int j = 1; j <= m; j++)
+                    cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1] + a[i - 1] : Math.max(prev[j], cur[j - 1]);
+                long[] t = prev; prev = cur; cur = t;
+            }
+            System.out.println(prev[m]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1\n7\n7"
+      yield "1 1\n7\n8"
+      yield "3 3\n1 2 3\n3 2 1"
+      n = m = 1000
+      yield f"{n} {m}\n" + " ".join(str(rng.randint(1, 5)) for _ in range(n)) + "\n" + " ".join(str(rng.randint(1, 5)) for _ in range(m))
+      yield f"{n} {m}\n" + " ".join("1000000" for _ in range(n)) + "\n" + " ".join("1000000" for _ in range(m))
+      yield f"{n} {m}\n" + " ".join(str(rng.randint(1, 10**6)) for _ in range(n)) + "\n" + " ".join(str(rng.randint(1, 10**6)) for _ in range(m))
+      yield f"{n} {m}\n" + " ".join(str(rng.randint(1, 30)) for _ in range(n)) + "\n" + " ".join(str(rng.randint(1, 30)) for _ in range(m))
+      for _ in range(4):
+          n, m = rng.randint(1, 60), rng.randint(1, 60)
+          yield f"{n} {m}\n" + " ".join(str(rng.randint(1, 9)) for _ in range(n)) + "\n" + " ".join(str(rng.randint(1, 9)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n, m = rng.randint(1, 8), rng.randint(1, 8)
+          yield f"{n} {m}\n" + " ".join(str(rng.randint(1, 6)) for _ in range(n)) + "\n" + " ".join(str(rng.randint(1, 6)) for _ in range(m))

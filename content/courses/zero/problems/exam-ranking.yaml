@@ -1,0 +1,127 @@
+id: exam-ranking
+title: Exam ranking
+concepts: [searching-and-sorting]
+difficulty: easy
+statement: |
+  A teacher has the exam marks of `n` students and wants the results board in order: the
+  **highest mark first**, and students with the same mark in **alphabetical order** of their
+  names.
+
+  Print the names in board order, one per line.
+input_format: |
+  The first line contains n. Each of the next n lines contains a name (lowercase letters,
+  all different) and a mark.
+output_format: The n names, one per line, in board order.
+constraints:
+  - 1 ≤ n ≤ 10^5
+  - names have 1 to 10 lowercase letters
+  - 0 ≤ mark ≤ 100
+examples:
+  - input: "4\nmia 82\nali 95\nzoe 82\nben 70"
+    output: "ali\nmia\nzoe\nben"
+    explanation: "ali has the top mark. mia and zoe tie on 82, so mia comes first alphabetically."
+  - input: "1\nkai 0"
+    output: "kai"
+hints:
+  - "Sort once, with a rule that covers both the mark and the name."
+  - "In Python, the key (-mark, name) sorts marks from high to low and names from A to Z."
+  - "In C++ and Java, write a comparator: a higher mark comes first; for equal marks, the smaller name comes first."
+approach: |
+  A key sort with a tie rule. Sort by the pair (−mark, name): negating the mark puts higher
+  marks first, and the name breaks ties alphabetically. Reversing the whole sort instead would
+  also reverse the names, which is wrong. One sort of n items: O(n log n).
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  rows = [(data[1 + 2 * i], int(data[2 + 2 * i])) for i in range(n)]
+  rows.sort(key=lambda r: (-r[1], r[0]))
+  sys.stdout.write("\n".join(name for name, _ in rows) + "\n")
+brute: |
+  n = int(input())
+  rows = []
+  for _ in range(n):
+      name, mark = input().split()
+      rows.append([name, int(mark)])
+  for i in range(n):
+      for j in range(n - 1 - i):
+          a, b = rows[j], rows[j + 1]
+          if a[1] < b[1] or (a[1] == b[1] and a[0] > b[0]):
+              rows[j], rows[j + 1] = b, a
+  for name, _ in rows:
+      print(name)
+references:
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        ios::sync_with_stdio(false);
+        cin.tie(nullptr);
+        int n;
+        cin >> n;
+        vector<pair<string, int>> rows(n);
+        for (auto& r : rows) cin >> r.first >> r.second;
+        sort(rows.begin(), rows.end(), [](const pair<string, int>& a, const pair<string, int>& b) {
+            if (a.second != b.second) return a.second > b.second;
+            return a.first < b.first;
+        });
+        string out;
+        for (auto& r : rows) out += r.first + "\n";
+        cout << out;
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            int n = Integer.parseInt(in.readLine().trim());
+            String[] names = new String[n];
+            int[] marks = new int[n];
+            Integer[] order = new Integer[n];
+            for (int i = 0; i < n; i++) {
+                StringTokenizer st = new StringTokenizer(in.readLine());
+                names[i] = st.nextToken();
+                marks[i] = Integer.parseInt(st.nextToken());
+                order[i] = i;
+            }
+            Arrays.sort(order, (a, b) -> marks[a] != marks[b] ? marks[b] - marks[a] : names[a].compareTo(names[b]));
+            StringBuilder out = new StringBuilder();
+            for (int i : order) out.append(names[i]).append('\n');
+            System.out.print(out);
+        }
+    }
+generator: |
+  def name(i):
+      s = ""
+      i += 1
+      while i:
+          i, r = divmod(i - 1, 26)
+          s = chr(97 + r) + s
+      return s
+
+  def case(rng, n, lo, hi):
+      ids = rng.sample(range(26 ** 4), n)
+      return f"{n}\n" + "\n".join(f"{name(i)} {rng.randint(lo, hi)}" for i in ids)
+
+  def cases(rng):
+      yield "1\na 100"
+      yield "3\nc 5\nb 5\na 5"
+      yield "2\nzz 0\naa 100"
+      yield case(rng, 100000, 0, 100)
+      yield case(rng, 100000, 50, 50)
+      yield case(rng, 100000, 0, 1)
+      for _ in range(4):
+          yield case(rng, rng.randint(1, 40), 0, 10)
+small_generator: |
+  def cases(rng):
+      letters = "abcdefgh"
+      for _ in range(300):
+          n = rng.randint(1, 8)
+          names = rng.sample([a + b for a in letters for b in letters], n)
+          yield f"{n}\n" + "\n".join(f"{x} {rng.randint(0, 5)}" for x in names)

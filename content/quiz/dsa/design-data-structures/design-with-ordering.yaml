@@ -1,0 +1,63 @@
+id: quiz:dsa:design-data-structures:design-with-ordering
+family: design-with-ordering
+concept: dsa:design-data-structures
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: past
+  band: 2
+  format: trace
+  prompt: set foo bar at time 1, set foo baz at time 4. What does get foo 3 return?
+  options:
+  - bar
+  - baz
+  - '-'
+  - bar baz
+  answer: 0
+  misconceptions:
+  - null
+  - design-latest-only
+  - stop-after-first
+  - trace-step-slip
+  explanation: The last set at or before 3 was at time 1.
+- id: bisect
+  band: 3
+  format: mcq
+  prompt: A key's set times are 1 4 9. Which index answers get at time 4?
+  options:
+  - 1, which is bisect_right(times, 4) − 1
+  - 0, which is bisect_left(times, 4) − 1
+  - '2'
+  - None
+  answer: 0
+  misconceptions:
+  - null
+  - lower-vs-upper-bound
+  - off-by-one-output
+  - design-latest-only
+  explanation: A set at exactly time t counts.
+- id: sorted
+  band: 4
+  format: classify
+  prompt: Why does each key's history never need sorting?
+  options:
+  - Set times only increase, so appending keeps the list in order
+  - Python sorts lists automatically
+  - The values are sorted
+  - It does need sorting
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-needs-sorted-input
+  - confuse-index-value
+  - pattern-sort-breaks-order
+  explanation: Binary search needs order, and the input already provides it.
+status: provisional
+provenance:
+  origin: original

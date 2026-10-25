@@ -1,0 +1,124 @@
+concept: zero:searching-and-sorting
+pattern: zero:searching-and-sorting/simple-sorts
+concept_version: 1.0.1
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the simple sorts pattern pack (syllabus expansion, Phase 4).
+rollback: remove content/atoms/zero/searching-and-sorting/simple-sorts.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: sorts-worked
+  kind: worked
+  title: 'Worked: bubble sort on 5 1 4 2 8'
+  objective: Trace bubble sort pass by pass.
+  seconds: 100
+  body: 'Pass 1 swaps 5 with 1, then with 4, then with 2, and leaves 8: the list is 1 4 2 5 8. Pass 2
+    swaps 4 with 2: 1 2 4 5 8. Pass 3 makes no swaps, so the sort stops. Each pass moved the largest
+    value still out of place to the end of the unsorted part.'
+  why: A pass with no swaps proves every neighbouring pair is in order.
+- id: sorts-faded
+  kind: faded
+  title: 'Your turn: 3 1 2'
+  objective: Trace the passes yourself.
+  seconds: 90
+  body: Bubble sort, ascending, on 3 1 2.
+  steps:
+  - state: Pass 1 compares 3 with 1.
+    prompt: What happens?
+    options:
+    - They swap, giving 1 3 2
+    - Nothing
+    - They swap, giving 3 2 1
+    answer: 0
+    explanation: 3 > 1 is out of order.
+  - state: Pass 1 then compares 3 with 2.
+    prompt: What is the list after pass 1?
+    options:
+    - 1 2 3
+    - 1 3 2
+    - 2 1 3
+    answer: 0
+    explanation: 3 > 2, so they swap too.
+  - state: Pass 2 compares 1 with 2 and makes no swaps.
+    prompt: What does the sort do?
+    options:
+    - Stops; the list is sorted
+    - Runs another pass
+    - Swaps 1 and 2
+    answer: 0
+    explanation: No swaps means sorted.
+- id: sorts-visualizer
+  kind: visualizer
+  title: 'Step through: why one pass is not enough'
+  objective: See how far a small value moves per pass.
+  seconds: 100
+  body: The list 2 3 4 1, sorted by bubble passes.
+  steps:
+  - state: Pass 1 compares 2-3 and 3-4 (no swaps), then swaps 4 and 1.
+    prompt: Where is the 1 after pass 1?
+    options:
+    - One step left, at index 2
+    - At the front
+    - At the end
+    answer: 0
+    explanation: The list is 2 3 1 4.
+  - state: Each pass moves a small value at most one step left.
+    prompt: How many passes until the 1 reaches the front?
+    options:
+    - '3'
+    - '1'
+    - '2'
+    answer: 0
+    explanation: It starts three steps from the front.
+  - state: Big values move all the way right in one pass.
+    prompt: Why does that happen?
+    options:
+    - The big value is swapped with each smaller neighbour as the pass walks right
+    - Passes start from the right
+    - Big values are never compared
+    answer: 0
+    explanation: The pass carries it along.
+- id: sorts-micro
+  kind: micro
+  title: 'Pitfall: one pass is not a sort'
+  objective: Repeat passes until nothing moves.
+  seconds: 70
+  misconception: sort-pass-equals-sorted
+  body: 'A single left-to-right pass of neighbour swaps carries the largest value to the end, but a
+    small value moves only one step left: 5 1 4 2 8 becomes 1 4 2 5 8, with 2 still after 4. Repeat
+    the pass, up to n − 1 times, and stop early when a pass makes no swaps.'
+  why: Each pass fixes one more value at the end, not the whole list.
+- id: sorts-classify
+  kind: classify
+  title: Which tool?
+  objective: Pick the right searching or sorting tool.
+  seconds: 80
+  body: For each task, choose the best-fitting approach.
+  steps:
+  - state: Find 42 in a sorted list of a million numbers.
+    prompt: Which approach?
+    options:
+    - Binary search
+    - Linear search
+    - Bubble sort first
+    answer: 0
+    explanation: About 20 looks.
+  - state: Sort students by score, highest first, ties by name.
+    prompt: Which approach?
+    options:
+    - The built-in sort with a key that includes the tie rule
+    - Bubble sort by score only
+    - Binary search
+    answer: 0
+    explanation: The key carries both rules.
+  - state: Show the list after two passes of a hand-written sort that swaps neighbours.
+    prompt: Which sort is this?
+    options:
+    - Bubble sort
+    - Selection sort
+    - Insertion sort
+    answer: 0
+    explanation: Neighbour swaps in passes are bubble sort.

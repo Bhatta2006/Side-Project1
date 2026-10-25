@@ -97,7 +97,20 @@ def test_repository_families_are_provisional_original_and_unreviewed(catalog):
     } <= set(catalog.quiz_families)
     for family in catalog.quiz_families.values():
         assert family.status == "provisional" and family.provenance.review is None
-        assert family.provenance.origin == "original" and family.generator is not None
+        assert family.provenance.origin == "original"
+        if family.pattern:
+            # A pattern's family gets its answers from executed reference code.
+            assert family.generator is not None, family.id
+        elif family.generator is None:
+            # A secondary family may be static; unreviewed, its items never count as mastery
+            # evidence, and every distractor still names the misconception it tests.
+            assert len(family.items) >= 3, family.id
+            assert all(
+                t is not None
+                for i in family.items
+                for k, t in enumerate(i.misconceptions)
+                if k != i.answer
+            ), family.id
 
 
 def test_generator_template_file_must_exist(tmp_path, catalog, taxonomy):
@@ -179,10 +192,13 @@ def test_pattern_quiz_family_must_resolve_to_a_family_for_that_pattern(tmp_path,
 
 def test_legacy_items_are_wrapped_read_only_with_global_keys_and_bands(catalog):
     items = quizbank.legacy_items(catalog)
-    assert len(items) == 284
-    assert len({i.key for i in items}) == 284
+    embedded = [q for c in catalog.concepts.values() for q in c.quiz]
+    assert len(items) == len(embedded) >= 284
+    assert len({i.key for i in items}) == len(items)
     assert all(i.status == "provisional" for i in items)
-    assert Counter(i.format for i in items) == {"mcq": 248, "output_prediction": 34, "bug_spot": 2}
+    assert Counter(i.format for i in items) == Counter(
+        quizbank.LEGACY_FORMAT[q.kind] for q in embedded
+    )
     for item in items:
         expected = quizbank.BAND_FOR_DIFFICULTY[item.difficulty]
         if item.languages:

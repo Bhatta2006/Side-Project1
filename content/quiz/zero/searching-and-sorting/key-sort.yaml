@@ -1,0 +1,62 @@
+id: quiz:zero:searching-and-sorting:key-sort
+family: key-sort
+concept: zero:searching-and-sorting
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: tie
+  band: 2
+  format: trace
+  prompt: Sorting pear fig apple kiwi date with key (length, word). What is the result?
+  options:
+  - fig date kiwi pear apple
+  - fig pear kiwi date apple
+  - apple date fig kiwi pear
+  - fig kiwi date pear apple
+  answer: 0
+  misconceptions:
+  - null
+  - sort-tie-left-to-chance
+  - sort-confuse-algorithms
+  - trace-step-slip
+  explanation: Length first, then alphabetical among the four-letter words.
+- id: stable
+  band: 3
+  format: mcq
+  prompt: Python sorts pear fig apple kiwi date with key=len only. Why do pear, kiwi and date stay in that order?
+  options:
+  - Python's sort is stable, so ties keep their input order
+  - They are already alphabetical
+  - Python sorts ties randomly
+  - len breaks ties alphabetically
+  answer: 0
+  misconceptions:
+  - null
+  - sort-tie-left-to-chance
+  - sort-tie-left-to-chance
+  - sort-tie-left-to-chance
+  explanation: C++'s std::sort makes no such promise.
+- id: descending
+  band: 4
+  format: classify
+  prompt: Sort students by score, highest first, ties by name A to Z. Which Python key works?
+  options:
+  - 'key=lambda s: (-s.score, s.name)'
+  - 'key=lambda s: (s.score, s.name), reverse=True'
+  - 'key=lambda s: s.score'
+  - 'key=lambda s: (s.name, -s.score)'
+  answer: 0
+  misconceptions:
+  - null
+  - sort-wrong-direction
+  - sort-tie-left-to-chance
+  - order-matters-assumption
+  explanation: reverse=True would also reverse the names.
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,124 @@
+id: bundle-count
+title: Bundles of stickers
+concepts: [knapsack-unbounded]
+difficulty: medium
+statement: |
+  A shop sells sticker packs in `n` different sizes; size i holds `s_i` stickers, and there is
+  an unlimited supply of every size. You want exactly `T` stickers, and you can carry at most
+  `K` packs.
+
+  Two bundles are the same if they contain the same number of packs of every size; the order
+  you pick them up does not matter. Print the number of different bundles of **at most K
+  packs** with exactly T stickers in total, modulo 10^9 + 7.
+input_format: |
+  The first line contains n, T and K. The second line contains the n distinct sizes s_i.
+output_format: The number of bundles, modulo 10^9 + 7.
+constraints:
+  - 1 ≤ n ≤ 20
+  - 1 ≤ T ≤ 500
+  - 1 ≤ K ≤ 50
+  - 1 ≤ s_i ≤ 500, all distinct
+examples:
+  - input: "3 6 3\n1 2 3"
+    output: "3"
+    explanation: "With at most 3 packs: {3, 3}, {2, 2, 2} and {1, 2, 3}. Bundles such as {1, 1, 2, 2} reach 6 stickers but need 4 packs."
+  - input: "2 4 1\n1 2"
+    output: "0"
+hints:
+  - "Without the pack limit this is counting combinations: sizes in the outer loop. What extra number must the state remember to respect K?"
+  - "Let ways[k][t] be the number of bundles of exactly k packs with t stickers, using the sizes seen so far."
+  - "For each size s, for k from 1 to K, for t from s to T: ways[k][t] += ways[k − 1][t − s]. Going up in k lets the same size be added again. Sum ways[k][T] for k = 0..K."
+approach: |
+  Count combinations with an extra dimension for the number of packs. ways[k][t] = bundles of
+  exactly k packs and t stickers using the sizes processed so far, with ways[0][0] = 1. Sizes
+  go in the outer loop so each multiset is built in one fixed order. For a size s, raising k
+  from 1 to K and reading ways[k − 1][t − s], which may already contain s, allows several
+  packs of the same size. The answer is the sum of ways[k][T] over k ≤ K. O(n·K·T) time.
+reference: |
+  MOD = 10**9 + 7
+  n, T, K = map(int, input().split())
+  sizes = list(map(int, input().split()))
+  ways = [[0] * (T + 1) for _ in range(K + 1)]  # ways[k][t]: bundles of k packs, t stickers
+  ways[0][0] = 1
+  for s in sizes:  # sizes outer: each bundle is built in one fixed order
+      for k in range(1, K + 1):  # upwards in k: the same size can be added again
+          prev, cur = ways[k - 1], ways[k]
+          for t in range(s, T + 1):
+              cur[t] = (cur[t] + prev[t - s]) % MOD
+  print(sum(ways[k][T] for k in range(K + 1)) % MOD)
+brute: |
+  n, T, K = map(int, input().split())
+  sizes = list(map(int, input().split()))
+
+  def count(i, left, packs):
+      if left == 0:
+          return 1
+      if i == n or packs == 0:
+          return 0
+      total, k = 0, 0
+      while k <= packs and k * sizes[i] <= left:
+          total += count(i + 1, left - k * sizes[i], packs - k)
+          k += 1
+      return total
+
+  print(count(0, T, K) % (10**9 + 7))
+references:
+  cpp: |
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        const long long MOD = 1000000007;
+        int n, T, K;
+        cin >> n >> T >> K;
+        vector<int> sizes(n);
+        for (auto& s : sizes) cin >> s;
+        // ways[k][t]: bundles of exactly k packs with t stickers
+        vector<vector<long long>> ways(K + 1, vector<long long>(T + 1, 0));
+        ways[0][0] = 1;
+        for (int s : sizes)
+            for (int k = 1; k <= K; k++)
+                for (int t = s; t <= T; t++) ways[k][t] = (ways[k][t] + ways[k - 1][t - s]) % MOD;
+        long long total = 0;
+        for (int k = 0; k <= K; k++) total = (total + ways[k][T]) % MOD;
+        cout << total << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            final long MOD = 1_000_000_007L;
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt(), T = in.nextInt(), K = in.nextInt();
+            int[] sizes = new int[n];
+            for (int i = 0; i < n; i++) sizes[i] = in.nextInt();
+            long[][] ways = new long[K + 1][T + 1];  // ways[k][t]: bundles of k packs, t stickers
+            ways[0][0] = 1;
+            for (int s : sizes)
+                for (int k = 1; k <= K; k++)
+                    for (int t = s; t <= T; t++) ways[k][t] = (ways[k][t] + ways[k - 1][t - s]) % MOD;
+            long total = 0;
+            for (int k = 0; k <= K; k++) total = (total + ways[k][T]) % MOD;
+            System.out.println(total);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1 1\n1"
+      yield "1 5 4\n1"
+      yield "1 500 50\n10"
+      yield "2 500 50\n1 2"
+      yield "20 500 50\n" + " ".join(map(str, range(1, 21)))
+      yield "20 500 50\n" + " ".join(map(str, rng.sample(range(1, 60), 20)))
+      yield "20 499 50\n" + " ".join(str(2 * x) for x in rng.sample(range(1, 100), 20))
+      yield "20 500 25\n" + " ".join(map(str, rng.sample(range(1, 501), 20)))
+      for _ in range(4):
+          n = rng.randint(1, 20)
+          yield f"{n} {rng.randint(1, 500)} {rng.randint(1, 50)}\n" + " ".join(map(str, rng.sample(range(1, 80), n)))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 4)
+          yield f"{n} {rng.randint(1, 15)} {rng.randint(1, 6)}\n" + " ".join(map(str, rng.sample(range(1, 9), n)))

@@ -1,0 +1,62 @@
+id: quiz:zero:math-on-numbers:digit-properties
+family: digit-properties
+concept: zero:math-on-numbers
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: power
+  band: 2
+  format: mcq
+  prompt: For an Armstrong check of n, which power is each digit raised to?
+  options:
+  - The number of digits of n
+  - Always 3
+  - The digit itself
+  - Always 2
+  answer: 0
+  misconceptions:
+  - null
+  - digit-fixed-power
+  - confuse-index-value
+  - digit-fixed-power
+  explanation: 153 uses cubes because it has 3 digits; 1634 uses fourth powers.
+- id: cubes
+  band: 3
+  format: trace
+  prompt: With cubes hard-coded, what is the digit total for 1634?
+  options:
+  - '308'
+  - '1634'
+  - '14'
+  - '1296'
+  answer: 0
+  misconceptions:
+  - null
+  - digit-fixed-power
+  - count-vs-sum
+  - stop-after-first
+  explanation: 1 + 216 + 27 + 64 = 308, so it wrongly says no.
+- id: self-dividing
+  band: 4
+  format: classify
+  prompt: Is 102 a self-dividing number (every digit divides it)?
+  options:
+  - No; it has a 0 digit, which cannot divide anything
+  - 'Yes'
+  - Only the 1 matters
+  - It crashes the check
+  answer: 0
+  misconceptions:
+  - null
+  - short-circuit-order
+  - stop-after-first
+  - short-circuit-order
+  explanation: Check d != 0 before n % d.
+status: provisional
+provenance:
+  origin: original

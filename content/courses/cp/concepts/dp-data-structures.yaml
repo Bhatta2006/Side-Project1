@@ -1,0 +1,73 @@
+id: dp-data-structures
+title: DP with data structures
+summary: Speed up transitions with a Fenwick tree, a segment tree or a monotonic deque.
+module: dp-advanced
+prerequisites:
+- dp-classics
+- fenwick-tree
+difficulty: 5
+estimated_minutes: 60
+status: draft
+lesson: '## Lis bit
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Range transition segtree
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Deque window
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

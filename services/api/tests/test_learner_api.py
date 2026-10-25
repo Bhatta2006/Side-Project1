@@ -363,3 +363,10 @@ def test_concepts_link_curated_practice_and_company_lists(client):
     assert all(p["difficulty"] == "easy" and p["window"] == "thirty-days" for p in google["items"])
     assert all(p["concept"] is None or p["concept"]["band"] for p in google["items"])
     assert client.get("/api/v1/companies/not-a-company").status_code == 404
+
+
+def test_zero_problems_start_from_beginner_code(client):
+    headers = login(client)
+    onboard(client, headers)
+    starter = client.get("/api/v1/problems/ticket-stub").json()["starter"]
+    assert "input()" in starter and "sys" not in starter and "def main" not in starter

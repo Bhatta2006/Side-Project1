@@ -1,0 +1,115 @@
+id: exact-change-festival
+title: Exact change at the festival
+concepts: [knapsack-01]
+difficulty: medium
+statement: |
+  A festival has `n` stalls. Stall i charges `c_i` tokens and gives `j_i` joy. You may visit
+  each stall at most once. You hold exactly `B` tokens, and tokens cannot be taken home, so
+  you must spend **exactly** B.
+
+  Print the largest total joy you can get while spending exactly B tokens, or -1 if no set
+  of stalls costs exactly B.
+input_format: |
+  The first line contains n and B. Each of the next n lines contains c_i and j_i.
+output_format: The largest total joy, or -1.
+constraints:
+  - 1 ≤ n ≤ 100
+  - 1 ≤ B ≤ 10^4
+  - 1 ≤ c_i ≤ 10^4
+  - 0 ≤ j_i ≤ 10^9
+examples:
+  - input: "3 5\n2 3\n3 4\n4 6"
+    output: "7"
+    explanation: "Stalls 1 and 2 cost exactly 5 and give 3 + 4 = 7. Stall 3 alone costs 4, which is not exactly 5."
+  - input: "2 3\n2 10\n2 10"
+    output: "-1"
+hints:
+  - "This is 0/1 knapsack, but the budget must be used exactly. What should dp[c] hold for a total that no set of stalls reaches?"
+  - "Start with dp[0] = 0 and every other dp[c] = −∞ (unreachable). A take only counts if dp[c − cost] is reachable."
+  - "Loop the budget from B down to c_i for each stall, and print dp[B], or −1 if it is still unreachable."
+approach: |
+  0/1 knapsack where dp[c] is the best joy spending exactly c tokens. Initialise dp[0] = 0 and
+  every other cell to an "unreachable" marker, so a total is only built from reachable
+  smaller totals. For each stall, loop c from B down to its cost. Starting from zeros would
+  answer "at most B" instead. O(n·B) time, O(B) memory; totals need 64-bit integers.
+reference: |
+  n, B = map(int, input().split())
+  NONE = -1  # unreachable marker; real totals are never negative
+  dp = [NONE] * (B + 1)
+  dp[0] = 0
+  for _ in range(n):
+      cost, joy = map(int, input().split())
+      for c in range(B, cost - 1, -1):
+          if dp[c - cost] != NONE and dp[c - cost] + joy > dp[c]:
+              dp[c] = dp[c - cost] + joy
+  print(dp[B])
+brute: |
+  from itertools import combinations
+  n, B = map(int, input().split())
+  stalls = [tuple(map(int, input().split())) for _ in range(n)]
+  best = -1
+  for size in range(n + 1):
+      for chosen in combinations(stalls, size):
+          if sum(c for c, _ in chosen) == B:
+              best = max(best, sum(j for _, j in chosen))
+  print(best)
+references:
+  cpp: |
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, B;
+        cin >> n >> B;
+        vector<long long> dp(B + 1, -1);  // -1: no set of stalls costs exactly c
+        dp[0] = 0;
+        for (int i = 0; i < n; i++) {
+            int cost;
+            long long joy;
+            cin >> cost >> joy;
+            for (int c = B; c >= cost; c--)
+                if (dp[c - cost] != -1 && dp[c - cost] + joy > dp[c]) dp[c] = dp[c - cost] + joy;
+        }
+        cout << dp[B] << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            int n = Integer.parseInt(st.nextToken()), B = Integer.parseInt(st.nextToken());
+            long[] dp = new long[B + 1];
+            Arrays.fill(dp, -1);  // -1: no set of stalls costs exactly c
+            dp[0] = 0;
+            for (int i = 0; i < n; i++) {
+                st = new StringTokenizer(in.readLine());
+                int cost = Integer.parseInt(st.nextToken());
+                long joy = Long.parseLong(st.nextToken());
+                for (int c = B; c >= cost; c--)
+                    if (dp[c - cost] != -1 && dp[c - cost] + joy > dp[c]) dp[c] = dp[c - cost] + joy;
+            }
+            System.out.println(dp[B]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1\n1 0"
+      yield "1 1\n2 5"
+      yield "2 2\n1 1000000000\n1 1000000000"
+      n, B = 100, 10000
+      yield f"{n} {B}\n" + "\n".join(f"{rng.randint(1, 300)} {rng.randint(0, 10**9)}" for _ in range(n))
+      yield f"{n} {B}\n" + "\n".join(f"{rng.randint(1, 10**4)} {rng.randint(0, 10**9)}" for _ in range(n))
+      yield f"{n} {B}\n" + "\n".join(f"{2 * rng.randint(1, 150)} {rng.randint(0, 100)}" for _ in range(n))
+      yield f"{n} 9999\n" + "\n".join(f"{2 * rng.randint(1, 150)} {rng.randint(0, 100)}" for _ in range(n))
+      for _ in range(4):
+          n = rng.randint(1, 30)
+          yield f"{n} {rng.randint(1, 200)}\n" + "\n".join(f"{rng.randint(1, 60)} {rng.randint(0, 50)}" for _ in range(n))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 8)
+          yield f"{n} {rng.randint(1, 25)}\n" + "\n".join(f"{rng.randint(1, 10)} {rng.randint(0, 9)}" for _ in range(n))

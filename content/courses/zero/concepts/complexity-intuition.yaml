@@ -1,0 +1,53 @@
+id: complexity-intuition
+title: How fast is my program?
+summary: Count operations, see why nested loops cost n squared, and use the 10^8 operations per second
+  rule to pick an approach.
+module: functions-module
+prerequisites:
+- nested-loops
+- searching-and-sorting
+difficulty: 3
+estimated_minutes: 35
+status: draft
+lesson: '## Count operations
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Constraint budget
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

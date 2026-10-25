@@ -1,0 +1,64 @@
+id: quiz:dsa:dp-partition:boolean-ways
+family: boolean-ways
+concept: dsa:dp-partition
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: two-tables
+  band: 2
+  format: mcq
+  prompt: Why keep both T[i][j] and F[i][j]?
+  options:
+  - XOR and OR need the number of ways a part is false
+  - To print both answers
+  - It is faster
+  - Only for AND
+  answer: 0
+  misconceptions:
+  - null
+  - boolean-true-only
+  - pattern-count-vs-exists
+  - boolean-true-only
+  explanation: T ^ F counts left-true times right-false.
+- id: and-rule
+  band: 3
+  format: trace
+  prompt: Left part has 2 true and 1 false ways; right part has 3 true and 2 false. How many true ways
+    with & as the last operator?
+  options:
+  - '6'
+  - '15'
+  - '13'
+  - '5'
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - boolean-true-only
+  - count-vs-sum
+  explanation: Both parts must be true, 2 × 3 = 6.
+- id: value
+  band: 4
+  format: trace
+  prompt: How many bracketings of T|T&F^T evaluate to true?
+  options:
+  - '4'
+  - '5'
+  - '2'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - boolean-true-only
+  - mcm-greedy-order
+  - off-by-one-output
+  explanation: Four of the five bracketings give true.
+status: provisional
+provenance:
+  origin: original

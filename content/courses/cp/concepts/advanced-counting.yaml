@@ -1,0 +1,51 @@
+id: advanced-counting
+title: Counting II
+summary: Counting by DP versus formula, bijections, and grid paths with obstacles by inclusion-exclusion.
+module: math-2
+prerequisites:
+- combinatorics
+difficulty: 5
+estimated_minutes: 55
+status: draft
+lesson: '## Obstacle paths
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Bijections
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

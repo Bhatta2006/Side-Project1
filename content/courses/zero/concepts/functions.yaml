@@ -115,11 +115,11 @@ lesson: |
 
   Separate what the function computes from how the caller obtains input or displays output. A precise contract makes the function reusable and testable. Trace argument values entering a call, local names inside it, and the return value flowing back.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Cover every return path. A branch that forgets to return can yield an unintended value or fail compilation. State whether a function may mutate a collection argument; callers must not discover that by accident.
 
-  Calling a helper does not remove its cost. A loop that calls an O(n) helper n times is generally O(n²).
+  Calling a function does not make its work free. A loop that calls a function which itself loops over the whole list does that inner work once per item, which gets slow on big inputs.
 
   ### Check your understanding
 

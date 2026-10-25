@@ -1,0 +1,126 @@
+id: zero:math-on-numbers/divisors-sqrt
+concept: zero:math-on-numbers
+title: 'Divisors up to the square root: every small divisor brings its partner'
+tracks:
+- foundations
+recognise:
+- Count, add up or list the divisors of n
+- n is large, so trying every number up to n is too slow
+- Every divisor i up to the square root has a partner n // i above it
+state: the divisors found so far, from the pairs (i, n // i) with i · i ≤ n
+transition: if n % i == 0, take i and, when different, its partner n // i
+base_cases:
+- i starts at 1, whose partner is n itself
+complexity:
+  time: O(√n)
+  space: O(1)
+template:
+  python: |
+    n = int(input())
+    count = total = 0
+    i = 1
+    while i * i <= n:  # every divisor pairs with n // i across the square root
+        if n % i == 0:
+            count += 1
+            total += i
+            if i != n // i:  # a square's root is its own partner
+                count += 1
+                total += n // i
+        i += 1
+    print(count, total)
+  cpp: |
+    #include <iostream>
+    using namespace std;
+
+    int main() {
+        long long n, count = 0, total = 0;
+        cin >> n;
+        for (long long i = 1; i * i <= n; i++) {  // every divisor pairs with n / i across the root
+            if (n % i != 0) continue;
+            count++;
+            total += i;
+            if (i != n / i) {  // a square's root is its own partner
+                count++;
+                total += n / i;
+            }
+        }
+        cout << count << " " << total << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            long n = new Scanner(System.in).nextLong(), count = 0, total = 0;
+            for (long i = 1; i * i <= n; i++) {  // every divisor pairs with n / i across the root
+                if (n % i != 0) continue;
+                count++;
+                total += i;
+                if (i != n / i) {  // a square's root is its own partner
+                    count++;
+                    total += n / i;
+                }
+            }
+            System.out.println(count + " " + total);
+        }
+    }
+template_io:
+  stdin: |
+    36
+  expected: 9 91
+variants:
+- id: three-divisors
+  band: 1
+  title: Exactly three divisors
+  problem: leetcode:three-divisors
+- id: perfect
+  band: 2
+  title: Divisors other than n add up to n
+  problem: leetcode:perfect-number
+- id: kth-factor
+  band: 2
+  title: The k-th smallest divisor
+  problem: leetcode:the-kth-factor-of-n
+- id: four-divisors
+  band: 3
+  title: Count to four, then add them up
+  problem: leetcode:four-divisors
+- id: odd-divisor
+  band: 3
+  title: Divide out the factors of 2
+  problem: cf:1475A
+- id: t-primes
+  band: 4
+  title: Squares of primes
+  problem: cf:230B
+- id: counting-divisors
+  band: 5
+  title: Many queries
+  problem: cses:1713
+pitfalls:
+- div-square-twice
+- div-sqrt-bound-strict
+- div-no-partner
+- div-forget-self
+- pattern-root-vs-all
+atoms:
+- divisors-worked
+- divisors-faded
+- divisors-visualizer
+- divisors-micro
+- divisors-classify
+quiz_family: quiz:zero:math-on-numbers:divisors-sqrt
+problems:
+  external:
+  - leetcode:three-divisors
+  - leetcode:perfect-number
+  - leetcode:the-kth-factor-of-n
+  - leetcode:four-divisors
+  - cf:1475A
+  - cf:230B
+  - cses:1713
+showcase:
+- 'Why adding both partners every time reports 10 divisors for 36: 6 is its own partner'
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,234 @@
+id: quiz:dsa:dp-lis:lis-quadratic
+family: lis-quadratic
+concept: dsa:dp-lis
+pattern: dsa:dp-lis/lis-quadratic
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: lis_quadratic
+  params:
+    length:
+    - 5
+    - 8
+    value:
+    - 1
+    - 9
+  reference: lis_brute(a)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: extend greedily from the first element
+  misconception: lis-greedy-extend
+- rule: longest contiguous increasing run
+  misconception: pattern-subsequence-vs-substring
+- rule: compare with <= instead of <
+  misconception: lis-non-strict-compare
+- rule: answer dp[n − 1] instead of max(dp)
+  misconception: lis-answer-last-cell
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is a longest increasing subsequence problem?
+  options:
+  - Fewest deletions so the remaining numbers strictly increase
+  - Longest run of consecutive rising days
+  - Sort the numbers
+  - Largest gap between neighbours
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subsequence-vs-substring
+  - pattern-sort-breaks-order
+  - dp-vague-state
+  explanation: What remains after deletions is a subsequence; keep the longest increasing one.
+- id: state-meaning
+  band: 1
+  format: mcq
+  prompt: What does dp[i] mean?
+  options:
+  - The longest increasing subsequence ending at a[i]
+  - The longest increasing subsequence of the whole array
+  - The number of elements smaller than a[i]
+  - The longest increasing run ending at i
+  answer: 0
+  misconceptions:
+  - null
+  - lis-answer-last-cell
+  - confuse-index-value
+  - pattern-subsequence-vs-substring
+  explanation: Ending at i is what lets later elements extend it.
+- id: base
+  band: 2
+  format: mcq
+  prompt: What does every dp[i] start at?
+  options:
+  - '1'
+  - '0'
+  - i
+  - a[i]
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - confuse-index-value
+  - confuse-index-value
+  explanation: Every element alone is an increasing subsequence of length 1.
+- id: cell
+  band: 2
+  format: trace
+  prompt: a = 2 5 3 7 with dp = 1 2 2 ?. What is dp[3]?
+  options:
+  - '3'
+  - '4'
+  - '2'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - dp-missing-plus-one
+  - dp-wrong-base-case
+  explanation: 7 extends 5 or 3 (dp 2), so 3.
+- id: answer-cell
+  band: 3
+  format: bug_spot
+  prompt: The code prints dp[n − 1]. For which input is that wrong?
+  options:
+  - 1 2 3 0
+  - 1 2 3 4
+  - '5'
+  - 1 1 1
+  answer: 0
+  misconceptions:
+  - null
+  - lis-answer-last-cell
+  - lis-answer-last-cell
+  - lis-non-strict-compare
+  explanation: dp = 1 2 3 1; the answer is 3, not dp[3] = 1.
+- id: strict
+  band: 3
+  format: bug_spot
+  prompt: The comparison is a[j] <= a[i]. What does 4 4 4 print?
+  options:
+  - 3, but a strictly increasing subsequence has length 1
+  - '1'
+  - '0'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - lis-non-strict-compare
+  - dp-wrong-base-case
+  - off-by-one-output
+  explanation: Equal values must not extend a strict chain.
+- id: greedy
+  band: 3
+  format: classify
+  prompt: Why does taking every larger number after the first one fail?
+  options:
+  - An early large number blocks smaller ones that start longer chains
+  - It counts equal numbers
+  - It is too slow
+  - It does not fail
+  answer: 0
+  misconceptions:
+  - null
+  - lis-greedy-extend
+  - lis-non-strict-compare
+  - lis-greedy-extend
+  explanation: 10 2 3 4 gives 1 that way; the LIS is 3.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: The table version on n = 2·10^5 numbers. Is it fast enough?
+  options:
+  - No; O(n²) is 4·10^10 steps, use patience sorting
+  - Yes; it is O(n)
+  - Yes; it is O(n log n)
+  - Only in C++
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - pattern-search-vs-scan
+  - pattern-brute-force-default
+  explanation: Patience sorting with binary search is O(n log n).
+- id: removals
+  band: 4
+  format: mcq
+  prompt: n = 9 and the LIS is 5. Fewest removals to make the array strictly increasing?
+  options:
+  - '4'
+  - '5'
+  - '9'
+  - '14'
+  answer: 0
+  misconceptions:
+  - null
+  - lis-answer-last-cell
+  - off-by-one-output
+  - count-vs-sum
+  explanation: Keep the 5, remove the other 4.
+- id: divisible
+  band: 5
+  format: classify
+  prompt: Largest subset where every pair divides one another. What do you do first?
+  options:
+  - Sort, then LIS with "a[j] divides a[i]" as the rule
+  - LIS on the input order
+  - Greedy by smallest number
+  - Count multiples of each number
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-sort-then-lis
+  - lis-greedy-extend
+  - pattern-brute-force-default
+  explanation: A set has no order; sorting makes divisibility a chain from small to large.
+- id: envelopes
+  band: 6
+  format: classify
+  prompt: Envelopes sorted by width; equal widths sorted by height ascending. What goes wrong?
+  options:
+  - Two envelopes of the same width can chain, which is not a strict fit
+  - Nothing
+  - The answer is always 1
+  - The sort is too slow
+  answer: 0
+  misconceptions:
+  - null
+  - lis-envelope-tie-order
+  - pattern-sort-then-lis
+  - pattern-brute-force-default
+  explanation: Sort equal widths by height descending so they cannot form a rising pair.
+- id: sequence-order
+  band: 6
+  format: classify
+  prompt: Should you sort the array before computing its LIS?
+  options:
+  - No; the order is part of the problem and sorting makes everything increasing
+  - Yes, always
+  - Only if it has duplicates
+  - Only descending
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-sort-then-lis
+  - pattern-sort-breaks-order
+  - lis-non-strict-compare
+  explanation: Sort only when the items have no order of their own.
+status: provisional
+provenance:
+  origin: original

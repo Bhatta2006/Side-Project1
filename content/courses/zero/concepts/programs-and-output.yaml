@@ -75,13 +75,19 @@ lesson: |
   program needs. For now, treat them as the frame around your picture — you will
   understand each part soon.
 
-  In Python, `print` has two optional settings. `sep` is what goes *between* the things you
-  print, and `end` is what goes *after* them (a new line by default):
+  ## Several values in one print
+
+  Python puts a space between the values you give `print`, then ends the line:
 
   ```python
-  print("a", "b", sep="-", end="!")  # prints: a-b!
-  print("c")                         # prints: c   (on the same line, so: a-b!c)
+  print("Total:", 5)          # Total: 5
+  print("a", "b", sep="-")    # a-b   (sep goes between the values)
+  print("no newline", end="") # end replaces the line break
+  print("!")                  # so this continues: no newline!
   ```
+
+  In C++ you choose every space yourself with `<<`, and `"\n"` ends the line. In Java,
+  `System.out.print` keeps going on the same line and `System.out.println` ends it.
 
   ## Comments
 
@@ -90,15 +96,39 @@ lesson: |
 
   ## Worked walkthrough
 
-  Trace a program that prints a greeting, then a total. Before running, draw two numbered output lines. The computer executes the first print, writes its newline, then executes the second. It does not combine both statements into one sentence unless you explicitly choose that formatting. Change only the separator and predict how the output changes; the values being printed are the same, but their representation changes.
+  Predict the output before you run it:
+
+  ```python
+  print("Hello, Priya")
+  print("Total:", 2 + 3)
+  ```
+
+  ```cpp
+  std::cout << "Hello, Priya" << "\n";
+  std::cout << "Total: " << 2 + 3 << "\n";
+  ```
+
+  ```java
+  System.out.println("Hello, Priya");
+  System.out.println("Total: " + (2 + 3));
+  ```
+
+  The computer runs the first line and prints `Hello, Priya`, then moves to a new line. It
+  runs the second line, works out `2 + 3`, and prints `Total: 5`. Two print instructions
+  give two lines, in order. Now remove the space after `Total:` and predict again: you get
+  `Total:5`.
 
   ### Why this works
 
-  A program is a sequence of precise instructions. Output is observable behaviour, so a correct calculation with the wrong spaces or an extra debug message can still be marked wrong by the automatic checker. Separate the value you intend to compute from the text you intend to emit.
+  The computer follows your instructions exactly and in order. When Socrat checks your
+  answer, it compares your output character by character, so an extra space or an extra
+  message counts as a different answer. Print exactly what the task asks for.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
-  Test a blank line, a quoted number and a number computed by addition. Quoted digits are text; arithmetic needs numeric values. Keep debugging output separate from required output.
+  Try printing an empty line, a number in quotes (`"5"`) and a sum (`2 + 3`). Text in
+  quotes is printed as it is; only numbers without quotes are calculated. If you print extra
+  messages to check your work, remove them before you submit.
 
   ### Check your understanding
 

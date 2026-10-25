@@ -1,0 +1,51 @@
+id: how-code-runs
+title: How computers run code
+summary: 'What happens between writing code and seeing output: compilers, interpreters, running a file
+  and the kinds of errors you will meet.'
+module: first-steps
+prerequisites: []
+difficulty: 1
+estimated_minutes: 30
+status: draft
+lesson: '## Compile vs interpret
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Error types
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

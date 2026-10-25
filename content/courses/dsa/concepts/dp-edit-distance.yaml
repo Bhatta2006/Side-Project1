@@ -1,0 +1,1086 @@
+id: dp-edit-distance
+title: 'Strings DP: edits and matching'
+summary: Edit distance, distinct subsequences, wildcard and regex matching, interleaving strings and palindromic
+  substrings.
+module: dynamic-programming
+prerequisites: [dp-lcs]
+difficulty: 5
+estimated_minutes: 90
+lesson: |
+  The LCS family asked what two strings **share**. This family asks what it **costs** to turn
+  one string into another, **how many ways** one fits inside another, or **whether** a
+  pattern matches. The state is still a pair of prefixes, `dp[i][j]`; what changes is the
+  base row and column, and which neighbours a cell combines.
+
+  ## Edit distance
+
+  ### Recognition cues
+
+  - Turn one string into another with **insert**, **delete** and **replace**, one character
+    at a time, using as few operations as possible.
+  - Spell checkers, "how similar are these words", DNA mutations.
+  - Both strings are up to a few thousand characters.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For edit distance |
+  |---|---|
+  | State | `dp[i][j]` = the fewest operations that turn `a[:i]` into `b[:j]` |
+  | Transition | equal last characters: `dp[i−1][j−1]`; otherwise `1 + min(dp[i−1][j], dp[i][j−1], dp[i−1][j−1])` (delete, insert, replace) |
+  | Base cases | `dp[i][0] = i` (delete everything), `dp[0][j] = j` (insert everything) |
+  | Answer | `dp[n][m]` |
+  | Loop order | i ascending, j ascending: a cell needs up, left and up-left |
+
+  ### Template
+
+  Two rows: `prev` is row i − 1, `cur` is row i.
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  n, m = len(a), len(b)
+  prev = list(range(m + 1))  # row 0: turn "" into b[:j] with j inserts
+  for i in range(1, n + 1):
+      cur = [i] + [0] * m  # column 0: delete all i characters
+      for j in range(1, m + 1):
+          if a[i - 1] == b[j - 1]:
+              cur[j] = prev[j - 1]  # nothing to fix at the end
+          else:
+              cur[j] = 1 + min(prev[j], cur[j - 1], prev[j - 1])  # delete, insert, replace
+      prev = cur
+  print(prev[m])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      int n = a.size(), m = b.size();
+      vector<int> prev(m + 1), cur(m + 1);
+      for (int j = 0; j <= m; j++) prev[j] = j;  // row 0: j inserts
+      for (int i = 1; i <= n; i++) {
+          cur[0] = i;  // column 0: delete all i characters
+          for (int j = 1; j <= m; j++)
+              cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1]
+                                            : 1 + min({prev[j], cur[j - 1], prev[j - 1]});  // del, ins, rep
+          swap(prev, cur);
+      }
+      cout << prev[m] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int n = a.length(), m = b.length();
+          int[] prev = new int[m + 1], cur = new int[m + 1];
+          for (int j = 0; j <= m; j++) prev[j] = j;  // row 0: j inserts
+          for (int i = 1; i <= n; i++) {
+              cur[0] = i;  // column 0: delete all i characters
+              for (int j = 1; j <= m; j++)
+                  cur[j] = a.charAt(i - 1) == b.charAt(j - 1) ? prev[j - 1]
+                          : 1 + Math.min(prev[j], Math.min(cur[j - 1], prev[j - 1]));  // del, ins, rep
+              int[] t = prev; prev = cur; cur = t;
+          }
+          System.out.println(prev[m]);
+      }
+  }
+  ```
+
+  ### Anchor problem: horse to ros
+
+  Turn `horse` into `ros`. The answer is **3**: replace h with r (`rorse`), delete r
+  (`rose`), delete e (`ros`).
+
+  **Wrong first attempt — reuse LCS.** Keep the longest common subsequence and fix the rest:
+  delete what is not shared from a, insert what is missing from b, so n + m − 2·LCS.
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  n, m = len(a), len(b)
+  dp = [[0] * (m + 1) for _ in range(n + 1)]  # LCS table
+  for i in range(1, n + 1):
+      for j in range(1, m + 1):
+          if a[i - 1] == b[j - 1]:
+              dp[i][j] = dp[i - 1][j - 1] + 1
+          else:
+              dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+  print(n + m - 2 * dp[n][m])  # deletes + inserts only
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      int n = a.size(), m = b.size();
+      vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));  // LCS table
+      for (int i = 1; i <= n; i++)
+          for (int j = 1; j <= m; j++)
+              dp[i][j] = a[i - 1] == b[j - 1] ? dp[i - 1][j - 1] + 1 : max(dp[i - 1][j], dp[i][j - 1]);
+      cout << n + m - 2 * dp[n][m] << "\n";  // deletes + inserts only
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int n = a.length(), m = b.length();
+          int[][] dp = new int[n + 1][m + 1];  // LCS table
+          for (int i = 1; i <= n; i++)
+              for (int j = 1; j <= m; j++)
+                  dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1) ? dp[i - 1][j - 1] + 1
+                                                                : Math.max(dp[i - 1][j], dp[i][j - 1]);
+          System.out.println(n + m - 2 * dp[n][m]);  // deletes + inserts only
+      }
+  }
+  ```
+
+  It prints 4. The LCS of `horse` and `ros` has length 2, so it deletes 3 and inserts 1. But
+  a **replace** fixes a wrong character in one operation, where delete-then-insert takes two.
+  The LCS answer is right only when replacing is not allowed (*Delete operation for two
+  strings*).
+
+  **Step 1 — recursion.** Compare the last characters of the two prefixes:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def edit(i, j):
+      """Fewest operations turning a[:i] into b[:j]."""
+      if i == 0:
+          return j  # insert the rest of b
+      if j == 0:
+          return i  # delete the rest of a
+      if a[i - 1] == b[j - 1]:
+          return edit(i - 1, j - 1)
+      return 1 + min(edit(i - 1, j), edit(i, j - 1), edit(i - 1, j - 1))  # del, ins, rep
+
+
+  a = input().strip()
+  b = input().strip()
+  print(edit(len(a), len(b)))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  using namespace std;
+
+  string a, b;
+
+  int edit(int i, int j) {  // fewest operations turning a[:i] into b[:j]
+      if (i == 0) return j;  // insert the rest of b
+      if (j == 0) return i;  // delete the rest of a
+      if (a[i - 1] == b[j - 1]) return edit(i - 1, j - 1);
+      return 1 + min({edit(i - 1, j), edit(i, j - 1), edit(i - 1, j - 1)});  // del, ins, rep
+  }
+
+  int main() {
+      cin >> a >> b;
+      cout << edit(a.size(), b.size()) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static String a, b;
+
+      static int edit(int i, int j) {  // fewest operations turning a[:i] into b[:j]
+          if (i == 0) return j;  // insert the rest of b
+          if (j == 0) return i;  // delete the rest of a
+          if (a.charAt(i - 1) == b.charAt(j - 1)) return edit(i - 1, j - 1);
+          return 1 + Math.min(edit(i - 1, j), Math.min(edit(i, j - 1), edit(i - 1, j - 1)));
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          a = in.next();
+          b = in.next();
+          System.out.println(edit(a.length(), b.length()));
+      }
+  }
+  ```
+
+  Each mismatch branches three ways, so the calls grow like 3^(n+m), yet there are only
+  (n + 1)(m + 1) different (i, j) pairs.
+
+  **Step 2 — memoization.** Store each (i, j) answer once:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def edit(i, j):
+      if i == 0:
+          return j
+      if j == 0:
+          return i
+      if memo[i][j] is None:  # solve each (i, j) pair once
+          if a[i - 1] == b[j - 1]:
+              memo[i][j] = edit(i - 1, j - 1)
+          else:
+              memo[i][j] = 1 + min(edit(i - 1, j), edit(i, j - 1), edit(i - 1, j - 1))
+      return memo[i][j]
+
+
+  a = input().strip()
+  b = input().strip()
+  memo = [[None] * (len(b) + 1) for _ in range(len(a) + 1)]
+  print(edit(len(a), len(b)))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  string a, b;
+  vector<vector<int>> memo;  // -1 = not solved yet
+
+  int edit(int i, int j) {
+      if (i == 0) return j;
+      if (j == 0) return i;
+      int& slot = memo[i][j];
+      if (slot == -1)  // solve each (i, j) pair once
+          slot = a[i - 1] == b[j - 1] ? edit(i - 1, j - 1)
+                                      : 1 + min({edit(i - 1, j), edit(i, j - 1), edit(i - 1, j - 1)});
+      return slot;
+  }
+
+  int main() {
+      cin >> a >> b;
+      memo.assign(a.size() + 1, vector<int>(b.size() + 1, -1));
+      cout << edit(a.size(), b.size()) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static String a, b;
+      static int[][] memo;  // -1 = not solved yet
+
+      static int edit(int i, int j) {
+          if (i == 0) return j;
+          if (j == 0) return i;
+          if (memo[i][j] == -1)  // solve each (i, j) pair once
+              memo[i][j] = a.charAt(i - 1) == b.charAt(j - 1) ? edit(i - 1, j - 1)
+                      : 1 + Math.min(edit(i - 1, j), Math.min(edit(i, j - 1), edit(i - 1, j - 1)));
+          return memo[i][j];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          a = in.next();
+          b = in.next();
+          memo = new int[a.length() + 1][b.length() + 1];
+          for (int[] row : memo) Arrays.fill(row, -1);
+          System.out.println(edit(a.length(), b.length()));
+      }
+  }
+  ```
+
+  **Step 3 — tabulation.** Fill the base row and column first, then row by row:
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  n, m = len(a), len(b)
+  dp = [[0] * (m + 1) for _ in range(n + 1)]  # dp[i][j]: edits turning a[:i] into b[:j]
+  for i in range(n + 1):
+      dp[i][0] = i
+  for j in range(m + 1):
+      dp[0][j] = j
+  for i in range(1, n + 1):
+      for j in range(1, m + 1):
+          if a[i - 1] == b[j - 1]:
+              dp[i][j] = dp[i - 1][j - 1]
+          else:
+              dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+  print(dp[n][m])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      int n = a.size(), m = b.size();
+      vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));  // edits turning a[:i] into b[:j]
+      for (int i = 0; i <= n; i++) dp[i][0] = i;
+      for (int j = 0; j <= m; j++) dp[0][j] = j;
+      for (int i = 1; i <= n; i++)
+          for (int j = 1; j <= m; j++)
+              dp[i][j] = a[i - 1] == b[j - 1] ? dp[i - 1][j - 1]
+                                              : 1 + min({dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]});
+      cout << dp[n][m] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int n = a.length(), m = b.length();
+          int[][] dp = new int[n + 1][m + 1];  // edits turning a[:i] into b[:j]
+          for (int i = 0; i <= n; i++) dp[i][0] = i;
+          for (int j = 0; j <= m; j++) dp[0][j] = j;
+          for (int i = 1; i <= n; i++)
+              for (int j = 1; j <= m; j++)
+                  dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1) ? dp[i - 1][j - 1]
+                          : 1 + Math.min(dp[i - 1][j], Math.min(dp[i][j - 1], dp[i - 1][j - 1]));
+          System.out.println(dp[n][m]);
+      }
+  }
+  ```
+
+  Dry run (rows are prefixes of `horse`, columns prefixes of `ros`):
+
+  | | "" | r | o | s |
+  |---|---|---|---|---|
+  | "" | 0 | 1 | 2 | 3 |
+  | h | 1 | 1 | 2 | 3 |
+  | o | 2 | 2 | 1 | 2 |
+  | r | 3 | 2 | 2 | 2 |
+  | s | 4 | 3 | 3 | 2 |
+  | e | 5 | 4 | 4 | **3** |
+
+  Read two cells. Row `h`, column `r`: h ≠ r, so 1 + min(up 1, left 1, up-left 0) = 1 (replace).
+  Row `o`, column `o`: a match, so it copies up-left (1, for `h` → `r`) at no cost.
+
+  **Step 4 — two rows.** A cell reads up, left and up-left, so the previous row and the
+  current row are enough: the template above. Column 0 of each new row is i, not 0.
+
+  ### Variants
+
+  1. *Edit distance* (LeetCode, CSES): the anchor.
+  2. *Delete operation for two strings*: no replace, so n + m − 2·LCS is right there.
+  3. *Minimum ASCII delete sum*: deletions cost the letter's code; the base row and column
+     become prefix sums of costs.
+  4. *One edit distance*: is the distance exactly 1? A linear scan beats the table.
+  5. Different costs for insert, delete and replace: the same table with weights.
+
+  ### Contrast
+
+  **Edit distance or LCS deletions?** If replace is allowed, a wrong character costs 1; use the
+  three-way minimum. If only inserts and deletes are allowed, it costs 2, and
+  n + m − 2·LCS is exact.
+
+  ### Common mistakes
+
+  - Base row and column left at 0. Turning `abc` into `""` needs three deletions.
+  - Adding 1 when the characters are equal.
+  - Forgetting one of the three operations (usually replace).
+  - In a single-row version, overwriting `prev[j − 1]` before it is read as the diagonal.
+
+  ## Distinct subsequences
+
+  ### Recognition cues
+
+  - "In how many ways does t appear as a subsequence of s?"
+  - The answer is a count, often modulo 10⁹ + 7.
+  - Each character of s can be used by at most one position of t in a given way.
+
+  ### State, transition, base cases, answer, loop order
+
+  `ways[i][j]` = the number of ways `t[:j]` appears in `s[:i]`. Every way either skips
+  `s[i−1]` (`ways[i−1][j]`) or, when `s[i−1] == t[j−1]`, uses it for `t[j−1]`
+  (`ways[i−1][j−1]`). Base `ways[i][0] = 1` (the empty t appears once). In one row, j runs
+  **backwards**, exactly like 0/1 knapsack: each character of s is an item used at most once.
+
+  ### Template
+
+  ```python
+  MOD = 10**9 + 7
+  s = input().strip()
+  t = input().strip()
+  ways = [1] + [0] * len(t)  # ways[j]: ways t[:j] appears in the part of s seen so far
+  for ch in s:
+      for j in range(len(t), 0, -1):  # backwards: this ch is used at most once per way
+          if t[j - 1] == ch:
+              ways[j] = (ways[j] + ways[j - 1]) % MOD
+  print(ways[len(t)])
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      const long long MOD = 1000000007;
+      string s, t;
+      cin >> s >> t;
+      int m = t.size();
+      vector<long long> ways(m + 1, 0);  // ways[j]: ways t[:j] appears in s so far
+      ways[0] = 1;
+      for (char ch : s)
+          for (int j = m; j >= 1; j--)  // backwards: this ch is used at most once per way
+              if (t[j - 1] == ch) ways[j] = (ways[j] + ways[j - 1]) % MOD;
+      cout << ways[m] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          final long MOD = 1_000_000_007L;
+          Scanner in = new Scanner(System.in);
+          String s = in.next(), t = in.next();
+          int m = t.length();
+          long[] ways = new long[m + 1];  // ways[j]: ways t[:j] appears in s so far
+          ways[0] = 1;
+          for (char ch : s.toCharArray())
+              for (int j = m; j >= 1; j--)  // backwards: this ch is used at most once per way
+                  if (t.charAt(j - 1) == ch) ways[j] = (ways[j] + ways[j - 1]) % MOD;
+          System.out.println(ways[m]);
+      }
+  }
+  ```
+
+  ### Anchor problem: rabbit in rabbbit
+
+  The program prints **3**: any two of the three b's in `rabbbit` can play the `bb` of
+  `rabbit`.
+
+  | after s[:i] | "" | r | ra | rab | rabb | rabbi | rabbit |
+  |---|---|---|---|---|---|---|---|
+  | r | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+  | ra | 1 | 1 | 1 | 0 | 0 | 0 | 0 |
+  | rab | 1 | 1 | 1 | 1 | 0 | 0 | 0 |
+  | rabb | 1 | 1 | 1 | 2 | 1 | 0 | 0 |
+  | rabbb | 1 | 1 | 1 | 3 | 3 | 0 | 0 |
+  | rabbbi | 1 | 1 | 1 | 3 | 3 | 3 | 0 |
+  | rabbbit | 1 | 1 | 1 | 3 | 3 | 3 | **3** |
+
+  **Wrong first attempt.** Looping j forwards lets one `b` of s fill both b's of t, and the
+  program prints 6.
+
+  ### Variants
+
+  1. *Distinct subsequences* (LeetCode): the anchor.
+  2. *Number of matching subsequences*: yes/no per word, many words (LCS family).
+  3. Count how often `"abc"` appears as a subsequence: the same table with a 3-letter t.
+
+  ### Contrast
+
+  **Count, exists, or best?** Asking *whether* t is a subsequence needs only two pointers.
+  Asking *how many ways* needs the counting table: one `+` per matching character.
+
+  ### Common mistakes
+
+  - `ways[0] = 0`, which makes every count 0.
+  - Looping j forwards in the one-row version.
+  - Overflow: counts grow fast; use the modulus or 64-bit integers.
+
+  ## Wildcard and regex matching
+
+  ### Recognition cues
+
+  - A pattern with `?` (any one character) and `*` (any sequence), or regex-style `.` and
+    `x*`; does it match the **whole** string?
+  - The answer is yes or no.
+
+  ### State, transition, base cases, answer, loop order
+
+  `match[i][j]` = whether `s[:i]` matches `p[:j]`. For wildcards:
+
+  | `p[j−1]` is | `match[i][j]` |
+  |---|---|
+  | a letter or `?` | `match[i−1][j−1]` and (`p[j−1] == '?'` or `p[j−1] == s[i−1]`) |
+  | `*` | `match[i][j−1]` (the star matches nothing) or `match[i−1][j]` (it also eats `s[i−1]`) |
+
+  Base: `match[0][0] = true`; `match[0][j]` is true only while p starts with stars. For regex,
+  `x*` is a unit: `match[i][j] = match[i][j−2]` (zero copies) or (`x` matches `s[i−1]` and
+  `match[i−1][j]`).
+
+  ### Template
+
+  ```python
+  s = input().strip()
+  p = input().strip()
+  n, m = len(s), len(p)
+  match = [[False] * (m + 1) for _ in range(n + 1)]  # match[i][j]: s[:i] matches p[:j]
+  match[0][0] = True
+  for j in range(1, m + 1):
+      match[0][j] = match[0][j - 1] and p[j - 1] == "*"  # only stars match ""
+  for i in range(1, n + 1):
+      for j in range(1, m + 1):
+          if p[j - 1] == "*":
+              match[i][j] = match[i][j - 1] or match[i - 1][j]  # star: empty, or eat s[i-1]
+          elif p[j - 1] == "?" or p[j - 1] == s[i - 1]:
+              match[i][j] = match[i - 1][j - 1]
+  print("YES" if match[n][m] else "NO")
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string s, p;
+      cin >> s >> p;
+      int n = s.size(), m = p.size();
+      vector<vector<bool>> match(n + 1, vector<bool>(m + 1, false));  // s[:i] matches p[:j]
+      match[0][0] = true;
+      for (int j = 1; j <= m; j++) match[0][j] = match[0][j - 1] && p[j - 1] == '*';
+      for (int i = 1; i <= n; i++)
+          for (int j = 1; j <= m; j++) {
+              if (p[j - 1] == '*') match[i][j] = match[i][j - 1] || match[i - 1][j];  // empty, or eat
+              else if (p[j - 1] == '?' || p[j - 1] == s[i - 1]) match[i][j] = match[i - 1][j - 1];
+          }
+      cout << (match[n][m] ? "YES" : "NO") << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String s = in.next(), p = in.next();
+          int n = s.length(), m = p.length();
+          boolean[][] match = new boolean[n + 1][m + 1];  // s[:i] matches p[:j]
+          match[0][0] = true;
+          for (int j = 1; j <= m; j++) match[0][j] = match[0][j - 1] && p.charAt(j - 1) == '*';
+          for (int i = 1; i <= n; i++)
+              for (int j = 1; j <= m; j++) {
+                  char c = p.charAt(j - 1);
+                  if (c == '*') match[i][j] = match[i][j - 1] || match[i - 1][j];  // empty, or eat
+                  else if (c == '?' || c == s.charAt(i - 1)) match[i][j] = match[i - 1][j - 1];
+              }
+          System.out.println(match[n][m] ? "YES" : "NO");
+      }
+  }
+  ```
+
+  ### Anchor problem: adceb against *a*b
+
+  The program prints `YES`: the first `*` matches nothing, `a` matches `a`, the second `*`
+  matches `dce`, and `b` matches `b`. Against `a*c?b`, `acdcb` prints `NO`: the pattern ends
+  in `?b`, so those two take the final `cb`, and then `acd` would have to match `a*c`, which
+  needs a final `c`.
+
+  **Wrong first attempt.** Letting `*` match exactly one character (treating it like `?`)
+  rejects `adceb`. Letting `*` swallow as much as possible rejects it too: the first star
+  would eat everything, leaving nothing for `a` and `b`. The table tries every split.
+
+  ### Variants
+
+  1. *Wildcard matching* (LeetCode): the anchor.
+  2. *Regular expression matching* (LeetCode): `.` and `x*`, with the `j − 2` rule.
+  3. *Single wildcard pattern matching* (Codeforces): at most one `*`, so compare a prefix and
+     a suffix directly.
+
+  ### Contrast
+
+  **Wildcard star or regex star?** A wildcard `*` stands alone and matches any sequence. A
+  regex `*` belongs to the character before it, so `x*` means "zero or more x" and the pair is
+  skipped together (`j − 2`).
+
+  ### Common mistakes
+
+  - `match[0][j]` set to true for letters: only a prefix of stars can match the empty string.
+  - Treating `*` as one character.
+  - Using the wildcard rule for regex, or the reverse.
+
+  ## Interleaving strings
+
+  ### Recognition cues
+
+  - "Is s3 formed by merging s1 and s2 while keeping the order of each?"
+  - Two sources feed one output, and both may offer the same next character.
+
+  ### State, transition, base cases, answer, loop order
+
+  `ok[i][j]` = whether `s3[:i+j]` is an interleaving of `s1[:i]` and `s2[:j]`. It is true if
+  the last character came from s1 (`ok[i−1][j]` and `s1[i−1] == s3[i+j−1]`) or from s2
+  (`ok[i][j−1]` and `s2[j−1] == s3[i+j−1]`). Base `ok[0][0] = true`. Check the lengths first:
+  if `len(s1) + len(s2) != len(s3)`, the answer is no.
+
+  ### Template
+
+  ```python
+  s1 = input().strip()
+  s2 = input().strip()
+  s3 = input().strip()
+  n, m = len(s1), len(s2)
+  if n + m != len(s3):
+      print("NO")
+  else:
+      ok = [[False] * (m + 1) for _ in range(n + 1)]  # ok[i][j]: s3[:i+j] mixes s1[:i], s2[:j]
+      for i in range(n + 1):
+          for j in range(m + 1):
+              if i == 0 and j == 0:
+                  ok[i][j] = True
+                  continue
+              c = s3[i + j - 1]
+              from_s1 = i > 0 and ok[i - 1][j] and s1[i - 1] == c
+              from_s2 = j > 0 and ok[i][j - 1] and s2[j - 1] == c
+              ok[i][j] = from_s1 or from_s2  # the last character came from one of them
+      print("YES" if ok[n][m] else "NO")
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string s1, s2, s3;
+      cin >> s1 >> s2 >> s3;
+      int n = s1.size(), m = s2.size();
+      if (n + m != (int)s3.size()) {
+          cout << "NO\n";
+          return 0;
+      }
+      vector<vector<bool>> ok(n + 1, vector<bool>(m + 1, false));  // s3[:i+j] mixes s1[:i], s2[:j]
+      for (int i = 0; i <= n; i++)
+          for (int j = 0; j <= m; j++) {
+              if (i == 0 && j == 0) { ok[i][j] = true; continue; }
+              char c = s3[i + j - 1];
+              bool fromS1 = i > 0 && ok[i - 1][j] && s1[i - 1] == c;
+              bool fromS2 = j > 0 && ok[i][j - 1] && s2[j - 1] == c;
+              ok[i][j] = fromS1 || fromS2;  // the last character came from one of them
+          }
+      cout << (ok[n][m] ? "YES" : "NO") << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String s1 = in.next(), s2 = in.next(), s3 = in.next();
+          int n = s1.length(), m = s2.length();
+          if (n + m != s3.length()) {
+              System.out.println("NO");
+              return;
+          }
+          boolean[][] ok = new boolean[n + 1][m + 1];  // s3[:i+j] mixes s1[:i] and s2[:j]
+          for (int i = 0; i <= n; i++)
+              for (int j = 0; j <= m; j++) {
+                  if (i == 0 && j == 0) { ok[i][j] = true; continue; }
+                  char c = s3.charAt(i + j - 1);
+                  boolean fromS1 = i > 0 && ok[i - 1][j] && s1.charAt(i - 1) == c;
+                  boolean fromS2 = j > 0 && ok[i][j - 1] && s2.charAt(j - 1) == c;
+                  ok[i][j] = fromS1 || fromS2;  // the last character came from one of them
+              }
+          System.out.println(ok[n][m] ? "YES" : "NO");
+      }
+  }
+  ```
+
+  ### Anchor problem: aabcc, dbbca and aadbbcbcac
+
+  The program prints `YES`. With s3 = `aadbbbaccc` it prints `NO`.
+
+  **Wrong first attempt — two pointers.** Take the next character of s3 from s1 whenever s1
+  offers it, otherwise from s2. On the `YES` case this prints `NO`: at the fifth character
+  (`b`), s1 offers `b` and greedy takes it, but the merge only works if that `b` comes from
+  s2. When both strings offer the same character, you must try both, which is what the table
+  does.
+
+  ### Variants
+
+  1. *Interleaving string* (LeetCode): the anchor.
+  2. Shortest common supersequence (LCS family): the smallest s3 that interleaves both.
+
+  ### Contrast
+
+  **Greedy or DP?** Greedy is safe only when the next choice is forced. Here a tie (both
+  strings offer the same character) is a real choice, so the table keeps both outcomes.
+
+  ### Common mistakes
+
+  - Skipping the length check.
+  - Indexing s3 with i or j instead of i + j − 1.
+  - Greedy pointer merging.
+
+  ## Palindromic substrings
+
+  ### Recognition cues
+
+  - "Count the palindromic substrings", "longest palindromic substring".
+  - Contiguous blocks of one string.
+
+  ### State, transition, base cases, answer, loop order
+
+  As a table: `pal[i][j]` = whether `s[i..j]` is a palindrome, true when `s[i] == s[j]` and
+  the inside is a palindrome (or has length 0 or 1). Simpler in practice: every palindrome
+  has a **centre** (a character, or the gap between two), so expand outwards from each of
+  the 2n − 1 centres while the ends match. Same O(n²) time, O(1) memory.
+
+  ### Template
+
+  ```python
+  s = input().strip()
+  n = len(s)
+  count, best = 0, 0
+  for centre in range(2 * n - 1):  # n characters and n - 1 gaps
+      lo, hi = centre // 2, (centre + 1) // 2
+      while lo >= 0 and hi < n and s[lo] == s[hi]:  # grow while the ends match
+          count += 1
+          best = max(best, hi - lo + 1)
+          lo -= 1
+          hi += 1
+  print(count, best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  using namespace std;
+
+  int main() {
+      string s;
+      cin >> s;
+      int n = s.size(), count = 0, best = 0;
+      for (int centre = 0; centre < 2 * n - 1; centre++) {  // n characters and n - 1 gaps
+          int lo = centre / 2, hi = (centre + 1) / 2;
+          while (lo >= 0 && hi < n && s[lo] == s[hi]) {  // grow while the ends match
+              count++;
+              best = max(best, hi - lo + 1);
+              lo--;
+              hi++;
+          }
+      }
+      cout << count << " " << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          String s = new Scanner(System.in).next();
+          int n = s.length(), count = 0, best = 0;
+          for (int centre = 0; centre < 2 * n - 1; centre++) {  // n characters and n - 1 gaps
+              int lo = centre / 2, hi = (centre + 1) / 2;
+              while (lo >= 0 && hi < n && s.charAt(lo) == s.charAt(hi)) {  // grow while ends match
+                  count++;
+                  best = Math.max(best, hi - lo + 1);
+                  lo--;
+                  hi++;
+              }
+          }
+          System.out.println(count + " " + best);
+      }
+  }
+  ```
+
+  ### Anchor problem: aaa
+
+  The program prints `6 3`: three single letters, two `aa` and one `aaa`. For `abc` it prints
+  `3 1`.
+
+  **Wrong first attempt.** Expanding only around characters finds odd lengths only: `aa`
+  would report 2 palindromes instead of 3.
+
+  ### Variants
+
+  1. *Palindromic substrings* (LeetCode): the count.
+  2. *Longest palindromic substring* (LeetCode) and *Longest palindrome* (CSES): the best
+     length; CSES needs Manacher's O(n) algorithm for n = 10⁶.
+  3. *Palindrome partitioning II*: fewest cuts, using the `pal` table inside a 1D DP.
+
+  ### Contrast
+
+  **Palindromic subsequence or substring?** Subsequences may skip characters (LCS-style
+  table, best on a mismatch); substrings must be contiguous (a yes/no table, or centres).
+
+  ### Common mistakes
+
+  - Forgetting even-length centres.
+  - Using the subsequence recurrence for substrings.
+
+  ## Worked walkthrough
+
+  **Problem.** How many single-character edits turn `sunday` into `saturday`?
+
+  1. *Recognise.* Insert, delete and replace, minimum count: edit distance.
+  2. *Base.* Row 0 is 0 1 2 … 8 and column 0 is 0 1 … 6.
+  3. *Fill.* Both start with `s`, so `dp[1][1] = 0`. `saturday` has two extra letters
+     (`at`), and `n` must become `r`.
+  4. *Answer.* `dp[6][8] = 3`: insert `a`, insert `t`, replace `n` with `r`.
+  5. *Check.* The LCS shortcut gives 6 + 8 − 2·5 = 4, because it charges 2 for the `n` → `r`
+     replace.
+
+  ### Why this works
+
+  Look at the last characters of `a[:i]` and `b[:j]`. In an optimal edit script, `b[j−1]`
+  is produced by an insert, by replacing `a[i−1]`, or by keeping an equal `a[i−1]`; otherwise
+  `a[i−1]` is deleted. These cases cover every script, and each leaves a smaller instance:
+  `dp[i][j−1]`, `dp[i−1][j−1]`, `dp[i−1][j]`. Taking the cheapest case, by induction on
+  i + j, gives the optimum. Keeping equal characters for free is never worse than editing
+  them.
+
+  ### Boundary cases and cost
+
+  - One string empty: the answer is the other's length.
+  - Equal strings: 0.
+  - Counting problems need a modulus or 64-bit integers.
+  - Cost: O(n·m) time; O(m) memory with two rows. 5000 × 5000 = 2.5 × 10⁷ cells is fine in
+    C++ or Java, slow in Python.
+
+  ### Check your understanding
+
+  What is the edit distance from `abc` to `yabd`, and what does the LCS shortcut give?
+
+  Try it on paper before reading the reasoning below.
+
+  > Insert `y` at the front, replace `c` with `d`: 2. The LCS is `ab` (2), so the shortcut
+  > gives 3 + 4 − 4 = 3, one more, because it pays 2 for the replace.
+key_points:
+- dp[i][j] turns a[:i] into b[:j]; the base row is j inserts, the base column i deletes.
+- Equal last characters cost nothing; otherwise 1 + min(delete, insert, replace).
+- n + m − 2·LCS is correct only when replace is not allowed.
+- 'Distinct subsequences: count with ways[0] = 1 and j backwards, like 0/1 knapsack.'
+- Wildcard * is empty or eats one more character; regex x* skips the pair (j − 2).
+- 'Interleaving: the last character of s3[:i+j] came from s1 or from s2; check lengths first.'
+- Palindromic substrings expand from 2n − 1 centres, odd and even.
+pitfalls:
+- Base row and column left at 0.
+- Adding 1 when the last characters are equal.
+- Dropping the replace option, or using the LCS shortcut when replace is allowed.
+- Looping j forwards when counting distinct subsequences.
+- Greedy pointers for interleaving or for wildcard stars.
+resources:
+- title: Edit distance
+  url: https://en.wikipedia.org/wiki/Edit_distance
+  kind: article
+  source: Wikipedia
+  minutes: 15
+  level: core
+- title: Levenshtein distance
+  url: https://en.wikipedia.org/wiki/Levenshtein_distance
+  kind: article
+  source: Wikipedia
+  minutes: 20
+  level: deep
+- title: Introduction to DP
+  url: https://usaco.guide/gold/intro-dp
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: three-ops
+  kind: mcq
+  prompt: Which operations does the classic edit distance allow?
+  options:
+  - Insert, delete and replace one character
+  - Only insert and delete
+  - Swap two adjacent characters
+  - Delete a whole word
+  answer: 0
+  explanation: Levenshtein distance uses insert, delete and replace.
+  difficulty: 1
+- id: base-column
+  kind: mcq
+  prompt: What is dp[3][0], the cost of turning a 3-character prefix into the empty string?
+  options:
+  - '3'
+  - '0'
+  - '1'
+  - '4'
+  answer: 0
+  explanation: Delete all three characters.
+  difficulty: 2
+- id: horse
+  kind: mcq
+  prompt: The LCS shortcut n + m − 2·LCS gives 4 for horse → ros. What is the edit distance?
+  options:
+  - '3'
+  - '4'
+  - '2'
+  - '5'
+  answer: 0
+  explanation: A replace fixes h → r in one step instead of two.
+  difficulty: 2
+- id: equal-chars
+  kind: mcq
+  prompt: a[i−1] == b[j−1]. What is dp[i][j]?
+  options:
+  - dp[i−1][j−1]
+  - dp[i−1][j−1] + 1
+  - 1 + min of the three neighbours
+  - '0'
+  answer: 0
+  explanation: Equal last characters need no edit.
+  difficulty: 3
+- id: distinct-count
+  kind: mcq
+  prompt: In how many ways does bag appear as a subsequence of babgbag?
+  options:
+  - '5'
+  - '3'
+  - '1'
+  - '7'
+  answer: 0
+  explanation: Count the choices of b, a and g positions in order; the table gives 5.
+  difficulty: 4
+- id: wildcard-star
+  kind: mcq
+  prompt: For wildcard matching, p[j−1] is *. What is match[i][j]?
+  options:
+  - match[i][j−1] or match[i−1][j]
+  - match[i−1][j−1]
+  - match[i][j−2]
+  - Always true
+  answer: 0
+  explanation: The star matches nothing, or it also swallows s[i−1].
+  difficulty: 4
+- id: interleave-greedy
+  kind: mcq
+  prompt: Why do two pointers fail for interleaving strings?
+  options:
+  - When both strings offer the same next character, the choice matters later
+  - Because s3 may be longer
+  - They never fail
+  - Because the strings are unsorted
+  answer: 0
+  explanation: aabcc, dbbca, aadbbcbcac needs the b from s2 where greedy takes it from s1.
+  difficulty: 5
+- id: palindrome-count
+  kind: output
+  prompt: What does this print?
+  code:
+    python: |
+      s = "aaa"
+      n, count = len(s), 0
+      for centre in range(2 * n - 1):
+          lo, hi = centre // 2, (centre + 1) // 2
+          while lo >= 0 and hi < n and s[lo] == s[hi]:
+              count += 1
+              lo -= 1
+              hi += 1
+      print(count)
+    cpp: |
+      string s = "aaa";
+      int n = s.size(), count = 0;
+      for (int centre = 0; centre < 2 * n - 1; centre++) {
+          int lo = centre / 2, hi = (centre + 1) / 2;
+          while (lo >= 0 && hi < n && s[lo] == s[hi]) { count++; lo--; hi++; }
+      }
+      cout << count;
+    java: |
+      String s = "aaa";
+      int n = s.length(), count = 0;
+      for (int centre = 0; centre < 2 * n - 1; centre++) {
+          int lo = centre / 2, hi = (centre + 1) / 2;
+          while (lo >= 0 && hi < n && s.charAt(lo) == s.charAt(hi)) { count++; lo--; hi++; }
+      }
+      System.out.print(count);
+  options:
+  - '6'
+  - '3'
+  - '4'
+  - '5'
+  answer: 0
+  explanation: a, a, a, aa, aa and aaa.
+  difficulty: 4
+problems:
+- typo-costs
+- wildcard-sightings
+practice_links:
+- title: Edit Distance
+  url: https://leetcode.com/problems/edit-distance/
+  platform: LeetCode
+  difficulty: medium
+- title: Edit Distance
+  url: https://cses.fi/problemset/task/1639
+  platform: CSES
+  difficulty: medium
+- title: One Edit Distance
+  url: https://leetcode.com/problems/one-edit-distance/
+  platform: LeetCode
+  difficulty: medium
+- title: Distinct Subsequences
+  url: https://leetcode.com/problems/distinct-subsequences/
+  platform: LeetCode
+  difficulty: hard
+- title: Wildcard Matching
+  url: https://leetcode.com/problems/wildcard-matching/
+  platform: LeetCode
+  difficulty: hard
+- title: Regular Expression Matching
+  url: https://leetcode.com/problems/regular-expression-matching/
+  platform: LeetCode
+  difficulty: hard
+- title: Interleaving String
+  url: https://leetcode.com/problems/interleaving-string/
+  platform: LeetCode
+  difficulty: medium
+- title: Palindromic Substrings
+  url: https://leetcode.com/problems/palindromic-substrings/
+  platform: LeetCode
+  difficulty: medium
+- title: Longest Palindromic Substring
+  url: https://leetcode.com/problems/longest-palindromic-substring/
+  platform: LeetCode
+  difficulty: medium
+- title: Palindrome Partitioning II
+  url: https://leetcode.com/problems/palindrome-partitioning-ii/
+  platform: LeetCode
+  difficulty: hard
+provenance:
+  origin: original
+status: live

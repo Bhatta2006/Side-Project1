@@ -7,7 +7,8 @@ import { ArrowLeft } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { destination, useSession } from '@/lib/session';
 import type { Features } from '@/lib/types';
-import { Soc } from '@/components/socrat/illustration';
+import { LiveSoc } from '@/components/socrat/live-soc';
+import type { SocMood } from '@/components/socrat/soc';
 import { ErrorState } from '@/components/socrat/states';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (!loading && profile) router.replace(destination(profile, 'active') ?? requestedPath() ?? '/today');
@@ -62,27 +64,38 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
     }
   }
 
+  // Soc reacts to the form: curious on focus, greets you by name, thinks while signing in.
+  const first = name.trim().split(/\s+/)[0]?.slice(0, 20) ?? '';
+  const [mood, line]: [SocMood, string | null] = error ? ['worried', 'Hmm. That did not work. Shall we try again?']
+    : busy ? ['thinking', 'Looking for your notebook…']
+      : first ? ['happy', `Nice to meet you, ${first}!`]
+        : focused ? ['curious', 'And who might you be?']
+          : ['neutral', null];
+
   return (
-    <div className="login-page min-h-dvh bg-background px-4 py-4 sm:px-6 lg:px-10 lg:py-8">
-      <div className="mx-auto mb-4 flex max-w-[1240px] items-center justify-between gap-4 lg:mb-6">
+    <div className="login-page margin-rule min-h-dvh px-5 py-4 [--margin-x:20px] sm:px-8 sm:[--margin-x:40px] lg:px-10 lg:py-6 lg:[--margin-x:88px]">
+      <div className="mx-auto mb-6 flex max-w-[1400px] items-center justify-between gap-4 pl-5 sm:pl-8 lg:mb-4 lg:pl-[108px]">
         <Link href="/" aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
-        <Link href="/" className="inline-flex min-h-11 items-center gap-2 rounded-full px-2 text-[15px] font-semibold text-muted-foreground hover:text-foreground">
+        <Link href="/" className="inline-flex min-h-11 items-center gap-2 rounded-full px-2 text-[15px] font-medium text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" aria-hidden="true" /> Back to home
         </Link>
       </div>
 
-      <div className="mx-auto grid max-w-[1240px] gap-4 lg:min-h-[calc(100dvh-140px)] lg:grid-cols-[1.1fr_1fr] lg:gap-6">
-        {/* Phone: the form comes first and this card shrinks to a compact header. */}
-        <section aria-labelledby="login-story-title" className="relative order-first flex flex-col justify-between gap-6 overflow-hidden rounded-card bg-secondary p-6 text-secondary-foreground max-lg:min-h-0 lg:order-none lg:p-10">
-          <h2 id="login-story-title" className="font-display text-4xl leading-[1.02] font-bold tracking-[-0.035em] lg:type-display-l lg:text-[64px] lg:leading-[60px]">Learn it.<br />Then prove it.</h2>
-          <Soc size={240} className="hidden self-center lg:block" />
-          <p className="hidden max-w-sm text-[15px] lg:block">A tutor that asks before it tells. A plan that follows your evidence.</p>
+      <div className="mx-auto grid max-w-[1400px] items-center gap-10 pl-5 sm:pl-8 lg:min-h-[calc(100dvh-120px)] lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:pl-[108px]">
+        <section aria-labelledby="login-story-title" className="relative order-last flex flex-col gap-6 lg:order-none">
+          <h2 id="login-story-title" className="text-[44px] leading-[0.98] font-semibold tracking-[-0.055em] sm:text-[56px] lg:text-[76px]">Learn it.<br /><span className="hl hl-draw">Then prove it.</span></h2>
+          <p className="max-w-sm text-[17px] text-muted-foreground">A tutor that asks before it tells. A plan that follows your evidence.</p>
+          <div className="relative mt-2 hidden w-[260px] lg:block">
+            <LiveSoc mood={mood} say={line} bubbleSide="right" />
+          </div>
+          <p className="font-hand hidden -rotate-3 text-[24px] text-pen lg:block">psst, the first question is on me ↗</p>
         </section>
 
-        <section className="login-panel flex flex-col justify-center rounded-card border bg-card p-6 lg:p-12" aria-labelledby="login-title">
+        <section className="login-panel paper flex flex-col justify-center rounded-[28px] p-6 sm:p-8 lg:p-12" aria-labelledby="login-title">
           <div className="mx-auto w-full max-w-md">
             <h1 id="login-title" className="type-display-l">Log in</h1>
             <p className="mt-3 text-base text-muted-foreground">New to Socrat? Logging in creates your account.</p>
+            <div className="mt-6 flex items-center gap-3 lg:hidden"><LiveSoc books={false} size={64} mood={mood} say={null} className="w-16" /><p className="font-hand text-[22px] text-pen">{line ?? 'hello there!'}</p></div>
 
             <div className="mt-8 grid gap-4">
               {/* Sign-in options appear once the server says which are enabled. */}
@@ -104,14 +117,14 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
                 </p>
               ) : null}
               {features?.dev_login ? (
-                <form onSubmit={devLogin} className="grid gap-4 rounded-card border border-dashed border-border-strong p-5">
+                <form onSubmit={devLogin} className="grid gap-4 rounded-[20px] border border-dashed border-border-strong p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-semibold">Simulated learner</p>
-                    <span className="rounded-full border border-border-strong px-3 py-0.5 text-[13px] font-semibold">Development only</span>
+                    <p className="font-medium">Simulated learner</p>
+                    <span className="font-hand text-[19px] text-pen">development only</span>
                   </div>
                   <div className="grid gap-2">
-                    <label htmlFor="login-name" className="text-[15px] font-semibold">Your name</label>
-                    <Input id="login-name" value={name} onChange={e => setName(e.target.value)} maxLength={80} autoComplete="given-name" aria-describedby="login-name-help" required autoFocus />
+                    <label htmlFor="login-name" className="text-[15px] font-medium">Your name</label>
+                    <Input id="login-name" value={name} onChange={e => { setName(e.target.value); setError(''); }} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} maxLength={80} autoComplete="given-name" aria-describedby="login-name-help" required autoFocus />
                     <p id="login-name-help" className="text-sm text-muted-foreground">This simulates a learner on a local build. The same name returns you to the same account.</p>
                   </div>
                   <Button size="lg" disabled={busy || !name.trim()} aria-busy={busy}>

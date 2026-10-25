@@ -1,0 +1,133 @@
+id: dsa:dp-partition/mcm
+concept: dsa:dp-partition
+title: 'Matrix chain: try every last split of a range'
+tracks:
+- interview
+- competitive
+recognise:
+- Combine a sequence two neighbours at a time; the order changes the total cost
+- The cost of joining two blocks depends on their outer boundaries
+- n up to a few hundred, so O(n³) over ranges fits
+state: dp[i][j] = cheapest cost to combine items i..j into one
+transition: dp[i][j] = min over i ≤ k < j of dp[i][k] + dp[k+1][j] + join(i, k, j)
+base_cases:
+- dp[i][i] = 0
+complexity:
+  time: O(n³)
+  space: O(n²)
+template:
+  python: |
+    n = int(input())  # number of matrices
+    p = list(map(int, input().split()))  # n + 1 dimensions: matrix i is p[i] x p[i + 1]
+    dp = [[0] * n for _ in range(n)]  # dp[i][j]: cheapest cost to multiply matrices i..j
+    for length in range(2, n + 1):  # shorter ranges first
+        for i in range(n - length + 1):
+            j = i + length - 1
+            dp[i][j] = min(
+                dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] * p[j + 1]  # last multiply splits after k
+                for k in range(i, j)
+            )
+    print(dp[0][n - 1])
+  cpp: |
+    #include <algorithm>
+    #include <climits>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;  // number of matrices
+        cin >> n;
+        vector<long long> p(n + 1);  // matrix i is p[i] x p[i + 1]
+        for (auto& x : p) cin >> x;
+        vector<vector<long long>> dp(n, vector<long long>(n, 0));  // cheapest cost for i..j
+        for (int length = 2; length <= n; length++)  // shorter ranges first
+            for (int i = 0; i + length - 1 < n; i++) {
+                int j = i + length - 1;
+                dp[i][j] = LLONG_MAX;
+                for (int k = i; k < j; k++)  // the last multiply splits after k
+                    dp[i][j] = min(dp[i][j], dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] * p[j + 1]);
+            }
+        cout << dp[0][n - 1] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();  // number of matrices
+            long[] p = new long[n + 1];  // matrix i is p[i] x p[i + 1]
+            for (int i = 0; i <= n; i++) p[i] = in.nextLong();
+            long[][] dp = new long[n][n];  // cheapest cost for i..j
+            for (int length = 2; length <= n; length++)  // shorter ranges first
+                for (int i = 0; i + length - 1 < n; i++) {
+                    int j = i + length - 1;
+                    dp[i][j] = Long.MAX_VALUE;
+                    for (int k = i; k < j; k++)  // the last multiply splits after k
+                        dp[i][j] = Math.min(dp[i][j], dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] * p[j + 1]);
+                }
+            System.out.println(dp[0][n - 1]);
+        }
+    }
+template_io:
+  stdin: |
+    4
+    40 20 30 10 30
+  expected: '26000'
+variants:
+- id: triangulation
+  band: 2
+  title: Split a polygon at a third vertex
+  problem: leetcode:minimum-score-triangulation-of-polygon
+- id: leaf-tree
+  band: 3
+  title: Join cost from the largest leaves
+  problem: leetcode:minimum-cost-tree-from-leaf-values
+- id: removal-game
+  band: 3
+  title: A two-player game on a range
+  problem: cses:1097
+- id: cut-stick
+  band: 4
+  title: First cut splits the range
+  problem: leetcode:minimum-cost-to-cut-a-stick
+- id: burst
+  band: 5
+  title: Last burst splits the range
+  problem: leetcode:burst-balloons
+- id: merge-stones
+  band: 6
+  title: Merge K piles at a time
+  problem: leetcode:minimum-cost-to-merge-stones
+pitfalls:
+- mcm-length-order
+- mcm-cost-index
+- mcm-greedy-order
+- pattern-interval-vs-front-partition
+atoms:
+- mcm-worked
+- mcm-faded
+- mcm-visualizer
+- mcm-micro
+- mcm-classify
+quiz_family: quiz:dsa:dp-partition:mcm
+problems:
+  external:
+  - leetcode:minimum-score-triangulation-of-polygon
+  - leetcode:minimum-cost-tree-from-leaf-values
+  - cses:1097
+  - leetcode:minimum-cost-to-cut-a-stick
+  - leetcode:burst-balloons
+  - leetcode:minimum-cost-to-merge-stones
+  - leetcode:different-ways-to-add-parentheses
+  - leetcode:palindrome-partitioning-ii
+  - leetcode:word-break
+  - leetcode:partition-array-for-maximum-sum
+  - cses:1744
+  - leetcode:strange-printer
+showcase:
+- 'Cheapest pair first versus the best last split, on four matrices'
+status: provisional
+provenance:
+  origin: original

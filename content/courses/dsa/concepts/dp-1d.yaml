@@ -2,7 +2,7 @@ id: dp-1d
 title: Dynamic programming (1D)
 summary: Define a state, write the recurrence, fill a table — and turn exponential recursion into linear time.
 module: dynamic-programming
-prerequisites: [zero:recursion, complexity]
+prerequisites: [zero:recursion, complexity, dp-introduction]
 difficulty: 4
 estimated_minutes: 70
 lesson: |

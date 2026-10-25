@@ -1,0 +1,137 @@
+id: signal-splits
+title: Signal splits
+concepts: [dp-partition]
+difficulty: medium
+statement: |
+  A sensor recorded `n` readings `a_1 … a_n`. You must split the readings into **contiguous**
+  segments, each of length at most `K`, to send them as packets. A packet costs `C` plus the
+  spread of its readings (its largest reading minus its smallest).
+
+  Print the smallest total cost of sending all the readings.
+input_format: |
+  The first line contains n, K and C. The second line contains a_1 … a_n.
+output_format: The smallest total cost.
+constraints:
+  - 1 ≤ n ≤ 2000
+  - 1 ≤ K ≤ 100
+  - 0 ≤ C ≤ 10^9
+  - 0 ≤ a_i ≤ 10^9
+examples:
+  - input: "5 3 2\n1 2 9 9 8"
+    output: "6"
+    explanation: "Packets [1 2] and [9 9 8] cost (2 + 1) + (2 + 1) = 6. Putting 2 and 9 in one packet would add a spread of at least 7."
+  - input: "3 1 5\n4 7 1"
+    output: "15"
+hints:
+  - "Once the readings before the last packet are sent, the last packet's cost depends only on its own readings. What prefix state does that suggest?"
+  - "best[i] = cheapest cost to send the first i readings; best[0] = 0."
+  - "For each i, try every last packet a[j..i−1] of length at most K, updating its max and min as j moves left: best[i] = min(best[j] + C + max − min)."
+approach: |
+  Front partition. best[i] is the cheapest cost for the first i readings, with best[0] = 0.
+  The last packet is a[j..i−1] for some j with i − j ≤ K; walking j leftwards from i − 1 keeps
+  the packet's running maximum and minimum, so each candidate costs O(1):
+  best[i] = min(best[j] + C + max − min). O(n·K) time, O(n) memory; totals need 64-bit
+  integers.
+reference: |
+  n, K, C = map(int, input().split())
+  a = list(map(int, input().split()))
+  best = [0] * (n + 1)
+  for i in range(1, n + 1):
+      hi = lo = a[i - 1]
+      result = None
+      for j in range(i - 1, max(0, i - K) - 1, -1):
+          x = a[j]
+          if x > hi:
+              hi = x
+          if x < lo:
+              lo = x
+          c = best[j] + C + hi - lo
+          if result is None or c < result:
+              result = c
+      best[i] = result
+  print(best[n])
+brute: |
+  from itertools import product
+  n, K, C = map(int, input().split())
+  a = list(map(int, input().split()))
+  answer = None
+  for cuts in product([0, 1], repeat=n - 1):
+      pieces, start = [], 0
+      for i, c in enumerate(cuts, 1):
+          if c:
+              pieces.append(a[start:i])
+              start = i
+      pieces.append(a[start:])
+      if all(len(p) <= K for p in pieces):
+          total = sum(C + max(p) - min(p) for p in pieces)
+          answer = total if answer is None or total < answer else answer
+  print(answer)
+references:
+  cpp: |
+    #include <algorithm>
+    #include <climits>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, K;
+        long long C;
+        cin >> n >> K >> C;
+        vector<long long> a(n), best(n + 1, 0);
+        for (auto& x : a) cin >> x;
+        for (int i = 1; i <= n; i++) {
+            long long hi = a[i - 1], lo = a[i - 1], result = LLONG_MAX;
+            for (int j = i - 1; j >= max(0, i - K); j--) {
+                hi = max(hi, a[j]);
+                lo = min(lo, a[j]);
+                result = min(result, best[j] + C + hi - lo);
+            }
+            best[i] = result;
+        }
+        cout << best[n] << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            int n = Integer.parseInt(st.nextToken()), K = Integer.parseInt(st.nextToken());
+            long C = Long.parseLong(st.nextToken());
+            long[] a = new long[n], best = new long[n + 1];
+            st = new StringTokenizer(in.readLine());
+            for (int i = 0; i < n; i++) a[i] = Long.parseLong(st.nextToken());
+            for (int i = 1; i <= n; i++) {
+                long hi = a[i - 1], lo = a[i - 1], result = Long.MAX_VALUE;
+                for (int j = i - 1; j >= Math.max(0, i - K); j--) {
+                    hi = Math.max(hi, a[j]);
+                    lo = Math.min(lo, a[j]);
+                    result = Math.min(result, best[j] + C + hi - lo);
+                }
+                best[i] = result;
+            }
+            System.out.println(best[n]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1 0\n5"
+      yield "2 2 1000000000\n0 1000000000"
+      yield "3 1 5\n4 7 1"
+      n = 2000
+      yield f"{n} 100 0\n" + " ".join(str(rng.randint(0, 10**9)) for _ in range(n))
+      yield f"{n} 100 1000000000\n" + " ".join(str(rng.randint(0, 10**9)) for _ in range(n))
+      yield f"{n} 1 7\n" + " ".join(str(rng.randint(0, 10**9)) for _ in range(n))
+      yield f"{n} 50 1000\n" + " ".join(str(i // 37 * 1000) for i in range(n))
+      yield f"{n} 100 5\n" + " ".join(str(rng.randint(0, 9)) for _ in range(n))
+      for _ in range(4):
+          m = rng.randint(1, 60)
+          yield f"{m} {rng.randint(1, 8)} {rng.randint(0, 20)}\n" + " ".join(str(rng.randint(0, 30)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          m = rng.randint(1, 9)
+          yield f"{m} {rng.randint(1, 4)} {rng.randint(0, 6)}\n" + " ".join(str(rng.randint(0, 9)) for _ in range(m))

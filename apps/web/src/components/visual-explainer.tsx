@@ -152,7 +152,7 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
     <div className="grid gap-3">
       <div
         ref={canvas}
-        className={cn('visual-canvas relative flex flex-col overflow-hidden rounded-card border bg-card', full === 'overlay' && 'fixed inset-0 z-[70] rounded-none border-0')}
+        className={cn('visual-canvas relative flex flex-col overflow-hidden paper rounded-card', full === 'overlay' && 'fixed inset-0 z-[70] rounded-none border-0')}
         role={full === 'overlay' ? 'dialog' : undefined}
         aria-modal={full === 'overlay' ? true : undefined}
         aria-label={full ? `${artifact.title}, expanded` : undefined}
@@ -170,7 +170,7 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
             <div role="alert" className="grid min-h-[inherit] place-items-center p-8 text-center">
               <div className="grid max-w-md justify-items-center gap-3">
                 <AttentionIcon size={32} />
-                <p className="font-display text-xl font-bold tracking-[-0.02em]">{failure === 'load' ? 'The visual was generated but did not load.' : 'The visual stopped responding.'}</p>
+                <p className="font-display text-xl font-semibold tracking-[-0.02em]">{failure === 'load' ? 'The visual was generated but did not load.' : 'The visual stopped responding.'}</p>
                 <div className="mt-2 flex flex-wrap justify-center gap-2">
                   <Button onClick={reload}>Reload visual</Button>
                   {onExplain ? <Button variant="outline" onClick={onExplain}>Read the explanation</Button> : null}

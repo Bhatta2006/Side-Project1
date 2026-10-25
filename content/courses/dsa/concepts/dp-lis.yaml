@@ -1,0 +1,809 @@
+id: dp-lis
+title: Longest increasing subsequence family
+summary: 'LIS in O(n^2) and O(n log n), printing it, and variants: divisible subsets, chains, bitonic,
+  counts and envelopes.'
+module: dynamic-programming
+prerequisites: [dp-1d, binary-search]
+difficulty: 4
+estimated_minutes: 75
+lesson: |
+  The longest increasing subsequence (LIS) asks for the longest run of elements that keeps
+  rising, in their original order but not necessarily next to each other. It is a 1D DP:
+  each element asks "what is the best chain I can end?". It also has a famous faster method,
+  patience sorting, that combines DP with binary search. Many problems that sort items first
+  (envelopes, pairs, divisible numbers) end in an LIS.
+
+  ## LIS in O(n²)
+
+  ### Recognition cues
+
+  - A sequence, and you keep a subsequence (order kept, gaps allowed) that strictly increases,
+    or rises under some rule ("a divides b", "box fits inside box").
+  - Longest such chain, the number of longest chains, or the fewest removals to make the
+    sequence increasing.
+  - n up to a few thousand for O(n²); larger n needs the O(n log n) method below.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For LIS |
+  |---|---|
+  | State | `dp[i]` = the length of the longest strictly increasing subsequence that **ends at** `a[i]` |
+  | Transition | `dp[i] = 1 + max(dp[j])` over `j < i` with `a[j] < a[i]`; 1 if there is no such j |
+  | Base cases | every `dp[i]` starts at 1: the element alone |
+  | Answer | `max(dp)`, not `dp[n − 1]`: the best chain can end anywhere |
+  | Loop order | i ascending; for each i, every j before it |
+
+  ### Template
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  dp = [1] * n  # dp[i]: longest increasing subsequence ending at a[i]
+  for i in range(n):
+      for j in range(i):
+          if a[j] < a[i]:  # a[i] can extend the chain ending at a[j]
+              dp[i] = max(dp[i], dp[j] + 1)
+  print(max(dp))  # the best chain can end anywhere
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> a(n), dp(n, 1);  // dp[i]: longest increasing subsequence ending at a[i]
+      for (auto& x : a) cin >> x;
+      for (int i = 0; i < n; i++)
+          for (int j = 0; j < i; j++)
+              if (a[j] < a[i]) dp[i] = max(dp[i], dp[j] + 1);  // extend the chain ending at a[j]
+      cout << *max_element(dp.begin(), dp.end()) << "\n";  // the best chain can end anywhere
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] a = new int[n], dp = new int[n];  // dp[i]: longest increasing subsequence ending at a[i]
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          int best = 0;
+          for (int i = 0; i < n; i++) {
+              dp[i] = 1;
+              for (int j = 0; j < i; j++)
+                  if (a[j] < a[i]) dp[i] = Math.max(dp[i], dp[j] + 1);  // extend the chain at a[j]
+              best = Math.max(best, dp[i]);  // the best chain can end anywhere
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: 10 9 2 5 3 7 101 18
+
+  The LIS has length **4**, for example `2 5 7 101` or `2 3 7 18`. Input is n, then the
+  numbers.
+
+  **Wrong first attempt — extend greedily.** Start with the first number and take every
+  later number that is bigger than the last one taken:
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  last, length = a[0], 1
+  for x in a[1:]:
+      if x > last:  # take anything that keeps the chain rising
+          last, length = x, length + 1
+  print(length)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> a(n);
+      for (auto& x : a) cin >> x;
+      int last = a[0], length = 1;
+      for (int i = 1; i < n; i++)
+          if (a[i] > last) {  // take anything that keeps the chain rising
+              last = a[i];
+              length++;
+          }
+      cout << length << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          int last = a[0], length = 1;
+          for (int i = 1; i < n; i++)
+              if (a[i] > last) {  // take anything that keeps the chain rising
+                  last = a[i];
+                  length++;
+              }
+          System.out.println(length);
+      }
+  }
+  ```
+
+  It prints 2 (10, 101). Starting at 10 blocks 2, 5 and 7. Starting elsewhere does not save
+  greedy either: whichever element you commit to, a smaller one later may start a longer
+  chain. Each element has to consider every chain it could extend.
+
+  **Step 1 — recursion.** The longest chain ending at i extends the best chain ending at some
+  smaller earlier element:
+
+  ```python
+  def ending_at(i):
+      """Longest increasing subsequence that ends at a[i]."""
+      best = 1
+      for j in range(i):
+          if a[j] < a[i]:
+              best = max(best, ending_at(j) + 1)
+      return best
+
+
+  n = int(input())
+  a = list(map(int, input().split()))
+  print(max(ending_at(i) for i in range(n)))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n;
+  vector<int> a;
+
+  int endingAt(int i) {  // longest increasing subsequence that ends at a[i]
+      int best = 1;
+      for (int j = 0; j < i; j++)
+          if (a[j] < a[i]) best = max(best, endingAt(j) + 1);
+      return best;
+  }
+
+  int main() {
+      cin >> n;
+      a.resize(n);
+      for (auto& x : a) cin >> x;
+      int best = 0;
+      for (int i = 0; i < n; i++) best = max(best, endingAt(i));
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int[] a;
+
+      static int endingAt(int i) {  // longest increasing subsequence that ends at a[i]
+          int best = 1;
+          for (int j = 0; j < i; j++)
+              if (a[j] < a[i]) best = Math.max(best, endingAt(j) + 1);
+          return best;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          a = new int[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          int best = 0;
+          for (int i = 0; i < n; i++) best = Math.max(best, endingAt(i));
+          System.out.println(best);
+      }
+  }
+  ```
+
+  On an increasing input every call fans out to all earlier indexes: about 2ⁿ calls. Yet there
+  are only n different questions, one per ending index.
+
+  **Step 2 — memoization.** Answer each ending index once:
+
+  ```python
+  def ending_at(i):
+      if memo[i] is None:  # solve each ending index once
+          best = 1
+          for j in range(i):
+              if a[j] < a[i]:
+                  best = max(best, ending_at(j) + 1)
+          memo[i] = best
+      return memo[i]
+
+
+  n = int(input())
+  a = list(map(int, input().split()))
+  memo = [None] * n
+  print(max(ending_at(i) for i in range(n)))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n;
+  vector<int> a, memo;  // memo[i] = 0: not solved yet
+
+  int endingAt(int i) {
+      if (memo[i] == 0) {  // solve each ending index once
+          memo[i] = 1;
+          for (int j = 0; j < i; j++)
+              if (a[j] < a[i]) memo[i] = max(memo[i], endingAt(j) + 1);
+      }
+      return memo[i];
+  }
+
+  int main() {
+      cin >> n;
+      a.resize(n);
+      memo.assign(n, 0);
+      for (auto& x : a) cin >> x;
+      int best = 0;
+      for (int i = 0; i < n; i++) best = max(best, endingAt(i));
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int[] a, memo;  // memo[i] = 0: not solved yet
+
+      static int endingAt(int i) {
+          if (memo[i] == 0) {  // solve each ending index once
+              memo[i] = 1;
+              for (int j = 0; j < i; j++)
+                  if (a[j] < a[i]) memo[i] = Math.max(memo[i], endingAt(j) + 1);
+          }
+          return memo[i];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          a = new int[n];
+          memo = new int[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          int best = 0;
+          for (int i = 0; i < n; i++) best = Math.max(best, endingAt(i));
+          System.out.println(best);
+      }
+  }
+  ```
+
+  **Step 3 — tabulation.** Every `ending_at(i)` needs only smaller indexes, so fill `dp` from
+  left to right: that is the template above. O(n²) time, O(n) memory.
+
+  Dry run:
+
+  | i | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+  |---|---|---|---|---|---|---|---|---|
+  | a[i] | 10 | 9 | 2 | 5 | 3 | 7 | 101 | 18 |
+  | dp[i] | 1 | 1 | 1 | 2 | 2 | 3 | **4** | **4** |
+
+  Read one cell: for 7 (i = 5), the smaller earlier numbers are 2, 5 and 3, with dp values 1,
+  2 and 2, so dp = 2 + 1 = 3.
+
+  **Step 4 — faster, not smaller.** The table is already one row. The improvement here is in
+  time: the next section replaces the inner loop with a binary search, giving O(n log n).
+
+  ### Variants
+
+  1. *Longest increasing subsequence* (LeetCode): the anchor.
+  2. *Longest continuous increasing subsequence*: contiguous, so a single pass.
+  3. *Number of longest increasing subsequences*: keep a count beside each dp value.
+  4. *Largest divisible subset*: sort, then "a[j] divides a[i]" replaces `a[j] < a[i]`.
+  5. *Longest string chain*: sort by length; a word extends a word with one letter fewer.
+  6. *Minimum removals to make a mountain array*: LIS from the left plus LIS from the right.
+
+  ### Contrast
+
+  **Subsequence or contiguous run?** LIS may skip elements, so each element looks back at
+  every earlier one. The longest increasing *run* only compares neighbours and resets when
+  the run breaks.
+
+  ### Common mistakes
+
+  - Printing `dp[n − 1]` instead of `max(dp)`.
+  - Using `<=` when the problem says strictly increasing.
+  - Initialising `dp` to 0 instead of 1.
+  - Greedy extension from the first element.
+
+  ## Patience sorting: LIS in O(n log n)
+
+  ### Recognition cues
+
+  - LIS with n up to 10⁵ or 2·10⁵: O(n²) is too slow.
+  - Only the **length** is needed (or a count of piles, as in *Towers*).
+
+  ### State, transition, base cases, answer, loop order
+
+  Keep `tails`: `tails[L]` is the **smallest possible last element** of an increasing
+  subsequence of length L + 1 seen so far. `tails` is always sorted. For each x, find the
+  first tail ≥ x (lower bound): replace it with x, or append x if every tail is smaller. The
+  answer is `len(tails)`. For a **non-decreasing** subsequence, use the first tail > x (upper
+  bound) instead.
+
+  ### Template
+
+  ```python
+  from bisect import bisect_left
+
+  n = int(input())
+  a = list(map(int, input().split()))
+  tails = []  # tails[L]: smallest last element of an increasing subsequence of length L + 1
+  for x in a:
+      k = bisect_left(tails, x)  # first tail >= x (strictly increasing)
+      if k == len(tails):
+          tails.append(x)  # x extends the longest chain
+      else:
+          tails[k] = x  # a smaller tail for length k + 1
+  print(len(tails))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> tails;  // tails[L]: smallest last element of an increasing subsequence of length L + 1
+      for (int i = 0; i < n; i++) {
+          int x;
+          cin >> x;
+          auto it = lower_bound(tails.begin(), tails.end(), x);  // first tail >= x
+          if (it == tails.end()) tails.push_back(x);  // x extends the longest chain
+          else *it = x;  // a smaller tail for that length
+      }
+      cout << tails.size() << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] tails = new int[n];  // tails[L]: smallest last element of a chain of length L + 1
+          int size = 0;
+          for (int i = 0; i < n; i++) {
+              int x = in.nextInt(), lo = 0, hi = size;
+              while (lo < hi) {  // first tail >= x
+                  int mid = (lo + hi) / 2;
+                  if (tails[mid] < x) lo = mid + 1;
+                  else hi = mid;
+              }
+              tails[lo] = x;  // replace, or append when lo == size
+              if (lo == size) size++;
+          }
+          System.out.println(size);
+      }
+  }
+  ```
+
+  ### Anchor problem: the same numbers, faster
+
+  | x | 10 | 9 | 2 | 5 | 3 | 7 | 101 | 18 |
+  |---|---|---|---|---|---|---|---|---|
+  | tails after | 10 | 9 | 2 | 2 5 | 2 3 | 2 3 7 | 2 3 7 101 | 2 3 7 18 |
+
+  The length is **4**. Replacing 5 with 3 does not change any length; it only makes the
+  length-2 chain easier to extend later. That is the greedy choice that *is* safe here: a
+  smaller tail is never worse.
+
+  **Wrong first attempt — reading tails as the answer.** `tails` is not, in general, an
+  increasing subsequence of the input. For `3 4 1`, tails ends as `1 4`, but 1 comes after 4.
+  Only its length is meaningful. To print a real LIS, store for each element the index it
+  extended (see the next section).
+
+  **Wrong second attempt — the wrong bound.** With upper bound, equal values extend each
+  other: `2 2 2` gives 3 instead of 1.
+
+  ### Variants
+
+  1. *Increasing subsequence* (CSES): n = 2·10⁵, the template as is.
+  2. *Towers* (CSES): each cube goes on the leftmost tower whose top is larger; the number of
+     towers is patience sorting with upper bound.
+  3. *Russian doll envelopes*: sort, then this template (see below).
+  4. *Longest increasing subsequence II*: rises of at most k; needs a segment tree over
+     values, a CP topic.
+
+  ### Contrast
+
+  **Strictly increasing or non-decreasing?** Strict: lower bound, so an equal value replaces a
+  tail instead of extending it. Non-decreasing: upper bound, so equal values can follow each
+  other. Check the word "strictly" and test with repeated values.
+
+  ### Common mistakes
+
+  - Printing `tails` as if it were the subsequence.
+  - Upper bound for a strict LIS, or lower bound for a non-decreasing one.
+  - Forgetting that the C++/Java bound must search only the filled part of `tails`.
+
+  ## LIS variants: printing, counting, sorting first
+
+  ### Recognition cues
+
+  - "Print one longest increasing subsequence."
+  - Items with no given order (envelopes, pairs, numbers to pick) where a chain must rise in
+    two keys or under a divisibility rule.
+  - "Rise then fall" (bitonic, mountain): an LIS from each side.
+
+  ### State, transition, base cases, answer, loop order
+
+  To print, keep `parent[i]` = the j that gave `dp[i]` its value. Walk back from the best
+  ending index and reverse. For unordered items, **sort first** so the chain can only use
+  earlier items, then run LIS on the remaining key. For envelopes, sort by width ascending
+  and, for equal widths, height **descending**, so two envelopes of the same width can never
+  both be in the chain.
+
+  ### Template
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  dp, parent = [1] * n, [-1] * n  # parent[i]: previous index in the best chain ending at i
+  for i in range(n):
+      for j in range(i):
+          if a[j] < a[i] and dp[j] + 1 > dp[i]:
+              dp[i], parent[i] = dp[j] + 1, j
+  i = max(range(n), key=lambda k: dp[k])  # where the best chain ends
+  chain = []
+  while i != -1:  # walk back through the parents
+      chain.append(a[i])
+      i = parent[i]
+  print(len(chain))
+  print(*reversed(chain))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> a(n), dp(n, 1), parent(n, -1);  // parent[i]: previous index in the best chain
+      for (auto& x : a) cin >> x;
+      for (int i = 0; i < n; i++)
+          for (int j = 0; j < i; j++)
+              if (a[j] < a[i] && dp[j] + 1 > dp[i]) dp[i] = dp[j] + 1, parent[i] = j;
+      int i = max_element(dp.begin(), dp.end()) - dp.begin();  // where the best chain ends
+      vector<int> chain;
+      for (; i != -1; i = parent[i]) chain.push_back(a[i]);  // walk back through the parents
+      reverse(chain.begin(), chain.end());
+      cout << chain.size() << "\n";
+      for (size_t k = 0; k < chain.size(); k++) cout << chain[k] << (k + 1 < chain.size() ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] a = new int[n], dp = new int[n], parent = new int[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextInt();
+          int end = 0;
+          for (int i = 0; i < n; i++) {
+              dp[i] = 1;
+              parent[i] = -1;  // previous index in the best chain ending at i
+              for (int j = 0; j < i; j++)
+                  if (a[j] < a[i] && dp[j] + 1 > dp[i]) { dp[i] = dp[j] + 1; parent[i] = j; }
+              if (dp[i] > dp[end]) end = i;  // where the best chain ends
+          }
+          Deque<Integer> chain = new ArrayDeque<>();
+          for (int i = end; i != -1; i = parent[i]) chain.addFirst(a[i]);  // walk back
+          System.out.println(chain.size());
+          StringBuilder out = new StringBuilder();
+          for (int x : chain) out.append(out.length() > 0 ? " " : "").append(x);
+          System.out.println(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: printing for 10 9 2 5 3 7 101 18
+
+  The program prints `4` and then `2 5 7 101`. The parents are 5 → 2, 7 → 5, 101 → 7: each
+  number remembers which chain it extended first with the best length.
+
+  **Envelopes.** For `(5,4) (6,4) (6,7) (2,3)`, sort to `(2,3) (5,4) (6,7) (6,4)`, then the
+  LIS of the heights `3 4 7 4` is 3: (2,3) → (5,4) → (6,7). Sorting equal widths with
+  height ascending, `3 4 4 7`, would wrongly allow (6,4) → (6,7), which is not a strict fit.
+
+  **Wrong first attempt.** Sorting a plain array before LIS destroys the order the problem
+  gave you: every sorted array is its own LIS. Sort only when the items have no order of their
+  own.
+
+  ### Variants
+
+  1. *Russian doll envelopes*: the sort trick above, then patience sorting.
+  2. *Maximum length of pair chain*: sort by end; greedy works there too.
+  3. *Largest divisible subset*: sort, divisibility as the rule, print with parents.
+  4. *Number of longest increasing subsequences*: `count[i]` adds `count[j]` for every j that
+     ties the best length.
+  5. *Minimum removals to make a mountain array*: `lis_left[i] + lis_right[i] − 1`.
+
+  ### Contrast
+
+  **Sort first, or keep the order?** If the input is a sequence, its order is part of the
+  problem: never sort. If the input is a set of items (boxes, pairs, numbers to choose), sort
+  by one key so that a chain can only move forwards, then run LIS on the other key.
+
+  ### Common mistakes
+
+  - Sorting envelopes by height ascending inside equal widths.
+  - Walking parents forwards instead of back from the best ending index.
+  - Counting LIS by adding counts for every smaller j instead of only the ones that tie the
+    best length.
+
+  ## Worked walkthrough
+
+  **Problem.** Remove as few numbers as possible from `5 1 6 2 7 3 8` so that the rest
+  strictly increase. How many removals?
+
+  1. *Recognise.* What stays is an increasing subsequence; to remove the fewest, keep the
+     longest. Removals = n − LIS.
+  2. *Fill.* dp = 1 1 2 2 3 3 4 (for example 1 2 3 8, or 5 6 7 8).
+  3. *Answer.* 7 − 4 = 3.
+  4. *Check with tails.* 5 → 1 → 1 6 → 1 2 → 1 2 7 → 1 2 3 → 1 2 3 8: length 4.
+
+  ### Why this works
+
+  Any increasing subsequence that ends at a[i] is either a[i] alone or some increasing
+  subsequence ending at an earlier, smaller a[j], followed by a[i]. Taking the best such j
+  gives the longest one ending at i, and the overall LIS ends somewhere, so the maximum over
+  i is the answer. For patience sorting, the invariant is that tails[L] is the smallest tail
+  of any increasing subsequence of length L + 1 so far; x can extend exactly the lengths whose
+  tails are below x, so it either creates a longer chain or lowers one tail. A tail never
+  increases, so the length is never underestimated.
+
+  ### Boundary cases and cost
+
+  - n = 1: the answer is 1.
+  - All equal: 1 for strictly increasing, n for non-decreasing.
+  - Already sorted ascending: n. Sorted descending: 1.
+  - Cost: O(n²) for the table (fine to n ≈ 5000), O(n log n) for patience sorting (n up to
+    10⁶).
+
+  ### Check your understanding
+
+  `0 8 4 12 2 10 6 14 1 9`. What is the LIS length, and what does `tails` hold at the end?
+
+  Try it on paper before reading the reasoning below.
+
+  > The length is 4 (for example 0 4 6 9, or 0 8 12 14). tails ends as `0 1 6 9`: length 4,
+  > but 0 1 6 9 is not a subsequence in that order (1 comes after 6). Only the length is
+  > meaningful.
+key_points:
+- dp[i] is the longest increasing subsequence ending at a[i]; the answer is max(dp).
+- dp[i] = 1 + max dp[j] over earlier, smaller a[j]; O(n²).
+- 'Patience sorting: tails[L] is the smallest tail of a chain of length L + 1; O(n log n).'
+- Strict LIS uses lower bound; non-decreasing uses upper bound.
+- tails gives the length only; print an LIS with parent pointers.
+- Unordered items - sort by one key (ties descending), then LIS on the other.
+- Fewest removals to make it increasing = n − LIS.
+pitfalls:
+- Printing dp[n − 1] instead of the maximum over all i.
+- Using <= or upper bound for a strictly increasing subsequence.
+- Treating tails as an actual subsequence.
+- Sorting a sequence whose order matters.
+- Envelopes sorted with equal widths in ascending height.
+resources:
+- title: Longest increasing subsequence
+  url: https://cp-algorithms.com/sequences/longest_increasing_subsequence.html
+  kind: article
+  source: CP-Algorithms
+  minutes: 30
+  level: core
+- title: Longest Increasing Subsequence
+  url: https://usaco.guide/gold/lis
+  kind: article
+  source: USACO Guide
+  minutes: 30
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: state
+  kind: mcq
+  prompt: In the O(n²) LIS, what does dp[i] mean?
+  options:
+  - The longest increasing subsequence that ends at a[i]
+  - The longest increasing subsequence of a[:i]
+  - The number of smaller elements before i
+  - Whether a[i] is in the LIS
+  answer: 0
+  explanation: Ending at i is what makes the transition possible; the answer is the maximum.
+  difficulty: 1
+- id: greedy
+  kind: mcq
+  prompt: 10 9 2 5 3 7 101 18. Greedy extension from the first element gets 2. What is the LIS?
+  options:
+  - '4'
+  - '2'
+  - '3'
+  - '5'
+  answer: 0
+  explanation: 2 5 7 101 (or 2 3 7 18).
+  difficulty: 2
+- id: answer-cell
+  kind: mcq
+  prompt: dp = 1 2 3 1. What is the LIS length?
+  options:
+  - '3'
+  - '1'
+  - '7'
+  - '4'
+  answer: 0
+  explanation: The maximum over all i, not the last cell.
+  difficulty: 2
+- id: bound
+  kind: mcq
+  prompt: For a strictly increasing LIS with tails, which search do you use?
+  options:
+  - The first tail >= x (lower bound)
+  - The first tail > x (upper bound)
+  - The last tail < x
+  - Linear search from the end
+  answer: 0
+  explanation: An equal value must replace, not extend.
+  difficulty: 3
+- id: tails-trace
+  kind: output
+  prompt: What does this print?
+  code:
+    python: |
+      from bisect import bisect_left
+      tails = []
+      for x in [3, 4, 1, 5, 2]:
+          k = bisect_left(tails, x)
+          if k == len(tails):
+              tails.append(x)
+          else:
+              tails[k] = x
+      print(tails)
+    cpp: |
+      vector<int> tails;
+      for (int x : {3, 4, 1, 5, 2}) {
+          auto it = lower_bound(tails.begin(), tails.end(), x);
+          if (it == tails.end()) tails.push_back(x);
+          else *it = x;
+      }
+      cout << "[";
+      for (size_t i = 0; i < tails.size(); i++) cout << (i ? ", " : "") << tails[i];
+      cout << "]";
+    java: |
+      java.util.List<Integer> tails = new java.util.ArrayList<>();
+      for (int x : new int[] {3, 4, 1, 5, 2}) {
+          int k = java.util.Collections.binarySearch(tails, x);
+          if (k < 0) k = -k - 1;
+          if (k == tails.size()) tails.add(x);
+          else tails.set(k, x);
+      }
+      System.out.print(tails);
+  options:
+  - '[1, 2, 5]'
+  - '[3, 4, 5]'
+  - '[1, 4, 5]'
+  - '[1, 2]'
+  answer: 0
+  explanation: tails is not a subsequence of the input; only its length 3 matters.
+  difficulty: 4
+- id: envelopes
+  kind: mcq
+  prompt: Envelopes are sorted by width. Why sort equal widths by height descending?
+  options:
+  - So two envelopes of the same width can never both be in the chain
+  - To make the LIS longer
+  - Because heights must decrease
+  - It does not matter
+  answer: 0
+  explanation: Descending heights within a width cannot form an increasing pair.
+  difficulty: 4
+- id: removals
+  kind: mcq
+  prompt: 5 1 6 2 7 3 8. Fewest removals so the rest strictly increases?
+  options:
+  - '3'
+  - '4'
+  - '2'
+  - '0'
+  answer: 0
+  explanation: 7 − LIS, and the LIS is 4.
+  difficulty: 3
+- id: non-decreasing
+  kind: mcq
+  prompt: 2 2 2. Longest strictly increasing and longest non-decreasing subsequence?
+  options:
+  - 1 and 3
+  - 3 and 3
+  - 1 and 1
+  - 0 and 3
+  answer: 0
+  explanation: Equal values cannot follow each other in a strict LIS.
+  difficulty: 5
+problems:
+- tidy-shelf
+- heaviest-rise
+practice_links:
+- title: Longest Increasing Subsequence
+  url: https://leetcode.com/problems/longest-increasing-subsequence/
+  platform: LeetCode
+  difficulty: medium
+- title: Increasing Subsequence
+  url: https://cses.fi/problemset/task/1145
+  platform: CSES
+  difficulty: medium
+- title: Towers
+  url: https://cses.fi/problemset/task/1073
+  platform: CSES
+  difficulty: medium
+- title: Number of Longest Increasing Subsequence
+  url: https://leetcode.com/problems/number-of-longest-increasing-subsequence/
+  platform: LeetCode
+  difficulty: medium
+- title: Russian Doll Envelopes
+  url: https://leetcode.com/problems/russian-doll-envelopes/
+  platform: LeetCode
+  difficulty: hard
+- title: Largest Divisible Subset
+  url: https://leetcode.com/problems/largest-divisible-subset/
+  platform: LeetCode
+  difficulty: medium
+- title: Longest String Chain
+  url: https://leetcode.com/problems/longest-string-chain/
+  platform: LeetCode
+  difficulty: medium
+- title: Maximum Length of Pair Chain
+  url: https://leetcode.com/problems/maximum-length-of-pair-chain/
+  platform: LeetCode
+  difficulty: medium
+- title: Minimum Number of Removals to Make Mountain Array
+  url: https://leetcode.com/problems/minimum-number-of-removals-to-make-mountain-array/
+  platform: LeetCode
+  difficulty: hard
+- title: Longest Continuous Increasing Subsequence
+  url: https://leetcode.com/problems/longest-continuous-increasing-subsequence/
+  platform: LeetCode
+  difficulty: easy
+provenance:
+  origin: original
+status: live

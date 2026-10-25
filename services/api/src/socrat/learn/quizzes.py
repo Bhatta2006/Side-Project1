@@ -36,15 +36,23 @@ PROBE_PREREQS = 3
 
 
 def item(catalog: Catalog, concept: str, item_id: str) -> QuizItem:
-    return next(q for q in catalog.concept(concept).quiz if q.id == item_id)
+    return next(q for q in catalog.concept(concept).quiz if q.matches(item_id))
+
+
+def fitting(catalog: Catalog, concept: str, language: str) -> list[QuizItem]:
+    """The concept's items minus those about another language; all of them if none fit."""
+    quiz = catalog.concept(concept).quiz
+    return [q for q in quiz if q.fits(language)] or list(quiz)
 
 
 # ---------------------------------------------------------------- gates
 
 
-def gate_pool(catalog: Catalog, module_key: str) -> list[tuple[str, QuizItem]]:
+def gate_pool(catalog: Catalog, module_key: str, language: str) -> list[tuple[str, QuizItem]]:
     return [
-        (c, q) for c in gates.module_concepts(catalog, module_key) for q in catalog.concept(c).quiz
+        (c, q)
+        for c in gates.module_concepts(catalog, module_key)
+        for q in fitting(catalog, c, language)
     ]
 
 
@@ -83,9 +91,11 @@ def next_gate_item(
     return [concept, q.id]
 
 
-def gate_state(catalog: Catalog, session: QuizSession, exhausted: bool = False) -> gates.GateResult:
+def gate_state(
+    catalog: Catalog, session: QuizSession, language: str, exhausted: bool = False
+) -> gates.GateResult:
     module_key = session.activity_id.removeprefix("checkpoint:")
-    pool = gate_pool(catalog, module_key)
+    pool = gate_pool(catalog, module_key, language)
     levels = sorted({q.difficulty for _, q in pool})
     hard_available = sum(1 for _, q in pool if q.difficulty == levels[-1]) if levels else 0
     answers = [
@@ -113,10 +123,12 @@ def choose_items(
     kind, _, target = activity_id.partition(":")
     rng = random.Random(f"{enrollment.id}:{activity_id}:{seed}")
     if kind == "quiz":
-        quiz = sorted(catalog.concept(target).quiz, key=lambda q: (q.difficulty, q.id))
+        quiz = sorted(
+            fitting(catalog, target, enrollment.language), key=lambda q: (q.difficulty, q.id)
+        )
         return [[target, q.id] for q in quiz[:5]]
     if kind in {"review", "remedial"}:
-        quiz = list(catalog.concept(target).quiz)
+        quiz = list(fitting(catalog, target, enrollment.language))
         rng.shuffle(quiz)
         return [[target, q.id] for q in quiz[: 3 if kind == "review" else 4]]
     if kind == "probe":
@@ -124,17 +136,22 @@ def choose_items(
         items = []
         for concept in [target, *catalog.prerequisites[target][:PROBE_PREREQS]]:
             quiz = sorted(
-                catalog.concept(concept).quiz, key=lambda q: (abs(q.difficulty - 3), q.id)
+                fitting(catalog, concept, enrollment.language),
+                key=lambda q: (abs(q.difficulty - 3), q.id),
             )
             items += [[concept, q.id] for q in quiz[:2]]
         return items
     if kind == "testout":
-        hardest = sorted(catalog.concept(target).quiz, key=lambda q: (-q.difficulty, q.id))
+        hardest = sorted(
+            fitting(catalog, target, enrollment.language), key=lambda q: (-q.difficulty, q.id)
+        )
         return [[target, q.id] for q in hardest[:4]]
     if kind == "moduletest":
         items = []
         for concept in gates.module_concepts(catalog, target):
-            hardest = sorted(catalog.concept(concept).quiz, key=lambda q: (-q.difficulty, q.id))
+            hardest = sorted(
+                fitting(catalog, concept, enrollment.language), key=lambda q: (-q.difficulty, q.id)
+            )
             items += [[concept, q.id] for q in hardest[:2]]
         return items[: gates.MAX_ITEMS]
     if kind == "checkpoint":
@@ -142,7 +159,7 @@ def choose_items(
         course = catalog.course(course_id)
         if not any(m.id == module_id for m in course.modules):
             raise HTTPException(404, "not_found")
-        pool = gate_pool(catalog, target)
+        pool = gate_pool(catalog, target, enrollment.language)
         levels = sorted({q.difficulty for _, q in pool})
         if not levels:
             raise HTTPException(404, "not_found")
@@ -250,16 +267,16 @@ def _latest(db: Session, enrollment: Enrollment, activity_id: str) -> QuizSessio
     return row
 
 
-def gate_view(db: Session, catalog: Catalog, session: QuizSession) -> dict:
+def gate_view(db: Session, catalog: Catalog, session: QuizSession, language: str) -> dict:
     module_key = session.activity_id.removeprefix("checkpoint:")
-    state = gate_state(catalog, session)
+    state = gate_state(catalog, session, language)
     record = db.get(ActivityRecord, (session.enrollment_id, session.activity_id))
     outcome = (record.outcome or {}) if record else {}
     course_id = module_key.split(":", 1)[0]
     keys = gates.module_keys(catalog, course_id)
     position = keys.index(module_key)
     unlocks = keys[position + 1] if position + 1 < len(keys) else None
-    pool = gate_pool(catalog, module_key)
+    pool = gate_pool(catalog, module_key, language)
     return dict(
         max_items=gates.MAX_ITEMS,
         max_strikes=gates.MAX_STRIKES,
@@ -317,11 +334,11 @@ def session_view(
         activity_id=session.activity_id,
         questions=questions,
         completed=session.completed_at is not None,
-        score=score_of(catalog, session) if session.completed_at else None,
+        score=score_of(catalog, session, language) if session.completed_at else None,
         feedback="at_end" if checkpoint or kind in TESTOUTS else "immediate",
     )
     if checkpoint and db is not None:
-        view["gate"] = gate_view(db, catalog, session)
+        view["gate"] = gate_view(db, catalog, session, language)
     if kind in TESTOUTS and db is not None and session.completed_at is not None:
         record = db.get(ActivityRecord, (session.enrollment_id, session.activity_id))
         outcome = (record.outcome or {}) if record else {}
@@ -329,9 +346,9 @@ def session_view(
     return view
 
 
-def score_of(catalog: Catalog, session: QuizSession) -> float:
+def score_of(catalog: Catalog, session: QuizSession, language: str) -> float:
     if session.activity_id.startswith("checkpoint:"):
-        return gate_state(catalog, session).score
+        return gate_state(catalog, session, language).score
     if not session.items:
         return 0.0
     return sum(1 for a in session.answers.values() if a["correct"]) / len(session.items)
@@ -360,18 +377,18 @@ def answer(
     correct = q.is_correct(session.id, choice)  # choice is a display position
     session.answers = {**session.answers, item_id: {"choice": choice, "correct": correct}}
     if session.activity_id.startswith("checkpoint:"):
-        state = gate_state(catalog, session)
+        state = gate_state(catalog, session, enrollment.language)
         if not state.done:
             module_key = session.activity_id.removeprefix("checkpoint:")
             following = next_gate_item(
-                gate_pool(catalog, module_key),
+                gate_pool(catalog, module_key, enrollment.language),
                 session.items,
                 recent_items(db, enrollment, now, exclude=session.id),
                 state.next_level,
                 gate_rng(enrollment, session.id, len(session.items)),
             )
             if following is None:
-                state = gate_state(catalog, session, exhausted=True)
+                state = gate_state(catalog, session, enrollment.language, exhausted=True)
             else:
                 session.items = [*session.items, following]
         finished = state.done
@@ -413,7 +430,7 @@ def finish(
             expected_seconds=expected,
         )
     if session.activity_id.startswith("checkpoint:"):
-        state = gate_state(catalog, session, exhausted=True)
+        state = gate_state(catalog, session, enrollment.language, exhausted=True)
         record = learn.start_activity(db, enrollment, session.activity_id, now)
         attempts = int((record.outcome or {}).get("attempts", 0)) + 1
         if state.passed:
@@ -440,7 +457,7 @@ def finish(
             enrollment,
             session.activity_id,
             now,
-            outcome={"score": score_of(catalog, session)},
+            outcome={"score": score_of(catalog, session, enrollment.language)},
         )
         if session.activity_id.startswith("quiz:"):  # Taking the check means the lesson was read.
             learn.complete_activity(
@@ -468,7 +485,7 @@ def finish_testout(
     beyond honest quiz evidence, and the normal path carries on."""
     elapsed = learn.elapsed(db, enrollment, session.activity_id, now)
     expected = learn.expected_seconds(catalog, session.activity_id, enrollment)
-    score = score_of(catalog, session)
+    score = score_of(catalog, session, enrollment.language)
     fractions = {c: sum(r) / len(r) for c, r in per_concept.items()}
     passed = (
         score >= TESTOUT_PASS

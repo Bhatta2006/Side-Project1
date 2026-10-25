@@ -1,0 +1,32 @@
+id: euler-tour
+title: Euler tour flattening
+summary: Turn subtree queries into range queries with entry and exit times, then answer them with a Fenwick
+  or segment tree.
+module: range-structures
+prerequisites:
+- lca
+- fenwick-tree
+difficulty: 5
+estimated_minutes: 45
+status: draft
+lesson: '## Subtree as range
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

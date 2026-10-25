@@ -112,7 +112,12 @@ def test_starter_content_has_explicit_versions_rights_and_language_adapters():
     catalog = default_catalog()
     assert len(catalog.atom_packs) == 30
     for course in ("zero", "dsa", "cp"):
-        assert set(catalog.course_concepts(course)[:10]) <= catalog.atom_packs.keys()
+        # New concepts inserted into the starter range carry pattern packs, not reviewed concept packs,
+        # so the starter range is the first ten pre-expansion concepts.
+        starters = [
+            c for c in catalog.course_concepts(course) if catalog.concepts[c].provenance is None
+        ][:10]
+        assert len(starters) == 10 and set(starters) <= catalog.atom_packs.keys()
     for pack in catalog.atom_packs.values():
         assert pack.status == "released" and pack.review
         worked = next(a for a in pack.atoms if a.kind == "worked")

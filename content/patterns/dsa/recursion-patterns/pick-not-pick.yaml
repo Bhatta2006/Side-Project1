@@ -1,0 +1,137 @@
+id: dsa:recursion-patterns/pick-not-pick
+concept: dsa:recursion-patterns
+title: 'Pick or not pick: two branches per index, decide every index'
+tracks:
+- interview
+- competitive
+recognise:
+- Subsequences, subsets or "choose some elements", where every element is in or out
+- Count, list or optimise the choices under a condition such as a sum or a size
+- n is small, around 20, because there are 2^n choices
+state: ways(i, total) = the number of ways to finish choosing from index i, given the sum chosen so far
+transition: ways(i, total) = ways(i + 1, total + a[i]) + ways(i + 1, total)
+base_cases:
+- i = n, every index decided; count 1 if total = k, else 0
+complexity:
+  time: O(2^n)
+  space: O(n) recursion depth
+template:
+  python: |
+    import sys
+
+    data = sys.stdin.read().split()
+    n, k = int(data[0]), int(data[1])
+    a = [int(x) for x in data[2:2 + n]]
+
+
+    def ways(i, total):  # ways to finish from index i, given the sum chosen so far
+        if i == n:  # every element decided: is this one choice a hit?
+            return 1 if total == k else 0
+        take = ways(i + 1, total + a[i])  # pick a[i]
+        skip = ways(i + 1, total)  # do not pick a[i]
+        return take + skip
+
+
+    print(ways(0, 0))
+  cpp: |
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int n;
+    long long k;
+    vector<long long> a;
+
+    long long ways(int i, long long total) {  // ways to finish from index i, given the sum so far
+        if (i == n) return total == k ? 1 : 0;  // every element decided: is this one choice a hit?
+        long long take = ways(i + 1, total + a[i]);  // pick a[i]
+        long long skip = ways(i + 1, total);  // do not pick a[i]
+        return take + skip;
+    }
+
+    int main() {
+        cin >> n >> k;
+        a.resize(n);
+        for (auto& x : a) cin >> x;
+        cout << ways(0, 0) << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        static int n;
+        static long k;
+        static long[] a;
+
+        static long ways(int i, long total) {  // ways to finish from index i, given the sum so far
+            if (i == n) return total == k ? 1 : 0;  // every element decided: is this one choice a hit?
+            long take = ways(i + 1, total + a[i]);  // pick a[i]
+            long skip = ways(i + 1, total);  // do not pick a[i]
+            return take + skip;
+        }
+
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            n = in.nextInt();
+            k = in.nextLong();
+            a = new long[n];
+            for (int i = 0; i < n; i++) a[i] = in.nextLong();
+            System.out.println(ways(0, 0));
+        }
+    }
+template_io:
+  stdin: |
+    4 3
+    1 2 0 3
+  expected: '4'
+variants:
+- id: subsets
+  band: 2
+  title: List every subset
+  problem: leetcode:subsets
+- id: target-sum
+  band: 3
+  title: Plus or minus for each element
+  problem: leetcode:target-sum
+- id: combination-sum
+  band: 3
+  title: Pick again, so stay at i
+  problem: leetcode:combination-sum
+- id: subsets-ii
+  band: 4
+  title: Duplicates, skip equal values when not picking
+  problem: leetcode:subsets-ii
+- id: combination-sum-ii
+  band: 4
+  title: Each element once, duplicates in the input
+  problem: leetcode:combination-sum-ii
+- id: apple-division
+  band: 5
+  title: Two groups, minimise the difference
+  problem: cses:1623
+pitfalls:
+- pnp-stop-at-target
+- pnp-base-ignores-target
+- pnp-take-without-element
+- pnp-forget-skip
+- pattern-subset-vs-subarray
+atoms:
+- pnp-worked
+- pnp-faded
+- pnp-visualizer
+- pnp-micro
+- pnp-classify
+quiz_family: quiz:dsa:recursion-patterns:pick-not-pick
+problems:
+  external:
+  - leetcode:subsets
+  - leetcode:target-sum
+  - leetcode:combination-sum
+  - leetcode:subsets-ii
+  - leetcode:combination-sum-ii
+  - cses:1623
+showcase:
+- 'Why stopping at the target counts 3 instead of 4 on 1 2 0 3 with k = 3'
+status: provisional
+provenance:
+  origin: original

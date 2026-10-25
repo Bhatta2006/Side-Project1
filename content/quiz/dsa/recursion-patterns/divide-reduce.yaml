@@ -1,0 +1,63 @@
+id: quiz:dsa:recursion-patterns:divide-reduce
+family: divide-reduce
+concept: dsa:recursion-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: josephus
+  band: 2
+  format: trace
+  prompt: Josephus with n = 5 and k = 2. Who survives?
+  options:
+  - '3'
+  - '5'
+  - '1'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - josephus-no-shift
+  - off-by-one-output
+  - trace-step-slip
+  explanation: 2, 4, 1 and 5 leave in that order.
+- id: shift
+  band: 3
+  format: mcq
+  prompt: The 0-based survivor among m − 1 people is s. What is it among m people?
+  options:
+  - (s + k) % m
+  - s
+  - s + 1
+  - (s + 1) % m
+  answer: 0
+  misconceptions:
+  - null
+  - josephus-no-shift
+  - josephus-no-shift
+  - off-by-one-output
+  explanation: The smaller circle starts counting k seats later.
+- id: hanoi
+  band: 4
+  format: trace
+  prompt: How many moves does the Tower of Hanoi need for 4 discs?
+  options:
+  - '15'
+  - '16'
+  - '8'
+  - '7'
+  answer: 0
+  misconceptions:
+  - null
+  - off-by-one-output
+  - power-as-multiply
+  - trace-step-slip
+  explanation: moves(n) = 2 · moves(n − 1) + 1, so 2⁴ − 1.
+status: provisional
+provenance:
+  origin: original

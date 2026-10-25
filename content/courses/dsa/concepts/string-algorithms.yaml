@@ -1,0 +1,95 @@
+id: string-algorithms
+title: String algorithms
+summary: Everyday string manipulation, then pattern matching with Rabin-Karp rolling hashes, KMP's LPS
+  array and the Z-function.
+module: math-and-strings
+prerequisites:
+- hashing
+- interview-math
+difficulty: 4
+estimated_minutes: 70
+status: draft
+lesson: '## String manipulation
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Rabin karp
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Kmp lps
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Z function
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

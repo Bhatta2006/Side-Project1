@@ -354,20 +354,7 @@ def prepare(
         problem = catalog.problem(problem_id)
         ladder = socratic.Ladder.from_dict(thread.ladder.get("state"))
         ladder = socratic.advance(ladder, message, new_attempt)
-        failed = (
-            db.scalar(
-                select(func.count())
-                .select_from(Submission)
-                .where(
-                    Submission.user_id == user.id,
-                    Submission.problem_id == problem.id,
-                    Submission.mode == "submit",
-                    Submission.status == "done",
-                    Submission.verdict != "accepted",
-                )
-            )
-            or 0
-        )
+        failed = failed_submits(db, user.id, problem.id)
         if intent in {"reveal", "reveal_confirmed"}:
             ok, why = socratic.reveal_eligibility(ladder, failed)
             if not ok:
@@ -587,6 +574,34 @@ def rate(db: Session, user_id: str, message_id: str, rating: int) -> dict:
     return {"id": message.id, "rating": message.rating}
 
 
+def failed_submits(db: Session, user_id: str, problem_id: str) -> int:
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(Submission)
+            .where(
+                Submission.user_id == user_id,
+                Submission.problem_id == problem_id,
+                Submission.mode == "submit",
+                Submission.status == "done",
+                Submission.verdict != "accepted",
+            )
+        )
+        or 0
+    )
+
+
+def reveal_view(db: Session, user_id: str, scope: str, state: dict | None) -> dict | None:
+    """Whether "Show solution" works yet, so the panel never offers what it will refuse (Z-8)."""
+    if not scope.startswith("problem:"):
+        return None
+    ladder = socratic.Ladder.from_dict(state)
+    ok, needs = socratic.reveal_eligibility(
+        ladder, failed_submits(db, user_id, scope.removeprefix("problem:"))
+    )
+    return {"ok": ok, "needs": "" if ok else needs}
+
+
 def thread_view(db: Session, user_id: str, scope: str) -> dict:
     scope = validate_scope(scope)
     thread = db.scalar(
@@ -595,7 +610,12 @@ def thread_view(db: Session, user_id: str, scope: str) -> dict:
         )
     )
     if thread is None:
-        return {"scope": scope, "messages": [], "ladder": {}}
+        return {
+            "scope": scope,
+            "messages": [],
+            "ladder": {},
+            "reveal": reveal_view(db, user_id, scope, None),
+        }
     rows = db.scalars(
         select(AssistantMessage)
         .where(AssistantMessage.thread_id == thread.id)
@@ -605,6 +625,7 @@ def thread_view(db: Session, user_id: str, scope: str) -> dict:
     return {
         "scope": scope,
         "ladder": thread.ladder.get("state", {}),
+        "reveal": reveal_view(db, user_id, scope, thread.ladder.get("state")),
         "messages": [
             {
                 "id": m.id,

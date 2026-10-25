@@ -1,0 +1,79 @@
+id: quiz:dsa:dp-lis:lis-patience
+family: lis-patience
+concept: dsa:dp-lis
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: tails-meaning
+  band: 2
+  format: mcq
+  prompt: What does tails[L] hold?
+  options:
+  - The smallest last element of any increasing subsequence of length L + 1 so far
+  - The L-th element of the LIS
+  - The largest element seen so far
+  - The number of chains of length L
+  answer: 0
+  misconceptions:
+  - null
+  - lis-tails-is-sequence
+  - dp-vague-state
+  - count-vs-sum
+  explanation: Keeping the smallest tail makes each length as easy to extend as possible.
+- id: trace
+  band: 3
+  format: trace
+  prompt: tails = 2 5 9. The next number is 6. What is tails now?
+  options:
+  - 2 5 6
+  - 2 5 9 6
+  - 2 6 9
+  - '6'
+  answer: 0
+  misconceptions:
+  - null
+  - lis-tails-is-sequence
+  - lis-upper-vs-lower
+  - overwrite-best
+  explanation: The first tail >= 6 is 9; replace it.
+- id: not-a-sequence
+  band: 4
+  format: bug_spot
+  prompt: After 3 4 1, tails is 1 4. Someone prints it as the LIS. What is wrong?
+  options:
+  - 1 comes after 4 in the input, so 1 4 is not a subsequence
+  - Nothing
+  - The length is wrong
+  - tails should be sorted descending
+  answer: 0
+  misconceptions:
+  - null
+  - lis-tails-is-sequence
+  - lis-tails-is-sequence
+  - pattern-sort-breaks-order
+  explanation: Only the length of tails is meaningful; use parent pointers to print.
+- id: bound
+  band: 5
+  format: classify
+  prompt: You need the longest non-decreasing subsequence. Which search?
+  options:
+  - The first tail > x (upper bound)
+  - The first tail >= x (lower bound)
+  - The last tail <= x
+  - No search; append always
+  answer: 0
+  misconceptions:
+  - null
+  - lis-upper-vs-lower
+  - pattern-strict-vs-nondecreasing-lis
+  - lis-greedy-extend
+  explanation: Equal values may follow each other, so x extends past equal tails.
+status: provisional
+provenance:
+  origin: original

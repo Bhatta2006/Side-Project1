@@ -1,0 +1,127 @@
+id: dsa:knapsack-unbounded/unbounded-knapsack
+concept: dsa:knapsack-unbounded
+title: 'Unbounded knapsack: reuse items as often as you like'
+tracks:
+- interview
+- competitive
+recognise:
+- Items come in unlimited copies, under a length, weight or amount budget
+- Maximise value, minimise a count, or count ways to reach the budget
+- The budget is small enough to index; listing every multiset is too slow
+state: dp[c] = best value within capacity c, any number of copies of each item
+transition: 'for each item, c from w up to W: dp[c] = max(dp[c], dp[c − w] + v)'
+base_cases:
+- dp[c] = 0 for every c before any item
+complexity:
+  time: O(n · W)
+  space: O(W) with one row
+template:
+  python: |
+    n, W = map(int, input().split())
+    w = list(map(int, input().split()))
+    v = list(map(int, input().split()))
+    dp = [0] * (W + 1)  # dp[c]: best value within capacity c, items reusable
+    for i in range(n):
+        for c in range(w[i], W + 1):  # forwards, so item i can be taken again
+            dp[c] = max(dp[c], dp[c - w[i]] + v[i])
+    print(dp[W])
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, W;
+        cin >> n >> W;
+        vector<int> w(n);
+        vector<long long> v(n), dp(W + 1, 0);  // dp[c]: best value within capacity c
+        for (auto& x : w) cin >> x;
+        for (auto& x : v) cin >> x;
+        for (int i = 0; i < n; i++)
+            for (int c = w[i]; c <= W; c++)  // forwards, so item i can be taken again
+                dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
+        cout << dp[W] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt(), W = in.nextInt();
+            int[] w = new int[n];
+            long[] v = new long[n], dp = new long[W + 1];  // dp[c]: best value within capacity c
+            for (int i = 0; i < n; i++) w[i] = in.nextInt();
+            for (int i = 0; i < n; i++) v[i] = in.nextLong();
+            for (int i = 0; i < n; i++)
+                for (int c = w[i]; c <= W; c++)  // forwards, so item i can be taken again
+                    dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
+            System.out.println(dp[W]);
+        }
+    }
+template_io:
+  stdin: |
+    4 4
+    1 2 3 4
+    1 5 8 9
+  expected: '10'
+variants:
+- id: integer-break
+  band: 2
+  title: Pieces 1 to n, maximise the product
+  problem: leetcode:integer-break
+- id: minimizing-coins
+  band: 3
+  title: Fewest coins for an exact amount
+  problem: cses:1634
+- id: cut-ribbon
+  band: 3
+  title: Use the whole length exactly, most pieces
+  problem: cf:189A
+- id: perfect-squares
+  band: 4
+  title: Fewest squares
+  problem: leetcode:perfect-squares
+- id: coin-change-ii
+  band: 4
+  title: Count combinations (coins outer)
+  problem: leetcode:coin-change-ii
+- id: combination-sum-iv
+  band: 5
+  title: Count ordered ways (amount outer)
+  problem: leetcode:combination-sum-iv
+- id: minimum-cost-tickets
+  band: 6
+  title: Reusable passes with prices
+  problem: leetcode:minimum-cost-for-tickets
+pitfalls:
+- unbounded-vs-01
+- unbounded-advance-after-take
+- knapsack-greedy-ratio
+- exact-capacity-zero-init
+atoms:
+- uk-worked
+- uk-faded
+- uk-visualizer
+- uk-micro
+- uk-classify
+quiz_family: quiz:dsa:knapsack-unbounded:unbounded-knapsack
+problems:
+  external:
+  - leetcode:integer-break
+  - cses:1634
+  - cf:189A
+  - leetcode:perfect-squares
+  - leetcode:coin-change-ii
+  - leetcode:combination-sum-iv
+  - leetcode:minimum-cost-for-tickets
+  - leetcode:coin-change
+  - cses:1635
+  - cses:1636
+  - cses:1633
+showcase:
+- 'Why the capacity loop runs forwards here: a second copy of the same piece, step by step'
+status: provisional
+provenance:
+  origin: original

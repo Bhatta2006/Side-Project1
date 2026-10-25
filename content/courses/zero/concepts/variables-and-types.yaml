@@ -91,11 +91,11 @@ lesson: |
 
   Assignment updates a name's value; it does not establish a permanent mathematical equation between names. Type determines which operations are meaningful. The text '4' concatenated with text '3' is different from the number 4 added to 3.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Test zero, negative values and values near the integer limit. Python integers grow; C++ and Java fixed-width integers need a sufficiently wide type before the arithmetic occurs.
 
-  A scalar assignment normally takes constant time; copying a collection can take time proportional to its size.
+  Storing one value in a variable is instant. Later, when you copy a whole list, that takes longer the more items it holds.
 
   ### Check your understanding
 

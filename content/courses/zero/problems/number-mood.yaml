@@ -1,0 +1,100 @@
+id: number-mood
+title: Number mood
+concepts: [math-on-numbers]
+difficulty: easy
+statement: |
+  Add up the **proper divisors** of a whole number n: every divisor of n except n itself.
+  The number is
+
+  - `perfect` if that sum equals n,
+  - `abundant` if the sum is bigger than n,
+  - `deficient` if the sum is smaller than n.
+
+  Print the proper-divisor sum, then the word.
+input_format: The only line contains n.
+output_format: The sum of the proper divisors and the word, separated by a space.
+constraints:
+  - 1 ≤ n ≤ 10^12
+examples:
+  - input: "28"
+    output: "28 perfect"
+    explanation: "1 + 2 + 4 + 7 + 14 = 28."
+  - input: "12"
+    output: "16 abundant"
+    explanation: "1 + 2 + 3 + 4 + 6 = 16, more than 12."
+  - input: "1"
+    output: "0 deficient"
+hints:
+  - "Divisors come in pairs i and n / i. You only need to try i while i · i ≤ n."
+  - "Add both members of each pair, but a perfect square's root only once. Then subtract n itself."
+  - "For n up to 10^12 the loop runs about a million times, and the sum needs 64-bit integers."
+approach: |
+  Divisor pairs up to the square root. For each i with i · i ≤ n that divides n, add i and,
+  if it is different, its partner n // i. That sums all divisors, including n; subtract n to
+  get the proper-divisor sum s. Compare s with n to choose the word. For n = 1 the only
+  divisor is 1 itself, so s = 0. O(√n) time, about 10^6 steps; s stays below about 5 · 10^12.
+reference: |
+  def main():
+      n = int(input())
+      total = 0
+      i = 1
+      while i * i <= n:
+          if n % i == 0:
+              total += i
+              j = n // i
+              if j != i:
+                  total += j
+          i += 1
+      s = total - n
+      word = "perfect" if s == n else ("abundant" if s > n else "deficient")
+      print(s, word)
+  main()
+brute: |
+  n = int(input())
+  s = sum(d for d in range(1, n) if n % d == 0)
+  word = "perfect" if s == n else ("abundant" if s > n else "deficient")
+  print(s, word)
+references:
+  cpp: |
+    #include <iostream>
+    using namespace std;
+
+    int main() {
+        long long n, total = 0;
+        cin >> n;
+        for (long long i = 1; i * i <= n; i++) {
+            if (n % i != 0) continue;
+            total += i;
+            if (n / i != i) total += n / i;
+        }
+        long long s = total - n;
+        cout << s << " " << (s == n ? "perfect" : s > n ? "abundant" : "deficient") << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            long n = new Scanner(System.in).nextLong(), total = 0;
+            for (long i = 1; i * i <= n; i++) {
+                if (n % i != 0) continue;
+                total += i;
+                if (n / i != i) total += n / i;
+            }
+            long s = total - n;
+            System.out.println(s + " " + (s == n ? "perfect" : s > n ? "abundant" : "deficient"));
+        }
+    }
+generator: |
+  def cases(rng):
+      for n in (1, 2, 6, 496, 8128, 33550336, 8589869056, 945, 999999999989, 1000000000000, 999999000001, 963761198400):
+          yield str(n)
+      for _ in range(4):
+          yield str(rng.randint(10**11, 10**12))
+      for _ in range(3):
+          r = rng.randint(10**5, 10**6)
+          yield str(r * r)
+small_generator: |
+  def cases(rng):
+      for n in range(1, 301):
+          yield str(n)

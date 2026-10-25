@@ -1,0 +1,784 @@
+id: binary-search-on-answer
+title: Binary search on the answer
+summary: Minimise the maximum or maximise the minimum by binary searching over answers with a monotone
+  yes/no check.
+module: linear-patterns
+prerequisites:
+- binary-search
+difficulty: 4
+estimated_minutes: 60
+lesson: |
+  The binary search lesson ended with Koko's bananas: instead of searching an array, search
+  the **range of possible answers**, using a yes/no check that is monotone (if speed k is
+  fast enough, so is every faster speed). That idea, the answer predicate, is its own pattern
+  (`answer-monotonic-predicate`). This lesson covers the three shapes it takes in interviews:
+
+  - **Minimise the maximum** ("the smallest cap such that …"): search for the first value
+    that works.
+  - **Maximise the minimum** ("the largest gap such that …"): search for the last value
+    that works.
+  - **The k-th smallest** of something too big to list: search on a split point, or on the
+    value itself and count how many are smaller.
+
+  Every solution has the same three parts: the **range** (a value that surely fails or is the
+  smallest possible, and one that surely works), the **check** (usually a greedy O(n) pass),
+  and the **direction** (which half to keep). Get all three right and the search is O(n log
+  range).
+
+  ## Min max split
+
+  ### Recognition cues
+
+  - Divide an array into **at most k contiguous** pieces (days, workers, painters, parts).
+  - **Minimise the largest** piece (its sum, its time).
+  - Checking one cap is easy: fill each piece greedily until the next element would exceed
+    the cap.
+
+  ### Template
+
+  Input: n and k, then the n numbers. Print the smallest possible largest part sum.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+
+
+  def parts_needed(cap):  # fill each part greedily up to the cap
+      parts, run = 1, 0
+      for x in a:
+          if run + x > cap:  # x does not fit: it starts a new part
+              parts, run = parts + 1, 0
+          run += x
+      return parts
+
+
+  lo, hi = max(a), sum(a)  # every part holds at least one element; one part holds them all
+  while lo < hi:
+      mid = (lo + hi) // 2
+      if parts_needed(mid) <= k:
+          hi = mid  # mid works; maybe a smaller cap does too
+      else:
+          lo = mid + 1  # mid fails, and so does every smaller cap
+  print(lo)
+  ```
+
+  ```cpp
+  #include <bits/stdc++.h>
+  using namespace std;
+
+  int main() {
+      int n, k;
+      cin >> n >> k;
+      vector<long long> a(n);
+      for (auto& x : a) cin >> x;
+      auto partsNeeded = [&](long long cap) {  // fill each part greedily up to the cap
+          int parts = 1;
+          long long run = 0;
+          for (long long x : a) {
+              if (run + x > cap) parts++, run = 0;  // x does not fit: it starts a new part
+              run += x;
+          }
+          return parts;
+      };
+      long long lo = *max_element(a.begin(), a.end()), hi = accumulate(a.begin(), a.end(), 0LL);
+      while (lo < hi) {
+          long long mid = lo + (hi - lo) / 2;
+          if (partsNeeded(mid) <= k) hi = mid;  // mid works; maybe a smaller cap does too
+          else lo = mid + 1;  // mid fails, and so does every smaller cap
+      }
+      cout << lo << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), k = in.nextInt();
+          long[] a = new long[n];
+          long lo = 0, hi = 0;
+          for (int i = 0; i < n; i++) { a[i] = in.nextLong(); lo = Math.max(lo, a[i]); hi += a[i]; }
+          while (lo < hi) {  // lo = max(a): every part holds an element; hi = sum(a): one part
+              long mid = lo + (hi - lo) / 2, run = 0;
+              int parts = 1;
+              for (long x : a) {  // fill each part greedily up to the cap mid
+                  if (run + x > mid) { parts++; run = 0; }  // x does not fit: it starts a new part
+                  run += x;
+              }
+              if (parts <= k) hi = mid;  // mid works; maybe a smaller cap does too
+              else lo = mid + 1;  // mid fails, and so does every smaller cap
+          }
+          System.out.println(lo);
+      }
+  }
+  ```
+
+  ### Anchor problem: split into three parts
+
+  ```text
+  8 3
+  3 1 4 1 5 9 2 6
+  ```
+
+  The best split is `3 1 4 1 5 | 9 2 | 6`, with part sums 14, 11 and 6: the answer is **14**.
+
+  **Step 1 — brute force.** Try every place for the first cut and solve the rest the same way:
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+
+
+  def best(start, parts):  # smallest largest sum for a[start:] in at most `parts` parts
+      if parts == 1:
+          return sum(a[start:])
+      result, run = sum(a[start:]), 0  # option: no more cuts
+      for end in range(start, n - 1):  # first part is a[start..end]
+          run += a[end]
+          result = min(result, max(run, best(end + 1, parts - 1)))
+      return result
+
+
+  print(best(0, k))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <numeric>
+  #include <vector>
+  using namespace std;
+
+  int n, k;
+  vector<long long> a;
+
+  long long best(int start, int parts) {  // smallest largest sum for a[start..] in at most `parts` parts
+      long long rest = accumulate(a.begin() + start, a.end(), 0LL);
+      if (parts == 1) return rest;
+      long long result = rest, run = 0;  // option: no more cuts
+      for (int end = start; end < n - 1; end++) {  // first part is a[start..end]
+          run += a[end];
+          result = min(result, max(run, best(end + 1, parts - 1)));
+      }
+      return result;
+  }
+
+  int main() {
+      cin >> n >> k;
+      a.resize(n);
+      for (auto& x : a) cin >> x;
+      cout << best(0, k) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static int n;
+      static long[] a;
+
+      static long best(int start, int parts) {  // smallest largest sum for a[start..] in at most `parts` parts
+          long rest = 0;
+          for (int i = start; i < n; i++) rest += a[i];
+          if (parts == 1) return rest;
+          long result = rest, run = 0;  // option: no more cuts
+          for (int end = start; end < n - 1; end++) {  // first part is a[start..end]
+              run += a[end];
+              result = Math.min(result, Math.max(run, best(end + 1, parts - 1)));
+          }
+          return result;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          int k = in.nextInt();
+          a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          System.out.println(best(0, k));
+      }
+  }
+  ```
+
+  It prints 14, but it tries every combination of cut positions: about C(n − 1, k − 1)
+  splits, hopeless for n = 10⁵.
+
+  **Step 2 — wrong first attempt: cut near the average.** The total is 31, so aim for parts of
+  about ⌈31 / 3⌉ = 11 and cut whenever the next element would overshoot:
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+  target = -(-sum(a) // k)  # ceiling of the average
+  sums, run = [], 0
+  for x in a:
+      if run + x > target and len(sums) < k - 1:  # overshoot: close this part
+          sums.append(run)
+          run = 0
+      run += x
+  sums.append(run)  # the last part takes whatever is left
+  print(max(sums))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, k;
+      cin >> n >> k;
+      vector<long long> a(n);
+      long long total = 0;
+      for (auto& x : a) cin >> x, total += x;
+      long long target = (total + k - 1) / k, run = 0;  // ceiling of the average
+      vector<long long> sums;
+      for (long long x : a) {
+          if (run + x > target && (int)sums.size() < k - 1) sums.push_back(run), run = 0;  // overshoot
+          run += x;
+      }
+      sums.push_back(run);  // the last part takes whatever is left
+      cout << *max_element(sums.begin(), sums.end()) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), k = in.nextInt();
+          long[] a = new long[n];
+          long total = 0;
+          for (int i = 0; i < n; i++) { a[i] = in.nextLong(); total += a[i]; }
+          long target = (total + k - 1) / k, run = 0, best = 0;  // ceiling of the average
+          int closed = 0;
+          for (long x : a) {
+              if (run + x > target && closed < k - 1) { best = Math.max(best, run); closed++; run = 0; }
+              run += x;
+          }
+          System.out.println(Math.max(best, run));  // the last part takes whatever is left
+      }
+  }
+  ```
+
+  It prints **17**: `3 1 4 1 | 5 | 9 2 6`. Cutting before the 5 looked safe (9 + 5 would
+  overshoot 11), but it left too little room later. No local rule knows how much to leave
+  for the rest; the average is only a lower bound on the answer, not a plan.
+
+  **Step 3 — search the cap.** Turn the question around: *given a cap, can the array be split
+  into at most k parts with every part at most the cap?* Greedy filling answers that in O(n):
+  putting an element into the current part never hurts later parts. And the answer is
+  monotone: a cap that works keeps working when it grows. So binary search for the first cap
+  that works, between max(a) (every part holds an element) and sum(a) (one part):
+
+  | lo | hi | mid | greedy parts at cap mid | parts | works? |
+  |---|---|---|---|---|---|
+  | 9 | 31 | 20 | 3 1 4 1 5 \| 9 2 6 | 2 | yes: hi = 20 |
+  | 9 | 20 | 14 | 3 1 4 1 5 \| 9 2 \| 6 | 3 | yes: hi = 14 |
+  | 9 | 14 | 11 | 3 1 4 1 \| 5 \| 9 2 \| 6 | 4 | no: lo = 12 |
+  | 12 | 14 | 13 | 3 1 4 1 \| 5 \| 9 2 \| 6 | 4 | no: lo = 14 |
+
+  lo = hi = **14**. Cost: O(n) per check, O(log(sum)) checks.
+
+  ### Variants
+
+  1. *Split array largest sum* and CSES *Array division*: the anchor.
+  2. *Capacity to ship packages within D days*: days are parts, the cap is the ship.
+  3. *Koko eating bananas* and *smallest divisor under a threshold*: a different check, the
+     same "first value that works".
+  4. *Minimum number of days to make m bouquets*: the check counts runs of bloomed flowers.
+  5. *Minimized maximum of products distributed to any store*: the check sums ⌈q / cap⌉.
+  6. *Minimum time to complete trips*: search on time; the check sums `time // t`.
+
+  ### Contrast
+
+  **Search the answer, or compute it?** If the answer can be built directly by a formula or
+  one greedy pass, do that. Search on the answer when *checking* a candidate is easy but
+  *constructing* the best one is not, and the check is monotone.
+
+  ### Common mistakes
+
+  - Starting at lo = 1 or 0: below max(a) the greedy count is wrong, because an element larger
+    than the cap still lands in a part.
+  - `parts < k` instead of `parts <= k`: using exactly k parts is allowed.
+  - `hi = mid − 1` after a success, which can skip the answer.
+  - Overflow in the total or in `lo + hi`: use 64-bit integers and `lo + (hi − lo) / 2`.
+
+  ## Max min distance
+
+  ### Recognition cues
+
+  - Choose m positions, people or points, and **maximise the smallest gap** between them.
+  - A gap that can be achieved can also be achieved by every smaller gap: the check is monotone
+    in the other direction.
+  - Checking one gap is a greedy left-to-right pass over the **sorted** positions.
+
+  ### Template
+
+  Input: n and m, then n distinct positions. Print the largest possible minimum gap.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, m = int(data[0]), int(data[1])
+  pos = sorted(int(x) for x in data[2:2 + n])
+
+
+  def fits(gap):  # can m positions be chosen with every neighbouring gap at least `gap`?
+      count, last = 1, pos[0]  # taking the leftmost position never hurts
+      for p in pos[1:]:
+          if p - last >= gap:
+              count, last = count + 1, p
+      return count >= m
+
+
+  lo, hi = 1, pos[-1] - pos[0]
+  while lo < hi:  # find the LAST gap that fits
+      mid = (lo + hi + 1) // 2  # round up, or lo = mid could loop forever
+      if fits(mid):
+          lo = mid
+      else:
+          hi = mid - 1
+  print(lo)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n, m;
+  vector<long long> pos;
+
+  bool fits(long long gap) {  // can m positions be chosen with every neighbouring gap >= gap?
+      int count = 1;
+      long long last = pos[0];  // taking the leftmost position never hurts
+      for (int i = 1; i < n; i++)
+          if (pos[i] - last >= gap) count++, last = pos[i];
+      return count >= m;
+  }
+
+  int main() {
+      cin >> n >> m;
+      pos.resize(n);
+      for (auto& p : pos) cin >> p;
+      sort(pos.begin(), pos.end());
+      long long lo = 1, hi = pos[n - 1] - pos[0];
+      while (lo < hi) {  // find the LAST gap that fits
+          long long mid = lo + (hi - lo + 1) / 2;  // round up, or lo = mid could loop forever
+          if (fits(mid)) lo = mid;
+          else hi = mid - 1;
+      }
+      cout << lo << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static long[] pos;
+      static int m;
+
+      static boolean fits(long gap) {  // can m positions be chosen with every neighbouring gap >= gap?
+          int count = 1;
+          long last = pos[0];  // taking the leftmost position never hurts
+          for (int i = 1; i < pos.length; i++)
+              if (pos[i] - last >= gap) { count++; last = pos[i]; }
+          return count >= m;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          m = in.nextInt();
+          pos = new long[n];
+          for (int i = 0; i < n; i++) pos[i] = in.nextLong();
+          Arrays.sort(pos);
+          long lo = 1, hi = pos[n - 1] - pos[0];
+          while (lo < hi) {  // find the LAST gap that fits
+              long mid = lo + (hi - lo + 1) / 2;  // round up, or lo = mid could loop forever
+              if (fits(mid)) lo = mid;
+              else hi = mid - 1;
+          }
+          System.out.println(lo);
+      }
+  }
+  ```
+
+  ### Anchor problem: three stalls
+
+  `5 3` then `1 2 8 4 9`. Sorted: 1 2 4 8 9. Gap 5 fails (1, 8 only), gap 3 fits (1, 4, 8),
+  gap 4 fails (1, 8 only). The answer is **3**.
+
+  **Wrong first attempt — the first-true template unchanged.** Copying `mid = (lo + hi) // 2`
+  with `lo = mid` on success: when lo = 3 and hi = 4, mid is 3, it fits, lo stays 3, and the
+  loop never ends. Searching for the **last** value that works needs mid rounded **up**.
+  Forgetting to sort is the other classic: the greedy pass assumes positions in order.
+
+  ### Variants
+
+  1. *Magnetic force between two balls*: the anchor.
+  2. *Maximum tastiness of candy basket*: the same check on prices.
+  3. *Maximum candies allocated to k children*: the last pile size that gives k children a pile.
+  4. *Divide chocolate*: maximise the minimum sweetness, the mirror of min max split.
+
+  ### Contrast
+
+  **First that works, or last that works?** Min max problems keep `hi = mid` on success and
+  round mid down. Max min problems keep `lo = mid` on success and must round mid up. Write
+  down which way the check flips before writing the loop.
+
+  ### Common mistakes
+
+  - Rounding mid down with `lo = mid`: an endless loop.
+  - Not sorting the positions.
+  - hi = the largest position instead of the largest distance.
+
+  ## Kth of two sorted
+
+  ### Recognition cues
+
+  - Two **sorted** arrays and the k-th smallest of their union (the median is k = half).
+  - O(log) time is required, so merging, which is O(n + m), is not enough.
+  - The question is "how many of the k smallest come from each array?"
+
+  ### Template
+
+  Input: n, m and k, then the n numbers of a, then the m numbers of b. Print the k-th smallest.
+
+  ```python
+  import sys
+
+  data = list(map(int, sys.stdin.read().split()))
+  n, m, k = data[0], data[1], data[2]
+  a, b = data[3:3 + n], data[3 + n:3 + n + m]
+  lo, hi = max(0, k - m), min(k, n)  # i = how many of the k smallest come from a
+  while lo < hi:
+      i = (lo + hi) // 2
+      j = k - i  # the rest come from b
+      if a[i] < b[j - 1]:  # a's next element beats b's last one taken: take more from a
+          lo = i + 1
+      else:
+          hi = i
+  i, j = lo, k - lo
+  print(max(a[i - 1] if i > 0 else -10**18, b[j - 1] if j > 0 else -10**18))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, m, k;
+      cin >> n >> m >> k;
+      vector<long long> a(n), b(m);
+      for (auto& x : a) cin >> x;
+      for (auto& x : b) cin >> x;
+      int lo = max(0, k - m), hi = min(k, n);  // i = how many of the k smallest come from a
+      while (lo < hi) {
+          int i = (lo + hi) / 2, j = k - i;  // the rest come from b
+          if (a[i] < b[j - 1]) lo = i + 1;  // a's next element beats b's last one taken
+          else hi = i;
+      }
+      int i = lo, j = k - lo;
+      long long fromA = i > 0 ? a[i - 1] : -1e18, fromB = j > 0 ? b[j - 1] : -1e18;
+      cout << max(fromA, fromB) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), m = in.nextInt(), k = in.nextInt();
+          long[] a = new long[n], b = new long[m];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          for (int i = 0; i < m; i++) b[i] = in.nextLong();
+          int lo = Math.max(0, k - m), hi = Math.min(k, n);  // i = how many of the k smallest come from a
+          while (lo < hi) {
+              int i = (lo + hi) / 2, j = k - i;  // the rest come from b
+              if (a[i] < b[j - 1]) lo = i + 1;  // a's next element beats b's last one taken
+              else hi = i;
+          }
+          int i = lo, j = k - lo;
+          long fromA = i > 0 ? a[i - 1] : Long.MIN_VALUE, fromB = j > 0 ? b[j - 1] : Long.MIN_VALUE;
+          System.out.println(Math.max(fromA, fromB));
+      }
+  }
+  ```
+
+  ### Anchor problem: the 6th smallest
+
+  a = `1 3 8 9`, b = `2 4 5 7 10`, k = 6. The union in order is 1 2 3 4 5 7 8 9 10, so the
+  answer is **7**: two elements from a (1, 3) and four from b (2, 4, 5, 7).
+
+  **Wrong first attempt — half from each.** Taking k / 2 = 3 from each array gives 1 3 8 and
+  2 4 5, and the larger of the last ones is 8. But 8 is not among the 6 smallest; 7 is. The
+  split must be **searched**: i elements from a are right when a's next element is not
+  smaller than b's last one taken. That condition is monotone in i, so binary search finds
+  the smallest i that satisfies it.
+
+  | lo | hi | i | j | a[i] | b[j − 1] | a[i] < b[j − 1]? |
+  |---|---|---|---|---|---|---|
+  | 1 | 4 | 2 | 4 | 8 | 7 | no: hi = 2 |
+  | 1 | 2 | 1 | 5 | 3 | 10 | yes: lo = 2 |
+
+  i = 2, j = 4, and the answer is max(a[1], b[3]) = max(3, 7) = 7.
+
+  ### Variants
+
+  1. *Median of two sorted arrays*: the k-th (and (k+1)-th) for k = half the total.
+  2. *Kth smallest element in a sorted matrix*: search on the **value** and count entries at
+     most it, row by row.
+  3. *Kth smallest number in a multiplication table*: count with `min(x // i, n)` per row.
+  4. *Find k-th smallest pair distance*: sort, search on the distance, count pairs with two
+     pointers.
+
+  ### Contrast
+
+  **Search the split or search the value?** With two sorted arrays, the split point is the
+  cheapest search space: O(log min(n, m)). When the "array" is implicit (a table, all pairs),
+  search on the value instead and count how many are at most it: the first value with count
+  ≥ k is the answer.
+
+  ### Common mistakes
+
+  - A search range that lets j go below 0 or above m: start at `max(0, k − m)` and end at
+    `min(k, n)`.
+  - Comparing a[i − 1] with b[j] (the condition for the other direction) while moving the
+    bounds as if it were a[i] with b[j − 1].
+  - Forgetting the empty side when i = 0 or j = 0.
+
+  ## Worked walkthrough
+
+  **Problem.** Ship packages with weights 1, 2, …, 10 in order within 5 days. What is the
+  smallest ship capacity?
+
+  1. *Shape.* Days are contiguous parts and the capacity is the cap: min max split with k = 5.
+  2. *Range.* lo = 10 (the heaviest package must fit), hi = 55 (everything in one day).
+  3. *Search.* Cap 32: 2 days, works. Cap 21: 3 days, works. Cap 15: 5 days
+     (1–5, 6–7, 8, 9, 10), works. Cap 12: 6 days, fails, so lo = 13. Cap 14: 6 days, fails,
+     so lo = 15.
+  4. *Answer.* 15.
+
+  ### Why this works
+
+  Let works(c) say "greedy filling with cap c uses at most k parts". Greedy filling uses the
+  fewest parts possible for a cap: any valid split can be shifted so that each part is as full
+  as greedy makes it, without adding parts. So works(c) is true exactly when a split with
+  largest part at most c exists. If it exists for c, the same split works for every larger c,
+  so works is false up to the answer and true from it on. The loop keeps the invariant "the
+  answer is in [lo, hi]" (mid works: the answer is at most mid; mid fails: it is above mid)
+  and shrinks the range every step, so it ends at the answer.
+
+  ### Boundary cases and cost
+
+  - k at least n: every element alone, so the answer is max(a); the search starts there.
+  - k = 1: the answer is sum(a).
+  - Max min with m = 2: the two ends, so the answer is the full spread.
+  - Cost: O(n log(sum)) for min max split, O(n log n + n log(spread)) for max min distance
+    including the sort, and O(log min(n, m)) for the k-th of two sorted arrays.
+
+  ### Check your understanding
+
+  `7 2 5 10 8` split into 2 parts. What are lo and hi, and what is the answer?
+
+  Try it on paper before reading the reasoning below.
+
+  > lo = 10, hi = 32. Cap 21: 7 2 5 | 10 8, two parts, works. Cap 15: 7 2 5 | 10 | 8, three
+  > parts, fails. Cap 18: 7 2 5 | 10 8, works. Cap 16 and 17 fail. The answer is 18.
+key_points:
+- 'Three parts: a range, a monotone check, and a direction.'
+- Min max problems search for the first cap that works; keep hi = mid on success.
+- Max min problems search for the last value that works; round mid up and keep lo = mid.
+- The check is usually one greedy O(n) pass.
+- Start min max split at max(a); below it the greedy count is wrong.
+- Using exactly k parts is allowed, so accept parts ≤ k.
+- 'Kth of two sorted: search how many come from a; the rest come from b.'
+pitfalls:
+- Cutting near the average instead of searching the cap.
+- Starting the search below the largest element.
+- Accepting only parts < k.
+- Rounding mid down while searching for the last value that works.
+- Forgetting to sort positions before the greedy gap check.
+- A split range that lets the other array's count go out of bounds.
+resources:
+- title: "USACO Guide: Binary search (on the answer)"
+  url: https://usaco.guide/silver/binary-search
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: "Tech Interview Handbook: Sorting and searching"
+  url: https://www.techinterviewhandbook.org/algorithms/sorting-searching/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 10
+  level: core
+- title: Array Division
+  url: https://cses.fi/problemset/task/1085
+  kind: interactive
+  source: CSES
+  minutes: 25
+  level: deep
+quiz:
+- id: answer-shape
+  kind: mcq
+  prompt: Which problem is binary search on the answer?
+  options:
+  - The smallest ship capacity that delivers every package within D days
+  - The position of 7 in a sorted array
+  - The sum of an array
+  - The longest increasing subsequence
+  answer: 0
+  explanation: Checking a capacity is easy and the check is monotone.
+  difficulty: 1
+- id: split-range
+  kind: mcq
+  prompt: 'Min max split of 7 2 5 10 8. What range does the search use?'
+  options:
+  - 10 to 32
+  - 1 to 32
+  - 0 to 10
+  - 7 to 10
+  answer: 0
+  explanation: From the largest element to the total.
+  difficulty: 2
+- id: split-check
+  kind: mcq
+  prompt: The cap is 15 and the array is 7 2 5 10 8. How many parts does greedy filling use?
+  options:
+  - '3'
+  - '2'
+  - '4'
+  - '5'
+  answer: 0
+  explanation: 7 2 5 | 10 | 8.
+  difficulty: 2
+- id: average-trap
+  kind: mcq
+  prompt: Why is cutting near the average not enough?
+  options:
+  - An early cut can leave too little room for the parts that come later
+  - The average is always the answer
+  - It is too slow
+  - It needs the array sorted
+  answer: 0
+  explanation: On 3 1 4 1 5 9 2 6 with k = 3 it gives 17 instead of 14.
+  difficulty: 3
+- id: exactly-k
+  kind: mcq
+  prompt: A cap needs exactly k parts. Does it work?
+  options:
+  - Yes; at most k parts are allowed
+  - No; it must need fewer than k
+  - Only if k is even
+  - Only for the last part
+  answer: 0
+  explanation: The check is parts ≤ k.
+  difficulty: 3
+- id: round-up
+  kind: mcq
+  prompt: Searching for the largest gap that fits, with lo = mid on success. How must mid be computed?
+  options:
+  - Rounded up, (lo + hi + 1) // 2
+  - Rounded down, (lo + hi) // 2
+  - Either way
+  - As hi − 1
+  answer: 0
+  explanation: Rounding down with lo = mid can loop forever when hi = lo + 1.
+  difficulty: 3
+- id: gap-trace
+  kind: mcq
+  prompt: Positions 1 2 8 4 9 and m = 3. What is the largest minimum gap?
+  options:
+  - '3'
+  - '4'
+  - '1'
+  - '7'
+  answer: 0
+  explanation: 1, 4 and 8 (or 9).
+  difficulty: 4
+- id: kth-split
+  kind: mcq
+  prompt: a = 1 3 8 9, b = 2 4 5 7 10 and k = 6. How many of the 6 smallest come from a?
+  options:
+  - '2'
+  - '3'
+  - '4'
+  - '1'
+  answer: 0
+  explanation: 1 and 3 from a; 2, 4, 5 and 7 from b.
+  difficulty: 4
+- id: kth-value
+  kind: mcq
+  prompt: The k-th smallest number in an n × n multiplication table. What do you binary search over?
+  options:
+  - The value x, counting the entries at most x
+  - The row index
+  - The positions in a merged list
+  - The column index
+  answer: 0
+  explanation: The table is too big to list; counting entries at most x is O(n).
+  difficulty: 5
+problems:
+- courier-vans
+- kth-cheapest-meal
+practice_links:
+- title: Split Array Largest Sum
+  url: https://leetcode.com/problems/split-array-largest-sum/
+  platform: LeetCode
+  difficulty: hard
+- title: Capacity To Ship Packages Within D Days
+  url: https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/
+  platform: LeetCode
+  difficulty: medium
+- title: Minimum Number of Days to Make m Bouquets
+  url: https://leetcode.com/problems/minimum-number-of-days-to-make-m-bouquets/
+  platform: LeetCode
+  difficulty: medium
+- title: Magnetic Force Between Two Balls
+  url: https://leetcode.com/problems/magnetic-force-between-two-balls/
+  platform: LeetCode
+  difficulty: medium
+- title: Maximum Tastiness of Candy Basket
+  url: https://leetcode.com/problems/maximum-tastiness-of-candy-basket/
+  platform: LeetCode
+  difficulty: medium
+- title: Median of Two Sorted Arrays
+  url: https://leetcode.com/problems/median-of-two-sorted-arrays/
+  platform: LeetCode
+  difficulty: hard
+- title: Kth Smallest Element in a Sorted Matrix
+  url: https://leetcode.com/problems/kth-smallest-element-in-a-sorted-matrix/
+  platform: LeetCode
+  difficulty: medium
+- title: Array Division
+  url: https://cses.fi/problemset/task/1085
+  platform: CSES
+  difficulty: medium
+provenance:
+  origin: original
+status: live

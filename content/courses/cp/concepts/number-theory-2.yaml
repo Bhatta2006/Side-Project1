@@ -1,0 +1,93 @@
+id: number-theory-2
+title: Number theory II
+summary: Chinese remainder theorem, Euler's theorem for huge exponents, coprime counting and Möbius inversion.
+module: math-2
+prerequisites:
+- modular-arithmetic
+difficulty: 5
+estimated_minutes: 65
+status: draft
+lesson: '## Crt
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Euler theorem
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Coprime counting
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Mobius
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

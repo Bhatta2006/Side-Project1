@@ -1,0 +1,52 @@
+id: memory-and-references
+title: Memory and references
+summary: Stack and heap, values versus references, what a = b really does, and shallow versus deep copies
+  in each language.
+module: functions-module
+prerequisites:
+- scope-and-mutation
+difficulty: 3
+estimated_minutes: 40
+status: draft
+lesson: '## Alias mutation
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Shallow vs deep copy
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

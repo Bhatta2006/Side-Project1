@@ -1,0 +1,675 @@
+id: dp-stocks
+title: Stock trading DP
+summary: One state machine, day by holding by transactions left, that solves all six buy-and-sell-stock
+  problems.
+module: dynamic-programming
+prerequisites: [dp-2d]
+difficulty: 4
+estimated_minutes: 60
+lesson: |
+  The "best time to buy and sell stock" problems look like six different puzzles: one trade,
+  unlimited trades, at most two, at most k, a cooldown, a fee. They are one idea. At the end
+  of each day you are in a small number of **states** (holding a share or not, trades left),
+  and each day moves you between states. Write down the states and their moves once, and every
+  variant is a one-line change.
+
+  ## Stock state machine
+
+  ### Recognition cues
+
+  - A sequence of prices, one per day; you buy and sell, holding at most one share at a time.
+  - Rules that limit you: at most k transactions, a cooldown after selling, a fee per trade.
+  - The best choice today depends on what you hold and how many trades you have left, not on
+    the exact history.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For at most k transactions |
+  |---|---|
+  | State | `cash[t]` = most money with no share, using at most t buys; `hold[t]` = most money while holding a share bought as one of t buys |
+  | Transition | for each price: `cash[t] = max(cash[t], hold[t] + price)` (sell); `hold[t] = max(hold[t], cash[t − 1] − price)` (buy uses up a transaction) |
+  | Base cases | before day 1, `cash[t] = 0` (do nothing); `hold[t] = −∞` (you cannot hold a share you never bought) |
+  | Answer | `cash[k]` |
+  | Loop order | days in order, outer; t from k down to 1, so `cash[t − 1]` is still yesterday's value |
+
+  The machine has two kinds of states and three moves: rest (stay), buy (cash → hold) and sell
+  (hold → cash).
+
+  ### Template
+
+  ```python
+  n, k = map(int, input().split())
+  prices = list(map(int, input().split()))
+  NEG = -10**18  # "holding is impossible"
+  cash = [0] * (k + 1)  # cash[t]: best money with no share, at most t buys used
+  hold = [NEG] * (k + 1)  # hold[t]: best money holding one share, at most t buys used
+  for price in prices:
+      for t in range(k, 0, -1):  # t down, so cash[t - 1] is still yesterday's
+          cash[t] = max(cash[t], hold[t] + price)  # sell today, or keep resting
+          hold[t] = max(hold[t], cash[t - 1] - price)  # buy today with one more transaction
+  print(cash[k])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, k;
+      cin >> n >> k;
+      const long long NEG = -1e18;  // "holding is impossible"
+      vector<long long> cash(k + 1, 0), hold(k + 1, NEG);  // best money without / with a share
+      for (int d = 0; d < n; d++) {
+          long long price;
+          cin >> price;
+          for (int t = k; t >= 1; t--) {  // t down, so cash[t - 1] is still yesterday's
+              cash[t] = max(cash[t], hold[t] + price);  // sell today, or keep resting
+              hold[t] = max(hold[t], cash[t - 1] - price);  // buy with one more transaction
+          }
+      }
+      cout << cash[k] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), k = in.nextInt();
+          final long NEG = (long) -1e18;  // "holding is impossible"
+          long[] cash = new long[k + 1], hold = new long[k + 1];  // best money without / with a share
+          Arrays.fill(hold, NEG);
+          for (int d = 0; d < n; d++) {
+              long price = in.nextLong();
+              for (int t = k; t >= 1; t--) {  // t down, so cash[t - 1] is still yesterday's
+                  cash[t] = Math.max(cash[t], hold[t] + price);  // sell today, or keep resting
+                  hold[t] = Math.max(hold[t], cash[t - 1] - price);  // buy with one more transaction
+              }
+          }
+          System.out.println(cash[k]);
+      }
+  }
+  ```
+
+  ### Anchor problem: at most two trades
+
+  Prices `1 2 4 2 5 7 2 4 9 0`, at most k = 2 transactions (input `n k`, then the prices). The
+  best profit is **13**: buy at 1, sell at 7 (+6); buy at 2, sell at 9 (+7).
+
+  **Wrong first attempt — keep the k biggest rising runs.** Split the prices into maximal
+  rising runs (1→4, 2→7, 2→9, worth 3, 5 and 7) and keep the two largest:
+
+  ```python
+  n, k = map(int, input().split())
+  p = list(map(int, input().split()))
+  runs, start = [], 0
+  for i in range(1, n + 1):
+      if i == n or p[i] < p[i - 1]:  # a rising run ends at i - 1
+          runs.append(p[i - 1] - p[start])
+          start = i
+  runs.sort(reverse=True)
+  print(sum(runs[:k]))  # the k biggest runs
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <functional>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, k;
+      cin >> n >> k;
+      vector<long long> p(n), runs;
+      for (auto& x : p) cin >> x;
+      int start = 0;
+      for (int i = 1; i <= n; i++)
+          if (i == n || p[i] < p[i - 1]) {  // a rising run ends at i - 1
+              runs.push_back(p[i - 1] - p[start]);
+              start = i;
+          }
+      sort(runs.begin(), runs.end(), greater<long long>());
+      long long total = 0;
+      for (int i = 0; i < k && i < (int)runs.size(); i++) total += runs[i];  // the k biggest runs
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), k = in.nextInt();
+          long[] p = new long[n];
+          for (int i = 0; i < n; i++) p[i] = in.nextLong();
+          List<Long> runs = new ArrayList<>();
+          int start = 0;
+          for (int i = 1; i <= n; i++)
+              if (i == n || p[i] < p[i - 1]) {  // a rising run ends at i - 1
+                  runs.add(p[i - 1] - p[start]);
+                  start = i;
+              }
+          runs.sort(Collections.reverseOrder());
+          long total = 0;
+          for (int i = 0; i < k && i < runs.size(); i++) total += runs.get(i);  // the k biggest runs
+          System.out.println(total);
+      }
+  }
+  ```
+
+  It prints 12 (5 + 7). Merging the first two runs into one trade, 1→7, earns 6, more than
+  either run alone, because the dip to 2 in between is small. Whether to merge or split
+  depends on the dips and on k, and the state machine weighs every option.
+
+  **Step 1 — recursion.** On each day, rest, or make the one move your state allows:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def best(day, holding, left):
+      """Most profit from day onwards, given what we hold and buys left."""
+      if day == n:
+          return 0
+      result = best(day + 1, holding, left)  # rest
+      if holding:
+          result = max(result, p[day] + best(day + 1, False, left))  # sell
+      elif left > 0:
+          result = max(result, -p[day] + best(day + 1, True, left - 1))  # buy
+      return result
+
+
+  n, k = map(int, input().split())
+  p = list(map(int, input().split()))
+  print(best(0, False, k))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n, k;
+  vector<long long> p;
+
+  long long best(int day, bool holding, int left) {  // most profit from day onwards
+      if (day == n) return 0;
+      long long result = best(day + 1, holding, left);  // rest
+      if (holding) result = max(result, p[day] + best(day + 1, false, left));  // sell
+      else if (left > 0) result = max(result, -p[day] + best(day + 1, true, left - 1));  // buy
+      return result;
+  }
+
+  int main() {
+      cin >> n >> k;
+      p.resize(n);
+      for (auto& x : p) cin >> x;
+      cout << best(0, false, k) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int n;
+      static long[] p;
+
+      static long best(int day, boolean holding, int left) {  // most profit from day onwards
+          if (day == n) return 0;
+          long result = best(day + 1, holding, left);  // rest
+          if (holding) result = Math.max(result, p[day] + best(day + 1, false, left));  // sell
+          else if (left > 0) result = Math.max(result, -p[day] + best(day + 1, true, left - 1));  // buy
+          return result;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          int k = in.nextInt();
+          p = new long[n];
+          for (int i = 0; i < n; i++) p[i] = in.nextLong();
+          System.out.println(best(0, false, k));
+      }
+  }
+  ```
+
+  Every day branches in two, so this is about 2ⁿ calls. But a call is fully described by
+  (day, holding, left): only n × 2 × (k + 1) different states.
+
+  **Step 2 — memoization.** Store each state once:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def best(day, holding, left):
+      if day == n:
+          return 0
+      key = (day, holding, left)
+      if key not in memo:  # solve each (day, holding, left) once
+          result = best(day + 1, holding, left)
+          if holding:
+              result = max(result, p[day] + best(day + 1, False, left))
+          elif left > 0:
+              result = max(result, -p[day] + best(day + 1, True, left - 1))
+          memo[key] = result
+      return memo[key]
+
+
+  n, k = map(int, input().split())
+  p = list(map(int, input().split()))
+  memo = {}
+  print(best(0, False, k))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n, k;
+  vector<long long> p;
+  vector<vector<vector<long long>>> memo;  // memo[day][holding][left]; -1 = not solved
+
+  long long best(int day, int holding, int left) {
+      if (day == n) return 0;
+      long long& slot = memo[day][holding][left];
+      if (slot == -1) {  // solve each state once
+          slot = best(day + 1, holding, left);
+          if (holding) slot = max(slot, p[day] + best(day + 1, 0, left));
+          else if (left > 0) slot = max(slot, -p[day] + best(day + 1, 1, left - 1));
+      }
+      return slot;
+  }
+
+  int main() {
+      cin >> n >> k;
+      p.resize(n);
+      for (auto& x : p) cin >> x;
+      memo.assign(n, vector<vector<long long>>(2, vector<long long>(k + 1, -1)));
+      cout << best(0, 0, k) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static int n;
+      static long[] p;
+      static long[][][] memo;  // memo[day][holding][left]; -1 = not solved
+
+      static long best(int day, int holding, int left) {
+          if (day == n) return 0;
+          if (memo[day][holding][left] == -1) {  // solve each state once
+              long result = best(day + 1, holding, left);
+              if (holding == 1) result = Math.max(result, p[day] + best(day + 1, 0, left));
+              else if (left > 0) result = Math.max(result, -p[day] + best(day + 1, 1, left - 1));
+              memo[day][holding][left] = result;
+          }
+          return memo[day][holding][left];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          int k = in.nextInt();
+          p = new long[n];
+          for (int i = 0; i < n; i++) p[i] = in.nextLong();
+          memo = new long[n][2][k + 1];
+          for (long[][] a : memo) for (long[] b : a) Arrays.fill(b, -1);
+          System.out.println(best(0, 0, k));
+      }
+  }
+  ```
+
+  The memo values are never −1 for real states, because resting forever earns 0.
+
+  **Step 3 — tabulation.** Fill day by day, forwards. `cash[d][t]` and `hold[d][t]` describe
+  the end of day d:
+
+  ```python
+  n, k = map(int, input().split())
+  p = list(map(int, input().split()))
+  NEG = -10**18
+  # cash[d][t] / hold[d][t]: best money after d days, without / with a share, at most t buys
+  cash = [[0] * (k + 1) for _ in range(n + 1)]
+  hold = [[NEG] * (k + 1) for _ in range(n + 1)]
+  for d in range(1, n + 1):
+      price = p[d - 1]
+      for t in range(1, k + 1):
+          cash[d][t] = max(cash[d - 1][t], hold[d - 1][t] + price)  # rest or sell
+          hold[d][t] = max(hold[d - 1][t], cash[d - 1][t - 1] - price)  # rest or buy
+  print(cash[n][k])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, k;
+      cin >> n >> k;
+      vector<long long> p(n);
+      for (auto& x : p) cin >> x;
+      const long long NEG = -1e18;
+      // cash[d][t] / hold[d][t]: best money after d days, without / with a share, at most t buys
+      vector<vector<long long>> cash(n + 1, vector<long long>(k + 1, 0));
+      vector<vector<long long>> hold(n + 1, vector<long long>(k + 1, NEG));
+      for (int d = 1; d <= n; d++)
+          for (int t = 1; t <= k; t++) {
+              cash[d][t] = max(cash[d - 1][t], hold[d - 1][t] + p[d - 1]);  // rest or sell
+              hold[d][t] = max(hold[d - 1][t], cash[d - 1][t - 1] - p[d - 1]);  // rest or buy
+          }
+      cout << cash[n][k] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), k = in.nextInt();
+          long[] p = new long[n];
+          for (int i = 0; i < n; i++) p[i] = in.nextLong();
+          final long NEG = (long) -1e18;
+          // cash[d][t] / hold[d][t]: best money after d days, without / with a share, at most t buys
+          long[][] cash = new long[n + 1][k + 1], hold = new long[n + 1][k + 1];
+          for (long[] row : hold) Arrays.fill(row, NEG);
+          for (int d = 1; d <= n; d++)
+              for (int t = 1; t <= k; t++) {
+                  cash[d][t] = Math.max(cash[d - 1][t], hold[d - 1][t] + p[d - 1]);  // rest or sell
+                  hold[d][t] = Math.max(hold[d - 1][t], cash[d - 1][t - 1] - p[d - 1]);  // rest or buy
+              }
+          System.out.println(cash[n][k]);
+      }
+  }
+  ```
+
+  Dry run (k = 2; each column is the end of that day):
+
+  | price | 1 | 2 | 4 | 2 | 5 | 7 | 2 | 4 | 9 | 0 |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | hold[1] | −1 | −1 | −1 | −1 | −1 | −1 | −1 | −1 | −1 | 0 |
+  | cash[1] | 0 | 1 | 3 | 3 | 4 | 6 | 6 | 6 | 8 | 8 |
+  | hold[2] | −1 | −1 | −1 | 1 | 1 | 1 | 4 | 4 | 4 | 8 |
+  | cash[2] | 0 | 1 | 3 | 3 | 6 | 8 | 8 | 8 | **13** | 13 |
+
+  Read one cell: on the day priced 2 (the seventh), `hold[2]` becomes `cash[1]` from the day
+  before (6) minus 2 = 4: the first trade 1→7 is banked, then the second share is bought. On
+  the day priced 9, selling it gives 4 + 9 = 13.
+
+  **Step 4 — one row per state.** Day d reads only day d − 1, so keep one `cash` and one
+  `hold` array. To make `cash[t − 1]` still mean yesterday's value when you buy, run t from k
+  **down** to 1. That is the template. (Selling and buying on the same day never helps, so
+  reading today's `cash[t]` in the same pass is harmless.)
+
+  ### Variants
+
+  Every variant edits the machine, not the method:
+
+  | Problem | Change |
+  |---|---|
+  | One transaction (stock I) | k = 1, or track the minimum price so far |
+  | Unlimited transactions (stock II) | drop t: `cash = max(cash, hold + p)`, `hold = max(hold, cash − p)` |
+  | Transaction fee | subtract the fee once, when selling |
+  | Cooldown | buy from the cash of **two** days ago |
+  | At most two (stock III), at most k (stock IV) | the template, with k = 2 or k |
+
+  With unlimited trades, the answer is simply the sum of every rise `max(0, p[d] − p[d − 1])`:
+  any rise can be its own trade.
+
+  ### Contrast
+
+  **Unlimited or limited trades?** With unlimited trades, summing every daily rise is
+  correct, so greedy works. As soon as trades are limited (k, a cooldown, a fee), merging or
+  skipping rises matters, and you need the state machine.
+
+  ### Common mistakes
+
+  - Starting `hold` at 0, which lets you sell a share you never bought.
+  - Buying from `cash[t]` instead of `cash[t − 1]`: the buy no longer uses a transaction.
+  - Charging the fee on both the buy and the sell.
+  - Cooldown: buying from yesterday's cash instead of the day before yesterday.
+  - Using `k` larger than n / 2: then it is the unlimited case, and the table is wasted work.
+
+  ## Worked walkthrough
+
+  **Problem (cooldown).** Prices `1 2 3 0 2`; after selling you must rest one day before
+  buying again. What is the best profit?
+
+  1. *States.* Holding, or not holding. The new rule: a buy on day d uses the cash from day
+     d − 2.
+  2. *Machine.* `hold = max(hold, cash_two_days_ago − price)`, `cash = max(cash, hold + price)`.
+  3. *Run.* Buy at 1, sell at 2 (+1), rest on day 3, buy at 0, sell at 2 (+2).
+  4. *Answer.* 3. Without the cooldown, 1→3 and 0→2 would give 4, but that sells at 3 and
+     buys at 0 the very next day, which the rest day forbids. Selling one day earlier, at 2,
+     leaves the rest day free.
+
+  ### Why this works
+
+  On any day, everything that matters for the future is whether you hold a share and how many
+  buys are left; past prices only matter through the money they produced. So the best money
+  in each state, day by day, is enough. Each state's value is the best of the moves that lead
+  into it, and every strategy is a path through the machine, so taking the maximum at every
+  step finds the best path.
+
+  ### Boundary cases and cost
+
+  - One day, or prices that only fall: the answer is 0 (never trade).
+  - k = 0: the answer is 0.
+  - k ≥ n / 2: limits never bind; use the unlimited version.
+  - Profits can exceed 32 bits when prices and n are large.
+  - Cost: O(n·k) time and O(k) memory; the unlimited, fee and cooldown versions are O(n)
+    time and O(1) memory.
+
+  ### Check your understanding
+
+  Prices `3 1 4 1 5`, unlimited trades with a fee of 2 per completed trade. What is the best
+  profit?
+
+  Try it on paper before reading the reasoning below.
+
+  > Separate trades 1→4 and 1→5 earn 3 − 2 + 4 − 2 = 3. One trade 1→5 earns 4 − 2 = 2. So 3.
+key_points:
+- 'States: holding a share or not, plus transactions left; moves: rest, buy, sell.'
+- cash[t] = max(cash[t], hold[t] + p); hold[t] = max(hold[t], cash[t − 1] − p).
+- hold starts at −∞, cash at 0; the answer is cash[k].
+- Loop t from k down so a buy reads yesterday's cash[t − 1].
+- Unlimited trades - sum of every daily rise; greedy is correct only then.
+- 'Fee: subtract once when selling. Cooldown: buy from cash two days ago.'
+- O(n·k) time, O(k) memory.
+pitfalls:
+- hold initialised to 0, which allows selling a share never bought.
+- Buying from cash[t] instead of cash[t − 1], which ignores the transaction limit.
+- Keeping the k largest rising runs instead of running the machine.
+- Charging the fee on both sides of a trade.
+- Cooldown buy reading yesterday's cash.
+resources:
+- title: Introduction to DP
+  url: https://usaco.guide/gold/intro-dp
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: Dynamic Programming
+  url: https://www.techinterviewhandbook.org/algorithms/dynamic-programming/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 15
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: states
+  kind: mcq
+  prompt: What does the stock state machine need to know at the end of each day, for at most k trades?
+  options:
+  - Whether you hold a share, and how many buys you have used
+  - Every price so far
+  - The day of the last sale only
+  - The total number of rises
+  answer: 0
+  explanation: The future depends only on what you hold and how many trades are left.
+  difficulty: 1
+- id: unlimited
+  kind: mcq
+  prompt: Prices 1 3 2 5, unlimited trades. What is the best profit?
+  options:
+  - '5'
+  - '4'
+  - '3'
+  - '2'
+  answer: 0
+  explanation: 'Sum of rises: (3 − 1) + (5 − 2) = 5.'
+  difficulty: 2
+- id: hold-init
+  kind: mcq
+  prompt: What should hold[t] be before the first day?
+  options:
+  - Minus infinity
+  - '0'
+  - The first price
+  - t
+  answer: 0
+  explanation: You cannot hold a share you never bought; 0 would let you sell it for free.
+  difficulty: 2
+- id: buy-index
+  kind: mcq
+  prompt: Why does a buy read cash[t − 1] and not cash[t]?
+  options:
+  - A buy starts a new transaction, so it comes from a state with one fewer used
+  - Because t − 1 is smaller
+  - To avoid an index error
+  - It makes no difference
+  answer: 0
+  explanation: Reading cash[t] would let you buy without using up a transaction.
+  difficulty: 3
+- id: runs-greedy
+  kind: mcq
+  prompt: Prices 1 2 4 2 5 7 2 4 9 0, at most 2 trades. Keeping the two biggest rising runs gives 12. What
+    is the best?
+  options:
+  - '13'
+  - '12'
+  - '15'
+  - '14'
+  answer: 0
+  explanation: Merge 1→7 (6) and take 2→9 (7).
+  difficulty: 4
+- id: fee
+  kind: mcq
+  prompt: With a transaction fee, where is it subtracted?
+  options:
+  - Once per trade, for example when selling
+  - On every day you hold
+  - On both the buy and the sell
+  - Only on the last trade
+  answer: 0
+  explanation: Each completed trade pays the fee once.
+  difficulty: 3
+- id: cooldown
+  kind: mcq
+  prompt: With a one-day cooldown after selling, a buy on day d uses which cash?
+  options:
+  - The cash at the end of day d − 2
+  - The cash at the end of day d − 1
+  - The cash at the end of day d
+  - Zero
+  answer: 0
+  explanation: If you sold on day d − 1, you must rest on day d.
+  difficulty: 4
+- id: k-output
+  kind: output
+  prompt: What does this print?
+  code:
+    python: |
+      p, k = [3, 2, 6, 5, 0, 3], 2
+      cash, hold = [0] * (k + 1), [-10**9] * (k + 1)
+      for price in p:
+          for t in range(k, 0, -1):
+              cash[t] = max(cash[t], hold[t] + price)
+              hold[t] = max(hold[t], cash[t - 1] - price)
+      print(cash[k])
+    cpp: |
+      vector<int> p = {3, 2, 6, 5, 0, 3};
+      int k = 2;
+      vector<int> cash(k + 1, 0), hold(k + 1, -1000000000);
+      for (int price : p)
+          for (int t = k; t >= 1; t--) {
+              cash[t] = max(cash[t], hold[t] + price);
+              hold[t] = max(hold[t], cash[t - 1] - price);
+          }
+      cout << cash[k];
+    java: |
+      int[] p = {3, 2, 6, 5, 0, 3};
+      int k = 2;
+      int[] cash = new int[k + 1], hold = new int[k + 1];
+      java.util.Arrays.fill(hold, -1000000000);
+      for (int price : p)
+          for (int t = k; t >= 1; t--) {
+              cash[t] = Math.max(cash[t], hold[t] + price);
+              hold[t] = Math.max(hold[t], cash[t - 1] - price);
+          }
+      System.out.print(cash[k]);
+  options:
+  - '7'
+  - '4'
+  - '6'
+  - '9'
+  answer: 0
+  explanation: Buy at 2, sell at 6 (+4); buy at 0, sell at 3 (+3).
+  difficulty: 5
+problems:
+- warehouse-trading
+- rest-days
+practice_links:
+- title: Best Time to Buy and Sell Stock
+  url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock/
+  platform: LeetCode
+  difficulty: easy
+- title: Best Time to Buy and Sell Stock II
+  url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock-ii/
+  platform: LeetCode
+  difficulty: medium
+- title: Best Time to Buy and Sell Stock III
+  url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock-iii/
+  platform: LeetCode
+  difficulty: hard
+- title: Best Time to Buy and Sell Stock IV
+  url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock-iv/
+  platform: LeetCode
+  difficulty: hard
+- title: Best Time to Buy and Sell Stock with Cooldown
+  url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/
+  platform: LeetCode
+  difficulty: medium
+- title: Best Time to Buy and Sell Stock with Transaction Fee
+  url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-transaction-fee/
+  platform: LeetCode
+  difficulty: medium
+provenance:
+  origin: original
+status: live

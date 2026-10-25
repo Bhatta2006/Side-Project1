@@ -1,0 +1,31 @@
+id: sparse-table
+title: Sparse table
+summary: O(1) range minimum and other idempotent queries after an O(n log n) build.
+module: range-structures
+prerequisites:
+- prefix-difference
+- dsa:bit-manipulation
+difficulty: 4
+estimated_minutes: 35
+status: draft
+lesson: '## Idempotent rmq
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

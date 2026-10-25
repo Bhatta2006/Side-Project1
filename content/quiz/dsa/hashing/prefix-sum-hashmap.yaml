@@ -1,0 +1,237 @@
+id: quiz:dsa:hashing:prefix-sum-hashmap
+family: prefix-sum-hashmap
+concept: dsa:hashing
+pattern: dsa:hashing/prefix-sum-hashmap
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: longest_sum_k
+  params:
+    length:
+    - 5
+    - 8
+    value:
+    - -3
+    - 4
+    k:
+    - -2
+    - 5
+  reference: longest_brute(a, k)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: shrink a sliding window while the sum is too big
+  misconception: window-with-negatives
+- rule: overwrite the stored index with the latest one
+  misconception: prefix-store-last-index
+- rule: start the map empty
+  misconception: prefix-missing-empty
+- rule: count the subarrays instead of measuring the longest
+  misconception: prefix-count-vs-longest
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is the prefix state hash map pattern?
+  options:
+  - The longest subarray whose sum is k, where numbers may be negative
+  - The largest element of the array
+  - The number of distinct values
+  - The longest increasing subsequence
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-vs-scan
+  - distinct-vs-frequency
+  - pattern-subsequence-vs-substring
+  explanation: Contiguous subarrays with a sum condition and negative numbers.
+- id: identity
+  band: 1
+  format: mcq
+  prompt: p is the running prefix sum. When does a[j + 1 .. i] sum to k?
+  options:
+  - When p[i] − p[j] = k
+  - When p[i] + p[j] = k
+  - When p[i] = k
+  - When p[j] = k
+  answer: 0
+  misconceptions:
+  - null
+  - hash-insert-before-lookup
+  - prefix-missing-empty
+  - confuse-index-value
+  explanation: The subarray sum is the difference of two prefix sums.
+- id: seed
+  band: 2
+  format: mcq
+  prompt: What does the map hold before the scan starts?
+  options:
+  - The empty prefix, sum 0 at index −1
+  - Nothing
+  - Sum 0 at index 0
+  - Sum k at index −1
+  answer: 0
+  misconceptions:
+  - null
+  - prefix-missing-empty
+  - prefix-seed-index-zero
+  - confuse-index-value
+  explanation: Subarrays that start at index 0 are measured against the empty prefix.
+- id: trace-hit
+  band: 2
+  format: trace
+  prompt: 'k = 4. The map is {0: −1, 2: 0, 5: 1} and at index 2 the total is 6. What length is found?'
+  options:
+  - '2'
+  - '3'
+  - '1'
+  - No subarray
+  answer: 0
+  misconceptions:
+  - null
+  - window-length-off-by-one
+  - prefix-store-last-index
+  - prefix-missing-empty
+  explanation: total − k = 2, first seen at index 0, so the length is 2 − 0 = 2.
+- id: keep-first
+  band: 3
+  format: mcq
+  prompt: The total 0 appears at index −1 and again at index 4. Which index stays in the map for the longest subarray?
+  options:
+  - '−1'
+  - '4'
+  - Both
+  - Neither
+  answer: 0
+  misconceptions:
+  - null
+  - prefix-store-last-index
+  - pattern-first-vs-last-index
+  - prefix-missing-empty
+  explanation: The earliest start gives the longest subarray.
+- id: anchor
+  band: 3
+  format: trace
+  prompt: a = 1 -1 5 -2 3 and k = 3. What does the scan print?
+  options:
+  - '4'
+  - '2'
+  - '0'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - prefix-store-last-index
+  - window-with-negatives
+  - prefix-count-vs-longest
+  explanation: The subarray 1 −1 5 −2, found through the empty prefix at −1.
+- id: window
+  band: 3
+  format: classify
+  prompt: Why not a sliding window for this problem?
+  options:
+  - With negative numbers, a sum that is too big can come back down
+  - Windows only work on sorted arrays
+  - A window would be O(n²)
+  - Windows cannot measure length
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-needs-sorted-input
+  - pattern-brute-force-default
+  - window-sum-not-length
+  explanation: The shrink rule assumes the sum only grows as the window grows.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: n elements. Expected time of the scan?
+  options:
+  - O(n)
+  - O(n²)
+  - O(n log n)
+  - O(2^n)
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  - dp-recompute-subproblems
+  explanation: One pass with O(1) expected map operations per element.
+- id: count-version
+  band: 4
+  format: classify
+  prompt: You now need the number of subarrays with sum k. What does the map store?
+  options:
+  - How many times each prefix sum appeared, starting with {0 → 1}
+  - The first index of each prefix sum
+  - The last index of each prefix sum
+  - The subarrays themselves
+  answer: 0
+  misconceptions:
+  - null
+  - prefix-count-vs-longest
+  - prefix-store-last-index
+  - pattern-brute-force-default
+  explanation: Every earlier prefix with the right value ends one subarray.
+- id: zeros-ones
+  band: 5
+  format: classify
+  prompt: The longest subarray with equally many 0s and 1s. What transformation makes it this pattern?
+  options:
+  - Replace 0 by −1, then find the longest subarray with sum 0
+  - Sort the array
+  - Count the 1s only
+  - Replace 1 by 0
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-sort-breaks-order
+  - count-vs-sum
+  - prefix-count-vs-longest
+  explanation: Equal counts means the +1s and −1s cancel.
+- id: remainder
+  band: 5
+  format: mcq
+  prompt: In Java, total = −7 and m = 5. Which key keeps remainders comparable?
+  options:
+  - ((total % m) + m) % m, which is 3
+  - total % m, which is −2
+  - Math.abs(total) % m, which is 2
+  - total / m, which is −1
+  answer: 0
+  misconceptions:
+  - null
+  - mod-wrong-modulus
+  - mod-division
+  - confuse-index-value
+  explanation: Java's % keeps the sign of the dividend; shift it into 0 .. m − 1.
+- id: shortest
+  band: 6
+  format: classify
+  prompt: You need the shortest subarray with sum k. What changes in the template?
+  options:
+  - Overwrite the index every time, keeping the latest
+  - Keep the first index as before
+  - Seed the map at index 0
+  - Add 1 to every length found
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-first-vs-last-index
+  - prefix-seed-index-zero
+  - window-length-off-by-one
+  explanation: The closest earlier prefix gives the shortest subarray.
+status: provisional
+provenance:
+  origin: original

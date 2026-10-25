@@ -101,7 +101,8 @@ def test_course_scope_holds_for_search_direct_urls_and_tutor(client):  # noqa: F
     headers = login(client)
     onboard(client, headers)
     concepts = client.get("/api/v1/library/meta").json()["concepts"]
-    assert len(concepts) == 18 and all(c["id"].startswith("zero:") for c in concepts)
+    zero = default_catalog().course_concepts("zero")
+    assert len(concepts) == len(zero) and all(c["id"].startswith("zero:") for c in concepts)
     for url in [
         "/concepts/dsa:complexity",
         "/quiz/quiz:dsa:complexity",
@@ -178,12 +179,9 @@ def test_placement_knowledge_unlocks_topics_without_self_reported_solves(client,
 def test_every_concept_has_deeper_teaching():
     cat = default_catalog()
     for qualified, concept in cat.concepts.items():
-        for heading in [
-            "Worked walkthrough",
-            "Why this works",
-            "Boundary cases and cost",
-            "Check your understanding",
-        ]:
+        # Programming from Zero names the cost section for beginners (no Big-O yet).
+        edge = "Things to watch for" if qualified.startswith("zero:") else "Boundary cases and cost"
+        for heading in ["Worked walkthrough", "Why this works", edge, "Check your understanding"]:
             assert heading in concept.lesson, qualified
     assert sum(len(c.lesson.split()) for c in cat.concepts.values()) > 37000
 

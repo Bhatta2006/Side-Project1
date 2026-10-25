@@ -1,0 +1,909 @@
+id: dp-introduction
+title: 'Dynamic programming: the idea'
+summary: Overlapping subproblems and optimal substructure, Fibonacci four ways, spotting DP, and printing
+  the choices behind an answer.
+module: dynamic-programming
+prerequisites: ['zero:recursion', complexity]
+difficulty: 3
+estimated_minutes: 60
+lesson: |
+  Dynamic programming (DP) is recursion that refuses to solve the same question twice. You
+  describe a problem in terms of smaller versions of itself, notice that those smaller
+  versions repeat, and store each answer the first time you work it out. Two properties make
+  this possible:
+
+  - **Overlapping subproblems:** the same smaller question is asked many times.
+  - **Optimal substructure:** the best (or total) answer is built from best (or total)
+    answers to smaller questions.
+
+  This concept has three pattern families. The first one, Fibonacci four ways, is the one
+  every later DP lesson reuses: recursion → memoization → tabulation → space optimisation.
+
+  ## Fibonacci four ways
+
+  ### Recognition cues
+
+  - The answer for size n is a fixed combination of answers for a few smaller sizes, such as
+    n − 1 and n − 2.
+  - "How many ways…" or "the n-th term…", with n up to 10⁵ or more, where trying every
+    sequence of choices would be far too slow.
+  - Drawing the recursion tree shows the same node, like f(3), in several places.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For Fibonacci |
+  |---|---|
+  | State | `F(i)` = the i-th Fibonacci number |
+  | Transition | `F(i) = F(i − 1) + F(i − 2)` |
+  | Base cases | `F(0) = 0`, `F(1) = 1` |
+  | Answer | `F(n)` |
+  | Loop order | i increasing, because each cell reads the two cells before it |
+
+  Write the state as a full sentence before you write any code. If you cannot say what
+  `dp[i]` means in words, the transition will not come out right.
+
+  ### Template
+
+  The finished pattern keeps only the last two values. Read n, print F(n):
+
+  ```python
+  n = int(input())
+  prev, cur = 0, 1  # F(0) and F(1)
+  for _ in range(n):
+      prev, cur = cur, prev + cur  # slide the two-number window forward
+  print(prev)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      long long prev = 0, cur = 1;  // F(0) and F(1)
+      for (int i = 0; i < n; i++) {
+          long long next = prev + cur;
+          prev = cur;
+          cur = next;
+      }
+      cout << prev << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          int n = new Scanner(System.in).nextInt();
+          long prev = 0, cur = 1;  // F(0) and F(1)
+          for (int i = 0; i < n; i++) {
+              long next = prev + cur;
+              prev = cur;
+              cur = next;
+          }
+          System.out.println(prev);
+      }
+  }
+  ```
+
+  ### Anchor problem: the n-th Fibonacci number
+
+  Given n (0 ≤ n ≤ 90), print F(n). F(90) is about 2.9 × 10¹⁸, which still fits in a signed
+  64-bit integer; use `long long` / `long`.
+
+  **Step 1 — plain recursion (the wrong first attempt).** The definition translates directly
+  into code. This version also counts how many times `fib` is called:
+
+  ```python
+  calls = 0
+
+
+  def fib(n):
+      global calls
+      calls += 1
+      if n < 2:
+          return n
+      return fib(n - 1) + fib(n - 2)
+
+
+  n = int(input())
+  value = fib(n)
+  print(value, calls)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  long long calls = 0;
+
+  long long fib(int n) {
+      calls++;
+      if (n < 2) return n;
+      return fib(n - 1) + fib(n - 2);
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      long long value = fib(n);  // finish the work before reading calls
+      cout << value << " " << calls << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static long calls = 0;
+
+      static long fib(int n) {
+          calls++;
+          if (n < 2) return n;
+          return fib(n - 1) + fib(n - 2);
+      }
+
+      public static void main(String[] args) {
+          int n = new Scanner(System.in).nextInt();
+          long value = fib(n);
+          System.out.println(value + " " + calls);
+      }
+  }
+  ```
+
+  For n = 25 it prints `75025 242785`: a quarter of a million calls for one number. The
+  count is exactly 2·F(n + 1) − 1, so it grows as fast as the Fibonacci numbers themselves:
+
+  | n | F(n) | calls |
+  |---|---|---|
+  | 5 | 5 | 15 |
+  | 10 | 55 | 177 |
+  | 25 | 75,025 | 242,785 |
+  | 50 | 12,586,269,025 | 40,730,022,147 |
+
+  Forty billion calls for n = 50 is minutes of work at best. The answer is right; the work
+  is wasted, because `fib(48)` is computed twice, `fib(47)` three times, and so on.
+
+  **Step 2 — memoization (top-down).** Keep the recursion, but store each answer the first
+  time it is computed and return the stored value afterwards:
+
+  ```python
+  memo = {}
+
+
+  def fib(n):
+      if n < 2:
+          return n
+      if n not in memo:  # solve each n once, then reuse it
+          memo[n] = fib(n - 1) + fib(n - 2)
+      return memo[n]
+
+
+  print(fib(int(input())))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<long long> memo;  // -1 means "not solved yet"
+
+  long long fib(int n) {
+      if (n < 2) return n;
+      if (memo[n] == -1) memo[n] = fib(n - 1) + fib(n - 2);
+      return memo[n];
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      memo.assign(n + 1, -1);
+      cout << fib(n) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Arrays;
+  import java.util.Scanner;
+
+  public class Solution {
+      static long[] memo;  // -1 means "not solved yet"
+
+      static long fib(int n) {
+          if (n < 2) return n;
+          if (memo[n] == -1) memo[n] = fib(n - 1) + fib(n - 2);
+          return memo[n];
+      }
+
+      public static void main(String[] args) {
+          int n = new Scanner(System.in).nextInt();
+          memo = new long[n + 1];
+          Arrays.fill(memo, -1);
+          System.out.println(fib(n));
+      }
+  }
+  ```
+
+  Trace for `fib(5)`. Each n is solved once, in this order:
+
+  | Call | What happens | Stored |
+  |---|---|---|
+  | fib(5) → fib(4) → fib(3) → fib(2) | fib(1) = 1 and fib(0) = 0 are base cases | memo[2] = 1 |
+  | back in fib(3) | fib(1) = 1 | memo[3] = 2 |
+  | back in fib(4) | fib(2) is already stored | memo[4] = 3 |
+  | back in fib(5) | fib(3) is already stored | memo[5] = 5 |
+
+  Now there are about 2n calls instead of 2·F(n + 1). The cost is O(n) time and O(n) memory,
+  plus a recursion stack n frames deep.
+
+  **Step 3 — tabulation (bottom-up).** Turn the recursion inside out: fill a table from the
+  base cases upward, in an order where every cell's inputs are already filled:
+
+  ```python
+  n = int(input())
+  dp = [0] * (n + 2)  # n + 2 so dp[1] exists even when n = 0
+  dp[1] = 1
+  for i in range(2, n + 1):
+      dp[i] = dp[i - 1] + dp[i - 2]  # both cells are already filled
+  print(dp[n])
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> dp(n + 2, 0);  // n + 2 so dp[1] exists even when n = 0
+      dp[1] = 1;
+      for (int i = 2; i <= n; i++) dp[i] = dp[i - 1] + dp[i - 2];
+      cout << dp[n] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          int n = new Scanner(System.in).nextInt();
+          long[] dp = new long[n + 2];  // n + 2 so dp[1] exists even when n = 0
+          dp[1] = 1;
+          for (int i = 2; i <= n; i++) dp[i] = dp[i - 1] + dp[i - 2];
+          System.out.println(dp[n]);
+      }
+  }
+  ```
+
+  Dry run for n = 6:
+
+  | i | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+  |---|---|---|---|---|---|---|---|
+  | dp[i] | 0 | 1 | 1 | 2 | 3 | 5 | 8 |
+
+  No recursion means no stack-depth limit, and the loop order makes the dependency explicit.
+
+  **Step 4 — space optimisation.** Cell i reads only cells i − 1 and i − 2, so two variables
+  are enough. That is the template above. Its dry run for n = 6 shows the pair (prev, cur)
+  after each step:
+
+  | step | start | 1 | 2 | 3 | 4 | 5 | 6 |
+  |---|---|---|---|---|---|---|---|
+  | prev, cur | 0, 1 | 1, 1 | 1, 2 | 2, 3 | 3, 5 | 5, 8 | 8, 13 |
+
+  After n steps, `prev` holds F(n) = 8. Time O(n), memory O(1).
+
+  **Which version should you write?** Derive the recurrence with recursion, make it correct
+  with memoization, and switch to tabulation when the input is large or the recursion would
+  be too deep. Compress space last, and only when nothing needs the old cells (see
+  "Reconstructing the choice" below).
+
+  ### Variants
+
+  Each variant changes one thing about the anchor:
+
+  1. *Fibonacci number*: the anchor itself.
+  2. *Climbing stairs*: steps of 1 or 2; ways(n) = ways(n − 1) + ways(n − 2), with ways(0) = 1.
+  3. *N-th Tribonacci number*: three previous terms instead of two.
+  4. *Min cost climbing stairs*: `min` instead of `+`, and each step adds a cost.
+  5. *Dice combinations* (CSES): six previous terms, with answers taken modulo 10⁹ + 7.
+  6. *Count ways to build good strings*: step sizes come from the input, and counts are taken modulo 10⁹ + 7.
+
+  ### Contrast
+
+  "Climbing stairs with steps 1 and 2" counts **ordered** sequences: 1 + 2 and 2 + 1 are
+  different ways, so ways(3) = 3. "In how many ways can 3 be written as a sum of 1s and 2s?"
+  counts **unordered** collections: {1, 1, 1} and {1, 2}, so 2 ways. The second one is coin
+  change II, where the loop over coins must be the outer loop. Ask whether the order of the
+  pieces matters before you reuse the Fibonacci recurrence.
+
+  ### Common mistakes
+
+  - **Recomputing subproblems:** plain recursion on an input of 40 or more. Add a memo or a
+    table.
+  - **A memo that never stores:** the result is computed and returned, but `memo[n] = …` is
+    missing, so nothing is reused.
+  - **Wrong base cases:** starting from F(1) = F(2) = 1 but then asking for F(0); or setting
+    ways(0) = 0 in climbing stairs, which makes every count zero.
+  - **Filling the table out of order:** reading dp[i + 1] while computing dp[i].
+  - **Overflow:** F(47) no longer fits in a 32-bit int.
+
+  ## Spotting a DP problem
+
+  ### Recognition cues
+
+  - You make a **choice** at each step (which stair, which item, which split), and the
+    choices **combine** into a total that you minimise, maximise or count.
+  - A greedy rule, such as "take whatever looks best right now", has a small counterexample.
+  - Trying every sequence of choices is exponential, but the same intermediate situation
+    (the same stair, the same remaining budget) keeps reappearing.
+
+  ### State, transition, base cases, answer, loop order
+
+  A quick test before you commit to DP:
+
+  1. Name the **situation** you are in partway through, using as few numbers as possible.
+     That is your state.
+  2. List the **choices** from that situation. Each choice leads to a smaller situation;
+     that is the transition.
+  3. Check that situations **repeat**. If every subproblem is new, as in merge sort, you
+     have divide and conquer and memoization will not help.
+
+  ### Template
+
+  Min cost climbing stairs: `cost[i]` is paid when you leave stair i, and from there you climb
+  one or two stairs. You may start on stair 0 or stair 1; the top is stair n.
+  `dp[i]` = the cheapest way to stand on stair i.
+
+  ```python
+  n = int(input())
+  cost = list(map(int, input().split()))
+  dp = [0] * (n + 1)  # dp[i]: cheapest way to stand on stair i (n is the top)
+  for i in range(2, n + 1):
+      dp[i] = min(dp[i - 1] + cost[i - 1], dp[i - 2] + cost[i - 2])
+  print(dp[n])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> cost(n), dp(n + 1, 0);  // dp[i]: cheapest way to stand on i
+      for (auto& c : cost) cin >> c;
+      for (int i = 2; i <= n; i++)
+          dp[i] = min(dp[i - 1] + cost[i - 1], dp[i - 2] + cost[i - 2]);
+      cout << dp[n] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] cost = new long[n];
+          long[] dp = new long[n + 1];  // dp[i]: cheapest way to stand on i
+          for (int i = 0; i < n; i++) cost[i] = in.nextLong();
+          for (int i = 2; i <= n; i++)
+              dp[i] = Math.min(dp[i - 1] + cost[i - 1], dp[i - 2] + cost[i - 2]);
+          System.out.println(dp[n]);
+      }
+  }
+  ```
+
+  ### Anchor problem: cheapest way up the stairs
+
+  Input `4` and costs `1 2 100 3`. The answer is 5.
+
+  **Wrong first attempt — greedy.** Start on the cheaper of the first two stairs, then
+  always step to the cheaper of the next two:
+
+  ```python
+  n = int(input())
+  cost = list(map(int, input().split()))
+  pos = 0 if cost[0] <= cost[1] else 1  # start on the cheaper stair
+  total = 0
+  while True:
+      total += cost[pos]
+      if pos + 2 >= n:
+          break  # one jump reaches the top
+      pos = pos + 1 if cost[pos + 1] <= cost[pos + 2] else pos + 2
+  print(total)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> cost(n);
+      for (auto& c : cost) cin >> c;
+      int pos = cost[0] <= cost[1] ? 0 : 1;  // start on the cheaper stair
+      long long total = 0;
+      while (true) {
+          total += cost[pos];
+          if (pos + 2 >= n) break;  // one jump reaches the top
+          pos = cost[pos + 1] <= cost[pos + 2] ? pos + 1 : pos + 2;
+      }
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] cost = new long[n];
+          for (int i = 0; i < n; i++) cost[i] = in.nextLong();
+          int pos = cost[0] <= cost[1] ? 0 : 1;  // start on the cheaper stair
+          long total = 0;
+          while (true) {
+              total += cost[pos];
+              if (pos + 2 >= n) break;  // one jump reaches the top
+              pos = cost[pos + 1] <= cost[pos + 2] ? pos + 1 : pos + 2;
+          }
+          System.out.println(total);
+      }
+  }
+  ```
+
+  It prints 6. It starts on stair 0 (cost 1), moves to stair 1 (cost 2, cheaper than 100),
+  then to stair 3 (cost 3): 1 + 2 + 3 = 6. Starting on stair 1 and jumping to stair 3 costs
+  2 + 3 = 5. Greedy committed to stair 0 because it looked cheap, without asking where it
+  leads.
+
+  **The DP.** It considers both ways into every stair:
+
+  | i | 0 | 1 | 2 | 3 | 4 (top) |
+  |---|---|---|---|---|---|
+  | from i − 1 | – | – | 0 + 2 = 2 | 1 + 100 = 101 | 2 + 3 = 5 |
+  | from i − 2 | – | – | 0 + 1 = 1 | 0 + 2 = 2 | 1 + 100 = 101 |
+  | dp[i] | 0 | 0 | 1 | 2 | **5** |
+
+  O(n) time; the table can shrink to two variables, exactly like Fibonacci.
+
+  ### Variants
+
+  1. *Jump game*: can you reach the end? A greedy "farthest reach" also works here; see the
+     contrast below.
+  2. *Coin change (fewest coins)*: the choice is the last coin, and greedy fails for coins
+     {1, 3, 4} and amount 6.
+  3. *Maximum subarray*: dp[i] = the best sum of a subarray ending at i. This is Kadane's
+     algorithm, which is DP in disguise.
+
+  ### Contrast
+
+  Not every optimisation problem needs DP. In *jump game*, keeping the farthest reachable
+  index is provably enough, so greedy is correct in O(n) with no table. In *coin change*,
+  greedy fails. The difference is whether you can prove that the local choice never blocks
+  a better future. When you cannot, and a small counterexample exists, use DP.
+
+  ### Common mistakes
+
+  - **Trusting a greedy rule** because it worked on the sample.
+  - **A state that hides information:** "the cheapest cost so far" without saying *which
+    stair you are on* cannot be extended correctly.
+  - **Using DP where nothing repeats:** memoizing merge sort costs memory and saves no time.
+
+  ## Reconstructing the choice
+
+  ### Recognition cues
+
+  - The output asks for the **path, the items or the sequence**, not only the best value.
+  - The statement says "print any optimal…", or "if there are several answers, print the
+    lexicographically smallest".
+  - You need every dp cell at the end, so the space-optimised version is no longer enough.
+
+  ### State, transition, base cases, answer, loop order
+
+  Keep the same dp table, and add a second array, `came[i]`, that records **which choice won**
+  at cell i. After filling the table, start from the answer cell and follow `came` backwards
+  until you reach a base case. Then reverse the list you collected.
+
+  ### Template
+
+  Same stairs as above; print the cost and the stairs you stepped on:
+
+  ```python
+  n = int(input())
+  cost = list(map(int, input().split()))
+  dp = [0] * (n + 1)
+  came = [-1] * (n + 1)  # came[i]: the stair we stepped from to reach i
+  for i in range(2, n + 1):
+      one, two = dp[i - 1] + cost[i - 1], dp[i - 2] + cost[i - 2]
+      if one <= two:
+          dp[i], came[i] = one, i - 1
+      else:
+          dp[i], came[i] = two, i - 2
+  path, i = [], came[n]
+  while i >= 0:  # walk back from the top along the recorded choices
+      path.append(i)
+      i = came[i]
+  print(dp[n])
+  print(*reversed(path))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> cost(n), dp(n + 1, 0);
+      vector<int> came(n + 1, -1);  // came[i]: the stair we stepped from to reach i
+      for (auto& c : cost) cin >> c;
+      for (int i = 2; i <= n; i++) {
+          long long one = dp[i - 1] + cost[i - 1], two = dp[i - 2] + cost[i - 2];
+          if (one <= two) dp[i] = one, came[i] = i - 1;
+          else dp[i] = two, came[i] = i - 2;
+      }
+      vector<int> path;
+      for (int i = came[n]; i >= 0; i = came[i]) path.push_back(i);  // walk back
+      cout << dp[n] << "\n";
+      for (int k = (int)path.size() - 1; k >= 0; k--)
+          cout << path[k] << (k ? " " : "");
+      cout << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] cost = new long[n], dp = new long[n + 1];
+          int[] came = new int[n + 1];  // came[i]: the stair we stepped from to reach i
+          Arrays.fill(came, -1);
+          for (int i = 0; i < n; i++) cost[i] = in.nextLong();
+          for (int i = 2; i <= n; i++) {
+              long one = dp[i - 1] + cost[i - 1], two = dp[i - 2] + cost[i - 2];
+              if (one <= two) { dp[i] = one; came[i] = i - 1; }
+              else { dp[i] = two; came[i] = i - 2; }
+          }
+          Deque<Integer> path = new ArrayDeque<>();
+          for (int i = came[n]; i >= 0; i = came[i]) path.addFirst(i);  // walk back
+          StringJoiner line = new StringJoiner(" ");
+          for (int stair : path) line.add(String.valueOf(stair));
+          System.out.println(dp[n]);
+          System.out.println(line);
+      }
+  }
+  ```
+
+  ### Anchor problem: which stairs were used?
+
+  For `1 2 100 3` the program prints `5` and then `1 3`:
+
+  | i | 2 | 3 | 4 (top) |
+  |---|---|---|---|
+  | dp[i] | 1 | 2 | 5 |
+  | came[i] | 0 | 1 | 3 |
+
+  Walking back: the top came from 3, 3 came from 1, and 1 is a start stair (`came = −1`).
+  Reversed, that is 1, 3.
+
+  **Wrong first attempt.** Re-solving forward by "always step to the neighbour with the
+  smaller dp value" can wander, because a small dp value says how cheap a stair was to
+  *reach*, not whether it leads to the top cheaply. Record the choice while filling the
+  table, when you know which option won.
+
+  ### Variants
+
+  1. *Coin path*: print the lexicographically smallest cheapest path, which needs a tie rule
+     when recording choices.
+  2. *Largest divisible subset*: an LIS-style table plus `came` to print the subset.
+  3. *Longest common subsequence* (CSES): walk back through a 2D table.
+
+  ### Contrast
+
+  If the problem asks only for the best **value**, two variables are enough. If it asks for
+  the **choices**, you need the full table, or at least the full `came` array. Decide which
+  one the output needs before you optimise memory.
+
+  ### Common mistakes
+
+  - Compressing the table to two variables and then discovering you need to print the path.
+  - Forgetting to reverse the collected path.
+  - Breaking ties inconsistently when the statement asks for a specific optimal answer.
+
+  ## Worked walkthrough
+
+  **Problem.** Count the ways to tile a 2 × n board with 1 × 2 dominoes, modulo 10⁹ + 7.
+
+  1. *Is it DP?* Choices (how the next dominoes are placed) combine into a count, and the
+     same leftover board width appears again and again. Yes.
+  2. *State.* `ways[i]` = the number of tilings of a 2 × i board.
+  3. *Choices at the right edge.* Either one vertical domino (leaving width i − 1) or two
+     horizontal dominoes stacked (leaving width i − 2). Nothing else fits.
+  4. *Transition.* `ways[i] = ways[i − 1] + ways[i − 2]`, base cases `ways[0] = 1` (the empty
+     board has one tiling: place nothing) and `ways[1] = 1`.
+  5. *Order and memory.* i increasing; only two values are needed.
+
+  | i | 0 | 1 | 2 | 3 | 4 | 5 |
+  |---|---|---|---|---|---|---|
+  | ways[i] | 1 | 1 | 2 | 3 | 5 | 8 |
+
+  ```python
+  MOD = 10**9 + 7
+  n = int(input())
+  prev, cur = 1, 1  # ways(0) and ways(1)
+  for _ in range(n - 1):
+      prev, cur = cur, (prev + cur) % MOD  # one vertical, or two horizontal
+  print(cur)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      const long long MOD = 1000000007;
+      int n;
+      cin >> n;
+      long long prev = 1, cur = 1;  // ways(0) and ways(1)
+      for (int i = 0; i < n - 1; i++) {
+          long long next = (prev + cur) % MOD;  // one vertical, or two horizontal
+          prev = cur;
+          cur = next;
+      }
+      cout << cur << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          final long MOD = 1_000_000_007L;
+          int n = new Scanner(System.in).nextInt();
+          long prev = 1, cur = 1;  // ways(0) and ways(1)
+          for (int i = 0; i < n - 1; i++) {
+              long next = (prev + cur) % MOD;  // one vertical, or two horizontal
+              prev = cur;
+              cur = next;
+          }
+          System.out.println(cur);
+      }
+  }
+  ```
+
+  It is the Fibonacci template with different starting values and a modulus.
+
+  ### Why this works
+
+  The two choices at the right edge are **exhaustive** (every tiling ends one of these two
+  ways) and **disjoint** (no tiling ends both ways). So the tilings of width i split exactly
+  into those counted by `ways[i − 1]` and those counted by `ways[i − 2]`. By induction on i,
+  if the two smaller counts are right, so is `ways[i]`. For minimum and maximum problems the
+  same argument uses `min`/`max` instead of `+`: the best answer must end with one of the
+  choices, and each choice is best when its smaller subproblem is solved optimally.
+
+  ### Boundary cases and cost
+
+  - n = 0 should print 1 (one empty tiling), and n = 1 should print 1. Test both.
+  - Counts grow like 1.6ⁿ: take the modulus at every addition, not only at the end.
+  - Memoized recursion on n = 10⁵ exceeds Python's default recursion limit of 1000; use the
+    loop.
+  - Cost: plain recursion O(1.6ⁿ) time; memoization O(n) time and O(n) memory plus an
+    O(n)-deep stack; tabulation O(n) time and O(n) memory; two variables O(n) time and O(1)
+    memory.
+
+  ### Check your understanding
+
+  A frog can jump 1, 2 or 3 stones forward. How many ways can it reach stone 4 from stone 0,
+  and what changes in the template?
+
+  Try it on paper before reading the reasoning below.
+
+  > ways[i] = ways[i − 1] + ways[i − 2] + ways[i − 3], with ways[0] = 1 and negative indexes
+  > counting as 0: 1, 1, 2, 4, 7, so the answer is 7. The template keeps three variables
+  > instead of two.
+key_points:
+- DP stores answers to repeated subproblems so each is solved once.
+- Write the state as a sentence, then the transition, base cases, answer cell and loop order.
+- Derive with recursion, fix with memoization, scale with tabulation, compress space last.
+- Plain Fibonacci recursion makes 2·F(n+1) − 1 calls; memoization makes about 2n.
+- If a greedy rule has a small counterexample and situations repeat, use DP.
+- To print the choices, record which option won at every cell and walk back from the answer.
+pitfalls:
+- Recursing without a memo on inputs of 40 or more.
+- Computing a value in the memoized function but never storing it.
+- Base cases that make every answer zero, such as ways(0) = 0.
+- Compressing the table before checking whether the output needs the path.
+resources:
+- title: Introduction to Dynamic Programming
+  url: https://cp-algorithms.com/dynamic_programming/intro-to-dp.html
+  kind: article
+  source: CP-Algorithms
+  minutes: 20
+  level: intro
+- title: Introduction to DP
+  url: https://usaco.guide/gold/intro-dp
+  kind: article
+  source: USACO Guide
+  minutes: 30
+  level: core
+- title: Recursion Tree and DAG (Dynamic Programming)
+  url: https://visualgo.net/en/recursion
+  kind: visualizer
+  source: VisuAlgo
+  minutes: 15
+  level: intro
+- title: functools.cache and lru_cache
+  url: https://docs.python.org/3/library/functools.html
+  kind: docs
+  source: Python docs
+  minutes: 10
+  level: core
+  languages:
+  - python
+quiz:
+- id: two-properties
+  kind: mcq
+  prompt: Which two properties tell you a recursive solution can become DP?
+  options:
+  - Overlapping subproblems and optimal substructure
+  - Sorted input and a monotone answer
+  - Unique subproblems and a greedy choice
+  - Small input and many test cases
+  answer: 0
+  explanation: Subproblems must repeat, and the answer must be built from answers to subproblems.
+  difficulty: 1
+- id: naive-calls
+  kind: mcq
+  prompt: Plain recursive fib(n) makes 2·F(n+1) − 1 calls. Roughly how many is that for n = 50?
+  options:
+  - About 4 × 10^10
+  - About 100
+  - About 2,500
+  - About 10^6
+  answer: 0
+  explanation: F(51) is about 2 × 10^10, so the call count is about 4 × 10^10.
+  difficulty: 2
+- id: memo-missing-store
+  kind: bug
+  prompt: This memoized fib is still exponential. Why?
+  code:
+    python: |
+      memo = {}
+      def fib(n):
+          if n < 2:
+              return n
+          if n in memo:
+              return memo[n]
+          return fib(n - 1) + fib(n - 2)
+    cpp: |
+      map<int, long long> memo;
+      long long fib(int n) {
+          if (n < 2) return n;
+          if (memo.count(n)) return memo[n];
+          return fib(n - 1) + fib(n - 2);
+      }
+    java: |
+      static Map<Integer, Long> memo = new HashMap<>();
+      static long fib(int n) {
+          if (n < 2) return n;
+          if (memo.containsKey(n)) return memo.get(n);
+          return fib(n - 1) + fib(n - 2);
+      }
+  options:
+  - The result is never stored in memo
+  - The base case is wrong
+  - It should use a list instead of a dict
+  - It recurses on n + 1
+  answer: 0
+  explanation: Nothing is ever written to memo, so the lookup never hits.
+  difficulty: 2
+- id: tab-output
+  kind: output
+  prompt: What does this print?
+  code:
+    python: |
+      dp = [0, 1]
+      for i in range(2, 7):
+          dp.append(dp[-1] + dp[-2])
+      print(dp[6])
+    cpp: |
+      vector<long long> dp = {0, 1};
+      for (int i = 2; i < 7; i++) dp.push_back(dp[i - 1] + dp[i - 2]);
+      cout << dp[6];
+    java: |
+      long[] dp = new long[7];
+      dp[1] = 1;
+      for (int i = 2; i < 7; i++) dp[i] = dp[i - 1] + dp[i - 2];
+      System.out.print(dp[6]);
+  options:
+  - '8'
+  - '13'
+  - '5'
+  - '6'
+  answer: 0
+  explanation: '0 1 1 2 3 5 8: dp[6] = 8.'
+  difficulty: 2
+- id: greedy-stairs
+  kind: mcq
+  prompt: Costs 1 2 100 3 (start on stair 0 or 1, top is stair 4). Greedy pays 6. What does DP pay?
+  options:
+  - '5'
+  - '6'
+  - '3'
+  - '4'
+  answer: 0
+  explanation: 'Start on stair 1 (cost 2), jump to stair 3 (cost 3): 5.'
+  difficulty: 3
+- id: reconstruct-needs
+  kind: mcq
+  prompt: You must print the stairs used, not just the cost. What must you keep?
+  options:
+  - Which choice won at every cell
+  - Only the last two dp values
+  - Only the final answer
+  - The input sorted by cost
+  answer: 0
+  explanation: Walking back from the answer needs the winning choice at every cell.
+  difficulty: 3
+- id: space-when
+  kind: mcq
+  prompt: When is it safe to replace the dp table with two variables?
+  options:
+  - Each cell reads only the previous two and no path is printed
+  - Whenever the table is longer than 1000
+  - Only for counting problems
+  - Only when the input is sorted
+  answer: 0
+  explanation: Old cells can be dropped only if nothing reads them again.
+  difficulty: 4
+problems:
+- fence-painting
+- stepping-stones-path
+practice_links:
+- title: Jump Game
+  url: https://leetcode.com/problems/jump-game/
+  platform: LeetCode
+  difficulty: medium
+- title: Coin Change
+  url: https://leetcode.com/problems/coin-change/
+  platform: LeetCode
+  difficulty: medium
+- title: Maximum Subarray
+  url: https://leetcode.com/problems/maximum-subarray/
+  platform: LeetCode
+  difficulty: medium
+- title: Coin Path
+  url: https://leetcode.com/problems/coin-path/
+  platform: LeetCode
+  difficulty: hard
+- title: Largest Divisible Subset
+  url: https://leetcode.com/problems/largest-divisible-subset/
+  platform: LeetCode
+  difficulty: medium
+- title: Longest Common Subsequence
+  url: https://cses.fi/problemset/task/3403
+  platform: CSES
+  difficulty: medium
+provenance:
+  origin: original
+status: live

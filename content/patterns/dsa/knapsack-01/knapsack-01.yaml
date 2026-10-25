@@ -1,0 +1,129 @@
+id: dsa:knapsack-01/knapsack-01
+concept: dsa:knapsack-01
+title: '0/1 knapsack: take or skip each item once under a budget'
+tracks:
+- interview
+- competitive
+recognise:
+- Each item can be used at most once, under a weight or cost budget
+- Maximise value, test a reachable total, or count ways to hit it
+- The budget is small enough to index; 2^n subsets are too many
+state: dp[c] = best value within capacity c using the items seen so far
+transition: 'for each item, c from W down to w: dp[c] = max(dp[c], dp[c − w] + v)'
+base_cases:
+- dp[c] = 0 for every c before any item
+complexity:
+  time: O(n · W)
+  space: O(W) with one row
+template:
+  python: |
+    n, W = map(int, input().split())
+    w = list(map(int, input().split()))
+    v = list(map(int, input().split()))
+    dp = [0] * (W + 1)  # dp[c]: best value within capacity c, using the items so far
+    for i in range(n):
+        for c in range(W, w[i] - 1, -1):  # backwards, so item i is used at most once
+            dp[c] = max(dp[c], dp[c - w[i]] + v[i])
+    print(dp[W])
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, W;
+        cin >> n >> W;
+        vector<int> w(n);
+        vector<long long> v(n), dp(W + 1, 0);  // dp[c]: best value within capacity c
+        for (auto& x : w) cin >> x;
+        for (auto& x : v) cin >> x;
+        for (int i = 0; i < n; i++)
+            for (int c = W; c >= w[i]; c--)  // backwards, so item i is used at most once
+                dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
+        cout << dp[W] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt(), W = in.nextInt();
+            int[] w = new int[n];
+            long[] v = new long[n], dp = new long[W + 1];  // dp[c]: best value within capacity c
+            for (int i = 0; i < n; i++) w[i] = in.nextInt();
+            for (int i = 0; i < n; i++) v[i] = in.nextLong();
+            for (int i = 0; i < n; i++)
+                for (int c = W; c >= w[i]; c--)  // backwards, so item i is used at most once
+                    dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
+            System.out.println(dp[W]);
+        }
+    }
+template_io:
+  stdin: |
+    4 7
+    1 3 4 5
+    1 4 5 7
+  expected: '9'
+variants:
+- id: book-shop
+  band: 2
+  title: Pages within a price budget
+  problem: cses:1158
+- id: equal-partition
+  band: 3
+  title: Value equals weight, exact half
+  problem: leetcode:partition-equal-subset-sum
+- id: money-sums
+  band: 3
+  title: Every reachable total
+  problem: cses:1745
+- id: last-stone
+  band: 4
+  title: Closest to half
+  problem: leetcode:last-stone-weight-ii
+- id: target-sum
+  band: 4
+  title: Count sign assignments
+  problem: leetcode:target-sum
+- id: ones-and-zeroes
+  band: 5
+  title: Two budgets at once
+  problem: leetcode:ones-and-zeroes
+- id: profitable-schemes
+  band: 6
+  title: Count plans under two limits
+  problem: leetcode:profitable-schemes
+pitfalls:
+- knapsack-forward-capacity-loop
+- knapsack-greedy-ratio
+- knapsack-capacity-boundary
+- knapsack-weight-for-value
+atoms:
+- ks-worked
+- ks-faded
+- ks-visualizer
+- ks-micro
+- ks-classify
+quiz_family: quiz:dsa:knapsack-01:knapsack-01
+problems:
+  external:
+  - cses:1158
+  - leetcode:partition-equal-subset-sum
+  - cses:1745
+  - leetcode:last-stone-weight-ii
+  - leetcode:target-sum
+  - leetcode:ones-and-zeroes
+  - leetcode:profitable-schemes
+  - cf:1516C
+  - leetcode:tallest-billboard
+  - leetcode:minimize-the-difference-between-target-and-chosen-elements
+  - cses:1093
+  - leetcode:number-of-great-partitions
+  - leetcode:split-array-with-same-average
+showcase:
+- 'Why the capacity loop runs backwards: the same item taken twice, step by step'
+status: provisional
+provenance:
+  origin: original

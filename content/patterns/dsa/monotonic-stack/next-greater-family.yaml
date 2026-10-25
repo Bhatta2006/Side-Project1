@@ -1,0 +1,134 @@
+id: dsa:monotonic-stack/next-greater-family
+concept: dsa:monotonic-stack
+title: 'Next greater family: a stack of indexes still waiting'
+tracks:
+- interview
+- competitive
+recognise:
+- For every element, the nearest greater or smaller element to its left or right
+- The answer is a value, a position or a distance per element
+- n is large, so checking every pair is too slow
+state: stack of waiting indexes whose values decrease from bottom to top
+transition: 'for each i: while a[top] < a[i], pop top and set res[top] = a[i]; push i'
+base_cases:
+- every answer starts at −1
+complexity:
+  time: O(n) amortised
+  space: O(n)
+template:
+  python: |
+    n = int(input())
+    a = list(map(int, input().split()))
+    res = [-1] * n  # res[i]: first value to the right of i that is greater than a[i]
+    stack = []  # indexes still waiting; their values decrease from bottom to top
+    for i in range(n):
+        while stack and a[stack[-1]] < a[i]:  # a[i] answers every smaller value on top
+            res[stack.pop()] = a[i]
+        stack.append(i)
+    print(*res)
+  cpp: |
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<long long> a(n), res(n, -1);  // res[i]: first greater value to the right of i
+        for (auto& x : a) cin >> x;
+        vector<int> st;  // indexes still waiting; their values decrease from bottom to top
+        for (int i = 0; i < n; i++) {
+            while (!st.empty() && a[st.back()] < a[i]) {  // a[i] answers every smaller value on top
+                res[st.back()] = a[i];
+                st.pop_back();
+            }
+            st.push_back(i);
+        }
+        for (int i = 0; i < n; i++) cout << res[i] << (i + 1 < n ? " " : "\n");
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();
+            long[] a = new long[n], res = new long[n];  // res[i]: first greater value to the right of i
+            for (int i = 0; i < n; i++) a[i] = in.nextLong();
+            Arrays.fill(res, -1);
+            Deque<Integer> st = new ArrayDeque<>();  // indexes still waiting; values decrease downwards
+            for (int i = 0; i < n; i++) {
+                while (!st.isEmpty() && a[st.peek()] < a[i]) res[st.pop()] = a[i];  // a[i] answers them
+                st.push(i);
+            }
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < n; i++) out.append(res[i]).append(i + 1 < n ? " " : "\n");
+            System.out.print(out);
+        }
+    }
+template_io:
+  stdin: |
+    5
+    2 1 2 4 3
+  expected: 4 2 4 -1 -1
+variants:
+- id: nge-i
+  band: 1
+  title: Answers looked up in a hash map
+  problem: leetcode:next-greater-element-i
+- id: nearest-smaller
+  band: 2
+  title: Previous smaller, read before pushing
+  problem: cses:1645
+- id: nge-ii
+  band: 3
+  title: Circular array, scan twice
+  problem: leetcode:next-greater-element-ii
+- id: linked-list
+  band: 3
+  title: Next greater node in a list
+  problem: leetcode:next-greater-node-in-linked-list
+- id: remove-k
+  band: 4
+  title: Increasing stack of digits
+  problem: leetcode:remove-k-digits
+- id: visible-people
+  band: 5
+  title: Count the pops
+  problem: leetcode:number-of-visible-people-in-a-queue
+- id: pattern-132
+  band: 6
+  title: Scan from the right, remember the last pop
+  problem: leetcode:132-pattern
+pitfalls:
+- mono-max-to-the-right
+- mono-strictness
+- mono-wrong-direction
+- pattern-next-greater-vs-max-right
+atoms:
+- mono-worked
+- mono-faded
+- mono-visualizer
+- mono-micro
+- mono-classify
+quiz_family: quiz:dsa:monotonic-stack:next-greater-family
+problems:
+  external:
+  - leetcode:next-greater-element-i
+  - cses:1645
+  - leetcode:next-greater-element-ii
+  - leetcode:next-greater-node-in-linked-list
+  - leetcode:remove-k-digits
+  - leetcode:number-of-visible-people-in-a-queue
+  - leetcode:132-pattern
+  - leetcode:daily-temperatures
+  - leetcode:online-stock-span
+  - leetcode:largest-rectangle-in-histogram
+  - leetcode:sum-of-subarray-minimums
+  - leetcode:sliding-window-maximum
+  - leetcode:trapping-rain-water
+showcase:
+- '2 1 2 4 3: who pops whom, and why each index moves at most twice'
+status: provisional
+provenance:
+  origin: original

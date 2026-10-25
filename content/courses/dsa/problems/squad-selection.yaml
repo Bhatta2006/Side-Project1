@@ -1,0 +1,121 @@
+id: squad-selection
+title: Squad selection
+concepts: [recursion-patterns]
+difficulty: medium
+statement: |
+  A coach has `n` players with skill ratings `s_1 … s_n`. The squad for the next match must
+  have **exactly `r` players** whose ratings add up to **exactly `T`**.
+
+  Count the different squads. Two squads are different if some player is in one and not in
+  the other, even when the ratings are equal.
+input_format: |
+  The first line contains n, r and T. The second line contains s_1 … s_n.
+output_format: The number of squads.
+constraints:
+  - 1 ≤ n ≤ 16
+  - 1 ≤ r ≤ n
+  - 1 ≤ s_i ≤ 1000
+  - 1 ≤ T ≤ 16000
+examples:
+  - input: "5 2 7\n3 4 2 5 4"
+    output: "3"
+    explanation: "Players 1 and 2 (3 + 4), players 1 and 5 (3 + 4) and players 3 and 4 (2 + 5)."
+  - input: "3 3 10\n1 2 3"
+    output: "0"
+hints:
+  - "Each player is either in the squad or not. A recursive call can decide player i and pass on how many players and how much skill have been chosen."
+  - "Only count a squad when every player has been decided and both the size and the total match."
+  - "You may cut a branch early when it already has more than r players or more than T skill."
+approach: |
+  Pick or not pick with two pieces of state. go(i, chosen, total) decides player i: take them
+  (chosen + 1, total + s_i) or leave them out. When i = n, count 1 exactly when chosen = r and
+  total = T. Since ratings are positive, a branch with chosen > r or total > T can return 0
+  at once. There are at most 2^16 choices, so this runs instantly.
+reference: |
+  import sys
+  def main():
+      data = sys.stdin.read().split()
+      n, r, t = int(data[0]), int(data[1]), int(data[2])
+      s = [int(x) for x in data[3:3 + n]]
+      def go(i, chosen, total):
+          if chosen > r or total > t:
+              return 0
+          if i == n:
+              return 1 if chosen == r and total == t else 0
+          return go(i + 1, chosen + 1, total + s[i]) + go(i + 1, chosen, total)
+      print(go(0, 0, 0))
+  main()
+brute: |
+  from itertools import combinations
+  n, r, t = map(int, input().split())
+  s = list(map(int, input().split()))
+  print(sum(1 for squad in combinations(range(n), r) if sum(s[i] for i in squad) == t))
+references:
+  cpp: |
+    #include <cstdio>
+    #include <vector>
+    using namespace std;
+
+    int n, r, t;
+    vector<int> s;
+
+    long long go(int i, int chosen, int total) {
+        if (chosen > r || total > t) return 0;
+        if (i == n) return chosen == r && total == t ? 1 : 0;
+        return go(i + 1, chosen + 1, total + s[i]) + go(i + 1, chosen, total);
+    }
+
+    int main() {
+        if (scanf("%d %d %d", &n, &r, &t) != 3) return 0;
+        s.resize(n);
+        for (auto& x : s) scanf("%d", &x);
+        printf("%lld\n", go(0, 0, 0));
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        static int n, r, t;
+        static int[] s;
+
+        static long go(int i, int chosen, int total) {
+            if (chosen > r || total > t) return 0;
+            if (i == n) return chosen == r && total == t ? 1 : 0;
+            return go(i + 1, chosen + 1, total + s[i]) + go(i + 1, chosen, total);
+        }
+
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            n = in.nextInt();
+            r = in.nextInt();
+            t = in.nextInt();
+            s = new int[n];
+            for (int i = 0; i < n; i++) s[i] = in.nextInt();
+            System.out.println(go(0, 0, 0));
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1 5\n5"
+      yield "1 1 4\n5"
+      yield "16 8 8\n" + " ".join(["1"] * 16)
+      yield "16 8 8000\n" + " ".join(["1000"] * 16)
+      yield "16 16 16000\n" + " ".join(["1000"] * 16)
+      yield "16 1 1\n" + " ".join(["1"] * 16)
+      for _ in range(3):
+          s = [rng.randint(1, 20) for _ in range(16)]
+          r = rng.randint(1, 16)
+          t = sum(rng.sample(s, r))
+          yield f"16 {r} {t}\n" + " ".join(map(str, s))
+      for _ in range(3):
+          s = [rng.randint(1, 1000) for _ in range(16)]
+          r = rng.randint(1, 16)
+          yield f"16 {r} {sum(rng.sample(s, r))}\n" + " ".join(map(str, s))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 8)
+          s = [rng.randint(1, 6) for _ in range(n)]
+          r = rng.randint(1, n)
+          t = rng.randint(1, 30)
+          yield f"{n} {r} {t}\n" + " ".join(map(str, s))

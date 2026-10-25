@@ -1,0 +1,153 @@
+id: seating-plans
+title: Seating plans
+concepts: [recursion-patterns]
+difficulty: medium
+statement: |
+  A row has `n` seats and `k` guests are coming. To keep some distance, **no two guests may
+  sit in neighbouring seats**.
+
+  Write a plan as a string of n characters: `X` for a seat with a guest and `.` for an empty
+  seat. Print how many plans there are, then every plan, one per line, in lexicographic
+  (dictionary) order. The character `.` comes before `X`.
+input_format: The only line contains n and k.
+output_format: |
+  The number of plans on the first line, then the plans in lexicographic order.
+constraints:
+  - 1 ≤ n ≤ 16
+  - 0 ≤ k ≤ n
+examples:
+  - input: "4 2"
+    output: "3\n.X.X\nX..X\nX.X."
+    explanation: "The guests can take seats 2 and 4, 1 and 4, or 1 and 3."
+  - input: "3 3"
+    output: "0"
+hints:
+  - "Build the plan one seat at a time. Trying `.` before `X` at every seat produces the plans in lexicographic order."
+  - "A seat may get an `X` only if the previous seat is empty and some guests are still waiting."
+  - "Cut a branch when the guests still waiting cannot fit in the seats that are left: m free seats hold at most (m + 1) // 2 guests."
+approach: |
+  String generation with a rule checked on the prefix. build(plan, left) fills the next seat:
+  first with `.`, then with `X` if the previous seat is not an `X` and left > 0. When the plan
+  has n seats, record it if left = 0. Trying `.` first gives lexicographic order because `.`
+  sorts before `X`. Pruning with "m seats hold at most (m + 1) // 2 guests" keeps the work
+  close to the size of the output. Print the count first, then the plans.
+reference: |
+  import sys
+  def main():
+      n, k = map(int, sys.stdin.read().split())
+      out = []
+      def build(plan, left):
+          free = n - len(plan)
+          if left > (free + 1) // 2:
+              return
+          if free == 0:
+              out.append("".join(plan))
+              return
+          plan.append(".")
+          build(plan, left)
+          plan.pop()
+          if left > 0 and (not plan or plan[-1] != "X"):
+              plan.append("X")
+              build(plan, left - 1)
+              plan.pop()
+      build([], k)
+      print(len(out))
+      if out:
+          print("\n".join(out))
+  main()
+brute: |
+  from itertools import product
+  n, k = map(int, input().split())
+  plans = []
+  for seats in product(".X", repeat=n):
+      s = "".join(seats)
+      if s.count("X") == k and "XX" not in s:
+          plans.append(s)
+  plans.sort()
+  print(len(plans))
+  for p in plans:
+      print(p)
+references:
+  cpp: |
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    using namespace std;
+
+    int n;
+    vector<string> out;
+
+    void build(string& plan, int left) {
+        int freeSeats = n - (int)plan.size();
+        if (left > (freeSeats + 1) / 2) return;
+        if (freeSeats == 0) { out.push_back(plan); return; }
+        plan.push_back('.');
+        build(plan, left);
+        plan.pop_back();
+        if (left > 0 && (plan.empty() || plan.back() != 'X')) {
+            plan.push_back('X');
+            build(plan, left - 1);
+            plan.pop_back();
+        }
+    }
+
+    int main() {
+        int k;
+        cin >> n >> k;
+        string plan;
+        build(plan, k);
+        string text = to_string(out.size()) + "\n";
+        for (auto& p : out) text += p + "\n";
+        cout << text;
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        static int n;
+        static List<String> out = new ArrayList<>();
+
+        static void build(StringBuilder plan, int left) {
+            int free = n - plan.length();
+            if (left > (free + 1) / 2) return;
+            if (free == 0) { out.add(plan.toString()); return; }
+            plan.append('.');
+            build(plan, left);
+            plan.setLength(plan.length() - 1);
+            if (left > 0 && (plan.length() == 0 || plan.charAt(plan.length() - 1) != 'X')) {
+                plan.append('X');
+                build(plan, left - 1);
+                plan.setLength(plan.length() - 1);
+            }
+        }
+
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            n = in.nextInt();
+            int k = in.nextInt();
+            build(new StringBuilder(), k);
+            StringBuilder text = new StringBuilder().append(out.size()).append('\n');
+            for (String p : out) text.append(p).append('\n');
+            System.out.print(text);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 0"
+      yield "1 1"
+      yield "2 2"
+      yield "16 0"
+      yield "16 8"
+      yield "16 9"
+      yield "16 5"
+      yield "16 6"
+      yield "15 8"
+      yield "16 4"
+      for _ in range(3):
+          n = rng.randint(1, 16)
+          yield f"{n} {rng.randint(0, (n + 1) // 2)}"
+small_generator: |
+  def cases(rng):
+      for _ in range(200):
+          n = rng.randint(1, 10)
+          yield f"{n} {rng.randint(0, n)}"

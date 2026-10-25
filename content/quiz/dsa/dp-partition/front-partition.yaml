@@ -1,0 +1,64 @@
+id: quiz:dsa:dp-partition:front-partition
+family: front-partition
+concept: dsa:dp-partition
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: state
+  band: 1
+  format: mcq
+  prompt: In palindrome partitioning II, what does cuts[i] mean?
+  options:
+  - The fewest cuts so that s[0..i] is all palindromes
+  - Whether s[0..i] is a palindrome
+  - The longest palindrome ending at i
+  - The cuts needed for s[i..n−1]
+  answer: 0
+  misconceptions:
+  - null
+  - dp-count-vs-exists
+  - dp-vague-state
+  - pattern-interval-vs-front-partition
+  explanation: A prefix state; the last piece s[j..i] is tried for every j.
+- id: greedy
+  band: 3
+  format: trace
+  prompt: abaab. Greedy takes the longest palindromic prefix each time. How many cuts does it make, and
+    what is the best?
+  options:
+  - 2 and 1
+  - 1 and 1
+  - 2 and 2
+  - 3 and 1
+  answer: 0
+  misconceptions:
+  - null
+  - front-greedy-longest
+  - off-by-one-output
+  - front-greedy-longest
+  explanation: aba | a | b needs 2 cuts; a | baab needs 1.
+- id: cost
+  band: 4
+  format: complexity
+  prompt: Checking each piece for being a palindrome by scanning it inside the double loop costs what?
+  options:
+  - O(n³); precompute a palindrome table for O(n²)
+  - O(n²)
+  - O(n)
+  - O(n log n)
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - pattern-search-vs-scan
+  - pattern-brute-force-default
+  explanation: n² (j, i) pairs times an O(n) check.
+status: provisional
+provenance:
+  origin: original

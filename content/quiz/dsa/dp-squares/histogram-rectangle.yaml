@@ -1,0 +1,64 @@
+id: quiz:dsa:dp-squares:histogram-rectangle
+family: histogram-rectangle
+concept: dsa:dp-squares
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: heights
+  band: 2
+  format: trace
+  prompt: A column's height was 2 and this row's cell is 1. The next row's cell is 0. What are the two
+    new heights?
+  options:
+  - 3, then 0
+  - 3, then 3
+  - 1, then 0
+  - 2, then 0
+  answer: 0
+  misconceptions:
+  - null
+  - histogram-no-reset
+  - dp-wrong-base-case
+  - off-by-one-output
+  explanation: A 1 extends the column; a 0 resets it.
+- id: why-histogram
+  band: 3
+  format: classify
+  prompt: Why does running the histogram stack on every row find the largest rectangle?
+  options:
+  - Every rectangle of ones has its bottom edge on some row, where it fits under that row's bars
+  - Rectangles are always at the bottom
+  - The stack finds squares only
+  - It does not; you also need the square DP
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-square-vs-rectangle
+  - pattern-square-vs-rectangle
+  - pattern-stack-vs-deque
+  explanation: Each row's histogram covers every rectangle ending on that row.
+- id: value
+  band: 4
+  format: trace
+  prompt: Grid 10100 / 10111 / 11111 / 10010. What is the largest all-ones rectangle?
+  options:
+  - '6'
+  - '4'
+  - '5'
+  - '9'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-square-vs-rectangle
+  - histogram-width-off-by-one
+  - count-vs-sum
+  explanation: Rows 2–3, columns 3–5.
+status: provisional
+provenance:
+  origin: original

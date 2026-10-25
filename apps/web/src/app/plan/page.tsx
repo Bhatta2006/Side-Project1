@@ -54,9 +54,9 @@ function OverrideBadges({ item, undo }: { item: RoadmapItem; undo: (kind: string
 /** A native disclosure styled as a card section; keyboard accessible by default. */
 function Disclosure({ id, title, children, defaultOpen = false }: { id: string; title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   return (
-    <details className="group rounded-card border bg-card" open={defaultOpen} aria-labelledby={id}>
+    <details className="group paper rounded-card" open={defaultOpen} aria-labelledby={id}>
       <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 lg:px-6 [&::-webkit-details-marker]:hidden">
-        <h2 id={id} className="font-display text-lg font-bold tracking-[-0.02em]">{title}</h2>
+        <h2 id={id} className="font-display text-lg font-semibold tracking-[-0.02em]">{title}</h2>
         <ChevronDown className="size-5 flex-none transition-transform group-open:rotate-180" aria-hidden="true" />
       </summary>
       <div className="px-5 pb-5 lg:px-6 lg:pb-6">{children}</div>
@@ -113,8 +113,8 @@ export default function PlanPage() {
     <Page wide>
       <Reveal>
         <header className="mb-8">
-          <p className="type-label mb-3 text-muted-foreground">{NAME.skills}</p>
-          <h1 className="type-display-l">Your skills</h1>
+          <p className="font-hand mb-2 origin-left -rotate-2 text-[22px] text-pen">{NAME.skills}</p>
+          <h1 className="type-display-l">Your <span className="hl hl-draw">skills</span></h1>
           <p className="mt-3 max-w-2xl text-base text-muted-foreground">
             Your roadmap for {FOCUS_LABEL[plan.focus]}, on the {STYLE_LABEL[plan.style]} path. It adapts to your results, and Socrat asks before changing it.
           </p>
@@ -130,7 +130,7 @@ export default function PlanPage() {
             <Card id="proposals" aria-labelledby="proposals-heading">
               <div className="grid gap-3 px-(--card-spacing)">
                 <div>
-                  <h2 id="proposals-heading" className="font-display text-xl font-bold tracking-[-0.03em]">Socrat suggests</h2>
+                  <h2 id="proposals-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Socrat suggests</h2>
                   <p className="mt-1 text-[15px] text-muted-foreground">Based on how you&apos;re doing. Nothing changes unless you accept.</p>
                 </div>
                 <ProposalList proposals={pending} onDecided={load} />
@@ -142,14 +142,14 @@ export default function PlanPage() {
           {current ? (
             <Reveal index={1}>
               <Card tone="hero" className="relative" aria-labelledby="module-heading">
-                <Soc size={176} className="pointer-events-none absolute top-1/2 right-8 hidden -translate-y-1/2 lg:block" />
+                <Soc size={176} mood="proud" className="pointer-events-none absolute top-1/2 right-8 hidden -translate-y-1/2 lg:block" />
                 <div className="relative grid gap-5 px-(--card-spacing) lg:max-w-[62%]">
                   <p className="type-label text-(--card-muted)">Current module{current.bridge ? `, bridge from ${current.course}` : ''}</p>
                   <h2 id="module-heading" className="type-display-l">{current.title}</h2>
                   <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                     <div><dt className="text-sm text-(--card-muted)">Skills done</dt><dd className="type-display-m tabular-nums">{currentDone}/{current.concepts.length}</dd></div>
-                    <div><dt className="text-sm text-(--card-muted)">Study left</dt><dd className="font-display text-2xl font-bold tracking-[-0.03em] tabular-nums">{hours(plan.remaining_minutes)}</dd></div>
-                    <div className="col-span-2 sm:col-span-1"><dt className="text-sm text-(--card-muted)">Likely finish</dt><dd className="font-display text-2xl font-bold tracking-[-0.03em]" data-visual-mask="">{formatDate(plan.forecast.realistic_finish, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
+                    <div><dt className="text-sm text-(--card-muted)">Study left</dt><dd className="font-display text-2xl font-semibold tracking-[-0.03em] tabular-nums">{hours(plan.remaining_minutes)}</dd></div>
+                    <div className="col-span-2 sm:col-span-1"><dt className="text-sm text-(--card-muted)">Likely finish</dt><dd className="font-display text-2xl font-semibold tracking-[-0.03em]" data-visual-mask="">{formatDate(plan.forecast.realistic_finish, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
                   </dl>
                   <p className="max-w-lg text-[15px] text-(--card-muted)">{PACE_LABEL[plan.pace]} pace. {plan.pace_reason}</p>
                   {plan.forecast.adherence < 0.95 ? (
@@ -176,7 +176,7 @@ export default function PlanPage() {
           {current ? (
             <Card aria-labelledby="map-heading">
               <div className="px-(--card-spacing)">
-                <h2 id="map-heading" className="mb-3 font-display text-xl font-bold tracking-[-0.03em]">Skill map: {current.title}</h2>
+                <h2 id="map-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Skill map: {current.title}</h2>
                 <NodeMap
                   label={current.title}
                   nodes={current.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: statusFromRoadmap(c), current: c.concept === plan.current_concept, reviewDue: c.review_due }))}
@@ -188,7 +188,7 @@ export default function PlanPage() {
           {/* All modules, expandable. */}
           <section aria-labelledby="roadmap-heading" className="grid gap-4 lg:gap-6">
             <div>
-              <h2 id="roadmap-heading" className="font-display text-2xl font-bold tracking-[-0.03em]">Modules</h2>
+              <h2 id="roadmap-heading" className="font-display text-2xl font-semibold tracking-[-0.03em]">Modules</h2>
               <p className="mt-1 text-[15px] text-muted-foreground">Your course and its foundation modules, updated from your learning evidence.</p>
             </div>
             {plan.modules.map((module, mi) => {
@@ -196,11 +196,11 @@ export default function PlanPage() {
               const isCurrent = module.id === current?.id;
               return (
                 <Reveal key={module.id} index={mi + 2}>
-                  <details className={cn('group rounded-card border bg-card', unlocked.has(module.id) && 'animate-unlock')} open={isCurrent || unlocked.has(module.id) || module.id === firstLocked}>
+                  <details className={cn('group paper rounded-card', unlocked.has(module.id) && 'animate-unlock')} open={isCurrent || unlocked.has(module.id) || module.id === firstLocked}>
                     <summary className="flex min-h-16 cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 lg:px-6 [&::-webkit-details-marker]:hidden">
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-display text-lg font-bold tracking-[-0.02em]">{module.title}</span>
+                          <span className="font-display text-lg font-semibold tracking-[-0.02em]">{module.title}</span>
                           {isCurrent ? <Badge>Current</Badge> : null}
                           {unlocked.has(module.id) ? <Badge>Unlocked</Badge> : null}
                           {module.locked_by ? <StatusLabel status="locked" muted className="text-[13px]" /> : null}
@@ -216,7 +216,7 @@ export default function PlanPage() {
                     <div className="grid gap-3 px-5 pb-5 lg:px-6 lg:pb-6">
                       {module.locked_by ? (
                         <LockedState title={`Locked until ${module.locked_by.module}`} href={activityHref(module.locked_by.gate)}>
-                          Pass the {module.locked_by.module} checkpoint to unlock practice and checks in this module.
+                          Already know this? Pass the {module.locked_by.module} checkpoint (up to 10 questions) to unlock it now.
                         </LockedState>
                       ) : null}
                       <ul className="grid gap-2">

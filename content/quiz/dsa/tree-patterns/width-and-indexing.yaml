@@ -1,0 +1,63 @@
+id: quiz:dsa:tree-patterns:width-and-indexing
+family: width-and-indexing
+concept: dsa:tree-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: children
+  band: 2
+  format: mcq
+  prompt: A node has position p. What are its children's positions?
+  options:
+  - 2p and 2p + 1
+  - p + 1 and p + 2
+  - 2p − 1 and 2p
+  - p and p + 1
+  answer: 0
+  misconceptions:
+  - null
+  - off-by-one-output
+  - off-by-one-output
+  - confuse-index-value
+  explanation: The heap layout used for arrays.
+- id: width
+  band: 3
+  format: trace
+  prompt: A level has nodes at positions 4, 5 and 7. What is its width?
+  options:
+  - '4'
+  - '3'
+  - '2'
+  - '7'
+  answer: 0
+  misconceptions:
+  - null
+  - tree-width-counts-nodes
+  - off-by-one-output
+  - confuse-index-value
+  explanation: 7 − 4 + 1, counting the empty slot 6.
+- id: overflow
+  band: 4
+  format: bug_spot
+  prompt: A chain going right 70 levels deep. What goes wrong with raw positions in C++ or Java?
+  options:
+  - Positions pass 2^63 and overflow; renumber each level from 0
+  - Nothing
+  - The width becomes 0
+  - The BFS loops forever
+  answer: 0
+  misconceptions:
+  - null
+  - tree-width-overflow
+  - tree-width-counts-nodes
+  - tree-width-overflow
+  explanation: Subtract the level's first position before doubling.
+status: provisional
+provenance:
+  origin: original

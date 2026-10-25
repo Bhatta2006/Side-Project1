@@ -2,7 +2,7 @@ id: sliding-window
 title: Sliding window
 summary: Maintain a contiguous window and its summary as it slides, instead of recomputing every subarray.
 module: linear-patterns
-prerequisites: [two-pointers]
+prerequisites: [two-pointers, hashing]
 difficulty: 3
 estimated_minutes: 55
 lesson: |

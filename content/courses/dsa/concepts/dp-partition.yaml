@@ -1,0 +1,937 @@
+id: dp-partition
+title: Partition DP (matrix chain)
+summary: 'Try every split point between i and j: matrix chains, cutting sticks, bursting balloons, boolean
+  ways and minimum cuts.'
+module: dynamic-programming
+prerequisites: [dp-2d]
+difficulty: 5
+estimated_minutes: 90
+lesson: |
+  Some problems are about a **range** `i..j` that must be split into two parts, solved
+  separately, and combined at a cost. Multiplying a chain of matrices, cutting a stick at
+  marked points, bursting balloons, putting brackets into a boolean expression: in each, the
+  answer for `i..j` tries every split point `k` and keeps the best. This is **partition DP**
+  (also called interval DP or matrix-chain DP).
+
+  The new idea is the loop order. A range depends on shorter ranges inside it, so the table is
+  filled **by length**, from the shortest ranges to the whole input.
+
+  ## Matrix chain multiplication
+
+  ### Recognition cues
+
+  - A sequence that must be combined two neighbours at a time, and the **order** of combining
+    changes the total cost.
+  - The cost of combining two blocks depends on their outer boundaries (dimensions, lengths,
+    end values).
+  - n up to a few hundred: O(n³) is the usual cost.
+
+  ### State, transition, base cases, answer, loop order
+
+  Matrix i has dimensions `p[i] × p[i+1]`. Multiplying an a×b matrix by a b×c matrix costs a·b·c.
+
+  | Part | For matrix chain |
+  |---|---|
+  | State | `dp[i][j]` = the cheapest way to multiply matrices i..j into one |
+  | Transition | `dp[i][j] = min over i ≤ k < j of dp[i][k] + dp[k+1][j] + p[i]·p[k+1]·p[j+1]` |
+  | Base cases | `dp[i][i] = 0`: a single matrix needs no multiplication |
+  | Answer | `dp[0][n−1]` |
+  | Loop order | by range length, 2 up to n; every shorter range is ready before it is read |
+
+  The last multiplication joins the product of `i..k` (a `p[i] × p[k+1]` matrix) with the
+  product of `k+1..j` (a `p[k+1] × p[j+1]` matrix).
+
+  ### Template
+
+  ```python
+  n = int(input())  # number of matrices
+  p = list(map(int, input().split()))  # n + 1 dimensions: matrix i is p[i] x p[i + 1]
+  dp = [[0] * n for _ in range(n)]  # dp[i][j]: cheapest cost to multiply matrices i..j
+  for length in range(2, n + 1):  # shorter ranges first
+      for i in range(n - length + 1):
+          j = i + length - 1
+          dp[i][j] = min(
+              dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] * p[j + 1]  # last multiply splits after k
+              for k in range(i, j)
+          )
+  print(dp[0][n - 1])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <climits>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;  // number of matrices
+      cin >> n;
+      vector<long long> p(n + 1);  // matrix i is p[i] x p[i + 1]
+      for (auto& x : p) cin >> x;
+      vector<vector<long long>> dp(n, vector<long long>(n, 0));  // cheapest cost for i..j
+      for (int length = 2; length <= n; length++)  // shorter ranges first
+          for (int i = 0; i + length - 1 < n; i++) {
+              int j = i + length - 1;
+              dp[i][j] = LLONG_MAX;
+              for (int k = i; k < j; k++)  // the last multiply splits after k
+                  dp[i][j] = min(dp[i][j], dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] * p[j + 1]);
+          }
+      cout << dp[0][n - 1] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();  // number of matrices
+          long[] p = new long[n + 1];  // matrix i is p[i] x p[i + 1]
+          for (int i = 0; i <= n; i++) p[i] = in.nextLong();
+          long[][] dp = new long[n][n];  // cheapest cost for i..j
+          for (int length = 2; length <= n; length++)  // shorter ranges first
+              for (int i = 0; i + length - 1 < n; i++) {
+                  int j = i + length - 1;
+                  dp[i][j] = Long.MAX_VALUE;
+                  for (int k = i; k < j; k++)  // the last multiply splits after k
+                      dp[i][j] = Math.min(dp[i][j], dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] * p[j + 1]);
+              }
+          System.out.println(dp[0][n - 1]);
+      }
+  }
+  ```
+
+  ### Anchor problem: four matrices
+
+  Dimensions `40 20 30 10 30`: matrices A (40×20), B (20×30), C (30×10) and D (10×30). The
+  cheapest order costs **26000**: (A(BC))D.
+
+  **Wrong first attempt — cheapest pair first.** Repeatedly multiply the neighbouring pair
+  that is cheapest right now:
+
+  ```python
+  n = int(input())
+  p = list(map(int, input().split()))
+  total = 0
+  while len(p) > 2:  # more than one matrix left
+      k = min(range(1, len(p) - 1), key=lambda k: p[k - 1] * p[k] * p[k + 1])
+      total += p[k - 1] * p[k] * p[k + 1]  # multiply the cheapest neighbouring pair
+      p.pop(k)  # their shared dimension disappears
+  print(total)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> p(n + 1);
+      for (auto& x : p) cin >> x;
+      long long total = 0;
+      while (p.size() > 2) {  // more than one matrix left
+          int best = 1;
+          for (int k = 2; k + 1 < (int)p.size(); k++)
+              if (p[k - 1] * p[k] * p[k + 1] < p[best - 1] * p[best] * p[best + 1]) best = k;
+          total += p[best - 1] * p[best] * p[best + 1];  // multiply the cheapest pair
+          p.erase(p.begin() + best);  // their shared dimension disappears
+      }
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          List<Long> p = new ArrayList<>();
+          for (int i = 0; i <= n; i++) p.add(in.nextLong());
+          long total = 0;
+          while (p.size() > 2) {  // more than one matrix left
+              int best = 1;
+              for (int k = 2; k + 1 < p.size(); k++)
+                  if (p.get(k - 1) * p.get(k) * p.get(k + 1) < p.get(best - 1) * p.get(best) * p.get(best + 1)) best = k;
+              total += p.get(best - 1) * p.get(best) * p.get(best + 1);  // multiply the cheapest pair
+              p.remove(best);  // their shared dimension disappears
+          }
+          System.out.println(total);
+      }
+  }
+  ```
+
+  It prints 36000. Greedy multiplies B·C (6000), then (BC)·D (6000), and is left with A
+  times a 20×30 matrix: 24000. The table instead multiplies A·(BC) next (8000), which leaves a
+  40×10 matrix times D (12000). A cheap step now can leave an expensive shape for later, so
+  the table compares every final split.
+
+  **Step 1 — recursion.** For the range i..j, try every position of the last multiplication:
+
+  ```python
+  def cost(i, j):
+      """Cheapest cost to multiply matrices i..j."""
+      if i == j:
+          return 0
+      return min(cost(i, k) + cost(k + 1, j) + p[i] * p[k + 1] * p[j + 1] for k in range(i, j))
+
+
+  n = int(input())
+  p = list(map(int, input().split()))
+  print(cost(0, n - 1))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <climits>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<long long> p;
+
+  long long cost(int i, int j) {  // cheapest cost to multiply matrices i..j
+      if (i == j) return 0;
+      long long best = LLONG_MAX;
+      for (int k = i; k < j; k++) best = min(best, cost(i, k) + cost(k + 1, j) + p[i] * p[k + 1] * p[j + 1]);
+      return best;
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      p.resize(n + 1);
+      for (auto& x : p) cin >> x;
+      cout << cost(0, n - 1) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static long[] p;
+
+      static long cost(int i, int j) {  // cheapest cost to multiply matrices i..j
+          if (i == j) return 0;
+          long best = Long.MAX_VALUE;
+          for (int k = i; k < j; k++) best = Math.min(best, cost(i, k) + cost(k + 1, j) + p[i] * p[k + 1] * p[j + 1]);
+          return best;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          p = new long[n + 1];
+          for (int i = 0; i <= n; i++) p[i] = in.nextLong();
+          System.out.println(cost(0, n - 1));
+      }
+  }
+  ```
+
+  The number of bracketings grows like the Catalan numbers (about 4ⁿ), yet there are only
+  n(n + 1)/2 ranges.
+
+  **Step 2 — memoization.** Store each range once:
+
+  ```python
+  def cost(i, j):
+      if i == j:
+          return 0
+      if memo[i][j] is None:  # solve each range once
+          memo[i][j] = min(cost(i, k) + cost(k + 1, j) + p[i] * p[k + 1] * p[j + 1] for k in range(i, j))
+      return memo[i][j]
+
+
+  n = int(input())
+  p = list(map(int, input().split()))
+  memo = [[None] * n for _ in range(n)]
+  print(cost(0, n - 1))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <climits>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<long long> p;
+  vector<vector<long long>> memo;  // -1 = not solved yet
+
+  long long cost(int i, int j) {
+      if (i == j) return 0;
+      long long& slot = memo[i][j];
+      if (slot == -1) {  // solve each range once
+          slot = LLONG_MAX;
+          for (int k = i; k < j; k++) slot = min(slot, cost(i, k) + cost(k + 1, j) + p[i] * p[k + 1] * p[j + 1]);
+      }
+      return slot;
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      p.resize(n + 1);
+      for (auto& x : p) cin >> x;
+      memo.assign(n, vector<long long>(n, -1));
+      cout << cost(0, n - 1) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static long[] p;
+      static long[][] memo;  // -1 = not solved yet
+
+      static long cost(int i, int j) {
+          if (i == j) return 0;
+          if (memo[i][j] == -1) {  // solve each range once
+              long best = Long.MAX_VALUE;
+              for (int k = i; k < j; k++) best = Math.min(best, cost(i, k) + cost(k + 1, j) + p[i] * p[k + 1] * p[j + 1]);
+              memo[i][j] = best;
+          }
+          return memo[i][j];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          p = new long[n + 1];
+          for (int i = 0; i <= n; i++) p[i] = in.nextLong();
+          memo = new long[n][n];
+          for (long[] row : memo) Arrays.fill(row, -1);
+          System.out.println(cost(0, n - 1));
+      }
+  }
+  ```
+
+  **Step 3 — tabulation by length.** A range reads only strictly shorter ranges, so fill all
+  ranges of length 2, then 3, and so on: that is the template above.
+
+  Dry run (rows i, columns j; matrices A B C D are 0 1 2 3):
+
+  | i \ j | 0 | 1 | 2 | 3 |
+  |---|---|---|---|---|
+  | 0 | 0 | 24000 | 14000 | **26000** |
+  | 1 | | 0 | 6000 | 12000 |
+  | 2 | | | 0 | 9000 |
+  | 3 | | | | 0 |
+
+  Read one cell: `dp[0][2]` (A·B·C) is the smaller of split after A, 0 + 6000 + 40·20·10 =
+  14000, and split after B, 24000 + 0 + 40·30·10 = 36000. So 14000. Then `dp[0][3]` splits
+  after C: 14000 + 0 + 40·10·30 = 26000.
+
+  **Step 4 — the loop order is the optimisation.** There is no smaller table here: every
+  range can be read by a longer one. What matters is filling by length (or i from n − 1 down
+  and j upwards), never row by row from the top. O(n³) time, O(n²) memory.
+
+  ### Variants
+
+  1. *Minimum score triangulation of polygon*: split the polygon at a third vertex k; the
+     cost is the product of the triangle's corners.
+  2. *Minimum cost tree from leaf values*: the cost of joining is the product of the largest
+     leaves on each side.
+  3. *Burst balloons*, *minimum cost to cut a stick*: see "Cut or burst" below.
+  4. *Removal game* (CSES): a range game where both players play well; the state is still
+     i..j.
+  5. *Strange printer*, *minimum cost to merge stones*: harder range DPs with an extra rule.
+
+  ### Contrast
+
+  **Interval DP or front partition?** If a split leaves two pieces that both still need
+  solving, the state is the range i..j and the cost is O(n³). If only the last piece is
+  special and everything before it is a prefix (cutting a string into palindromes, words),
+  the state is a prefix and the cost is O(n²).
+
+  ### Common mistakes
+
+  - Filling `dp` row by row from i = 0, which reads ranges not yet computed.
+  - The wrong dimensions in the join cost: it is `p[i]·p[k+1]·p[j+1]`.
+  - `k` running up to j instead of j − 1, which leaves an empty right half.
+  - 32-bit overflow when products of three dimensions are summed.
+
+  ## Cut or burst
+
+  ### Recognition cues
+
+  - Cut a stick at marked points, each cut costing the current piece's length; or burst
+    balloons where a balloon's score uses its current neighbours.
+  - The cost of an action depends on what is **still around it**.
+
+  ### State, transition, base cases, answer, loop order
+
+  Add the ends as sentinels: cut positions `0, c_1 … c_m, L` (sorted), or balloons padded
+  with a 1 on each side. `dp[i][j]` covers the open range between sentinel i and sentinel j.
+
+  - **Cut a stick:** the **first** cut k in (i, j) costs the piece length `c[j] − c[i]`:
+    `dp[i][j] = c[j] − c[i] + min(dp[i][k] + dp[k][j])`.
+  - **Burst balloons:** choose the **last** balloon k burst in (i, j); at that moment its
+    neighbours are i and j: `dp[i][j] = max(dp[i][k] + dp[k][j] + v[i]·v[k]·v[j])`.
+
+  Ranges with no point strictly inside are 0. Fill by gap `j − i`.
+
+  ### Template
+
+  ```python
+  L, m = map(int, input().split())
+  c = [0] + sorted(map(int, input().split())) + [L]  # sentinels at both ends
+  size = m + 2
+  dp = [[0] * size for _ in range(size)]  # dp[i][j]: cheapest cuts strictly between c[i] and c[j]
+  for gap in range(2, size):
+      for i in range(size - gap):
+          j = i + gap
+          dp[i][j] = c[j] - c[i] + min(dp[i][k] + dp[k][j] for k in range(i + 1, j))  # first cut at k
+  print(dp[0][size - 1])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <climits>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int L, m;
+      cin >> L >> m;
+      vector<long long> c(m + 2, 0);
+      for (int i = 1; i <= m; i++) cin >> c[i];
+      c[m + 1] = L;
+      sort(c.begin(), c.end());  // sentinels 0 and L stay at the ends
+      int size = m + 2;
+      vector<vector<long long>> dp(size, vector<long long>(size, 0));  // cuts strictly between c[i], c[j]
+      for (int gap = 2; gap < size; gap++)
+          for (int i = 0; i + gap < size; i++) {
+              int j = i + gap;
+              long long best = LLONG_MAX;
+              for (int k = i + 1; k < j; k++) best = min(best, dp[i][k] + dp[k][j]);  // first cut at k
+              dp[i][j] = c[j] - c[i] + best;
+          }
+      cout << dp[0][size - 1] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int L = in.nextInt(), m = in.nextInt();
+          long[] c = new long[m + 2];
+          for (int i = 1; i <= m; i++) c[i] = in.nextLong();
+          c[m + 1] = L;
+          Arrays.sort(c);  // sentinels 0 and L stay at the ends
+          int size = m + 2;
+          long[][] dp = new long[size][size];  // cuts strictly between c[i] and c[j]
+          for (int gap = 2; gap < size; gap++)
+              for (int i = 0; i + gap < size; i++) {
+                  int j = i + gap;
+                  long best = Long.MAX_VALUE;
+                  for (int k = i + 1; k < j; k++) best = Math.min(best, dp[i][k] + dp[k][j]);  // first cut at k
+                  dp[i][j] = c[j] - c[i] + best;
+              }
+          System.out.println(dp[0][size - 1]);
+      }
+  }
+  ```
+
+  ### Anchor problem: a stick of length 7, cuts at 1 3 4 5
+
+  The program prints **16**: cut at 3 (cost 7), then 5 in the right piece (cost 4), then 1 in
+  the left (3), then 4 (2). Cutting in the given order 1, 3, 4, 5 costs 7 + 6 + 4 + 3 = 20.
+  The input lists the cuts unsorted on purpose in many judges; sorting is part of the
+  solution.
+
+  **Burst balloons.** For values `3 1 5 8`, the best score is **167**. Thinking about the
+  **first** balloon to burst fails, because its removal changes the neighbours of both sides,
+  so the two halves are not independent. The **last** balloon k in a range sees only the
+  fixed walls i and j, which makes the halves independent.
+
+  ### Variants
+
+  1. *Minimum cost to cut a stick* (LeetCode): the anchor.
+  2. *Burst balloons* (LeetCode): last balloon, maximum.
+  3. *Rectangle cutting* (CSES): two dimensions, but the same "try every cut" idea.
+
+  ### Contrast
+
+  **First action or last action?** Choose the action that splits the range into
+  **independent** halves. A cut splits the stick immediately, so think about the first cut. A
+  burst glues its neighbours together, so think about the last burst.
+
+  ### Common mistakes
+
+  - Forgetting to sort the cut positions or to add the 0 and L sentinels.
+  - Thinking about the first balloon burst.
+  - Ranges with no point inside must stay 0, not infinity.
+
+  ## Boolean ways
+
+  ### Recognition cues
+
+  - An expression of `T`/`F` with `&`, `|` and `^`, or numbers with `+ − ×`: count the ways to
+    add brackets that give a target value, or list all values.
+  - Every operator could be the last one evaluated.
+
+  ### State, transition, base cases, answer, loop order
+
+  Keep **two** tables: `T[i][j]` and `F[i][j]` = the number of bracketings of symbols i..j
+  that give true / false. For the last operator after symbol k, combine the counts of the left
+  and right parts:
+
+  | operator | ways to get true |
+  |---|---|
+  | `&` | `LT·RT` |
+  | `\|` | `LT·RT + LT·RF + LF·RT` |
+  | `^` | `LT·RF + LF·RT` |
+
+  The false count is `(LT + LF)(RT + RF)` minus the true count. Base: a single symbol is 1
+  way true or 1 way false. Fill by length.
+
+  ### Template
+
+  ```python
+  MOD = 10**9 + 7
+  expr = input().strip()  # symbols at even positions, operators at odd positions
+  sym, op = expr[0::2], expr[1::2]
+  n = len(sym)
+  T = [[0] * n for _ in range(n)]  # T[i][j]: bracketings of symbols i..j that give true
+  F = [[0] * n for _ in range(n)]
+  for i in range(n):
+      T[i][i], F[i][i] = int(sym[i] == "T"), int(sym[i] == "F")
+  for length in range(2, n + 1):
+      for i in range(n - length + 1):
+          j = i + length - 1
+          for k in range(i, j):  # operator op[k] is evaluated last
+              lt, lf, rt, rf = T[i][k], F[i][k], T[k + 1][j], F[k + 1][j]
+              total = (lt + lf) * (rt + rf)
+              if op[k] == "&":
+                  true = lt * rt
+              elif op[k] == "|":
+                  true = total - lf * rf
+              else:  # ^
+                  true = lt * rf + lf * rt
+              T[i][j] = (T[i][j] + true) % MOD
+              F[i][j] = (F[i][j] + total - true) % MOD
+  print(T[0][n - 1])
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      const long long MOD = 1000000007;
+      string expr;
+      cin >> expr;  // symbols at even positions, operators at odd positions
+      int n = (expr.size() + 1) / 2;
+      vector<vector<long long>> T(n, vector<long long>(n, 0)), F = T;  // ways to get true / false
+      for (int i = 0; i < n; i++) T[i][i] = expr[2 * i] == 'T', F[i][i] = expr[2 * i] == 'F';
+      for (int length = 2; length <= n; length++)
+          for (int i = 0; i + length - 1 < n; i++) {
+              int j = i + length - 1;
+              for (int k = i; k < j; k++) {  // operator after symbol k is evaluated last
+                  long long lt = T[i][k], lf = F[i][k], rt = T[k + 1][j], rf = F[k + 1][j];
+                  long long total = (lt + lf) % MOD * ((rt + rf) % MOD) % MOD, t;
+                  char o = expr[2 * k + 1];
+                  if (o == '&') t = lt * rt % MOD;
+                  else if (o == '|') t = (total - lf * rf % MOD + MOD) % MOD;
+                  else t = (lt * rf + lf * rt) % MOD;
+                  T[i][j] = (T[i][j] + t) % MOD;
+                  F[i][j] = (F[i][j] + total - t + MOD) % MOD;
+              }
+          }
+      cout << T[0][n - 1] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          final long MOD = 1_000_000_007L;
+          String expr = new Scanner(System.in).next();  // symbols at even positions, operators at odd
+          int n = (expr.length() + 1) / 2;
+          long[][] T = new long[n][n], F = new long[n][n];  // ways to get true / false
+          for (int i = 0; i < n; i++) {
+              T[i][i] = expr.charAt(2 * i) == 'T' ? 1 : 0;
+              F[i][i] = expr.charAt(2 * i) == 'F' ? 1 : 0;
+          }
+          for (int length = 2; length <= n; length++)
+              for (int i = 0; i + length - 1 < n; i++) {
+                  int j = i + length - 1;
+                  for (int k = i; k < j; k++) {  // operator after symbol k is evaluated last
+                      long lt = T[i][k], lf = F[i][k], rt = T[k + 1][j], rf = F[k + 1][j];
+                      long total = (lt + lf) % MOD * ((rt + rf) % MOD) % MOD, t;
+                      char o = expr.charAt(2 * k + 1);
+                      if (o == '&') t = lt * rt % MOD;
+                      else if (o == '|') t = (total - lf * rf % MOD + MOD) % MOD;
+                      else t = (lt * rf + lf * rt) % MOD;
+                      T[i][j] = (T[i][j] + t) % MOD;
+                      F[i][j] = (F[i][j] + total - t + MOD) % MOD;
+                  }
+              }
+          System.out.println(T[0][n - 1]);
+      }
+  }
+  ```
+
+  ### Anchor problem: T|T&F^T
+
+  The program prints **4**: of the five bracketings, four evaluate to true. For `T^F&T` it
+  prints 2.
+
+  **Wrong first attempt.** Keeping only the true counts fails for `^` and `|`: "true XOR
+  false" needs the number of ways the right part is **false**, which a true-only table never
+  stored.
+
+  ### Variants
+
+  1. *Different ways to add parentheses*: numbers and `+ − ×`; return every value, so each
+     range stores a list.
+  2. *Parsing a boolean expression*: one fixed bracketing, so a stack evaluation is enough.
+
+  ### Contrast
+
+  **Count the outcomes or evaluate once?** If the brackets are given, evaluate with a stack. If
+  every bracketing counts, each range keeps a count per outcome (true and false), filled by
+  length.
+
+  ### Common mistakes
+
+  - Tracking only the true count.
+  - Indexing the operator: the operator after symbol k is `expr[2k + 1]`.
+  - Forgetting the modulus on products.
+
+  ## Front partition
+
+  ### Recognition cues
+
+  - Cut a string or array into pieces, each piece must be valid (a palindrome, a dictionary
+    word, at most k long), and you count pieces, cuts or a score.
+  - Only the **last** piece's validity matters once the prefix before it is solved.
+
+  ### State, transition, base cases, answer, loop order
+
+  `cuts[i]` = the fewest cuts for the prefix `s[0..i]`. If `s[j..i]` is a valid piece, it can
+  be the last one: `cuts[i] = min(cuts[j − 1] + 1)`, or 0 when j = 0. For palindromes,
+  precompute `pal[j][i]` first (O(n²)), then the 1D DP is O(n²) as well.
+
+  ### Template
+
+  ```python
+  s = input().strip()
+  n = len(s)
+  pal = [[False] * n for _ in range(n)]  # pal[j][i]: s[j..i] is a palindrome
+  for j in range(n - 1, -1, -1):
+      for i in range(j, n):
+          pal[j][i] = s[j] == s[i] and (i - j < 2 or pal[j + 1][i - 1])
+  cuts = [0] * n  # cuts[i]: fewest cuts so that s[0..i] is all palindromes
+  for i in range(n):
+      cuts[i] = min(0 if j == 0 else cuts[j - 1] + 1 for j in range(i + 1) if pal[j][i])  # last piece s[j..i]
+  print(cuts[n - 1])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string s;
+      cin >> s;
+      int n = s.size();
+      vector<vector<bool>> pal(n, vector<bool>(n, false));  // pal[j][i]: s[j..i] is a palindrome
+      for (int j = n - 1; j >= 0; j--)
+          for (int i = j; i < n; i++) pal[j][i] = s[j] == s[i] && (i - j < 2 || pal[j + 1][i - 1]);
+      vector<int> cuts(n, 0);  // cuts[i]: fewest cuts so that s[0..i] is all palindromes
+      for (int i = 0; i < n; i++) {
+          cuts[i] = i;  // worst case: every character alone
+          for (int j = 0; j <= i; j++)
+              if (pal[j][i]) cuts[i] = min(cuts[i], j == 0 ? 0 : cuts[j - 1] + 1);  // last piece s[j..i]
+      }
+      cout << cuts[n - 1] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          String s = new Scanner(System.in).next();
+          int n = s.length();
+          boolean[][] pal = new boolean[n][n];  // pal[j][i]: s[j..i] is a palindrome
+          for (int j = n - 1; j >= 0; j--)
+              for (int i = j; i < n; i++) pal[j][i] = s.charAt(j) == s.charAt(i) && (i - j < 2 || pal[j + 1][i - 1]);
+          int[] cuts = new int[n];  // cuts[i]: fewest cuts so that s[0..i] is all palindromes
+          for (int i = 0; i < n; i++) {
+              cuts[i] = i;  // worst case: every character alone
+              for (int j = 0; j <= i; j++)
+                  if (pal[j][i]) cuts[i] = Math.min(cuts[i], j == 0 ? 0 : cuts[j - 1] + 1);  // last piece
+          }
+          System.out.println(cuts[n - 1]);
+      }
+  }
+  ```
+
+  ### Anchor problem: aab
+
+  The program prints **1**: `aa | b`. For `abccbc` it prints 2 (`a | bccb | c`).
+
+  **Wrong first attempt — longest palindrome first.** Taking the longest palindromic prefix
+  each time works for `aab` but fails on inputs such as `abaab`: the greedy takes `aba`, then
+  must cut `a | b` (2 cuts), while `a | baab` needs 1.
+
+  ### Variants
+
+  1. *Palindrome partitioning II* (LeetCode): the anchor.
+  2. *Word break*: `ok[i]` is true if some dictionary word ends at i after a valid prefix.
+  3. *Partition array for maximum sum*: the last piece has length at most k and is worth
+     its maximum times its length.
+
+  ### Contrast
+
+  **Interval DP or front partition?** See the matrix chain contrast: if the pieces before the
+  last one never interact with it, a prefix state is enough and saves a factor of n.
+
+  ### Common mistakes
+
+  - Rechecking each palindrome in O(n) inside the double loop, giving O(n³).
+  - Printing the number of pieces instead of cuts (pieces = cuts + 1).
+  - Greedy longest-first piece.
+
+  ## Worked walkthrough
+
+  **Problem.** Balloons `3 1 5 8`. Bursting balloon k scores `left · k · right` with its
+  current neighbours (1 outside the ends). What is the best total?
+
+  1. *Recognise.* The score depends on neighbours that change as balloons disappear: a range
+     problem.
+  2. *Choose the split.* The last balloon in an open range (i, j) only sees i and j, so the
+     two sides are independent.
+  3. *Pad.* Values become `1 3 1 5 8 1`.
+  4. *Fill by gap.* For example, the range strictly between the 1 at position 0 and 5 at
+     position 3 holds `3 1`: bursting 3 last scores 1·3·5 plus bursting 1 first, 3·1·5, so
+     15 + 15 = 30.
+  5. *Answer.* `dp[0][5] = 167`: burst 1, 5, 3, 8 in that order (15 + 120 + 24 + 8).
+
+  ### Why this works
+
+  Every way of combining a range ends with one final step, and that step splits the range
+  into two parts that are combined independently before it. Trying every possible final
+  split, with each part already optimal, covers every strategy, so the minimum (or maximum,
+  or sum of counts) over splits is correct. Filling by length guarantees both parts were
+  computed first.
+
+  ### Boundary cases and cost
+
+  - One element (one matrix, no cuts, one symbol): the answer is 0, 0 or the symbol's value.
+  - Sentinels: forgetting them is the most common way to read outside the array.
+  - Costs and counts overflow 32 bits quickly.
+  - Cost: O(n³) time, O(n²) memory for interval DP; O(n²) for front partition. n = 500 gives
+    about 2·10⁷ steps for interval DP: fine in C++ or Java, slow in Python.
+
+  ### Check your understanding
+
+  Dimensions `10 30 5 60` (three matrices). Which order is cheaper, (AB)C or A(BC), and what
+  does the table give?
+
+  Try it on paper before reading the reasoning below.
+
+  > (AB)C costs 10·30·5 + 10·5·60 = 1500 + 3000 = 4500. A(BC) costs 30·5·60 + 10·30·60 =
+  > 9000 + 18000 = 27000. The table gives 4500.
+key_points:
+- dp[i][j] solves the range i..j by trying every split point k and combining two smaller ranges.
+- Fill by range length, so every part is ready before the range that reads it.
+- 'Matrix chain: dp[i][j] = min dp[i][k] + dp[k+1][j] + p[i]·p[k+1]·p[j+1].'
+- 'Cut a stick: think about the first cut; burst balloons: think about the last burst.'
+- 'Boolean ways: keep true and false counts for every range.'
+- 'Front partition: if only the last piece matters, a prefix state gives O(n²).'
+- Interval DP is O(n³) time and O(n²) memory.
+pitfalls:
+- Filling ranges row by row from the top instead of by length.
+- The wrong dimension product for the last multiplication.
+- Unsorted cut positions or missing sentinels.
+- Choosing the first balloon instead of the last.
+- Keeping only true counts in boolean ways.
+resources:
+- title: Range DP
+  url: https://usaco.guide/gold/dp-ranges
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: Introduction to DP
+  url: https://usaco.guide/gold/intro-dp
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: recognise
+  kind: mcq
+  prompt: Which problem is partition (interval) DP?
+  options:
+  - Multiply a chain of matrices in the cheapest bracket order
+  - Fewest coins for an amount
+  - Longest increasing subsequence
+  - Shortest path in a grid
+  answer: 0
+  explanation: Every bracketing ends with a final split of the range.
+  difficulty: 1
+- id: loop-order
+  kind: mcq
+  prompt: In which order must dp[i][j] be filled?
+  options:
+  - By range length, shortest first
+  - Row by row from i = 0
+  - Column by column from j = n − 1
+  - Any order
+  answer: 0
+  explanation: A range reads only strictly shorter ranges.
+  difficulty: 2
+- id: join-cost
+  kind: mcq
+  prompt: Matrix i is p[i] × p[i+1]. Splitting i..j after k, what does the last multiplication cost?
+  options:
+  - p[i] · p[k+1] · p[j+1]
+  - p[i] · p[k] · p[j]
+  - p[k] · p[k+1]
+  - p[i] · p[j]
+  answer: 0
+  explanation: The left product is p[i] × p[k+1] and the right is p[k+1] × p[j+1].
+  difficulty: 3
+- id: cheapest-pair-first
+  kind: mcq
+  prompt: Dimensions 40 20 30 10 30. Cheapest-pair-first gives 36000. What is the best?
+  options:
+  - '26000'
+  - '36000'
+  - '48000'
+  - '24000'
+  answer: 0
+  explanation: (A(BC))D costs 6000 + 8000 + 12000 = 26000.
+  difficulty: 3
+- id: three
+  kind: mcq
+  prompt: Dimensions 10 30 5 60. What does the table give?
+  options:
+  - '4500'
+  - '27000'
+  - '9000'
+  - '18000'
+  answer: 0
+  explanation: (AB)C = 1500 + 3000.
+  difficulty: 2
+- id: burst-last
+  kind: mcq
+  prompt: Why think about the last balloon burst in a range, not the first?
+  options:
+  - The last one sees only the fixed walls, so the two sides are independent
+  - It scores the most
+  - It is always the largest
+  - It does not matter
+  answer: 0
+  explanation: Bursting first changes neighbours on both sides.
+  difficulty: 4
+- id: cut-stick
+  kind: mcq
+  prompt: A stick of length 7 with cuts at 1 3 4 5. What is the cheapest total cost?
+  options:
+  - '16'
+  - '20'
+  - '22'
+  - '7'
+  answer: 0
+  explanation: Cut at 3, then 5, then 1, then 4.
+  difficulty: 4
+- id: front
+  kind: mcq
+  prompt: Fewest cuts to split aab into palindromes?
+  options:
+  - '1'
+  - '2'
+  - '0'
+  - '3'
+  answer: 0
+  explanation: aa | b.
+  difficulty: 3
+- id: bool-false
+  kind: mcq
+  prompt: Why does boolean ways keep a false count as well?
+  options:
+  - XOR and OR need the number of ways a part is false
+  - To print false answers
+  - It halves the work
+  - It is not needed
+  answer: 0
+  explanation: T ^ F counts left-true × right-false.
+  difficulty: 5
+problems:
+- crate-merging
+- signal-splits
+practice_links:
+- title: Minimum Score Triangulation of Polygon
+  url: https://leetcode.com/problems/minimum-score-triangulation-of-polygon/
+  platform: LeetCode
+  difficulty: medium
+- title: Minimum Cost Tree From Leaf Values
+  url: https://leetcode.com/problems/minimum-cost-tree-from-leaf-values/
+  platform: LeetCode
+  difficulty: medium
+- title: Minimum Cost to Cut a Stick
+  url: https://leetcode.com/problems/minimum-cost-to-cut-a-stick/
+  platform: LeetCode
+  difficulty: hard
+- title: Burst Balloons
+  url: https://leetcode.com/problems/burst-balloons/
+  platform: LeetCode
+  difficulty: hard
+- title: Different Ways to Add Parentheses
+  url: https://leetcode.com/problems/different-ways-to-add-parentheses/
+  platform: LeetCode
+  difficulty: medium
+- title: Palindrome Partitioning II
+  url: https://leetcode.com/problems/palindrome-partitioning-ii/
+  platform: LeetCode
+  difficulty: hard
+- title: Word Break
+  url: https://leetcode.com/problems/word-break/
+  platform: LeetCode
+  difficulty: medium
+- title: Partition Array for Maximum Sum
+  url: https://leetcode.com/problems/partition-array-for-maximum-sum/
+  platform: LeetCode
+  difficulty: medium
+- title: Removal Game
+  url: https://cses.fi/problemset/task/1097
+  platform: CSES
+  difficulty: medium
+- title: Rectangle Cutting
+  url: https://cses.fi/problemset/task/1744
+  platform: CSES
+  difficulty: medium
+provenance:
+  origin: original
+status: live

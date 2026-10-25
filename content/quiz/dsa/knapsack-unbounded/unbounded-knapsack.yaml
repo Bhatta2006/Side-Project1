@@ -1,0 +1,241 @@
+id: quiz:dsa:knapsack-unbounded:unbounded-knapsack
+family: unbounded-knapsack
+concept: dsa:knapsack-unbounded
+pattern: dsa:knapsack-unbounded/unbounded-knapsack
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: unbounded_knapsack
+  params:
+    items:
+    - 2
+    - 4
+    weight:
+    - 1
+    - 6
+    value:
+    - 1
+    - 9
+    capacity:
+    - 4
+    - 12
+  reference: best_multiset(w, v, W)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: loop capacity backwards so each item is used once
+  misconception: unbounded-vs-01
+- rule: take items greedily by value per weight
+  misconception: knapsack-greedy-ratio
+- rule: start the capacity loop after c == w
+  misconception: knapsack-capacity-boundary
+- rule: add the weight instead of the value
+  misconception: knapsack-weight-for-value
+items:
+- id: recognise-reuse
+  band: 1
+  format: mcq
+  prompt: Which detail makes a packing problem unbounded knapsack?
+  options:
+  - Each item comes in unlimited copies
+  - Each item exists once
+  - Items can be cut into fractions of any size
+  - There is no budget
+  answer: 0
+  misconceptions:
+  - null
+  - unbounded-vs-01
+  - knapsack-greedy-ratio
+  - knapsack-ignore-capacity
+  explanation: Unlimited copies is unbounded; once each is 0/1; fractions are the greedy case.
+- id: state-meaning
+  band: 1
+  format: mcq
+  prompt: In the one-row unbounded version, what does dp[c] mean?
+  options:
+  - The best value within capacity c, copies allowed
+  - The value of item c
+  - How many copies of item c were taken
+  - The capacity left after c items
+  answer: 0
+  misconceptions:
+  - null
+  - confuse-index-value
+  - dp-vague-state
+  - dp-vague-state
+  explanation: c is a capacity, not an item index.
+- id: recursion-stay
+  band: 2
+  format: mcq
+  prompt: In best(i, cap), after taking one copy of item i, which call comes next?
+  options:
+  - best(i, cap − w[i])
+  - best(i + 1, cap − w[i])
+  - best(i + 1, cap)
+  - best(i − 1, cap − w[i])
+  answer: 0
+  misconceptions:
+  - null
+  - unbounded-advance-after-take
+  - knapsack-always-take
+  - dp-wrong-subproblem
+  explanation: Staying on item i is what allows another copy; moving to i + 1 is the 0/1 recurrence.
+- id: one-cell
+  band: 2
+  format: trace
+  prompt: 'Forwards, piece (len 2, price 5). Already dp[2] = 5 and dp[4] = 4. What is the new dp[4]?'
+  options:
+  - '10'
+  - '9'
+  - '5'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - unbounded-vs-01
+  - knapsack-always-take
+  - dp-overwrite-min
+  explanation: max(4, dp[2] + 5) = max(4, 10) = 10, two copies of the piece.
+- id: table-row
+  band: 3
+  format: mcq
+  prompt: In the 2D table, taking item i at capacity c reads which cell?
+  options:
+  - dp[i][c − w], the same row
+  - dp[i − 1][c − w], the row above
+  - dp[i − 1][c]
+  - dp[i][c − 1]
+  answer: 0
+  misconceptions:
+  - null
+  - unbounded-advance-after-take
+  - knapsack-always-take
+  - dp-wrong-subproblem
+  explanation: The same row may already contain item i, so it can be taken again.
+- id: greedy-fails
+  band: 3
+  format: classify
+  prompt: Pieces of length 1 2 3 4 sell for 1 5 8 9, rod length 4. Why does greedy by price per length
+    fail?
+  options:
+  - The best-ratio piece leaves a remainder only a poor piece fills
+  - Ratios cannot be compared
+  - Greedy needs the pieces sorted by length
+  - It does not fail
+  answer: 0
+  misconceptions:
+  - null
+  - knapsack-greedy-ratio
+  - knapsack-greedy-ratio
+  - knapsack-greedy-ratio
+  explanation: Length 3 (8) leaves length 1 (1) for 9; two length-2 pieces give 10.
+- id: backwards-output
+  band: 3
+  format: mcq
+  prompt: Pieces (len 1, price 1) and (len 2, price 5), length 4, loop backwards. What is dp[4]?
+  options:
+  - '6'
+  - '10'
+  - '5'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - unbounded-vs-01
+  - knapsack-single-item
+  - knapsack-always-take
+  explanation: Backwards takes each piece once, 5 + 1 = 6. The unbounded answer is 10.
+- id: exact-start
+  band: 4
+  format: mcq
+  prompt: The length must be used exactly and you maximise pieces. What should dp[c] start at for c > 0?
+  options:
+  - Minus infinity, meaning unreachable
+  - '0'
+  - c
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - exact-capacity-zero-init
+  - dp-wrong-base-case
+  - dp-wrong-base-case
+  explanation: Zeros would allow leftover length; only dp[0] is reachable at the start.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: n items, capacity W. What is the time of the one-row version?
+  options:
+  - O(n · W)
+  - O(W^n)
+  - O(n log n)
+  - O(W)
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - knapsack-greedy-ratio
+  - dp-vague-state
+  explanation: n passes over W + 1 cells, each O(1).
+- id: boundary
+  band: 5
+  format: bug_spot
+  prompt: The capacity loop starts at c = w[i] + 1. Which case is missed?
+  options:
+  - Capacity equal to the item's weight, so the first copy is never taken
+  - Items heavier than W
+  - The last item
+  - Nothing
+  answer: 0
+  misconceptions:
+  - null
+  - knapsack-capacity-boundary
+  - knapsack-capacity-boundary
+  - knapsack-capacity-boundary
+  explanation: dp[w] = dp[0] + v is the first copy; every later copy builds on it.
+- id: once-transfer
+  band: 6
+  format: classify
+  prompt: Each gift in a shop exists once; maximise joy within a budget. Which loop direction?
+  options:
+  - 'Capacity backwards: each item once'
+  - Capacity forwards
+  - Either
+  - Greedy by joy per cost
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-01-vs-unbounded-knapsack
+  - pattern-01-vs-unbounded-knapsack
+  - knapsack-greedy-ratio
+  explanation: One copy per item is the 0/1 family, where the backwards loop is correct.
+- id: exact-transfer
+  band: 6
+  format: classify
+  prompt: Fewest coins to make exactly 23 from coins 4 and 6. What does the DP report?
+  options:
+  - '-1: no combination makes exactly 23'
+  - '4'
+  - '5'
+  - '0'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-exact-vs-at-most-capacity
+  - greedy-coin-change
+  - coin-min-zero-init
+  explanation: 4 and 6 are even, so no sum is odd; dp[23] stays infinity.
+status: provisional
+provenance:
+  origin: original

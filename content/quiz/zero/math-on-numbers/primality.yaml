@@ -1,0 +1,62 @@
+id: quiz:zero:math-on-numbers:primality
+family: primality
+concept: zero:math-on-numbers
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: one
+  band: 2
+  format: mcq
+  prompt: Is 1 prime?
+  options:
+  - No; a prime needs two different divisors
+  - Yes; nothing divides it
+  - Yes; it is odd
+  - Only in Python
+  answer: 0
+  misconceptions:
+  - null
+  - prime-one-is-prime
+  - prime-one-is-prime
+  - syntax-delimiters
+  explanation: 1 has only one divisor.
+- id: bound
+  band: 3
+  format: trace
+  prompt: The loop tests i from 2 while i * i < n. What does it say about 49?
+  options:
+  - Prime, which is wrong
+  - Not prime
+  - It loops forever
+  - It crashes
+  answer: 0
+  misconceptions:
+  - null
+  - div-sqrt-bound-strict
+  - infinite-loop-condition
+  - syntax-delimiters
+  explanation: It stops at 6 and never tries 7.
+- id: cost
+  band: 4
+  format: complexity
+  prompt: Testing n = 999999999989 (a prime) up to its square root. About how many divisions?
+  options:
+  - About a million
+  - About a trillion
+  - About 12
+  - About 500 billion
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-root-vs-all
+  - digit-count-vs-value
+  - pattern-root-vs-all
+  explanation: √(10¹²) = 10⁶.
+status: provisional
+provenance:
+  origin: original

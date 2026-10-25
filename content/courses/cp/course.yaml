@@ -28,7 +28,7 @@ modules:
   - id: contest-basics
     title: Contest fundamentals
     summary: Fast I/O, overflow, budgeting operations, simulation and complete search.
-    concepts: [fast-io, simulation, complete-search]
+    concepts: [fast-io, stress-testing, simulation, ad-hoc, constructive, math-basics, stl-mastery, complete-search]
   - id: math
     title: Contest math
     summary: Number theory, modular arithmetic and counting.
@@ -36,20 +36,32 @@ modules:
   - id: techniques
     title: Core techniques
     summary: Difference arrays, binary search on the answer, greedy proofs and bitmasks.
-    concepts: [prefix-difference, binary-search-answer, greedy-cp, bitmasks]
+    concepts: [prefix-difference, two-pointers-cp, binary-search-answer, greedy-cp, bitmasks]
   - id: dp-module
     title: Dynamic programming for contests
     summary: Knapsack, LIS and bitmask DP.
-    concepts: [dp-classics, bitmask-dp]
+    concepts: [dp-classics, bitmask-dp, dp-counting, interval-dp, digit-dp]
   - id: graph-module
     title: Graphs and trees
     summary: Multi-source and 0-1 BFS, minimum spanning trees, tree techniques and LCA.
-    concepts: [graph-techniques, mst, tree-techniques, lca]
+    concepts: [graph-techniques, shortest-paths-cp, mst, dsu-advanced, dag-dp, scc, bridges-articulation, euler-path, tree-techniques, rerooting, lca]
   - id: range-structures
     title: Range query structures
     summary: Fenwick trees and segment trees for fast updates and queries.
-    concepts: [fenwick-tree, segment-tree]
+    concepts: [fenwick-tree, sparse-table, segment-tree, lazy-segment-tree, sqrt-decomposition, euler-tour]
   - id: strings-module
     title: String algorithms
     summary: Polynomial hashing and the prefix function.
-    concepts: [string-hashing, kmp]
+    concepts: [string-hashing, kmp, z-function]
+  - id: dp-advanced
+    title: Advanced DP
+    summary: Speed up DP transitions with data structures and classic optimisations.
+    concepts: [dp-data-structures, dp-optimisations]
+  - id: math-2
+    title: Contest math II
+    summary: Number theory, probability, counting, games, matrix powers and geometry.
+    concepts: [number-theory-2, expected-value, advanced-counting, game-theory, matrix-exponentiation, geometry]
+  - id: contest-craft
+    title: Contest craft
+    summary: Strategy, interactive problems and recognising techniques from constraints.
+    concepts: [contest-craft]

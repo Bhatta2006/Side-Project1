@@ -1,0 +1,63 @@
+id: quiz:dsa:dp-on-trees:path-through-node
+family: path-through-node
+concept: dsa:dp-on-trees
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: record
+  band: 2
+  format: mcq
+  prompt: A node's two allowed arms have lengths 3 and 2 (in nodes). What path does it record?
+  options:
+  - '6'
+  - '5'
+  - '4'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - tree-best-only-downward
+  - off-by-one-output
+  - tree-return-both-branches
+  explanation: 1 + 3 + 2 nodes.
+- id: blocked
+  band: 3
+  format: bug_spot
+  prompt: The code skips the whole subtree of a child whose label equals its parent's. What is missed?
+  options:
+  - Valid paths lying entirely inside that subtree
+  - Nothing
+  - Only single nodes
+  - Paths through the root
+  answer: 0
+  misconceptions:
+  - null
+  - path-skip-blocked-subtree
+  - path-skip-blocked-subtree
+  - tree-best-only-downward
+  explanation: Labels 1 1 2 2 3 lose the path 4 → 2 → 5.
+- id: returned
+  band: 4
+  format: mcq
+  prompt: What does a node return to its parent?
+  options:
+  - 1 + its longest allowed arm
+  - 1 + both arms
+  - Its recorded best
+  - The number of children
+  answer: 0
+  misconceptions:
+  - null
+  - tree-return-both-branches
+  - pattern-return-vs-record
+  - count-vs-sum
+  explanation: A parent continues one arm only.
+status: provisional
+provenance:
+  origin: original

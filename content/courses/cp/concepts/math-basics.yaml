@@ -1,0 +1,74 @@
+id: math-basics
+title: Math basics for contests
+summary: Divisibility and GCD properties, floor and ceil with negatives, sums and progressions, and primes
+  and divisors in sqrt n.
+module: contest-basics
+prerequisites:
+- fast-io
+- zero:math-on-numbers
+difficulty: 2
+estimated_minutes: 45
+status: draft
+lesson: '## Divisibility gcd
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Floor ceil
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Sums and ap
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

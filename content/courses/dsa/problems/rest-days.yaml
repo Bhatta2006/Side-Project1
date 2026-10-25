@@ -1,0 +1,125 @@
+id: rest-days
+title: Trading with rest days
+concepts: [dp-stocks]
+difficulty: medium
+statement: |
+  You know the price `p_i` of a share for each of `n` days. You may make as many trades as you
+  like, holding at most one share at a time: buy on one day, sell on a later day. After every
+  sale you must rest for `D` full days before you may buy again: if you sell on day i, the
+  next buy can be on day i + D + 1 at the earliest.
+
+  Print the largest total profit.
+input_format: |
+  The first line contains n and D. The second line contains p_1 … p_n.
+output_format: The largest profit.
+constraints:
+  - 1 ≤ n ≤ 2 · 10^5
+  - 0 ≤ D ≤ n
+  - 1 ≤ p_i ≤ 10^9
+examples:
+  - input: "5 1\n1 2 3 0 2"
+    output: "3"
+    explanation: "Buy at 1, sell at 2, rest on day 3, buy at 0, sell at 2. Selling at 3 would force a rest on the day priced 0."
+  - input: "4 0\n1 3 1 3"
+    output: "4"
+hints:
+  - "With D = 0 this is unlimited trading. Which past state does a buy read when D is larger?"
+  - "Keep cash[i] (no share after day i) and hold[i] (a share after day i). A sale moves hold[i − 1] + p_i into cash[i]."
+  - "A buy on day i must come after the rest: hold[i] = max(hold[i − 1], cash[i − D − 1] − p_i), with cash before day 1 equal to 0."
+approach: |
+  The stock state machine with a longer memory. cash[i] is the most money with no share after
+  day i, and hold[i] with one share. Selling reads yesterday: cash[i] = max(cash[i − 1],
+  hold[i − 1] + p_i). Buying must respect the rest: hold[i] = max(hold[i − 1],
+  cash[i − D − 1] − p_i), where cash of a day before the start is 0. Keep the whole cash
+  array (or a window of D + 1 values). O(n) time; profits need 64-bit integers.
+reference: |
+  n, D = map(int, input().split())
+  p = list(map(int, input().split()))
+  cash = [0] * (n + 1)  # cash[i]: best money with no share after i days
+  hold = -10**18
+  for i in range(1, n + 1):
+      price = p[i - 1]
+      before = cash[i - D - 1] if i - D - 1 >= 0 else 0
+      new_hold = max(hold, before - price)
+      cash[i] = max(cash[i - 1], hold + price)
+      hold = new_hold
+  print(cash[n])
+brute: |
+  from functools import lru_cache
+  n, D = map(int, input().split())
+  p = list(map(int, input().split()))
+
+  @lru_cache(maxsize=None)
+  def go(day, holding):
+      if day >= n:
+          return 0
+      result = go(day + 1, holding)
+      if holding:
+          result = max(result, p[day] + go(day + 1 + D, False))
+      else:
+          result = max(result, -p[day] + go(day + 1, True))
+      return result
+
+  print(go(0, False))
+references:
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, D;
+        cin >> n >> D;
+        vector<long long> p(n), cash(n + 1, 0);
+        for (auto& x : p) cin >> x;
+        long long hold = -1e18;
+        for (int i = 1; i <= n; i++) {
+            long long before = i - D - 1 >= 0 ? cash[i - D - 1] : 0;
+            long long newHold = max(hold, before - p[i - 1]);
+            cash[i] = max(cash[i - 1], hold + p[i - 1]);
+            hold = newHold;
+        }
+        cout << cash[n] << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            int n = Integer.parseInt(st.nextToken()), D = Integer.parseInt(st.nextToken());
+            long[] p = new long[n], cash = new long[n + 1];
+            st = new StringTokenizer(in.readLine());
+            for (int i = 0; i < n; i++) p[i] = Long.parseLong(st.nextToken());
+            long hold = (long) -1e18;
+            for (int i = 1; i <= n; i++) {
+                long before = i - D - 1 >= 0 ? cash[i - D - 1] : 0;
+                long newHold = Math.max(hold, before - p[i - 1]);
+                cash[i] = Math.max(cash[i - 1], hold + p[i - 1]);
+                hold = newHold;
+            }
+            System.out.println(cash[n]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 0\n5"
+      yield "2 0\n1 1000000000"
+      yield "2 2\n1000000000 1"
+      n = 200000
+      yield f"{n} 0\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n} 1\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n} 7\n" + " ".join(str(1 if i % 4 < 2 else 10**9) for i in range(n))
+      yield f"{n} {n}\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n} 3\n" + " ".join(str(n - i) for i in range(n))
+      for _ in range(4):
+          m = rng.randint(1, 60)
+          yield f"{m} {rng.randint(0, 5)}\n" + " ".join(str(rng.randint(1, 20)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          m = rng.randint(1, 10)
+          yield f"{m} {rng.randint(0, 3)}\n" + " ".join(str(rng.randint(1, 9)) for _ in range(m))

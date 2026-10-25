@@ -1,0 +1,161 @@
+id: kth-cheapest-meal
+title: The k-th cheapest meal
+concepts: [binary-search-on-answer]
+difficulty: medium
+statement: |
+  A canteen sells `n` starters with prices `s_1 … s_n` and `m` mains with prices
+  `t_1 … t_m`. A meal is one starter and one main, so there are n · m meals (two meals with
+  the same price are still different meals).
+
+  List the prices of all meals from cheapest to most expensive. Print the price in position
+  `k` of that list.
+input_format: |
+  The first line contains n, m and k. The second line contains s_1 … s_n. The third line
+  contains t_1 … t_m.
+output_format: The k-th smallest meal price.
+constraints:
+  - 1 ≤ n, m ≤ 5·10^4
+  - 1 ≤ k ≤ n · m
+  - 1 ≤ s_i, t_j ≤ 10^9
+examples:
+  - input: "2 3 4\n3 1\n2 5 4"
+    output: "6"
+    explanation: "The meal prices in order are 3, 5, 5, 6, 7, 9. The fourth is 6."
+  - input: "1 1 1\n7\n8"
+    output: "15"
+hints:
+  - "There are too many meals to list. But for a price x, you can count the meals costing at most x."
+  - "Sort both menus. As the starter gets more expensive, fewer mains fit under x, so one pointer moving down the mains counts all pairs in O(n + m)."
+  - "The answer is the smallest x with at least k meals costing at most x. Binary search x between 2 and 2·10^9."
+approach: |
+  Binary search on the value, with counting as the check. Sort s and t. For a price x, count
+  the pairs with s_i + t_j ≤ x using two pointers: walk the starters upward while a pointer
+  into the mains moves downward to the last main that still fits. The count never decreases
+  as x grows, so the answer is the smallest x whose count is at least k. That x is a real
+  meal price: the count only increases at meal prices. O((n + m) log(2·10^9)) time after
+  sorting.
+reference: |
+  import sys
+  def main():
+      data = sys.stdin.buffer.read().split()
+      n, m, k = int(data[0]), int(data[1]), int(data[2])
+      s = sorted(int(x) for x in data[3:3 + n])
+      t = sorted(int(x) for x in data[3 + n:3 + n + m])
+      def count(x):
+          total, j = 0, m - 1
+          for a in s:
+              while j >= 0 and a + t[j] > x:
+                  j -= 1
+              if j < 0:
+                  break
+              total += j + 1
+          return total
+      lo, hi = s[0] + t[0], s[-1] + t[-1]
+      while lo < hi:
+          mid = (lo + hi) // 2
+          if count(mid) >= k:
+              hi = mid
+          else:
+              lo = mid + 1
+      print(lo)
+  main()
+brute: |
+  n, m, k = map(int, input().split())
+  s = list(map(int, input().split()))
+  t = list(map(int, input().split()))
+  prices = sorted(a + b for a in s for b in t)
+  print(prices[k - 1])
+references:
+  cpp: |
+    #include <algorithm>
+    #include <cstdio>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, m;
+        long long k;
+        if (scanf("%d %d %lld", &n, &m, &k) != 3) return 0;
+        vector<long long> s(n), t(m);
+        for (auto& x : s) scanf("%lld", &x);
+        for (auto& x : t) scanf("%lld", &x);
+        sort(s.begin(), s.end());
+        sort(t.begin(), t.end());
+        auto count = [&](long long x) {
+            long long total = 0;
+            int j = m - 1;
+            for (long long a : s) {
+                while (j >= 0 && a + t[j] > x) j--;
+                if (j < 0) break;
+                total += j + 1;
+            }
+            return total;
+        };
+        long long lo = s[0] + t[0], hi = s[n - 1] + t[m - 1];
+        while (lo < hi) {
+            long long mid = lo + (hi - lo) / 2;
+            if (count(mid) >= k) hi = mid;
+            else lo = mid + 1;
+        }
+        printf("%lld\n", lo);
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            DataInputStream in = new DataInputStream(new BufferedInputStream(System.in, 1 << 16));
+            int n = (int) next(in), m = (int) next(in);
+            long k = next(in);
+            long[] s = new long[n], t = new long[m];
+            for (int i = 0; i < n; i++) s[i] = next(in);
+            for (int i = 0; i < m; i++) t[i] = next(in);
+            Arrays.sort(s);
+            Arrays.sort(t);
+            long lo = s[0] + t[0], hi = s[n - 1] + t[m - 1];
+            while (lo < hi) {
+                long mid = lo + (hi - lo) / 2;
+                long total = 0;
+                int j = m - 1;
+                for (long a : s) {
+                    while (j >= 0 && a + t[j] > mid) j--;
+                    if (j < 0) break;
+                    total += j + 1;
+                }
+                if (total >= k) hi = mid;
+                else lo = mid + 1;
+            }
+            System.out.println(lo);
+        }
+
+        static long next(DataInputStream in) throws IOException {
+            int c = in.read();
+            while (c < '0' || c > '9') c = in.read();
+            long v = 0;
+            while (c >= '0' && c <= '9') { v = v * 10 + (c - '0'); c = in.read(); }
+            return v;
+        }
+    }
+generator: |
+  def menu(rng, count, lo, hi):
+      return " ".join(str(rng.randint(lo, hi)) for _ in range(count))
+
+  def cases(rng):
+      yield "1 1 1\n1\n1"
+      yield "3 2 6\n1000000000 1 5\n1000000000 2"
+      yield "4 4 9\n5 5 5 5\n5 5 5 5"
+      n = m = 50000
+      yield f"{n} {m} 1\n{menu(rng, n, 1, 10**9)}\n{menu(rng, m, 1, 10**9)}"
+      yield f"{n} {m} {n * m}\n{menu(rng, n, 1, 10**9)}\n{menu(rng, m, 1, 10**9)}"
+      yield f"{n} {m} {n * m // 2}\n{menu(rng, n, 1, 10**9)}\n{menu(rng, m, 1, 10**9)}"
+      yield f"{n} {m} {rng.randint(1, n * m)}\n{menu(rng, n, 1, 100)}\n{menu(rng, m, 1, 100)}"
+      yield f"{n} 1 {rng.randint(1, n)}\n{menu(rng, n, 1, 10**9)}\n7"
+      for _ in range(4):
+          a, b = rng.randint(1, 30), rng.randint(1, 30)
+          yield f"{a} {b} {rng.randint(1, a * b)}\n{menu(rng, a, 1, 50)}\n{menu(rng, b, 1, 50)}"
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          a, b = rng.randint(1, 6), rng.randint(1, 6)
+          yield f"{a} {b} {rng.randint(1, a * b)}\n" + " ".join(str(rng.randint(1, 12)) for _ in range(a)) + "\n" + " ".join(str(rng.randint(1, 12)) for _ in range(b))

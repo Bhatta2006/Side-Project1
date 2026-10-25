@@ -1,0 +1,136 @@
+id: dsa:dp-lcs/lcs
+concept: dsa:dp-lcs
+title: 'Longest common subsequence: compare two prefixes'
+tracks:
+- interview
+- competitive
+recognise:
+- Two strings or arrays; keep characters in order but not necessarily adjacent
+- Longest common part, fewest deletions to make equal, or unchanged lines
+- Lengths up to a few thousand, so an n by m table fits
+state: dp[i][j] = LCS length of a[:i] and b[:j]
+transition: 'match: dp[i−1][j−1] + 1; mismatch: max(dp[i−1][j], dp[i][j−1])'
+base_cases:
+- dp[0][j] = dp[i][0] = 0
+complexity:
+  time: O(n · m)
+  space: O(m) with two rows
+template:
+  python: |
+    a = input().strip()
+    b = input().strip()
+    n, m = len(a), len(b)
+    prev = [0] * (m + 1)  # prev[j]: LCS of a[:i-1] and b[:j]
+    for i in range(1, n + 1):
+        cur = [0] * (m + 1)
+        for j in range(1, m + 1):
+            if a[i - 1] == b[j - 1]:
+                cur[j] = prev[j - 1] + 1  # extend the LCS of both shorter prefixes
+            else:
+                cur[j] = max(prev[j], cur[j - 1])  # drop the last char of a or of b
+        prev = cur
+    print(prev[m])
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        string a, b;
+        cin >> a >> b;
+        int n = a.size(), m = b.size();
+        vector<int> prev(m + 1, 0), cur(m + 1, 0);  // prev[j]: LCS of a[:i-1] and b[:j]
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j <= m; j++)
+                cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1] + 1  // extend both prefixes
+                                              : max(prev[j], cur[j - 1]);  // drop one char
+            swap(prev, cur);
+        }
+        cout << prev[m] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            String a = in.next(), b = in.next();
+            int n = a.length(), m = b.length();
+            int[] prev = new int[m + 1], cur = new int[m + 1];  // prev[j]: LCS of a[:i-1], b[:j]
+            for (int i = 1; i <= n; i++) {
+                for (int j = 1; j <= m; j++)
+                    cur[j] = a.charAt(i - 1) == b.charAt(j - 1) ? prev[j - 1] + 1  // extend both
+                                                               : Math.max(prev[j], cur[j - 1]);
+                int[] t = prev; prev = cur; cur = t;
+            }
+            System.out.println(prev[m]);
+        }
+    }
+template_io:
+  stdin: |
+    zabcd
+    abczd
+  expected: '4'
+variants:
+- id: common-subsequence-cf
+  band: 1
+  title: Any shared character is enough
+  problem: cf:1382A
+- id: lcs-classic
+  band: 2
+  title: LCS length of two strings
+  problem: leetcode:longest-common-subsequence
+- id: delete-two-strings
+  band: 3
+  title: Fewest deletions to make equal
+  problem: leetcode:delete-operation-for-two-strings
+- id: uncrossed-lines
+  band: 3
+  title: LCS of two integer arrays
+  problem: leetcode:uncrossed-lines
+- id: ascii-delete
+  band: 4
+  title: Minimise the cost of deleted letters
+  problem: leetcode:minimum-ascii-delete-sum-for-two-strings
+- id: lcs-print
+  band: 5
+  title: Print the subsequence itself
+  problem: cses:3403
+- id: max-dot-product
+  band: 6
+  title: Match step adds a product, non-empty
+  problem: leetcode:max-dot-product-of-two-subsequences
+pitfalls:
+- lcs-mismatch-diagonal
+- lcs-greedy-match
+- lcs-index-offset
+- pattern-subsequence-vs-substring
+atoms:
+- lcs-worked
+- lcs-faded
+- lcs-visualizer
+- lcs-micro
+- lcs-classify
+quiz_family: quiz:dsa:dp-lcs:lcs
+problems:
+  external:
+  - cf:1382A
+  - leetcode:longest-common-subsequence
+  - leetcode:delete-operation-for-two-strings
+  - leetcode:uncrossed-lines
+  - leetcode:minimum-ascii-delete-sum-for-two-strings
+  - cses:3403
+  - leetcode:max-dot-product-of-two-subsequences
+  - leetcode:maximum-length-of-repeated-subarray
+  - leetcode:shortest-common-supersequence
+  - leetcode:longest-palindromic-subsequence
+  - leetcode:minimum-insertion-steps-to-make-a-string-palindrome
+  - leetcode:is-subsequence
+  - leetcode:number-of-matching-subsequences
+showcase:
+- 'Why greedy matching fails: zabcd against abczd, cell by cell'
+status: provisional
+provenance:
+  origin: original

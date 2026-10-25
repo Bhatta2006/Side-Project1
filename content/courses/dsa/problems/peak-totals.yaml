@@ -1,0 +1,135 @@
+id: peak-totals
+title: Peak totals
+concepts: [monotonic-stack]
+difficulty: medium
+statement: |
+  You are given `n` numbers. For every contiguous subarray, take its **largest** element.
+  Print the sum of these largest elements over all n(n + 1)/2 subarrays, modulo 10^9 + 7.
+input_format: |
+  The first line contains n. The second line contains a_1 … a_n.
+output_format: The sum modulo 10^9 + 7.
+constraints:
+  - 1 ≤ n ≤ 1.5 · 10^5
+  - 1 ≤ a_i ≤ 10^9
+examples:
+  - input: "3\n1 3 2"
+    output: "15"
+    explanation: "Subarrays [1], [3], [2], [1 3], [3 2], [1 3 2] have maxima 1, 3, 2, 3, 3, 3: total 15."
+  - input: "2\n4 4"
+    output: "12"
+hints:
+  - "Instead of looping over subarrays, ask for each element: in how many subarrays is it the maximum?"
+  - "If a[i] can extend left[i] positions to the left and right[i] to the right while staying the largest, it is the maximum of left[i] × right[i] subarrays."
+  - "Use stacks for the previous greater and next greater elements. With equal values, stop at strictly greater on one side and at greater-or-equal on the other, so each subarray is counted once."
+approach: |
+  Contribution counting with two monotonic stacks. left[i] is the distance to the previous
+  element that is greater or equal (or the start), and right[i] the distance to the next
+  strictly greater element (or the end). a[i] is the maximum of exactly left[i] · right[i]
+  subarrays, and the asymmetric tie rule credits each subarray with repeated maxima to one
+  copy. Sum a[i] · left[i] · right[i] modulo 10^9 + 7. O(n) time.
+reference: |
+  import sys
+  MOD = 10**9 + 7
+  data = sys.stdin.buffer.read().split()
+  n = int(data[0])
+  a = list(map(int, data[1:1 + n]))
+  left, right, st = [0] * n, [0] * n, []
+  for i in range(n):
+      while st and a[st[-1]] < a[i]:
+          st.pop()
+      left[i] = i - (st[-1] if st else -1)
+      st.append(i)
+  st = []
+  for i in range(n - 1, -1, -1):
+      while st and a[st[-1]] <= a[i]:
+          st.pop()
+      right[i] = (st[-1] if st else n) - i
+      st.append(i)
+  print(sum(a[i] * left[i] * right[i] for i in range(n)) % MOD)
+brute: |
+  n = int(input())
+  a = list(map(int, input().split()))
+  total = 0
+  for i in range(n):
+      best = 0
+      for j in range(i, n):
+          best = max(best, a[j])
+          total += best
+  print(total % (10**9 + 7))
+references:
+  cpp: |
+    #include <cstdio>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        const long long MOD = 1000000007;
+        int n;
+        if (scanf("%d", &n) != 1) return 0;
+        vector<long long> a(n), left(n), right(n);
+        for (auto& x : a) scanf("%lld", &x);
+        vector<int> st;
+        for (int i = 0; i < n; i++) {
+            while (!st.empty() && a[st.back()] < a[i]) st.pop_back();
+            left[i] = i - (st.empty() ? -1 : st.back());
+            st.push_back(i);
+        }
+        st.clear();
+        for (int i = n - 1; i >= 0; i--) {
+            while (!st.empty() && a[st.back()] <= a[i]) st.pop_back();
+            right[i] = (st.empty() ? n : st.back()) - i;
+            st.push_back(i);
+        }
+        long long total = 0;
+        for (int i = 0; i < n; i++) total = (total + a[i] % MOD * left[i] % MOD * right[i]) % MOD;
+        printf("%lld\n", total);
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            final long MOD = 1_000_000_007L;
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            int n = Integer.parseInt(in.readLine().trim());
+            StringTokenizer tk = new StringTokenizer(in.readLine());
+            long[] a = new long[n], left = new long[n], right = new long[n];
+            for (int i = 0; i < n; i++) a[i] = Long.parseLong(tk.nextToken());
+            int[] st = new int[n];
+            int top = 0;
+            for (int i = 0; i < n; i++) {
+                while (top > 0 && a[st[top - 1]] < a[i]) top--;
+                left[i] = i - (top > 0 ? st[top - 1] : -1);
+                st[top++] = i;
+            }
+            top = 0;
+            for (int i = n - 1; i >= 0; i--) {
+                while (top > 0 && a[st[top - 1]] <= a[i]) top--;
+                right[i] = (top > 0 ? st[top - 1] : n) - i;
+                st[top++] = i;
+            }
+            long total = 0;
+            for (int i = 0; i < n; i++) total = (total + a[i] % MOD * left[i] % MOD * right[i]) % MOD;
+            System.out.println(total);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1\n1000000000"
+      yield "2\n4 4"
+      yield "3\n3 2 1"
+      n = 150000
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n}\n" + " ".join("1000000000" for _ in range(n))
+      yield f"{n}\n" + " ".join(str(i + 1) for i in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 3)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(n - i) for i in range(n))
+      for _ in range(4):
+          m = rng.randint(1, 60)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 10)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          m = rng.randint(1, 10)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 5)) for _ in range(m))

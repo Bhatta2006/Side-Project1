@@ -1,0 +1,52 @@
+id: rerooting
+title: Rerooting DP
+summary: Compute an answer for every root at once, such as sums of distances or farthest nodes, with two
+  passes.
+module: graph-module
+prerequisites:
+- tree-techniques
+difficulty: 5
+estimated_minutes: 50
+status: draft
+lesson: '## Reroot sum
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Reroot max
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

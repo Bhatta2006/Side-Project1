@@ -1,0 +1,276 @@
+id: quiz:dsa:dp-introduction:fibonacci-four-ways
+family: fibonacci-four-ways
+concept: dsa:dp-introduction
+pattern: dsa:dp-introduction/fibonacci-four-ways
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: two_term_recurrence
+  params:
+    a:
+    - 0
+    - 2
+    b:
+    - 1
+    - 3
+    n:
+    - 3
+    - 9
+  reference: term(a, b, n)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: recompute the same call without storing it
+  misconception: dp-recompute-subproblems
+- rule: look up the memo but never write to it
+  misconception: dp-memo-not-stored
+- rule: start from a base case that zeroes every count
+  misconception: dp-wrong-base-case
+- rule: fill a cell before the cells it reads
+  misconception: dp-loop-order
+items:
+- id: recognise-repeat
+  band: 1
+  format: mcq
+  prompt: In the recursion tree of fib(6), what makes DP useful?
+  options:
+  - The same calls, like fib(3), appear several times
+  - Every call is different
+  - The tree is sorted
+  - There are no base cases
+  answer: 0
+  misconceptions:
+  - null
+  - dp-no-overlap
+  - confuse-index-value
+  - dp-wrong-base-case
+  explanation: Repeated calls are the overlapping subproblems that a memo removes.
+- id: state-sentence
+  band: 1
+  format: mcq
+  prompt: Climbing stairs with steps 1 or 2. What should ways[i] mean?
+  options:
+  - The number of ways to stand exactly on stair i
+  - The number of steps taken so far
+  - The largest stair reachable
+  - Whether stair i is reachable
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - confuse-index-value
+  - dp-count-vs-exists
+  explanation: A precise state sentence makes the transition ways[i − 1] + ways[i − 2] follow.
+- id: base-case
+  band: 2
+  format: mcq
+  prompt: 'Climbing stairs: ways(0) = 0 and ways(1) = 1. What goes wrong?'
+  options:
+  - ways(2) becomes 1 instead of 2, and every later count is too small
+  - Nothing; the answer is the same
+  - The program crashes
+  - Only ways(1) is wrong
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - dp-recompute-subproblems
+  - dp-loop-order
+  explanation: Standing at the bottom is one way, so ways(0) = 1; with 0, ways(2) = 1.
+- id: predict-table
+  band: 2
+  format: output_prediction
+  prompt: What does this print?
+  code:
+    python: |
+      dp = [0, 1]
+      for i in range(2, 8):
+          dp.append(dp[i - 1] + dp[i - 2])
+      print(dp[7])
+    cpp: |
+      long long dp[8] = {0, 1};
+      for (int i = 2; i < 8; i++) dp[i] = dp[i - 1] + dp[i - 2];
+      cout << dp[7];
+    java: |
+      long[] dp = new long[8];
+      dp[1] = 1;
+      for (int i = 2; i < 8; i++) dp[i] = dp[i - 1] + dp[i - 2];
+      System.out.print(dp[7]);
+  options:
+  - '13'
+  - '8'
+  - '21'
+  - '7'
+  answer: 0
+  misconceptions:
+  - null
+  - dp-missing-plus-one
+  - dp-missing-plus-one
+  - dp-loop-order
+  explanation: The table is 0 1 1 2 3 5 8 13; index 7 holds 13.
+- id: trace-pair
+  band: 3
+  format: trace
+  prompt: Two variables, prev = 0 and cur = 1. After 4 updates of (prev, cur) → (cur, prev + cur), what
+    is (prev, cur)?
+  options:
+  - (3, 5)
+  - (5, 8)
+  - (2, 3)
+  - (3, 4)
+  answer: 0
+  misconceptions:
+  - null
+  - dp-missing-plus-one
+  - dp-missing-plus-one
+  - dp-overwrite-min
+  explanation: '(1, 1), (1, 2), (2, 3), (3, 5): prev holds F(4) = 3.'
+- id: bug-no-store
+  band: 3
+  format: bug_spot
+  prompt: This memoized fib is still slow. Which line is the bug?
+  code:
+    python: |
+      memo = {}
+      def fib(n):
+          if n < 2: return n
+          if n in memo: return memo[n]
+          return fib(n - 1) + fib(n - 2)
+    cpp: |
+      map<int, long long> memo;
+      long long fib(int n) {
+          if (n < 2) return n;
+          if (memo.count(n)) return memo[n];
+          return fib(n - 1) + fib(n - 2);
+      }
+    java: |
+      static Map<Integer, Long> memo = new HashMap<>();
+      static long fib(int n) {
+          if (n < 2) return n;
+          if (memo.containsKey(n)) return memo.get(n);
+          return fib(n - 1) + fib(n - 2);
+      }
+  options:
+  - The last line returns without storing the result
+  - The base case
+  - The memo lookup
+  - The function name
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - dp-recompute-subproblems
+  - confuse-index-value
+  explanation: Nothing is written to memo, so every call recomputes.
+- id: bug-swap-order
+  band: 3
+  format: bug_spot
+  prompt: In Python, prev = cur; cur = prev + cur breaks the two-variable loop. Why?
+  options:
+  - cur adds the new prev, not the old one
+  - It overflows
+  - It needs a list
+  - It starts from the wrong n
+  answer: 0
+  misconceptions:
+  - null
+  - dp-overwrite-min
+  - dp-recompute-subproblems
+  - dp-wrong-base-case
+  explanation: 'Update both at once, or save the old value first: prev, cur = cur, prev + cur.'
+- id: complexity-naive
+  band: 4
+  format: complexity
+  prompt: 'Plain recursive fib(n): how does the number of calls grow?'
+  options:
+  - Exponentially, like the Fibonacci numbers
+  - Linearly
+  - Like n log n
+  - Quadratically
+  answer: 0
+  misconceptions:
+  - null
+  - dp-no-overlap
+  - dp-no-overlap
+  - dp-no-overlap
+  explanation: It makes 2·F(n + 1) − 1 calls, which grows about 1.6 times per step of n.
+- id: complexity-memo
+  band: 4
+  format: complexity
+  prompt: With a memo, how many distinct fib(i) are computed for fib(n)?
+  options:
+  - n + 1, each once
+  - 2^n
+  - n^2
+  - log n
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - dp-loop-order
+  - dp-no-overlap
+  explanation: Each i from 0 to n is solved once; later calls are lookups.
+- id: when-compress
+  band: 5
+  format: mcq
+  prompt: You must print every Fibonacci number from F(0) to F(n). Can you use only two variables?
+  options:
+  - 'Yes: print each value as it is produced'
+  - 'No: you need the whole table first'
+  - Only with recursion
+  - Only if n is small
+  answer: 0
+  misconceptions:
+  - null
+  - dp-compressed-loses-path
+  - dp-recompute-subproblems
+  - dp-no-overlap
+  explanation: Each value is final when produced, so it can be printed and dropped.
+- id: transfer-tribonacci
+  band: 6
+  format: classify
+  prompt: T(n) = T(n − 1) + T(n − 2) + T(n − 3). What changes from the Fibonacci template?
+  options:
+  - Keep three variables and three base cases
+  - Nothing
+  - Use a 2D table
+  - Sort the input first
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - dp-vague-state
+  - pattern-sort-breaks-order
+  explanation: Each term reads three previous terms, so the window holds three values.
+- id: transfer-unordered
+  band: 6
+  format: classify
+  prompt: Count ways to make n from 1s and 2s where 1 + 2 and 2 + 1 are the same. Does the stairs recurrence
+    work?
+  options:
+  - 'No: it counts orders; use coin change II'
+  - Yes, unchanged
+  - Yes, but start from ways(0) = 0
+  - Only for even n
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-ordered-vs-unordered-ways
+  - dp-wrong-base-case
+  - dp-wrong-base-case
+  explanation: The stairs recurrence counts ordered sequences; unordered sums need coins in the outer
+    loop.
+status: provisional
+provenance:
+  origin: original

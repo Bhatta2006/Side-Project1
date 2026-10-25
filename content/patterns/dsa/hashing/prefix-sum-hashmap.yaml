@@ -1,0 +1,136 @@
+id: dsa:hashing/prefix-sum-hashmap
+concept: dsa:hashing
+title: 'Prefix state hash map: an earlier prefix equal to total − k'
+tracks:
+- interview
+- competitive
+recognise:
+- Contiguous subarrays with a condition on their sum, or on a count turned into a sum
+- The array may hold negative numbers, so a sliding window cannot decide when to shrink
+- Asked for the longest, the shortest or the number of such subarrays
+state: first[s] = the first index at which the running prefix sum equals s; the empty prefix is 0 at −1
+transition: at index i, total += a[i]; if total − k is stored, a[first[total − k] + 1 .. i] sums to k;
+  then keep the first index of total
+base_cases:
+- the empty prefix, sum 0, ends at index −1
+complexity:
+  time: O(n) expected
+  space: O(n)
+template:
+  python: |
+    import sys
+
+    data = sys.stdin.read().split()
+    n, k = int(data[0]), int(data[1])
+    a = [int(x) for x in data[2:2 + n]]
+    first = {0: -1}  # prefix sum -> first index where it ends; the empty prefix ends at -1
+    total = best = 0
+    for i, x in enumerate(a):
+        total += x
+        if total - k in first:  # a[first[total - k] + 1 .. i] sums to k
+            best = max(best, i - first[total - k])
+        first.setdefault(total, i)  # keep the FIRST index: it gives the longest subarray
+    print(best)
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <unordered_map>
+    using namespace std;
+
+    int main() {
+        int n;
+        long long k, total = 0;
+        cin >> n >> k;
+        unordered_map<long long, int> first = {{0, -1}};  // prefix sum -> first index; empty prefix: -1
+        int best = 0;
+        for (int i = 0; i < n; i++) {
+            long long x;
+            cin >> x;
+            total += x;
+            auto it = first.find(total - k);
+            if (it != first.end()) best = max(best, i - it->second);  // a[it->second + 1 .. i] sums to k
+            first.insert({total, i});  // insert never overwrites: the FIRST index is kept
+        }
+        cout << best << "\n";
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();
+            long k = in.nextLong(), total = 0;
+            Map<Long, Integer> first = new HashMap<>();  // prefix sum -> first index where it ends
+            first.put(0L, -1);  // the empty prefix ends at -1
+            int best = 0;
+            for (int i = 0; i < n; i++) {
+                total += in.nextLong();
+                Integer j = first.get(total - k);
+                if (j != null) best = Math.max(best, i - j);  // a[j + 1 .. i] sums to k
+                first.putIfAbsent(total, i);  // keep the FIRST index: it gives the longest subarray
+            }
+            System.out.println(best);
+        }
+    }
+template_io:
+  stdin: |
+    5 3
+    1 -1 5 -2 3
+  expected: '4'
+variants:
+- id: longest-k
+  band: 2
+  title: Longest subarray with sum k
+  problem: leetcode:maximum-size-subarray-sum-equals-k
+- id: count-k
+  band: 2
+  title: Count subarrays with sum k
+  problem: leetcode:subarray-sum-equals-k
+- id: zeros-ones
+  band: 3
+  title: Equal 0s and 1s, as sum 0
+  problem: leetcode:contiguous-array
+- id: nice
+  band: 3
+  title: Odd numbers become 1, count sum k
+  problem: leetcode:count-number-of-nice-subarrays
+- id: divisible
+  band: 4
+  title: Remainders as keys
+  problem: leetcode:subarray-sums-divisible-by-k
+- id: well-performing
+  band: 5
+  title: Longest subarray with sum above 0
+  problem: leetcode:longest-well-performing-interval
+- id: remove-shortest
+  band: 6
+  title: Shortest subarray, so keep the last index
+  problem: leetcode:make-sum-divisible-by-p
+pitfalls:
+- prefix-missing-empty
+- prefix-store-last-index
+- prefix-seed-index-zero
+- window-with-negatives
+- pattern-first-vs-last-index
+atoms:
+- prefix-map-worked
+- prefix-map-faded
+- prefix-map-visualizer
+- prefix-map-micro
+- prefix-map-classify
+quiz_family: quiz:dsa:hashing:prefix-sum-hashmap
+problems:
+  external:
+  - leetcode:maximum-size-subarray-sum-equals-k
+  - leetcode:subarray-sum-equals-k
+  - leetcode:contiguous-array
+  - leetcode:count-number-of-nice-subarrays
+  - leetcode:subarray-sums-divisible-by-k
+  - leetcode:longest-well-performing-interval
+  - leetcode:make-sum-divisible-by-p
+showcase:
+- 'Why a sliding window prints 0 on 1 -1 5 -2 3 with k = 3, while the prefix map finds 4'
+status: provisional
+provenance:
+  origin: original

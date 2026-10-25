@@ -1,0 +1,211 @@
+id: library-shelf
+title: The popular shelf
+concepts: [design-data-structures]
+difficulty: hard
+statement: |
+  A library keeps a small "popular" shelf with room for `c` books. Readers ask for books one
+  at a time. For each request for book `x`:
+
+  - If x is on the shelf, print `HIT`. The request counts as one more read of x.
+  - Otherwise print `MISS` and put x on the shelf with a read count of 1. If the shelf was
+    already full, first remove the book with the **smallest read count**; among books with
+    that count, remove the one whose most recent read is **oldest**.
+
+  Read counts start again from 1 whenever a book comes back after being removed.
+input_format: |
+  The first line contains c and q. The second line contains the q requested book numbers.
+output_format: One line, HIT or MISS, for every request.
+constraints:
+  - 1 ≤ c ≤ 10^5
+  - 1 ≤ q ≤ 10^5
+  - 1 ≤ x ≤ 10^6
+examples:
+  - input: "2 6\n1 2 1 3 2 1"
+    output: "MISS\nMISS\nHIT\nMISS\nMISS\nHIT"
+    explanation: "When 3 arrives, book 1 has 2 reads and book 2 has 1, so 2 leaves. When 2 comes back, books 1 (2 reads) and 3 (1 read) are on the shelf, so 3 leaves. Book 1 is still there at the end."
+  - input: "1 3\n5 5 6"
+    output: "MISS\nHIT\nMISS"
+hints:
+  - "Removing the book with the fewest reads, ties by oldest read, is a least-frequently-used cache."
+  - "Group the books by read count. Inside each group, keep them in the order of their latest read, so the oldest is at the front."
+  - "Track the smallest read count in use. A new book always has count 1, so after an insertion the smallest count is 1; a hit only changes it when it empties that group."
+approach: |
+  An LFU cache with O(1) operations. Keep count[x] for the books on the shelf, and for each
+  count an ordered set of the books with that count, in order of their latest read (an ordered
+  dictionary, or a linked list per count). A hit moves x from group count[x] to the end of group
+  count[x] + 1, and if group count[x] was the smallest and is now empty, the smallest count
+  goes up by one. A miss on a full shelf removes the front book of the smallest group, then x
+  joins group 1 at the end and the smallest count becomes 1. Every request is O(1) expected.
+reference: |
+  import sys
+  from collections import OrderedDict
+  def main():
+      data = sys.stdin.buffer.read().split()
+      c, q = int(data[0]), int(data[1])
+      count = {}
+      groups = {}
+      low = 0
+      out = []
+      for i in range(q):
+          x = int(data[2 + i])
+          k = count.get(x)
+          if k is not None:
+              g = groups[k]
+              del g[x]
+              if not g:
+                  del groups[k]
+                  if low == k:
+                      low = k + 1
+              count[x] = k + 1
+              groups.setdefault(k + 1, OrderedDict())[x] = None
+              out.append("HIT")
+              continue
+          out.append("MISS")
+          if len(count) == c:
+              g = groups[low]
+              old, _ = g.popitem(last=False)
+              if not g:
+                  del groups[low]
+              del count[old]
+          count[x] = 1
+          groups.setdefault(1, OrderedDict())[x] = None
+          low = 1
+      sys.stdout.write("\n".join(out) + "\n")
+  main()
+brute: |
+  c, q = map(int, input().split())
+  xs = list(map(int, input().split()))
+  shelf = {}
+  for t, x in enumerate(xs):
+      if x in shelf:
+          shelf[x][0] += 1
+          shelf[x][1] = t
+          print("HIT")
+          continue
+      print("MISS")
+      if len(shelf) == c:
+          old = min(shelf, key=lambda b: (shelf[b][0], shelf[b][1]))
+          del shelf[old]
+      shelf[x] = [1, t]
+references:
+  cpp: |
+    #include <cstdio>
+    #include <list>
+    #include <string>
+    #include <unordered_map>
+    using namespace std;
+
+    int main() {
+        int c, q;
+        if (scanf("%d %d", &c, &q) != 2) return 0;
+        unordered_map<int, list<int>> groups;
+        unordered_map<int, pair<int, list<int>::iterator>> book;
+        book.reserve(2 * c + 1);
+        int low = 0;
+        string out;
+        for (int i = 0; i < q; i++) {
+            int x;
+            scanf("%d", &x);
+            auto it = book.find(x);
+            if (it != book.end()) {
+                int k = it->second.first;
+                auto& g = groups[k];
+                g.erase(it->second.second);
+                if (g.empty()) {
+                    groups.erase(k);
+                    if (low == k) low = k + 1;
+                }
+                auto& h = groups[k + 1];
+                h.push_back(x);
+                it->second = {k + 1, prev(h.end())};
+                out += "HIT\n";
+                continue;
+            }
+            out += "MISS\n";
+            if ((int)book.size() == c) {
+                auto& g = groups[low];
+                int old = g.front();
+                g.pop_front();
+                if (g.empty()) groups.erase(low);
+                book.erase(old);
+            }
+            auto& h = groups[1];
+            h.push_back(x);
+            book[x] = {1, prev(h.end())};
+            low = 1;
+        }
+        fputs(out.c_str(), stdout);
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            DataInputStream in = new DataInputStream(new BufferedInputStream(System.in, 1 << 16));
+            int c = next(in), q = next(in);
+            HashMap<Integer, Integer> count = new HashMap<>();
+            HashMap<Integer, LinkedHashSet<Integer>> groups = new HashMap<>();
+            int low = 0;
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < q; i++) {
+                int x = next(in);
+                Integer k = count.get(x);
+                if (k != null) {
+                    LinkedHashSet<Integer> g = groups.get(k);
+                    g.remove(x);
+                    if (g.isEmpty()) {
+                        groups.remove(k);
+                        if (low == k) low = k + 1;
+                    }
+                    count.put(x, k + 1);
+                    groups.computeIfAbsent(k + 1, z -> new LinkedHashSet<>()).add(x);
+                    out.append("HIT\n");
+                    continue;
+                }
+                out.append("MISS\n");
+                if (count.size() == c) {
+                    LinkedHashSet<Integer> g = groups.get(low);
+                    Iterator<Integer> first = g.iterator();
+                    int old = first.next();
+                    first.remove();
+                    if (g.isEmpty()) groups.remove(low);
+                    count.remove(old);
+                }
+                count.put(x, 1);
+                groups.computeIfAbsent(1, z -> new LinkedHashSet<>()).add(x);
+                low = 1;
+            }
+            System.out.print(out);
+        }
+
+        static int next(DataInputStream in) throws IOException {
+            int ch = in.read();
+            while (ch < '0' || ch > '9') ch = in.read();
+            int v = 0;
+            while (ch >= '0' && ch <= '9') { v = v * 10 + (ch - '0'); ch = in.read(); }
+            return v;
+        }
+    }
+generator: |
+  def case(c, xs):
+      return f"{c} {len(xs)}\n" + " ".join(map(str, xs))
+
+  def cases(rng):
+      yield case(1, [7])
+      yield case(1, [3, 3, 4, 3])
+      yield case(3, [1, 2, 3, 1, 1, 2, 4, 5, 3])
+      q = 100000
+      yield case(50000, [rng.randint(1, 10**6) for _ in range(q)])
+      yield case(1000, [rng.randint(1, 2000) for _ in range(q)])
+      yield case(1, [rng.randint(1, 3) for _ in range(q)])
+      yield case(50, [int(rng.paretovariate(1.2)) % 5000 + 1 for _ in range(q)])
+      yield case(50000, [i % 50001 + 1 for i in range(q)])
+      yield case(7, [rng.randint(1, 10) for _ in range(q)])
+      for _ in range(4):
+          yield case(rng.randint(1, 5), [rng.randint(1, 8) for _ in range(rng.randint(1, 40))])
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          c, n = rng.randint(1, 4), rng.randint(1, 14)
+          yield f"{c} {n}\n" + " ".join(str(rng.randint(1, 6)) for _ in range(n))

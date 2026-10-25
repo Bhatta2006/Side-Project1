@@ -1,0 +1,124 @@
+concept: dsa:dp-squares
+pattern: dsa:dp-squares/maximal-square
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the maximal square pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/dp-squares/maximal-square.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: sq-worked
+  kind: worked
+  title: 'Worked: 10100 / 10111 / 11111 / 10010'
+  objective: Fill the table and read the area.
+  seconds: 100
+  body: 'Rows 1 and 2 hold only 1s and 0s, because no cell has three non-zero neighbours. In row 3,
+    column 4 sees up 1, left 1 and up-left 1, so it becomes 2; column 5 sees up 1, left 2, up-left 1, so
+    it is also 2. Row 4 adds nothing bigger. The largest side is 2, so the area is 4.'
+  why: A cell grows only as far as its smallest neighbouring square allows.
+- id: sq-faded
+  kind: faded
+  title: 'Your turn: 111 / 111 / 110'
+  objective: Apply the three-neighbour minimum yourself.
+  seconds: 90
+  body: The first row and column of the table are all 1.
+  steps:
+  - state: Row 2, column 2. Up 1, left 1, up-left 1.
+    prompt: What is dp?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    answer: 0
+    explanation: 1 + min(1, 1, 1).
+  - state: Row 2, column 3. Up 1, left 2, up-left 1.
+    prompt: What is dp?
+    options:
+    - '2'
+    - '3'
+    - '1'
+    answer: 0
+    explanation: 1 + min(1, 2, 1).
+  - state: Row 3, column 3 is 0.
+    prompt: What is the largest area in the grid?
+    options:
+    - '4'
+    - '9'
+    - '6'
+    answer: 0
+    explanation: The largest side is 2.
+- id: sq-visualizer
+  kind: visualizer
+  title: 'Step through: what each neighbour checks'
+  objective: Link the three neighbours to the square's cells.
+  seconds: 110
+  body: A 2 × 2 square ending at (i, j) needs four cells.
+  steps:
+  - state: The cell above has dp ≥ 1.
+    prompt: Which cell does that confirm?
+    options:
+    - The top-right cell of the square
+    - The top-left cell
+    - The bottom-left cell
+    answer: 0
+    explanation: Up is directly above the corner.
+  - state: The cell to the left has dp ≥ 1.
+    prompt: Which cell does that confirm?
+    options:
+    - The bottom-left cell
+    - The top-left cell
+    - The top-right cell
+    answer: 0
+    explanation: Left is directly beside the corner.
+  - state: Up and left both have dp ≥ 1.
+    prompt: Which cell is still unchecked?
+    options:
+    - The top-left cell, checked by the diagonal
+    - None
+    - The corner itself
+    answer: 0
+    explanation: Only the up-left neighbour covers it.
+- id: sq-micro
+  kind: micro
+  title: 'Pitfall: dropping the diagonal'
+  objective: Know why up-left must be in the minimum.
+  seconds: 80
+  misconception: sq-missing-diagonal
+  body: 'Up and left check the edges next to the corner, but not the cell diagonally inside the square.
+    In 101 / 001 / 011, the bottom-right cell sees up 1 and left 1, so without the diagonal it claims a
+    2 × 2 square, though the middle cell is 0. With the diagonal it is 1 + min(1, 1, 0) = 1.'
+  why: Every cell of the square must be checked by some neighbour.
+- id: sq-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate squares from rectangles.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: The largest square field of free cells on a map.
+    prompt: Which approach?
+    options:
+    - Three-neighbour square DP
+    - Histogram per row
+    - BFS
+    answer: 0
+    explanation: One size parameter.
+  - state: The largest rectangular parking lot of free cells.
+    prompt: Which approach?
+    options:
+    - Histogram per row plus a monotonic stack
+    - Three-neighbour square DP
+    - Prefix sums only
+    answer: 0
+    explanation: Two free sides.
+  - state: How many square plots of free cells exist, of any size?
+    prompt: Which approach?
+    options:
+    - Sum of the square DP table
+    - Largest square only
+    - Count the free cells
+    answer: 0
+    explanation: A cell with side k ends k squares.

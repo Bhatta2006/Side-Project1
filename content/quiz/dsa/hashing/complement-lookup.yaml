@@ -1,0 +1,63 @@
+id: quiz:dsa:hashing:complement-lookup
+family: complement-lookup
+concept: dsa:hashing
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: order
+  band: 2
+  format: mcq
+  prompt: Counting pairs i < j with a[i] + a[j] = k, in which order do you use the map for each x?
+  options:
+  - Look up k − x, then insert x
+  - Insert x, then look up k − x
+  - Insert every value first, then look up each
+  - Look up x, then insert k − x
+  answer: 0
+  misconceptions:
+  - null
+  - hash-insert-before-lookup
+  - double-count
+  - confuse-index-value
+  explanation: Looking up first means x only meets elements to its left.
+- id: halve
+  band: 3
+  format: trace
+  prompt: 3 3 3 1 5 2 and k = 6. Counting everything first and halving gives 5. What is the right count?
+  options:
+  - '4'
+  - '5'
+  - '11'
+  - '3'
+  answer: 0
+  misconceptions:
+  - null
+  - hash-insert-before-lookup
+  - double-count
+  - stop-after-first
+  explanation: Three pairs of 3s and the pair (1, 5); halving still counts each 3 with itself.
+- id: four-sum
+  band: 4
+  format: complexity
+  prompt: 4Sum II with four lists of n numbers. Hash every a + b, then look up −(c + d). The time?
+  options:
+  - O(n²)
+  - O(n⁴)
+  - O(n³)
+  - O(n log n)
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - nested-loops-repair
+  - pattern-sort-breaks-order
+  explanation: Two double loops, each with O(1) map work.
+status: provisional
+provenance:
+  origin: original

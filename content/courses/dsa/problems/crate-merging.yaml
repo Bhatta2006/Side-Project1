@@ -1,0 +1,133 @@
+id: crate-merging
+title: Merging crate stacks
+concepts: [dp-partition]
+difficulty: medium
+statement: |
+  `n` stacks of crates stand in a row; stack i holds `w_i` crates. A forklift can merge two
+  **neighbouring** stacks into one stack, which takes their place in the row. Merging costs
+  the total number of crates in the new stack.
+
+  Keep merging until one stack is left. Print the smallest total cost.
+input_format: |
+  The first line contains n. The second line contains w_1 … w_n.
+output_format: The smallest total cost.
+constraints:
+  - 1 ≤ n ≤ 200
+  - 1 ≤ w_i ≤ 10^9
+examples:
+  - input: "4\n10 20 30 40"
+    output: "190"
+    explanation: "Merge 10+20 (30), then 30+30 (60), then 60+40 (100): 30 + 60 + 100 = 190."
+  - input: "1\n5"
+    output: "0"
+hints:
+  - "The last merge joins a left block and a right block, each of which was merged on its own. Which state describes a block?"
+  - "dp[i][j] = cheapest cost to merge stacks i..j into one. The last merge splits it after some k."
+  - "dp[i][j] = min over k of dp[i][k] + dp[k + 1][j], plus the crates in i..j (a prefix sum). Fill by length."
+approach: |
+  Interval DP like matrix chain. dp[i][j] is the cheapest cost to merge stacks i..j; a single
+  stack costs 0. The final merge of i..j joins i..k and k+1..j and costs the total weight of
+  i..j, which a prefix sum gives in O(1). Fill ranges by length. O(n³) time, O(n²) memory;
+  costs need 64-bit integers.
+reference: |
+  n = int(input())
+  w = list(map(int, input().split()))
+  pre = [0]
+  for x in w:
+      pre.append(pre[-1] + x)
+  dp = [[0] * n for _ in range(n)]
+  for length in range(2, n + 1):
+      for i in range(n - length + 1):
+          j = i + length - 1
+          row, best = dp[i], None
+          for k in range(i, j):
+              c = row[k] + dp[k + 1][j]
+              if best is None or c < best:
+                  best = c
+          dp[i][j] = best + pre[j + 1] - pre[i]
+  print(dp[0][n - 1])
+brute: |
+  from functools import lru_cache
+  n = int(input())
+  w = tuple(map(int, input().split()))
+
+  @lru_cache(maxsize=None)
+  def go(stacks):
+      if len(stacks) == 1:
+          return 0
+      best = None
+      for k in range(len(stacks) - 1):
+          merged = stacks[k] + stacks[k + 1]
+          c = merged + go(stacks[:k] + (merged,) + stacks[k + 2:])
+          best = c if best is None or c < best else best
+      return best
+
+  print(go(w))
+references:
+  cpp: |
+    #include <algorithm>
+    #include <climits>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<long long> pre(n + 1, 0);
+        for (int i = 0; i < n; i++) {
+            long long x;
+            cin >> x;
+            pre[i + 1] = pre[i] + x;
+        }
+        vector<vector<long long>> dp(n, vector<long long>(n, 0));
+        for (int length = 2; length <= n; length++)
+            for (int i = 0; i + length - 1 < n; i++) {
+                int j = i + length - 1;
+                long long best = LLONG_MAX;
+                for (int k = i; k < j; k++) best = min(best, dp[i][k] + dp[k + 1][j]);
+                dp[i][j] = best + pre[j + 1] - pre[i];
+            }
+        cout << dp[0][n - 1] << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            int n = Integer.parseInt(in.readLine().trim());
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            long[] pre = new long[n + 1];
+            for (int i = 0; i < n; i++) pre[i + 1] = pre[i] + Long.parseLong(st.nextToken());
+            long[][] dp = new long[n][n];
+            for (int length = 2; length <= n; length++)
+                for (int i = 0; i + length - 1 < n; i++) {
+                    int j = i + length - 1;
+                    long best = Long.MAX_VALUE;
+                    for (int k = i; k < j; k++) best = Math.min(best, dp[i][k] + dp[k + 1][j]);
+                    dp[i][j] = best + pre[j + 1] - pre[i];
+                }
+            System.out.println(dp[0][n - 1]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1\n7"
+      yield "2\n1000000000 1000000000"
+      yield "3\n1 100 1"
+      n = 200
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 10**9)) for _ in range(n))
+      yield f"{n}\n" + " ".join("1000000000" for _ in range(n))
+      yield f"{n}\n" + " ".join(str(i + 1) for i in range(n))
+      yield f"{n}\n" + " ".join(str(rng.choice([1, 10**9])) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 10)) for _ in range(n))
+      for _ in range(4):
+          m = rng.randint(1, 40)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 100)) for _ in range(m))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          m = rng.randint(1, 7)
+          yield f"{m}\n" + " ".join(str(rng.randint(1, 20)) for _ in range(m))

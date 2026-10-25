@@ -108,11 +108,11 @@ lesson: |
 
   Scope answers which binding a name refers to; aliasing answers whether different bindings refer to the same object. These are separate questions. A function can have a local parameter that still points to a caller-owned mutable object.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   A shallow copy duplicates the outer collection but not nested mutable elements. Test independent rows in a grid by modifying one cell and checking that another row does not change. Java passes reference values by value; it does not pass variables by reference.
 
-  Sharing a reference is normally O(1). A shallow copy of n elements is O(n); recursively copying nested objects has a larger cost.
+  Sharing a list is instant because nothing is copied. Copying a list takes longer the more items it has, and copying lists inside lists takes longer still.
 
   ### Check your understanding
 

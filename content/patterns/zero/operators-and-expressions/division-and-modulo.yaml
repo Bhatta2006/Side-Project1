@@ -1,0 +1,107 @@
+id: zero:operators-and-expressions/division-and-modulo
+concept: zero:operators-and-expressions
+title: 'Division and modulo: whole groups, then what is left'
+tracks:
+- foundations
+recognise:
+- Convert a total into bigger and smaller units, such as seconds into hours, minutes and seconds
+- How many whole groups is division; how many are left over is the remainder
+- Anything that repeats in cycles, such as days of the week or even and odd
+state: what is left of the total after the bigger units have been taken out
+transition: unit count = left // unit size; left = left % unit size
+base_cases:
+- the smallest unit is simply what is left at the end
+complexity:
+  time: O(1) per unit
+  space: O(1)
+template:
+  python: |
+    t = int(input())
+    h = t // 3600  # whole hours
+    m = t % 3600 // 60  # whole minutes in what is left after the hours
+    s = t % 60  # seconds left over
+    print(h, m, s)
+  cpp: |
+    #include <iostream>
+    using namespace std;
+
+    int main() {
+        long long t;
+        cin >> t;
+        long long h = t / 3600;  // whole hours (whole-number division between integers)
+        long long m = t % 3600 / 60;  // whole minutes in what is left after the hours
+        long long s = t % 60;  // seconds left over
+        cout << h << " " << m << " " << s << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            long t = new Scanner(System.in).nextLong();
+            long h = t / 3600;  // whole hours (whole-number division between integers)
+            long m = t % 3600 / 60;  // whole minutes in what is left after the hours
+            long s = t % 60;  // seconds left over
+            System.out.println(h + " " + m + " " + s);
+        }
+    }
+template_io:
+  stdin: |
+    3725
+  expected: 1 2 5
+variants:
+- id: watermelon
+  band: 1
+  title: An even split is a remainder of 0
+  problem: cf:4A
+- id: even-multiple
+  band: 1
+  title: Smallest even multiple
+  problem: leetcode:smallest-even-multiple
+- id: coins
+  band: 2
+  title: Divide and round up
+  problem: cf:1061A
+- id: tournament
+  band: 2
+  title: Halve the teams each round
+  problem: leetcode:count-of-matches-in-tournament
+- id: bottles
+  band: 3
+  title: Divide and keep the remainder in a loop
+  problem: leetcode:water-bottles
+- id: round-numbers
+  band: 3
+  title: Split a number into place values
+  problem: cf:1352A
+- id: floor-number
+  band: 4
+  title: Which group holds item n?
+  problem: cf:1426A
+pitfalls:
+- mod-chain-missing
+- mod-swap-div
+- mod-wrong-divisor
+- python-slash-decimal
+- pattern-divide-vs-remainder
+atoms:
+- divmod-worked
+- divmod-faded
+- divmod-visualizer
+- divmod-micro
+- divmod-classify
+quiz_family: quiz:zero:operators-and-expressions:division-and-modulo
+problems:
+  external:
+  - cf:4A
+  - leetcode:smallest-even-multiple
+  - cf:1061A
+  - leetcode:count-of-matches-in-tournament
+  - leetcode:water-bottles
+  - cf:1352A
+  - cf:1426A
+showcase:
+- 'Why m = t // 60 prints 1 62 5 for 3725 seconds: the minutes must come from the remainder'
+status: provisional
+provenance:
+  origin: original

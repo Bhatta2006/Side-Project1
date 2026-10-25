@@ -1,0 +1,80 @@
+id: quiz:dsa:dp-introduction:identify-dp
+family: identify-dp
+concept: dsa:dp-introduction
+format: classify
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: greedy-or-dp
+  band: 2
+  format: classify
+  prompt: Stair costs 1 2 100 3. Greedy steps to the cheaper next stair. Why can it fail?
+  options:
+  - A cheap stair can lead to an expensive one; DP checks every way in
+  - Greedy is always optimal here
+  - The costs must be sorted first
+  - It needs recursion
+  answer: 0
+  misconceptions:
+  - null
+  - dp-greedy-local-choice
+  - pattern-sort-breaks-order
+  - dp-recompute-subproblems
+  explanation: Greedy pays 6; starting on stair 1 pays 5.
+- id: repeat-check
+  band: 3
+  format: classify
+  prompt: Which problem gains nothing from memoization?
+  options:
+  - Merge sort
+  - Counting stair climbs
+  - Fewest coins for an amount
+  - Min cost climbing stairs
+  answer: 0
+  misconceptions:
+  - null
+  - dp-no-overlap
+  - dp-no-overlap
+  - dp-no-overlap
+  explanation: Merge sort's halves never repeat; the others revisit the same amounts or stairs.
+- id: state-choice
+  band: 3
+  format: mcq
+  prompt: To minimise cost up the stairs, which state is complete?
+  options:
+  - The stair you stand on
+  - The total paid so far
+  - The number of jumps so far
+  - The cheapest stair seen
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - dp-vague-state
+  - dp-greedy-local-choice
+  explanation: Knowing the stair is enough to decide the rest; the total so far is the value, not the
+    state.
+- id: jump-game
+  band: 5
+  format: classify
+  prompt: 'Jump game: can you reach the last index? Is DP required?'
+  options:
+  - 'No: tracking the farthest reach is provably enough'
+  - 'Yes: greedy always fails'
+  - 'Yes: it needs a 2D table'
+  - 'No: sorting solves it'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-dp-vs-greedy
+  - dp-vague-state
+  - pattern-sort-breaks-order
+  explanation: Farthest reach never blocks a better future, so greedy is correct here.
+status: provisional
+provenance:
+  origin: original

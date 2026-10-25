@@ -105,11 +105,11 @@ lesson: |
 
   An if/else-if chain expresses mutually exclusive choices. Its order matters when predicates overlap: more specific or stricter cases must come first. Before implementation, describe what each branch guarantees and make sure the final else covers all remaining valid inputs.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   A condition can be logically valid but ordered incorrectly. Checking score >= 50 before score >= 80 makes the high branch unreachable. Also distinguish missing cases from impossible cases.
 
-  A fixed chain is O(1). When the number of cases grows with input, reconsider a lookup table instead of an unbounded chain.
+  A short if/elif chain is instant. If the number of cases keeps growing, a lookup table (you will meet maps soon) is easier than a very long chain.
 
   ### Check your understanding
 

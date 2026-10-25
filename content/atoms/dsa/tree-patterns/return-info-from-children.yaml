@@ -1,0 +1,124 @@
+concept: dsa:tree-patterns
+pattern: dsa:tree-patterns/return-info-from-children
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the return-info-from-children pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/tree-patterns/return-info-from-children.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: tri-worked
+  kind: worked
+  title: 'Worked: values 1 2 3 4 5'
+  objective: Compute returned and recorded values bottom-up.
+  seconds: 100
+  body: 'Leaves 4, 5 and 3 return themselves. Node 2 gets gl = 4 and gr = 5, records 2 + 4 + 5 = 11 and
+    returns 2 + 5 = 7. The root gets gl = 7 and gr = 3, records 1 + 7 + 3 = 11 and returns 8. The best
+    recorded value is 11.'
+  why: Returning one side keeps every path a real path; recording both sides finds bends.
+- id: tri-faded
+  kind: faded
+  title: 'Your turn: root −2 with children 5 and −1'
+  objective: Apply the clamp and the two rules yourself.
+  seconds: 90
+  body: Node 1 = −2 with children node 2 = 5 and node 3 = −1, both leaves.
+  steps:
+  - state: Leaf node 3 returns −1.
+    prompt: What does the root use as gr?
+    options:
+    - '0'
+    - '−1'
+    - '5'
+    answer: 0
+    explanation: max(0, −1) = 0; a negative branch is left out.
+  - state: gl = 5, gr = 0 at the root.
+    prompt: What does the root record?
+    options:
+    - '3'
+    - '5'
+    - '2'
+    answer: 0
+    explanation: −2 + 5 + 0 = 3.
+  - state: Leaf node 2 recorded 5 earlier.
+    prompt: What is the final best path sum?
+    options:
+    - '5'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: The single node 5 beats any path through −2.
+- id: tri-visualizer
+  kind: visualizer
+  title: 'Step through: return versus record'
+  objective: See why the returned value is one-sided.
+  seconds: 110
+  body: Node 2 (value 2) has leaf children 4 and 5; its parent is the root 1.
+  steps:
+  - state: The best path that bends at node 2.
+    prompt: What is it?
+    options:
+    - 4 → 2 → 5 = 11
+    - 2 + 5 = 7
+    - '2'
+    answer: 0
+    explanation: Both children can join a path whose highest node is 2.
+  - state: The root wants to extend a path through node 2.
+    prompt: Which path from node 2 can it extend?
+    options:
+    - One going down a single side, 2 → 5 = 7
+    - 4 → 2 → 5
+    - Both sides
+    answer: 0
+    explanation: Adding the root to 4 → 2 → 5 would give node 2 three neighbours.
+  - state: Node 2 returns 7 and records 11.
+    prompt: Which value updates the global best?
+    options:
+    - '11'
+    - '7'
+    - '18'
+    answer: 0
+    explanation: The recorded value is a complete path; the returned one is a partial path.
+- id: tri-micro
+  kind: micro
+  title: 'Pitfall: returning the bent path'
+  objective: Know why a node returns only its better branch.
+  seconds: 80
+  misconception: tree-return-both-branches
+  body: 'If node 2 returns 4 + 2 + 5 = 11 to its parent, the parent adds itself and its other child, 1 +
+    11 + 3 = 15. That route enters node 2 from three directions, which no path can do. Return the value
+    plus the better branch, and record value plus both branches separately.'
+  why: A path visits each node with at most two neighbours.
+- id: tri-classify
+  kind: classify
+  title: Which pattern?
+  objective: Pick the tree pattern that fits.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: The longest path between any two nodes, in edges.
+    prompt: Which approach?
+    options:
+    - Return heights, record left + right
+    - BFS levels
+    - Parent pointers and BFS from the root only
+    answer: 0
+    explanation: The diameter bends at its highest node.
+  - state: Count the nodes with no larger value above them.
+    prompt: Which approach?
+    options:
+    - Pass the largest value so far down
+    - Return values up
+    - Level order
+    answer: 0
+    explanation: The condition looks at ancestors.
+  - state: Every node exactly 3 edges from a given node.
+    prompt: Which approach?
+    options:
+    - Parent pointers, then BFS from that node
+    - Search its subtree
+    - Return heights
+    answer: 0
+    explanation: Some of those nodes are reached through ancestors.

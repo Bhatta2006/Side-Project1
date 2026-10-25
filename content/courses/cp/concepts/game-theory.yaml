@@ -1,0 +1,73 @@
+id: game-theory
+title: Game theory
+summary: Winning and losing positions, Nim, and Sprague-Grundy numbers for sums of games.
+module: math-2
+prerequisites:
+- dp-classics
+- bitmasks
+difficulty: 4
+estimated_minutes: 55
+status: draft
+lesson: '## Win lose dp
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Nim
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Sprague grundy
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

@@ -1,0 +1,52 @@
+id: tree-construction
+title: Building and serialising trees
+summary: Rebuild a tree from two traversals, see why preorder plus postorder is ambiguous, and serialise
+  and deserialise trees.
+module: trees
+prerequisites:
+- tree-patterns
+difficulty: 4
+estimated_minutes: 45
+status: draft
+lesson: '## From two traversals
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Serialize
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

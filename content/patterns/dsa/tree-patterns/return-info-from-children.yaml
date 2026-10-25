@@ -1,0 +1,158 @@
+id: dsa:tree-patterns/return-info-from-children
+concept: dsa:tree-patterns
+title: 'Return info from children: return one side, record both'
+tracks:
+- interview
+- competitive
+recognise:
+- A node's answer depends on answers from its two subtrees
+- A global best (any path, diameter) is updated at every node
+- The path may start and end anywhere, not only at the root
+state: down[x] = best value of a path that starts at x and goes down one side
+transition: 'gl, gr = max(0, down[children]); best = max(best, val + gl + gr); down[x] = val + max(gl, gr)'
+base_cases:
+- a missing child contributes 0
+complexity:
+  time: O(n)
+  space: O(n)
+template:
+  python: |
+    import sys
+
+    data = sys.stdin.read().split()
+    n = int(data[0])
+    val = [0] + [int(x) for x in data[1:n + 1]]
+    left, right = [0] * (n + 1), [0] * (n + 1)
+    for i in range(1, n + 1):
+        left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+    order = [1]  # BFS order: every parent before its children
+    for x in order:
+        for c in (left[x], right[x]):
+            if c:
+                order.append(c)
+    down = [0] * (n + 1)  # down[x]: best path from x going down one side; down[0] = 0
+    best = -10**18
+    for x in reversed(order):  # children before parents
+        gl, gr = max(0, down[left[x]]), max(0, down[right[x]])  # drop negative branches
+        best = max(best, val[x] + gl + gr)  # a path may bend at x
+        down[x] = val[x] + max(gl, gr)  # the parent can continue only one side
+    print(best)
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<long long> val(n + 1, 0), down(n + 1, 0);  // down[x]: best path from x down one side
+        vector<int> left(n + 1, 0), right(n + 1, 0), order = {1};
+        for (int i = 1; i <= n; i++) cin >> val[i];
+        for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+        for (size_t k = 0; k < order.size(); k++)  // BFS order: every parent before its children
+            for (int c : {left[order[k]], right[order[k]]}) if (c) order.push_back(c);
+        long long best = -1e18;
+        for (int k = n - 1; k >= 0; k--) {  // children before parents
+            int x = order[k];
+            long long gl = max(0LL, down[left[x]]), gr = max(0LL, down[right[x]]);  // drop negatives
+            best = max(best, val[x] + gl + gr);  // a path may bend at x
+            down[x] = val[x] + max(gl, gr);  // the parent can continue only one side
+        }
+        cout << best << "\n";
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt();
+            long[] val = new long[n + 1], down = new long[n + 1];  // down[x]: best path from x down one side
+            int[] left = new int[n + 1], right = new int[n + 1], order = new int[n];
+            for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+            for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+            int size = 1;
+            order[0] = 1;
+            for (int k = 0; k < size; k++)  // BFS order: every parent before its children
+                for (int c : new int[] {left[order[k]], right[order[k]]}) if (c != 0) order[size++] = c;
+            long best = Long.MIN_VALUE;
+            for (int k = n - 1; k >= 0; k--) {  // children before parents
+                int x = order[k];
+                long gl = Math.max(0, down[left[x]]), gr = Math.max(0, down[right[x]]);  // drop negatives
+                best = Math.max(best, val[x] + gl + gr);  // a path may bend at x
+                down[x] = val[x] + Math.max(gl, gr);  // the parent can continue only one side
+            }
+            System.out.println(best);
+        }
+    }
+template_io:
+  stdin: |
+    5
+    1 2 3 4 5
+    2 3
+    4 5
+    0 0
+    0 0
+    0 0
+  expected: '11'
+variants:
+- id: balanced
+  band: 1
+  title: Return the height, or −1 if unbalanced
+  problem: leetcode:balanced-binary-tree
+- id: diameter
+  band: 2
+  title: Return height, record left + right
+  problem: leetcode:diameter-of-binary-tree
+- id: subordinates
+  band: 2
+  title: Return subtree sizes
+  problem: cses:1674
+- id: univalue
+  band: 3
+  title: Children count only with equal values
+  problem: leetcode:longest-univalue-path
+- id: max-path
+  band: 4
+  title: Return one branch, record both
+  problem: leetcode:binary-tree-maximum-path-sum
+- id: coins
+  band: 5
+  title: Return the surplus, record the moves
+  problem: leetcode:distribute-coins-in-binary-tree
+- id: cameras
+  band: 6
+  title: Return one of three states
+  problem: leetcode:binary-tree-cameras
+pitfalls:
+- tree-return-both-branches
+- tree-negative-branch
+- tree-best-only-downward
+- pattern-return-vs-record
+atoms:
+- tri-worked
+- tri-faded
+- tri-visualizer
+- tri-micro
+- tri-classify
+quiz_family: quiz:dsa:tree-patterns:return-info-from-children
+problems:
+  external:
+  - leetcode:balanced-binary-tree
+  - leetcode:diameter-of-binary-tree
+  - cses:1674
+  - leetcode:longest-univalue-path
+  - leetcode:binary-tree-maximum-path-sum
+  - leetcode:distribute-coins-in-binary-tree
+  - leetcode:binary-tree-cameras
+  - leetcode:binary-tree-right-side-view
+  - leetcode:path-sum-ii
+  - leetcode:lowest-common-ancestor-of-a-binary-tree
+  - leetcode:all-nodes-distance-k-in-binary-tree
+  - leetcode:maximum-width-of-binary-tree
+showcase:
+- 'Why returning both branches builds an impossible path: 15 instead of 11'
+status: provisional
+provenance:
+  origin: original

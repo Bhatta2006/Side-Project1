@@ -1,0 +1,63 @@
+id: quiz:dsa:recursion-patterns:string-generation
+family: string-generation
+concept: dsa:recursion-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: close-rule
+  band: 2
+  format: mcq
+  prompt: Building balanced brackets, the code allows ")" whenever fewer than n have been used. Which bad string can it produce for n = 2?
+  options:
+  - ')(()'
+  - '(())'
+  - '()()'
+  - None
+  answer: 0
+  misconceptions:
+  - null
+  - gen-close-limit-n
+  - gen-close-limit-n
+  - filter-ignored
+  explanation: A ")" first closes nothing; the rule must be closed < opened.
+- id: count
+  band: 3
+  format: trace
+  prompt: How many strings does the generator print for n = 3?
+  options:
+  - '5'
+  - '20'
+  - '6'
+  - '64'
+  answer: 0
+  misconceptions:
+  - null
+  - gen-close-limit-n
+  - trace-step-slip
+  - filter-ignored
+  explanation: ((())), (()()), (())(), ()(()) and ()()().
+- id: prefix
+  band: 4
+  format: classify
+  prompt: Why check the rule before each extension instead of filtering finished strings?
+  options:
+  - Invalid prefixes are never extended, so the work follows the output size
+  - Filtering gives wrong answers
+  - Recursion cannot filter
+  - It changes the order of the output
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-filter-vs-valid-prefix
+  - pattern-brute-force-default
+  - order-matters-assumption
+  explanation: Filtering explores all 2^(2n) strings.
+status: provisional
+provenance:
+  origin: original

@@ -6,6 +6,7 @@ skill can reuse an existing foundation without duplicating it.
 """
 
 import random
+import re
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
@@ -87,6 +88,11 @@ class QuizItem(Model):
     explanation: str = Field(min_length=5, max_length=2000)
     difficulty: int = Field(ge=1, le=5)
     provenance: Provenance | None = None
+    # Ids this item had before a rename, so stored sessions and placements still resolve.
+    former_ids: list[Slug] = Field(default_factory=list)
+
+    def matches(self, item_id: str) -> bool:
+        return item_id == self.id or item_id in self.former_ids
 
     def snippet(self, language: str) -> str | None:
         """The code shown with this question in the learner's language, if any."""
@@ -94,6 +100,25 @@ class QuizItem(Model):
             if key == language:
                 return value
         return next(iter(self.code.values()), None)
+
+    def fits(self, language: str) -> bool:
+        """False for items written about another language ("In C++, ...", id ``cpp-...``)."""
+        names = {"c++": "cpp", "cpp": "cpp", "java": "java", "python": "python", "py": "python"}
+        lead = re.match(
+            r"\s*In ((?:C\+\+|Java|Python)(?:\s*(?:,|or|and)\s*(?:C\+\+|Java|Python))*)",
+            self.prompt,
+        )
+        named = (
+            {names[x.lower()] for x in re.findall(r"C\+\+|Java|Python", lead.group(1))}
+            if lead
+            else set()
+        )
+        prefix = self.id.split("-", 1)[0]
+        if not named and prefix in names and "-" in self.id:
+            named = {names[prefix]}
+        if self.code and language not in self.code:
+            return False  # its code exists only in other languages
+        return not named or language in named
 
     def order(self, seed: str) -> list[int]:
         """Display position -> authored option index, fixed per (seed, item).
@@ -135,14 +160,33 @@ class Concept(Model):
     prerequisites: list[Ref] = Field(default_factory=list)
     difficulty: int = Field(ge=1, le=5)
     estimated_minutes: int = Field(ge=10, le=600)
-    lesson: str = Field(min_length=200)
-    key_points: list[str] = Field(min_length=2, max_length=8)
+    lesson: str = Field(min_length=1)
+    key_points: list[str] = Field(default_factory=list, max_length=8)
     pitfalls: list[str] = Field(default_factory=list, max_length=8)
-    resources: list[Resource] = Field(min_length=2, max_length=8)
-    quiz: list[QuizItem] = Field(min_length=2, max_length=10)
+    resources: list[Resource] = Field(default_factory=list, max_length=8)
+    quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None
+    # A draft is being authored: validated and kept in the graph, but never served.
+    status: Literal["draft", "live"] = "live"
+
+    @model_validator(mode="after")
+    def live_is_complete(self):
+        if self.status == "live":
+            missing = [
+                name
+                for name, ok in (
+                    ("a lesson of at least 200 characters", len(self.lesson) >= 200),
+                    ("at least 2 key points", len(self.key_points) >= 2),
+                    ("at least 2 resources", len(self.resources) >= 2),
+                    ("at least 2 quiz items", len(self.quiz) >= 2),
+                )
+                if not ok
+            ]
+            if missing:
+                raise ValueError(f"live concept {self.id} needs {', '.join(missing)}")
+        return self
 
 
 class Example(Model):

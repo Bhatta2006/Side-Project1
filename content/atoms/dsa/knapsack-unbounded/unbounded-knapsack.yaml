@@ -1,0 +1,126 @@
+concept: dsa:knapsack-unbounded
+pattern: dsa:knapsack-unbounded/unbounded-knapsack
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the unbounded knapsack pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/knapsack-unbounded/unbounded-knapsack.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: uk-worked
+  kind: worked
+  title: 'Worked: rod pieces 1 2 3 4, length 4'
+  objective: Fill one row forwards and read the answer.
+  seconds: 100
+  body: 'Prices 1 5 8 9. After the length-1 piece, dp = 0 1 2 3 4. With the length-2 piece, going forwards,
+    dp[2] = 5, dp[3] = max(3, dp[1] + 5) = 6 and dp[4] = max(4, dp[2] + 5) = 10, because dp[2] already
+    holds one length-2 piece. Lengths 3 and 4 raise dp[3] to 8 but cannot beat 10 at dp[4]. Answer 10.'
+  why: Reading a cell already updated for this piece is what lets the piece be used twice.
+- id: uk-faded
+  kind: faded
+  title: 'Your turn: pieces 2 and 3, prices 3 and 5, length 6'
+  objective: Apply the forward update yourself.
+  seconds: 90
+  body: Start with dp = 0 0 0 0 0 0 0 for lengths 0 to 6.
+  steps:
+  - state: Piece (len 2, price 3), lengths 2 up to 6.
+    prompt: What is dp after this piece?
+    options:
+    - 0 0 3 3 6 6 9
+    - 0 0 3 3 3 3 3
+    - 0 3 6 9 12 15 18
+    answer: 0
+    explanation: Every 2 units add another copy worth 3.
+  - state: dp = 0 0 3 3 6 6 9. Piece (len 3, price 5), length 5.
+    prompt: What is dp[5]?
+    options:
+    - '8'
+    - '6'
+    - '10'
+    answer: 0
+    explanation: max(6, dp[2] + 5) = max(6, 3 + 5) = 8.
+  - state: Same piece, length 6, with dp[3] already updated to 5.
+    prompt: What is dp[6]?
+    options:
+    - '10'
+    - '9'
+    - '8'
+    answer: 0
+    explanation: max(9, dp[3] + 5) = max(9, 5 + 5) = 10, two pieces of length 3.
+- id: uk-visualizer
+  kind: visualizer
+  title: 'Step through: forwards versus backwards'
+  objective: See how the loop direction allows or blocks a second copy.
+  seconds: 110
+  body: One piece (len 2, price 5), length 4. Compare the two loop directions.
+  steps:
+  - state: 'Forwards: c = 2 first sets dp[2] = 5. Then c = 4.'
+    prompt: What does dp[4] become?
+    options:
+    - '10'
+    - '5'
+    - '0'
+    answer: 0
+    explanation: 'dp[2] + 5 = 5 + 5 = 10: two copies.'
+  - state: 'Backwards: c = 4 first. dp[2] is still 0.'
+    prompt: What does dp[4] become?
+    options:
+    - '5'
+    - '10'
+    - '0'
+    answer: 0
+    explanation: dp[2] + 5 = 0 + 5 = 5, one copy only.
+  - state: Pieces can be cut as many times as you like.
+    prompt: Which direction is correct?
+    options:
+    - Forwards
+    - Backwards
+    - Either
+    answer: 0
+    explanation: Forwards reads the cell that already holds this piece, so it can be reused.
+- id: uk-micro
+  kind: micro
+  title: 'Pitfall: the backwards loop in an unbounded problem'
+  objective: Know why the unbounded loop must run upwards.
+  seconds: 80
+  misconception: unbounded-vs-01
+  body: 'The one-row 0/1 template loops capacity from W down, so an item is used once. Copy it into an
+    unbounded problem and every coin or piece is still used once. Pieces 1 and 2 with prices 1 and 5 and
+    length 4 give 6 backwards instead of 10. Unlimited copies need the loop from w up to W, so dp[c − w]
+    already includes this item.'
+  why: Loop direction alone decides between once and unlimited.
+- id: uk-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate unbounded knapsack from its neighbours.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Cut a pipe of length 500 into standard lengths, each sold at a fixed price, as many of each
+      as you like.
+    prompt: Which approach?
+    options:
+    - Unbounded knapsack (capacity forwards)
+    - 0/1 knapsack (capacity backwards)
+    - Greedy by price per length
+    answer: 0
+    explanation: Unlimited copies of each length is the unbounded family.
+  - state: Choose some of 30 one-off gifts to maximise joy within a budget of 1000.
+    prompt: Which approach?
+    options:
+    - 0/1 knapsack (capacity backwards)
+    - Unbounded knapsack
+    - Greedy by joy per cost
+    answer: 0
+    explanation: Each gift exists once.
+  - state: Count the ordered sequences of steps of size 1, 3 or 5 that reach stair 40.
+    prompt: Which loop goes outside?
+    options:
+    - The amount (permutations)
+    - The step sizes (combinations)
+    - Either
+    answer: 0
+    explanation: Different orders are different climbs, so the amount loop is outside.

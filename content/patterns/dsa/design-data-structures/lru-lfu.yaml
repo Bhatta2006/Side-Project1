@@ -1,0 +1,159 @@
+id: dsa:design-data-structures/lru-lfu
+concept: dsa:design-data-structures
+title: 'LRU cache: a hash map to find the node, a linked list to move it'
+tracks:
+- interview
+- competitive
+recognise:
+- A cache with a capacity, where something must leave when it is full
+- get and put in O(1), with an eviction rule based on use
+- An access changes the order, so items move from the middle to the front
+state: a map key -> node and a doubly linked list of nodes in use order, most recent first
+transition: a hit moves its node to the front; a new key into a full cache removes the node before the tail first
+base_cases:
+- an empty list is just the two sentinels, head and tail
+complexity:
+  time: O(1) per operation
+  space: O(capacity)
+template:
+  python: |
+    import sys
+    from collections import OrderedDict
+
+    data = sys.stdin.read().split()
+    cap, q, pos = int(data[0]), int(data[1]), 2
+    cache = OrderedDict()  # key -> value, least recently used first
+    out = []
+    for _ in range(q):
+        if data[pos] == "get":
+            key = int(data[pos + 1])
+            pos += 2
+            if key in cache:
+                cache.move_to_end(key)  # a hit makes it the most recently used
+            out.append(str(cache.get(key, -1)))
+        else:
+            key, val = int(data[pos + 1]), int(data[pos + 2])
+            pos += 3
+            if key in cache:
+                cache.move_to_end(key)  # an update is a use too, and evicts nothing
+            elif len(cache) == cap:
+                cache.popitem(last=False)  # evict the least recently used
+            cache[key] = val
+    print("\n".join(out))
+  cpp: |
+    #include <bits/stdc++.h>
+    using namespace std;
+
+    int main() {
+        int cap, q;
+        cin >> cap >> q;
+        list<pair<int, int>> order;  // (key, value), most recently used first
+        unordered_map<int, list<pair<int, int>>::iterator> where;  // key -> its node in the list
+        while (q--) {
+            string op;
+            int key, val;
+            cin >> op >> key;
+            auto it = where.find(key);
+            if (op == "get") {
+                if (it != where.end()) order.splice(order.begin(), order, it->second);  // to the front, O(1)
+                cout << (it != where.end() ? it->second->second : -1) << "\n";
+                continue;
+            }
+            cin >> val;
+            if (it != where.end()) order.erase(it->second);  // an update: drop the old node
+            else if ((int)order.size() == cap) where.erase(order.back().first), order.pop_back();  // evict
+            order.push_front({key, val});
+            where[key] = order.begin();
+        }
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int cap = in.nextInt(), q = in.nextInt();
+            Map<Integer, Integer> cache = new LinkedHashMap<>(16, 0.75f, true) {  // access order: LRU first
+                protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
+                    return size() > cap;  // evict the least recently used after an insert
+                }
+            };
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < q; i++) {
+                String op = in.next();
+                int key = in.nextInt();
+                if (op.equals("get")) out.append(cache.getOrDefault(key, -1)).append('\n');
+                else cache.put(key, in.nextInt());
+            }
+            System.out.print(out);
+        }
+    }
+template_io:
+  stdin: |
+    2 9
+    put 1 1
+    put 2 2
+    get 1
+    put 3 3
+    get 2
+    put 4 4
+    get 1
+    get 3
+    get 4
+  expected: |-
+    1
+    -1
+    -1
+    3
+    4
+variants:
+- id: lru
+  band: 2
+  title: LRU cache
+  problem: leetcode:lru-cache
+- id: browser
+  band: 2
+  title: Browser history with a cursor
+  problem: leetcode:design-browser-history
+- id: random-set
+  band: 3
+  title: Array plus index map
+  problem: leetcode:insert-delete-getrandom-o1
+- id: underground
+  band: 3
+  title: Two maps kept in step
+  problem: leetcode:design-underground-system
+- id: lfu
+  band: 5
+  title: One LRU list per frequency
+  problem: leetcode:lfu-cache
+- id: all-one
+  band: 6
+  title: Buckets of keys by count
+  problem: leetcode:all-oone-data-structure
+pitfalls:
+- lru-fifo-not-lru
+- lru-get-no-refresh
+- lru-evict-on-update
+- lru-capacity-off-by-one
+- pattern-queue-vs-linked-list
+atoms:
+- lru-worked
+- lru-faded
+- lru-visualizer
+- lru-micro
+- lru-classify
+quiz_family: quiz:dsa:design-data-structures:lru-lfu
+problems:
+  external:
+  - leetcode:lru-cache
+  - leetcode:design-browser-history
+  - leetcode:insert-delete-getrandom-o1
+  - leetcode:design-underground-system
+  - leetcode:lfu-cache
+  - leetcode:all-oone-data-structure
+showcase:
+- 'Why a queue of arrivals answers 2 instead of -1: a get must move a key from the middle'
+status: provisional
+provenance:
+  origin: original

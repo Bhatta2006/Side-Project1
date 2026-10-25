@@ -1,0 +1,63 @@
+id: quiz:dsa:monotonic-stack:histogram-area
+family: histogram-area
+concept: dsa:monotonic-stack
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: value
+  band: 2
+  format: trace
+  prompt: Bars 2 4 4 1. What is the largest rectangle?
+  options:
+  - '8'
+  - '4'
+  - '6'
+  - '11'
+  answer: 0
+  misconceptions:
+  - null
+  - histogram-tallest-only
+  - histogram-width-off-by-one
+  - count-vs-sum
+  explanation: The two 4s at height 4, width 2.
+- id: width
+  band: 3
+  format: mcq
+  prompt: A bar is popped at i; the index now on top is left. What is the width of its rectangle?
+  options:
+  - i − left − 1
+  - i − left
+  - i
+  - i − left + 1
+  answer: 0
+  misconceptions:
+  - null
+  - histogram-width-off-by-one
+  - histogram-width-off-by-one
+  - off-by-one-output
+  explanation: The bars strictly between left and i.
+- id: sentinel
+  band: 4
+  format: bug_spot
+  prompt: There is no 0-height bar at the end. Which input gives a wrong answer?
+  options:
+  - 1 2 3, because no bar is ever popped
+  - 3 2 1
+  - '5'
+  - 2 2
+  answer: 0
+  misconceptions:
+  - null
+  - histogram-no-sentinel
+  - histogram-no-sentinel
+  - histogram-no-sentinel
+  explanation: An increasing histogram never pops; the answer would stay 0.
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,124 @@
+concept: dsa:design-data-structures
+pattern: dsa:design-data-structures/lru-lfu
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the LRU cache pattern pack (syllabus expansion, Phase 3).
+rollback: remove content/atoms/dsa/design-data-structures/lru-lfu.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: lru-worked
+  kind: worked
+  title: 'Worked: capacity 2, nine operations'
+  objective: Track the use order through gets and puts.
+  seconds: 110
+  body: 'put 1 and put 2 give the order 2 1 (most recent first). get 1 prints 1 and makes it 1 2. put 3
+    finds the cache full and evicts the key at the back, 2: the order is 3 1. get 2 prints −1. put 4
+    evicts 1: 4 3. get 1 prints −1, get 3 prints 3 (order 3 4) and get 4 prints 4.'
+  why: Every use moves a key to the front, so the back is always the least recently used.
+- id: lru-faded
+  kind: faded
+  title: 'Your turn: an update in a full cache'
+  objective: Apply the rules to an update.
+  seconds: 90
+  body: Capacity 2. put 1 1, put 2 2, put 1 10, put 3 3, get 1, get 2.
+  steps:
+  - state: The cache holds keys 1 and 2, and put 1 10 arrives.
+    prompt: What happens?
+    options:
+    - Key 1 gets the value 10 and becomes the most recent; nothing is evicted
+    - Key 2 is evicted
+    - Key 1 is evicted and added again
+    answer: 0
+    explanation: Updating does not add a key.
+  - state: put 3 3 arrives; the use order is 1 then 2.
+    prompt: Which key is evicted?
+    options:
+    - '2'
+    - '1'
+    - None
+    answer: 0
+    explanation: Key 2 was used least recently.
+  - state: get 1 and get 2 run.
+    prompt: What do they print?
+    options:
+    - 10 and −1
+    - 1 and 2
+    - −1 and 2
+    answer: 0
+    explanation: Key 1 holds 10; key 2 is gone.
+- id: lru-visualizer
+  kind: visualizer
+  title: 'Step through: why a queue is not enough'
+  objective: See a get needing removal from the middle.
+  seconds: 110
+  body: Capacity 3 holding keys 1, 2 and 3, which arrived in that order.
+  steps:
+  - state: get 2 runs.
+    prompt: Where must key 2 go in the use order?
+    options:
+    - To the front, as the most recent
+    - It stays where it is
+    - It leaves the cache
+    answer: 0
+    explanation: A get is a use.
+  - state: Key 2 sits in the middle of a queue of arrivals.
+    prompt: Can a queue move it to the front in O(1)?
+    options:
+    - No; a queue only adds and removes at its ends
+    - Yes, by popping it
+    - Yes, by sorting
+    answer: 0
+    explanation: Moving it means removing it from the middle.
+  - state: A doubly linked list plus a map from key to node.
+    prompt: How is key 2 moved?
+    options:
+    - Find its node in the map, cut its two links, insert it after the head
+    - Scan the list for it
+    - Rebuild the list
+    answer: 0
+    explanation: All O(1).
+- id: lru-micro
+  kind: micro
+  title: 'Pitfall: evicting in arrival order'
+  objective: Count every get as a use.
+  seconds: 80
+  misconception: lru-fifo-not-lru
+  body: 'A hash map plus a queue of arrivals evicts the key that arrived first, which is FIFO, not LRU.
+    In put 1, put 2, get 1, put 3 with capacity 2, FIFO evicts key 1 although it was just used; LRU
+    evicts key 2. Keep the keys in use order, and move a key to the front on every get and put.'
+  why: Least recently used depends on every access, not only on arrival.
+- id: lru-classify
+  kind: classify
+  title: Which design?
+  objective: Pick the structures for each design.
+  seconds: 90
+  body: For each design, choose the best-fitting structures.
+  steps:
+  - state: insert, remove and getRandom, all in O(1).
+    prompt: Which structures?
+    options:
+    - An array plus a value → index map, deleting by moving the last value into the hole
+    - A hash set alone
+    - A sorted array
+    answer: 0
+    explanation: The array gives random access; the map finds positions.
+  - state: get(key, t) returns the value set most recently at or before time t.
+    prompt: Which structures?
+    options:
+    - Per key, a history sorted by time, searched with binary search
+    - A map of the latest values
+    - A queue
+    answer: 0
+    explanation: Past times need the whole history.
+  - state: A cache that evicts the least frequently used key, ties by least recent.
+    prompt: Which structures?
+    options:
+    - One LRU list per frequency, plus the smallest frequency in use
+    - One LRU list
+    - A min-heap of keys only
+    answer: 0
+    explanation: Frequency picks the list, recency picks inside it.

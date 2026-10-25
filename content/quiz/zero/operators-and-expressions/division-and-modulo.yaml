@@ -1,0 +1,228 @@
+id: quiz:zero:operators-and-expressions:division-and-modulo
+family: division-and-modulo
+concept: zero:operators-and-expressions
+pattern: zero:operators-and-expressions/division-and-modulo
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+generator:
+  template: split_units
+  params:
+    seconds:
+    - 3700
+    - 40000
+  reference: split(t)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: take the minutes from the whole total
+  misconception: mod-chain-missing
+- rule: use % for the hours and // for the rest
+  misconception: mod-swap-div
+- rule: take the seconds modulo 3600
+  misconception: mod-wrong-divisor
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is answered with whole-number division and remainder?
+  options:
+  - How many weeks and days are in 100 days?
+  - Which of two numbers is bigger?
+  - How many letters are in a word?
+  - Is a word a palindrome?
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - count-not-sum
+  - pattern-search-vs-scan
+  explanation: 100 // 7 weeks and 100 % 7 days.
+- id: meaning
+  band: 1
+  format: mcq
+  prompt: What does 17 % 5 give?
+  options:
+  - 2, what is left after taking out three 5s
+  - 3, the number of whole 5s
+  - '3.4'
+  - '85'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-divide-vs-remainder
+  - python-slash-decimal
+  - product-not-sum
+  explanation: 17 = 3 · 5 + 2.
+- id: hours
+  band: 2
+  format: trace
+  prompt: t = 9000 seconds. What is t // 3600?
+  options:
+  - '2'
+  - '1800'
+  - '150'
+  - '2.5'
+  answer: 0
+  misconceptions:
+  - null
+  - mod-swap-div
+  - mod-wrong-divisor
+  - python-slash-decimal
+  explanation: Two whole hours (7200 seconds) fit.
+- id: left
+  band: 2
+  format: trace
+  prompt: t = 9000. What is t % 3600 // 60?
+  options:
+  - '30'
+  - '150'
+  - '0'
+  - '1800'
+  answer: 0
+  misconceptions:
+  - null
+  - mod-chain-missing
+  - mod-wrong-divisor
+  - mod-swap-div
+  explanation: 1800 seconds are left after the hours, which is 30 minutes.
+- id: whole-total
+  band: 3
+  format: trace
+  prompt: For t = 3725, the code uses m = t // 60. What does it print as h m s?
+  options:
+  - 1 62 5
+  - 1 2 5
+  - 62 1 5
+  - 1 2 125
+  answer: 0
+  misconceptions:
+  - null
+  - mod-chain-missing
+  - mod-swap-div
+  - mod-wrong-divisor
+  explanation: t // 60 also counts the minutes inside the hour.
+- id: python-slash
+  band: 3
+  format: trace
+  prompt: In Python, what is 3725 / 3600?
+  options:
+  - About 1.03, a decimal
+  - '1'
+  - '125'
+  - An error
+  answer: 0
+  misconceptions:
+  - null
+  - python-slash-decimal
+  - mod-swap-div
+  - syntax-delimiters
+  explanation: In Python, / always gives a decimal; // gives the whole number.
+- id: negative
+  band: 4
+  format: trace
+  prompt: What does -7 % 2 give in Python, and in Java?
+  options:
+  - 1 in Python, −1 in Java
+  - −1 in both
+  - 1 in both
+  - −1 in Python, 1 in Java
+  answer: 0
+  misconceptions:
+  - null
+  - mod-wrong-modulus
+  - mod-wrong-modulus
+  - python-slash-decimal
+  explanation: Python rounds division down, Java towards zero, and the remainder follows.
+- id: cycle
+  band: 4
+  format: trace
+  prompt: Today is day 2 of the week (days 0 to 6). Which day is it in 100 days?
+  options:
+  - '4'
+  - '102'
+  - '14'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - mod-chain-missing
+  - mod-swap-div
+  - off-by-one-output
+  explanation: (2 + 100) % 7 = 4.
+- id: digits
+  band: 5
+  format: classify
+  prompt: How do you get the tens digit of n = 4729?
+  options:
+  - n // 10 % 10
+  - n % 10
+  - n // 10
+  - n % 100
+  answer: 0
+  misconceptions:
+  - null
+  - mod-wrong-divisor
+  - mod-chain-missing
+  - mod-wrong-divisor
+  explanation: Drop the last digit with // 10, then take the last digit of the rest with % 10.
+- id: round-up
+  band: 5
+  format: classify
+  prompt: Which expression gives the number of boxes of 12 needed for n eggs?
+  options:
+  - (n + 11) // 12
+  - n // 12 + 1
+  - n % 12
+  - n // 12
+  answer: 0
+  misconceptions:
+  - null
+  - ceil-vs-floor
+  - mod-swap-div
+  - ceil-vs-floor
+  explanation: Adding 11 rounds up exactly when there is a remainder.
+- id: weeks
+  band: 6
+  format: classify
+  prompt: d is a number of hours. Which gives the weeks, days and hours left, in that order?
+  options:
+  - d // 168, d % 168 // 24, d % 24
+  - d // 168, d // 24, d % 24
+  - d % 168, d // 24, d // 24
+  - d // 7, d % 7, d
+  answer: 0
+  misconceptions:
+  - null
+  - mod-chain-missing
+  - mod-swap-div
+  - mod-wrong-divisor
+  explanation: The same chain as seconds, with units of 168 and 24 hours.
+- id: change
+  band: 6
+  format: trace
+  prompt: 87 cents in coins of 25, 10, 5 and 1, taking the biggest coins first. How many 10-cent coins?
+  options:
+  - '1'
+  - '8'
+  - '3'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - mod-chain-missing
+  - mod-swap-div
+  - trace-step-slip
+  explanation: 87 // 25 = 3 leaves 12, and 12 // 10 = 1.
+status: provisional
+provenance:
+  origin: original

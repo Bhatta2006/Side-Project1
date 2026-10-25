@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from socrat.catalog import atoms
 from socrat.catalog.registry import CONTENT_ROOT, default_catalog
 from socrat.learn import pattern_sessions
-from socrat.models import Evidence, LearningSession
+from socrat.mastery.model import placed
+from socrat.models import ConceptState, Enrollment, Evidence, LearningSession, now
 from socrat.planner import patterns as P
 
 CAT = default_catalog()
@@ -334,6 +335,21 @@ def test_session_start_uses_the_pattern_planner_only_with_the_flag(tmp_path, mon
     with client:
         headers = login(client)
         onboard(client, headers, course="zero")
+        # Patterns wait for their course prerequisites: place the learner past every concept
+        # that has no pattern, so the patterns built on them are ready to teach.
+        catalog = default_catalog()
+        taught = {p.concept for p in catalog.patterns.values()}
+        with Session(app.state.engine) as db, db.begin():
+            enrollment = db.scalar(select(Enrollment).where(Enrollment.active.is_(True)))
+            for concept in catalog.course_concepts("zero"):
+                if concept not in taught:
+                    db.merge(
+                        ConceptState(
+                            enrollment_id=enrollment.id,
+                            concept=concept,
+                            state=placed(True, now()).to_dict(),
+                        )
+                    )
         assert client.get("/api/v1/features").json()["pattern_planner"] is enabled
         view = client.post(
             "/api/v1/learning-sessions", json={"minutes": 30}, headers=headers
@@ -346,7 +362,7 @@ def test_session_start_uses_the_pattern_planner_only_with_the_flag(tmp_path, mon
                 assert not any("pattern" in b for b in row.payload["blocks"])
                 return
             assert plan["type"] == "intro" and plan["pattern"].startswith("zero:")
-            assert len(plan["scores"]) == 3 and set(plan["scores"][0]["parts"]) >= {
+            assert len(plan["scores"]) >= 1 and set(plan["scores"][0]["parts"]) >= {
                 "weakness",
                 "diversity",
             }

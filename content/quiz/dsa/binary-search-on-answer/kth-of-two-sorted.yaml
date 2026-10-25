@@ -1,0 +1,63 @@
+id: quiz:dsa:binary-search-on-answer:kth-of-two-sorted
+family: kth-of-two-sorted
+concept: dsa:binary-search-on-answer
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: half
+  band: 2
+  format: trace
+  prompt: a = 1 3 8 9, b = 2 4 5 7 10, k = 6. Taking 3 from each array suggests 8. What is the 6th smallest?
+  options:
+  - '7'
+  - '8'
+  - '5'
+  - '9'
+  answer: 0
+  misconceptions:
+  - null
+  - kth-half-each
+  - off-by-one-output
+  - kth-half-each
+  explanation: Two come from a and four from b.
+- id: range
+  band: 3
+  format: mcq
+  prompt: a has 4 elements, b has 5, k = 6. What range does i (taken from a) search?
+  options:
+  - 1 to 4
+  - 0 to 6
+  - 0 to 4
+  - 1 to 6
+  answer: 0
+  misconceptions:
+  - null
+  - search-range-confusion
+  - search-range-confusion
+  - search-range-confusion
+  explanation: At least k − 5 = 1 must come from a, and at most 4 can.
+- id: counting
+  band: 4
+  format: classify
+  prompt: The k-th smallest pair distance among n numbers. Why search on the distance instead of a split?
+  options:
+  - There is no single array to split; counting pairs at most d is easy
+  - Distances are already sorted
+  - It is the only O(1) method
+  - Splits only work for k = 1
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-needs-sorted-input
+  - pattern-brute-force-default
+  - kth-half-each
+  explanation: The first d with count ≥ k is the answer.
+status: provisional
+provenance:
+  origin: original

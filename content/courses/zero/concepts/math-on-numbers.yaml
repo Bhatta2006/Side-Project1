@@ -1,0 +1,849 @@
+id: math-on-numbers
+title: Math on numbers
+summary: Digit tricks with % 10 and // 10, divisors and primes in O(sqrt n), Euclid's GCD and simple sequences.
+module: control-flow
+prerequisites:
+- while-loops
+- operators-and-expressions
+difficulty: 2
+estimated_minutes: 60
+lesson: |
+  ## The big idea
+
+  A large share of beginner problems are about **one whole number**: its digits, its
+  divisors, whether it is prime, what it has in common with another number. They all use the
+  same two tools from the operators lesson, `% 10` and `// 10` (or `% i` and `// i`), inside a
+  `while` loop. The trick that turns slow loops into fast ones is the **square root**: divisors
+  come in pairs, so you only need to look at half of each pair.
+
+  ## Digit extraction
+
+  ### Recognition cues
+
+  - Count, add up, reverse or inspect the **digits** of a number.
+  - The number is given as an integer, and you are not supposed to turn it into text.
+
+  ### Template
+
+  Print the number of digits, their sum and the number reversed. Input: n ≥ 0.
+
+  ```python
+  n = int(input())
+  digits = total = reverse = 0
+  if n == 0:
+      digits = 1  # 0 still has one digit
+  while n > 0:
+      d = n % 10  # the last digit
+      digits += 1
+      total += d
+      reverse = reverse * 10 + d  # shift left, then add the digit
+      n //= 10  # drop the last digit
+  print(digits, total, reverse)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long n, digits = 0, total = 0, reverse = 0;
+      cin >> n;
+      if (n == 0) digits = 1;  // 0 still has one digit
+      while (n > 0) {
+          long long d = n % 10;  // the last digit
+          digits++;
+          total += d;
+          reverse = reverse * 10 + d;  // shift left, then add the digit
+          n /= 10;  // drop the last digit
+      }
+      cout << digits << " " << total << " " << reverse << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long n = new Scanner(System.in).nextLong(), digits = 0, total = 0, reverse = 0;
+          if (n == 0) digits = 1;  // 0 still has one digit
+          while (n > 0) {
+              long d = n % 10;  // the last digit
+              digits++;
+              total += d;
+              reverse = reverse * 10 + d;  // shift left, then add the digit
+              n /= 10;  // drop the last digit
+          }
+          System.out.println(digits + " " + total + " " + reverse);
+      }
+  }
+  ```
+
+  ### Anchor problem: 4729
+
+  `4729` prints **4 22 9274**.
+
+  **Wrong first attempt — stop at one digit.** `while n > 9` looks natural ("while there is
+  more than one digit"), but it stops before the last remaining digit is processed: it
+  reports 3 digits, a sum of 18 and the reverse 927. The loop must run **while n > 0**, once
+  per digit, and the number 0 needs its own case because the loop never runs for it.
+
+  ### Variants
+
+  1. *Find numbers with even number of digits*: count digits per number.
+  2. *Add digits*: repeat the digit sum until one digit is left.
+  3. *Alternating digit sum*: the sign flips per digit, from the front.
+  4. *Palindrome number*: reverse and compare.
+
+  ### Contrast
+
+  **Digits or text?** `str(n)` gives the digits as characters and is fine when allowed. The
+  `% 10` loop works on the number itself, which many problems require and which every
+  language supports the same way.
+
+  ### Common mistakes
+
+  - `while n > 9`, which skips the leading digit.
+  - Forgetting that 0 has one digit.
+  - `reverse = d * 10 + reverse`, which builds the number backwards.
+
+  ## Digit properties
+
+  ### Recognition cues
+
+  - "A number is called *special* if …" followed by a rule about its digits: Armstrong
+    numbers, strong numbers (sum of digit factorials), self-dividing numbers.
+  - Check one number, or count the special numbers in a range.
+
+  ### Template
+
+  An Armstrong number equals the sum of its digits, each raised to the number of digits.
+  Input: n. Print `yes` or `no`.
+
+  ```python
+  n = int(input())
+  k = len(str(n))  # how many digits n has
+  total, m = 0, n
+  while m > 0:
+      total += (m % 10) ** k
+      m //= 10
+  print("yes" if total == n else "no")
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long n;
+      cin >> n;
+      int k = 0;
+      for (long long m = n; m > 0; m /= 10) k++;  // how many digits n has
+      if (n == 0) k = 1;
+      long long total = 0;
+      for (long long m = n; m > 0; m /= 10) {
+          long long p = 1;
+          for (int j = 0; j < k; j++) p *= m % 10;  // digit to the power k, in whole numbers
+          total += p;
+      }
+      cout << (total == n ? "yes" : "no") << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long n = new Scanner(System.in).nextLong();
+          int k = String.valueOf(n).length();  // how many digits n has
+          long total = 0;
+          for (long m = n; m > 0; m /= 10) {
+              long p = 1;
+              for (int j = 0; j < k; j++) p *= m % 10;  // digit to the power k, in whole numbers
+              total += p;
+          }
+          System.out.println(total == n ? "yes" : "no");
+      }
+  }
+  ```
+
+  ### Anchor problem: 153 and 1634
+
+  `153` prints **yes** (1 + 125 + 27), and so does `1634` (1 + 1296 + 81 + 256).
+
+  **Wrong first attempt — always cubes.** Many first examples are three digits, so the
+  power 3 gets hard-coded. For 1634 the cubes add up to 308 and the program says `no`. The
+  power is the **number of digits**, which must be counted first.
+
+  ### Variants
+
+  1. *Armstrong number*: the anchor.
+  2. *Self dividing numbers*: every digit divides the number (and 0 is not allowed).
+  3. *Count integers with even digit sum*: check each number in a range.
+
+  ### Contrast
+
+  **One pass or two?** When the rule needs something about all the digits (their count) before
+  using each digit, count first, then make a second pass.
+
+  ### Common mistakes
+
+  - Hard-coding the power instead of counting digits.
+  - `pow` in C++ returning a decimal that is slightly off; multiply whole numbers instead.
+  - Changing n itself in the loop and then comparing with the changed value.
+
+  ## Divisors up to the square root
+
+  ### Recognition cues
+
+  - The divisors of n: count them, add them up, list them, or ask for a special one.
+  - n is large (up to 10¹² or so), so trying every number up to n is too slow.
+
+  ### Template
+
+  Print the number of divisors of n and their sum. Input: n ≥ 1.
+
+  ```python
+  n = int(input())
+  count = total = 0
+  i = 1
+  while i * i <= n:  # every divisor pairs with n // i across the square root
+      if n % i == 0:
+          count += 1
+          total += i
+          if i != n // i:  # a square's root is its own partner
+              count += 1
+              total += n // i
+      i += 1
+  print(count, total)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long n, count = 0, total = 0;
+      cin >> n;
+      for (long long i = 1; i * i <= n; i++) {  // every divisor pairs with n / i across the root
+          if (n % i != 0) continue;
+          count++;
+          total += i;
+          if (i != n / i) {  // a square's root is its own partner
+              count++;
+              total += n / i;
+          }
+      }
+      cout << count << " " << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long n = new Scanner(System.in).nextLong(), count = 0, total = 0;
+          for (long i = 1; i * i <= n; i++) {  // every divisor pairs with n / i across the root
+              if (n % i != 0) continue;
+              count++;
+              total += i;
+              if (i != n / i) {  // a square's root is its own partner
+                  count++;
+                  total += n / i;
+              }
+          }
+          System.out.println(count + " " + total);
+      }
+  }
+  ```
+
+  ### Anchor problem: the divisors of 36
+
+  ```text
+  36
+  ```
+
+  36 has 9 divisors, 1 2 3 4 6 9 12 18 36, which add up to 91: the program prints **9 91**.
+
+  **Step 1 — try every number.** Test each d from 1 to n:
+
+  ```python
+  n = int(input())
+  count = total = 0
+  for d in range(1, n + 1):  # try every candidate
+      if n % d == 0:
+          count += 1
+          total += d
+  print(count, total)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long n, count = 0, total = 0;
+      cin >> n;
+      for (long long d = 1; d <= n; d++)  // try every candidate
+          if (n % d == 0) count++, total += d;
+      cout << count << " " << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long n = new Scanner(System.in).nextLong(), count = 0, total = 0;
+          for (long d = 1; d <= n; d++)  // try every candidate
+              if (n % d == 0) { count++; total += d; }
+          System.out.println(count + " " + total);
+      }
+  }
+  ```
+
+  It prints 9 91, but for n = 10¹² it would test a trillion numbers.
+
+  **Step 2 — wrong first attempt: stop at the root, always add the partner.** Every divisor
+  i below the square root has a partner n // i above it, so loop only up to the root and add
+  both:
+
+  ```python
+  n = int(input())
+  count = total = 0
+  i = 1
+  while i * i <= n:
+      if n % i == 0:
+          count += 2  # i and its partner n // i...
+          total += i + n // i
+      i += 1
+  print(count, total)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long n, count = 0, total = 0;
+      cin >> n;
+      for (long long i = 1; i * i <= n; i++)
+          if (n % i == 0) count += 2, total += i + n / i;  // i and its partner n / i...
+      cout << count << " " << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long n = new Scanner(System.in).nextLong(), count = 0, total = 0;
+          for (long i = 1; i * i <= n; i++)
+              if (n % i == 0) { count += 2; total += i + n / i; }  // i and its partner n / i...
+          System.out.println(count + " " + total);
+      }
+  }
+  ```
+
+  It prints **10 97**. At i = 6 the partner of 6 is 36 // 6 = 6 itself, so the 6 is counted
+  twice. A perfect square's root is the one divisor without a different partner.
+
+  **Step 3 — pairs, with the root counted once.** The template. Dry run for 36:
+
+  | i | 36 % i | divisors found | count | total |
+  |---|---|---|---|---|
+  | 1 | 0 | 1 and 36 | 2 | 37 |
+  | 2 | 0 | 2 and 18 | 4 | 57 |
+  | 3 | 0 | 3 and 12 | 6 | 72 |
+  | 4 | 0 | 4 and 9 | 8 | 85 |
+  | 5 | 1 | — | 8 | 85 |
+  | 6 | 0 | 6 only (6 · 6 = 36) | **9** | **91** |
+
+  The loop stops when i · i > 36, after only 6 steps instead of 36. For n = 10¹² that is a
+  million steps instead of a trillion: O(√n).
+
+  ### Variants
+
+  1. *Three divisors*: exactly three divisors means n is the square of a prime.
+  2. *The kth factor of n*: list the small divisors, then the partners in reverse.
+  3. *Perfect number*: the sum of the divisors other than n equals n.
+  4. *Four divisors*: count to four and add them up.
+  5. *Odd divisor* (Codeforces 1475A): divide out every factor 2 first.
+  6. *Counting divisors* (CSES): the same pairs, many queries.
+
+  ### Contrast
+
+  **Stop at the square root, or at n?** Divisors larger than √n are partners of divisors
+  smaller than √n, so the small ones find them all. Only the root of a perfect square has no
+  separate partner.
+
+  ### Common mistakes
+
+  - Counting the square root twice.
+  - `i * i < n`, which never reaches the root of a perfect square.
+  - `i <= sqrt(n)` with decimals, which can be off by one for big n; `i * i <= n` is exact.
+  - `i` and `i * i` in 32 bits when n is large: use 64-bit integers.
+
+  ## Primality
+
+  ### Recognition cues
+
+  - Is n prime? Or: count the primes, find the next prime, test many numbers.
+  - A prime has exactly two divisors, 1 and itself.
+
+  ### Template
+
+  Input: n. Print `prime` or `not prime`.
+
+  ```python
+  n = int(input())
+  prime = n >= 2  # 0 and 1 are not prime
+  i = 2
+  while i * i <= n and prime:  # a factor above the root has a partner below it
+      if n % i == 0:
+          prime = False  # found a divisor other than 1 and n
+      i += 1
+  print("prime" if prime else "not prime")
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long n;
+      cin >> n;
+      bool prime = n >= 2;  // 0 and 1 are not prime
+      for (long long i = 2; i * i <= n && prime; i++)  // a factor above the root has a partner below
+          if (n % i == 0) prime = false;  // found a divisor other than 1 and n
+      cout << (prime ? "prime" : "not prime") << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long n = new Scanner(System.in).nextLong();
+          boolean prime = n >= 2;  // 0 and 1 are not prime
+          for (long i = 2; i * i <= n && prime; i++)  // a factor above the root has a partner below
+              if (n % i == 0) prime = false;  // found a divisor other than 1 and n
+          System.out.println(prime ? "prime" : "not prime");
+      }
+  }
+  ```
+
+  ### Anchor problem: 97 and 1
+
+  `97` prints **prime** (no i from 2 to 9 divides it), and `1` prints **not prime**.
+
+  **Wrong first attempt — forget the small cases.** `prime = True` followed by the loop calls
+  1 prime, because the loop never runs for it. By definition a prime needs two different
+  divisors, so 0 and 1 are not prime. Looping all the way to n − 1 gives the right answers but
+  is O(n); the root is enough.
+
+  ### Variants
+
+  1. *Count primes*: test every number, or use a sieve (a later lesson).
+  2. *Closest prime numbers in range*: test candidates in order.
+  3. *T-primes* (Codeforces 230B): exactly three divisors, so the square of a prime.
+  4. *Almost prime* (Codeforces 26A): exactly two different prime factors.
+
+  ### Contrast
+
+  **Count divisors, or stop at the first one?** To decide primality, stop at the first
+  divisor found; counting all divisors does more work for the same yes or no.
+
+  ### Common mistakes
+
+  - Calling 1 prime.
+  - Starting the loop at 1, which divides everything.
+  - Stopping at `i < sqrt(n)` and missing a square of a prime, such as 49.
+
+  ## Euclid's GCD
+
+  ### Recognition cues
+
+  - The greatest common divisor (GCD) or least common multiple (LCM) of two numbers.
+  - Simplifying fractions, splitting into equal groups, cycles that line up again.
+
+  ### Template
+
+  Print gcd(a, b) and lcm(a, b). Input: a and b, both at least 1.
+
+  ```python
+  a, b = map(int, input().split())
+  x, y = a, b
+  while y != 0:
+      x, y = y, x % y  # gcd(x, y) = gcd(y, x % y)
+  print(x, a // x * b)  # lcm: divide first, so the product stays small
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long a, b;
+      cin >> a >> b;
+      long long x = a, y = b;
+      while (y != 0) {
+          long long r = x % y;  // gcd(x, y) = gcd(y, x % y)
+          x = y;
+          y = r;
+      }
+      cout << x << " " << a / x * b << "\n";  // lcm: divide first, so the product stays small
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          long a = in.nextLong(), b = in.nextLong(), x = a, y = b;
+          while (y != 0) {
+              long r = x % y;  // gcd(x, y) = gcd(y, x % y)
+              x = y;
+              y = r;
+          }
+          System.out.println(x + " " + a / x * b);  // lcm: divide first, so the product stays small
+      }
+  }
+  ```
+
+  ### Anchor problem: 12 and 18
+
+  `12 18` prints **6 36**. The pairs go (12, 18) → (18, 12) → (12, 6) → (6, 0).
+
+  **Wrong first attempt — subtract the smaller from the larger.** The oldest form of Euclid's
+  method subtracts: gcd(a, b) = gcd(a − b, b). It is correct, but for 10¹⁸ and 1 it subtracts
+  10¹⁸ times. The remainder `x % y` does all those subtractions at once, and the numbers at
+  least halve every two steps. For the LCM, `a * b // g` can overflow 64 bits in C++ and Java
+  even when the LCM itself fits; divide first.
+
+  ### Variants
+
+  1. *Find greatest common divisor of array*: the GCD of the smallest and the largest.
+  2. *Greatest common divisor of strings*: the same idea on string lengths.
+  3. *Common divisors* (CSES): the largest GCD of any pair.
+
+  ### Contrast
+
+  **Remainder or subtraction?** Both give the GCD. Subtraction can take as many steps as the
+  numbers are large; the remainder takes a few dozen steps even for 10¹⁸.
+
+  ### Common mistakes
+
+  - `a * b // g` overflowing in C++ and Java.
+  - Losing a or b by updating them in place, then using them for the LCM.
+  - Updating `x = y` before computing `x % y`.
+
+  ## Iterative sequences
+
+  ### Recognition cues
+
+  - Each term comes from the previous one or two: Fibonacci, Collatz, "repeat this step".
+  - Only the last few terms are needed, so a list of every term is not.
+
+  ### Template
+
+  Print the first n Fibonacci numbers. Input: n ≥ 1.
+
+  ```python
+  n = int(input())
+  a, b = 0, 1
+  out = []
+  for _ in range(n):
+      out.append(a)
+      a, b = b, a + b  # both new values come from the OLD pair
+  print(" ".join(map(str, out)))
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      long long a = 0, b = 1;
+      for (int i = 0; i < n; i++) {
+          cout << a << (i + 1 < n ? " " : "\n");
+          long long next = a + b;  // computed from the old pair before anything changes
+          a = b;
+          b = next;
+      }
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          int n = new Scanner(System.in).nextInt();
+          long a = 0, b = 1;
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) {
+              out.append(a).append(i + 1 < n ? " " : "\n");
+              long next = a + b;  // computed from the old pair before anything changes
+              a = b;
+              b = next;
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: seven terms
+
+  `7` prints **0 1 1 2 3 5 8**.
+
+  **Wrong first attempt — update one at a time.** `a = b` then `b = a + b` uses the **new** a,
+  so b just doubles: 0 1 2 4 8 16 32. Python's `a, b = b, a + b` computes both right-hand
+  values first; in C++ and Java, save the next value in a third variable before overwriting.
+
+  ### Variants
+
+  1. *Fibonacci number*: only the n-th term.
+  2. *N-th Tribonacci number*: three variables instead of two.
+  3. *Happy number*: repeat "sum of squared digits" until 1 or a repeat.
+
+  ### Contrast
+
+  **Keep every term, or only the last ones?** A list of all terms is simple but uses O(n)
+  memory; when each term needs only the previous one or two, two or three variables are
+  enough.
+
+  ### Common mistakes
+
+  - Updating the variables one at a time.
+  - Starting at 1 1 instead of 0 1 (check the problem's definition).
+  - Fibonacci numbers pass 2³¹ around the 47th term; use 64-bit integers.
+
+  ## Worked walkthrough
+
+  **Problem.** Simplify the fraction 84 / 126.
+
+  1. *Tool.* The fraction is simplest after dividing both parts by their GCD.
+  2. *Euclid.* (84, 126) → (126, 84) → (84, 42) → (42, 0): the GCD is 42.
+  3. *Divide.* 84 // 42 = 2 and 126 // 42 = 3, so the fraction is 2 / 3.
+  4. *Check.* gcd(2, 3) = 1, so nothing more divides both.
+
+  ### Why this works
+
+  Any number that divides both x and y also divides x − y, and so x % y, which is x minus a
+  multiple of y. The reverse holds too, so (x, y) and (y, x % y) have exactly the same common
+  divisors, and the greatest is the same. The remainder is smaller than y, so the pairs shrink
+  until y is 0, and gcd(x, 0) is x. The divisor loop works for a similar reason: if i · j = n
+  with i ≤ j, then i · i ≤ n, so the smaller divisor of every pair is found before the loop
+  stops.
+
+  ### Things to watch for
+
+  - Edge cases: 0 has one digit, 1 is not prime, and a perfect square's root is counted once.
+  - Use `i * i <= n`, not decimal square roots.
+  - Big numbers: 64-bit integers in C++ and Java, and divide before multiplying for the LCM.
+  - Update sequence variables from the old values.
+
+  ### Check your understanding
+
+  How many divisors does 49 have, and how many steps does the square-root loop take?
+
+  Try it on paper before reading the reasoning below.
+
+  > The divisors are 1, 7 and 49: three. The loop tries i = 1 to 7 (7 · 7 = 49), finds 1 with
+  > partner 49, and 7, which is its own partner. It stops after 7 steps.
+key_points:
+- '`n % 10` is the last digit and `n // 10` drops it; loop while n > 0.'
+- 0 has one digit, which the loop alone does not count.
+- Digit rules often need the digit count first, then a second pass.
+- Divisors pair up as i and n // i, so loop while i · i ≤ n.
+- A perfect square's root is its own partner; count it once.
+- A prime is at least 2 and has no divisor from 2 to its square root.
+- 'Euclid: gcd(x, y) = gcd(y, x % y); lcm = a // gcd · b.'
+- Update sequence variables from the old values, all at once.
+pitfalls:
+- Stopping digit loops at n > 9.
+- Hard-coding the power in Armstrong numbers.
+- Counting the square root of a perfect square twice.
+- Calling 1 prime.
+- Overflowing a · b when computing the LCM.
+- Updating Fibonacci variables one at a time.
+resources:
+- title: Python Tutor – step through arithmetic
+  url: https://pythontutor.com/
+  kind: visualizer
+  source: Python Tutor
+  minutes: 10
+  level: intro
+- title: "CS50x Week 1: C, types, operators and input"
+  url: https://cs50.harvard.edu/x/2024/weeks/1/
+  kind: course
+  source: Harvard CS50
+  minutes: 120
+  level: core
+  languages: [cpp]
+- title: 'Competitive Programmer''s Handbook, chapter 21: Number theory'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 40
+  level: deep
+quiz:
+- id: digit-count-zero
+  kind: mcq
+  prompt: The loop `while n > 0` counts digits. What must you add for n = 0?
+  options:
+  - A special case, because 0 has one digit but the loop never runs
+  - Nothing
+  - Start the count at 1 for every n
+  - Use while n >= 0
+  answer: 0
+  explanation: Starting at 1 would overcount every other number, and n >= 0 never stops.
+  difficulty: 1
+- id: reverse-trace
+  kind: mcq
+  prompt: What does reverse = reverse * 10 + d build for 4729?
+  options:
+  - '9274'
+  - '4729'
+  - '22'
+  - '927'
+  answer: 0
+  explanation: Each new digit is shifted in from the right.
+  difficulty: 2
+- id: armstrong
+  kind: mcq
+  prompt: Is 1634 an Armstrong number?
+  options:
+  - Yes; 1 + 1296 + 81 + 256 = 1634 with fourth powers
+  - No; its cubes add up to 308
+  - No; Armstrong numbers have three digits
+  - Only in base 4
+  answer: 0
+  explanation: The power is the number of digits.
+  difficulty: 2
+- id: divisor-pairs
+  kind: mcq
+  prompt: Which divisor of 36 is not paired with a different divisor?
+  options:
+  - '6'
+  - '1'
+  - '9'
+  - All are paired
+  answer: 0
+  explanation: 6 · 6 = 36, so 6 is its own partner.
+  difficulty: 2
+- id: square-root-once
+  kind: mcq
+  prompt: The root loop always adds 2 per divisor found. What does it report for 36?
+  options:
+  - 10 divisors, one too many
+  - 9 divisors
+  - 18 divisors
+  - 6 divisors
+  answer: 0
+  explanation: It counts 6 twice.
+  difficulty: 3
+- id: sqrt-cost
+  kind: mcq
+  prompt: About how many steps does the square-root loop take for n = 10^12?
+  options:
+  - A million
+  - A trillion
+  - Twelve
+  - A thousand
+  answer: 0
+  explanation: √(10¹²) = 10⁶.
+  difficulty: 3
+- id: prime-one
+  kind: mcq
+  prompt: Why does a primality test need a special check for n < 2?
+  options:
+  - 0 and 1 are not prime, but the loop never runs for them
+  - The loop crashes for them
+  - They are prime
+  - It does not need one
+  answer: 0
+  explanation: A prime needs exactly two different divisors.
+  difficulty: 3
+- id: euclid-step
+  kind: mcq
+  prompt: Euclid on (12, 18). What pair comes after (18, 12)?
+  options:
+  - (12, 6)
+  - (6, 12)
+  - (18, 6)
+  - (12, 0)
+  answer: 0
+  explanation: (x, y) becomes (y, x % y), and 18 % 12 = 6.
+  difficulty: 4
+- id: lcm-order
+  kind: mcq
+  prompt: Why compute the LCM as a // g * b instead of a * b // g in C++?
+  options:
+  - a * b can overflow 64 bits even when the LCM fits
+  - Division is faster
+  - They give different answers in maths
+  - The compiler requires it
+  answer: 0
+  explanation: Dividing first keeps the intermediate value small.
+  difficulty: 4
+- id: fib-update
+  kind: mcq
+  prompt: a = 2, b = 3. The code runs a = b, then b = a + b. What are a and b?
+  options:
+  - 3 and 6
+  - 3 and 5
+  - 2 and 5
+  - 5 and 8
+  answer: 0
+  explanation: The second line already sees the new a.
+  difficulty: 5
+problems:
+- number-mood
+- square-tiles
+practice_links:
+- title: Palindrome Number
+  url: https://leetcode.com/problems/palindrome-number/
+  platform: LeetCode
+  difficulty: easy
+- title: Armstrong Number
+  url: https://leetcode.com/problems/armstrong-number/
+  platform: LeetCode
+  difficulty: easy
+- title: Three Divisors
+  url: https://leetcode.com/problems/three-divisors/
+  platform: LeetCode
+  difficulty: easy
+- title: The kth Factor of n
+  url: https://leetcode.com/problems/the-kth-factor-of-n/
+  platform: LeetCode
+  difficulty: medium
+- title: Perfect Number
+  url: https://leetcode.com/problems/perfect-number/
+  platform: LeetCode
+  difficulty: easy
+- title: T-primes
+  url: https://codeforces.com/problemset/problem/230/B
+  platform: Codeforces
+  difficulty: easy
+- title: Find Greatest Common Divisor of Array
+  url: https://leetcode.com/problems/find-greatest-common-divisor-of-array/
+  platform: LeetCode
+  difficulty: easy
+- title: Fibonacci Number
+  url: https://leetcode.com/problems/fibonacci-number/
+  platform: LeetCode
+  difficulty: easy
+provenance:
+  origin: original
+status: live

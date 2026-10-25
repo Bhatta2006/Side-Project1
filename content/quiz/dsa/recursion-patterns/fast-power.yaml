@@ -1,0 +1,63 @@
+id: quiz:dsa:recursion-patterns:fast-power
+family: fast-power
+concept: dsa:recursion-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: calls
+  band: 2
+  format: trace
+  prompt: power(3, 13) halves the exponent each call. How many calls in total, including power(3, 0)?
+  options:
+  - '5'
+  - '13'
+  - '4'
+  - '26'
+  answer: 0
+  misconceptions:
+  - null
+  - power-as-repeat
+  - off-by-one-output
+  - power-half-twice
+  explanation: 13, 6, 3, 1, 0.
+- id: twice
+  band: 3
+  format: classify
+  prompt: Why is power(b, p // 2) * power(b, p // 2) slow?
+  options:
+  - Each call makes two calls, so there are about p calls in total
+  - Multiplication is slow
+  - It overflows
+  - It is not slow
+  answer: 0
+  misconceptions:
+  - null
+  - power-half-twice
+  - mod-only-at-end
+  - power-half-twice
+  explanation: Compute the half once and square it.
+- id: mod
+  band: 4
+  format: trace
+  prompt: What is 3¹³ mod 1000?
+  options:
+  - '323'
+  - '594'
+  - '39'
+  - '169'
+  answer: 0
+  misconceptions:
+  - null
+  - mod-wrong-modulus
+  - power-as-multiply
+  - square-vs-double
+  explanation: 3¹³ = 1594323.
+status: provisional
+provenance:
+  origin: original

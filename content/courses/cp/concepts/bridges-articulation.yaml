@@ -1,0 +1,30 @@
+id: bridges-articulation
+title: Bridges and articulation points
+summary: Low-link values to find bridges, cut vertices and 2-edge-connected components.
+module: graph-module
+prerequisites:
+- graph-techniques
+difficulty: 5
+estimated_minutes: 45
+status: draft
+lesson: '## Low link
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

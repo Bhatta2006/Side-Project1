@@ -1,0 +1,73 @@
+id: lazy-segment-tree
+title: Lazy segment tree and tree walks
+summary: Range add and range assign with lazy propagation, and walking down the tree to find the first
+  index that qualifies.
+module: range-structures
+prerequisites:
+- segment-tree
+difficulty: 5
+estimated_minutes: 70
+status: draft
+lesson: '## Range add
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Range assign
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Segment walk
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

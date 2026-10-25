@@ -1,0 +1,154 @@
+id: dsa:binary-search-on-answer/min-max-split
+concept: dsa:binary-search-on-answer
+title: 'Min max split: search the cap, check it greedily'
+tracks:
+- interview
+- competitive
+recognise:
+- Divide an array into at most k contiguous pieces such as days, workers or parts
+- Minimise the largest piece
+- Checking one cap is a greedy pass that fills each piece until the next element would overflow
+state: range [lo, hi] of caps that still contains the smallest cap that works
+transition: if greedy filling with cap mid needs at most k parts then hi = mid else lo = mid + 1
+base_cases:
+- lo = max(a), since every part holds at least one element
+- hi = sum(a), since one part can hold everything
+complexity:
+  time: O(n log(sum))
+  space: O(1) beyond the input
+template:
+  python: |
+    import sys
+
+    data = sys.stdin.read().split()
+    n, k = int(data[0]), int(data[1])
+    a = [int(x) for x in data[2:2 + n]]
+
+
+    def parts_needed(cap):  # fill each part greedily up to the cap
+        parts, run = 1, 0
+        for x in a:
+            if run + x > cap:  # x does not fit: it starts a new part
+                parts, run = parts + 1, 0
+            run += x
+        return parts
+
+
+    lo, hi = max(a), sum(a)  # every part holds at least one element; one part holds them all
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if parts_needed(mid) <= k:
+            hi = mid  # mid works; maybe a smaller cap does too
+        else:
+            lo = mid + 1  # mid fails, and so does every smaller cap
+    print(lo)
+  cpp: |
+    #include <bits/stdc++.h>
+    using namespace std;
+
+    int main() {
+        int n, k;
+        cin >> n >> k;
+        vector<long long> a(n);
+        for (auto& x : a) cin >> x;
+        auto partsNeeded = [&](long long cap) {  // fill each part greedily up to the cap
+            int parts = 1;
+            long long run = 0;
+            for (long long x : a) {
+                if (run + x > cap) parts++, run = 0;  // x does not fit: it starts a new part
+                run += x;
+            }
+            return parts;
+        };
+        long long lo = *max_element(a.begin(), a.end()), hi = accumulate(a.begin(), a.end(), 0LL);
+        while (lo < hi) {
+            long long mid = lo + (hi - lo) / 2;
+            if (partsNeeded(mid) <= k) hi = mid;  // mid works; maybe a smaller cap does too
+            else lo = mid + 1;  // mid fails, and so does every smaller cap
+        }
+        cout << lo << "\n";
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt(), k = in.nextInt();
+            long[] a = new long[n];
+            long lo = 0, hi = 0;
+            for (int i = 0; i < n; i++) { a[i] = in.nextLong(); lo = Math.max(lo, a[i]); hi += a[i]; }
+            while (lo < hi) {  // lo = max(a): every part holds an element; hi = sum(a): one part
+                long mid = lo + (hi - lo) / 2, run = 0;
+                int parts = 1;
+                for (long x : a) {  // fill each part greedily up to the cap mid
+                    if (run + x > mid) { parts++; run = 0; }  // x does not fit: it starts a new part
+                    run += x;
+                }
+                if (parts <= k) hi = mid;  // mid works; maybe a smaller cap does too
+                else lo = mid + 1;  // mid fails, and so does every smaller cap
+            }
+            System.out.println(lo);
+        }
+    }
+template_io:
+  stdin: |
+    8 3
+    3 1 4 1 5 9 2 6
+  expected: '14'
+variants:
+- id: largest-sum
+  band: 2
+  title: Split into k parts, minimise the largest sum
+  problem: leetcode:split-array-largest-sum
+- id: ship
+  band: 2
+  title: Ship packages within D days
+  problem: leetcode:capacity-to-ship-packages-within-d-days
+- id: array-division
+  band: 3
+  title: Array division
+  problem: cses:1085
+- id: bouquets
+  band: 3
+  title: Days until m bouquets of adjacent flowers
+  problem: leetcode:minimum-number-of-days-to-make-m-bouquets
+- id: stores
+  band: 4
+  title: Smallest maximum per store
+  problem: leetcode:minimized-maximum-of-products-distributed-to-any-store
+- id: trips
+  band: 5
+  title: Search on time, count trips
+  problem: leetcode:minimum-time-to-complete-trips
+- id: bag-limit
+  band: 6
+  title: Fewest operations as the check
+  problem: leetcode:minimum-limit-of-balls-in-a-bag
+pitfalls:
+- split-average-greedy
+- search-range-confusion
+- predicate-boundary
+- exclude-candidate-mid
+- pattern-first-vs-last-true
+atoms:
+- split-worked
+- split-faded
+- split-visualizer
+- split-micro
+- split-classify
+quiz_family: quiz:dsa:binary-search-on-answer:min-max-split
+problems:
+  external:
+  - leetcode:split-array-largest-sum
+  - leetcode:capacity-to-ship-packages-within-d-days
+  - cses:1085
+  - leetcode:minimum-number-of-days-to-make-m-bouquets
+  - leetcode:minimized-maximum-of-products-distributed-to-any-store
+  - leetcode:minimum-time-to-complete-trips
+  - leetcode:minimum-limit-of-balls-in-a-bag
+showcase:
+- 'Why cutting near the average gives 17 on 3 1 4 1 5 9 2 6, while searching the cap finds 14'
+status: provisional
+provenance:
+  origin: original

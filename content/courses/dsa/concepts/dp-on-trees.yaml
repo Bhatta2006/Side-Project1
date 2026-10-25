@@ -1,0 +1,894 @@
+id: dp-on-trees
+title: DP on trees
+summary: 'Post-order DP over tree nodes: rob or skip, best path through a node and camera-style cover
+  states.'
+module: dynamic-programming
+prerequisites: [dp-1d, tree-patterns]
+difficulty: 5
+estimated_minutes: 75
+lesson: |
+  DP on trees is DP whose subproblems are **subtrees**. Each node solves its own subtree from
+  its children's answers, so the fill order is "children before parents" (post-order, or
+  reverse BFS order). What makes it DP rather than a plain "return info" pattern is that a
+  node often needs **several** answers from each child, one per state: "best if the child is
+  taken" and "best if it is skipped", or "covered", "has a camera" and "not covered yet".
+
+  **Input in this lesson** follows tree patterns: n, then the n node values, then one line per
+  node with its left and right child (0 = none); node 1 is the root.
+
+  ## Rob or skip
+
+  ### Recognition cues
+
+  - Choose a set of nodes, with a rule about **neighbours**: no two chosen nodes may be
+    adjacent (house robber III), or every edge needs a chosen end (vertex cover).
+  - Maximise or minimise the total value of the chosen nodes.
+  - A single number per node is not enough: the parent needs to know whether the child was
+    chosen.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For "no two adjacent nodes" |
+  |---|---|
+  | State | `take[x]` = best total in x's subtree with x chosen; `skip[x]` = best with x not chosen |
+  | Transition | `take[x] = val[x] + skip[left] + skip[right]`; `skip[x] = max(take, skip)[left] + max(take, skip)[right]` |
+  | Base cases | a missing child has take = skip = 0 |
+  | Answer | `max(take[root], skip[root])` |
+  | Loop order | children before parents: reverse BFS order |
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  order = [1]  # BFS order: parents before children
+  for x in order:
+      order.extend(c for c in (left[x], right[x]) if c)
+  take, skip = [0] * (n + 1), [0] * (n + 1)  # index 0 stands for a missing child
+  for x in reversed(order):  # children before parents
+      l, r = left[x], right[x]
+      take[x] = val[x] + skip[l] + skip[r]  # x chosen: its children must be skipped
+      skip[x] = max(take[l], skip[l]) + max(take[r], skip[r])  # x skipped: children are free
+  print(max(take[1], skip[1]))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1, 0), take(n + 1, 0), skip(n + 1, 0);  // index 0: missing child
+      vector<int> left(n + 1, 0), right(n + 1, 0), order = {1};
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      for (size_t k = 0; k < order.size(); k++)  // BFS order: parents before children
+          for (int c : {left[order[k]], right[order[k]]}) if (c) order.push_back(c);
+      for (int k = n - 1; k >= 0; k--) {  // children before parents
+          int x = order[k], l = left[x], r = right[x];
+          take[x] = val[x] + skip[l] + skip[r];  // x chosen: its children must be skipped
+          skip[x] = max(take[l], skip[l]) + max(take[r], skip[r]);  // x skipped: children are free
+      }
+      cout << max(take[1], skip[1]) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] val = new long[n + 1], take = new long[n + 1], skip = new long[n + 1];  // 0: missing child
+          int[] left = new int[n + 1], right = new int[n + 1], order = new int[n];
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          int size = 1;
+          order[0] = 1;
+          for (int k = 0; k < size; k++)  // BFS order: parents before children
+              for (int c : new int[] {left[order[k]], right[order[k]]}) if (c != 0) order[size++] = c;
+          for (int k = n - 1; k >= 0; k--) {  // children before parents
+              int x = order[k], l = left[x], r = right[x];
+              take[x] = val[x] + skip[l] + skip[r];  // x chosen: its children must be skipped
+              skip[x] = Math.max(take[l], skip[l]) + Math.max(take[r], skip[r]);  // children are free
+          }
+          System.out.println(Math.max(take[1], skip[1]));
+      }
+  }
+  ```
+
+  ### Anchor problem: houses on a tree
+
+  Each node is a house with money; robbing two houses joined by an edge sets off the alarm.
+
+  ```text
+  5
+  10 1 1 10 1
+  2 5
+  3 0
+  4 0
+  0 0
+  0 0
+  ```
+
+  Node 1 (10) has children 2 (1) and 5 (1); node 2 has child 3 (1), whose child is 4 (10). The
+  best total is **20**: houses 1 and 4.
+
+  **Wrong first attempt — alternate levels.** No two nodes on the same level are adjacent, so
+  take either all odd levels or all even levels:
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  totals, level = [0, 0], [1]  # totals[0]: odd levels, totals[1]: even levels
+  depth = 0
+  while level:
+      totals[depth % 2] += sum(val[x] for x in level)
+      level = [c for x in level for c in (left[x], right[x]) if c]
+      depth += 1
+  print(max(totals))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1);
+      vector<int> left(n + 1), right(n + 1), level = {1};
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      long long totals[2] = {0, 0};  // odd levels, even levels
+      for (int depth = 0; !level.empty(); depth++) {
+          vector<int> next;
+          for (int x : level) {
+              totals[depth % 2] += val[x];
+              for (int c : {left[x], right[x]}) if (c) next.push_back(c);
+          }
+          level = next;
+      }
+      cout << max(totals[0], totals[1]) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] val = new long[n + 1];
+          int[] left = new int[n + 1], right = new int[n + 1];
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          long[] totals = new long[2];  // odd levels, even levels
+          List<Integer> level = new ArrayList<>(List.of(1));
+          for (int depth = 0; !level.isEmpty(); depth++) {
+              List<Integer> next = new ArrayList<>();
+              for (int x : level) {
+                  totals[depth % 2] += val[x];
+                  for (int c : new int[] {left[x], right[x]}) if (c != 0) next.add(c);
+              }
+              level = next;
+          }
+          System.out.println(Math.max(totals[0], totals[1]));
+      }
+  }
+  ```
+
+  It prints 12: levels 1 and 3 give 10 + 1 = 11, levels 2 and 4 give 2 + 10 = 12. Houses 1 and
+  4 are on levels 1 and 4, which have different parities, so no level pattern finds them. Each
+  node must decide for itself, depending on what its children chose.
+
+  **Step 1 — recursion.** Either rob x and continue from its grandchildren, or skip x and
+  continue from its children:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def best(x):
+      """Most money from the subtree of x."""
+      if x == 0:
+          return 0
+      rob = val[x]
+      for c in (left[x], right[x]):
+          if c:
+              rob += best(left[c]) + best(right[c])  # grandchildren
+      return max(rob, best(left[x]) + best(right[x]))
+
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  print(best(1))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<long long> val;
+  vector<int> lft, rgt;
+
+  long long best(int x) {  // most money from the subtree of x
+      if (x == 0) return 0;
+      long long rob = val[x];
+      for (int c : {lft[x], rgt[x]})
+          if (c) rob += best(lft[c]) + best(rgt[c]);  // grandchildren
+      return max(rob, best(lft[x]) + best(rgt[x]));
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      val.assign(n + 1, 0);
+      lft.assign(n + 1, 0);
+      rgt.assign(n + 1, 0);
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> lft[i] >> rgt[i];
+      cout << best(1) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static long[] val;
+      static int[] left, right;
+
+      static long best(int x) {  // most money from the subtree of x
+          if (x == 0) return 0;
+          long rob = val[x];
+          for (int c : new int[] {left[x], right[x]})
+              if (c != 0) rob += best(left[c]) + best(right[c]);  // grandchildren
+          return Math.max(rob, best(left[x]) + best(right[x]));
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          val = new long[n + 1];
+          left = new int[n + 1];
+          right = new int[n + 1];
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          System.out.println(best(1));
+      }
+  }
+  ```
+
+  Every node is reached from its parent and from its grandparent, so the calls multiply: on a
+  long chain the count grows like the Fibonacci numbers. There are only n subtrees.
+
+  **Step 2 — memoization.** Store each subtree's best once:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def best(x):
+      if x == 0:
+          return 0
+      if memo[x] is None:  # solve each subtree once
+          rob = val[x]
+          for c in (left[x], right[x]):
+              if c:
+                  rob += best(left[c]) + best(right[c])
+          memo[x] = max(rob, best(left[x]) + best(right[x]))
+      return memo[x]
+
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  memo = [None] * (n + 1)
+  print(best(1))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<long long> val, memo;  // memo: -1 = not solved yet
+  vector<int> lft, rgt;
+
+  long long best(int x) {
+      if (x == 0) return 0;
+      if (memo[x] == -1) {  // solve each subtree once
+          long long rob = val[x];
+          for (int c : {lft[x], rgt[x]})
+              if (c) rob += best(lft[c]) + best(rgt[c]);
+          memo[x] = max(rob, best(lft[x]) + best(rgt[x]));
+      }
+      return memo[x];
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      val.assign(n + 1, 0);
+      memo.assign(n + 1, -1);
+      lft.assign(n + 1, 0);
+      rgt.assign(n + 1, 0);
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> lft[i] >> rgt[i];
+      cout << best(1) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static long[] val, memo;  // memo: -1 = not solved yet
+      static int[] left, right;
+
+      static long best(int x) {
+          if (x == 0) return 0;
+          if (memo[x] == -1) {  // solve each subtree once
+              long rob = val[x];
+              for (int c : new int[] {left[x], right[x]})
+                  if (c != 0) rob += best(left[c]) + best(right[c]);
+              memo[x] = Math.max(rob, best(left[x]) + best(right[x]));
+          }
+          return memo[x];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          val = new long[n + 1];
+          memo = new long[n + 1];
+          left = new int[n + 1];
+          right = new int[n + 1];
+          Arrays.fill(memo, -1);
+          for (int i = 1; i <= n; i++) val[i] = in.nextLong();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          System.out.println(best(1));
+      }
+  }
+  ```
+
+  **Step 3 — tabulation with two states.** Reaching into grandchildren is awkward. Give every
+  node two answers instead, `take` and `skip`, so a parent only reads its children. Filling
+  them in reverse BFS order is the template above.
+
+  Dry run (children first):
+
+  | node | value | take | skip |
+  |---|---|---|---|
+  | 4 | 10 | 10 | 0 |
+  | 3 | 1 | 1 + 0 = 1 | max(10, 0) = 10 |
+  | 2 | 1 | 1 + 10 = 11 | max(1, 10) = 10 |
+  | 5 | 1 | 1 | 0 |
+  | 1 | 10 | 10 + 10 + 0 = **20** | max(11, 10) + max(1, 0) = 12 |
+
+  The answer is max(20, 12) = 20.
+
+  **Step 4 — the states are the saving.** Two numbers per node replace the grandchild calls:
+  O(n) time and O(n) memory, with no recursion.
+
+  ### Variants
+
+  1. *House robber III*: the anchor.
+  2. *Tree matching* (CSES): pick the most edges with no shared node; states "x is matched to
+     a child" and "x is free".
+  3. Minimum vertex cover: every edge needs a chosen end, so a skipped node forces its children
+     to be taken.
+  4. *Binary tree cameras*: three states (next family).
+
+  ### Contrast
+
+  **One answer per node or several?** If the parent only needs a number from each child
+  (height, sum), return it. If the parent's choice depends on the **child's choice**, keep
+  one answer per child state and let the parent combine them.
+
+  ### Common mistakes
+
+  - Alternating levels, which ignores choices inside a level.
+  - `take[x]` adding `take` of a child, which robs two adjacent houses.
+  - `skip[x]` adding only `take` of the children, forgetting a child may also be skipped.
+  - Deep recursion on chains of 10⁵ nodes.
+
+  ## Path through a node
+
+  ### Recognition cues
+
+  - The longest or best **path** anywhere in the tree, under a rule about neighbouring nodes:
+    different labels, increasing values, equal values.
+  - The tree patterns lesson's "return one side, record both", with a filter on which children
+    may join.
+
+  ### State, transition, base cases, answer, loop order
+
+  `down[x]` = the longest valid path (in nodes) that starts at x and goes down. A child c may
+  continue it only if the rule allows the edge x–c. Record `1 + best + second best` over the
+  allowed children as a path bending at x; return `1 + best`. A child that may not join is
+  still **solved on its own**: paths inside its subtree still count.
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  label = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  order = [1]
+  for x in order:
+      order.extend(c for c in (left[x], right[x]) if c)
+  down, best = [0] * (n + 1), 0  # down[x]: longest valid path from x going down, in nodes
+  for x in reversed(order):  # every child is solved first, joined or not
+      arms = sorted((down[c] for c in (left[x], right[x]) if c and label[c] != label[x]), reverse=True)
+      arms += [0, 0]
+      best = max(best, 1 + arms[0] + arms[1])  # a path bending at x
+      down[x] = 1 + arms[0]  # the parent extends one arm only
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> label(n + 1, 0), left(n + 1), right(n + 1), down(n + 1, 0), order = {1};
+      for (int i = 1; i <= n; i++) cin >> label[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      for (size_t k = 0; k < order.size(); k++)
+          for (int c : {left[order[k]], right[order[k]]}) if (c) order.push_back(c);
+      int best = 0;
+      for (int k = n - 1; k >= 0; k--) {  // every child is solved first, joined or not
+          int x = order[k], a = 0, b = 0;  // the two longest allowed arms
+          for (int c : {left[x], right[x]})
+              if (c && label[c] != label[x]) {
+                  if (down[c] > a) b = a, a = down[c];
+                  else b = max(b, down[c]);
+              }
+          best = max(best, 1 + a + b);  // a path bending at x
+          down[x] = 1 + a;  // the parent extends one arm only
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] label = new int[n + 1], left = new int[n + 1], right = new int[n + 1];
+          int[] down = new int[n + 1], order = new int[n];
+          for (int i = 1; i <= n; i++) label[i] = in.nextInt();
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          int size = 1, best = 0;
+          order[0] = 1;
+          for (int k = 0; k < size; k++)
+              for (int c : new int[] {left[order[k]], right[order[k]]}) if (c != 0) order[size++] = c;
+          for (int k = n - 1; k >= 0; k--) {  // every child is solved first, joined or not
+              int x = order[k], a = 0, b = 0;  // the two longest allowed arms
+              for (int c : new int[] {left[x], right[x]})
+                  if (c != 0 && label[c] != label[x]) {
+                      if (down[c] > a) { b = a; a = down[c]; }
+                      else b = Math.max(b, down[c]);
+                  }
+              best = Math.max(best, 1 + a + b);  // a path bending at x
+              down[x] = 1 + a;  // the parent extends one arm only
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: neighbours must differ
+
+  Node 1 has children 2 and 3; node 2 has children 4 and 5. Labels `1 2 3 1 2`. The longest
+  path whose neighbouring nodes have different labels has **4** nodes: 4 → 2 → 1 → 3 (labels
+  1 2 1 3). Node 5 has the same label as node 2, so it cannot join.
+
+  **Wrong first attempt — drop a blocked child's whole subtree.** With labels `1 1 2 2 3`,
+  node 2 matches the root and cannot join it, but the path 4 → 2 → 5 (labels 2 1 3) lies
+  entirely inside its subtree. Skipping that subtree reports 2 instead of **3**. The template
+  solves every child before deciding whether it may join.
+
+  ### Variants
+
+  1. *Longest path with different adjacent characters*: the anchor (on general trees).
+  2. *Longest univalue path*: the opposite rule, equal labels.
+  3. *Binary tree maximum path sum*: values instead of lengths (tree patterns).
+
+  ### Contrast
+
+  **Join the parent, or stand alone?** The rule decides whether a child's arm extends the
+  parent's path, never whether the child's own subtree is solved. Every subtree is still a
+  place where the best path may live.
+
+  ### Common mistakes
+
+  - Skipping a blocked child's whole subtree.
+  - Counting edges when the problem counts nodes, or the reverse.
+  - Returning both arms to the parent.
+
+  ## Cover states
+
+  ### Recognition cues
+
+  - Place the fewest cameras, guards or lights so every node is covered, where a node is
+    covered by itself or by a neighbour.
+  - A node's status depends on its parent **and** its children, so two states are not enough.
+
+  ### State, transition, base cases, answer, loop order
+
+  Three states per node x, each describing x's subtree with every node except possibly x
+  covered:
+
+  | State | Meaning | Value |
+  |---|---|---|
+  | `cam[x]` | x has a camera | 1 + Σ min(cam, cov, unc) over the children |
+  | `cov[x]` | no camera at x, but a child's camera covers it | Σ min(cam, cov) over the children, with at least one child forced to cam |
+  | `unc[x]` | no camera at x, not covered yet (the parent must cover it) | Σ cov over the children |
+
+  A missing child counts as cam = ∞, cov = 0, unc = ∞. The answer is `min(cam[root],
+  cov[root])`: the root has no parent to cover it.
+
+  ### Template
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  order = [1]
+  for x in order:
+      order.extend(c for c in (left[x], right[x]) if c)
+  INF = float("inf")
+  cam, cov, unc = [INF] + [0] * n, [0] * (n + 1), [INF] + [0] * n  # index 0: missing child
+  for x in reversed(order):
+      kids = [c for c in (left[x], right[x]) if c]
+      cam[x] = 1 + sum(min(cam[c], cov[c], unc[c]) for c in kids)  # x covers its children
+      base = sum(min(cam[c], cov[c]) for c in kids)  # children must be covered without x
+      extra = min((cam[c] - min(cam[c], cov[c]) for c in kids), default=INF)  # force one camera
+      cov[x] = base + extra
+      unc[x] = sum(cov[c] for c in kids)  # no child camera may see x
+  print(min(cam[1], cov[1]))  # the root has no parent to cover it
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> val(n + 1);
+      vector<int> left(n + 1), right(n + 1), order = {1};
+      for (int i = 1; i <= n; i++) cin >> val[i];
+      for (int i = 1; i <= n; i++) cin >> left[i] >> right[i];
+      for (size_t k = 0; k < order.size(); k++)
+          for (int c : {left[order[k]], right[order[k]]}) if (c) order.push_back(c);
+      const long long INF = 1e9;
+      vector<long long> cam(n + 1, 0), cov(n + 1, 0), unc(n + 1, 0);
+      cam[0] = unc[0] = INF;  // index 0: missing child
+      for (int k = n - 1; k >= 0; k--) {
+          int x = order[k];
+          long long camX = 1, base = 0, extra = INF, uncX = 0;
+          for (int c : {left[x], right[x]}) {
+              if (!c) continue;
+              camX += min({cam[c], cov[c], unc[c]});  // x covers its children
+              base += min(cam[c], cov[c]);  // children must be covered without x
+              extra = min(extra, cam[c] - min(cam[c], cov[c]));  // force one camera
+              uncX += cov[c];  // no child camera may see x
+          }
+          cam[x] = camX;
+          cov[x] = min(INF, base + extra);
+          unc[x] = min(INF, uncX);
+      }
+      cout << min(cam[1], cov[1]) << "\n";  // the root has no parent to cover it
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] left = new int[n + 1], right = new int[n + 1], order = new int[n];
+          for (int i = 1; i <= n; i++) in.nextLong();  // values are not needed here
+          for (int i = 1; i <= n; i++) { left[i] = in.nextInt(); right[i] = in.nextInt(); }
+          int size = 1;
+          order[0] = 1;
+          for (int k = 0; k < size; k++)
+              for (int c : new int[] {left[order[k]], right[order[k]]}) if (c != 0) order[size++] = c;
+          final long INF = 1_000_000_000L;
+          long[] cam = new long[n + 1], cov = new long[n + 1], unc = new long[n + 1];
+          cam[0] = unc[0] = INF;  // index 0: missing child
+          for (int k = n - 1; k >= 0; k--) {
+              int x = order[k];
+              long camX = 1, base = 0, extra = INF, uncX = 0;
+              for (int c : new int[] {left[x], right[x]}) {
+                  if (c == 0) continue;
+                  camX += Math.min(cam[c], Math.min(cov[c], unc[c]));  // x covers its children
+                  base += Math.min(cam[c], cov[c]);  // children must be covered without x
+                  extra = Math.min(extra, cam[c] - Math.min(cam[c], cov[c]));  // force one camera
+                  uncX += cov[c];  // no child camera may see x
+              }
+              cam[x] = camX;
+              cov[x] = Math.min(INF, base + extra);
+              unc[x] = Math.min(INF, uncX);
+          }
+          System.out.println(Math.min(cam[1], cov[1]));  // the root has no parent to cover it
+      }
+  }
+  ```
+
+  ### Anchor problem: cameras
+
+  Node 1 has a left child 2; node 2 has children 3 and 4. One camera on node 2 covers all four
+  nodes, so the program prints **1**. For a chain 1 → 2 → 3 → 4 → 5 it prints 2 (cameras on 2
+  and 4).
+
+  **Wrong first attempt — a camera on every leaf.** Leaves can only cover themselves and their
+  parent, so the first tree would get 2 cameras (on 3 and 4) instead of 1. The DP compares
+  "camera here" with "covered by a child" and "leave it to the parent" at every node.
+
+  ### Variants
+
+  1. *Binary tree cameras*: the anchor.
+  2. Weighted cameras: each node has a price; `cam[x]` adds the price instead of 1.
+  3. Minimum dominating set on a general tree: the same three states over all children.
+
+  ### Contrast
+
+  **Two states or three?** If a node's status depends only on its own choice (taken or not),
+  two states suffice. If it can also be satisfied by a neighbour below **or above**, add a
+  state for "waiting for the parent".
+
+  ### Common mistakes
+
+  - Only two states, which cannot express "covered by a child".
+  - `cov[x]` without forcing at least one child camera.
+  - Forgetting that the root has no parent: `unc[root]` is not allowed.
+
+  ## Worked walkthrough
+
+  **Problem.** Values `3 4 5 1 3 1`: node 1 (3) has children 2 (4) and 3 (5); node 2 has
+  children 4 (1) and 5 (3); node 3 has a right child 6 (1). Rob houses with no two adjacent.
+
+  1. *Leaves.* Nodes 4, 5 and 6: take = value, skip = 0.
+  2. *Node 2.* take = 4 + 0 + 0 = 4; skip = max(1, 0) + max(3, 0) = 4.
+  3. *Node 3.* take = 5 + 0 = 5; skip = max(1, 0) = 1.
+  4. *Root.* take = 3 + 4 + 1 = 8; skip = max(4, 4) + max(5, 1) = 9.
+  5. *Answer.* 9: rob 4 and 5 (nodes 2 and 3).
+
+  ### Why this works
+
+  Once x's state is fixed, its two subtrees no longer interact: the only edges between them
+  and the rest of the tree go through x. So the best total for x's subtree in a given state
+  is x's own contribution plus, for each child independently, the best child state compatible
+  with x's state. Every valid selection is one combination of these choices, so the maximum (or
+  minimum) over them is the optimum, by induction from the leaves up.
+
+  ### Boundary cases and cost
+
+  - One node: rob it; one camera.
+  - A chain: the tree is a line and rob-or-skip becomes house robber.
+  - Values may be zero; with negative values, skipping is always allowed, so take never has to
+    win.
+  - Cost: O(n) time and O(n) memory, a constant number of states per node.
+
+  ### Check your understanding
+
+  A chain 1 → 2 → 3 with values 2, 7, 9. What do take and skip hold at the root, and what is
+  the answer?
+
+  Try it on paper before reading the reasoning below.
+
+  > Node 3: take 9, skip 0. Node 2: take 7, skip 9. Root: take 2 + 9 = 11, skip max(7, 9) = 9.
+  > The answer is 11 (nodes 1 and 3).
+key_points:
+- Subproblems are subtrees; fill children before parents (reverse BFS order).
+- Keep one answer per node state when the parent's choice depends on the child's.
+- 'Rob or skip: take = val + Σ skip(children); skip = Σ max(take, skip)(children).'
+- 'Path through a node: record 1 + two best allowed arms, return 1 + the best arm.'
+- A child that may not join is still solved on its own.
+- 'Cover states: camera here, covered by a child, waiting for the parent; the root cannot wait.'
+- O(n) time and memory.
+pitfalls:
+- Alternating levels instead of deciding per node.
+- Adding take of a child when the parent is taken.
+- Dropping a blocked child's subtree in path problems.
+- Only two states for camera problems.
+- Deep recursion on long chains.
+resources:
+- title: DP on Trees - Introduction
+  url: https://usaco.guide/gold/dp-trees
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: Tree
+  url: https://www.techinterviewhandbook.org/algorithms/tree/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 15
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 14: Tree algorithms'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 40
+  level: deep
+quiz:
+- id: take-skip
+  kind: mcq
+  prompt: In rob-or-skip, what is take[x]?
+  options:
+  - val[x] + skip of both children
+  - val[x] + take of both children
+  - val[x] + the larger of take and skip of each child
+  - val[x] only
+  answer: 0
+  explanation: Robbing x forbids robbing its children.
+  difficulty: 1
+- id: levels
+  kind: mcq
+  prompt: Tree 10 → 1 → 1 → 10 (a chain) plus a second child 1 of the root. Alternating levels gives 12.
+    What is the best?
+  options:
+  - '20'
+  - '12'
+  - '21'
+  - '11'
+  answer: 0
+  explanation: The root and the last 10 are not adjacent.
+  difficulty: 2
+- id: order
+  kind: mcq
+  prompt: In which order are the nodes filled?
+  options:
+  - Children before parents, such as reverse BFS order
+  - Root first
+  - By value
+  - Any order
+  answer: 0
+  explanation: A node reads its children's states.
+  difficulty: 2
+- id: chain
+  kind: mcq
+  prompt: A chain 1 → 2 → 3 with values 2, 7, 9. What is the most money?
+  options:
+  - '11'
+  - '9'
+  - '16'
+  - '18'
+  answer: 0
+  explanation: Nodes 1 and 3.
+  difficulty: 3
+- id: blocked
+  kind: mcq
+  prompt: A child cannot join its parent's path because of the label rule. What happens to the child's
+    subtree?
+  options:
+  - It is still solved; paths inside it still count
+  - It is skipped entirely
+  - Its labels are changed
+  - The answer becomes 0
+  answer: 0
+  explanation: The best path may lie wholly inside that subtree.
+  difficulty: 3
+- id: three-states
+  kind: mcq
+  prompt: Why does binary tree cameras need three states?
+  options:
+  - A node can be covered by itself, by a child, or still need its parent
+  - Because each node has two children
+  - Two states always suffice
+  - To count leaves
+  answer: 0
+  explanation: The third state lets the parent take responsibility.
+  difficulty: 4
+- id: cameras
+  kind: mcq
+  prompt: A chain of 5 nodes. How many cameras are needed?
+  options:
+  - '2'
+  - '3'
+  - '1'
+  - '5'
+  answer: 0
+  explanation: Cameras on nodes 2 and 4 cover everything.
+  difficulty: 4
+- id: root
+  kind: mcq
+  prompt: Which root states may form the answer for cameras?
+  options:
+  - cam and cov only
+  - All three
+  - unc only
+  - cam only
+  answer: 0
+  explanation: The root has no parent to cover it.
+  difficulty: 5
+problems:
+- watchtowers
+- street-lamps
+practice_links:
+- title: House Robber III
+  url: https://leetcode.com/problems/house-robber-iii/
+  platform: LeetCode
+  difficulty: medium
+- title: Tree Matching
+  url: https://cses.fi/problemset/task/1130
+  platform: CSES
+  difficulty: medium
+- title: Binary Tree Cameras
+  url: https://leetcode.com/problems/binary-tree-cameras/
+  platform: LeetCode
+  difficulty: hard
+- title: Longest Univalue Path
+  url: https://leetcode.com/problems/longest-univalue-path/
+  platform: LeetCode
+  difficulty: medium
+- title: Binary Tree Maximum Path Sum
+  url: https://leetcode.com/problems/binary-tree-maximum-path-sum/
+  platform: LeetCode
+  difficulty: hard
+- title: Distribute Coins in Binary Tree
+  url: https://leetcode.com/problems/distribute-coins-in-binary-tree/
+  platform: LeetCode
+  difficulty: medium
+provenance:
+  origin: original
+status: live

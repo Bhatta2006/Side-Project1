@@ -1,0 +1,212 @@
+id: thumbnail-cache
+title: Thumbnail cache
+concepts: [design-data-structures]
+difficulty: medium
+statement: |
+  A photo app keeps thumbnails in a cache that holds at most `B` bytes in total. Each
+  thumbnail has an id and a size in bytes. The cache follows these rules, where a **use**
+  of a thumbnail is a successful `get` or any `put` of it:
+
+  - `get k`: if thumbnail k is in the cache, print `HIT` and count it as a use; otherwise
+    print `MISS`.
+  - `put k s`: thumbnail k is (re)created with size s. Any old copy of k leaves the cache
+    first. If s > B, the new thumbnail is not stored at all. Otherwise it is stored as the
+    most recently used, and then, while the total size is above B, the **least recently
+    used** other thumbnail is removed.
+
+  Process the operations in order.
+input_format: |
+  The first line contains B and q. Each of the next q lines is `get k` or `put k s`.
+output_format: One line, HIT or MISS, for every get.
+constraints:
+  - 1 ≤ B ≤ 10^12
+  - 1 ≤ q ≤ 10^5
+  - 1 ≤ k ≤ 10^9 and 1 ≤ s ≤ 10^9
+examples:
+  - input: "10 7\nput 1 4\nput 2 4\nget 1\nput 3 5\nget 2\nget 1\nget 3"
+    output: "HIT\nMISS\nHIT\nHIT"
+    explanation: "After get 1, thumbnail 2 is the least recently used. put 3 brings the total to 13, so 2 leaves (total 9). Thumbnails 1 and 3 stay."
+  - input: "5 3\nput 1 3\nput 2 6\nget 1"
+    output: "HIT"
+    explanation: "Thumbnail 2 is bigger than the whole cache, so it is never stored and nothing is removed."
+hints:
+  - "This is an LRU cache, except that one new item may push out several old ones, and capacity is measured in bytes."
+  - "Keep the thumbnails in use order (a hash map plus a doubly linked list, or an ordered dictionary) along with the total size."
+  - "After storing a new thumbnail, remove from the least recent end until the total fits. Totals reach about 10^14, so use 64-bit integers."
+approach: |
+  An LRU cache with weights. Keep an ordered map from id to size in use order (least recent
+  first) and the running total. get moves a hit to the most recent end. put first removes an
+  old copy of k (subtracting its size); if s > B it stops there; otherwise it appends k as the
+  most recent, adds s, and pops from the least recent end while the total exceeds B. Since s ≤
+  B, the loop never removes k itself. Every thumbnail is inserted once and removed at most once
+  per insertion, so the whole run is O(q) amortised.
+reference: |
+  import sys
+  from collections import OrderedDict
+  def main():
+      data = sys.stdin.buffer.read().split()
+      budget, q = int(data[0]), int(data[1])
+      cache = OrderedDict()
+      total = 0
+      out = []
+      pos = 2
+      for _ in range(q):
+          op = data[pos]
+          key = int(data[pos + 1])
+          if op == b"get":
+              pos += 2
+              if key in cache:
+                  cache.move_to_end(key)
+                  out.append("HIT")
+              else:
+                  out.append("MISS")
+              continue
+          size = int(data[pos + 2])
+          pos += 3
+          if key in cache:
+              total -= cache.pop(key)
+          if size > budget:
+              continue
+          cache[key] = size
+          total += size
+          while total > budget:
+              _, old = cache.popitem(last=False)
+              total -= old
+      sys.stdout.write("\n".join(out) + ("\n" if out else ""))
+  main()
+brute: |
+  b, q = map(int, input().split())
+  items = []
+  for _ in range(q):
+      parts = input().split()
+      key = int(parts[1])
+      found = [p for p in items if p[0] == key]
+      if parts[0] == "get":
+          if found:
+              items.remove(found[0])
+              items.append(found[0])
+              print("HIT")
+          else:
+              print("MISS")
+          continue
+      size = int(parts[2])
+      if found:
+          items.remove(found[0])
+      if size > b:
+          continue
+      items.append([key, size])
+      while sum(p[1] for p in items) > b:
+          items.pop(0)
+references:
+  cpp: |
+    #include <cstdio>
+    #include <list>
+    #include <string>
+    #include <unordered_map>
+    using namespace std;
+
+    int main() {
+        long long budget;
+        int q;
+        if (scanf("%lld %d", &budget, &q) != 2) return 0;
+        list<pair<long long, long long>> order;
+        unordered_map<long long, list<pair<long long, long long>>::iterator> where;
+        where.reserve(2 * q + 1);
+        long long total = 0;
+        string out;
+        char op[8];
+        for (int i = 0; i < q; i++) {
+            long long key;
+            scanf("%7s %lld", op, &key);
+            auto it = where.find(key);
+            if (op[0] == 'g') {
+                if (it == where.end()) out += "MISS\n";
+                else { order.splice(order.end(), order, it->second); out += "HIT\n"; }
+                continue;
+            }
+            long long size;
+            scanf("%lld", &size);
+            if (it != where.end()) { total -= it->second->second; order.erase(it->second); where.erase(it); }
+            if (size > budget) continue;
+            order.push_back({key, size});
+            where[key] = prev(order.end());
+            total += size;
+            while (total > budget) {
+                total -= order.front().second;
+                where.erase(order.front().first);
+                order.pop_front();
+            }
+        }
+        fputs(out.c_str(), stdout);
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in), 1 << 16);
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            long budget = Long.parseLong(st.nextToken());
+            int q = Integer.parseInt(st.nextToken());
+            LinkedHashMap<Long, Long> cache = new LinkedHashMap<>(16, 0.75f, true);
+            long total = 0;
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < q; i++) {
+                st = new StringTokenizer(in.readLine());
+                String op = st.nextToken();
+                long key = Long.parseLong(st.nextToken());
+                if (op.equals("get")) {
+                    out.append(cache.get(key) != null ? "HIT\n" : "MISS\n");
+                    continue;
+                }
+                long size = Long.parseLong(st.nextToken());
+                Long old = cache.remove(key);
+                if (old != null) total -= old;
+                if (size > budget) continue;
+                cache.put(key, size);
+                total += size;
+                Iterator<Map.Entry<Long, Long>> eldest = cache.entrySet().iterator();
+                while (total > budget) {
+                    total -= eldest.next().getValue();
+                    eldest.remove();
+                }
+            }
+            System.out.print(out);
+        }
+    }
+generator: |
+  def ops(rng, q, keys, smax, put_share):
+      lines = []
+      for _ in range(q):
+          k = rng.randint(1, keys)
+          if rng.random() < put_share:
+              lines.append(f"put {k} {rng.randint(1, smax)}")
+          else:
+              lines.append(f"get {k}")
+      return lines
+
+  def case(budget, lines):
+      return f"{budget} {len(lines)}\n" + "\n".join(lines)
+
+  def cases(rng):
+      yield "1 2\nget 5\nput 5 2"
+      yield "3 4\nput 1 3\nput 1 3\nget 1\nput 2 3"
+      yield "7 5\nput 1 4\nput 2 3\nput 3 1\nget 1\nget 3"
+      q = 100000
+      yield case(10**12, ops(rng, q, 1000, 10**6, 0.5))
+      yield case(5 * 10**6, ops(rng, q, 1000, 10**6, 0.5))
+      yield case(10**6, ops(rng, q, 1000, 10**6, 0.6))
+      yield case(1, ops(rng, q, 1000, 2, 0.5))
+      yield case(3 * 10**6, ["put %d %d" % (i % 997 + 1, 10**6) for i in range(q // 2)] + ["get %d" % (i % 997 + 1) for i in range(q // 2)])
+      for _ in range(4):
+          yield case(rng.randint(1, 30), ops(rng, rng.randint(1, 40), 6, 12, 0.5))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          b = rng.randint(1, 12)
+          lines = []
+          for _ in range(rng.randint(1, 12)):
+              k = rng.randint(1, 5)
+              lines.append(f"put {k} {rng.randint(1, 14)}" if rng.random() < 0.5 else f"get {k}")
+          yield f"{b} {len(lines)}\n" + "\n".join(lines)

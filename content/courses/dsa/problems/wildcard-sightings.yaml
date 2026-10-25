@@ -1,0 +1,108 @@
+id: wildcard-sightings
+title: Wildcard sightings
+concepts: [dp-edit-distance]
+difficulty: medium
+statement: |
+  A bird watcher writes down a long log `s` of letters, one per bird seen. A pattern `t` of
+  letters and `?` marks describes a sequence of sightings; `?` stands for any one bird.
+
+  A **sighting** of t is a choice of positions i_1 < i_2 < … < i_k in s (k = |t|) such that
+  each s[i_x] equals t[x], or t[x] is `?`. Print the number of different sightings, modulo
+  10^9 + 7.
+input_format: |
+  The first line contains s, the second t.
+output_format: The number of sightings modulo 10^9 + 7.
+constraints:
+  - 1 ≤ |s| ≤ 5000
+  - 1 ≤ |t| ≤ 100
+  - s contains lowercase letters; t contains lowercase letters and ?
+examples:
+  - input: "abab\na?"
+    output: "4"
+    explanation: "Choose an a, then any later bird: (1, 2), (1, 3) and (1, 4) start at the first a, and (3, 4) at the second."
+  - input: "aaa\nb"
+    output: "0"
+hints:
+  - "Without the ? marks this is distinct subsequences. What does a ? change in the matching test?"
+  - "ways[j] = number of ways t[:j] appears in the part of s read so far, with ways[0] = 1."
+  - "For each bird ch, loop j from |t| down to 1, and add ways[j − 1] when t[j − 1] is ch or ?. Backwards keeps each bird in at most one position of a sighting."
+approach: |
+  Distinct subsequences with a wildcard test. ways[j] counts the ways t[:j] appears in the
+  prefix of s read so far; ways[0] = 1. For every letter of s, run j from |t| down to 1 and
+  add ways[j − 1] to ways[j] whenever t[j − 1] matches the letter or is ?. The backwards loop
+  stops one bird from filling two pattern positions. O(|s|·|t|) time, O(|t|) memory.
+reference: |
+  MOD = 10**9 + 7
+  s = input().strip()
+  t = input().strip()
+  m = len(t)
+  ways = [1] + [0] * m
+  for ch in s:
+      for j in range(m, 0, -1):
+          p = t[j - 1]
+          if p == ch or p == "?":
+              ways[j] = (ways[j] + ways[j - 1]) % MOD
+  print(ways[m])
+brute: |
+  from itertools import combinations
+  s = input().strip()
+  t = input().strip()
+  count = 0
+  for pos in combinations(range(len(s)), len(t)):
+      if all(p == "?" or s[i] == p for i, p in zip(pos, t)):
+          count += 1
+  print(count % (10**9 + 7))
+references:
+  cpp: |
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        const long long MOD = 1000000007;
+        string s, t;
+        cin >> s >> t;
+        int m = t.size();
+        vector<long long> ways(m + 1, 0);
+        ways[0] = 1;
+        for (char ch : s)
+            for (int j = m; j >= 1; j--)
+                if (t[j - 1] == ch || t[j - 1] == '?') ways[j] = (ways[j] + ways[j - 1]) % MOD;
+        cout << ways[m] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            final long MOD = 1_000_000_007L;
+            Scanner in = new Scanner(System.in);
+            String s = in.next(), t = in.next();
+            int m = t.length();
+            long[] ways = new long[m + 1];
+            ways[0] = 1;
+            for (char ch : s.toCharArray())
+                for (int j = m; j >= 1; j--) {
+                    char p = t.charAt(j - 1);
+                    if (p == ch || p == '?') ways[j] = (ways[j] + ways[j - 1]) % MOD;
+                }
+            System.out.println(ways[m]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "a\na"
+      yield "a\n?"
+      yield "a\nb"
+      yield "ab\nabc"
+      yield "a" * 5000 + "\n" + "?" * 100
+      yield "a" * 5000 + "\n" + "a" * 50 + "?" * 50
+      yield "".join(rng.choice("ab") for _ in range(5000)) + "\n" + "".join(rng.choice("ab?") for _ in range(100))
+      yield "".join(rng.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(5000)) + "\n" + "".join(rng.choice("abc?") for _ in range(100))
+      for _ in range(4):
+          yield "".join(rng.choice("ab") for _ in range(rng.randint(1, 200))) + "\n" + "".join(rng.choice("ab?") for _ in range(rng.randint(1, 8)))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          yield "".join(rng.choice("ab") for _ in range(rng.randint(1, 9))) + "\n" + "".join(rng.choice("ab?") for _ in range(rng.randint(1, 4)))

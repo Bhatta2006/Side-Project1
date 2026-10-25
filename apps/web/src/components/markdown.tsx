@@ -80,6 +80,11 @@ export function parse(source: string): Block[] {
   return blocks;
 }
 
+/** Only `code` spans: for question prompts, where * and _ are usually maths, not emphasis. */
+export function codeSpans(text: string): ReactNode[] {
+  return text.split(/(`[^`]+`)/).map((part, i) => (i % 2 ? <code key={i}>{part.slice(1, -1)}</code> : part));
+}
+
 const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*|_[^_\s][^_]*_)|(\[[^\]]+\]\([^)\s]+\))/g;
 
 export function inline(text: string): ReactNode[] {

@@ -1,0 +1,125 @@
+concept: dsa:dp-on-trees
+pattern: dsa:dp-on-trees/rob-or-skip
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the rob-or-skip pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/dp-on-trees/rob-or-skip.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: rob-worked
+  kind: worked
+  title: 'Worked: values 10 1 1 10 1'
+  objective: Fill take and skip from the leaves up.
+  seconds: 100
+  body: 'Node 4 (10): take 10, skip 0. Node 3 (1): take 1, skip 10. Node 2 (1): take 1 + 10 = 11, skip
+    max(1, 10) = 10. Node 5 (1): take 1, skip 0. Root (10): take 10 + 10 + 0 = 20, skip max(11, 10) + 1 =
+    12. The answer is 20: rob nodes 1 and 4.'
+  why: Each node keeps the best for both of its own choices, so the parent can pick.
+- id: rob-faded
+  kind: faded
+  title: 'Your turn: a chain 2 → 7 → 9'
+  objective: Apply take and skip yourself.
+  seconds: 90
+  body: Node 1 (2) has child 2 (7), whose child is 3 (9).
+  steps:
+  - state: Node 3 is a leaf with value 9.
+    prompt: What are take and skip?
+    options:
+    - take 9, skip 0
+    - take 0, skip 9
+    - take 9, skip 9
+    answer: 0
+    explanation: Robbing the leaf gives 9; skipping it gives nothing.
+  - state: Node 2 has value 7.
+    prompt: What are take and skip?
+    options:
+    - take 7, skip 9
+    - take 16, skip 9
+    - take 7, skip 0
+    answer: 0
+    explanation: take = 7 + skip(3) = 7; skip = max(9, 0) = 9.
+  - state: The root has value 2.
+    prompt: What is the answer?
+    options:
+    - '11'
+    - '9'
+    - '18'
+    answer: 0
+    explanation: take = 2 + 9 = 11 beats skip = max(7, 9) = 9.
+- id: rob-visualizer
+  kind: visualizer
+  title: 'Step through: why one number is not enough'
+  objective: See the parent needing the child's choice.
+  seconds: 110
+  body: A parent with value 5 and a single child whose best subtree total is 8, reached by robbing the
+    child.
+  steps:
+  - state: The parent only knows "the child's subtree is worth 8".
+    prompt: Can the parent safely add its own 5?
+    options:
+    - No; it does not know whether the child was robbed
+    - Yes, always
+    - Only if 5 < 8
+    answer: 0
+    explanation: If the 8 includes the child, robbing the parent too is illegal.
+  - state: The child reports take = 8 and skip = 3.
+    prompt: What is the parent's take?
+    options:
+    - 5 + 3 = 8
+    - 5 + 8 = 13
+    - '5'
+    answer: 0
+    explanation: A robbed parent must use the child's skip value.
+  - state: Parent take = 8, parent skip = max(8, 3) = 8.
+    prompt: What is the best total?
+    options:
+    - '8'
+    - '13'
+    - '11'
+    answer: 0
+    explanation: Both choices give 8.
+- id: rob-micro
+  kind: micro
+  title: 'Pitfall: alternating levels'
+  objective: Know why level patterns are not enough.
+  seconds: 80
+  misconception: rob-alternate-levels
+  body: 'Two nodes on the same level are never adjacent, so taking every other level is always legal,
+    but it is rarely best. In 10 → 1 → 1 → 10 the best pair is the first and the last node, on levels 1
+    and 4, which no single parity contains. Each node must decide on its own, using take and skip.'
+  why: Legal is not the same as optimal.
+- id: rob-classify
+  kind: classify
+  title: Which pattern?
+  objective: Pick the tree DP shape.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Invite employees to a party, never an employee together with their direct boss, maximising fun.
+    prompt: Which approach?
+    options:
+    - Rob or skip with take and skip
+    - Alternate levels
+    - Greedy by fun
+    answer: 0
+    explanation: No two adjacent nodes, maximise the total.
+  - state: Fewest guards so every node is guarded by itself or a neighbour.
+    prompt: Which approach?
+    options:
+    - Three cover states
+    - Two states
+    - Guards on every leaf
+    answer: 0
+    explanation: A node may also be covered from above.
+  - state: The longest path where neighbouring nodes have different colours.
+    prompt: Which approach?
+    options:
+    - Path through a node with a filter on joining children
+    - Rob or skip
+    - BFS levels
+    answer: 0
+    explanation: Record two arms, return one, skip arms that break the rule.

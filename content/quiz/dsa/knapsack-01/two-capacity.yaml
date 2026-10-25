@@ -1,0 +1,63 @@
+id: quiz:dsa:knapsack-01:two-capacity
+family: two-capacity
+concept: dsa:knapsack-01
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: state-2d
+  band: 2
+  format: mcq
+  prompt: Words cost zeros and ones, both limited. What does dp[z][o] mean?
+  options:
+  - Most words within z zeros and o ones
+  - Words with exactly z zeros
+  - The z-th word
+  - Ones used by word o
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - confuse-index-value
+  - confuse-index-value
+  explanation: Both budgets index the state.
+- id: both-backwards
+  band: 3
+  format: bug_spot
+  prompt: Only the zeros loop runs backwards; the ones loop runs forwards. What goes wrong?
+  options:
+  - A word can be counted twice through the ones dimension
+  - Nothing
+  - It runs out of memory
+  - Zeros are ignored
+  answer: 0
+  misconceptions:
+  - null
+  - two-capacity-one-loop
+  - two-capacity-one-loop
+  - knapsack-zero-skipped
+  explanation: Every budget dimension must run backwards in the 0/1 version.
+- id: two-bags
+  band: 4
+  format: classify
+  prompt: Each item can go in bag A, bag B or neither. Is this two capacities?
+  options:
+  - 'No: it is a three-way choice with both fill levels as the state'
+  - Yes, the same
+  - 'No: it is greedy'
+  - Yes, with one loop
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-two-budgets-vs-two-bags
+  - knapsack-greedy-ratio
+  - two-capacity-one-loop
+  explanation: 'Two budgets: one item spends both. Two bags: one item spends one of them.'
+status: provisional
+provenance:
+  origin: original

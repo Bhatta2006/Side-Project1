@@ -1,0 +1,126 @@
+concept: dsa:knapsack-01
+pattern: dsa:knapsack-01/knapsack-01
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the 0/1 knapsack pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/knapsack-01/knapsack-01.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: ks-worked
+  kind: worked
+  title: 'Worked: weights 1 3 4 5, capacity 7'
+  objective: Fill one row backwards and read the answer.
+  seconds: 100
+  body: 'Values 1 4 5 7. After the weight-1 item, every capacity from 1 holds 1. After weight 3, capacity
+    3 holds 4 and capacity 4 holds 5 (items 1 and 3). After weight 4, capacity 7 holds 4 + 5 = 9. The
+    weight-5 item improves capacities 5 and 6 to 7 and 8, but not 7: 7 + dp[2] = 8 is less than 9. Answer
+    9.'
+  why: Each capacity keeps the better of skipping the item or taking it on top of a smaller capacity.
+- id: ks-faded
+  kind: faded
+  title: 'Your turn: weights 2 3, values 3 4, capacity 5'
+  objective: Apply the backwards update yourself.
+  seconds: 90
+  body: Start with dp = 0 0 0 0 0 0 for capacities 0 to 5.
+  steps:
+  - state: Item (w 2, v 3), capacities 5 down to 2.
+    prompt: What is dp after this item?
+    options:
+    - 0 0 3 3 3 3
+    - 0 0 3 3 6 6
+    - 0 3 3 3 3 3
+    answer: 0
+    explanation: 'Every capacity of at least 2 can hold the item once: 3.'
+  - state: dp = 0 0 3 3 3 3. Item (w 3, v 4), capacity 5.
+    prompt: What is dp[5]?
+    options:
+    - '7'
+    - '4'
+    - '6'
+    answer: 0
+    explanation: max(3, dp[2] + 4) = max(3, 3 + 4) = 7.
+  - state: Same item, capacity 3.
+    prompt: What is dp[3]?
+    options:
+    - '4'
+    - '3'
+    - '7'
+    answer: 0
+    explanation: max(3, dp[0] + 4) = 4.
+- id: ks-visualizer
+  kind: visualizer
+  title: 'Step through: forwards versus backwards'
+  objective: See how a forward loop reuses an item.
+  seconds: 110
+  body: One item (w 2, v 3), capacity 4. Compare the two loop directions.
+  steps:
+  - state: 'Backwards: c = 4 first. dp[2] is still 0.'
+    prompt: What does dp[4] become?
+    options:
+    - '3'
+    - '6'
+    - '0'
+    answer: 0
+    explanation: dp[2] + 3 = 0 + 3 = 3.
+  - state: 'Forwards: c = 2 first sets dp[2] = 3. Then c = 4.'
+    prompt: What does dp[4] become?
+    options:
+    - '6'
+    - '3'
+    - '0'
+    answer: 0
+    explanation: 'dp[2] + 3 = 3 + 3 = 6: the item twice.'
+  - state: Each item exists once.
+    prompt: Which direction is correct?
+    options:
+    - Backwards
+    - Forwards
+    - Either
+    answer: 0
+    explanation: Backwards reads only values from before this item.
+- id: ks-micro
+  kind: micro
+  title: 'Pitfall: the forward capacity loop'
+  objective: Know why the one-row loop must run from W down.
+  seconds: 80
+  misconception: knapsack-forward-capacity-loop
+  body: 'In the one-row version, dp[c] reads dp[c − w]. Looping c upwards means dp[c − w] may already
+    include the current item, so the item gets added again. With one item of weight 2 and value 3, capacity
+    4 becomes 6 instead of 3. Looping from W down reads only cells this item has not touched yet. Forwards
+    is right only when reuse is allowed: the unbounded knapsack.'
+  why: Loop direction decides whether an item can be reused.
+- id: ks-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate 0/1 knapsack from its neighbours.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Pick some of 40 projects, each at most once, to maximise profit within a 1000-hour budget.
+    prompt: Which approach?
+    options:
+    - 0/1 knapsack over hours
+    - Greedy by profit per hour
+    - Unbounded knapsack
+    answer: 0
+    explanation: 'Each project once, a small budget: 0/1 knapsack.'
+  - state: Fewest coins to make 37, with unlimited coins of each value.
+    prompt: Which approach?
+    options:
+    - Unbounded knapsack (capacity forwards)
+    - 0/1 knapsack
+    - Greedy largest coin
+    answer: 0
+    explanation: Coins can repeat, so it is the unbounded family.
+  - state: Fill a bag with gold dust and silver dust, which can be split freely.
+    prompt: Which approach?
+    options:
+    - Greedy by value per weight
+    - 0/1 knapsack
+    - Subset sum
+    answer: 0
+    explanation: 'Divisible items: the fractional knapsack is solved greedily.'

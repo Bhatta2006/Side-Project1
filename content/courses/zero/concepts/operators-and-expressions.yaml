@@ -1,0 +1,732 @@
+id: operators-and-expressions
+title: Operators and expressions
+summary: Division and modulo in each language, precedence, compound assignment, short-circuit logic and
+  the math library.
+module: first-steps
+prerequisites:
+- input-and-arithmetic
+difficulty: 2
+estimated_minutes: 45
+lesson: |
+  ## The big idea
+
+  An **expression** is anything that produces a value: `7`, `a + b`, `t % 60 == 0`. An
+  **operator** is the symbol that combines values: `+`, `//`, `%`, `and`. The last lesson
+  introduced the arithmetic operators. This one shows the five places where they surprise
+  beginners:
+
+  - whole-number division and remainder, used together to split a quantity into units;
+  - the order in which operators run (precedence);
+  - shortcuts like `+=` that update a variable;
+  - `and` / `or` that stop early (short-circuit);
+  - the math library, and where decimals give wrong answers.
+
+  ## Division and modulo
+
+  ### Recognition cues
+
+  - Convert a total into bigger and smaller **units**: seconds into hours, minutes and
+    seconds; cents into coins; days into weeks and days.
+  - "How many whole groups?" is division; "how many are left over?" is the remainder `%`.
+  - Anything that repeats in cycles: days of the week, clock hours, even and odd.
+
+  ### Template
+
+  Split a number of seconds into hours, minutes and seconds. Input: t.
+
+  ```python
+  t = int(input())
+  h = t // 3600  # whole hours
+  m = t % 3600 // 60  # whole minutes in what is left after the hours
+  s = t % 60  # seconds left over
+  print(h, m, s)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long t;
+      cin >> t;
+      long long h = t / 3600;  // whole hours (whole-number division between integers)
+      long long m = t % 3600 / 60;  // whole minutes in what is left after the hours
+      long long s = t % 60;  // seconds left over
+      cout << h << " " << m << " " << s << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long t = new Scanner(System.in).nextLong();
+          long h = t / 3600;  // whole hours (whole-number division between integers)
+          long m = t % 3600 / 60;  // whole minutes in what is left after the hours
+          long s = t % 60;  // seconds left over
+          System.out.println(h + " " + m + " " + s);
+      }
+  }
+  ```
+
+  ### Anchor problem: 3725 seconds
+
+  ```text
+  3725
+  ```
+
+  3725 seconds is 1 hour (3600 seconds), 2 minutes (120 seconds) and 5 seconds: the program
+  prints **1 2 5**.
+
+  **Step 1 — count by taking away.** The most direct idea: take away 3600 as often as you
+  can, then 60 as often as you can.
+
+  ```python
+  t = int(input())
+  h = m = 0
+  while t >= 3600:  # take away one hour at a time
+      t -= 3600
+      h += 1
+  while t >= 60:  # then one minute at a time
+      t -= 60
+      m += 1
+  print(h, m, t)  # what is left is the seconds
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long t, h = 0, m = 0;
+      cin >> t;
+      while (t >= 3600) t -= 3600, h++;  // take away one hour at a time
+      while (t >= 60) t -= 60, m++;  // then one minute at a time
+      cout << h << " " << m << " " << t << "\n";  // what is left is the seconds
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long t = new Scanner(System.in).nextLong(), h = 0, m = 0;
+          while (t >= 3600) { t -= 3600; h++; }  // take away one hour at a time
+          while (t >= 60) { t -= 60; m++; }  // then one minute at a time
+          System.out.println(h + " " + m + " " + t);  // what is left is the seconds
+      }
+  }
+  ```
+
+  It prints 1 2 5. It is correct, but for a total like 10¹⁸ seconds the loops would run for
+  centuries. Division does all those subtractions in one step: `t // 3600` **is** the number
+  of times 3600 can be taken away, and `t % 3600` is what is left.
+
+  **Step 2 — wrong first attempt: minutes from the whole total.**
+
+  ```python
+  t = int(input())
+  h = t // 3600
+  m = t // 60  # counts EVERY minute in t, including the hour
+  s = t % 60
+  print(h, m, s)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long t;
+      cin >> t;
+      long long h = t / 3600;
+      long long m = t / 60;  // counts EVERY minute in t, including the hour
+      long long s = t % 60;
+      cout << h << " " << m << " " << s << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          long t = new Scanner(System.in).nextLong();
+          long h = t / 3600;
+          long m = t / 60;  // counts EVERY minute in t, including the hour
+          long s = t % 60;
+          System.out.println(h + " " + m + " " + s);
+      }
+  }
+  ```
+
+  It prints **1 62 5**. 3725 seconds contain 62 whole minutes, but 60 of them were already
+  counted as the hour. The minutes must come from **what is left** after the hours:
+  `t % 3600`.
+
+  **Step 3 — divide, then take the remainder.** The template. Dry run for t = 3725:
+
+  | expression | value | meaning |
+  |---|---|---|
+  | `t // 3600` | 1 | one whole hour |
+  | `t % 3600` | 125 | 125 seconds are left after it |
+  | `125 // 60` | 2 | two whole minutes in those |
+  | `t % 60` | 5 | 5 seconds left over |
+
+  Each step is one operation, however large t is.
+
+  **Negative numbers differ between languages.** With a negative number, Python rounds
+  division **down** and C++ and Java round it **towards zero**, and the remainder follows:
+
+  | | Python | C++ and Java |
+  |---|---|---|
+  | `-7 // 2` or `-7 / 2` | −4 | −3 |
+  | `-7 % 2` | 1 | −1 |
+
+  For a remainder in 0 … m − 1 in every language, write `((x % m) + m) % m`.
+
+  ### Variants
+
+  1. *Watermelon* (Codeforces 4A): an even split is a remainder of 0.
+  2. *Smallest even multiple*: use `n % 2`.
+  3. *Coins* (Codeforces 1061A): how many coins of value n make S? Divide, rounding up.
+  4. *Count of matches in tournament*: halve the teams each round.
+  5. *Water bottles*: exchange empties for full ones with `//` and `%` in a loop.
+  6. *Sum of round numbers* (Codeforces 1352A): split a number into its place values.
+  7. *Floor number* (Codeforces 1426A): which floor holds flat n?
+
+  ### Contrast
+
+  **Divide or remainder?** `//` answers "how many whole groups fit?" and `%` answers "how much
+  is left over?". Splitting into several units alternates them: divide by the big unit, take
+  the remainder, then divide that by the next unit.
+
+  ### Common mistakes
+
+  - Taking the smaller unit from the whole total instead of from the remainder.
+  - Swapping `//` and `%`.
+  - Using `/` in Python, which gives a decimal (3725 / 3600 is 1.034…).
+  - Expecting the same answers for negative numbers in every language.
+
+  ## Precedence
+
+  ### Recognition cues
+
+  - A formula with several operators: averages, conversions, `a + b * c`.
+  - A result that is "almost right", such as a total that is far too big.
+
+  ### Template
+
+  The whole-number average of three numbers. Input: a, b and c.
+
+  ```python
+  a, b, c = map(int, input().split())
+  print((a + b + c) // 3)  # brackets first: add all three, then divide
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long a, b, c;
+      cin >> a >> b >> c;
+      cout << (a + b + c) / 3 << "\n";  // brackets first: add all three, then divide
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          long a = in.nextLong(), b = in.nextLong(), c = in.nextLong();
+          System.out.println((a + b + c) / 3);  // brackets first: add all three, then divide
+      }
+  }
+  ```
+
+  ### Anchor problem: average of 4, 5 and 9
+
+  `4 5 9` prints **6**: 18 // 3.
+
+  **Wrong first attempt — no brackets.** `a + b + c // 3` divides only c: 4 + 5 + 3 = 12.
+  `*`, `/`, `//` and `%` all run before `+` and `-`; operators of the same level run left to
+  right. From first to last:
+
+  | Level | Operators |
+  |---|---|
+  | 1 | brackets `( )` |
+  | 2 | `**` (Python power) |
+  | 3 | `*`  `/`  `//`  `%` |
+  | 4 | `+`  `-` |
+  | 5 | comparisons `<`  `<=`  `==`  `!=` |
+  | 6 | `not`, then `and`, then `or` (`!`, `&&`, `\|\|` in C++ and Java) |
+
+  ### Variants
+
+  1. *Convert the temperature*: `c * 9 / 5 + 32` needs no brackets, but `(f - 32) * 5 / 9`
+     does.
+  2. *Average salary excluding the minimum and maximum*: subtract, then divide.
+
+  ### Contrast
+
+  **Trust the table, or add brackets?** Precedence decides what the computer does; brackets
+  decide what the reader sees. When an expression mixes levels, add brackets even if they are
+  not needed.
+
+  ### Common mistakes
+
+  - `a + b / 2` for the average of a and b.
+  - `2 ** -1` and `-2 ** 2` in Python: `**` binds tighter than the minus, so `-2 ** 2` is −4.
+  - Forgetting that `%` is on the same level as `*`: `10 - 7 % 3` is 9.
+
+  ## Compound and increment
+
+  ### Recognition cues
+
+  - Updating a variable from its own value: totals, counters, running products.
+  - `x = x + 1` written many times in a loop.
+
+  ### Template
+
+  Add up n numbers and count the even ones. Input: n, then the n numbers.
+
+  ```python
+  n = int(input())
+  total = evens = 0
+  for x in map(int, input().split()):
+      total += x  # same as total = total + x
+      if x % 2 == 0:
+          evens += 1  # Python has no ++
+  print(total, evens)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      long long total = 0, evens = 0;
+      for (int i = 0; i < n; i++) {
+          long long x;
+          cin >> x;
+          total += x;  // same as total = total + x
+          if (x % 2 == 0) evens++;  // ++ adds 1
+      }
+      cout << total << " " << evens << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long total = 0, evens = 0;
+          for (int i = 0; i < n; i++) {
+              long x = in.nextLong();
+              total += x;  // same as total = total + x
+              if (x % 2 == 0) evens++;  // ++ adds 1
+          }
+          System.out.println(total + " " + evens);
+      }
+  }
+  ```
+
+  ### Anchor problem: 3 8 5 2
+
+  `4` then `3 8 5 2` prints **18 2**.
+
+  **Wrong first attempt — `=+` instead of `+=`.** `total =+ x` is legal in all three languages:
+  it means `total = (+x)`, so total ends as the last number, 2, and the program prints 2 2.
+  The operator is `+=`: the `+` comes first. In C++ and Java, `x++` and `++x` both add 1; they
+  differ only when the value is used in the same expression, so keep `x++` on a line of its
+  own.
+
+  ### Variants
+
+  1. *Running sum of 1D array*: `total += x` at each position.
+  2. *Number of steps to reduce a number to zero*: `n //= 2` or `n -= 1`, counting steps.
+
+  ### Contrast
+
+  **`+=` or `=`?** `+=` changes the variable using its old value; `=` throws the old value
+  away. A counter or total always needs the old value.
+
+  ### Common mistakes
+
+  - `=+` instead of `+=`.
+  - Starting a product at 0 instead of 1.
+  - Writing `x++` in Python, which is a syntax error.
+
+  ## Short circuit
+
+  ### Recognition cues
+
+  - A condition that is only **safe** to test after another one: divide only if the divisor is
+    not 0; read `a[i]` only if `i` is a valid index.
+  - `and` / `or` (`&&` / `||`) joining two tests.
+
+  ### Template
+
+  Does d divide n? Answer `no` for d = 0 instead of crashing. Input: n and d.
+
+  ```python
+  n, d = map(int, input().split())
+  if d != 0 and n % d == 0:  # and stops at the first False, so n % 0 never runs
+      print("yes")
+  else:
+      print("no")
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long n, d;
+      cin >> n >> d;
+      if (d != 0 && n % d == 0) cout << "yes\n";  // && stops at the first false, so n % 0 never runs
+      else cout << "no\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          long n = in.nextLong(), d = in.nextLong();
+          if (d != 0 && n % d == 0) System.out.println("yes");  // && stops at the first false
+          else System.out.println("no");
+      }
+  }
+  ```
+
+  ### Anchor problem: 10 and 0
+
+  `10 0` prints **no**, and `12 4` prints **yes**.
+
+  **Wrong first attempt — test the risky part first.** `n % d == 0 and d != 0` runs `10 % 0`
+  before it ever checks d: Python raises `ZeroDivisionError`, Java throws an
+  `ArithmeticException`, and C++ crashes. `and` only skips its right side when the left side
+  is already false, so the **guard goes first**. The boolean logic lesson covers the same idea
+  for `or`.
+
+  ### Variants
+
+  1. *Count the digits that divide a number*: digits can be 0, so guard before `%`.
+  2. *Power of two*: `n > 0 and n & (n - 1) == 0` (the bits lesson explains the right side).
+
+  ### Contrast
+
+  **Guard first, or test first?** The order of an `and` does not change the answer when both
+  sides are safe, but it decides whether the program crashes when the right side is only safe
+  after the left one passes.
+
+  ### Common mistakes
+
+  - The guard on the right of `and`.
+  - Using `&` instead of `&&` in C++ and Java: `&` always evaluates both sides.
+  - Putting work with side effects (like reading input) on the right of `and`.
+
+  ## Math library
+
+  ### Recognition cues
+
+  - Square roots, powers, absolute values, rounding up or down.
+  - Very large whole numbers where a decimal result might be slightly off.
+
+  ### Template
+
+  Two answers that avoid decimals. Input: a, b and n. Print ⌈a / b⌉, then the whole-number
+  square root of n (the largest r with r · r ≤ n).
+
+  ```python
+  import math
+
+  a, b, n = map(int, input().split())
+  print((a + b - 1) // b)  # round up without decimals (a, b positive)
+  print(math.isqrt(n))  # exact whole-number square root
+  ```
+
+  ```cpp
+  #include <cmath>
+  #include <iostream>
+  using namespace std;
+
+  int main() {
+      long long a, b, n;
+      cin >> a >> b >> n;
+      cout << (a + b - 1) / b << "\n";  // round up without decimals (a, b positive)
+      long long r = (long long)sqrtl((long double)n);  // close, but may be off by one
+      while (r * r > n) r--;  // fix it with whole numbers
+      while ((r + 1) * (r + 1) <= n) r++;
+      cout << r << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          long a = in.nextLong(), b = in.nextLong(), n = in.nextLong();
+          System.out.println((a + b - 1) / b);  // round up without decimals (a, b positive)
+          long r = (long) Math.sqrt((double) n);  // close, but may be off by one
+          while (r * r > n) r--;  // fix it with whole numbers
+          while ((r + 1) * (r + 1) <= n) r++;
+          System.out.println(r);
+      }
+  }
+  ```
+
+  ### Anchor problem: rounding up and a big square root
+
+  `7 2 9999999999999999` prints **4** and **99999999**.
+
+  **Wrong first attempt — trust the decimal square root.** `int(math.sqrt(9999999999999999))`
+  gives 100000000: the number 10¹⁶ − 1 cannot be stored exactly as a decimal (`float`,
+  `double`), so it is rounded to 10¹⁶ before the root is taken. Whole-number answers
+  (`math.isqrt`, or a decimal guess corrected with whole numbers) are exact. Rounding up with
+  `a // b + 1` is the other trap: for a = 8 and b = 2 it gives 5 instead of 4.
+
+  ### Variants
+
+  1. *Theatre Square* (Codeforces 1A): round up twice and multiply.
+  2. *Sqrt(x)* and *Valid perfect square*: whole-number square roots.
+  3. *Minimal square* (Codeforces 1360A): `max` and `min` from the library.
+
+  ### Contrast
+
+  **Library decimal or whole-number formula?** `math.sqrt`, `math.ceil` and `pow` work on
+  decimals, which hold about 15 to 16 significant digits. For whole-number answers on big
+  inputs, prefer whole-number operations: `(a + b - 1) // b`, `isqrt`, or a guess you check.
+
+  ### Common mistakes
+
+  - `int(math.sqrt(n))` for big n.
+  - `a // b + 1` to round up, which is wrong when b divides a.
+  - `pow(2, 10)` in C++ returning a `double`; print it as a whole number with care.
+
+  ## Worked walkthrough
+
+  **Problem.** 1000 eggs go into boxes of 12. How many full boxes, how many eggs are left
+  over, and how many boxes are needed to hold every egg?
+
+  1. *Full boxes.* `1000 // 12` = 83.
+  2. *Left over.* `1000 % 12` = 4 (83 · 12 = 996).
+  3. *Boxes for all.* Round up: `(1000 + 12 - 1) // 12` = 84, because the 4 extra eggs need
+     one more box.
+  4. *Check.* 83 · 12 + 4 = 1000.
+
+  ### Why this works
+
+  For whole numbers a ≥ 0 and b > 0, there is exactly one way to write a = q · b + r with
+  0 ≤ r < b; `a // b` is q and `a % b` is r. Splitting into units applies this twice: first
+  with b = 3600, then to the remainder with b = 60, so hours, minutes and seconds are each the
+  largest that fit. Rounding up adds b − 1 before dividing, which moves the result up by one
+  exactly when r is not 0.
+
+  ### Things to watch for
+
+  - Negative numbers: Python and C++/Java disagree on `//` and `%`.
+  - `/` in Python always gives a decimal.
+  - Big totals overflow `int` in C++ and Java; use `long long` or `long`.
+  - Brackets cost nothing and save readers from the precedence table.
+
+  ### Check your understanding
+
+  `t = 7384`. What do `t // 3600`, `t % 3600 // 60` and `t % 60` give?
+
+  Try it on paper before reading the reasoning below.
+
+  > 7384 // 3600 = 2 hours, leaving 184 seconds. 184 // 60 = 3 minutes, and 7384 % 60 = 4
+  > seconds. So 2 3 4.
+key_points:
+- '`//` counts whole groups and `%` gives what is left over; together they split a quantity into units.'
+- Take each smaller unit from the remainder of the bigger one.
+- Python rounds negative division down; C++ and Java round towards zero.
+- '`*`, `/`, `//`, `%` run before `+` and `-`; use brackets for averages.'
+- '`+=` updates a variable from its old value; `=+` is a different, legal statement.'
+- Put the guard first in an `and`, so the risky test never runs when it would crash.
+- Prefer whole-number formulas to decimals for big whole answers.
+pitfalls:
+- Taking the minutes from the whole total instead of the remainder.
+- Writing an average without brackets.
+- Writing `=+` instead of `+=`.
+- Putting the zero check after the division.
+- Trusting the decimal square root for big numbers.
+resources:
+- title: Python Tutor – step through arithmetic
+  url: https://pythontutor.com/
+  kind: visualizer
+  source: Python Tutor
+  minutes: 10
+  level: intro
+- title: Input and Output
+  url: https://docs.python.org/3/tutorial/inputoutput.html
+  kind: docs
+  source: Python docs
+  minutes: 20
+  level: core
+  languages: [python]
+- title: "CS50x Week 1: C, types, operators and input"
+  url: https://cs50.harvard.edu/x/2024/weeks/1/
+  kind: course
+  source: Harvard CS50
+  minutes: 120
+  level: core
+  languages: [cpp]
+- title: Java Full Course for Beginners
+  url: https://www.youtube.com/watch?v=eIrMbAQSU34
+  kind: video
+  source: Programming with Mosh
+  minutes: 150
+  level: core
+  languages: [java]
+quiz:
+- id: split-seconds
+  kind: mcq
+  prompt: t = 3725. What does t % 3600 // 60 give?
+  options:
+  - '2'
+  - '62'
+  - '5'
+  - '1'
+  answer: 0
+  explanation: 125 seconds are left after the hour, and 125 // 60 is 2.
+  difficulty: 1
+- id: minutes-from-total
+  kind: mcq
+  prompt: Why is m = t // 60 wrong for the minutes part of t seconds?
+  options:
+  - It also counts the minutes that are already inside the hours
+  - It rounds the wrong way
+  - It gives a decimal
+  - It is not wrong
+  answer: 0
+  explanation: Take the minutes from what is left after the hours.
+  difficulty: 2
+- id: negative-floor
+  kind: mcq
+  prompt: What is -7 // 2 in Python?
+  options:
+  - '-4'
+  - '-3'
+  - '-3.5'
+  - '3'
+  answer: 0
+  explanation: Python rounds down; C++ and Java would give -3.
+  difficulty: 3
+- id: average-brackets
+  kind: mcq
+  prompt: a = 4, b = 5, c = 9. What is a + b + c // 3 in Python?
+  options:
+  - '12'
+  - '6'
+  - '18'
+  - '7'
+  answer: 0
+  explanation: Only c is divided, because // runs before +.
+  difficulty: 2
+- id: plus-equals
+  kind: mcq
+  prompt: total = 5, then total =+ 3. What is total?
+  options:
+  - '3'
+  - '8'
+  - '5'
+  - An error
+  answer: 0
+  explanation: '=+ 3 means = (+3).'
+  difficulty: 2
+- id: guard-first
+  kind: mcq
+  prompt: d = 0. Which condition is safe?
+  options:
+  - d != 0 and n % d == 0
+  - n % d == 0 and d != 0
+  - Both
+  - Neither
+  answer: 0
+  explanation: and stops at the first false, so the guard must come first.
+  difficulty: 3
+- id: round-up
+  kind: mcq
+  prompt: How many boxes of 12 hold 1000 eggs?
+  options:
+  - '84'
+  - '83'
+  - '85'
+  - '4'
+  answer: 0
+  explanation: (1000 + 11) // 12 = 84.
+  difficulty: 3
+- id: round-up-trap
+  kind: mcq
+  prompt: Why is a // b + 1 not a safe way to round up?
+  options:
+  - It is one too many when b divides a
+  - It is too slow
+  - It gives a decimal
+  - It only works for negative numbers
+  answer: 0
+  explanation: 8 // 2 + 1 is 5, but 8 / 2 is exactly 4.
+  difficulty: 4
+- id: float-root
+  kind: mcq
+  prompt: Why can int(math.sqrt(n)) be wrong for n near 10^16?
+  options:
+  - A decimal cannot store such a big n exactly, so it is rounded before the root is taken
+  - math.sqrt only works on small numbers
+  - int rounds up
+  - It is never wrong
+  answer: 0
+  explanation: Use math.isqrt, or correct a decimal guess with whole numbers.
+  difficulty: 5
+problems:
+- party-packs
+- clock-after
+practice_links:
+- title: Watermelon
+  url: https://codeforces.com/problemset/problem/4/A
+  platform: Codeforces
+  difficulty: easy
+- title: Theatre Square
+  url: https://codeforces.com/problemset/problem/1/A
+  platform: Codeforces
+  difficulty: easy
+- title: Coins
+  url: https://codeforces.com/problemset/problem/1061/A
+  platform: Codeforces
+  difficulty: easy
+- title: Count of Matches in Tournament
+  url: https://leetcode.com/problems/count-of-matches-in-tournament/
+  platform: LeetCode
+  difficulty: easy
+- title: Water Bottles
+  url: https://leetcode.com/problems/water-bottles/
+  platform: LeetCode
+  difficulty: easy
+- title: Convert the Temperature
+  url: https://leetcode.com/problems/convert-the-temperature/
+  platform: LeetCode
+  difficulty: easy
+- title: Count the Digits That Divide a Number
+  url: https://leetcode.com/problems/count-the-digits-that-divide-a-number/
+  platform: LeetCode
+  difficulty: easy
+provenance:
+  origin: original
+status: live

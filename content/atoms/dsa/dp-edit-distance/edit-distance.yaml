@@ -1,0 +1,125 @@
+concept: dsa:dp-edit-distance
+pattern: dsa:dp-edit-distance/edit-distance
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the edit distance pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/dp-edit-distance/edit-distance.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: ed-worked
+  kind: worked
+  title: 'Worked: horse to ros'
+  objective: Fill the edit table and read the answer.
+  seconds: 100
+  body: 'Row 0 is 0 1 2 3 and column 0 is 0 1 2 3 4 5. Row h: h ≠ r, so 1 + min(1, 1, 0) = 1 (replace).
+    Row o, column o is a match and copies up-left: 1. Row r, column r copies up-left (row o, column 0:
+    2). The last row ends at 3: replace h, delete r, delete e.'
+  why: Each cell is the cheapest way to fix the last characters of both prefixes.
+- id: ed-faded
+  kind: faded
+  title: 'Your turn: cat to cut'
+  objective: Apply the base cases and the three-way minimum yourself.
+  seconds: 90
+  body: Rows are prefixes of cat, columns prefixes of cut. Row 0 is 0 1 2 3.
+  steps:
+  - state: Column 0, row cat (3 characters).
+    prompt: What is dp[3][0]?
+    options:
+    - '3'
+    - '0'
+    - '1'
+    answer: 0
+    explanation: Delete all three characters.
+  - state: Row ca, column cu. a ≠ u. Up = 1, left = 1, up-left = 0.
+    prompt: What is dp[2][2]?
+    options:
+    - '1'
+    - '0'
+    - '2'
+    answer: 0
+    explanation: 1 + min(1, 1, 0) = 1, replace a with u.
+  - state: Row cat, column cut. t == t. Up-left = 1.
+    prompt: What is dp[3][3]?
+    options:
+    - '1'
+    - '2'
+    - '0'
+    answer: 0
+    explanation: Equal last characters copy up-left at no cost.
+- id: ed-visualizer
+  kind: visualizer
+  title: 'Step through: where each neighbour comes from'
+  objective: Link up, left and up-left to delete, insert and replace.
+  seconds: 110
+  body: Cell (i, j) with a[i−1] ≠ b[j−1].
+  steps:
+  - state: You use dp[i−1][j] and add 1.
+    prompt: Which operation is that?
+    options:
+    - Delete a[i−1]
+    - Insert b[j−1]
+    - Replace
+    answer: 0
+    explanation: a loses its last character; b is unchanged.
+  - state: You use dp[i][j−1] and add 1.
+    prompt: Which operation is that?
+    options:
+    - Insert b[j−1]
+    - Delete a[i−1]
+    - Replace
+    answer: 0
+    explanation: b[j−1] is produced at the end; a is unchanged.
+  - state: You use dp[i−1][j−1] and add 1.
+    prompt: Which operation is that?
+    options:
+    - Replace a[i−1] with b[j−1]
+    - Delete both
+    - Insert both
+    answer: 0
+    explanation: One operation fixes both last characters.
+- id: ed-micro
+  kind: micro
+  title: 'Pitfall: base row and column at zero'
+  objective: Know why the edges of the table are not zero.
+  seconds: 80
+  misconception: edit-base-zero
+  body: 'In LCS, an empty prefix shares nothing, so the edges are 0. In edit distance, turning abc into
+    the empty string needs three deletions, and turning the empty string into ab needs two inserts. Leave
+    the edges at 0 and a whole prefix can appear or vanish for free: ab to xab comes out as 0 instead of
+    1, because the inserted x is never paid for.'
+  why: The edges are the cost of building or erasing a whole prefix.
+- id: ed-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate edit distance from its neighbours.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Fewest single-letter inserts, deletes or replacements to fix a typo.
+    prompt: Which approach?
+    options:
+    - Edit distance table
+    - n + m − 2·LCS
+    - Compare position by position
+    answer: 0
+    explanation: Replace is allowed, so use the three-way minimum.
+  - state: Fewest deletions from either word to make them equal; no replacing.
+    prompt: Which approach?
+    options:
+    - n + m − 2·LCS
+    - Edit distance with replace
+    - Two pointers
+    answer: 0
+    explanation: Without replace, the kept letters are a common subsequence.
+  - state: In how many ways does the word dog appear as a subsequence of a long text?
+    prompt: Which approach?
+    options:
+    - Counting table, like distinct subsequences
+    - Edit distance
+    - Two pointers
+    answer: 0
+    explanation: A count of embeddings needs the counting table.

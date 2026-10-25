@@ -1,0 +1,109 @@
+id: dsa:dp-introduction/fibonacci-four-ways
+concept: dsa:dp-introduction
+title: 'Fibonacci four ways: recursion, memo, table, two variables'
+tracks:
+- interview
+- competitive
+recognise:
+- The answer for n is a fixed mix of answers for a few smaller sizes
+- Asks for the n-th term or the number of ways, with large n
+- The recursion tree repeats the same calls many times
+state: F(i) = the i-th term; keep only F(i − 1) and F(i − 2)
+transition: F(i) = F(i − 1) + F(i − 2), filled for i increasing
+base_cases:
+- F(0) = 0
+- F(1) = 1
+complexity:
+  time: O(n)
+  space: O(1) with two variables
+template:
+  python: |
+    n = int(input())
+    prev, cur = 0, 1  # F(0) and F(1)
+    for _ in range(n):
+        prev, cur = cur, prev + cur  # slide the two-number window forward
+    print(prev)
+  cpp: |
+    #include <iostream>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        long long prev = 0, cur = 1;  // F(0) and F(1)
+        for (int i = 0; i < n; i++) {
+            long long next = prev + cur;
+            prev = cur;
+            cur = next;
+        }
+        cout << prev << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            int n = new Scanner(System.in).nextInt();
+            long prev = 0, cur = 1;  // F(0) and F(1)
+            for (int i = 0; i < n; i++) {
+                long next = prev + cur;
+                prev = cur;
+                cur = next;
+            }
+            System.out.println(prev);
+        }
+    }
+template_io:
+  stdin: |
+    10
+  expected: '55'
+variants:
+- id: fibonacci-number
+  band: 1
+  title: The n-th Fibonacci number
+  problem: leetcode:fibonacci-number
+- id: climbing-stairs
+  band: 2
+  title: Ways to climb with steps 1 or 2
+  problem: leetcode:climbing-stairs
+- id: tribonacci
+  band: 2
+  title: Three previous terms
+  problem: leetcode:n-th-tribonacci-number
+- id: min-cost-stairs
+  band: 3
+  title: Minimum instead of sum
+  problem: leetcode:min-cost-climbing-stairs
+- id: dice-combinations
+  band: 4
+  title: Six previous terms, modulo
+  problem: cses:1633
+- id: good-strings
+  band: 5
+  title: Step sizes from the input
+  problem: leetcode:count-ways-to-build-good-strings
+pitfalls:
+- dp-recompute-subproblems
+- dp-memo-not-stored
+- dp-wrong-base-case
+- dp-loop-order
+atoms:
+- fib-worked
+- fib-faded
+- fib-visualizer
+- fib-micro
+- fib-classify
+quiz_family: quiz:dsa:dp-introduction:fibonacci-four-ways
+problems:
+  external:
+  - leetcode:fibonacci-number
+  - leetcode:climbing-stairs
+  - leetcode:n-th-tribonacci-number
+  - leetcode:min-cost-climbing-stairs
+  - cses:1633
+  - leetcode:count-ways-to-build-good-strings
+showcase:
+- 'Fibonacci four ways: the call count of plain recursion against memoization'
+status: provisional
+provenance:
+  origin: original

@@ -115,6 +115,14 @@ def one_question(turn: Turn) -> str | None:
     return None if 1 <= count <= 2 else f"asked {count} questions; planning asks one at a time"
 
 
+def explains_term(turn: Turn) -> str | None:
+    # A beginner asking what `input()` is gets a plain explanation, not only a question (Z-7).
+    words = re.search(
+        r"\b(reads?|takes?|gets?)\b.{0,60}\b(line|input|text|keyboard)", turn.text, re.I
+    )
+    return None if words else "did not explain the term the learner asked about"
+
+
 def short(turn: Turn) -> str | None:
     words = len(turn.text.split())
     return None if words <= 180 else f"{words} words; Socratic hints stay short"
@@ -170,6 +178,13 @@ SCENARIOS = [
         "fresh",
         scope="problem",
         checks=[short],
+    ),
+    Scenario(
+        "beginner_asks_what_a_term_means",
+        "what is input()?? i have never seen this. how do i even start",
+        "fresh",
+        scope="problem",
+        checks=[explains_term, short],
     ),
 ]
 

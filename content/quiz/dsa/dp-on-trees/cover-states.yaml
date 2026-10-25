@@ -1,0 +1,64 @@
+id: quiz:dsa:dp-on-trees:cover-states
+family: cover-states
+concept: dsa:dp-on-trees
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: leaves
+  band: 2
+  format: trace
+  prompt: Node 1 has a left child 2; node 2 has children 3 and 4. Cameras on every leaf use 2. What is
+    the fewest?
+  options:
+  - '1'
+  - '2'
+  - '3'
+  - '0'
+  answer: 0
+  misconceptions:
+  - null
+  - cover-leaves-greedy
+  - cover-two-states-only
+  - off-by-one-output
+  explanation: One camera on node 2 covers all four nodes.
+- id: root
+  band: 3
+  format: mcq
+  prompt: Which states may the root end in?
+  options:
+  - Camera, or covered by a child
+  - Any of the three
+  - Waiting for the parent only
+  - Camera only
+  answer: 0
+  misconceptions:
+  - null
+  - cover-root-uncovered
+  - cover-root-uncovered
+  - cover-two-states-only
+  explanation: The root has no parent to cover it.
+- id: chain
+  band: 4
+  format: trace
+  prompt: A chain of 5 nodes. How many cameras?
+  options:
+  - '2'
+  - '3'
+  - '1'
+  - '5'
+  answer: 0
+  misconceptions:
+  - null
+  - cover-leaves-greedy
+  - cover-two-states-only
+  - tree-sum-all
+  explanation: Cameras on nodes 2 and 4.
+status: provisional
+provenance:
+  origin: original

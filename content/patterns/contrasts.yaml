@@ -48,3 +48,223 @@ pattern-search-needs-sorted-input:
     Searching an array needs it sorted. Searching on the answer does not: it needs a check
     that is monotone in the answer, such as "can finish within H hours at speed s". The input
     can be in any order.
+pattern-ordered-vs-unordered-ways:
+  title: "Ordered ways or unordered sums?"
+  body: >-
+    Climbing stairs counts orders: 1 + 2 and 2 + 1 are different climbs, so the recurrence adds
+    the last step. Counting sums where order does not matter is coin change II: loop over the
+    pieces in the outer loop so each collection is counted once. Ask whether reordering the
+    pieces gives a new answer.
+pattern-dp-vs-greedy:
+  title: "Greedy or DP?"
+  body: >-
+    Greedy commits to the choice that looks best now and never looks back. That is safe only
+    when you can prove the choice never blocks a better future, as with farthest reach in jump
+    game. If a small counterexample exists, as with stair costs 1 2 100 3, try every choice with
+    DP.
+pattern-value-vs-choice:
+  title: "Best value, or the choices behind it?"
+  body: >-
+    If the output is only the best value, keep as few dp cells as the transition reads. If it
+    must show the path, items or sequence, keep a record of which option won at every cell, then
+    walk back from the answer and reverse.
+pattern-01-vs-unbounded-knapsack:
+  title: "Once per item, or unlimited?"
+  body: >-
+    0/1 knapsack: each item exists once, so the one-row loop runs capacity from W down and never
+    reads a cell that already contains the item. Unbounded knapsack: items repeat, so the loop
+    runs upwards on purpose. Fractional knapsack: items can be split, so sort by value per
+    weight and take greedily.
+pattern-subset-vs-subarray:
+  title: "Subset or subarray?"
+  body: >-
+    A subset may skip elements and ignores order: use the subset-sum table. A subarray is a
+    contiguous run: use prefix sums or a sliding window. Look for the word contiguous, or for
+    examples where the chosen numbers are next to each other.
+pattern-partition-greedy-vs-dp:
+  title: "Greedy balancing or reachable sums?"
+  body: >-
+    Putting each number into the lighter pile is fast but can be wrong: 3 3 2 2 2 ends with a
+    difference of 2 when 0 is possible. When the total is small, mark every reachable sum up to
+    half and take the closest one.
+pattern-count-vs-exists:
+  title: "Count, exists, or best?"
+  body: >-
+    The table is identical; only the combine step changes. Use or to ask whether a total is
+    reachable, + to count the ways, and max or min for the best value. A yes/no table cannot be
+    turned into counts afterwards.
+pattern-two-budgets-vs-two-bags:
+  title: "Two budgets or two bags?"
+  body: >-
+    Two budgets: every item spends from two limits at once, so the state is both remaining
+    budgets. Two bags: each item goes into one of two places or nowhere, a three-way choice. Ask
+    whether one item uses two resources, or one resource in one of two places.
+pattern-exact-vs-at-most-capacity:
+  title: "Exactly the budget, or at most?"
+  body: >-
+    "At most W" lets every cell start at 0, because taking nothing always fits. "Exactly W"
+    means only dp[0] starts reachable: every other cell starts at infinity for a minimum, or
+    minus infinity for a maximum, and the answer must be checked for still unreachable.
+pattern-subsequence-vs-substring:
+  title: "Subsequence or substring?"
+  body: >-
+    A subsequence may skip characters, so an LCS cell keeps the better of up and left on a
+    mismatch. A substring is contiguous, so a common-substring cell resets to 0 on a mismatch
+    and the answer is the largest cell anywhere. Look for the words contiguous, consecutive or
+    block.
+pattern-two-pointers-vs-lcs:
+  title: "Two pointers or an LCS table?"
+  body: >-
+    If all of one string must appear in the other, match each character as early as possible
+    with two pointers; there is nothing to choose. If you choose which characters to keep from
+    both strings, an early match can block better ones, so fill the LCS table.
+pattern-palindrome-subsequence-vs-substring:
+  title: "Palindromic subsequence or substring?"
+  body: >-
+    A palindromic subsequence may skip characters, so on unequal ends keep the better of
+    dropping either end. A palindromic substring must be contiguous, so s[i..j] counts only if
+    the ends match and the inside is itself a palindrome; expanding around centres is simpler.
+pattern-edit-vs-lcs-deletions:
+  title: "Edit distance or LCS deletions?"
+  body: >-
+    If replacing a character is allowed, a wrong character costs one step, so take 1 plus the
+    minimum of delete, insert and replace. If only inserts and deletes are allowed, it costs
+    two, and n + m − 2·LCS is exact. Read which operations the statement allows.
+pattern-wildcard-vs-regex-star:
+  title: "Wildcard star or regex star?"
+  body: >-
+    A wildcard star stands alone and matches any sequence, so it either matches nothing (j − 1)
+    or eats one more character (i − 1). A regex star belongs to the character before it, so x*
+    is skipped as a pair (j − 2) or eats one more x.
+pattern-stock-unlimited-vs-limited:
+  title: "Unlimited trades or limited?"
+  body: >-
+    With unlimited trades and no fee or cooldown, every daily rise can be its own trade, so
+    summing the rises is correct. Once trades are limited by a count, a cooldown or a fee,
+    merging or skipping rises changes the answer, so run the cash and hold state machine.
+pattern-strict-vs-nondecreasing-lis:
+  title: "Strictly increasing or non-decreasing?"
+  body: >-
+    For a strictly increasing subsequence, compare with < and, in patience sorting, replace the
+    first tail that is at least x (lower bound), so equal values never extend each other. For
+    non-decreasing, use <= and the first tail greater than x (upper bound). Test with repeated
+    values.
+pattern-sort-then-lis:
+  title: "Sort first, or keep the order?"
+  body: >-
+    If the input is a sequence, its order is part of the problem, so never sort; sorting makes
+    every array its own increasing subsequence. If the input is a set of items such as boxes,
+    pairs or numbers to choose, sort by one key so a chain only moves forwards, then run LIS on
+    the other key.
+pattern-interval-vs-front-partition:
+  title: "Interval DP or front partition?"
+  body: >-
+    If a split leaves two pieces that both still need solving, and the cost of joining depends
+    on both, the state is a range i..j, filled by length in O(n³). If only the last piece
+    matters once the prefix before it is solved, as with palindrome cuts or word breaks, a
+    prefix state is enough and costs O(n²).
+pattern-bitmask-vs-knapsack:
+  title: "Bitmask DP or knapsack?"
+  body: >-
+    If only a total matters, such as a weight or a sum, the state is that number and the item
+    count can be large. If which items are used matters, because they interact like jobs and
+    workers or cities on a route, the state must be the set itself, so n has to be about 20 or
+    less.
+pattern-game-greedy-vs-minimax:
+  title: "Greedy move or minimax?"
+  body: >-
+    Greedy takes the move that looks best now. In a two-player game the opponent then replies
+    with their best move, so value each position for the player to move, as the best score
+    difference, and take the move that leaves the opponent the worst position.
+pattern-state-remembers-rules:
+  title: "What must the state remember?"
+  body: >-
+    Exactly the part of the past that a rule can look back at, such as the last character, the
+    length of the current run, or a count capped at its limit. Remember less and forbidden
+    sequences slip through; remember more and the table only grows.
+pattern-digit-dp-vs-brute-force:
+  title: "Loop over the numbers, or over their digits?"
+  body: >-
+    Up to about ten million numbers, a plain loop is simple and safe. Beyond that, count by
+    digits from the left, with the position, what the property needs so far, and a tight flag
+    that keeps the prefix from exceeding the limit.
+pattern-next-greater-vs-max-right:
+  title: "Next greater, or the largest to the right?"
+  body: >-
+    The largest value to the right is one running maximum. The next greater element is the
+    nearest bigger value, which needs every candidate not yet beaten, and that is what the
+    monotonic stack keeps. Read whether the question says first, next or nearest.
+pattern-stack-vs-deque:
+  title: "Monotonic stack or monotonic deque?"
+  body: >-
+    A stack fits when elements only leave because a better element beats them, as in next
+    greater. In a sliding window, elements also leave because they expire, so they must be
+    removed from the front as well. That needs a deque of indexes.
+pattern-return-vs-record:
+  title: "What to return, and what to record?"
+  body: >-
+    A parent can only extend a path down one side, so a node returns its best one-sided value. A
+    path anywhere may bend at the node and use both children, so the node records its two-sided
+    value in a global answer. Returning the two-sided value builds paths that no tree contains.
+pattern-square-vs-rectangle:
+  title: "Square or rectangle?"
+  body: >-
+    A square ending at a cell has one size, so one number per cell works and the three-neighbour
+    minimum finds it. A rectangle has two free sides, and no single number per cell describes
+    the best one. Build a histogram of consecutive ones for each row and run the
+    largest-rectangle stack on it.
+pattern-one-answer-vs-states:
+  title: "One answer per node, or one per state?"
+  body: >-
+    If the parent only needs a number from each child, such as a height or a sum, return that
+    number. If the parent's choice depends on the child's choice, such as whether the child was
+    taken or has a camera, keep one answer per child state and let the parent combine the
+    compatible ones.
+pattern-first-vs-last-index:
+  title: "First index or last index?"
+  body: >-
+    The prefix state scan is the same for every question; only the stored value changes. For the
+    longest subarray, keep the first index at which each prefix value appeared, so the start is
+    as early as possible. For the shortest, overwrite it with the latest index. For a count,
+    store how many times it appeared.
+pattern-first-vs-last-true:
+  title: "First value that works, or last?"
+  body: >-
+    Minimising a maximum looks for the first value that works: keep hi = mid when mid works and
+    round mid down. Maximising a minimum looks for the last value that works: keep lo = mid when
+    mid works, and round mid up, or the loop can stop moving. Decide which way the check flips
+    before writing the loop.
+pattern-filter-vs-valid-prefix:
+  title: "Filter at the end, or extend only valid prefixes?"
+  body: >-
+    Generating everything and filtering finished results is simple, but it explores every
+    candidate, valid or not. If the rule can be checked on a prefix, such as "never more closing
+    brackets than opening ones", check it before each extension, so invalid prefixes are never
+    grown and the work follows the size of the output.
+pattern-queue-vs-linked-list:
+  title: "Queue or doubly linked list?"
+  body: >-
+    A queue adds at one end and removes at the other, which is enough when the order never
+    changes after insertion, as in first in, first out. When an access moves an item to the
+    front, as in an LRU cache, the item must be removed from the middle of the order. That
+    needs a doubly linked list, plus a hash map that finds the item's node in O(1).
+pattern-divide-vs-remainder:
+  title: "Divide, or take the remainder?"
+  body: >-
+    Whole-number division answers "how many whole groups fit?" and the remainder answers "how
+    much is left over?". Splitting a total into several units alternates the two: divide by the
+    biggest unit, keep the remainder, then divide that by the next unit.
+pattern-root-vs-all:
+  title: "Stop at the square root, or try everything?"
+  body: >-
+    Every divisor larger than the square root of n is the partner n // i of a divisor i smaller
+    than it, so trying i up to the root finds all of them in O(√n) steps. Trying every number up
+    to n finds the same divisors in O(n). Only the root of a perfect square has no separate
+    partner and is counted once.
+pattern-bubble-selection-insertion:
+  title: "Bubble, selection or insertion?"
+  body: >-
+    All three simple sorts take about n² / 2 comparisons in the worst case, but they move values
+    differently. Bubble sort swaps out-of-order neighbours in passes, selection sort swaps the
+    smallest remaining value into place, and insertion sort slides each new value left into a
+    sorted front. A trace question depends on which one is running.

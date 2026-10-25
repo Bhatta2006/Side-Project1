@@ -1,0 +1,183 @@
+id: courier-vans
+title: Courier vans
+concepts: [binary-search-on-answer]
+difficulty: medium
+statement: |
+  A depot has `n` parcels on a conveyor, in order, with weights `w_1 … w_n`. There are `k`
+  vans. Each van takes one **contiguous** block of parcels from the conveyor (the next van
+  starts where the previous one stopped), and a van has room for **at most `c` parcels**.
+  Some vans may stay empty.
+
+  The load of a van is the total weight of its parcels. Print the smallest possible load of
+  the heaviest van.
+input_format: |
+  The first line contains n, k and c. The second line contains w_1 … w_n.
+output_format: The smallest possible heaviest load.
+constraints:
+  - 1 ≤ n ≤ 10^5
+  - 1 ≤ k, c ≤ n, and k · c ≥ n
+  - 1 ≤ w_i ≤ 10^4
+examples:
+  - input: "5 3 2\n4 1 1 1 6"
+    output: "6"
+    explanation: "4 1 | 1 1 | 6 gives loads 5, 2 and 6. No split can do better, because the parcel of weight 6 is in some van."
+  - input: "4 2 2\n1 1 1 9"
+    output: "10"
+    explanation: "Each van takes two parcels, so the split must be 1 1 | 1 9."
+hints:
+  - "If a heaviest load of L is achievable, so is every larger L. Binary search on L."
+  - "To check L, fill each van greedily: start a new van when the next parcel would push the load above L, or when the van already holds c parcels. L works if at most k vans are used."
+  - "Search from max(w) to the total weight; the total can exceed 2^31, so use 64-bit integers."
+approach: |
+  Min max split with a second limit per part. For a cap L, fill vans greedily from the
+  front, closing a van when the next parcel would exceed L or when the van holds c parcels.
+  Greedy filling uses the fewest vans for a given L, because filling a van as far as both
+  limits allow never leaves the rest of the conveyor worse off. The check is monotone in L,
+  so binary search for the smallest L that needs at most k vans, between max(w) and the total.
+  O(n log(total)) time.
+reference: |
+  import sys
+  def main():
+      data = sys.stdin.buffer.read().split()
+      n, k, c = int(data[0]), int(data[1]), int(data[2])
+      w = [int(x) for x in data[3:3 + n]]
+      def vans(cap):
+          used, run, count = 1, 0, 0
+          for x in w:
+              if run + x > cap or count == c:
+                  used += 1
+                  if used > k:
+                      return used
+                  run, count = 0, 0
+              run += x
+              count += 1
+          return used
+      lo, hi = max(w), sum(w)
+      while lo < hi:
+          mid = (lo + hi) // 2
+          if vans(mid) <= k:
+              hi = mid
+          else:
+              lo = mid + 1
+      print(lo)
+  main()
+brute: |
+  from itertools import combinations
+  n, k, c = map(int, input().split())
+  w = list(map(int, input().split()))
+  best = None
+  for parts in range(1, min(k, n) + 1):
+      for cuts in combinations(range(1, n), parts - 1):
+          b = [0, *cuts, n]
+          if all(b[i + 1] - b[i] <= c for i in range(parts)):
+              load = max(sum(w[b[i]:b[i + 1]]) for i in range(parts))
+              best = load if best is None or load < best else best
+  print(best)
+references:
+  cpp: |
+    #include <algorithm>
+    #include <cstdio>
+    #include <vector>
+    using namespace std;
+
+    int n, k, c;
+    vector<long long> w;
+
+    int vans(long long cap) {
+        int used = 1, count = 0;
+        long long run = 0;
+        for (long long x : w) {
+            if (run + x > cap || count == c) {
+                if (++used > k) return used;
+                run = 0;
+                count = 0;
+            }
+            run += x;
+            count++;
+        }
+        return used;
+    }
+
+    int main() {
+        if (scanf("%d %d %d", &n, &k, &c) != 3) return 0;
+        w.resize(n);
+        long long lo = 0, hi = 0;
+        for (auto& x : w) { scanf("%lld", &x); lo = max(lo, x); hi += x; }
+        while (lo < hi) {
+            long long mid = lo + (hi - lo) / 2;
+            if (vans(mid) <= k) hi = mid;
+            else lo = mid + 1;
+        }
+        printf("%lld\n", lo);
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        static int n, k, c;
+        static long[] w;
+
+        static int vans(long cap) {
+            int used = 1, count = 0;
+            long run = 0;
+            for (long x : w) {
+                if (run + x > cap || count == c) {
+                    if (++used > k) return used;
+                    run = 0;
+                    count = 0;
+                }
+                run += x;
+                count++;
+            }
+            return used;
+        }
+
+        public static void main(String[] args) throws IOException {
+            StreamTokenizer st = new StreamTokenizer(new BufferedReader(new InputStreamReader(System.in)));
+            st.nextToken(); n = (int) st.nval;
+            st.nextToken(); k = (int) st.nval;
+            st.nextToken(); c = (int) st.nval;
+            w = new long[n];
+            long lo = 0, hi = 0;
+            for (int i = 0; i < n; i++) {
+                st.nextToken();
+                w[i] = (long) st.nval;
+                lo = Math.max(lo, w[i]);
+                hi += w[i];
+            }
+            while (lo < hi) {
+                long mid = lo + (hi - lo) / 2;
+                if (vans(mid) <= k) hi = mid;
+                else lo = mid + 1;
+            }
+            System.out.println(lo);
+        }
+    }
+generator: |
+  def line(n, k, c, w):
+      return f"{n} {k} {c}\n" + " ".join(map(str, w))
+
+  def cases(rng):
+      yield "1 1 1\n7"
+      yield "3 3 1\n5 9 2"
+      yield "3 1 3\n10000 10000 10000"
+      n = 100000
+      yield line(n, 1, n, [rng.randint(1, 10**4) for _ in range(n)])
+      yield line(n, n, 1, [rng.randint(1, 10**4) for _ in range(n)])
+      yield line(n, 1000, 100, [rng.randint(1, 10**4) for _ in range(n)])
+      yield line(n, 50000, 2, [rng.randint(1, 10**4) for _ in range(n)])
+      yield line(n, 317, 5000, [rng.randint(1, 10**4) for _ in range(n)])
+      yield line(n, 2000, 60, [10**4] * n)
+      for _ in range(4):
+          m = rng.randint(1, 40)
+          kk = rng.randint(1, m)
+          cc = rng.randint(-(-m // kk), m)
+          yield line(m, kk, cc, [rng.randint(1, 30) for _ in range(m)])
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 9)
+          k = rng.randint(1, n)
+          c = rng.randint(-(-n // k), n)
+          yield f"{n} {k} {c}\n" + " ".join(str(rng.randint(1, 9)) for _ in range(n))

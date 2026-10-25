@@ -1,0 +1,765 @@
+id: dp-squares
+title: DP on squares and rectangles
+summary: Maximal square, counting all-ones squares and the maximal rectangle built from a histogram per
+  row.
+module: dynamic-programming
+prerequisites: [dp-2d, monotonic-stack]
+difficulty: 4
+estimated_minutes: 60
+lesson: |
+  Two classic grid questions look alike and need different tools. "The largest **square** of
+  ones" is a DP on grids: each cell asks how large a square can end at it. "The largest
+  **rectangle** of ones" cannot be answered that way, because a rectangle has two free
+  sides. Instead, each row becomes a histogram, and the monotonic stack finds the largest
+  rectangle under it.
+
+  **Input in this lesson.** The first line holds r and c; each of the next r lines is a string
+  of c characters, `1` for a filled cell and `0` for an empty one.
+
+  ## Maximal square
+
+  ### Recognition cues
+
+  - A 0/1 grid; the largest (or the number of) **squares** made only of ones.
+  - "Largest square plot", "biggest square of free cells", "count square submatrices".
+  - r · c up to about 10⁶ cells, so O(r · c) is the target.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For maximal square |
+  |---|---|
+  | State | `dp[i][j]` = the side of the largest all-ones square whose **bottom-right corner** is cell (i, j) |
+  | Transition | if the cell is 1: `1 + min(dp[i−1][j], dp[i][j−1], dp[i−1][j−1])`; if it is 0: 0 |
+  | Base cases | row 0 and column 0 of the padded table are 0 |
+  | Answer | the largest `dp[i][j]`, squared for the area |
+  | Loop order | rows top to bottom, columns left to right: a cell needs up, left and up-left |
+
+  The three neighbours are the squares ending just above, just to the left and diagonally
+  above-left. A square of side k ends at (i, j) only if all three of them have side at least
+  k − 1, so the smallest of them limits the new square.
+
+  ### Template
+
+  One row, with the diagonal remembered in a variable:
+
+  ```python
+  r, c = map(int, input().split())
+  grid = [input().strip() for _ in range(r)]
+  dp = [0] * (c + 1)  # dp[j]: side of the largest square ending at column j of the current row
+  best = 0
+  for i in range(r):
+      diag = 0  # dp of the cell up-left, from the previous row
+      for j in range(1, c + 1):
+          up = dp[j]  # still the previous row's value
+          dp[j] = 1 + min(up, dp[j - 1], diag) if grid[i][j - 1] == "1" else 0
+          diag = up
+          best = max(best, dp[j])
+  print(best * best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int r, c;
+      cin >> r >> c;
+      vector<int> dp(c + 1, 0);  // dp[j]: side of the largest square ending at column j of this row
+      int best = 0;
+      for (int i = 0; i < r; i++) {
+          string row;
+          cin >> row;
+          int diag = 0;  // dp of the cell up-left, from the previous row
+          for (int j = 1; j <= c; j++) {
+              int up = dp[j];  // still the previous row's value
+              dp[j] = row[j - 1] == '1' ? 1 + min({up, dp[j - 1], diag}) : 0;
+              diag = up;
+              best = max(best, dp[j]);
+          }
+      }
+      cout << (long long)best * best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int r = in.nextInt(), c = in.nextInt();
+          int[] dp = new int[c + 1];  // dp[j]: side of the largest square ending at column j of this row
+          int best = 0;
+          for (int i = 0; i < r; i++) {
+              String row = in.next();
+              int diag = 0;  // dp of the cell up-left, from the previous row
+              for (int j = 1; j <= c; j++) {
+                  int up = dp[j];  // still the previous row's value
+                  dp[j] = row.charAt(j - 1) == '1' ? 1 + Math.min(up, Math.min(dp[j - 1], diag)) : 0;
+                  diag = up;
+                  best = Math.max(best, dp[j]);
+              }
+          }
+          System.out.println((long) best * best);
+      }
+  }
+  ```
+
+  ### Anchor problem: the largest square
+
+  ```text
+  4 5
+  10100
+  10111
+  11111
+  10010
+  ```
+
+  The answer is **4**: the 2 × 2 square in rows 2–3, columns 3–4 (counting from 1).
+
+  **Wrong first attempt — forget the diagonal.** Using only up and left looks enough, since
+  they already cover the top and left edges:
+
+  ```python
+  r, c = map(int, input().split())
+  grid = [input().strip() for _ in range(r)]
+  dp = [[0] * (c + 1) for _ in range(r + 1)]
+  best = 0
+  for i in range(1, r + 1):
+      for j in range(1, c + 1):
+          if grid[i - 1][j - 1] == "1":
+              dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1])  # BUG: no diagonal
+              best = max(best, dp[i][j])
+  print(best * best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int r, c;
+      cin >> r >> c;
+      vector<string> grid(r);
+      for (auto& row : grid) cin >> row;
+      vector<vector<int>> dp(r + 1, vector<int>(c + 1, 0));
+      int best = 0;
+      for (int i = 1; i <= r; i++)
+          for (int j = 1; j <= c; j++)
+              if (grid[i - 1][j - 1] == '1') {
+                  dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1]);  // BUG: no diagonal
+                  best = max(best, dp[i][j]);
+              }
+      cout << best * best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int r = in.nextInt(), c = in.nextInt();
+          String[] grid = new String[r];
+          for (int i = 0; i < r; i++) grid[i] = in.next();
+          int[][] dp = new int[r + 1][c + 1];
+          int best = 0;
+          for (int i = 1; i <= r; i++)
+              for (int j = 1; j <= c; j++)
+                  if (grid[i - 1].charAt(j - 1) == '1') {
+                      dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1]);  // BUG: no diagonal
+                      best = Math.max(best, dp[i][j]);
+                  }
+          System.out.println(best * best);
+      }
+  }
+  ```
+
+  It happens to print 4 on the anchor, but on
+
+  ```text
+  3 3
+  101
+  001
+  011
+  ```
+
+  it prints 4 when the right answer is 1. At the bottom-right cell, up and left both report a
+  side of 1, so it claims a 2 × 2 square, yet the middle cell (the diagonal) is 0. The
+  square's corner cell is checked only by the diagonal neighbour.
+
+  **Step 1 — recursion.** The largest square ending at (i, j):
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def side(i, j):
+      """Largest all-ones square with bottom-right corner (i, j); 0 outside the grid."""
+      if i < 0 or j < 0 or grid[i][j] == "0":
+          return 0
+      return 1 + min(side(i - 1, j), side(i, j - 1), side(i - 1, j - 1))
+
+
+  r, c = map(int, input().split())
+  grid = [input().strip() for _ in range(r)]
+  best = max(side(i, j) for i in range(r) for j in range(c))
+  print(best * best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  vector<string> grid;
+
+  int side(int i, int j) {  // largest all-ones square with bottom-right corner (i, j)
+      if (i < 0 || j < 0 || grid[i][j] == '0') return 0;
+      return 1 + min({side(i - 1, j), side(i, j - 1), side(i - 1, j - 1)});
+  }
+
+  int main() {
+      int r, c;
+      cin >> r >> c;
+      grid.resize(r);
+      for (auto& row : grid) cin >> row;
+      int best = 0;
+      for (int i = 0; i < r; i++)
+          for (int j = 0; j < c; j++) best = max(best, side(i, j));
+      cout << best * best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static String[] grid;
+
+      static int side(int i, int j) {  // largest all-ones square with bottom-right corner (i, j)
+          if (i < 0 || j < 0 || grid[i].charAt(j) == '0') return 0;
+          return 1 + Math.min(side(i - 1, j), Math.min(side(i, j - 1), side(i - 1, j - 1)));
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int r = in.nextInt(), c = in.nextInt();
+          grid = new String[r];
+          for (int i = 0; i < r; i++) grid[i] = in.next();
+          int best = 0;
+          for (int i = 0; i < r; i++)
+              for (int j = 0; j < c; j++) best = Math.max(best, side(i, j));
+          System.out.println(best * best);
+      }
+  }
+  ```
+
+  Each call branches three ways, so a grid of ones takes exponential time, but there are only
+  r · c different cells.
+
+  **Step 2 — memoization.** Store each cell's side once:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def side(i, j):
+      if i < 0 or j < 0 or grid[i][j] == "0":
+          return 0
+      if memo[i][j] is None:  # solve each cell once
+          memo[i][j] = 1 + min(side(i - 1, j), side(i, j - 1), side(i - 1, j - 1))
+      return memo[i][j]
+
+
+  r, c = map(int, input().split())
+  grid = [input().strip() for _ in range(r)]
+  memo = [[None] * c for _ in range(r)]
+  best = max(side(i, j) for i in range(r) for j in range(c))
+  print(best * best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  vector<string> grid;
+  vector<vector<int>> memo;  // -1 = not solved yet
+
+  int side(int i, int j) {
+      if (i < 0 || j < 0 || grid[i][j] == '0') return 0;
+      int& slot = memo[i][j];
+      if (slot == -1) slot = 1 + min({side(i - 1, j), side(i, j - 1), side(i - 1, j - 1)});  // once per cell
+      return slot;
+  }
+
+  int main() {
+      int r, c;
+      cin >> r >> c;
+      grid.resize(r);
+      for (auto& row : grid) cin >> row;
+      memo.assign(r, vector<int>(c, -1));
+      int best = 0;
+      for (int i = 0; i < r; i++)
+          for (int j = 0; j < c; j++) best = max(best, side(i, j));
+      cout << best * best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static String[] grid;
+      static int[][] memo;  // -1 = not solved yet
+
+      static int side(int i, int j) {
+          if (i < 0 || j < 0 || grid[i].charAt(j) == '0') return 0;
+          if (memo[i][j] == -1)  // solve each cell once
+              memo[i][j] = 1 + Math.min(side(i - 1, j), Math.min(side(i, j - 1), side(i - 1, j - 1)));
+          return memo[i][j];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int r = in.nextInt(), c = in.nextInt();
+          grid = new String[r];
+          for (int i = 0; i < r; i++) grid[i] = in.next();
+          memo = new int[r][c];
+          for (int[] row : memo) Arrays.fill(row, -1);
+          int best = 0;
+          for (int i = 0; i < r; i++)
+              for (int j = 0; j < c; j++) best = Math.max(best, side(i, j));
+          System.out.println(best * best);
+      }
+  }
+  ```
+
+  **Step 3 — tabulation.** Fill a padded table row by row:
+
+  ```python
+  r, c = map(int, input().split())
+  grid = [input().strip() for _ in range(r)]
+  dp = [[0] * (c + 1) for _ in range(r + 1)]  # padded: row 0 and column 0 stay 0
+  best = 0
+  for i in range(1, r + 1):
+      for j in range(1, c + 1):
+          if grid[i - 1][j - 1] == "1":
+              dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+              best = max(best, dp[i][j])
+  print(best * best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int r, c;
+      cin >> r >> c;
+      vector<string> grid(r);
+      for (auto& row : grid) cin >> row;
+      vector<vector<int>> dp(r + 1, vector<int>(c + 1, 0));  // padded: row 0 and column 0 stay 0
+      int best = 0;
+      for (int i = 1; i <= r; i++)
+          for (int j = 1; j <= c; j++)
+              if (grid[i - 1][j - 1] == '1') {
+                  dp[i][j] = 1 + min({dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]});
+                  best = max(best, dp[i][j]);
+              }
+      cout << best * best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int r = in.nextInt(), c = in.nextInt();
+          String[] grid = new String[r];
+          for (int i = 0; i < r; i++) grid[i] = in.next();
+          int[][] dp = new int[r + 1][c + 1];  // padded: row 0 and column 0 stay 0
+          int best = 0;
+          for (int i = 1; i <= r; i++)
+              for (int j = 1; j <= c; j++)
+                  if (grid[i - 1].charAt(j - 1) == '1') {
+                      dp[i][j] = 1 + Math.min(dp[i - 1][j], Math.min(dp[i][j - 1], dp[i - 1][j - 1]));
+                      best = Math.max(best, dp[i][j]);
+                  }
+          System.out.println(best * best);
+      }
+  }
+  ```
+
+  Dry run (the table without its padding):
+
+  | row | col 1 | col 2 | col 3 | col 4 | col 5 |
+  |---|---|---|---|---|---|
+  | 1 | 1 | 0 | 1 | 0 | 0 |
+  | 2 | 1 | 0 | 1 | 1 | 1 |
+  | 3 | 1 | 1 | 1 | **2** | **2** |
+  | 4 | 1 | 0 | 0 | 1 | 0 |
+
+  Read one cell: row 3, column 4 is 1 + min(up 1, left 1, diagonal 1) = 2, a 2 × 2 square.
+  The largest side is 2, so the area is 4.
+
+  **Step 4 — one row.** A cell reads the row above (up and diagonal) and this row (left).
+  Keep one array: before overwriting `dp[j]`, save its old value, which becomes the next
+  cell's diagonal. That is the template: O(r · c) time, O(c) memory.
+
+  ### Variants
+
+  1. *Maximal square* (LeetCode): the anchor.
+  2. *Count square submatrices with all ones*: the sum of all `dp` values, because a cell
+     with side k ends exactly k squares (sides 1 to k).
+  3. *Largest 1-bordered square*: only the border must be ones, so count consecutive ones up
+     and left instead.
+  4. *Maximal rectangle*: two free sides need the histogram method below.
+
+  ### Contrast
+
+  **Square or rectangle?** A square has one size parameter, so "the largest square ending
+  here" is a single number and the three-neighbour minimum works. A rectangle has two, so no
+  single number per cell captures it; build row histograms and use the monotonic stack.
+
+  ### Common mistakes
+
+  - Leaving out the diagonal neighbour.
+  - Printing the side instead of the area (or the reverse).
+  - In the one-row version, reading `dp[j − 1]` from the previous row instead of this row.
+  - Forgetting to reset `dp[j]` to 0 on an empty cell.
+
+  ## Histogram rectangle
+
+  ### Recognition cues
+
+  - The largest **rectangle** of ones in a 0/1 grid.
+  - Counting all-ones rectangles, or the largest area under a skyline per row.
+
+  ### State, transition, base cases, answer, loop order
+
+  Turn each row into a histogram: `h[j]` = the number of consecutive ones ending at this row
+  in column j (0 if this cell is 0). Every all-ones rectangle has its bottom edge on some
+  row, and is then a rectangle under that row's histogram. So run the largest-rectangle
+  stack (monotonic stack concept) on every row and keep the best.
+
+  ### Template
+
+  ```python
+  r, c = map(int, input().split())
+  h = [0] * (c + 1)  # h[j]: ones ending at this row in column j; h[c] = 0 is the sentinel
+  best = 0
+  for _ in range(r):
+      row = input().strip()
+      for j in range(c):
+          h[j] = h[j] + 1 if row[j] == "1" else 0  # extend or reset each column
+      stack = []  # indexes with increasing heights
+      for j in range(c + 1):
+          while stack and h[stack[-1]] >= h[j]:
+              height = h[stack.pop()]
+              left = stack[-1] if stack else -1
+              best = max(best, height * (j - left - 1))
+          stack.append(j)
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int r, c;
+      cin >> r >> c;
+      vector<long long> h(c + 1, 0);  // h[j]: ones ending at this row in column j; h[c] = 0
+      long long best = 0;
+      for (int i = 0; i < r; i++) {
+          string row;
+          cin >> row;
+          for (int j = 0; j < c; j++) h[j] = row[j] == '1' ? h[j] + 1 : 0;  // extend or reset
+          vector<int> st;  // indexes with increasing heights
+          for (int j = 0; j <= c; j++) {
+              while (!st.empty() && h[st.back()] >= h[j]) {
+                  long long height = h[st.back()];
+                  st.pop_back();
+                  int left = st.empty() ? -1 : st.back();
+                  best = max(best, height * (j - left - 1));
+              }
+              st.push_back(j);
+          }
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int r = in.nextInt(), c = in.nextInt();
+          long[] h = new long[c + 1];  // h[j]: ones ending at this row in column j; h[c] = 0
+          long best = 0;
+          for (int i = 0; i < r; i++) {
+              String row = in.next();
+              for (int j = 0; j < c; j++) h[j] = row.charAt(j) == '1' ? h[j] + 1 : 0;  // extend or reset
+              Deque<Integer> st = new ArrayDeque<>();  // indexes with increasing heights
+              for (int j = 0; j <= c; j++) {
+                  while (!st.isEmpty() && h[st.peek()] >= h[j]) {
+                      long height = h[st.pop()];
+                      int left = st.isEmpty() ? -1 : st.peek();
+                      best = Math.max(best, height * (j - left - 1));
+                  }
+                  st.push(j);
+              }
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: the largest rectangle
+
+  The same grid as above. The histograms per row are:
+
+  | row | heights |
+  |---|---|
+  | 1 | 1 0 1 0 0 |
+  | 2 | 2 0 2 1 1 |
+  | 3 | 3 1 3 2 2 |
+  | 4 | 4 0 0 3 0 |
+
+  On row 3, the bars 3 2 2 in columns 3–5 hold a rectangle of height 2 and width 3: area
+  **6**, the answer.
+
+  **Wrong first attempt — adapt the square DP.** Storing "the largest rectangle ending here"
+  needs both a height and a width, and the best pair for a later cell is not always the best
+  pair for this one. The histogram view avoids choosing: it tries every bar as the limiting
+  height.
+
+  ### Variants
+
+  1. *Maximal rectangle* (LeetCode): the anchor.
+  2. *Count submatrices with all ones*: the same histograms, counting rectangles per row
+     with a stack.
+  3. *Largest rectangle in histogram*: the one-row case.
+
+  ### Contrast
+
+  **Square or rectangle?** See the maximal square contrast: one size parameter allows a
+  per-cell DP; two need the histogram and the stack.
+
+  ### Common mistakes
+
+  - Not resetting a column's height to 0 on an empty cell.
+  - Forgetting the 0 sentinel at the end of each row's histogram.
+  - Rebuilding the heights from scratch for every row, which is O(r² · c).
+
+  ## Worked walkthrough
+
+  **Problem (count all-ones squares).** How many square submatrices of the anchor grid
+  contain only ones?
+
+  1. *Recognise.* Squares of ones: the maximal square table.
+  2. *Count per corner.* A cell with `dp = k` is the bottom-right corner of exactly k squares,
+     of sides 1, 2, …, k.
+  3. *Sum.* The table's values add up to 2 (row 1) + 4 (row 2) + 7 (row 3) + 2 (row 4) =
+     **15**: 13 single cells and two 2 × 2 squares.
+  4. *Check.* There are 13 ones in the grid, and the two 2 × 2 squares end at row 3, columns
+     4 and 5.
+
+  ### Why this works
+
+  For squares: a k × k square ending at (i, j) contains the (k − 1)-squares ending at the
+  cell above, the cell to the left and the cell up-left. Conversely, if all three of those
+  have side at least k − 1 and the cell is 1, their union is the k × k square. So the side is
+  exactly 1 + the minimum of the three. For rectangles: every all-ones rectangle sits on some
+  bottom row, and on that row it is a rectangle under the histogram, which the stack finds.
+
+  ### Boundary cases and cost
+
+  - An all-zero grid: area 0. An all-one grid: area min(r, c)² for squares, r · c for
+    rectangles.
+  - One row or one column: the square is at most 1 × 1; the rectangle is the longest run.
+  - Cost: O(r · c) time for both; O(c) memory with one row.
+
+  ### Check your understanding
+
+  ```text
+  3 4
+  1110
+  1111
+  0111
+  ```
+
+  What are the largest square area and the largest rectangle area?
+
+  Try it on paper before reading the reasoning below.
+
+  > The largest square has side 2 (area 4); no 3 × 3 square fits, because row 3 starts with 0
+  > and row 1 ends with 0. The largest rectangle is 6: rows 1–2, columns 1–3, or rows 2–3,
+  > columns 2–4.
+key_points:
+- dp[i][j] is the side of the largest all-ones square whose bottom-right corner is (i, j).
+- On a 1 cell, 1 + min(up, left, up-left); on a 0 cell, 0.
+- The diagonal is the only neighbour that checks the square's far corner.
+- One row is enough if the old dp[j] is saved as the next diagonal.
+- The sum of all dp values counts every all-ones square.
+- 'Rectangles: build a histogram per row and run the largest-rectangle stack on each.'
+pitfalls:
+- Leaving out the diagonal neighbour.
+- Printing the side instead of the area.
+- Not resetting a height or a dp value to 0 on an empty cell.
+- Trying to store the largest rectangle per cell as one number.
+resources:
+- title: Introduction to DP
+  url: https://usaco.guide/gold/intro-dp
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: Dynamic Programming
+  url: https://www.techinterviewhandbook.org/algorithms/dynamic-programming/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 15
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: square-state
+  kind: mcq
+  prompt: What does dp[i][j] mean for maximal square?
+  options:
+  - The side of the largest all-ones square with bottom-right corner (i, j)
+  - The number of ones above (i, j)
+  - The area of the largest square in the whole grid so far
+  - Whether cell (i, j) is 1
+  answer: 0
+  explanation: Fixing the corner makes the square a single number.
+  difficulty: 1
+- id: square-cell
+  kind: mcq
+  prompt: The cell is 1; up = 2, left = 3, up-left = 1. What is dp[i][j]?
+  options:
+  - '2'
+  - '3'
+  - '4'
+  - '1'
+  answer: 0
+  explanation: 1 + min(2, 3, 1) = 2.
+  difficulty: 2
+- id: diagonal
+  kind: mcq
+  prompt: Grid rows 101 / 001 / 011. Without the diagonal neighbour the code prints 4. What is right?
+  options:
+  - '1'
+  - '4'
+  - '2'
+  - '0'
+  answer: 0
+  explanation: The middle cell is 0, so no 2 × 2 square exists.
+  difficulty: 3
+- id: count
+  kind: mcq
+  prompt: A cell has dp = 3. How many all-ones squares have it as their bottom-right corner?
+  options:
+  - '3'
+  - '9'
+  - '1'
+  - '14'
+  answer: 0
+  explanation: Sides 1, 2 and 3.
+  difficulty: 3
+- id: histogram
+  kind: mcq
+  prompt: Column heights for a row are built how?
+  options:
+  - Height + 1 if the cell is 1, else 0
+  - The number of ones in the whole column
+  - The row's index
+  - The largest square ending there
+  answer: 0
+  explanation: Heights count consecutive ones ending at this row.
+  difficulty: 2
+- id: rectangle
+  kind: mcq
+  prompt: Anchor grid 10100 / 10111 / 11111 / 10010. What is the largest all-ones rectangle?
+  options:
+  - '6'
+  - '4'
+  - '8'
+  - '5'
+  answer: 0
+  explanation: Rows 2–3, columns 3–5.
+  difficulty: 4
+- id: why-not-dp
+  kind: mcq
+  prompt: Why can't one number per cell describe the largest rectangle ending there?
+  options:
+  - A rectangle has two free sides, and the best pair can change for later cells
+  - Rectangles are always squares
+  - It can; use the same three neighbours
+  - Because of overflow
+  answer: 0
+  explanation: Use row histograms and the monotonic stack instead.
+  difficulty: 5
+problems:
+- solar-squares
+- meadow-fence
+practice_links:
+- title: Maximal Square
+  url: https://leetcode.com/problems/maximal-square/
+  platform: LeetCode
+  difficulty: medium
+- title: Count Square Submatrices with All Ones
+  url: https://leetcode.com/problems/count-square-submatrices-with-all-ones/
+  platform: LeetCode
+  difficulty: medium
+- title: Largest 1-Bordered Square
+  url: https://leetcode.com/problems/largest-1-bordered-square/
+  platform: LeetCode
+  difficulty: medium
+- title: Maximal Rectangle
+  url: https://leetcode.com/problems/maximal-rectangle/
+  platform: LeetCode
+  difficulty: hard
+- title: Count Submatrices With All Ones
+  url: https://leetcode.com/problems/count-submatrices-with-all-ones/
+  platform: LeetCode
+  difficulty: medium
+- title: Largest Rectangle in Histogram
+  url: https://leetcode.com/problems/largest-rectangle-in-histogram/
+  platform: LeetCode
+  difficulty: hard
+provenance:
+  origin: original
+status: live

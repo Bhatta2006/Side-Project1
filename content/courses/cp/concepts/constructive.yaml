@@ -1,0 +1,94 @@
+id: constructive
+title: Constructive algorithms
+summary: 'Build any valid array, permutation or string: alternating patterns, extremes first, permutations
+  and growing from a base case.'
+module: contest-basics
+prerequisites:
+- ad-hoc
+difficulty: 3
+estimated_minutes: 55
+status: draft
+lesson: '## Alternating
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Extremes first
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Permutation build
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Grow from base
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

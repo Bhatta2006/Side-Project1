@@ -1,0 +1,1071 @@
+id: dp-lcs
+title: 'Strings DP: the LCS family'
+summary: 'Longest common subsequence and its relatives: common substring, supersequence, palindromic subsequence
+  and subsequence matching.'
+module: dynamic-programming
+prerequisites: [dp-2d, zero:strings]
+difficulty: 4
+estimated_minutes: 85
+lesson: |
+  Many string problems compare **two sequences one prefix at a time**. The longest common
+  subsequence (LCS) is the root of the family: what is the longest sequence of characters
+  that appears, in order, in both strings? Diff tools, DNA alignment and "fewest deletions to
+  make two strings equal" are all LCS in disguise.
+
+  The state is always a pair of prefixes, `dp[i][j]` for `a[:i]` and `b[:j]`, so the table is
+  a grid, exactly as in DP on grids. What changes from problem to problem is what a cell
+  stores and what happens when the two last characters match or do not.
+
+  ## Longest common subsequence
+
+  ### Recognition cues
+
+  - Two strings or arrays, and you keep characters **in order but not necessarily next to
+    each other**.
+  - "Longest common", "fewest deletions to make equal", "how many lines are unchanged".
+  - Each length is up to a few thousand, so an n × m table fits.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For LCS |
+  |---|---|
+  | State | `dp[i][j]` = the LCS length of the first i characters of a and the first j of b |
+  | Transition | if `a[i−1] == b[j−1]`: `dp[i−1][j−1] + 1`; otherwise `max(dp[i−1][j], dp[i][j−1])` |
+  | Base cases | `dp[0][j] = dp[i][0] = 0`: an empty prefix shares nothing |
+  | Answer | `dp[n][m]` |
+  | Loop order | i ascending outside, j ascending inside: each cell needs up, left and up-left |
+
+  ### Template
+
+  Two rows are enough, because a cell reads only this row and the row above:
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  n, m = len(a), len(b)
+  prev = [0] * (m + 1)  # prev[j]: LCS of a[:i-1] and b[:j]
+  for i in range(1, n + 1):
+      cur = [0] * (m + 1)
+      for j in range(1, m + 1):
+          if a[i - 1] == b[j - 1]:
+              cur[j] = prev[j - 1] + 1  # extend the LCS of both shorter prefixes
+          else:
+              cur[j] = max(prev[j], cur[j - 1])  # drop the last char of a or of b
+      prev = cur
+  print(prev[m])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      int n = a.size(), m = b.size();
+      vector<int> prev(m + 1, 0), cur(m + 1, 0);  // prev[j]: LCS of a[:i-1] and b[:j]
+      for (int i = 1; i <= n; i++) {
+          for (int j = 1; j <= m; j++)
+              cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1] + 1  // extend both prefixes
+                                            : max(prev[j], cur[j - 1]);  // drop one char
+          swap(prev, cur);
+      }
+      cout << prev[m] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int n = a.length(), m = b.length();
+          int[] prev = new int[m + 1], cur = new int[m + 1];  // prev[j]: LCS of a[:i-1], b[:j]
+          for (int i = 1; i <= n; i++) {
+              for (int j = 1; j <= m; j++)
+                  cur[j] = a.charAt(i - 1) == b.charAt(j - 1) ? prev[j - 1] + 1  // extend both
+                                                             : Math.max(prev[j], cur[j - 1]);
+              int[] t = prev; prev = cur; cur = t;
+          }
+          System.out.println(prev[m]);
+      }
+  }
+  ```
+
+  ### Anchor problem: zabcd and abczd
+
+  The strings `zabcd` and `abczd` share the subsequence `abcd`, so the answer is **4**.
+
+  **Wrong first attempt — match greedily.** Walk through a, and match each character with its
+  first occurrence in b after the previous match:
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  pos, length = 0, 0  # pos: where the search in b continues
+  for ch in a:
+      k = b.find(ch, pos)  # first match after the previous one
+      if k != -1:
+          length += 1
+          pos = k + 1
+  print(length)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      size_t pos = 0;
+      int length = 0;  // pos: where the search in b continues
+      for (char ch : a) {
+          size_t k = b.find(ch, pos);  // first match after the previous one
+          if (k != string::npos) {
+              length++;
+              pos = k + 1;
+          }
+      }
+      cout << length << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int pos = 0, length = 0;  // pos: where the search in b continues
+          for (char ch : a.toCharArray()) {
+              int k = b.indexOf(ch, pos);  // first match after the previous one
+              if (k != -1) {
+                  length++;
+                  pos = k + 1;
+              }
+          }
+          System.out.println(length);
+      }
+  }
+  ```
+
+  It prints 2. The first `z` of a matches the `z` near the end of b, and after that only `d`
+  is left to match. Skipping `z` would have kept `a`, `b` and `c` available. Taking a match
+  now can block better matches later, so every cell must consider both "drop from a" and
+  "drop from b".
+
+  **Step 1 — recursion.** Compare suffixes starting at i and j:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def lcs(i, j):
+      """LCS of a[i:] and b[j:]."""
+      if i == len(a) or j == len(b):
+          return 0
+      if a[i] == b[j]:
+          return 1 + lcs(i + 1, j + 1)  # a match is always safe to take
+      return max(lcs(i + 1, j), lcs(i, j + 1))  # skip a[i] or skip b[j]
+
+
+  a = input().strip()
+  b = input().strip()
+  print(lcs(0, 0))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  using namespace std;
+
+  string a, b;
+
+  int lcs(int i, int j) {  // LCS of a[i:] and b[j:]
+      if (i == (int)a.size() || j == (int)b.size()) return 0;
+      if (a[i] == b[j]) return 1 + lcs(i + 1, j + 1);  // a match is always safe to take
+      return max(lcs(i + 1, j), lcs(i, j + 1));  // skip a[i] or skip b[j]
+  }
+
+  int main() {
+      cin >> a >> b;
+      cout << lcs(0, 0) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static String a, b;
+
+      static int lcs(int i, int j) {  // LCS of a[i:] and b[j:]
+          if (i == a.length() || j == b.length()) return 0;
+          if (a.charAt(i) == b.charAt(j)) return 1 + lcs(i + 1, j + 1);  // always safe
+          return Math.max(lcs(i + 1, j), lcs(i, j + 1));  // skip a[i] or skip b[j]
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          a = in.next();
+          b = in.next();
+          System.out.println(lcs(0, 0));
+      }
+  }
+  ```
+
+  Why is taking a match safe here, when greedy matching was not? Greedy matched `a[i]` with
+  some *later* `b[k]`, skipping characters of b. The recursion only matches when the two
+  **current** characters are equal, and then nothing is skipped. On a mismatch it tries both
+  skips. That branching is up to 2^(n+m) calls, but there are only (n + 1)(m + 1) different
+  (i, j) pairs.
+
+  **Step 2 — memoization.** Store each (i, j) answer once:
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(10000)
+
+
+  def lcs(i, j):
+      if i == len(a) or j == len(b):
+          return 0
+      if memo[i][j] is None:  # solve each (i, j) pair once
+          if a[i] == b[j]:
+              memo[i][j] = 1 + lcs(i + 1, j + 1)
+          else:
+              memo[i][j] = max(lcs(i + 1, j), lcs(i, j + 1))
+      return memo[i][j]
+
+
+  a = input().strip()
+  b = input().strip()
+  memo = [[None] * len(b) for _ in range(len(a))]
+  print(lcs(0, 0))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  string a, b;
+  vector<vector<int>> memo;  // -1 = not solved yet
+
+  int lcs(int i, int j) {
+      if (i == (int)a.size() || j == (int)b.size()) return 0;
+      int& slot = memo[i][j];
+      if (slot == -1)  // solve each (i, j) pair once
+          slot = a[i] == b[j] ? 1 + lcs(i + 1, j + 1) : max(lcs(i + 1, j), lcs(i, j + 1));
+      return slot;
+  }
+
+  int main() {
+      cin >> a >> b;
+      memo.assign(a.size(), vector<int>(b.size(), -1));
+      cout << lcs(0, 0) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static String a, b;
+      static int[][] memo;  // -1 = not solved yet
+
+      static int lcs(int i, int j) {
+          if (i == a.length() || j == b.length()) return 0;
+          if (memo[i][j] == -1)  // solve each (i, j) pair once
+              memo[i][j] = a.charAt(i) == b.charAt(j) ? 1 + lcs(i + 1, j + 1)
+                                                      : Math.max(lcs(i + 1, j), lcs(i, j + 1));
+          return memo[i][j];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          a = in.next();
+          b = in.next();
+          memo = new int[a.length()][b.length()];
+          for (int[] row : memo) Arrays.fill(row, -1);
+          System.out.println(lcs(0, 0));
+      }
+  }
+  ```
+
+  **Step 3 — tabulation.** Switch from suffixes to prefixes and fill row by row:
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  n, m = len(a), len(b)
+  # dp[i][j]: LCS length of a[:i] and b[:j]
+  dp = [[0] * (m + 1) for _ in range(n + 1)]
+  for i in range(1, n + 1):
+      for j in range(1, m + 1):
+          if a[i - 1] == b[j - 1]:
+              dp[i][j] = dp[i - 1][j - 1] + 1
+          else:
+              dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+  print(dp[n][m])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      int n = a.size(), m = b.size();
+      // dp[i][j]: LCS length of a[:i] and b[:j]
+      vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));
+      for (int i = 1; i <= n; i++)
+          for (int j = 1; j <= m; j++)
+              dp[i][j] = a[i - 1] == b[j - 1] ? dp[i - 1][j - 1] + 1
+                                              : max(dp[i - 1][j], dp[i][j - 1]);
+      cout << dp[n][m] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int n = a.length(), m = b.length();
+          int[][] dp = new int[n + 1][m + 1];  // dp[i][j]: LCS length of a[:i] and b[:j]
+          for (int i = 1; i <= n; i++)
+              for (int j = 1; j <= m; j++)
+                  dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1) ? dp[i - 1][j - 1] + 1
+                                                                : Math.max(dp[i - 1][j], dp[i][j - 1]);
+          System.out.println(dp[n][m]);
+      }
+  }
+  ```
+
+  Dry run (rows are prefixes of `zabcd`, columns prefixes of `abczd`):
+
+  | | "" | a | b | c | z | d |
+  |---|---|---|---|---|---|---|
+  | "" | 0 | 0 | 0 | 0 | 0 | 0 |
+  | z | 0 | 0 | 0 | 0 | 1 | 1 |
+  | a | 0 | 1 | 1 | 1 | 1 | 1 |
+  | b | 0 | 1 | 2 | 2 | 2 | 2 |
+  | c | 0 | 1 | 2 | 3 | 3 | 3 |
+  | d | 0 | 1 | 2 | 3 | 3 | **4** |
+
+  Read one cell: row `c`, column `c` is a match, so it is the up-left cell (2, for `ab`) plus
+  1. Row `a`, column `z` is a mismatch, so it is the larger of up (1, the `z` match) and left
+  (1, the `a` match).
+
+  **Step 4 — two rows.** Each cell reads up, left and up-left, so keep the previous row and
+  the current row only. That is the template above: O(n·m) time and O(m) memory. If you also
+  need the subsequence itself, keep the full table and walk back from `dp[n][m]` (see
+  "Shortest common supersequence").
+
+  ### Variants
+
+  1. *Longest common subsequence* (LeetCode, CSES): the anchor; CSES also prints the
+     subsequence.
+  2. *Delete operation for two strings*: deletions = n + m − 2·LCS.
+  3. *Uncrossed lines*: LCS of two integer arrays, drawn as non-crossing lines.
+  4. *Minimum ASCII delete sum*: the same table, but minimising the cost of deleted letters.
+  5. *Max dot product of two subsequences*: the match step adds a product instead of 1.
+  6. *Common subsequence* (Codeforces): only a length-1 answer is needed, so one shared
+     character is enough.
+
+  ### Contrast
+
+  **Subsequence or substring?** A subsequence may skip characters; a substring is
+  contiguous. LCS keeps the best value on a mismatch (`max` of up and left). Longest common
+  substring **resets to 0** on a mismatch, because a contiguous run is broken.
+
+  ### Common mistakes
+
+  - Taking `dp[i−1][j−1]` on a mismatch. That drops both characters, while one of them may
+    still match later.
+  - Off-by-one between the table (prefix lengths, 1-based) and the string (0-based):
+    compare `a[i − 1]` with `b[j − 1]`.
+  - Greedy matching with a pointer into b, which can lock in a bad match.
+  - Swapping the two rows in C++ or Java but forgetting that `cur[0]` must stay 0.
+
+  ## Longest common substring
+
+  ### Recognition cues
+
+  - "Longest common **substring**", "longest repeated subarray", "longest run that appears in
+    both".
+  - Contiguous blocks only.
+
+  ### State, transition, base cases, answer, loop order
+
+  `dp[i][j]` = the length of the longest common block **ending exactly at** `a[i−1]` and
+  `b[j−1]`. Match: `dp[i−1][j−1] + 1`; mismatch: 0. The answer is the **largest cell
+  anywhere**, not `dp[n][m]`.
+
+  ### Template
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  n, m = len(a), len(b)
+  dp = [[0] * (m + 1) for _ in range(n + 1)]  # dp[i][j]: common block ending at a[i-1], b[j-1]
+  best = 0
+  for i in range(1, n + 1):
+      for j in range(1, m + 1):
+          if a[i - 1] == b[j - 1]:
+              dp[i][j] = dp[i - 1][j - 1] + 1
+              best = max(best, dp[i][j])  # the answer can end anywhere
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      int n = a.size(), m = b.size(), best = 0;
+      // dp[i][j]: common block ending at a[i-1] and b[j-1]; mismatches stay 0
+      vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));
+      for (int i = 1; i <= n; i++)
+          for (int j = 1; j <= m; j++)
+              if (a[i - 1] == b[j - 1]) {
+                  dp[i][j] = dp[i - 1][j - 1] + 1;
+                  best = max(best, dp[i][j]);  // the answer can end anywhere
+              }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int n = a.length(), m = b.length(), best = 0;
+          int[][] dp = new int[n + 1][m + 1];  // common block ending at a[i-1], b[j-1]
+          for (int i = 1; i <= n; i++)
+              for (int j = 1; j <= m; j++)
+                  if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                      dp[i][j] = dp[i - 1][j - 1] + 1;
+                      best = Math.max(best, dp[i][j]);  // the answer can end anywhere
+                  }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: abcde and abfde
+
+  The program prints **2** (`ab`, or `de`). The LCS of the same strings is 4 (`abde`): the
+  `c` and `f` break every block, but a subsequence just skips them.
+
+  | | a | b | f | d | e |
+  |---|---|---|---|---|---|
+  | a | 1 | 0 | 0 | 0 | 0 |
+  | b | 0 | **2** | 0 | 0 | 0 |
+  | c | 0 | 0 | 0 | 0 | 0 |
+  | d | 0 | 0 | 0 | 1 | 0 |
+  | e | 0 | 0 | 0 | 0 | **2** |
+
+  **Wrong first attempt.** Reusing the LCS recurrence (`max` of up and left on a mismatch)
+  prints 4: it lets the block "continue" across `c` and `f`.
+
+  ### Variants
+
+  1. *Maximum length of repeated subarray*: the anchor on integer arrays.
+  2. *Longest palindromic substring*: compare a string with its reverse, or expand around
+     centres (simpler and O(1) memory).
+  3. For long strings, binary search on the length with rolling hashes (string algorithms).
+
+  ### Contrast
+
+  **Subsequence or substring?** See the LCS contrast: reset to 0 for contiguous blocks, keep
+  the best for subsequences, and take the maximum over all cells for substrings.
+
+  ### Common mistakes
+
+  - Printing `dp[n][m]`, which is only the block ending at both last characters.
+  - Forgetting the reset, which silently computes the LCS.
+
+  ## Shortest common supersequence
+
+  ### Recognition cues
+
+  - "Shortest string that has both a and b as subsequences."
+  - "Merge two sequences keeping both orders, with as few characters as possible."
+
+  ### State, transition, base cases, answer, loop order
+
+  Every character of the LCS can be written once and shared, so the length is
+  `n + m − LCS`. To print the string, fill the LCS table, then walk back from (n, m): on a
+  match write that character once and go diagonally; otherwise write the character from the
+  side you step away from (the larger neighbour); when one string runs out, copy the rest of
+  the other. Reverse at the end.
+
+  ### Template
+
+  ```python
+  a = input().strip()
+  b = input().strip()
+  n, m = len(a), len(b)
+  dp = [[0] * (m + 1) for _ in range(n + 1)]  # LCS table
+  for i in range(1, n + 1):
+      for j in range(1, m + 1):
+          if a[i - 1] == b[j - 1]:
+              dp[i][j] = dp[i - 1][j - 1] + 1
+          else:
+              dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+  out, i, j = [], n, m
+  while i > 0 and j > 0:  # walk back from the full prefixes
+      if a[i - 1] == b[j - 1]:
+          out.append(a[i - 1])  # shared character, written once
+          i, j = i - 1, j - 1
+      elif dp[i - 1][j] >= dp[i][j - 1]:
+          out.append(a[i - 1])  # a[i-1] is not in the LCS here
+          i -= 1
+      else:
+          out.append(b[j - 1])
+          j -= 1
+  out.extend(reversed(a[:i]))  # whatever is left of either string
+  out.extend(reversed(b[:j]))
+  print("".join(reversed(out)))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string a, b;
+      cin >> a >> b;
+      int n = a.size(), m = b.size();
+      vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));  // LCS table
+      for (int i = 1; i <= n; i++)
+          for (int j = 1; j <= m; j++)
+              dp[i][j] = a[i - 1] == b[j - 1] ? dp[i - 1][j - 1] + 1 : max(dp[i - 1][j], dp[i][j - 1]);
+      string out;
+      int i = n, j = m;
+      while (i > 0 && j > 0) {  // walk back from the full prefixes
+          if (a[i - 1] == b[j - 1]) out += a[i - 1], i--, j--;  // shared, written once
+          else if (dp[i - 1][j] >= dp[i][j - 1]) out += a[--i];
+          else out += b[--j];
+      }
+      while (i > 0) out += a[--i];  // whatever is left of either string
+      while (j > 0) out += b[--j];
+      reverse(out.begin(), out.end());
+      cout << out << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String a = in.next(), b = in.next();
+          int n = a.length(), m = b.length();
+          int[][] dp = new int[n + 1][m + 1];  // LCS table
+          for (int i = 1; i <= n; i++)
+              for (int j = 1; j <= m; j++)
+                  dp[i][j] = a.charAt(i - 1) == b.charAt(j - 1) ? dp[i - 1][j - 1] + 1
+                                                                : Math.max(dp[i - 1][j], dp[i][j - 1]);
+          StringBuilder out = new StringBuilder();
+          int i = n, j = m;
+          while (i > 0 && j > 0) {  // walk back from the full prefixes
+              if (a.charAt(i - 1) == b.charAt(j - 1)) { out.append(a.charAt(i - 1)); i--; j--; }
+              else if (dp[i - 1][j] >= dp[i][j - 1]) out.append(a.charAt(--i));
+              else out.append(b.charAt(--j));
+          }
+          while (i > 0) out.append(a.charAt(--i));  // whatever is left of either string
+          while (j > 0) out.append(b.charAt(--j));
+          System.out.println(out.reverse());
+      }
+  }
+  ```
+
+  ### Anchor problem: abac and cab
+
+  The LCS is `ab` (length 2), so the answer has 4 + 3 − 2 = 5 characters. The program prints
+  `cabac`: it contains `abac` (skip the first c) and `cab` (the first three).
+
+  **Wrong first attempt.** Concatenating `abac` + `cab` (7 characters) is a supersequence,
+  but not the shortest. Writing the LCS first and then "the rest" loses the order: the
+  shared characters must be interleaved where they occur.
+
+  ### Variants
+
+  1. *Shortest common supersequence* (LeetCode): print the string.
+  2. *Delete operation for two strings*: the same LCS, but the answer is n + m − 2·LCS.
+  3. *Printing the LCS itself*: the same walk, writing only the matched characters.
+
+  ### Contrast
+
+  **Best value, or the choices behind it?** The length needs only two rows. Printing the
+  string needs the full table (or a record of every choice) to walk back.
+
+  ### Common mistakes
+
+  - Forgetting the characters left over when one index reaches 0.
+  - Writing both characters on a match, which makes the result too long.
+  - Forgetting to reverse: the walk produces the answer backwards.
+
+  ## Longest palindromic subsequence
+
+  ### Recognition cues
+
+  - "Longest palindromic **subsequence**", "fewest insertions (or deletions) to make a
+    palindrome".
+  - One string, and you compare its two ends.
+
+  ### State, transition, base cases, answer, loop order
+
+  `dp[i][j]` = the longest palindromic subsequence inside `s[i..j]`. If `s[i] == s[j]`:
+  `dp[i+1][j−1] + 2`; otherwise `max(dp[i+1][j], dp[i][j−1])`. Base `dp[i][i] = 1`. Answer
+  `dp[0][n−1]`. **Loop order:** a cell reads row i + 1, so i runs from n − 1 **down** to 0
+  and j from i + 1 up. (Equivalently: the LCS of s and its reverse.)
+
+  ### Template
+
+  ```python
+  s = input().strip()
+  n = len(s)
+  dp = [[0] * n for _ in range(n)]  # dp[i][j]: longest palindromic subsequence of s[i..j]
+  for i in range(n - 1, -1, -1):  # row i reads row i + 1, so fill from the bottom
+      dp[i][i] = 1
+      for j in range(i + 1, n):
+          if s[i] == s[j]:
+              dp[i][j] = dp[i + 1][j - 1] + 2  # both ends join the palindrome
+          else:
+              dp[i][j] = max(dp[i + 1][j], dp[i][j - 1])
+  print(dp[0][n - 1])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      string s;
+      cin >> s;
+      int n = s.size();
+      vector<vector<int>> dp(n, vector<int>(n, 0));  // dp[i][j]: longest palindrome in s[i..j]
+      for (int i = n - 1; i >= 0; i--) {  // row i reads row i + 1, so fill from the bottom
+          dp[i][i] = 1;
+          for (int j = i + 1; j < n; j++)
+              dp[i][j] = s[i] == s[j] ? dp[i + 1][j - 1] + 2 : max(dp[i + 1][j], dp[i][j - 1]);
+      }
+      cout << dp[0][n - 1] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          String s = new Scanner(System.in).next();
+          int n = s.length();
+          int[][] dp = new int[n][n];  // dp[i][j]: longest palindromic subsequence of s[i..j]
+          for (int i = n - 1; i >= 0; i--) {  // row i reads row i + 1, so fill from the bottom
+              dp[i][i] = 1;
+              for (int j = i + 1; j < n; j++)
+                  dp[i][j] = s.charAt(i) == s.charAt(j) ? dp[i + 1][j - 1] + 2
+                                                        : Math.max(dp[i + 1][j], dp[i][j - 1]);
+          }
+          System.out.println(dp[0][n - 1]);
+      }
+  }
+  ```
+
+  ### Anchor problem: bbbab
+
+  The program prints **4** (`bbbb`). For two equal neighbours such as `s[0..1] = bb`,
+  `dp[1][0]` is below the diagonal and stays 0, so the cell is 0 + 2 = 2, as it should be.
+
+  | i \ j | 0 | 1 | 2 | 3 | 4 |
+  |---|---|---|---|---|---|
+  | 0 | 1 | 2 | 3 | 3 | **4** |
+  | 1 | | 1 | 2 | 2 | 3 |
+  | 2 | | | 1 | 1 | 3 |
+  | 3 | | | | 1 | 1 |
+  | 4 | | | | | 1 |
+
+  **Wrong first attempt.** Looping i upwards reads `dp[i+1][…]` before it is filled, so every
+  cell sees zeros, and `bbbab` prints 2 instead of 4.
+
+  ### Variants
+
+  1. *Longest palindromic subsequence* (LeetCode): the anchor.
+  2. *Minimum insertion steps to make a string palindrome*: n − LPS.
+  3. *Longest palindrome* (CSES): the *substring* version. Use centres or Manacher, not this
+     table.
+
+  ### Contrast
+
+  **Palindromic subsequence or substring?** The subsequence version keeps the best on a
+  mismatch, as LCS does. The substring version is a yes/no table: `s[i..j]` is a palindrome
+  only if the ends match **and** the inside is one.
+
+  ### Common mistakes
+
+  - Filling i from 0 upwards.
+  - Forgetting `dp[i][i] = 1`.
+  - Counting a single middle character twice (`+ 2` when `i == j`).
+
+  ## Subsequence matching
+
+  ### Recognition cues
+
+  - "Is s a subsequence of t?", "how many of these words are subsequences of t?"
+  - One side is a fixed pattern; you only need yes or no.
+
+  ### State, transition, base cases, answer, loop order
+
+  For one pattern, no table is needed: walk through t with a pointer into s and advance the
+  pointer whenever the characters match. Matching as early as possible is **safe here**:
+  any later match for the same pattern character would leave less of t for the rest. With
+  many patterns, precompute `nxt[i][c]` = the first position ≥ i where character c occurs in
+  t, then each pattern takes one jump per character.
+
+  ### Template
+
+  ```python
+  s = input().strip()
+  t = input().strip()
+  k = 0  # characters of s matched so far
+  for ch in t:
+      if k < len(s) and s[k] == ch:
+          k += 1  # earliest match is always safe
+  print("YES" if k == len(s) else "NO")
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  using namespace std;
+
+  int main() {
+      string s, t;
+      cin >> s >> t;
+      size_t k = 0;  // characters of s matched so far
+      for (char ch : t)
+          if (k < s.size() && s[k] == ch) k++;  // earliest match is always safe
+      cout << (k == s.size() ? "YES" : "NO") << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          String s = in.next(), t = in.next();
+          int k = 0;  // characters of s matched so far
+          for (char ch : t.toCharArray())
+              if (k < s.length() && s.charAt(k) == ch) k++;  // earliest match is always safe
+          System.out.println(k == s.length() ? "YES" : "NO");
+      }
+  }
+  ```
+
+  ### Anchor problem: ace in abcde
+
+  `a`, `c` and `e` are found in order, so the program prints `YES`; for `aec` it prints `NO`,
+  because no `c` comes after the `e`.
+
+  ### Variants
+
+  1. *Is subsequence* (LeetCode): the anchor.
+  2. *Number of matching subsequences*: many patterns, so use the `nxt` table or a bucket of
+     waiting patterns per character.
+  3. *Distinct subsequences*: count how many ways s appears in t; that needs a counting table
+     (next concept, edit distance family).
+
+  ### Contrast
+
+  **Two pointers or LCS?** Greedy matching is correct when the whole of s must appear in t:
+  there is nothing to choose. It is wrong for LCS, where you choose which characters to keep
+  from **both** strings. Ask whether one side must be used completely.
+
+  ### Common mistakes
+
+  - Using greedy matching for LCS (the anchor's wrong attempt).
+  - Building an n × m table for a single yes/no question.
+
+  ## Worked walkthrough
+
+  **Problem.** Make `sea` and `eat` equal by deleting characters from either string. What is
+  the fewest number of deletions?
+
+  1. *Recognise.* Characters are kept in order from both strings, and you minimise deletions:
+     the kept characters form a common subsequence.
+  2. *Reduce.* Keep the longest common subsequence and delete everything else: deletions =
+     n + m − 2·LCS.
+  3. *Fill.* LCS(`sea`, `eat`) = 2 (`ea`).
+  4. *Answer.* 3 + 3 − 4 = 2: delete `s` from `sea` and `t` from `eat`.
+
+  ### Why this works
+
+  Look at the last characters of the two prefixes. If they are equal, some longest common
+  subsequence uses them as its last character (swap the last character of any LCS for this
+  pair), so `dp[i−1][j−1] + 1` is optimal. If they differ, at least one of them is not the
+  last character of the LCS, so dropping it loses nothing, and taking the better of the two
+  drops covers both cases. By induction over i + j, every cell is correct.
+
+  ### Boundary cases and cost
+
+  - An empty string: the LCS is 0 and every other answer follows from the formulas.
+  - Identical strings: the LCS is the whole string.
+  - No common character: LCS 0, supersequence a + b.
+  - Cost: O(n·m) time. Memory O(n·m) for the full table (needed to print the answer) or
+    O(min(n, m)) for the length alone. Two strings of 5000 characters are 2.5 × 10⁷ cells:
+    fine in C++ or Java; in Python use two rows.
+
+  ### Check your understanding
+
+  `a = "abc"`, `b = "acb"`. What is the LCS length, and what is the longest common substring?
+
+  Try it on paper before reading the reasoning below.
+
+  > LCS: `ab` or `ac`, so 2 (all three letters cannot stay in order in both). Common
+  > substring: no two adjacent letters of `abc` appear next to each other in `acb` in the
+  > same order (`ab` no, `bc` no), so 1.
+key_points:
+- dp[i][j] compares the prefixes a[:i] and b[:j]; row 0 and column 0 are 0.
+- 'LCS: match → up-left + 1; mismatch → max(up, left).'
+- Greedy matching is wrong for LCS but right for checking that s is a subsequence of t.
+- 'Common substring: mismatch resets to 0, and the answer is the largest cell.'
+- 'Shortest common supersequence: n + m − LCS; print it by walking back.'
+- Longest palindromic subsequence fills i from n − 1 down, because row i reads row i + 1.
+- Two rows give the length in O(m) memory; printing the answer needs the full table.
+pitfalls:
+- Taking up-left on a mismatch, which drops a character that might still match.
+- Confusing a[i] with a[i − 1] when the table is indexed by prefix length.
+- Printing dp[n][m] for longest common substring instead of the maximum cell.
+- Filling the palindrome table with i ascending.
+- Greedy pointer matching for LCS.
+resources:
+- title: Introduction to DP
+  url: https://usaco.guide/gold/intro-dp
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: Longest common subsequence
+  url: https://en.wikipedia.org/wiki/Longest_common_subsequence
+  kind: article
+  source: Wikipedia
+  minutes: 20
+  level: deep
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: subsequence-meaning
+  kind: mcq
+  prompt: Which of these is a subsequence of "abcde" but not a substring?
+  options:
+  - ace
+  - abc
+  - cde
+  - bcd
+  answer: 0
+  explanation: ace keeps the order but skips b and d; the others are contiguous.
+  difficulty: 1
+- id: mismatch-rule
+  kind: mcq
+  prompt: In LCS, a[i−1] differs from b[j−1]. What is dp[i][j]?
+  options:
+  - max(dp[i−1][j], dp[i][j−1])
+  - dp[i−1][j−1]
+  - dp[i−1][j−1] + 1
+  - '0'
+  answer: 0
+  explanation: Drop the last character of one string or the other and keep the better.
+  difficulty: 2
+- id: greedy-lcs
+  kind: mcq
+  prompt: LCS of "zabcd" and "abczd". Greedy matching through b prints 2. What is the true LCS?
+  options:
+  - '4'
+  - '2'
+  - '3'
+  - '5'
+  answer: 0
+  explanation: abcd. Matching z first wastes a, b and c.
+  difficulty: 2
+- id: substring-reset
+  kind: mcq
+  prompt: For the longest common substring, what does a mismatch cell hold?
+  options:
+  - '0'
+  - max of up and left
+  - up-left
+  - up-left + 1
+  answer: 0
+  explanation: A contiguous block cannot continue through a mismatch.
+  difficulty: 3
+- id: scs-length
+  kind: mcq
+  prompt: a has 6 characters, b has 4, and their LCS has length 3. How long is the shortest common supersequence?
+  options:
+  - '7'
+  - '10'
+  - '13'
+  - '4'
+  answer: 0
+  explanation: 6 + 4 − 3 = 7; each LCS character is written once.
+  difficulty: 3
+- id: lps-order
+  kind: mcq
+  prompt: For the palindromic subsequence table dp[i][j], in which order must i run?
+  options:
+  - From n − 1 down to 0
+  - From 0 up to n − 1
+  - Any order
+  - Only i = j matters
+  answer: 0
+  explanation: Row i reads row i + 1, which must already be filled.
+  difficulty: 4
+- id: lps-value
+  kind: output
+  prompt: What does this print?
+  code:
+    python: |
+      s = "abca"
+      n = len(s)
+      dp = [[0] * n for _ in range(n)]
+      for i in range(n - 1, -1, -1):
+          dp[i][i] = 1
+          for j in range(i + 1, n):
+              if s[i] == s[j]:
+                  dp[i][j] = dp[i + 1][j - 1] + 2
+              else:
+                  dp[i][j] = max(dp[i + 1][j], dp[i][j - 1])
+      print(dp[0][n - 1])
+    cpp: |
+      string s = "abca";
+      int n = s.size();
+      vector<vector<int>> dp(n, vector<int>(n, 0));
+      for (int i = n - 1; i >= 0; i--) {
+          dp[i][i] = 1;
+          for (int j = i + 1; j < n; j++)
+              dp[i][j] = s[i] == s[j] ? dp[i + 1][j - 1] + 2 : max(dp[i + 1][j], dp[i][j - 1]);
+      }
+      cout << dp[0][n - 1];
+    java: |
+      String s = "abca";
+      int n = s.length();
+      int[][] dp = new int[n][n];
+      for (int i = n - 1; i >= 0; i--) {
+          dp[i][i] = 1;
+          for (int j = i + 1; j < n; j++)
+              dp[i][j] = s.charAt(i) == s.charAt(j) ? dp[i + 1][j - 1] + 2
+                                                    : Math.max(dp[i + 1][j], dp[i][j - 1]);
+      }
+      System.out.print(dp[0][n - 1]);
+  options:
+  - '3'
+  - '2'
+  - '4'
+  - '1'
+  answer: 0
+  explanation: aba (or aca) has length 3.
+  difficulty: 4
+- id: two-pointer-safe
+  kind: mcq
+  prompt: Why is greedy earliest matching correct for "is s a subsequence of t" but not for LCS?
+  options:
+  - All of s must be matched, so there is no choice of which characters to keep
+  - Because t is longer
+  - Greedy is never correct
+  - Because s is sorted
+  answer: 0
+  explanation: LCS chooses what to drop from both strings; subsequence matching does not.
+  difficulty: 5
+problems:
+- weighted-common-playlist
+- palindrome-trim
+practice_links:
+- title: Longest Common Subsequence
+  url: https://leetcode.com/problems/longest-common-subsequence/
+  platform: LeetCode
+  difficulty: medium
+- title: Delete Operation for Two Strings
+  url: https://leetcode.com/problems/delete-operation-for-two-strings/
+  platform: LeetCode
+  difficulty: medium
+- title: Uncrossed Lines
+  url: https://leetcode.com/problems/uncrossed-lines/
+  platform: LeetCode
+  difficulty: medium
+- title: Maximum Length of Repeated Subarray
+  url: https://leetcode.com/problems/maximum-length-of-repeated-subarray/
+  platform: LeetCode
+  difficulty: medium
+- title: Shortest Common Supersequence
+  url: https://leetcode.com/problems/shortest-common-supersequence/
+  platform: LeetCode
+  difficulty: hard
+- title: Longest Palindromic Subsequence
+  url: https://leetcode.com/problems/longest-palindromic-subsequence/
+  platform: LeetCode
+  difficulty: medium
+- title: Minimum Insertion Steps to Make a String Palindrome
+  url: https://leetcode.com/problems/minimum-insertion-steps-to-make-a-string-palindrome/
+  platform: LeetCode
+  difficulty: hard
+- title: Is Subsequence
+  url: https://leetcode.com/problems/is-subsequence/
+  platform: LeetCode
+  difficulty: easy
+- title: Number of Matching Subsequences
+  url: https://leetcode.com/problems/number-of-matching-subsequences/
+  platform: LeetCode
+  difficulty: medium
+- title: Longest Common Subsequence
+  url: https://cses.fi/problemset/task/3403
+  platform: CSES
+  difficulty: medium
+provenance:
+  origin: original
+status: live

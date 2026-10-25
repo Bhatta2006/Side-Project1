@@ -92,11 +92,11 @@ lesson: |
 
   Parsing is the boundary between text and computation. Decide the type before calculating, and derive the formula on paper before translating it into operators. Operator precedence should implement your formula; use parentheses whenever the intended grouping could be misread.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Dividing by zero is invalid. Negative integer division differs across languages: Python floors while C++ and Java truncate toward zero. Do not assume a positive-input identity proves behaviour for negatives.
 
-  A constant number of operations is O(1) under the usual bounded-integer model; parsing n tokens is O(n).
+  A few calculations are instant. Reading the input takes longer only when there is more input to read.
 
   ### Check your understanding
 

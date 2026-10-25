@@ -1,0 +1,962 @@
+id: monotonic-stack
+title: Monotonic stack and deque
+summary: Next greater and smaller elements, spans, histogram areas, contribution counting and the sliding-window
+  maximum deque.
+module: linear-patterns
+prerequisites: [stacks, sliding-window]
+difficulty: 4
+estimated_minutes: 90
+lesson: |
+  A **monotonic stack** keeps indexes whose values are in increasing (or decreasing) order
+  from bottom to top. When a new element breaks that order, the elements it pops have just
+  found their answer: the new element is the first one to their right that is greater (or
+  smaller). Every index is pushed once and popped at most once, so a whole pass is O(n),
+  even though there is a loop inside a loop.
+
+  The stacks lesson introduced the idea with "next greater element". This concept turns it
+  into a family: next greater and smaller in both directions, spans and waiting times, the
+  largest rectangle in a histogram, counting how many subarrays each element is the minimum
+  of, and the **monotonic deque** that keeps a sliding window's maximum.
+
+  ## Next greater family
+
+  ### Recognition cues
+
+  - For every element, find the **nearest** element to its left or right that is greater (or
+    smaller): next warmer day, nearest shorter building, next larger price.
+  - n up to 10⁵ or more, so checking every pair (O(n²)) is too slow.
+  - The answer is a value, an index or a distance per element.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For "next greater to the right" |
+  |---|---|
+  | State | a stack of indexes still waiting for their answer; their values **decrease** from bottom to top |
+  | Transition | for each i: while the top's value is **smaller** than `a[i]`, pop it and record `a[i]` as its answer; then push i |
+  | Base cases | every answer starts at −1 (none found) |
+  | Answer | indexes still on the stack at the end keep −1 |
+  | Loop order | left to right. For "previous" versions, read the answer from the stack top **before** pushing |
+
+  The four directions come from two switches: which way you scan, and whether you pop on `<`
+  (looking for greater) or `>` (looking for smaller).
+
+  ### Template
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  res = [-1] * n  # res[i]: first value to the right of i that is greater than a[i]
+  stack = []  # indexes still waiting; their values decrease from bottom to top
+  for i in range(n):
+      while stack and a[stack[-1]] < a[i]:  # a[i] answers every smaller value on top
+          res[stack.pop()] = a[i]
+      stack.append(i)
+  print(*res)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> a(n), res(n, -1);  // res[i]: first greater value to the right of i
+      for (auto& x : a) cin >> x;
+      vector<int> st;  // indexes still waiting; their values decrease from bottom to top
+      for (int i = 0; i < n; i++) {
+          while (!st.empty() && a[st.back()] < a[i]) {  // a[i] answers every smaller value on top
+              res[st.back()] = a[i];
+              st.pop_back();
+          }
+          st.push_back(i);
+      }
+      for (int i = 0; i < n; i++) cout << res[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] a = new long[n], res = new long[n];  // res[i]: first greater value to the right of i
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          Arrays.fill(res, -1);
+          Deque<Integer> st = new ArrayDeque<>();  // indexes still waiting; values decrease downwards
+          for (int i = 0; i < n; i++) {
+              while (!st.isEmpty() && a[st.peek()] < a[i]) res[st.pop()] = a[i];  // a[i] answers them
+              st.push(i);
+          }
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) out.append(res[i]).append(i + 1 < n ? " " : "\n");
+          System.out.print(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: 2 1 2 4 3
+
+  For each number, print the first greater number to its right, or −1. Input is n, then the
+  numbers. The answer is **4 2 4 −1 −1**.
+
+  **Brute force.** For every i, scan to the right until a bigger value appears:
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  res = []
+  for i in range(n):
+      found = -1
+      for j in range(i + 1, n):  # look further right until something is bigger
+          if a[j] > a[i]:
+              found = a[j]
+              break
+      res.append(found)
+  print(*res)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> a(n);
+      for (auto& x : a) cin >> x;
+      for (int i = 0; i < n; i++) {
+          long long found = -1;
+          for (int j = i + 1; j < n; j++)  // look further right until something is bigger
+              if (a[j] > a[i]) {
+                  found = a[j];
+                  break;
+              }
+          cout << found << (i + 1 < n ? " " : "\n");
+      }
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) {
+              long found = -1;
+              for (int j = i + 1; j < n; j++)  // look further right until something is bigger
+                  if (a[j] > a[i]) {
+                      found = a[j];
+                      break;
+                  }
+              out.append(found).append(i + 1 < n ? " " : "\n");
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  It is correct, but a falling array (5 4 3 2 1 …) makes every scan run to the end: O(n²),
+  about 5·10⁹ steps for n = 10⁵.
+
+  **Wrong first attempt — the maximum to the right.** Scan from the right and remember the
+  largest value seen so far:
+
+  ```python
+  n = int(input())
+  a = list(map(int, input().split()))
+  res, best = [-1] * n, -1
+  for i in range(n - 1, -1, -1):
+      res[i] = best if best > a[i] else -1  # the largest value to the right
+      best = max(best, a[i])
+  print(*res)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> a(n), res(n, -1);
+      for (auto& x : a) cin >> x;
+      long long best = -1;
+      for (int i = n - 1; i >= 0; i--) {
+          res[i] = best > a[i] ? best : -1;  // the largest value to the right
+          best = max(best, a[i]);
+      }
+      for (int i = 0; i < n; i++) cout << res[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] a = new long[n], res = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          long best = -1;
+          for (int i = n - 1; i >= 0; i--) {
+              res[i] = best > a[i] ? best : -1;  // the largest value to the right
+              best = Math.max(best, a[i]);
+          }
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) out.append(res[i]).append(i + 1 < n ? " " : "\n");
+          System.out.print(out);
+      }
+  }
+  ```
+
+  It prints 4 4 4 −1 −1. For the 1 at index 1, the largest value to the right is 4, but the
+  **first** greater one is the 2 right next to it. "Next" needs the nearest, not the biggest.
+
+  **Optimal — the stack.** Keep the indexes still waiting for an answer. When a[i] arrives,
+  every waiting value smaller than it has found its answer; the ones left are all at least
+  a[i], so the stack stays decreasing.
+
+  Dry run (stack shown as values, bottom to top):
+
+  | i | a[i] | popped (answer = a[i]) | stack after |
+  |---|---|---|---|
+  | 0 | 2 | — | 2 |
+  | 1 | 1 | — | 2 1 |
+  | 2 | 2 | the 1 at index 1 | 2 2 |
+  | 3 | 4 | the 2 at index 2, the 2 at index 0 | 4 |
+  | 4 | 3 | — | 4 3 |
+
+  Indexes 3 and 4 stay on the stack, so they keep −1. Result: 4 2 4 −1 −1.
+
+  Each index is pushed once and popped at most once, so the inner `while` runs at most n
+  times **in total**: O(n) time, O(n) memory.
+
+  ### Variants
+
+  1. *Next greater element I*: answers for a subset of values, stored in a hash map.
+  2. *Next greater element II*: a circular array; scan the indexes twice (i mod n).
+  3. *Nearest smaller values* (CSES): the previous smaller element, read from the stack top
+     before pushing.
+  4. *Next greater node in linked list*: copy the list into an array first.
+  5. *132 pattern*: scan from the right with a decreasing stack, remembering the last popped
+     value as the best "2".
+  6. *Remove K digits*: keep an increasing stack of digits, popping while removals remain.
+  7. *Number of visible people in a queue*: count the pops for each person.
+
+  ### Contrast
+
+  **Next greater, or the maximum to the right?** The maximum to the right is a single running
+  value. The next greater element is the **nearest** one, which needs every candidate that
+  is not yet beaten: that is the stack.
+
+  ### Common mistakes
+
+  - Popping on `<=` when the problem wants strictly greater (or the reverse): equal values
+    then answer each other.
+  - Pushing values instead of indexes, then needing the position or distance later.
+  - Reading the answer for "previous greater" after pushing, so an element answers itself.
+  - Forgetting the elements left on the stack: they have no answer (−1).
+
+  ## Spans and waiting times
+
+  ### Recognition cues
+
+  - "How many days until a warmer temperature?" (distance to the next greater).
+  - "For how many consecutive days, up to today, was the price at most today's?" (stock span:
+    distance to the previous greater).
+  - The answer is a **distance**, so the stack must hold indexes.
+
+  ### State, transition, base cases, answer, loop order
+
+  Same stack, but record `j − i` (next) or `i − j` (previous) instead of the value. For the
+  stock span, pop every previous price `<=` today's; the span is `i − (index on top)`, or
+  `i + 1` when the stack is empty.
+
+  ### Template
+
+  ```python
+  n = int(input())
+  t = list(map(int, input().split()))
+  wait = [0] * n  # wait[i]: days until a warmer day, 0 if none
+  stack = []  # indexes of days still waiting
+  for i in range(n):
+      while stack and t[stack[-1]] < t[i]:
+          j = stack.pop()
+          wait[j] = i - j  # a distance, so the stack holds indexes
+      stack.append(i)
+  print(*wait)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<int> t(n), wait(n, 0), st;  // wait[i]: days until a warmer day, 0 if none
+      for (auto& x : t) cin >> x;
+      for (int i = 0; i < n; i++) {
+          while (!st.empty() && t[st.back()] < t[i]) {
+              wait[st.back()] = i - st.back();  // a distance, so the stack holds indexes
+              st.pop_back();
+          }
+          st.push_back(i);
+      }
+      for (int i = 0; i < n; i++) cout << wait[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          int[] t = new int[n], wait = new int[n];  // wait[i]: days until a warmer day, 0 if none
+          for (int i = 0; i < n; i++) t[i] = in.nextInt();
+          Deque<Integer> st = new ArrayDeque<>();
+          for (int i = 0; i < n; i++) {
+              while (!st.isEmpty() && t[st.peek()] < t[i]) {
+                  int j = st.pop();
+                  wait[j] = i - j;  // a distance, so the stack holds indexes
+              }
+              st.push(i);
+          }
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) out.append(wait[i]).append(i + 1 < n ? " " : "\n");
+          System.out.print(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: temperatures 73 74 75 71 69 72 76 73
+
+  The program prints **1 1 4 2 1 1 0 0**. The 75 waits for the 76 four days later; the 71
+  and 69 are answered by the 72.
+
+  **Wrong first attempt.** Storing temperatures on the stack instead of indexes gives no way
+  to compute the distance when they are popped.
+
+  ### Variants
+
+  1. *Daily temperatures*: the anchor.
+  2. *Online stock span*: previous greater, answered as each price arrives.
+  3. *Car fleet*: sort by position, then a stack of arrival times.
+  4. *Maximum width ramp*: a decreasing stack of candidates for the left end, scanned from
+     the right.
+
+  ### Contrast
+
+  **Value or distance?** If the answer is the neighbour's value, the stack may hold values.
+  If it is a distance or a position, the stack must hold indexes.
+
+  ### Common mistakes
+
+  - Off by one in the span: today counts, so an empty stack gives `i + 1`.
+  - Using `<` for the stock span, which stops at equal prices that should be included.
+
+  ## Histogram area
+
+  ### Recognition cues
+
+  - Bars of width 1 and heights h; the largest rectangle that fits under them.
+  - The same question per row of a 0/1 matrix: the largest rectangle of ones.
+
+  ### State, transition, base cases, answer, loop order
+
+  The best rectangle uses some bar as its **lowest** bar, and stretches until the first
+  lower bar on each side. Keep an increasing stack of indexes; when a lower bar arrives at
+  i, pop the top bar: its right limit is i, and its left limit is the index now on top (or
+  −1). Area = height × (i − left − 1). Add a 0-height bar at the end so every bar is popped.
+
+  ### Template
+
+  ```python
+  n = int(input())
+  h = list(map(int, input().split())) + [0]  # the 0 bar pops everything at the end
+  stack, best = [], 0  # stack: indexes with increasing heights
+  for i in range(n + 1):
+      while stack and h[stack[-1]] >= h[i]:  # bar on top cannot extend past i
+          height = h[stack.pop()]
+          left = stack[-1] if stack else -1  # first lower bar on the left
+          best = max(best, height * (i - left - 1))
+      stack.append(i)
+  print(best)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      cin >> n;
+      vector<long long> h(n + 1, 0);  // h[n] = 0 pops everything at the end
+      for (int i = 0; i < n; i++) cin >> h[i];
+      vector<int> st;  // indexes with increasing heights
+      long long best = 0;
+      for (int i = 0; i <= n; i++) {
+          while (!st.empty() && h[st.back()] >= h[i]) {  // bar on top cannot extend past i
+              long long height = h[st.back()];
+              st.pop_back();
+              int left = st.empty() ? -1 : st.back();  // first lower bar on the left
+              best = max(best, height * (i - left - 1));
+          }
+          st.push_back(i);
+      }
+      cout << best << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] h = new long[n + 1];  // h[n] = 0 pops everything at the end
+          for (int i = 0; i < n; i++) h[i] = in.nextLong();
+          Deque<Integer> st = new ArrayDeque<>();  // indexes with increasing heights
+          long best = 0;
+          for (int i = 0; i <= n; i++) {
+              while (!st.isEmpty() && h[st.peek()] >= h[i]) {  // bar on top cannot extend past i
+                  long height = h[st.pop()];
+                  int left = st.isEmpty() ? -1 : st.peek();  // first lower bar on the left
+                  best = Math.max(best, height * (i - left - 1));
+              }
+              st.push(i);
+          }
+          System.out.println(best);
+      }
+  }
+  ```
+
+  ### Anchor problem: 2 1 5 6 2 3
+
+  The program prints **10**: the bars 5 and 6 together, at height 5. When the 2 at index 4
+  arrives, it pops 6 (area 6 × 1) and then 5, whose left limit is the 1 at index 1, so the
+  width is 4 − 1 − 1 = 2 and the area 10.
+
+  **Wrong first attempt.** Trying only "tallest bar alone" or "lowest bar times all bars"
+  gives max(6, 1 × 6) = 6. The best rectangle can sit anywhere in between.
+
+  ### Variants
+
+  1. *Largest rectangle in histogram*: the anchor.
+  2. *Maximal rectangle*: build a histogram of consecutive ones per row, then run this on
+     every row (DP on squares and rectangles).
+  3. *Count submatrices with all ones*: the same histograms, counting instead of maximising.
+  4. *Trapping rain water*: a stack of bars, filling water when a taller bar closes a basin.
+
+  ### Contrast
+
+  **Pop on `>=` or `>`?** For the area, either works, because equal bars are measured by the
+  last of them. For counting problems, the choice decides which equal element "owns" a
+  subarray, and it must differ between the two sides (see the next family).
+
+  ### Common mistakes
+
+  - Forgetting the final 0 bar, so bars still on the stack are never measured.
+  - Using `i − left` instead of `i − left − 1` for the width.
+  - 32-bit overflow: height × width can reach 10⁹ × 10⁵.
+
+  ## Contribution technique
+
+  ### Recognition cues
+
+  - "Sum over all subarrays of the minimum (or maximum, or max − min)."
+  - There are n² subarrays, but each element is the minimum of a whole block of them.
+
+  ### State, transition, base cases, answer, loop order
+
+  For each i, let `left[i]` = how many starting points to the left (including i) keep a[i]
+  as the minimum, and `right[i]` the same to the right. a[i] is the minimum of
+  `left[i] × right[i]` subarrays, so the answer is `Σ a[i] · left[i] · right[i]`. Both counts
+  come from nearest-smaller stacks. **Ties:** a subarray whose minimum appears twice must be
+  counted once, so stop at strictly smaller values on one side and at smaller-or-equal on the
+  other.
+
+  ### Template
+
+  ```python
+  MOD = 10**9 + 7
+  n = int(input())
+  a = list(map(int, input().split()))
+  left, right, stack = [0] * n, [0] * n, []
+  for i in range(n):  # previous strictly smaller
+      while stack and a[stack[-1]] > a[i]:
+          stack.pop()
+      left[i] = i - (stack[-1] if stack else -1)
+      stack.append(i)
+  stack = []
+  for i in range(n - 1, -1, -1):  # next smaller or equal: ties are owned by the leftmost
+      while stack and a[stack[-1]] >= a[i]:
+          stack.pop()
+      right[i] = (stack[-1] if stack else n) - i
+      stack.append(i)
+  print(sum(a[i] * left[i] * right[i] for i in range(n)) % MOD)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      const long long MOD = 1000000007;
+      int n;
+      cin >> n;
+      vector<long long> a(n), left(n), right(n);
+      for (auto& x : a) cin >> x;
+      vector<int> st;
+      for (int i = 0; i < n; i++) {  // previous strictly smaller
+          while (!st.empty() && a[st.back()] > a[i]) st.pop_back();
+          left[i] = i - (st.empty() ? -1 : st.back());
+          st.push_back(i);
+      }
+      st.clear();
+      for (int i = n - 1; i >= 0; i--) {  // next smaller or equal: ties go to the leftmost
+          while (!st.empty() && a[st.back()] >= a[i]) st.pop_back();
+          right[i] = (st.empty() ? n : st.back()) - i;
+          st.push_back(i);
+      }
+      long long total = 0;
+      for (int i = 0; i < n; i++) total = (total + a[i] % MOD * left[i] % MOD * right[i]) % MOD;
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          final long MOD = 1_000_000_007L;
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long[] a = new long[n], left = new long[n], right = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          Deque<Integer> st = new ArrayDeque<>();
+          for (int i = 0; i < n; i++) {  // previous strictly smaller
+              while (!st.isEmpty() && a[st.peek()] > a[i]) st.pop();
+              left[i] = i - (st.isEmpty() ? -1 : st.peek());
+              st.push(i);
+          }
+          st.clear();
+          for (int i = n - 1; i >= 0; i--) {  // next smaller or equal: ties go to the leftmost
+              while (!st.isEmpty() && a[st.peek()] >= a[i]) st.pop();
+              right[i] = (st.isEmpty() ? n : st.peek()) - i;
+              st.push(i);
+          }
+          long total = 0;
+          for (int i = 0; i < n; i++) total = (total + a[i] % MOD * left[i] % MOD * right[i]) % MOD;
+          System.out.println(total);
+      }
+  }
+  ```
+
+  ### Anchor problem: 3 1 2 4
+
+  The program prints **17**. The 1 is the minimum of 2 × 3 = 6 subarrays (6), the 3 of 1,
+  the 2 of 1 × 2 = 2 subarrays (4), and the 4 of 1 (4): 3 + 6 + 4 + 4 = 17.
+
+  **Wrong first attempt — the same comparison on both sides.** For `1 1`, the three
+  subarrays have minimum 1, so the answer is 3. Stopping at equal values on both sides
+  gives 2, because `[1, 1]` belongs to neither copy.
+
+  ### Variants
+
+  1. *Sum of subarray minimums*: the anchor.
+  2. *Sum of subarray ranges*: the sum of maximums minus the sum of minimums.
+  3. Sum of subarray maximums: flip the comparisons.
+
+  ### Contrast
+
+  **Strict on one side, non-strict on the other.** Each subarray must be credited to exactly
+  one copy of its minimum. Using the same comparison on both sides either drops or
+  double-counts subarrays where the minimum repeats.
+
+  ### Common mistakes
+
+  - The same comparison on both sides.
+  - Overflow: sums reach n² × max value; use the modulus or 128-bit care.
+
+  ## Monotonic deque
+
+  ### Recognition cues
+
+  - The maximum (or minimum) of **every window of size k**: sliding window maximum.
+  - A DP whose transition takes the best value from the last k positions (jump game VI,
+    constrained subsequence sum).
+
+  ### State, transition, base cases, answer, loop order
+
+  Keep a deque of indexes whose values **decrease** from front to back. For each i: pop from
+  the back while the back's value is `<=` a[i] (it can never be a window maximum again); push
+  i; pop from the front if it fell out of the window (`index ≤ i − k`). The front is the
+  window's maximum. O(n) total.
+
+  ### Template
+
+  ```python
+  from collections import deque
+
+  n, k = map(int, input().split())
+  a = list(map(int, input().split()))
+  dq, out = deque(), []  # indexes; values decrease from front to back
+  for i in range(n):
+      while dq and a[dq[-1]] <= a[i]:  # a[i] outlives and beats them
+          dq.pop()
+      dq.append(i)
+      if dq[0] <= i - k:  # the front slid out of the window
+          dq.popleft()
+      if i >= k - 1:
+          out.append(a[dq[0]])  # the front is the window maximum
+  print(*out)
+  ```
+
+  ```cpp
+  #include <deque>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, k;
+      cin >> n >> k;
+      vector<long long> a(n), out;
+      for (auto& x : a) cin >> x;
+      deque<int> dq;  // indexes; values decrease from front to back
+      for (int i = 0; i < n; i++) {
+          while (!dq.empty() && a[dq.back()] <= a[i]) dq.pop_back();  // a[i] outlives and beats them
+          dq.push_back(i);
+          if (dq.front() <= i - k) dq.pop_front();  // the front slid out of the window
+          if (i >= k - 1) out.push_back(a[dq.front()]);  // the front is the window maximum
+      }
+      for (size_t i = 0; i < out.size(); i++) cout << out[i] << (i + 1 < out.size() ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), k = in.nextInt();
+          long[] a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          Deque<Integer> dq = new ArrayDeque<>();  // indexes; values decrease from front to back
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) {
+              while (!dq.isEmpty() && a[dq.peekLast()] <= a[i]) dq.pollLast();  // a[i] beats them
+              dq.addLast(i);
+              if (dq.peekFirst() <= i - k) dq.pollFirst();  // the front slid out of the window
+              if (i >= k - 1) out.append(out.length() > 0 ? " " : "").append(a[dq.peekFirst()]);
+          }
+          System.out.println(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: 1 3 −1 −3 5 3 6 7, k = 3
+
+  The program prints **3 3 5 5 6 7**.
+
+  | i | a[i] | deque values after | window max |
+  |---|---|---|---|
+  | 2 | −1 | 3 −1 | 3 |
+  | 3 | −3 | 3 −1 −3 | 3 |
+  | 4 | 5 | 5 | 5 |
+  | 5 | 3 | 5 3 | 5 |
+  | 6 | 6 | 6 | 6 |
+  | 7 | 7 | 7 | 7 |
+
+  **Wrong first attempt — one running maximum.** A single variable cannot forget: once the
+  3 leaves the window at i = 4, nothing tells you the next largest value. The deque keeps
+  exactly the candidates that could still become the maximum.
+
+  ### Variants
+
+  1. *Sliding window maximum* (LeetCode) and *Sliding window minimum* (CSES).
+  2. *Longest subarray with absolute difference at most limit*: one deque for the max and one
+     for the min, with a variable window.
+  3. *Jump game VI*, *constrained subsequence sum*: dp[i] = a[i] + the best dp in the last k.
+  4. *Shortest subarray with sum at least K*: an increasing deque of prefix sums.
+
+  ### Contrast
+
+  **Stack or deque?** A stack answers "nearest greater" because old elements only leave when
+  beaten. In a sliding window, old elements also leave because they **expire**, so you need
+  to remove from the front as well: a deque.
+
+  ### Common mistakes
+
+  - Storing values instead of indexes, so expiry cannot be checked.
+  - Checking expiry before pushing in a way that empties the deque and reads a missing front.
+  - Printing before the first full window (i < k − 1).
+
+  ## Worked walkthrough
+
+  **Problem (trapping rain water).** Bars `0 1 0 2 1 0 1 3 2 1 2 1`. How much water stays
+  between them?
+
+  1. *Recognise.* Water fills a basin when a bar on the right is taller than the bottom of the
+     basin; the left wall is the nearest taller bar to the left. Nearest taller on both sides:
+     a monotonic stack.
+  2. *Stack.* Keep indexes with decreasing heights. When bar i is taller than the top, pop the
+     top as the basin bottom; the new top is the left wall.
+  3. *Fill.* The water added is (min(left wall, bar i) − bottom) × (i − left − 1).
+  4. *Answer.* The basins add up to **6**: 1 at index 2, 4 between indexes 3 and 7 (1 + 2 + 1
+     units above the 1, 0 and 1), and 1 at index 9.
+
+  ### Why this works
+
+  The stack invariant is that its values are monotonic from bottom to top. An element is
+  popped exactly when the first element that breaks the order arrives, and that element is,
+  by construction, the nearest one to the right that is greater (or smaller). Every element
+  between them was popped earlier, so none of them qualified. Since each index enters and
+  leaves the stack once, the whole pass is O(n).
+
+  ### Boundary cases and cost
+
+  - One element: no next greater (−1), span 1, area = its height, one window.
+  - All equal: the strictness of the comparison decides every answer; test it.
+  - All increasing or all decreasing: the stack empties every step, or never empties.
+  - Cost: O(n) time and O(n) memory for every family here.
+
+  ### Check your understanding
+
+  `6 2 5 4 5 1 6`. What is the next greater element of each number, and the stock span of
+  each (counting today and every previous day with price at most today's)?
+
+  Try it on paper before reading the reasoning below.
+
+  > Next greater: −1 5 6 5 6 6 −1. Spans: 1 1 2 1 4 1 7. The second 5 reaches back over 4,
+  > 5 and 2, stopping at the 6.
+key_points:
+- A monotonic stack keeps the indexes still waiting for an answer, in sorted value order.
+- An element is answered at the moment it is popped; each index is pushed and popped once, so O(n).
+- Scan direction and pop comparison pick next/previous and greater/smaller.
+- Store indexes when the answer is a distance or position.
+- 'Histogram: pop on a lower bar; area = height × (i − left − 1); end with a 0 bar.'
+- 'Contribution: Σ a[i] · left[i] · right[i], strict on one side and non-strict on the other.'
+- 'Monotonic deque: pop worse values from the back, expired ones from the front.'
+pitfalls:
+- Taking the maximum to the right instead of the nearest greater.
+- Popping on <= versus < without thinking about equal values.
+- Pushing values when distances or expiry need indexes.
+- Forgetting the 0 sentinel bar in the histogram.
+- Using the same tie rule on both sides when counting subarrays.
+resources:
+- title: Stack
+  url: https://www.techinterviewhandbook.org/algorithms/stack/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 15
+  level: core
+- title: Minimum stack / Minimum queue
+  url: https://cp-algorithms.com/data_structures/stack_queue_modification.html
+  kind: article
+  source: CP-Algorithms
+  minutes: 20
+  level: deep
+- title: 'Competitive Programmer''s Handbook, chapter 8: Amortized analysis'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 30
+  level: deep
+quiz:
+- id: nge-value
+  kind: mcq
+  prompt: 2 1 2 4 3. What is the next greater element of the 1?
+  options:
+  - '2'
+  - '4'
+  - '−1'
+  - '3'
+  answer: 0
+  explanation: The nearest greater value to the right is the 2 right next to it.
+  difficulty: 1
+- id: amortised
+  kind: mcq
+  prompt: The stack loop has a while inside a for. Why is it O(n)?
+  options:
+  - Each index is pushed once and popped at most once
+  - The while loop runs at most once per step
+  - The stack never has more than two elements
+  - It is O(n²)
+  answer: 0
+  explanation: Total pops across the whole pass are at most n.
+  difficulty: 2
+- id: indexes
+  kind: mcq
+  prompt: For daily temperatures (days to wait), what goes on the stack?
+  options:
+  - Indexes, so the distance can be computed when popped
+  - Temperatures
+  - Distances
+  - Nothing; use two pointers
+  answer: 0
+  explanation: The answer is j − i, which needs positions.
+  difficulty: 2
+- id: histogram
+  kind: mcq
+  prompt: Bars 2 1 5 6 2 3. What is the largest rectangle?
+  options:
+  - '10'
+  - '6'
+  - '12'
+  - '8'
+  answer: 0
+  explanation: Bars 5 and 6 at height 5, width 2.
+  difficulty: 3
+- id: sentinel
+  kind: mcq
+  prompt: Why add a bar of height 0 at the end of the histogram?
+  options:
+  - So every bar left on the stack gets popped and measured
+  - To avoid an empty stack
+  - It makes the heights increase
+  - It is not needed
+  answer: 0
+  explanation: Bars still on the stack would otherwise never be measured.
+  difficulty: 3
+- id: ties
+  kind: mcq
+  prompt: Sum of subarray minimums of 1 1. What is the right answer?
+  options:
+  - '3'
+  - '2'
+  - '4'
+  - '1'
+  answer: 0
+  explanation: '[1], [1] and [1, 1], each with minimum 1.'
+  difficulty: 4
+- id: deque-why
+  kind: mcq
+  prompt: Why does sliding window maximum need a deque rather than a stack?
+  options:
+  - Old indexes also leave because they expire, from the front
+  - Deques are faster
+  - To keep values sorted ascending
+  - A stack would work as well
+  answer: 0
+  explanation: Beaten values leave from the back, expired ones from the front.
+  difficulty: 4
+- id: window-output
+  kind: output
+  prompt: What does this print?
+  code:
+    python: |
+      from collections import deque
+      a, k = [4, 2, 12, 3], 2
+      dq, out = deque(), []
+      for i in range(len(a)):
+          while dq and a[dq[-1]] <= a[i]:
+              dq.pop()
+          dq.append(i)
+          if dq[0] <= i - k:
+              dq.popleft()
+          if i >= k - 1:
+              out.append(a[dq[0]])
+      print(*out)
+    cpp: |
+      vector<int> a = {4, 2, 12, 3};
+      int k = 2;
+      deque<int> dq;
+      vector<int> out;
+      for (int i = 0; i < (int)a.size(); i++) {
+          while (!dq.empty() && a[dq.back()] <= a[i]) dq.pop_back();
+          dq.push_back(i);
+          if (dq.front() <= i - k) dq.pop_front();
+          if (i >= k - 1) out.push_back(a[dq.front()]);
+      }
+      for (size_t i = 0; i < out.size(); i++) cout << out[i] << (i + 1 < out.size() ? " " : "");
+    java: |
+      int[] a = {4, 2, 12, 3};
+      int k = 2;
+      java.util.ArrayDeque<Integer> dq = new java.util.ArrayDeque<>();
+      StringBuilder out = new StringBuilder();
+      for (int i = 0; i < a.length; i++) {
+          while (!dq.isEmpty() && a[dq.peekLast()] <= a[i]) dq.pollLast();
+          dq.addLast(i);
+          if (dq.peekFirst() <= i - k) dq.pollFirst();
+          if (i >= k - 1) out.append(out.length() > 0 ? " " : "").append(a[dq.peekFirst()]);
+      }
+      System.out.print(out);
+  options:
+  - 4 12 12
+  - 4 2 12
+  - 12 12 12
+  - 4 12 3
+  answer: 0
+  explanation: Windows [4 2], [2 12], [12 3].
+  difficulty: 5
+problems:
+- nearest-taller-either-side
+- peak-totals
+practice_links:
+- title: Next Greater Element II
+  url: https://leetcode.com/problems/next-greater-element-ii/
+  platform: LeetCode
+  difficulty: medium
+- title: Nearest Smaller Values
+  url: https://cses.fi/problemset/task/1645
+  platform: CSES
+  difficulty: medium
+- title: Daily Temperatures
+  url: https://leetcode.com/problems/daily-temperatures/
+  platform: LeetCode
+  difficulty: medium
+- title: Online Stock Span
+  url: https://leetcode.com/problems/online-stock-span/
+  platform: LeetCode
+  difficulty: medium
+- title: Largest Rectangle in Histogram
+  url: https://leetcode.com/problems/largest-rectangle-in-histogram/
+  platform: LeetCode
+  difficulty: hard
+- title: Sum of Subarray Minimums
+  url: https://leetcode.com/problems/sum-of-subarray-minimums/
+  platform: LeetCode
+  difficulty: medium
+- title: Sliding Window Maximum
+  url: https://leetcode.com/problems/sliding-window-maximum/
+  platform: LeetCode
+  difficulty: hard
+- title: Trapping Rain Water
+  url: https://leetcode.com/problems/trapping-rain-water/
+  platform: LeetCode
+  difficulty: hard
+- title: 132 Pattern
+  url: https://leetcode.com/problems/132-pattern/
+  platform: LeetCode
+  difficulty: medium
+- title: Remove K Digits
+  url: https://leetcode.com/problems/remove-k-digits/
+  platform: LeetCode
+  difficulty: medium
+provenance:
+  origin: original
+status: live

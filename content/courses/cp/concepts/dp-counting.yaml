@@ -1,0 +1,74 @@
+id: dp-counting
+title: Counting DP
+summary: 'Count ways: ordered versus unordered coin combinations, prefix-sum transitions and counting
+  arrangements.'
+module: dp-module
+prerequisites:
+- dp-classics
+- prefix-difference
+difficulty: 4
+estimated_minutes: 60
+status: draft
+lesson: '## Ordered vs unordered
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Prefix sum transitions
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Profile counting
+
+
+  ### Recognition cues
+
+
+  ### State, transition, base cases, answer, loop order
+
+
+  ### Anchor: recursion → memoization → tabulation → space optimisation
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

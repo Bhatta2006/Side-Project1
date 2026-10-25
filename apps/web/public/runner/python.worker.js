@@ -15,18 +15,26 @@ def __socrat_run(src, data):
     saved = sys.stdin, sys.stdout, sys.stderr
     sys.stdin = io.TextIOWrapper(io.BytesIO(data.encode()), encoding="utf-8")
     sys.stdout, sys.stderr = out, err
-    failed = False
+    status = "executed"
     try:
-        exec(compile(src, "solution.py", "exec"), {"__name__": "__main__"})
+        code = compile(src, "solution.py", "exec")
+    except SyntaxError as e:
+        # A typo is not a crash: report it as a syntax error with only the learner's line.
+        sys.stdin, sys.stdout, sys.stderr = saved
+        return "compile_error", "", "".join(traceback.format_exception_only(type(e), e))
+    try:
+        exec(code, {"__name__": "__main__"})
     except SystemExit as e:
-        failed = e.code not in (None, 0)
-    except BaseException:
-        traceback.print_exc()
-        failed = True
+        if e.code not in (None, 0):
+            status = "runtime_error"
+    except BaseException as e:
+        # Skip this harness frame so the traceback starts in solution.py.
+        traceback.print_exception(type(e), e, e.__traceback__.tb_next)
+        status = "runtime_error"
     finally:
         sys.stdin, sys.stdout, sys.stderr = saved
         sys.setrecursionlimit(1000)
-    return failed, out.getvalue(), err.getvalue()
+    return status, out.getvalue(), err.getvalue()
 `;
 
 async function load(base) {
@@ -47,9 +55,9 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ type: 'start', index: test.index });
       const started = performance.now();
       const result = run(data.source, test.input);
-      const [failed, stdout, stderr] = result.toJs();
+      const [status, stdout, stderr] = result.toJs();
       result.destroy();
-      self.postMessage(await report(test.index, failed ? 'runtime_error' : 'executed', stdout, stderr, started));
+      self.postMessage(await report(test.index, status, stdout, stderr, started));
     }
     self.postMessage({ type: 'done' });
   } catch (error) {

@@ -1,0 +1,63 @@
+id: quiz:dsa:dp-lcs:subsequence-match
+family: subsequence-match
+concept: dsa:dp-lcs
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: trace
+  band: 1
+  format: trace
+  prompt: Is aec a subsequence of abcde?
+  options:
+  - No, no c comes after the e
+  - Yes, all three letters appear
+  - Yes, after sorting
+  - Only if repeats are allowed
+  answer: 0
+  misconceptions:
+  - null
+  - order-matters-assumption
+  - pattern-sort-breaks-order
+  - pattern-two-pointers-vs-lcs
+  explanation: Order matters; after matching e at the end, nothing is left for c.
+- id: greedy-safe
+  band: 3
+  format: classify
+  prompt: Why is matching each character of s at its earliest position in t safe?
+  options:
+  - A later match would only leave less of t for the rest of s
+  - Because t is sorted
+  - It is not safe; use LCS
+  - Because s is short
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-sort-breaks-order
+  - pattern-two-pointers-vs-lcs
+  - pattern-two-pointers-vs-lcs
+  explanation: All of s must match, so there is nothing to choose.
+- id: many-patterns
+  band: 4
+  format: classify
+  prompt: 50 000 short words, one long text. Which is a subsequence of the text?
+  options:
+  - Precompute the next position of each letter, then jump per character
+  - An LCS table for every word
+  - Two pointers over the whole text for every word, always
+  - Sort the words
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-two-pointers-vs-lcs
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  explanation: Each word then costs one jump per letter, not a full scan of the text.
+status: provisional
+provenance:
+  origin: original

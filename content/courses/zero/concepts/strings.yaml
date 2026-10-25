@@ -111,11 +111,11 @@ lesson: |
 
   Text is a sequence with a representation. Decide whether the task concerns characters, words or raw bytes. Most beginner judge tasks use ASCII, but user text may have Unicode characters that occupy several bytes or code units.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Test empty text, a single character, repeated characters and leading/trailing spaces. Trimming input changes its meaning if spaces are significant. Python and Java strings are immutable; C++ strings permit indexed mutation.
 
-  Scanning n characters is O(n). Rebuilding an immutable string on every iteration can copy an ever-growing prefix; collect pieces and join when appropriate.
+  Looking at every character takes longer for longer text. Adding to a string inside a loop can copy the whole string each time; collect the pieces in a list and join them at the end.
 
   ### Check your understanding
 

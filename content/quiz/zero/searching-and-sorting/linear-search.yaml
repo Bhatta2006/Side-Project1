@@ -1,0 +1,62 @@
+id: quiz:zero:searching-and-sorting:linear-search
+family: linear-search
+concept: zero:searching-and-sorting
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: early-else
+  band: 2
+  format: trace
+  prompt: Inside the loop, found = i on a match and found = -1 otherwise, with no break. What is printed for 4 2 7 2 9 and x = 2?
+  options:
+  - '-1'
+  - '1'
+  - '3'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - search-decide-too-early
+  - stop-after-first
+  - confuse-index-value
+  explanation: The last element, 9, resets found to −1.
+- id: no-break
+  band: 3
+  format: trace
+  prompt: Without break, but with found only set on a match, what is printed for 4 2 7 2 9 and x = 2?
+  options:
+  - 3, the last match
+  - 1, the first match
+  - '-1'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - stop-after-first
+  - search-decide-too-early
+  - confuse-index-value
+  explanation: Each later match overwrites found.
+- id: cost
+  band: 4
+  format: complexity
+  prompt: Linear search on n values when x is missing. How many comparisons?
+  options:
+  - n
+  - log n
+  - '1'
+  - n²
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-needs-sorted-input
+  - stop-after-first
+  - nested-loops-repair
+  explanation: Every element must be checked.
+status: provisional
+provenance:
+  origin: original

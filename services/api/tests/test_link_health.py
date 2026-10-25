@@ -97,8 +97,11 @@ def test_collects_curated_resources_and_practice_links_from_the_catalog():
     links = link_health.collect()
     resources = [u for u, info in links.items() if "resource" in info["kinds"]]
     practice = [u for u, info in links.items() if "practice" in info["kinds"]]
-    assert len(resources) == 152
-    assert len(practice) == 126
+    from socrat.catalog.registry import default_catalog
+
+    concepts = default_catalog().concepts.values()
+    assert len(resources) == len({str(r.url) for c in concepts for r in c.resources}) >= 152
+    assert len(practice) == len({str(p.url) for c in concepts for p in c.practice_links}) >= 126
 
 
 def test_offline_by_default_and_fixture_runs_write_a_csv(tmp_path, capsys):

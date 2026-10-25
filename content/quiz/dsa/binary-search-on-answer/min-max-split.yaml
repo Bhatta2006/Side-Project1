@@ -1,0 +1,237 @@
+id: quiz:dsa:binary-search-on-answer:min-max-split
+family: min-max-split
+concept: dsa:binary-search-on-answer
+pattern: dsa:binary-search-on-answer/min-max-split
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: min_max_split
+  params:
+    length:
+    - 5
+    - 8
+    value:
+    - 1
+    - 9
+    parts:
+    - 2
+    - 4
+  reference: split_brute(a, k)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: the ceiling of the average part sum
+  misconception: predicate-average-shortcut
+- rule: cut whenever a part would pass the average
+  misconception: split-average-greedy
+- rule: the largest element
+  misconception: split-lower-bound-answer
+- rule: accept a cap only when it needs fewer than k parts
+  misconception: predicate-boundary
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is min max split?
+  options:
+  - Give n chapters in order to k students and minimise the most pages any student reads
+  - Find a number in a sorted array
+  - Sort the chapters by length
+  - Find the longest chapter
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-vs-scan
+  - pattern-sort-breaks-order
+  - split-lower-bound-answer
+  explanation: Contiguous pieces, minimise the largest.
+- id: monotone
+  band: 1
+  format: mcq
+  prompt: A cap of 20 works. What do you know about a cap of 25?
+  options:
+  - It works too
+  - It fails
+  - Nothing
+  - It needs more parts
+  answer: 0
+  misconceptions:
+  - null
+  - predicate-inverted
+  - predicate-not-monotone
+  - predicate-inverted
+  explanation: A larger cap never needs more parts.
+- id: range
+  band: 2
+  format: mcq
+  prompt: The array is 4 9 2 6 and k = 2. What are lo and hi at the start?
+  options:
+  - lo = 9, hi = 21
+  - lo = 1, hi = 21
+  - lo = 2, hi = 9
+  - lo = 11, hi = 21
+  answer: 0
+  misconceptions:
+  - null
+  - search-range-confusion
+  - search-range-confusion
+  - predicate-average-shortcut
+  explanation: From the largest element to the total.
+- id: greedy-count
+  band: 2
+  format: trace
+  prompt: Cap 10 on the array 4 9 2 6. How many parts does greedy filling use?
+  options:
+  - '3'
+  - '2'
+  - '4'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - trace-step-slip
+  - subsets-vs-elements
+  - split-lower-bound-answer
+  explanation: 4 | 9 | 2 6.
+- id: exactly-k
+  band: 3
+  format: mcq
+  prompt: A cap needs exactly k parts. What does the search do?
+  options:
+  - Treats it as working and sets hi = mid
+  - Treats it as failing and sets lo = mid + 1
+  - Stops immediately
+  - Tries k + 1 parts
+  answer: 0
+  misconceptions:
+  - null
+  - predicate-boundary
+  - stop-after-first
+  - predicate-wrong-variable
+  explanation: At most k parts are allowed.
+- id: average
+  band: 3
+  format: trace
+  prompt: 3 1 4 1 5 9 2 6 into 3 parts. Cutting near the average gives 17. What is the true answer?
+  options:
+  - '14'
+  - '17'
+  - '11'
+  - '9'
+  answer: 0
+  misconceptions:
+  - null
+  - split-average-greedy
+  - predicate-average-shortcut
+  - split-lower-bound-answer
+  explanation: 3 1 4 1 5 | 9 2 | 6.
+- id: low-start
+  band: 3
+  format: classify
+  prompt: Why must the search start at max(a) rather than 1?
+  options:
+  - Below it, greedy filling still puts the big element in a part, so it miscounts
+  - Smaller caps are slower
+  - The answer is always max(a)
+  - To avoid negative numbers
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - split-lower-bound-answer
+  - search-range-confusion
+  explanation: A cap below the largest element can never work, but the count does not notice.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: n elements with total S. Time of the whole search?
+  options:
+  - O(n log S)
+  - O(n · S)
+  - O(n²)
+  - O(log S)
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - nested-loops-repair
+  - subsets-linear
+  explanation: O(log S) checks, each O(n).
+- id: keep-mid
+  band: 4
+  format: mcq
+  prompt: mid works. Why hi = mid and not hi = mid − 1?
+  options:
+  - mid itself may be the smallest cap that works
+  - It is faster
+  - To avoid overflow
+  - It makes no difference
+  answer: 0
+  misconceptions:
+  - null
+  - exclude-candidate-mid
+  - lo-hi-confusion
+  - exclude-candidate-mid
+  explanation: Throwing mid away can skip the answer.
+- id: ship
+  band: 5
+  format: classify
+  prompt: Ship packages in order within D days with the smallest capacity. What plays the role of the parts?
+  options:
+  - The days
+  - The packages
+  - The capacity
+  - The ships
+  answer: 0
+  misconceptions:
+  - null
+  - confuse-index-value
+  - predicate-wrong-variable
+  - subsets-vs-elements
+  explanation: Each day ships one contiguous group.
+- id: other-check
+  band: 5
+  format: classify
+  prompt: Koko eats bananas at speed s and needs ⌈p / s⌉ hours per pile. What changes from min max split?
+  options:
+  - Only the check; the search for the first value that works is the same
+  - The search direction
+  - It needs sorting first
+  - It cannot be binary searched
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-first-vs-last-true
+  - pattern-search-needs-sorted-input
+  - predicate-not-monotone
+  explanation: Speed is monotone in the same direction as the cap.
+- id: mirror
+  band: 6
+  format: classify
+  prompt: Now maximise the smallest part instead. What changes in the loop?
+  options:
+  - Search the last value that works, rounding mid up and keeping lo = mid
+  - Nothing
+  - Start at lo = sum(a)
+  - Accept parts < k only
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-first-vs-last-true
+  - search-range-confusion
+  - predicate-boundary
+  explanation: The check flips direction, so the search keeps the lower end.
+status: provisional
+provenance:
+  origin: original

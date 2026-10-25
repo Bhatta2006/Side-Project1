@@ -1,0 +1,938 @@
+id: knapsack-unbounded
+title: Unbounded knapsack family
+summary: 'Items you can reuse: unbounded knapsack, rod cutting, fewest coins, and why loop order separates
+  combinations from permutations.'
+module: dynamic-programming
+prerequisites: [knapsack-01]
+difficulty: 4
+estimated_minutes: 75
+lesson: |
+  In the unbounded knapsack family, every item can be **taken as many times as you like**.
+  Rods cut into equal pieces, coins from an endless supply, steps of fixed sizes: the item
+  never runs out, only the budget does. The table is the 0/1 knapsack table with one change:
+  after taking an item you may take it again.
+
+  This concept builds on the 0/1 knapsack. Read the two side by side: the code differs in a
+  single loop direction, and that direction is the whole difference between "once" and
+  "as often as you like".
+
+  ## Unbounded knapsack
+
+  ### Recognition cues
+
+  - Each item comes in **unlimited copies**: coin values, rod lengths, step sizes, ticket
+    types.
+  - There is a budget (length, weight, amount), and you maximise a value, minimise a count, or
+    count the ways to reach it.
+  - The budget is small enough to index an array; listing every multiset of items is too slow.
+
+  ### State, transition, base cases, answer, loop order
+
+  | Part | For unbounded knapsack |
+  |---|---|
+  | State | `dp[c]` = the best value within capacity c, any number of copies of each item |
+  | Transition | `dp[c] = max(dp[c], dp[c − w] + v)` for every item with `w ≤ c` |
+  | Base cases | `dp[c] = 0` for every c: taking nothing is allowed |
+  | Answer | `dp[W]` |
+  | Loop order | capacity runs **from w up to W**, so `dp[c − w]` may already contain this item |
+
+  ### Template
+
+  One row, filled forwards for each item:
+
+  ```python
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  dp = [0] * (W + 1)  # dp[c]: best value within capacity c, items reusable
+  for i in range(n):
+      for c in range(w[i], W + 1):  # forwards, so item i can be taken again
+          dp[c] = max(dp[c], dp[c - w[i]] + v[i])
+  print(dp[W])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, W;
+      cin >> n >> W;
+      vector<int> w(n);
+      vector<long long> v(n), dp(W + 1, 0);  // dp[c]: best value within capacity c
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      for (int i = 0; i < n; i++)
+          for (int c = w[i]; c <= W; c++)  // forwards, so item i can be taken again
+              dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
+      cout << dp[W] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), W = in.nextInt();
+          int[] w = new int[n];
+          long[] v = new long[n], dp = new long[W + 1];  // dp[c]: best value within capacity c
+          for (int i = 0; i < n; i++) w[i] = in.nextInt();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          for (int i = 0; i < n; i++)
+              for (int c = w[i]; c <= W; c++)  // forwards, so item i can be taken again
+                  dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
+          System.out.println(dp[W]);
+      }
+  }
+  ```
+
+  ### Anchor problem: cutting a rod
+
+  A rod of length 4 can be cut into pieces of length 1, 2, 3 or 4, which sell for 1, 5, 8
+  and 9. You may cut as many pieces of each length as you like. Input is `n W`, then the
+  piece lengths, then their prices. The best total is **10**: two pieces of length 2.
+
+  **Wrong first attempt — greedy by price per length.** Sort the pieces by price ÷ length and
+  cut as many of the best one as still fit:
+
+  ```python
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  order = sorted(range(n), key=lambda i: v[i] / w[i], reverse=True)  # best price per unit first
+  left, total = W, 0
+  for i in order:
+      total += (left // w[i]) * v[i]  # as many copies as fit
+      left %= w[i]
+  print(total)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <numeric>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, W;
+      cin >> n >> W;
+      vector<long long> w(n), v(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      vector<int> order(n);
+      iota(order.begin(), order.end(), 0);
+      sort(order.begin(), order.end(), [&](int a, int b) {
+          return v[a] * w[b] > v[b] * w[a];  // best price per unit first
+      });
+      long long left = W, total = 0;
+      for (int i : order) {
+          total += (left / w[i]) * v[i];  // as many copies as fit
+          left %= w[i];
+      }
+      cout << total << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), W = in.nextInt();
+          long[] w = new long[n], v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextLong();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          Integer[] order = new Integer[n];
+          for (int i = 0; i < n; i++) order[i] = i;
+          Arrays.sort(order, (a, b) -> Long.compare(v[b] * w[a], v[a] * w[b]));  // best per unit first
+          long left = W, total = 0;
+          for (int i : order) {
+              total += (left / w[i]) * v[i];  // as many copies as fit
+              left %= w[i];
+          }
+          System.out.println(total);
+      }
+  }
+  ```
+
+  It prints 9. The prices per unit are 2.67 (length 3), 2.5 (length 2), 2.25 (length 4) and
+  1 (length 1). Greedy cuts one piece of length 3, and the leftover length 1 sells for 1:
+  8 + 1 = 9. Two pieces of length 2 give 5 + 5 = 10. The best piece per unit can leave a
+  remainder that only a poor piece fills.
+
+  **Step 1 — recursion.** For each piece, either stop using it, or cut one more copy and
+  **stay on the same piece**:
+
+  ```python
+  def best(i, cap):
+      """Best value from pieces i, i + 1, ... with cap length left; copies allowed."""
+      if i == n:
+          return 0
+      result = best(i + 1, cap)  # no more copies of piece i
+      if w[i] <= cap:
+          result = max(result, v[i] + best(i, cap - w[i]))  # one more copy, stay on i
+      return result
+
+
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  print(best(0, W))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n, W;
+  vector<long long> w, v;
+
+  long long best(int i, long long cap) {  // pieces i.. with cap left, copies allowed
+      if (i == n) return 0;
+      long long result = best(i + 1, cap);  // no more copies of piece i
+      if (w[i] <= cap) result = max(result, v[i] + best(i, cap - w[i]));  // stay on i
+      return result;
+  }
+
+  int main() {
+      cin >> n >> W;
+      w.resize(n);
+      v.resize(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      cout << best(0, W) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int n;
+      static long[] w, v;
+
+      static long best(int i, long cap) {  // pieces i.. with cap left, copies allowed
+          if (i == n) return 0;
+          long result = best(i + 1, cap);  // no more copies of piece i
+          if (w[i] <= cap) result = Math.max(result, v[i] + best(i, cap - w[i]));  // stay on i
+          return result;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          int W = in.nextInt();
+          w = new long[n];
+          v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextLong();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          System.out.println(best(0, W));
+      }
+  }
+  ```
+
+  The only change from 0/1 knapsack is `best(i, …)` instead of `best(i + 1, …)` after a
+  take. Writing `i + 1` there would allow each piece once and print 9. The recursion still
+  repeats work: the pair (piece, length left) is all that matters, and pairs recur.
+
+  **Step 2 — memoization.** Store each (piece, length) answer once:
+
+  ```python
+  def best(i, cap):
+      if i == n:
+          return 0
+      if memo[i][cap] is None:  # solve each (piece, length) pair once
+          result = best(i + 1, cap)
+          if w[i] <= cap:
+              result = max(result, v[i] + best(i, cap - w[i]))
+          memo[i][cap] = result
+      return memo[i][cap]
+
+
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  memo = [[None] * (W + 1) for _ in range(n)]
+  print(best(0, W))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n, W;
+  vector<long long> w, v;
+  vector<vector<long long>> memo;  // -1 = not solved yet
+
+  long long best(int i, int cap) {
+      if (i == n) return 0;
+      long long& slot = memo[i][cap];
+      if (slot == -1) {  // solve each (piece, length) pair once
+          slot = best(i + 1, cap);
+          if (w[i] <= cap) slot = max(slot, v[i] + best(i, cap - (int)w[i]));
+      }
+      return slot;
+  }
+
+  int main() {
+      cin >> n >> W;
+      w.resize(n);
+      v.resize(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      memo.assign(n, vector<long long>(W + 1, -1));
+      cout << best(0, W) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static int n;
+      static long[] w, v;
+      static long[][] memo;  // -1 = not solved yet
+
+      static long best(int i, int cap) {
+          if (i == n) return 0;
+          if (memo[i][cap] == -1) {  // solve each (piece, length) pair once
+              long result = best(i + 1, cap);
+              if (w[i] <= cap) result = Math.max(result, v[i] + best(i, cap - (int) w[i]));
+              memo[i][cap] = result;
+          }
+          return memo[i][cap];
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          int W = in.nextInt();
+          w = new long[n];
+          v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextLong();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          memo = new long[n][W + 1];
+          for (long[] row : memo) Arrays.fill(row, -1);
+          System.out.println(best(0, W));
+      }
+  }
+  ```
+
+  **Step 3 — tabulation.** `dp[i][c]` uses the first i pieces. Taking piece i reads the
+  **same row** `dp[i][c − w]`, because that piece may still be in use:
+
+  ```python
+  n, W = map(int, input().split())
+  w = list(map(int, input().split()))
+  v = list(map(int, input().split()))
+  # dp[i][c]: best value using the first i pieces, copies allowed, length c
+  dp = [[0] * (W + 1) for _ in range(n + 1)]
+  for i in range(1, n + 1):
+      for c in range(W + 1):
+          dp[i][c] = dp[i - 1][c]  # no copy of piece i - 1
+          if w[i - 1] <= c:
+              dp[i][c] = max(dp[i][c], dp[i][c - w[i - 1]] + v[i - 1])  # same row: reuse
+  print(dp[n][W])
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, W;
+      cin >> n >> W;
+      vector<long long> w(n), v(n);
+      for (auto& x : w) cin >> x;
+      for (auto& x : v) cin >> x;
+      // dp[i][c]: best value using the first i pieces, copies allowed, length c
+      vector<vector<long long>> dp(n + 1, vector<long long>(W + 1, 0));
+      for (int i = 1; i <= n; i++)
+          for (int c = 0; c <= W; c++) {
+              dp[i][c] = dp[i - 1][c];  // no copy of piece i - 1
+              if (w[i - 1] <= c) dp[i][c] = max(dp[i][c], dp[i][c - w[i - 1]] + v[i - 1]);  // reuse
+          }
+      cout << dp[n][W] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), W = in.nextInt();
+          int[] w = new int[n];
+          long[] v = new long[n];
+          for (int i = 0; i < n; i++) w[i] = in.nextInt();
+          for (int i = 0; i < n; i++) v[i] = in.nextLong();
+          // dp[i][c]: best value using the first i pieces, copies allowed, length c
+          long[][] dp = new long[n + 1][W + 1];
+          for (int i = 1; i <= n; i++)
+              for (int c = 0; c <= W; c++) {
+                  dp[i][c] = dp[i - 1][c];  // no copy of piece i - 1
+                  if (w[i - 1] <= c) dp[i][c] = Math.max(dp[i][c], dp[i][c - w[i - 1]] + v[i - 1]);
+              }
+          System.out.println(dp[n][W]);
+      }
+  }
+  ```
+
+  Dry run (rows are "pieces allowed so far", columns are lengths 0 to 4):
+
+  | pieces allowed | 0 | 1 | 2 | 3 | 4 |
+  |---|---|---|---|---|---|
+  | none | 0 | 0 | 0 | 0 | 0 |
+  | + (len 1, price 1) | 0 | 1 | 2 | 3 | 4 |
+  | + (len 2, price 5) | 0 | 1 | 5 | 6 | **10** |
+  | + (len 3, price 8) | 0 | 1 | 5 | 8 | **10** |
+  | + (len 4, price 9) | 0 | 1 | 5 | 8 | **10** |
+
+  Read one cell: in row "+ (len 2, price 5)", length 4 is the larger of *no copy* (4, from the
+  row above) and *one more copy* (5 + this row at length 2, which is 5): 10. The 5 at length 2
+  already contains one length-2 piece, so the answer uses two.
+
+  **Step 4 — one row, filled forwards.** Cell c reads cell c − w of the **same** row, which is
+  to its left. Going left to right means that cell has already been updated for this piece,
+  which is exactly the reuse we want. That is the template above.
+
+  Going right to left turns it back into 0/1 knapsack, and on this input it prints 9:
+
+  | length c (piece len 2, price 5, backwards) | 4 | 3 | 2 |
+  |---|---|---|---|
+  | dp[c] after | max(4, dp[2] + 5) = **7** | max(3, dp[1] + 5) = 6 | max(2, dp[0] + 5) = 5 |
+
+  At c = 4 it reads dp[2] = 2, the value from *before* this piece, so the second length-2
+  piece is never counted. The finished row is 0 1 5 8 9.
+
+  Costs: recursion is exponential; memo and table O(n·W) time and O(n·W) memory; one row
+  O(n·W) time and O(W) memory.
+
+  ### Variants
+
+  1. *Rod cutting* or *Integer break*: piece lengths 1 to n, with the price or product as the
+     value.
+  2. *Cut ribbon* (Codeforces): lengths a, b and c must use the whole ribbon **exactly**, and
+     you maximise the number of pieces.
+  3. *Minimizing coins* (CSES) and *Coin change* (LeetCode): minimise the count. See "Fewest
+     coins" below.
+  4. *Coin combinations II* (CSES) and *Coin change II* (LeetCode): count unordered ways. See
+     "Combinations or permutations" below.
+  5. *Perfect squares*: the items are the squares up to n.
+  6. *Minimum cost for tickets*: three ticket lengths that can be bought again and again.
+
+  ### Contrast
+
+  **Unbounded or 0/1?** If an item exists once, loop the capacity **backwards** so it is
+  never read twice. If it can be reused, loop **forwards** on purpose. In the 2D table the
+  same difference is "take reads the row above" (0/1) versus "take reads this row"
+  (unbounded).
+
+  ### Common mistakes
+
+  - Looping the capacity backwards, which allows each piece only once.
+  - Moving to the next item after a take (`best(i + 1, …)` or `dp[i − 1][c − w]`), which is
+    the 0/1 recurrence.
+  - Greedy by value per weight on whole pieces.
+  - 32-bit overflow when large values are added many times.
+
+  ## Fewest coins
+
+  The DP (1D) lesson introduced fewest coins as a one-dimensional recurrence (its pattern is
+  `dsa:dp-1d/unbounded-coin-change`). Here it is the same table seen as an unbounded knapsack:
+  coins are items, the amount is the capacity, every coin adds 1 to the count, and the
+  amount must be hit **exactly**.
+
+  ### Recognition cues
+
+  - "Fewest coins", "least number of perfect squares", "fewest stamps" to make an exact total.
+  - Coin values repeat freely; some totals may be impossible.
+  - Greedy "largest coin first" is tempting and wrong for many coin systems.
+
+  ### State, transition, base cases, answer, loop order
+
+  `dp[a]` = the fewest coins that sum to **exactly** a. Transition:
+  `dp[a] = min(dp[a], dp[a − c] + 1)` for every coin `c ≤ a`. Base case `dp[0] = 0`; every
+  other cell starts at infinity, meaning "not reachable yet". Answer `dp[amount]`, or −1 if
+  it is still infinity. Either loop can be outside: a minimum does not care about order.
+
+  ### Template
+
+  ```python
+  n, amount = map(int, input().split())
+  coins = list(map(int, input().split()))
+  INF = float("inf")
+  dp = [0] + [INF] * amount  # dp[a]: fewest coins that make exactly a
+  for c in coins:
+      for a in range(c, amount + 1):  # forwards: coin c may be used again
+          dp[a] = min(dp[a], dp[a - c] + 1)
+  print(dp[amount] if dp[amount] != INF else -1)
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n, amount;
+      cin >> n >> amount;
+      vector<int> coins(n);
+      for (auto& x : coins) cin >> x;
+      const int INF = 1e9;
+      vector<int> dp(amount + 1, INF);  // dp[a]: fewest coins that make exactly a
+      dp[0] = 0;
+      for (int c : coins)
+          for (int a = c; a <= amount; a++)  // forwards: coin c may be used again
+              if (dp[a - c] != INF) dp[a] = min(dp[a], dp[a - c] + 1);
+      cout << (dp[amount] == INF ? -1 : dp[amount]) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), amount = in.nextInt();
+          int[] coins = new int[n];
+          for (int i = 0; i < n; i++) coins[i] = in.nextInt();
+          final int INF = 1_000_000_000;
+          int[] dp = new int[amount + 1];  // dp[a]: fewest coins that make exactly a
+          Arrays.fill(dp, INF);
+          dp[0] = 0;
+          for (int c : coins)
+              for (int a = c; a <= amount; a++)  // forwards: coin c may be used again
+                  if (dp[a - c] != INF) dp[a] = Math.min(dp[a], dp[a - c] + 1);
+          System.out.println(dp[amount] == INF ? -1 : dp[amount]);
+      }
+  }
+  ```
+
+  ### Anchor problem: coins 1 3 4, amount 6
+
+  **Wrong first attempt — largest coin first.** 4 fits, then 1, then 1: three coins. But
+  3 + 3 uses two. Greedy is correct for some coin systems (1 2 5 10 …) and wrong for others,
+  and the statement rarely tells you which.
+
+  **Wrong second attempt — zeros everywhere.** Starting every `dp[a]` at 0 makes every
+  minimum 0, and the program prints 0. A minimum needs "infinity" for "not reachable yet".
+
+  | a | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+  |---|---|---|---|---|---|---|---|
+  | after coin 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+  | after coin 3 | 0 | 1 | 2 | 1 | 2 | 3 | 2 |
+  | after coin 4 | 0 | 1 | 2 | 1 | 1 | 2 | **2** |
+
+  The answer is 2. With coins `2` and amount 3, the cell stays infinity and the program
+  prints −1.
+
+  ### Variants
+
+  1. *Coin change* (LeetCode) and *Minimizing coins* (CSES): the anchor.
+  2. *Perfect squares*: coins are 1, 4, 9, … up to n.
+  3. *Minimum cost for tickets*: the "coins" are 1-, 7- and 30-day passes, and the cost is
+     the price instead of 1.
+  4. *Cut ribbon* (Codeforces): exact length, but **maximise** pieces, so "unreachable" is
+     minus infinity.
+
+  ### Contrast
+
+  **Exactly the amount, or at most?** "At most W" lets every cell start at 0, because taking
+  nothing is always allowed. "Exactly W" means only `dp[0]` starts reachable; every other
+  cell starts at infinity (for a minimum) or minus infinity (for a maximum), and the answer
+  must be checked for "still unreachable".
+
+  ### Common mistakes
+
+  - Starting `dp` at 0 instead of infinity.
+  - Printing infinity (or a huge number) instead of −1 when the amount is unreachable.
+  - Adding 1 to `INT_MAX` in C++ or Java, which overflows to a negative number. Use a large
+    finite INF, or check reachability first.
+  - Trusting greedy because it worked on the examples.
+
+  ## Combinations or permutations
+
+  ### Recognition cues
+
+  - "How many ways" to reach a total using pieces that can repeat.
+  - The key question: are 1 + 2 and 2 + 1 the **same** way or **different** ways?
+  - Same: coin change II, coin combinations II (unordered, combinations). Different:
+    combination sum IV, dice combinations (ordered, permutations).
+
+  ### State, transition, base cases, answer, loop order
+
+  `ways[a]` = the number of ways to make exactly a; `ways[0] = 1` (the empty choice);
+  `ways[a] += ways[a − c]`. The transition is identical. **The loop order decides what is
+  counted:**
+
+  | Loops | Counts | Why |
+  |---|---|---|
+  | coins outer, amount inner | combinations | coins are added in a fixed order, so each multiset is built once |
+  | amount outer, coins inner | permutations | every coin can be the last one at every amount, so each order counts |
+
+  ### Template
+
+  Both counts, modulo 10⁹ + 7:
+
+  ```python
+  MOD = 10**9 + 7
+  n, amount = map(int, input().split())
+  coins = list(map(int, input().split()))
+  combos = [1] + [0] * amount  # combos[a]: multisets of coins that sum to a
+  for c in coins:  # coins outer: each multiset is built in one fixed order
+      for a in range(c, amount + 1):
+          combos[a] = (combos[a] + combos[a - c]) % MOD
+  orders = [1] + [0] * amount  # orders[a]: sequences of coins that sum to a
+  for a in range(1, amount + 1):  # amount outer: any coin can come last
+      for c in coins:
+          if c <= a:
+              orders[a] = (orders[a] + orders[a - c]) % MOD
+  print(combos[amount], orders[amount])
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      const long long MOD = 1000000007;
+      int n, amount;
+      cin >> n >> amount;
+      vector<int> coins(n);
+      for (auto& x : coins) cin >> x;
+      vector<long long> combos(amount + 1, 0), orders(amount + 1, 0);
+      combos[0] = orders[0] = 1;  // the empty choice
+      for (int c : coins)  // coins outer: each multiset is built in one fixed order
+          for (int a = c; a <= amount; a++) combos[a] = (combos[a] + combos[a - c]) % MOD;
+      for (int a = 1; a <= amount; a++)  // amount outer: any coin can come last
+          for (int c : coins)
+              if (c <= a) orders[a] = (orders[a] + orders[a - c]) % MOD;
+      cout << combos[amount] << " " << orders[amount] << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          final long MOD = 1_000_000_007L;
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt(), amount = in.nextInt();
+          int[] coins = new int[n];
+          for (int i = 0; i < n; i++) coins[i] = in.nextInt();
+          long[] combos = new long[amount + 1], orders = new long[amount + 1];
+          combos[0] = orders[0] = 1;  // the empty choice
+          for (int c : coins)  // coins outer: each multiset is built in one fixed order
+              for (int a = c; a <= amount; a++) combos[a] = (combos[a] + combos[a - c]) % MOD;
+          for (int a = 1; a <= amount; a++)  // amount outer: any coin can come last
+              for (int c : coins)
+                  if (c <= a) orders[a] = (orders[a] + orders[a - c]) % MOD;
+          System.out.println(combos[amount] + " " + orders[amount]);
+      }
+  }
+  ```
+
+  ### Anchor problem: coins 1 2 3, amount 4
+
+  The program prints `4 7`.
+
+  | a | 0 | 1 | 2 | 3 | 4 |
+  |---|---|---|---|---|---|
+  | combos after coin 1 | 1 | 1 | 1 | 1 | 1 |
+  | combos after coin 2 | 1 | 1 | 2 | 2 | 3 |
+  | combos after coin 3 | 1 | 1 | 2 | 3 | **4** |
+  | orders | 1 | 1 | 2 | 4 | **7** |
+
+  The four combinations are 1+1+1+1, 1+1+2, 2+2 and 1+3. The seven orders add the
+  rearrangements: 1+1+2 appears three ways (112, 121, 211) and 1+3 two ways (13, 31). For
+  the orders row, `orders[4] = orders[3] + orders[2] + orders[1] = 4 + 2 + 1`: the last coin
+  is 1, 2 or 3.
+
+  **Wrong first attempt.** Writing the permutation loop when the problem says "combinations"
+  (or the reverse) gives a plausible-looking but wrong count. Both programs are the same
+  length; only the nesting differs. Always check a tiny case by hand: amount 3 with coins
+  1 and 2 has 2 combinations (1+1+1, 1+2) and 3 orders (111, 12, 21).
+
+  ### Variants
+
+  1. *Coin change II* (LeetCode) and *Coin combinations II* (CSES): combinations.
+  2. *Combination sum IV* (LeetCode) and *Coin combinations I* (CSES): permutations.
+  3. *Dice combinations* (CSES): permutations with coins 1 to 6.
+  4. *Climbing stairs*: permutations with coins 1 and 2 (seen in DP 1D).
+
+  ### Contrast
+
+  **Ordered ways or unordered sums?** If reordering the pieces gives a new answer, put the
+  amount loop outside. If it does not, put the pieces loop outside so each collection is
+  built once.
+
+  ### Common mistakes
+
+  - Swapping the loops, which silently counts the other quantity.
+  - `ways[0] = 0`, which makes every count zero.
+  - Forgetting the modulus: these counts grow exponentially.
+
+  ## Worked walkthrough
+
+  **Problem (Cut ribbon).** A ribbon of length 7 must be cut **completely** into pieces of
+  length 5, 5 or 2. What is the largest number of pieces?
+
+  1. *Recognise.* Lengths can repeat, the total is a budget, and we maximise a count:
+     unbounded knapsack, every piece worth 1.
+  2. *Exact or at most?* "Completely" means exactly 7. So only `dp[0] = 0` starts reachable;
+     every other cell starts at minus infinity.
+  3. *Fill.* With length 2: dp[2] = 1, dp[4] = 2, dp[6] = 3. With length 5: dp[5] = 1,
+     dp[7] = dp[2] + 1 = 2.
+  4. *Answer.* dp[7] = 2 (5 + 2). Starting from zeros would wrongly allow leftover ribbon:
+     dp[7] would be 3, three pieces of length 2 with 1 unit wasted.
+
+  ### Why this works
+
+  Every way of filling capacity c either uses no copy of the last allowed item, or uses at
+  least one. Remove one copy from the second kind and you have a filling of c − w that may
+  still use that item: exactly `dp[i][c − w]` of the same row. The two kinds never overlap
+  and together cover everything, so by induction every cell is correct. In the one-row
+  version, going forwards guarantees `dp[c − w]` is already the same-row value.
+
+  For counting, the coins-outer order adds coins in a fixed sequence, so a multiset like
+  {1, 1, 2} can only be built as "all the 1s, then the 2" and is counted once.
+
+  ### Boundary cases and cost
+
+  - Amount 0: one way (the empty choice), zero coins, value 0.
+  - No coin divides the amount: the minimum stays infinity, so print −1; the count is 0.
+  - A coin larger than the amount never updates any cell.
+  - Values or counts can overflow 32 bits: use 64-bit integers or the given modulus.
+  - Cost: O(n·W) time and O(W) memory. With 100 coins and an amount of 10⁶ that is 10⁸
+    steps: fine in C++ or Java, slow in plain Python.
+
+  ### Check your understanding
+
+  Coins `2 3`, amount 7. How many combinations, how many orders, and what is the fewest
+  number of coins?
+
+  Try it on paper before reading the reasoning below.
+
+  > Combinations: {2, 2, 3} is the only multiset, so 1. Orders: 223, 232 and 322, so 3.
+  > Fewest coins: 2 + 2 + 3 uses 3 coins, and no two coins reach 7 (3 + 3 = 6, 2 + 3 = 5),
+  > so 3.
+key_points:
+- 'Unbounded knapsack: each item can be taken any number of times.'
+- One row filled forwards (c from w up to W) reuses items on purpose.
+- In the 2D table, a take reads the same row dp[i][c − w], not the row above.
+- 'Fewest coins: dp[0] = 0, every other cell infinity; −1 if still infinity.'
+- '"Exactly W" needs unreachable markers; "at most W" can start from zeros.'
+- Counting ways - coins outer counts combinations, amount outer counts permutations.
+- Greedy largest-first or best-ratio-first fails for many inputs.
+pitfalls:
+- Looping capacity backwards, which turns it into 0/1 knapsack.
+- Starting a minimum DP at 0 instead of infinity.
+- Swapping the two loops when counting ways.
+- Overflow from INF + 1 in C++ or Java.
+- Trusting greedy coin change because the examples pass.
+resources:
+- title: Knapsack Problem
+  url: https://cp-algorithms.com/dynamic_programming/knapsack.html
+  kind: article
+  source: CP-Algorithms
+  minutes: 25
+  level: core
+- title: Knapsack DP
+  url: https://usaco.guide/gold/knapsack
+  kind: article
+  source: USACO Guide
+  minutes: 40
+  level: core
+- title: 'Competitive Programmer''s Handbook, chapter 7: Dynamic programming'
+  url: https://cses.fi/book/book.pdf
+  kind: book
+  source: Antti Laaksonen
+  minutes: 45
+  level: deep
+quiz:
+- id: reuse-cue
+  kind: mcq
+  prompt: What makes a knapsack problem unbounded?
+  options:
+  - Each item can be taken any number of times
+  - Each item can be taken at most once
+  - Items can be split into fractions
+  - There are two budgets
+  answer: 0
+  explanation: Unlimited copies is the unbounded family; once each is 0/1.
+  difficulty: 1
+- id: rod-greedy
+  kind: mcq
+  prompt: Pieces of length 1 2 3 4 sell for 1 5 8 9. A rod of length 4 can be cut freely. Greedy by price
+    per length gets 9. What is the best?
+  options:
+  - '10'
+  - '9'
+  - '8'
+  - '12'
+  answer: 0
+  explanation: Two pieces of length 2 give 5 + 5 = 10.
+  difficulty: 2
+- id: forward-why
+  kind: mcq
+  prompt: Why does the one-row unbounded knapsack loop capacity from w up to W?
+  options:
+  - So dp[c − w] may already include this item, allowing reuse
+  - Because it is faster than going down
+  - So each item is used at most once
+  - So the answer ends up in dp[0]
+  answer: 0
+  explanation: Forwards reads cells already updated for this item, so it can be taken again.
+  difficulty: 3
+- id: backward-output
+  kind: output
+  prompt: Pieces of length 1 and 2 with prices 1 and 5, rod length 4. What does this print?
+  code:
+    python: |
+      w, v, W = [1, 2], [1, 5], 4
+      dp = [0] * (W + 1)
+      for i in range(2):
+          for c in range(W, w[i] - 1, -1):
+              dp[c] = max(dp[c], dp[c - w[i]] + v[i])
+      print(dp[W])
+    cpp: |
+      int w[] = {1, 2}, v[] = {1, 5}, W = 4;
+      vector<int> dp(W + 1, 0);
+      for (int i = 0; i < 2; i++)
+          for (int c = W; c >= w[i]; c--)
+              dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
+      cout << dp[W];
+    java: |
+      int[] w = {1, 2}, v = {1, 5};
+      int W = 4;
+      int[] dp = new int[W + 1];
+      for (int i = 0; i < 2; i++)
+          for (int c = W; c >= w[i]; c--)
+              dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
+      System.out.print(dp[W]);
+  options:
+  - '6'
+  - '10'
+  - '4'
+  - '5'
+  answer: 0
+  explanation: 'The backwards loop uses each piece once: 5 + 1 = 6. Reusing the length-2 piece would give
+    10.'
+  difficulty: 4
+- id: min-init
+  kind: mcq
+  prompt: In fewest coins, what should dp[a] start at for a > 0?
+  options:
+  - Infinity, meaning not reachable yet
+  - '0'
+  - a
+  - '1'
+  answer: 0
+  explanation: Starting at 0 makes every minimum 0; infinity marks totals not yet reached.
+  difficulty: 2
+- id: greedy-coins
+  kind: mcq
+  prompt: Coins 1 3 4, amount 6. How many coins does the fewest-coins DP give?
+  options:
+  - '2'
+  - '3'
+  - '1'
+  - '6'
+  answer: 0
+  explanation: 3 + 3. Largest-first takes 4 + 1 + 1, which is three coins.
+  difficulty: 2
+- id: loop-order-count
+  kind: mcq
+  prompt: You count ways to make an amount and 1 + 2 and 2 + 1 should count once. Which loop goes outside?
+  options:
+  - The coins
+  - The amount
+  - Either; the result is the same
+  - Neither; use a 2D table
+  answer: 0
+  explanation: Coins outer builds each multiset in one fixed order, so it counts combinations.
+  difficulty: 3
+- id: orders-count
+  kind: mcq
+  prompt: Coins 1 2 3, amount 4. How many ordered sequences of coins sum to 4?
+  options:
+  - '7'
+  - '4'
+  - '6'
+  - '8'
+  answer: 0
+  explanation: 1111, 112, 121, 211, 22, 13 and 31.
+  difficulty: 4
+- id: exact-ribbon
+  kind: mcq
+  prompt: A ribbon of length 7 must be cut completely into pieces of length 5 or 2. What should dp[c] start
+    at for c > 0, when maximising pieces?
+  options:
+  - Minus infinity (unreachable)
+  - '0'
+  - c / 2
+  - '1'
+  answer: 0
+  explanation: Exactly 7 means leftover ribbon is not allowed; zeros would accept 2 + 2 + 2 with 1 left.
+  difficulty: 5
+problems:
+- ride-tokens
+- bundle-count
+practice_links:
+- title: Coin Change
+  url: https://leetcode.com/problems/coin-change/
+  platform: LeetCode
+  difficulty: medium
+- title: Minimizing Coins
+  url: https://cses.fi/problemset/task/1634
+  platform: CSES
+  difficulty: easy
+- title: Coin Change II
+  url: https://leetcode.com/problems/coin-change-ii/
+  platform: LeetCode
+  difficulty: medium
+- title: Coin Combinations II
+  url: https://cses.fi/problemset/task/1636
+  platform: CSES
+  difficulty: medium
+- title: Combination Sum IV
+  url: https://leetcode.com/problems/combination-sum-iv/
+  platform: LeetCode
+  difficulty: medium
+- title: Coin Combinations I
+  url: https://cses.fi/problemset/task/1635
+  platform: CSES
+  difficulty: easy
+- title: Perfect Squares
+  url: https://leetcode.com/problems/perfect-squares/
+  platform: LeetCode
+  difficulty: medium
+- title: Minimum Cost For Tickets
+  url: https://leetcode.com/problems/minimum-cost-for-tickets/
+  platform: LeetCode
+  difficulty: medium
+- title: Dice Combinations
+  url: https://cses.fi/problemset/task/1633
+  platform: CSES
+  difficulty: easy
+provenance:
+  origin: original
+status: live

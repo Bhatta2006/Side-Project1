@@ -1,0 +1,63 @@
+id: quiz:dsa:dp-edit-distance:palindromic-substrings
+family: palindromic-substrings
+concept: dsa:dp-edit-distance
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: centres
+  band: 1
+  format: mcq
+  prompt: A string of length n has how many centres to expand from?
+  options:
+  - 2n − 1
+  - n
+  - n − 1
+  - n²
+  answer: 0
+  misconceptions:
+  - null
+  - palindrome-odd-centres-only
+  - loop-bound-off-by-one
+  - pattern-brute-force-default
+  explanation: n characters and the n − 1 gaps between them.
+- id: count-aa
+  band: 2
+  format: trace
+  prompt: How many palindromic substrings does aa have?
+  options:
+  - '3'
+  - '2'
+  - '1'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - palindrome-odd-centres-only
+  - distinct-vs-frequency
+  - double-count
+  explanation: a, a and aa. Odd centres alone miss aa.
+- id: substring-vs-subsequence
+  band: 4
+  format: classify
+  prompt: Longest palindromic substring of abca. Can you use the subsequence table?
+  options:
+  - No; the substring must be contiguous, so the answer is 1, not 3
+  - Yes, it gives 3
+  - Yes, after reversing
+  - Only for odd lengths
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-palindrome-subsequence-vs-substring
+  - pattern-palindrome-subsequence-vs-substring
+  - palindrome-odd-centres-only
+  explanation: aca is a subsequence but not a substring of abca.
+status: provisional
+provenance:
+  origin: original

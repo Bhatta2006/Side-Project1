@@ -1,0 +1,63 @@
+id: quiz:dsa:tree-patterns:distance-k
+family: distance-k
+concept: dsa:tree-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: why-parent
+  band: 2
+  format: mcq
+  prompt: Why does the distance-K search add parent edges?
+  options:
+  - Some nodes at distance K are reached by going up first
+  - To sort the answer
+  - To find the depth
+  - It is not needed
+  answer: 0
+  misconceptions:
+  - null
+  - tree-only-downward-search
+  - pattern-sort-breaks-order
+  - tree-only-downward-search
+  explanation: Child pointers lead only down.
+- id: trace
+  band: 3
+  format: trace
+  prompt: 1 has children 2, 3; 2 has 4, 5; 3 has 6, 7. Which nodes are at distance 2 from node 4?
+  options:
+  - 1 and 5
+  - '5'
+  - 1, 5 and 3
+  - 2 and 3
+  answer: 0
+  misconceptions:
+  - null
+  - tree-only-downward-search
+  - off-by-one-output
+  - off-by-one-output
+  explanation: 4 → 2 → 1 and 4 → 2 → 5.
+- id: visited
+  band: 4
+  format: bug_spot
+  prompt: The BFS over child and parent edges has no visited marks. What happens?
+  options:
+  - It walks back and forth between parent and child forever
+  - It is merely slower
+  - It finds fewer nodes
+  - Nothing
+  answer: 0
+  misconceptions:
+  - null
+  - bfs-no-visited
+  - tree-only-downward-search
+  - bfs-no-visited
+  explanation: Treating the tree as a graph brings back the need for visited marks.
+status: provisional
+provenance:
+  origin: original

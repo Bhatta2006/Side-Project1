@@ -108,11 +108,11 @@ lesson: |
 
   A class defines a representation and the operations allowed on it; an object is one concrete instance. Keep representation invariants true after construction and every method. For a bounded counter, state what minimum and maximum values are legal and decide how invalid operations are reported.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Test independent instances, repeated method calls and invalid constructor inputs. A method should not expose a mutable internal collection if callers could use it to break the object's invariant.
 
-  Object syntax does not determine algorithmic cost. A method that scans a stored list remains O(n), even if the call looks short.
+  A short method call can still do a lot of work: a method that looks through a stored list takes longer as the list grows.
 
   ### Check your understanding
 

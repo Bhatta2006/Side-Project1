@@ -1,0 +1,234 @@
+id: quiz:dsa:dp-edit-distance:edit-distance
+family: edit-distance
+concept: dsa:dp-edit-distance
+pattern: dsa:dp-edit-distance/edit-distance
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: edit_distance
+  params:
+    letters:
+    - 2
+    - 4
+    length:
+    - 2
+    - 6
+  reference: distance(a, b)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: use n + m − 2·LCS, which has no replace
+  misconception: pattern-edit-vs-lcs-deletions
+- rule: compare the strings position by position
+  misconception: edit-position-compare
+- rule: leave the base row and column at 0
+  misconception: edit-base-zero
+- rule: add 1 even when the characters are equal
+  misconception: edit-match-costs-one
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is edit distance?
+  options:
+  - Fewest single-character inserts, deletes or replaces to turn one word into another
+  - Longest block shared by two words
+  - Is one word a subsequence of the other?
+  - How many letters do two words have in common?
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subsequence-vs-substring
+  - pattern-two-pointers-vs-lcs
+  - edit-position-compare
+  explanation: Edit distance counts the cheapest sequence of the three operations.
+- id: state-meaning
+  band: 1
+  format: mcq
+  prompt: What does dp[i][j] mean?
+  options:
+  - The fewest edits turning a[:i] into b[:j]
+  - Whether a[i] equals b[j]
+  - The LCS of a[:i] and b[:j]
+  - The number of characters that differ at position i
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - pattern-edit-vs-lcs-deletions
+  - edit-position-compare
+  explanation: Both indexes are prefix lengths.
+- id: base-edges
+  band: 2
+  format: mcq
+  prompt: What are dp[0][j] and dp[i][0]?
+  options:
+  - j and i
+  - 0 and 0
+  - 1 and 1
+  - i and j
+  answer: 0
+  misconceptions:
+  - null
+  - edit-base-zero
+  - dp-wrong-base-case
+  - lcs-index-offset
+  explanation: Build b[:j] from nothing with j inserts; erase a[:i] with i deletes.
+- id: mismatch-cell
+  band: 2
+  format: trace
+  prompt: a[i−1] != b[j−1]. Up = 3, left = 2, up-left = 2. What is dp[i][j]?
+  options:
+  - '3'
+  - '2'
+  - '4'
+  - '5'
+  answer: 0
+  misconceptions:
+  - null
+  - dp-missing-plus-one
+  - min-vs-max
+  - edit-position-compare
+  explanation: 1 + min(3, 2, 2) = 3.
+- id: match-cell
+  band: 3
+  format: trace
+  prompt: a[i−1] == b[j−1]. Up = 2, left = 2, up-left = 1. What is dp[i][j]?
+  options:
+  - '1'
+  - '2'
+  - '3'
+  - '0'
+  answer: 0
+  misconceptions:
+  - null
+  - edit-match-costs-one
+  - dp-wrong-subproblem
+  - dp-wrong-base-case
+  explanation: Equal last characters copy up-left at no cost.
+- id: lcs-shortcut
+  band: 3
+  format: classify
+  prompt: Why does n + m − 2·LCS overcount when replace is allowed?
+  options:
+  - It fixes a wrong character with a delete and an insert, 2 steps instead of 1
+  - It ignores equal characters
+  - It only works for equal lengths
+  - It does not overcount
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-edit-vs-lcs-deletions
+  - edit-position-compare
+  - pattern-edit-vs-lcs-deletions
+  explanation: horse to ros gives 4 that way; with a replace it is 3.
+- id: position-compare
+  band: 3
+  format: bug_spot
+  prompt: Someone counts the positions where abc and bc differ, plus the length difference. What is wrong?
+  options:
+  - One deletion shifts every later character, so positions no longer line up
+  - Nothing; it gives 1
+  - It should ignore the length difference
+  - It should compare from the right
+  answer: 0
+  misconceptions:
+  - null
+  - edit-position-compare
+  - edit-position-compare
+  - edit-position-compare
+  explanation: The position count gives 3; deleting a costs 1.
+- id: neighbours
+  band: 4
+  format: mcq
+  prompt: Which neighbour stands for inserting b[j−1]?
+  options:
+  - dp[i][j−1]
+  - dp[i−1][j]
+  - dp[i−1][j−1]
+  - dp[i][j]
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-subproblem
+  - edit-missing-replace
+  - dp-vague-state
+  explanation: Insertion produces b[j−1] while a[:i] is unchanged.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: Two strings of length n and m. Time and memory of the two-row version?
+  options:
+  - O(n · m) time, O(m) memory
+  - O(n + m) time, O(1) memory
+  - O(3^(n+m)) time
+  - O(n · m) time and memory, always
+  answer: 0
+  misconceptions:
+  - null
+  - edit-position-compare
+  - dp-recompute-subproblems
+  - pattern-value-vs-choice
+  explanation: Each cell is O(1) and reads only this row and the previous one.
+- id: missing-replace
+  band: 5
+  format: bug_spot
+  prompt: The mismatch line is 1 + min(dp[i−1][j], dp[i][j−1]). What does it compute?
+  options:
+  - The edit distance without replace, n + m − 2·LCS
+  - The correct edit distance
+  - The LCS length
+  - Zero for every input
+  answer: 0
+  misconceptions:
+  - null
+  - edit-missing-replace
+  - pattern-edit-vs-lcs-deletions
+  - dp-wrong-base-case
+  explanation: Without the diagonal, a wrong character costs a delete plus an insert.
+- id: weighted-transfer
+  band: 6
+  format: classify
+  prompt: Inserts cost 2, deletes 3 and replaces 4. What changes?
+  options:
+  - Each neighbour adds its own cost, and the edges become 3i and 2j
+  - Nothing
+  - Use n + m − 2·LCS
+  - Only the base row changes
+  answer: 0
+  misconceptions:
+  - null
+  - edit-base-zero
+  - pattern-edit-vs-lcs-deletions
+  - edit-base-zero
+  explanation: Erasing a[:i] costs 3 per character; building b[:j] costs 2 per character.
+- id: count-transfer
+  band: 6
+  format: classify
+  prompt: Count the ways t appears as a subsequence of s. What changes from edit distance?
+  options:
+  - Add the skip and use counts instead of taking a minimum, with ways[i][0] = 1
+  - Nothing
+  - Take the maximum of the three neighbours
+  - Use two pointers
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-count-vs-exists
+  - min-vs-max
+  - pattern-two-pointers-vs-lcs
+  explanation: A count adds the cases; the empty t appears once in any prefix.
+status: provisional
+provenance:
+  origin: original

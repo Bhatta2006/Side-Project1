@@ -1,0 +1,124 @@
+concept: dsa:dp-partition
+pattern: dsa:dp-partition/mcm
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the matrix chain pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/dp-partition/mcm.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: mcm-worked
+  kind: worked
+  title: 'Worked: dimensions 40 20 30 10 30'
+  objective: Fill ranges by length and read the answer.
+  seconds: 100
+  body: 'Length 2: AB = 24000, BC = 6000, CD = 9000. Length 3: ABC is min(0 + 6000 + 40·20·10, 24000 + 0
+    + 40·30·10) = 14000; BCD is min(0 + 9000 + 20·30·30, 6000 + 0 + 20·10·30) = 12000. Length 4: splitting
+    after C gives 14000 + 0 + 40·10·30 = 26000, the minimum.'
+  why: Every range tries each possible last multiplication, using shorter ranges already filled.
+- id: mcm-faded
+  kind: faded
+  title: 'Your turn: dimensions 10 30 5 60'
+  objective: Compute the join cost and the minimum yourself.
+  seconds: 90
+  body: Matrices A (10×30), B (30×5), C (5×60).
+  steps:
+  - state: dp[0][1] is A·B.
+    prompt: What is dp[0][1]?
+    options:
+    - '1500'
+    - '9000'
+    - '300'
+    answer: 0
+    explanation: 10·30·5 = 1500.
+  - state: dp[1][2] is B·C.
+    prompt: What is dp[1][2]?
+    options:
+    - '9000'
+    - '1500'
+    - '18000'
+    answer: 0
+    explanation: 30·5·60 = 9000.
+  - state: For dp[0][2], split after A gives 0 + 9000 + 10·30·60; split after B gives 1500 + 0 + 10·5·60.
+    prompt: What is dp[0][2]?
+    options:
+    - '4500'
+    - '27000'
+    - '10500'
+    answer: 0
+    explanation: min(27000, 4500) = 4500.
+- id: mcm-visualizer
+  kind: visualizer
+  title: 'Step through: why fill by length'
+  objective: See which cells a range reads.
+  seconds: 110
+  body: Four matrices, cell dp[0][3].
+  steps:
+  - state: dp[0][3] tries k = 0, 1, 2.
+    prompt: Which cells does it read?
+    options:
+    - dp[0][0..2] and dp[1..3][3]
+    - Only dp[0][2]
+    - dp[1][1] only
+    answer: 0
+    explanation: Each split reads a left range starting at 0 and a right range ending at 3.
+  - state: Filling row by row from i = 0, dp[0][3] is computed before dp[1][3].
+    prompt: What happens?
+    options:
+    - It reads dp[1][3] while it is still 0
+    - Nothing
+    - It crashes
+    answer: 0
+    explanation: Row 1 has not been filled yet.
+  - state: Filling by length, ranges of length 2 and 3 come first.
+    prompt: Is everything dp[0][3] needs ready?
+    options:
+    - Yes, every part is shorter
+    - 'No'
+    - Only the left parts
+    answer: 0
+    explanation: Both parts of any split are strictly shorter than the range.
+- id: mcm-micro
+  kind: micro
+  title: 'Pitfall: filling row by row'
+  objective: Know why interval tables are filled by length.
+  seconds: 80
+  misconception: mcm-length-order
+  body: 'dp[i][j] reads dp[k + 1][j] for k ≥ i, which is a lower row. Filling i = 0 first reads those
+    rows while they are still 0, so splits look free and the answer is far too small. Fill ranges of
+    length 2, then 3, and so on, or run i from n − 1 down to 0 with j going up.'
+  why: A range depends on shorter ranges, not on earlier rows.
+- id: mcm-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate interval DP from its neighbours.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Merge adjacent piles of sand into one; merging costs the size of the result.
+    prompt: Which approach?
+    options:
+    - Interval DP over i..j with the range sum as the join cost
+    - Greedy smallest pair first
+    - Prefix DP
+    answer: 0
+    explanation: The last merge splits the range into two independently merged parts.
+  - state: Split a string into the fewest dictionary words.
+    prompt: Which approach?
+    options:
+    - Front partition over prefixes, O(n²)
+    - Interval DP, O(n³)
+    - Two pointers
+    answer: 0
+    explanation: Only the last word matters once the prefix before it is solved.
+  - state: Count the bracketings of T^F|T that give true.
+    prompt: Which approach?
+    options:
+    - Interval DP with true and false counts
+    - Evaluate left to right
+    - Front partition
+    answer: 0
+    explanation: Every operator can be the last one, splitting the range.

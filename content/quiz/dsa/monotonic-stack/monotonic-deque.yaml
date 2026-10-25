@@ -1,0 +1,63 @@
+id: quiz:dsa:monotonic-stack:monotonic-deque
+family: monotonic-deque
+concept: dsa:monotonic-stack
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: front
+  band: 2
+  format: mcq
+  prompt: In the sliding window maximum deque, what is at the front?
+  options:
+  - The index of the current window's maximum
+  - The newest index
+  - The oldest index in the window
+  - The smallest value
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-stack-vs-deque
+  - deque-no-expiry
+  - mono-wrong-direction
+  explanation: Values decrease from front to back, so the front is the largest still in the window.
+- id: trace
+  band: 3
+  format: trace
+  prompt: 1 3 −1 −3 5, k = 3. What are the window maxima?
+  options:
+  - 3 3 5
+  - 3 3 3
+  - 1 3 5
+  - 3 5 5
+  answer: 0
+  misconceptions:
+  - null
+  - deque-no-expiry
+  - off-by-one-output
+  - mono-max-to-the-right
+  explanation: Windows [1 3 −1], [3 −1 −3], [−1 −3 5].
+- id: expiry
+  band: 4
+  format: bug_spot
+  prompt: The code never removes expired indexes from the front. What goes wrong?
+  options:
+  - A maximum that left the window keeps being reported
+  - Nothing
+  - The deque becomes increasing
+  - It crashes
+  answer: 0
+  misconceptions:
+  - null
+  - deque-no-expiry
+  - pattern-stack-vs-deque
+  - deque-no-expiry
+  explanation: 9 1 1 1 with k = 2 would print 9 for every window.
+status: provisional
+provenance:
+  origin: original

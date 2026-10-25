@@ -1,0 +1,64 @@
+id: quiz:dsa:monotonic-stack:contribution-technique
+family: contribution-technique
+concept: dsa:monotonic-stack
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: count
+  band: 2
+  format: mcq
+  prompt: a[i] can start its subarray at 3 positions and end it at 2 while staying the minimum. In how
+    many subarrays is it the minimum?
+  options:
+  - '6'
+  - '5'
+  - '3'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - count-vs-sum
+  - off-by-one-output
+  explanation: Every start can pair with every end, 3 × 2.
+- id: total
+  band: 3
+  format: trace
+  prompt: Sum of the minimums of all subarrays of 3 1 2 4?
+  options:
+  - '17'
+  - '10'
+  - '20'
+  - '13'
+  answer: 0
+  misconceptions:
+  - null
+  - count-vs-sum
+  - contribution-tie-rule
+  - off-by-one-output
+  explanation: 3·1 + 1·6 + 2·2 + 4·1 = 17.
+- id: ties
+  band: 4
+  format: bug_spot
+  prompt: Both sides stop at values that are smaller or equal. What does 1 1 give?
+  options:
+  - 2, because [1, 1] is credited to neither copy
+  - '3'
+  - '4'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - contribution-tie-rule
+  - contribution-tie-rule
+  - double-count
+  explanation: Use strict on one side and non-strict on the other.
+status: provisional
+provenance:
+  origin: original

@@ -108,11 +108,11 @@ lesson: |
 
   A recursive solution needs a base case and a smaller instance moving toward it. Assume the smaller call fulfils its contract, then explain how one local operation extends that result. This reasoning is more useful than trying to hold the entire call tree in your head.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   A correct recurrence can still exceed the call-stack limit on deep inputs. Negative factorial arguments do not approach the chosen base case. Reject invalid input or specify a valid domain instead of allowing infinite recursion.
 
-  Factorial has O(n) time and O(n) stack depth. Naive Fibonacci branches twice and repeats work; memoization changes its time complexity.
+  Factorial of n makes n calls, one waiting inside the other. A simple recursive Fibonacci calls itself twice each time and repeats the same work, so it gets slow fast; remembering answers you already found fixes that.
 
   ### Check your understanding
 

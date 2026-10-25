@@ -1,0 +1,1171 @@
+id: design-data-structures
+title: Designing data structures
+summary: LRU and LFU caches, hash-based designs, ordered designs with binary search, and iterator design.
+module: design-and-practice
+prerequisites:
+- linked-lists
+- hashing
+- heaps
+- binary-search
+difficulty: 4
+estimated_minutes: 70
+lesson: |
+  "Design a data structure that supports …" questions give you a list of operations and the
+  cost each must have. There is rarely a single structure that does everything; the answer
+  is usually **two structures kept in sync**, each covering what the other cannot:
+
+  | Need | Structure that gives it |
+  |---|---|
+  | Find by key in O(1) | hash map |
+  | Remove from the middle in O(1) | doubly linked list (given the node) |
+  | Pick a random element in O(1) | array (index by position) |
+  | The latest value at or before a time | sorted list + binary search |
+  | Smallest or largest so far | heap |
+
+  The recipe: **list the operations and their costs, pick a structure per need, and write
+  down the invariant that ties them together** (for example: "every key in the map points at
+  its node in the list"). Every operation must restore that invariant before it returns.
+
+  ## LRU and LFU caches
+
+  ### Recognition cues
+
+  - A cache with a **capacity**; when it is full, something must leave.
+  - `get` and `put` in **O(1)**, and the rule for leaving depends on use: least recently used
+    (LRU) or least frequently used (LFU).
+  - "Recently used" changes on every access, so the order is updated constantly.
+
+  ### Template
+
+  Input: the capacity and the number of operations q, then q lines `get key` or
+  `put key value`. Print the result of every `get` (−1 if the key is missing).
+
+  ```python
+  import sys
+  from collections import OrderedDict
+
+  data = sys.stdin.read().split()
+  cap, q, pos = int(data[0]), int(data[1]), 2
+  cache = OrderedDict()  # key -> value, least recently used first
+  out = []
+  for _ in range(q):
+      if data[pos] == "get":
+          key = int(data[pos + 1])
+          pos += 2
+          if key in cache:
+              cache.move_to_end(key)  # a hit makes it the most recently used
+          out.append(str(cache.get(key, -1)))
+      else:
+          key, val = int(data[pos + 1]), int(data[pos + 2])
+          pos += 3
+          if key in cache:
+              cache.move_to_end(key)  # an update is a use too, and evicts nothing
+          elif len(cache) == cap:
+              cache.popitem(last=False)  # evict the least recently used
+          cache[key] = val
+  print("\n".join(out))
+  ```
+
+  ```cpp
+  #include <bits/stdc++.h>
+  using namespace std;
+
+  int main() {
+      int cap, q;
+      cin >> cap >> q;
+      list<pair<int, int>> order;  // (key, value), most recently used first
+      unordered_map<int, list<pair<int, int>>::iterator> where;  // key -> its node in the list
+      while (q--) {
+          string op;
+          int key, val;
+          cin >> op >> key;
+          auto it = where.find(key);
+          if (op == "get") {
+              if (it != where.end()) order.splice(order.begin(), order, it->second);  // to the front, O(1)
+              cout << (it != where.end() ? it->second->second : -1) << "\n";
+              continue;
+          }
+          cin >> val;
+          if (it != where.end()) order.erase(it->second);  // an update: drop the old node
+          else if ((int)order.size() == cap) where.erase(order.back().first), order.pop_back();  // evict
+          order.push_front({key, val});
+          where[key] = order.begin();
+      }
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int cap = in.nextInt(), q = in.nextInt();
+          Map<Integer, Integer> cache = new LinkedHashMap<>(16, 0.75f, true) {  // access order: LRU first
+              protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
+                  return size() > cap;  // evict the least recently used after an insert
+              }
+          };
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < q; i++) {
+              String op = in.next();
+              int key = in.nextInt();
+              if (op.equals("get")) out.append(cache.getOrDefault(key, -1)).append('\n');
+              else cache.put(key, in.nextInt());
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  Python's `OrderedDict`, C++'s `list` with `splice`, and Java's access-ordered
+  `LinkedHashMap` are all a hash map plus a doubly linked list underneath. Interviewers often
+  ask you to build that pair yourself, which is Step 3 below.
+
+  ### Anchor problem: capacity 2
+
+  ```text
+  2 9
+  put 1 1
+  put 2 2
+  get 1
+  put 3 3
+  get 2
+  put 4 4
+  get 1
+  get 3
+  get 4
+  ```
+
+  The gets print **1, −1, −1, 3, 4**: `put 3` evicts key 2 (key 1 was just used), and `put 4`
+  evicts key 1.
+
+  **Step 1 — brute force: a list in use order.** Keep `[key, value]` pairs, least recently used
+  first, and scan for the key on every operation:
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  cap, q, pos = int(data[0]), int(data[1]), 2
+  items = []  # [key, value] pairs, least recently used first
+  out = []
+  for _ in range(q):
+      key = int(data[pos + 1])
+      found = next((p for p in items if p[0] == key), None)  # O(n) scan
+      if found:
+          items.remove(found)  # O(n) shift
+      if data[pos] == "get":
+          out.append(str(found[1] if found else -1))
+          if found:
+              items.append(found)  # now the most recently used
+          pos += 2
+      else:
+          if not found and len(items) == cap:
+              items.pop(0)  # the least recently used
+          items.append([key, int(data[pos + 2])])
+          pos += 3
+  print("\n".join(out))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int cap, q;
+      cin >> cap >> q;
+      vector<pair<int, int>> items;  // (key, value), least recently used first
+      while (q--) {
+          string op;
+          int key;
+          cin >> op >> key;
+          int at = -1;
+          for (int i = 0; i < (int)items.size(); i++)  // O(n) scan
+              if (items[i].first == key) at = i;
+          pair<int, int> found = at >= 0 ? items[at] : make_pair(key, -1);
+          if (at >= 0) items.erase(items.begin() + at);  // O(n) shift
+          if (op == "get") {
+              cout << found.second << "\n";
+              if (at >= 0) items.push_back(found);  // now the most recently used
+          } else {
+              int val;
+              cin >> val;
+              if (at < 0 && (int)items.size() == cap) items.erase(items.begin());  // the LRU key
+              items.push_back({key, val});
+          }
+      }
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int cap = in.nextInt(), q = in.nextInt();
+          List<int[]> items = new ArrayList<>();  // {key, value}, least recently used first
+          StringBuilder out = new StringBuilder();
+          for (int t = 0; t < q; t++) {
+              String op = in.next();
+              int key = in.nextInt();
+              int[] found = null;
+              for (int[] p : items) if (p[0] == key) found = p;  // O(n) scan
+              if (found != null) items.remove(found);  // O(n) shift
+              if (op.equals("get")) {
+                  out.append(found != null ? found[1] : -1).append('\n');
+                  if (found != null) items.add(found);  // now the most recently used
+              } else {
+                  int val = in.nextInt();
+                  if (found == null && items.size() == cap) items.remove(0);  // the LRU key
+                  items.add(new int[] {key, val});
+              }
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  It prints the right answers, but every operation scans and shifts the list: O(cap) each.
+
+  **Step 2 — wrong first attempt: a queue of arrivals.** A hash map for the values and a queue
+  for the eviction order looks O(1):
+
+  ```python
+  import sys
+  from collections import deque
+
+  data = sys.stdin.read().split()
+  cap, q, pos = int(data[0]), int(data[1]), 2
+  cache, arrival = {}, deque()  # arrival order only: a get does not move anything
+  out = []
+  for _ in range(q):
+      key = int(data[pos + 1])
+      if data[pos] == "get":
+          out.append(str(cache.get(key, -1)))
+          pos += 2
+      else:
+          if key not in cache:
+              if len(cache) == cap:
+                  del cache[arrival.popleft()]  # evicts the oldest ARRIVAL
+              arrival.append(key)
+          cache[key] = int(data[pos + 2])
+          pos += 3
+  print("\n".join(out))
+  ```
+
+  ```cpp
+  #include <deque>
+  #include <iostream>
+  #include <string>
+  #include <unordered_map>
+  using namespace std;
+
+  int main() {
+      int cap, q;
+      cin >> cap >> q;
+      unordered_map<int, int> cache;
+      deque<int> arrival;  // arrival order only: a get does not move anything
+      while (q--) {
+          string op;
+          int key;
+          cin >> op >> key;
+          if (op == "get") {
+              cout << (cache.count(key) ? cache[key] : -1) << "\n";
+              continue;
+          }
+          int val;
+          cin >> val;
+          if (!cache.count(key)) {
+              if ((int)cache.size() == cap) cache.erase(arrival.front()), arrival.pop_front();  // oldest ARRIVAL
+              arrival.push_back(key);
+          }
+          cache[key] = val;
+      }
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int cap = in.nextInt(), q = in.nextInt();
+          Map<Integer, Integer> cache = new HashMap<>();
+          Deque<Integer> arrival = new ArrayDeque<>();  // arrival order only: a get does not move anything
+          StringBuilder out = new StringBuilder();
+          for (int t = 0; t < q; t++) {
+              String op = in.next();
+              int key = in.nextInt();
+              if (op.equals("get")) {
+                  out.append(cache.getOrDefault(key, -1)).append('\n');
+                  continue;
+              }
+              int val = in.nextInt();
+              if (!cache.containsKey(key)) {
+                  if (cache.size() == cap) cache.remove(arrival.pollFirst());  // evicts the oldest ARRIVAL
+                  arrival.addLast(key);
+              }
+              cache.put(key, val);
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  It prints 1, **2**, −1, 3, 4. At `put 3` the queue holds 1 then 2, so it evicts key 1, even
+  though `get 1` had just used it. A queue can only remove from its ends; when a get makes a
+  key recent, that key must move **from the middle** to the front, and a queue cannot do that
+  in O(1).
+
+  **Step 3 — hash map + doubly linked list.** The list keeps keys in use order (most recent at
+  the head). The map finds a key's node in O(1), and with `prev` and `next` links the node can
+  be cut out and moved to the head in O(1). Two sentinel nodes, `head` and `tail`, remove every
+  empty-list special case.
+
+  ```python
+  import sys
+
+
+  class Node:
+      def __init__(self, key=0, val=0):
+          self.key, self.val, self.prev, self.next = key, val, None, None
+
+
+  class LRU:
+      def __init__(self, cap):
+          self.cap, self.where = cap, {}  # key -> its node
+          self.head, self.tail = Node(), Node()  # sentinels: head.next is the most recent
+          self.head.next, self.tail.prev = self.tail, self.head
+
+      def unlink(self, node):
+          node.prev.next, node.next.prev = node.next, node.prev
+
+      def push_front(self, node):
+          node.prev, node.next = self.head, self.head.next
+          self.head.next.prev = node
+          self.head.next = node
+
+      def get(self, key):
+          node = self.where.get(key)
+          if node is None:
+              return -1
+          self.unlink(node)  # O(1): the map found the node, the links cut it out
+          self.push_front(node)
+          return node.val
+
+      def put(self, key, val):
+          if key in self.where:
+              self.unlink(self.where[key])
+          elif len(self.where) == self.cap:
+              lru = self.tail.prev  # the least recently used sits just before the tail
+              self.unlink(lru)
+              del self.where[lru.key]
+          node = Node(key, val)
+          self.where[key] = node
+          self.push_front(node)
+
+
+  data = sys.stdin.read().split()
+  cache, q, pos = LRU(int(data[0])), int(data[1]), 2
+  out = []
+  for _ in range(q):
+      if data[pos] == "get":
+          out.append(str(cache.get(int(data[pos + 1]))))
+          pos += 2
+      else:
+          cache.put(int(data[pos + 1]), int(data[pos + 2]))
+          pos += 3
+  print("\n".join(out))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <unordered_map>
+  using namespace std;
+
+  struct Node {
+      int key, val;
+      Node *prev = nullptr, *next = nullptr;
+  };
+
+  struct LRU {
+      int cap;
+      unordered_map<int, Node*> where;  // key -> its node
+      Node head{0, 0}, tail{0, 0};  // sentinels: head.next is the most recent
+      LRU(int c) : cap(c) { head.next = &tail; tail.prev = &head; }
+      void unlink(Node* x) { x->prev->next = x->next; x->next->prev = x->prev; }
+      void pushFront(Node* x) {
+          x->prev = &head;
+          x->next = head.next;
+          head.next->prev = x;
+          head.next = x;
+      }
+      int get(int key) {
+          auto it = where.find(key);
+          if (it == where.end()) return -1;
+          unlink(it->second);  // O(1): the map found the node, the links cut it out
+          pushFront(it->second);
+          return it->second->val;
+      }
+      void put(int key, int val) {
+          auto it = where.find(key);
+          if (it != where.end()) {
+              unlink(it->second);
+              delete it->second;
+              where.erase(it);
+          } else if ((int)where.size() == cap) {
+              Node* lru = tail.prev;  // the least recently used sits just before the tail
+              unlink(lru);
+              where.erase(lru->key);
+              delete lru;
+          }
+          Node* x = new Node{key, val};
+          where[key] = x;
+          pushFront(x);
+      }
+  };
+
+  int main() {
+      int cap, q;
+      cin >> cap >> q;
+      LRU cache(cap);
+      while (q--) {
+          string op;
+          int key, val;
+          cin >> op >> key;
+          if (op == "get") cout << cache.get(key) << "\n";
+          else { cin >> val; cache.put(key, val); }
+      }
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static class Node {
+          int key, val;
+          Node prev, next;
+          Node(int k, int v) { key = k; val = v; }
+      }
+
+      static int cap;
+      static Map<Integer, Node> where = new HashMap<>();  // key -> its node
+      static Node head = new Node(0, 0), tail = new Node(0, 0);  // sentinels: head.next is the most recent
+
+      static void unlink(Node x) { x.prev.next = x.next; x.next.prev = x.prev; }
+
+      static void pushFront(Node x) {
+          x.prev = head;
+          x.next = head.next;
+          head.next.prev = x;
+          head.next = x;
+      }
+
+      static int get(int key) {
+          Node x = where.get(key);
+          if (x == null) return -1;
+          unlink(x);  // O(1): the map found the node, the links cut it out
+          pushFront(x);
+          return x.val;
+      }
+
+      static void put(int key, int val) {
+          Node old = where.remove(key);
+          if (old != null) unlink(old);
+          else if (where.size() == cap) {
+              Node lru = tail.prev;  // the least recently used sits just before the tail
+              unlink(lru);
+              where.remove(lru.key);
+          }
+          Node x = new Node(key, val);
+          where.put(key, x);
+          pushFront(x);
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          cap = in.nextInt();
+          int q = in.nextInt();
+          head.next = tail;
+          tail.prev = head;
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < q; i++) {
+              String op = in.next();
+              int key = in.nextInt();
+              if (op.equals("get")) out.append(get(key)).append('\n');
+              else put(key, in.nextInt());
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  Dry run (the list from most to least recent):
+
+  | operation | list after | evicted | printed |
+  |---|---|---|---|
+  | put 1 1 | 1 | — | |
+  | put 2 2 | 2 1 | — | |
+  | get 1 | 1 2 | — | 1 |
+  | put 3 3 | 3 1 | 2 | |
+  | get 2 | 3 1 | — | −1 |
+  | put 4 4 | 4 3 | 1 | |
+  | get 1 | 4 3 | — | −1 |
+  | get 3 | 3 4 | — | 3 |
+  | get 4 | 4 3 | — | 4 |
+
+  Every operation is a constant number of map and link updates: **O(1)**, with O(cap) memory.
+  The invariant: every key in the map points at its node, and the list holds exactly the
+  map's keys in use order.
+
+  ### Variants
+
+  1. *LRU cache*: the anchor.
+  2. *LFU cache*: evict the least frequently used key, ties broken by least recent. Keep one
+     LRU list **per frequency** and the smallest frequency in use.
+  3. *Design browser history*: an array and a cursor (see the walkthrough).
+  4. *All O(1) data structure*: keys bucketed by count in a linked list of buckets.
+
+  ### Contrast
+
+  **Queue or linked list?** A queue removes only from its ends, which is enough when the order
+  never changes after insertion (FIFO). As soon as an access moves an item to the front, you
+  need removal from the middle, which takes a doubly linked list plus a map to find the node.
+
+  ### Common mistakes
+
+  - Evicting by arrival order: a get must count as a use.
+  - An update of an existing key evicting another key, although the size does not grow.
+  - Forgetting to delete the evicted key from the map, so the map and the list disagree.
+  - Holding cap + 1 keys: evict **before** inserting a new key when the cache is full.
+
+  ## Design with hashing
+
+  ### Recognition cues
+
+  - Insert, delete and **pick a random element** (or index by position) all in O(1).
+  - A hash map alone cannot pick a random key; an array alone cannot delete from the middle.
+  - Keep both: the array holds the values, the map holds each value's index.
+
+  ### Template
+
+  Insert, delete and get-random in O(1). Input: q, then q lines `insert x` or `remove x`.
+  Print `true` or `false` for each operation, then the array in its internal order.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  q = int(data[0])
+  vals, index = [], {}  # the values, and where each one sits in vals
+  out = []
+  for i in range(q):
+      op, x = data[1 + 2 * i], int(data[2 + 2 * i])
+      if op == "insert":
+          out.append("false" if x in index else "true")
+          if x not in index:
+              index[x] = len(vals)
+              vals.append(x)
+      else:
+          out.append("true" if x in index else "false")
+          if x in index:
+              j, last = index.pop(x), vals[-1]
+              vals[j] = last  # move the last value into the hole: O(1), no shifting
+              if last != x:
+                  index[last] = j
+              vals.pop()
+  print("\n".join(out))
+  print(" ".join(map(str, vals)))  # get_random would return vals[randrange(len(vals))]
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <unordered_map>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int q;
+      cin >> q;
+      vector<int> vals;
+      unordered_map<int, int> index;  // value -> where it sits in vals
+      string out;
+      for (int i = 0; i < q; i++) {
+          string op;
+          int x;
+          cin >> op >> x;
+          bool present = index.count(x);
+          if (op == "insert") {
+              out += present ? "false\n" : "true\n";
+              if (!present) { index[x] = vals.size(); vals.push_back(x); }
+          } else {
+              out += present ? "true\n" : "false\n";
+              if (present) {
+                  int j = index[x], last = vals.back();
+                  vals[j] = last;  // move the last value into the hole: O(1), no shifting
+                  index[last] = j;
+                  index.erase(x);
+                  vals.pop_back();
+              }
+          }
+      }
+      cout << out;
+      for (size_t i = 0; i < vals.size(); i++) cout << vals[i] << (i + 1 < vals.size() ? " " : "");
+      cout << "\n";  // getRandom would return vals[rand() % vals.size()]
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int q = in.nextInt();
+          List<Integer> vals = new ArrayList<>();
+          Map<Integer, Integer> index = new HashMap<>();  // value -> where it sits in vals
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < q; i++) {
+              String op = in.next();
+              int x = in.nextInt();
+              boolean present = index.containsKey(x);
+              if (op.equals("insert")) {
+                  out.append(present ? "false\n" : "true\n");
+                  if (!present) { index.put(x, vals.size()); vals.add(x); }
+              } else {
+                  out.append(present ? "true\n" : "false\n");
+                  if (present) {
+                      int j = index.get(x), last = vals.get(vals.size() - 1);
+                      vals.set(j, last);  // move the last value into the hole: O(1), no shifting
+                      index.put(last, j);
+                      index.remove(x);
+                      vals.remove(vals.size() - 1);
+                  }
+              }
+          }
+          StringJoiner line = new StringJoiner(" ");
+          for (int v : vals) line.add(String.valueOf(v));
+          System.out.print(out.append(line).append('\n'));  // getRandom: vals.get(random index)
+      }
+  }
+  ```
+
+  ### Anchor problem: insert, delete, get random
+
+  `insert 5`, `insert 7`, `insert 5`, `remove 5`, `insert 9`, `remove 3` print `true true
+  false true true false`, and the array ends as **7 9**: removing 5 moved 7 into its slot.
+
+  **Wrong first attempt — forget the moved value's index.** After moving `last` into the hole,
+  `index[last]` still says it lives at the end. The next `remove 7` would then overwrite the
+  wrong slot. Every move in the array must be mirrored in the map. Using `list.remove(x)`
+  instead of the swap keeps the map simple but costs O(n) per delete.
+
+  ### Variants
+
+  1. *Insert delete getRandom O(1)*: the anchor.
+  2. *… duplicates allowed*: the map holds a **set** of indexes per value.
+  3. *Design HashMap / HashSet*: buckets of lists, the structure under every map.
+  4. *Design underground system*: two maps, one for open trips and one for route totals.
+
+  ### Contrast
+
+  **Swap with the last, or shift?** Deleting from the middle of an array shifts everything
+  after it: O(n). When the order of the array does not matter, move the last element into the
+  hole instead: O(1), at the cost of updating its index.
+
+  ### Common mistakes
+
+  - Not updating the moved element's index.
+  - Removing the last element itself (x is last): the swap must still work.
+  - Returning a random **key** of a hash map, which no language offers in O(1).
+
+  ## Design with ordering
+
+  ### Recognition cues
+
+  - Values change over time, and queries ask for "the value at time t" or "the latest at or
+    before t".
+  - Times (or versions) arrive in increasing order, so each key's history is already sorted.
+  - Each query is a binary search in one key's history.
+
+  ### Template
+
+  A time-based key-value store. Input: q, then q lines `set key value t` (times strictly
+  increase) or `get key t`. Print the value set most recently at or before t, or `-`.
+
+  ```python
+  import sys
+  from bisect import bisect_right
+
+  data = sys.stdin.read().split()
+  q, pos = int(data[0]), 1
+  times, values = {}, {}  # key -> its set times (increasing), and the values set then
+  out = []
+  for _ in range(q):
+      if data[pos] == "set":
+          key, value, t = data[pos + 1], data[pos + 2], int(data[pos + 3])
+          times.setdefault(key, []).append(t)  # times arrive in order, so the list stays sorted
+          values.setdefault(key, []).append(value)
+          pos += 4
+      else:
+          key, t = data[pos + 1], int(data[pos + 2])
+          i = bisect_right(times.get(key, []), t) - 1  # the last set at or before t
+          out.append(values[key][i] if i >= 0 else "-")
+          pos += 3
+  print("\n".join(out))
+  ```
+
+  ```cpp
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+  #include <unordered_map>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int q;
+      cin >> q;
+      unordered_map<string, vector<int>> times;  // key -> its set times, increasing
+      unordered_map<string, vector<string>> values;  // key -> the values set at those times
+      while (q--) {
+          string op, key;
+          cin >> op >> key;
+          if (op == "set") {
+              string value;
+              int t;
+              cin >> value >> t;
+              times[key].push_back(t);  // times arrive in order, so the list stays sorted
+              values[key].push_back(value);
+          } else {
+              int t;
+              cin >> t;
+              auto& ts = times[key];
+              int i = int(upper_bound(ts.begin(), ts.end(), t) - ts.begin()) - 1;  // last set at or before t
+              cout << (i >= 0 ? values[key][i] : "-") << "\n";
+          }
+      }
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int q = in.nextInt();
+          Map<String, TreeMap<Integer, String>> history = new HashMap<>();  // key -> time -> value
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < q; i++) {
+              String op = in.next(), key = in.next();
+              if (op.equals("set")) {
+                  String value = in.next();
+                  history.computeIfAbsent(key, k -> new TreeMap<>()).put(in.nextInt(), value);
+              } else {
+                  int t = in.nextInt();
+                  TreeMap<Integer, String> h = history.get(key);
+                  Map.Entry<Integer, String> e = h == null ? null : h.floorEntry(t);  // last set at or before t
+                  out.append(e == null ? "-" : e.getValue()).append('\n');
+              }
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  Java's `TreeMap.floorEntry` does the same binary search inside a balanced tree.
+
+  ### Anchor problem: a price over time
+
+  `set foo bar 1`, `get foo 1`, `get foo 3`, `set foo bar2 4`, `get foo 4`, `get foo 5`,
+  `get foo 0` print **bar, bar, bar2, bar2, -**.
+
+  **Wrong first attempt — keep only the latest value.** A plain map `key → value` answers
+  `get foo 3` with `bar2` once the set at time 4 has happened, although at time 3 the value
+  was still `bar`. Queries about the past need the whole history; because times only grow,
+  appending keeps it sorted for free, and binary search answers each query in O(log n).
+
+  ### Variants
+
+  1. *Time based key-value store*: the anchor.
+  2. *Snapshot array*: per index, a history of (snapshot id, value).
+  3. *Stock price fluctuation*: a map of time → price plus two heaps with lazy deletion for
+     the maximum and minimum.
+  4. *Seat reservation manager*: a min-heap of free seats.
+
+  ### Contrast
+
+  **Latest only, or full history?** If queries only ask about "now", one value per key is
+  enough. If they ask about any past time, store the history, sorted by time, and binary search
+  it.
+
+  ### Common mistakes
+
+  - Overwriting the value and losing the history.
+  - `bisect_left` instead of `bisect_right` − 1, which misses a set at exactly time t.
+  - A query for a key that was never set, or for a time before its first set.
+
+  ## Iterator design
+
+  ### Recognition cues
+
+  - Implement `next()` and `hasNext()` over some structure: nested lists, a 2D array, a BST,
+    two lists in turn.
+  - Values must come out **lazily**, one per call, without copying everything first.
+  - The state is a cursor (indexes, or a stack) that always points at the next real value.
+
+  ### Template
+
+  Flatten a 2D array. Input: r, then r lines `length v1 v2 …`, then q and q operations `next`
+  or `hasNext`.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  r, pos = int(data[0]), 1
+  rows = []
+  for _ in range(r):
+      length = int(data[pos])
+      rows.append([int(x) for x in data[pos + 1:pos + 1 + length]])
+      pos += 1 + length
+  row, col = 0, 0  # the next value is rows[row][col], once empty rows are skipped
+
+
+  def has_next():
+      global row, col
+      while row < len(rows) and col == len(rows[row]):  # skip finished and empty rows
+          row, col = row + 1, 0
+      return row < len(rows)
+
+
+  out = []
+  for op in data[pos + 1:]:
+      if op == "hasNext":
+          out.append("true" if has_next() else "false")
+      else:
+          has_next()  # move to a real value first
+          out.append(str(rows[row][col]))
+          col += 1
+  print("\n".join(out))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  using namespace std;
+
+  vector<vector<int>> rows;
+  size_t row = 0, col = 0;  // the next value is rows[row][col], once empty rows are skipped
+
+  bool hasNext() {
+      while (row < rows.size() && col == rows[row].size()) row++, col = 0;  // skip finished and empty rows
+      return row < rows.size();
+  }
+
+  int main() {
+      int r, q;
+      cin >> r;
+      rows.resize(r);
+      for (auto& v : rows) {
+          int length;
+          cin >> length;
+          v.resize(length);
+          for (auto& x : v) cin >> x;
+      }
+      cin >> q;
+      while (q--) {
+          string op;
+          cin >> op;
+          if (op == "hasNext") cout << (hasNext() ? "true" : "false") << "\n";
+          else { hasNext(); cout << rows[row][col++] << "\n"; }  // move to a real value first
+      }
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static int[][] rows;
+      static int row = 0, col = 0;  // the next value is rows[row][col], once empty rows are skipped
+
+      static boolean hasNext() {
+          while (row < rows.length && col == rows[row].length) { row++; col = 0; }  // skip finished rows
+          return row < rows.length;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int r = in.nextInt();
+          rows = new int[r][];
+          for (int i = 0; i < r; i++) {
+              rows[i] = new int[in.nextInt()];
+              for (int j = 0; j < rows[i].length; j++) rows[i][j] = in.nextInt();
+          }
+          int q = in.nextInt();
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < q; i++) {
+              if (in.next().equals("hasNext")) out.append(hasNext()).append('\n');
+              else { hasNext(); out.append(rows[row][col++]).append('\n'); }  // move to a real value first
+          }
+          System.out.print(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: rows with a gap
+
+  Rows `1 2`, (empty), `3` and the operations `next next hasNext next hasNext` print **1, 2,
+  true, 3, false**.
+
+  **Wrong first attempt — `hasNext` checks only the row index.** `return row < len(rows)`
+  says `true` after the 2, but the cursor is sitting on an empty row; with a trailing empty
+  row it even says `true` when nothing is left. The cursor must be advanced past finished and
+  empty rows **before** answering, and `next` must do the same before reading.
+
+  ### Variants
+
+  1. *Flatten 2D vector*: the anchor.
+  2. *Peeking iterator*: cache the next value so `peek` does not consume it.
+  3. *Flatten nested list iterator*: a stack of (list, index) cursors.
+  4. *Binary search tree iterator*: a stack of left spines gives in-order values in O(1)
+     amortised and O(height) memory.
+  5. *Zigzag iterator*: a queue of iterators, taking turns.
+
+  ### Contrast
+
+  **Lazy cursor or copy everything?** Copying all values into a list in the constructor makes
+  `next` trivial but costs O(total) memory up front and breaks on huge or infinite inputs. A
+  cursor does O(1) amortised work per call and keeps only its position.
+
+  ### Common mistakes
+
+  - `hasNext` that does not skip empty rows or exhausted sub-iterators.
+  - `next` that assumes `hasNext` was called first.
+  - `hasNext` that moves past a value, so a second `hasNext` loses it.
+
+  ## Worked walkthrough
+
+  **Problem.** Design browser history: `visit(url)`, `back(steps)` and `forward(steps)`,
+  each returning the current page.
+
+  1. *Operations and costs.* All three in O(1) (`back` and `forward` may jump many steps).
+  2. *Structure.* An array of pages, a cursor `cur` and a bound `last` for the newest page that
+     can still be reached by going forward.
+  3. *Visit.* Put the page at `cur + 1`, set `cur` and `last` to that index: everything that was
+     ahead is no longer reachable, without deleting it.
+  4. *Back and forward.* `cur = max(0, cur − steps)` and `cur = min(last, cur + steps)`.
+  5. *Invariant.* Pages 0 … last are the history and cur lies in that range. Every operation
+     keeps this, and each is O(1).
+
+  ### Why this works
+
+  Each design is correct when its invariant holds after every operation, because every query
+  reads only what the invariant guarantees. For the LRU cache: the map holds exactly the
+  cached keys and points at their nodes, and the list orders them by last use. `get` moves one
+  node to the head, which keeps the order; `put` either moves an existing node or, when the
+  cache is full, removes the node just before the tail (the least recent by the invariant)
+  from both structures before inserting at the head. So the key evicted is always the least
+  recently used one.
+
+  ### Boundary cases and cost
+
+  - Capacity 1: every new key evicts the only one.
+  - A put that updates an existing key: move it, evict nothing.
+  - Removing the last array element in the random set: the swap must handle `last == x`.
+  - Queries before any set, or for missing keys: `-1` or `-`.
+  - Cost: O(1) per LRU operation and per random-set operation, O(log n) per time-store query,
+    O(1) amortised per iterator call.
+
+  ### Check your understanding
+
+  Capacity 2: `put 1 1`, `put 2 2`, `put 1 10`, `put 3 3`, `get 1`, `get 2`. What do the gets
+  print?
+
+  Try it on paper before reading the reasoning below.
+
+  > `put 1 10` updates key 1 and makes it the most recent, evicting nothing. `put 3 3` then
+  > evicts key 2, the least recently used. The gets print 10 and −1.
+key_points:
+- List the operations and their costs, pick a structure per need, and state the invariant that ties them.
+- 'LRU: a hash map to find the node and a doubly linked list to move it, both O(1).'
+- A get is a use; an update of an existing key evicts nothing.
+- 'LFU: one LRU list per frequency plus the smallest frequency in use.'
+- 'Random set: array plus value → index map; delete by moving the last value into the hole.'
+- 'Time-based store: append to a sorted history per key and binary search it.'
+- 'Iterators: a cursor that is advanced past empty parts before every answer.'
+pitfalls:
+- Evicting in arrival order, ignoring gets.
+- An update evicting another key.
+- Forgetting to update the index of the element moved into the hole.
+- Keeping only the latest value when queries ask about the past.
+- hasNext that does not skip empty rows.
+resources:
+- title: "Tech Interview Handbook: Hash table cheatsheet"
+  url: https://www.techinterviewhandbook.org/algorithms/hash-table/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 10
+  level: core
+- title: "Tech Interview Handbook: Linked list cheatsheet"
+  url: https://www.techinterviewhandbook.org/algorithms/linked-list/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 10
+  level: core
+- title: Linked lists visualized
+  url: https://visualgo.net/en/list
+  kind: visualizer
+  source: VisuAlgo
+  minutes: 15
+  level: deep
+quiz:
+- id: two-structures
+  kind: mcq
+  prompt: Which pair of structures gives an LRU cache O(1) get and put?
+  options:
+  - A hash map and a doubly linked list
+  - A hash map and a queue
+  - Two stacks
+  - A sorted array
+  answer: 0
+  explanation: The map finds the node; the list moves it in O(1).
+  difficulty: 1
+- id: get-is-use
+  kind: mcq
+  prompt: Capacity 2. put 1, put 2, get 1, put 3. Which key is evicted?
+  options:
+  - '2'
+  - '1'
+  - '3'
+  - None
+  answer: 0
+  explanation: get 1 made key 1 recent, so key 2 is the least recently used.
+  difficulty: 2
+- id: update
+  kind: mcq
+  prompt: The cache is full and put updates a key that is already stored. What is evicted?
+  options:
+  - Nothing
+  - The least recently used key
+  - The key being updated
+  - The most recently used key
+  answer: 0
+  explanation: The number of keys does not grow.
+  difficulty: 2
+- id: queue-fails
+  kind: mcq
+  prompt: Why is a queue of arrivals not enough for LRU?
+  options:
+  - A get must move a key from the middle to the front, which a queue cannot do in O(1)
+  - Queues are slower than lists
+  - Queues cannot hold integers
+  - It is enough
+  answer: 0
+  explanation: Queues only remove from their ends.
+  difficulty: 3
+- id: sentinels
+  kind: mcq
+  prompt: What do the head and tail sentinel nodes buy?
+  options:
+  - No special cases for an empty list or for the first and last node
+  - Faster hashing
+  - Less memory
+  - Sorted order
+  answer: 0
+  explanation: Every real node always has a prev and a next.
+  difficulty: 3
+- id: swap-delete
+  kind: mcq
+  prompt: The random set holds 5 7 9 and removes 5. What is the array afterwards?
+  options:
+  - 9 7
+  - 7 9
+  - 5 7
+  - 7 5 9
+  answer: 0
+  explanation: The last value, 9, moves into the hole at index 0.
+  difficulty: 3
+- id: history
+  kind: mcq
+  prompt: set foo bar at time 1, set foo baz at time 4. What does get foo 3 return?
+  options:
+  - bar
+  - baz
+  - Nothing
+  - bar baz
+  answer: 0
+  explanation: The last set at or before time 3 was at time 1.
+  difficulty: 4
+- id: lfu
+  kind: mcq
+  prompt: In an LFU cache, two keys have the same smallest frequency. Which one is evicted?
+  options:
+  - The one used least recently
+  - The smaller key
+  - Both
+  - The most recently used one
+  answer: 0
+  explanation: Ties are broken by recency, so each frequency keeps its own LRU list.
+  difficulty: 4
+- id: iterator-empty
+  kind: mcq
+  prompt: Rows 1, (empty), (empty). After next() returns 1, what must hasNext() return?
+  options:
+  - 'false'
+  - 'true'
+  - It depends on the row count
+  - It crashes
+  answer: 0
+  explanation: It must skip the empty rows before answering.
+  difficulty: 5
+problems:
+- thumbnail-cache
+- library-shelf
+practice_links:
+- title: LRU Cache
+  url: https://leetcode.com/problems/lru-cache/
+  platform: LeetCode
+  difficulty: medium
+- title: LFU Cache
+  url: https://leetcode.com/problems/lfu-cache/
+  platform: LeetCode
+  difficulty: hard
+- title: Insert Delete GetRandom O(1)
+  url: https://leetcode.com/problems/insert-delete-getrandom-o1/
+  platform: LeetCode
+  difficulty: medium
+- title: Time Based Key-Value Store
+  url: https://leetcode.com/problems/time-based-key-value-store/
+  platform: LeetCode
+  difficulty: medium
+- title: Snapshot Array
+  url: https://leetcode.com/problems/snapshot-array/
+  platform: LeetCode
+  difficulty: medium
+- title: Design Browser History
+  url: https://leetcode.com/problems/design-browser-history/
+  platform: LeetCode
+  difficulty: medium
+- title: Flatten Nested List Iterator
+  url: https://leetcode.com/problems/flatten-nested-list-iterator/
+  platform: LeetCode
+  difficulty: medium
+- title: Binary Search Tree Iterator
+  url: https://leetcode.com/problems/binary-search-tree-iterator/
+  platform: LeetCode
+  difficulty: medium
+provenance:
+  origin: original
+status: live

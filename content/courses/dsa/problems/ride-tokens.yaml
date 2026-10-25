@@ -1,0 +1,127 @@
+id: ride-tokens
+title: Ride tokens
+concepts: [knapsack-unbounded]
+difficulty: medium
+statement: |
+  A fair has `n` rides. Ride i costs `c_i` tokens and gives `f_i` fun, and you may ride it
+  **as many times as you like**. You hold exactly `B` tokens, tokens cannot be refunded, and
+  you want to spend **all** of them.
+
+  Print the largest total fun you can get while spending exactly B tokens, or -1 if no
+  sequence of rides costs exactly B.
+input_format: |
+  The first line contains n and B. Each of the next n lines contains c_i and f_i.
+output_format: The largest total fun, or -1.
+constraints:
+  - 1 ≤ n ≤ 100
+  - 1 ≤ B ≤ 10^4
+  - 1 ≤ c_i ≤ 10^4
+  - 0 ≤ f_i ≤ 10^9
+examples:
+  - input: "2 7\n2 3\n3 5"
+    output: "11"
+    explanation: "Ride 1 twice and ride 2 once costs 2 + 2 + 3 = 7 tokens for 3 + 3 + 5 = 11 fun."
+  - input: "1 5\n2 100"
+    output: "-1"
+hints:
+  - "Rides can repeat, so this is unbounded knapsack. But the budget must be used exactly: what should dp[c] hold for a total that no sequence of rides reaches?"
+  - "Start with dp[0] = 0 and every other dp[c] unreachable. A ride only extends a total that is already reachable."
+  - "Loop c from c_i up to B for each ride, so the ride can be taken again, and print dp[B], or -1 if it is still unreachable."
+approach: |
+  Unbounded knapsack where dp[c] is the most fun spending exactly c tokens. dp[0] = 0 and
+  every other cell starts unreachable, so a total is only built from reachable smaller
+  totals. For each ride, loop c upwards from its cost, which lets the same ride be used
+  again. Starting from zeros would answer "at most B". O(n·B) time, O(B) memory; totals need
+  64-bit integers.
+reference: |
+  n, B = map(int, input().split())
+  NONE = -1  # unreachable marker; real totals are never negative
+  dp = [NONE] * (B + 1)
+  dp[0] = 0
+  for _ in range(n):
+      cost, fun = map(int, input().split())
+      for c in range(cost, B + 1):
+          if dp[c - cost] != NONE and dp[c - cost] + fun > dp[c]:
+              dp[c] = dp[c - cost] + fun
+  print(dp[B])
+brute: |
+  import sys
+  sys.setrecursionlimit(10000)
+  n, B = map(int, input().split())
+  rides = [tuple(map(int, input().split())) for _ in range(n)]
+
+  def best(i, left):
+      if left == 0:
+          return 0
+      if i == n:
+          return -1
+      result = -1
+      k = 0
+      while k * rides[i][0] <= left:
+          rest = best(i + 1, left - k * rides[i][0])
+          if rest != -1:
+              result = max(result, rest + k * rides[i][1])
+          k += 1
+      return result
+
+  print(best(0, B))
+references:
+  cpp: |
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, B;
+        cin >> n >> B;
+        vector<long long> dp(B + 1, -1);  // -1: no sequence of rides costs exactly c
+        dp[0] = 0;
+        for (int i = 0; i < n; i++) {
+            int cost;
+            long long fun;
+            cin >> cost >> fun;
+            for (int c = cost; c <= B; c++)
+                if (dp[c - cost] != -1 && dp[c - cost] + fun > dp[c]) dp[c] = dp[c - cost] + fun;
+        }
+        cout << dp[B] << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            int n = Integer.parseInt(st.nextToken()), B = Integer.parseInt(st.nextToken());
+            long[] dp = new long[B + 1];
+            Arrays.fill(dp, -1);  // -1: no sequence of rides costs exactly c
+            dp[0] = 0;
+            for (int i = 0; i < n; i++) {
+                st = new StringTokenizer(in.readLine());
+                int cost = Integer.parseInt(st.nextToken());
+                long fun = Long.parseLong(st.nextToken());
+                for (int c = cost; c <= B; c++)
+                    if (dp[c - cost] != -1 && dp[c - cost] + fun > dp[c]) dp[c] = dp[c - cost] + fun;
+            }
+            System.out.println(dp[B]);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1\n1 0"
+      yield "1 1\n2 5"
+      yield "1 10000\n1 1000000000"
+      n, B = 100, 10000
+      yield f"{n} {B}\n" + "\n".join(f"{rng.randint(1, 300)} {rng.randint(0, 10**9)}" for _ in range(n))
+      yield f"{n} {B}\n" + "\n".join(f"{rng.randint(1, 10**4)} {rng.randint(0, 10**9)}" for _ in range(n))
+      yield f"{n} {B}\n" + "\n".join(f"{2 * rng.randint(1, 150)} {rng.randint(0, 100)}" for _ in range(n))
+      yield f"{n} 9999\n" + "\n".join(f"{2 * rng.randint(1, 150)} {rng.randint(0, 100)}" for _ in range(n))
+      for _ in range(4):
+          n = rng.randint(1, 30)
+          yield f"{n} {rng.randint(1, 200)}\n" + "\n".join(f"{rng.randint(1, 60)} {rng.randint(0, 50)}" for _ in range(n))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 5)
+          yield f"{n} {rng.randint(1, 20)}\n" + "\n".join(f"{rng.randint(1, 8)} {rng.randint(0, 9)}" for _ in range(n))

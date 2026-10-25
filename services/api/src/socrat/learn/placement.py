@@ -46,7 +46,9 @@ def enroll(
     db.flush()
     path = catalog.closure(catalog.course_concepts(course_id))
     start = f"{course_id}:{level.start_concept}" if level.start_concept else None
-    state = placement.start(catalog, path, start, seed=int(enrollment.id.replace("-", "")[:8], 16))
+    state = placement.start(
+        catalog, path, start, seed=int(enrollment.id.replace("-", "")[:8], 16), language=language
+    )
     enrollment.placement = state.to_dict()
     if state.done:
         finish(db, catalog, enrollment, state, now)
@@ -106,20 +108,23 @@ def answer(
 def finish(
     db: Session, catalog: Catalog, enrollment: Enrollment, state: placement.PlacementState, now: int
 ):
-    for concept, known in placement.result(state).items():
+    for concept, known in placement.result(state, _own(catalog, enrollment)).items():
         learn.set_state(db, enrollment, concept, placed(known, now), now)
     enrollment.status = "active"
     enrollment.placement = state.to_dict()
 
 
+def _own(catalog: Catalog, enrollment: Enrollment) -> set[str]:
+    return set(catalog.course_concepts(enrollment.course_id))
+
+
 def summary(catalog: Catalog, enrollment: Enrollment) -> dict:
     state = current(catalog, enrollment)
-    known = [c for c, k in placement.result(state).items() if k]
+    known = placement.result(state, _own(catalog, enrollment))
+    start = next((c for c in state.path if not known[c]), None)
     return {
         "asked": len(state.asked),
         "correct": sum(1 for x in state.asked if x["correct"]),
-        "known_concepts": [catalog.concept(c).title for c in known],
-        "starting_concept": catalog.concept(state.path[state.frontier]).title
-        if state.frontier < len(state.path)
-        else None,
+        "known_concepts": [catalog.concept(c).title for c, k in known.items() if k],
+        "starting_concept": catalog.concept(start).title if start else None,
     }

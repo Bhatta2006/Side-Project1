@@ -27,11 +27,11 @@ modules:
   - id: first-steps
     title: First steps
     summary: What a program is, how it runs, and how it stores and computes values.
-    concepts: [programs-and-output, variables-and-types, input-and-arithmetic]
+    concepts: [how-code-runs, programs-and-output, variables-and-types, input-and-arithmetic, operators-and-expressions]
   - id: control-flow
     title: Making decisions and repeating
     summary: Branches and loops — the two ideas that make programs powerful.
-    concepts: [conditionals, boolean-logic, while-loops, for-loops, nested-loops]
+    concepts: [conditionals, boolean-logic, while-loops, for-loops, nested-loops, pattern-printing, math-on-numbers, number-systems]
   - id: collections
     title: Working with data
     summary: Store many values and look them up quickly.
@@ -39,8 +39,8 @@ modules:
   - id: functions-module
     title: Functions and structure
     summary: Break programs into reusable, testable pieces.
-    concepts: [functions, scope-and-mutation, recursion]
+    concepts: [functions, scope-and-mutation, memory-and-references, recursion, searching-and-sorting, complexity-intuition]
   - id: craft
     title: The programmer's craft
     summary: Debug calmly, solve unfamiliar problems, and model the world with objects.
-    concepts: [debugging, problem-solving, classes-and-objects]
+    concepts: [debugging, problem-solving, classes-and-objects, exceptions, files-and-modules, standard-library]

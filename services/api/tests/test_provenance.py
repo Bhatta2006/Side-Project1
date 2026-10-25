@@ -23,8 +23,9 @@ ADAPTED_FROM = dict(
 
 def test_every_existing_content_file_still_loads_without_provenance():
     catalog = load()
-    assert len(catalog.concepts) == 61
-    assert all(c.provenance is None for c in catalog.concepts.values())
+    # The 61 concepts that predate provenance still load without it; newer ones record it.
+    assert sum(c.provenance is None for c in catalog.concepts.values()) == 61
+    assert all(c.provenance.origin == "original" for c in catalog.concepts.values() if c.provenance)
     assert all(q.provenance is None for c in catalog.concepts.values() for q in c.quiz)
     assert all(p.provenance is None for _, p in catalog.problems.values())
     assert all(pack.provenance is None for pack in catalog.atom_packs.values())

@@ -1,0 +1,73 @@
+id: scc
+title: Strongly connected components
+summary: Kosaraju and Tarjan, the condensation DAG, DP on it, and 2-SAT through the implication graph.
+module: graph-module
+prerequisites:
+- graph-techniques
+- dsa:topological-sort
+difficulty: 5
+estimated_minutes: 60
+status: draft
+lesson: '## Kosaraju tarjan
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Condensation dp
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Two sat
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

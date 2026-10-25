@@ -1,0 +1,63 @@
+id: quiz:dsa:tree-patterns:views-and-columns
+family: views-and-columns
+concept: dsa:tree-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: right-view
+  band: 2
+  format: mcq
+  prompt: Which node of each BFS level appears in the right side view?
+  options:
+  - The last one
+  - The first one
+  - The largest one
+  - Every right child
+  answer: 0
+  misconceptions:
+  - null
+  - tree-view-right-children-only
+  - confuse-index-value
+  - tree-view-right-children-only
+  explanation: The rightmost node of a level hides the others behind it.
+- id: deeper-left
+  band: 3
+  format: trace
+  prompt: Root 1 has only a left child 2, and 2 has a right child 3. What is the right side view?
+  options:
+  - 1 2 3
+  - '1'
+  - 1 3
+  - 2 3
+  answer: 0
+  misconceptions:
+  - null
+  - tree-view-right-children-only
+  - tree-view-right-children-only
+  - off-by-one-output
+  explanation: Each level has one node, so all three are visible.
+- id: columns
+  band: 4
+  format: mcq
+  prompt: The root is in column 0. Which column is the right child of the root's left child in?
+  options:
+  - '0'
+  - '−1'
+  - '1'
+  - '−2'
+  answer: 0
+  misconceptions:
+  - null
+  - off-by-one-output
+  - confuse-index-value
+  - off-by-one-output
+  explanation: Left subtracts 1 and right adds 1, so −1 + 1 = 0.
+status: provisional
+provenance:
+  origin: original

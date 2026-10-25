@@ -98,11 +98,11 @@ lesson: |
 
   A grid is two-dimensional state. Define whether a move uses four or eight directions, and check bounds before reading the destination. In a traversal, mark a cell visited at discovery so several neighbours do not schedule it repeatedly.
 
-  ### Boundary cases and cost
+  ### Things to watch for
 
   Test one row, one column, a corner and a non-square grid. Construct independent rows: duplicated references can make editing one row change every row. Do not confuse (row, column) with (x, y).
 
-  Visiting every cell once costs O(rows × columns). A visited grid or a worst-case traversal queue can use the same order of space.
+  Visiting every cell once takes time in proportion to rows × columns. Extra grids you keep (such as a visited grid) take about the same amount of memory.
 
   ### Check your understanding
 

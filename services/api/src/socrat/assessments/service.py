@@ -230,7 +230,7 @@ def start(
 
 
 def _item(catalog: Catalog, concept: str, item_id: str) -> QuizItem:
-    return next(q for q in catalog.concept(concept).quiz if q.id == item_id)
+    return next(q for q in catalog.concept(concept).quiz if q.matches(item_id))
 
 
 def _coding_solved(db: Session, user_id: str, attempt: WeeklyAssessment) -> set[str]:

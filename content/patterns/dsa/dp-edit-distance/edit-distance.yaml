@@ -1,0 +1,141 @@
+id: dsa:dp-edit-distance/edit-distance
+concept: dsa:dp-edit-distance
+title: 'Edit distance: insert, delete or replace, one character at a time'
+tracks:
+- interview
+- competitive
+recognise:
+- Turn one string into another with single-character inserts, deletes and replaces
+- Minimise the number (or total cost) of edits
+- Both strings fit an n by m table
+state: dp[i][j] = fewest edits turning a[:i] into b[:j]
+transition: 'equal: dp[i−1][j−1]; else 1 + min(dp[i−1][j], dp[i][j−1], dp[i−1][j−1])'
+base_cases:
+- dp[i][0] = i (delete everything)
+- dp[0][j] = j (insert everything)
+complexity:
+  time: O(n · m)
+  space: O(m) with two rows
+template:
+  python: |
+    a = input().strip()
+    b = input().strip()
+    n, m = len(a), len(b)
+    prev = list(range(m + 1))  # row 0: turn "" into b[:j] with j inserts
+    for i in range(1, n + 1):
+        cur = [i] + [0] * m  # column 0: delete all i characters
+        for j in range(1, m + 1):
+            if a[i - 1] == b[j - 1]:
+                cur[j] = prev[j - 1]  # nothing to fix at the end
+            else:
+                cur[j] = 1 + min(prev[j], cur[j - 1], prev[j - 1])  # delete, insert, replace
+        prev = cur
+    print(prev[m])
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        string a, b;
+        cin >> a >> b;
+        int n = a.size(), m = b.size();
+        vector<int> prev(m + 1), cur(m + 1);
+        for (int j = 0; j <= m; j++) prev[j] = j;  // row 0: j inserts
+        for (int i = 1; i <= n; i++) {
+            cur[0] = i;  // column 0: delete all i characters
+            for (int j = 1; j <= m; j++)
+                cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1]
+                                              : 1 + min({prev[j], cur[j - 1], prev[j - 1]});  // del, ins, rep
+            swap(prev, cur);
+        }
+        cout << prev[m] << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            String a = in.next(), b = in.next();
+            int n = a.length(), m = b.length();
+            int[] prev = new int[m + 1], cur = new int[m + 1];
+            for (int j = 0; j <= m; j++) prev[j] = j;  // row 0: j inserts
+            for (int i = 1; i <= n; i++) {
+                cur[0] = i;  // column 0: delete all i characters
+                for (int j = 1; j <= m; j++)
+                    cur[j] = a.charAt(i - 1) == b.charAt(j - 1) ? prev[j - 1]
+                            : 1 + Math.min(prev[j], Math.min(cur[j - 1], prev[j - 1]));  // del, ins, rep
+                int[] t = prev; prev = cur; cur = t;
+            }
+            System.out.println(prev[m]);
+        }
+    }
+template_io:
+  stdin: |
+    horse
+    ros
+  expected: '3'
+variants:
+- id: one-edit
+  band: 2
+  title: Is the distance exactly one?
+  problem: leetcode:one-edit-distance
+- id: delete-only
+  band: 2
+  title: No replace, so n + m − 2·LCS
+  problem: leetcode:delete-operation-for-two-strings
+- id: edit-distance-classic
+  band: 3
+  title: Insert, delete, replace
+  problem: leetcode:edit-distance
+- id: edit-distance-cses
+  band: 3
+  title: The same on long strings
+  problem: cses:1639
+- id: ascii-delete
+  band: 4
+  title: Weighted deletions
+  problem: leetcode:minimum-ascii-delete-sum-for-two-strings
+- id: distinct-subsequences
+  band: 5
+  title: Count instead of minimise
+  problem: leetcode:distinct-subsequences
+- id: wildcard
+  band: 6
+  title: Yes/no table with a star
+  problem: leetcode:wildcard-matching
+pitfalls:
+- edit-base-zero
+- edit-missing-replace
+- edit-match-costs-one
+- pattern-edit-vs-lcs-deletions
+atoms:
+- ed-worked
+- ed-faded
+- ed-visualizer
+- ed-micro
+- ed-classify
+quiz_family: quiz:dsa:dp-edit-distance:edit-distance
+problems:
+  external:
+  - leetcode:one-edit-distance
+  - leetcode:delete-operation-for-two-strings
+  - leetcode:edit-distance
+  - cses:1639
+  - leetcode:minimum-ascii-delete-sum-for-two-strings
+  - leetcode:distinct-subsequences
+  - leetcode:wildcard-matching
+  - leetcode:regular-expression-matching
+  - leetcode:interleaving-string
+  - leetcode:palindromic-substrings
+  - leetcode:longest-palindromic-substring
+  - leetcode:palindrome-partitioning-ii
+  - cf:1023A
+showcase:
+- 'horse to ros: why the LCS shortcut charges 4 and a replace makes it 3'
+status: provisional
+provenance:
+  origin: original

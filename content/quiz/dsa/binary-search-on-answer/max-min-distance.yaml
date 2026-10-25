@@ -1,0 +1,63 @@
+id: quiz:dsa:binary-search-on-answer:max-min-distance
+family: max-min-distance
+concept: dsa:binary-search-on-answer
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: round
+  band: 2
+  format: mcq
+  prompt: The loop keeps lo = mid when the gap fits. lo = 3, hi = 4 and mid = (lo + hi) // 2. What happens?
+  options:
+  - mid is 3 again and the loop never ends
+  - The loop ends with 4
+  - The loop ends with 3
+  - It crashes
+  answer: 0
+  misconceptions:
+  - null
+  - maxmin-round-down
+  - maxmin-round-down
+  - lo-hi-confusion
+  explanation: Searching for the last value that works needs mid rounded up.
+- id: trace
+  band: 3
+  format: trace
+  prompt: Positions 1 2 4 8 9 and m = 3. Does gap 4 fit?
+  options:
+  - No; greedily only 1 and 8 can be taken
+  - Yes; 1, 4, 8
+  - Yes; 1, 8, 9
+  - Yes; 2, 8, 9
+  answer: 0
+  misconceptions:
+  - null
+  - trace-step-slip
+  - predicate-boundary
+  - trace-step-slip
+  explanation: After 1 the next position at least 5 is 8, then nothing is at least 12.
+- id: sort
+  band: 4
+  format: classify
+  prompt: Why must the positions be sorted before the greedy check?
+  options:
+  - The greedy pass takes each next position that is far enough from the last one taken
+  - Binary search needs a sorted answer range
+  - To remove duplicates
+  - It does not matter
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-search-needs-sorted-input
+  - distinct-vs-frequency
+  - pattern-sort-breaks-order
+  explanation: Gaps are only between neighbours in sorted order.
+status: provisional
+provenance:
+  origin: original

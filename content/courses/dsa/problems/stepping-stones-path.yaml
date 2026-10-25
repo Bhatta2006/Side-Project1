@@ -1,0 +1,134 @@
+id: stepping-stones-path
+title: Stepping stones
+concepts: [dp-introduction]
+difficulty: medium
+statement: |
+  There are `n` stones in a row, numbered 1 to n, and stone i has height `h_i`. A frog
+  starts on stone 1 and wants to reach stone n. From stone i it may jump to stone i + 1 or
+  stone i + 2. A jump from stone i to stone j costs `|h_i − h_j|`.
+
+  Print the smallest total cost, and the stones the frog lands on (including 1 and n). If
+  several routes have the smallest cost, print the one whose list of stones is
+  lexicographically smallest.
+input_format: |
+  The first line contains n. The second line contains the n heights.
+output_format: |
+  Two lines: the smallest total cost, then the stones visited in order, separated by spaces.
+constraints:
+  - 2 ≤ n ≤ 10^5
+  - 1 ≤ h_i ≤ 10^4
+examples:
+  - input: "4\n10 30 40 20"
+    output: "30\n1 2 4"
+    explanation: "1 → 2 → 4 costs 20 + 10 = 30. The other routes cost 50."
+  - input: "3\n5 5 5"
+    output: "0\n1 2 3"
+    explanation: "1 → 3 also costs 0, but 1 2 3 is lexicographically smaller than 1 3."
+hints:
+  - "Let best[i] be the cheapest cost from stone i to stone n. What are best[n] and best[n − 1]?"
+  - "best[i] = min(|h_i − h_{i+1}| + best[i + 1], |h_i − h_{i+2}| + best[i + 2])."
+  - "To get the lexicographically smallest optimal route, walk forwards from stone 1 and step to i + 1 whenever that move still achieves best[i]."
+approach: |
+  Fill best[i] = cheapest cost from stone i to stone n, from i = n down to 1. Then
+  reconstruct forwards: from stone i, moving to i + 1 is allowed if
+  |h_i − h_{i+1}| + best[i + 1] == best[i]; prefer it, since a smaller next stone gives a
+  lexicographically smaller list. Otherwise move to i + 2. O(n) time and memory.
+reference: |
+  n = int(input())
+  h = list(map(int, input().split()))
+  best = [0] * n  # best[i]: cheapest cost from stone i (0-based) to the last stone
+  for i in range(n - 2, -1, -1):
+      best[i] = abs(h[i] - h[i + 1]) + best[i + 1]
+      if i + 2 < n:
+          best[i] = min(best[i], abs(h[i] - h[i + 2]) + best[i + 2])
+  path, i = [1], 0
+  while i < n - 1:
+      if abs(h[i] - h[i + 1]) + best[i + 1] == best[i]:
+          i += 1  # the smaller next stone keeps the list lexicographically smallest
+      else:
+          i += 2
+      path.append(i + 1)
+  print(best[0])
+  print(*path)
+brute: |
+  n = int(input())
+  h = list(map(int, input().split()))
+  routes = []
+
+  def walk(i, cost, path):
+      if i == n - 1:
+          routes.append((cost, path))
+          return
+      for j in (i + 1, i + 2):
+          if j < n:
+              walk(j, cost + abs(h[i] - h[j]), path + [j + 1])
+
+  walk(0, 0, [1])
+  cost, path = min(routes)
+  print(cost)
+  print(*path)
+references:
+  cpp: |
+    #include <cstdlib>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        cin >> n;
+        vector<long long> h(n), best(n, 0);
+        for (auto& x : h) cin >> x;
+        for (int i = n - 2; i >= 0; i--) {
+            best[i] = llabs(h[i] - h[i + 1]) + best[i + 1];
+            if (i + 2 < n) best[i] = min(best[i], llabs(h[i] - h[i + 2]) + best[i + 2]);
+        }
+        cout << best[0] << "\n" << 1;
+        int i = 0;
+        while (i < n - 1) {
+            i += (llabs(h[i] - h[i + 1]) + best[i + 1] == best[i]) ? 1 : 2;
+            cout << " " << i + 1;
+        }
+        cout << "\n";
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+            int n = Integer.parseInt(in.readLine().trim());
+            StringTokenizer st = new StringTokenizer(in.readLine());
+            long[] h = new long[n], best = new long[n];
+            for (int i = 0; i < n; i++) h[i] = Long.parseLong(st.nextToken());
+            for (int i = n - 2; i >= 0; i--) {
+                best[i] = Math.abs(h[i] - h[i + 1]) + best[i + 1];
+                if (i + 2 < n) best[i] = Math.min(best[i], Math.abs(h[i] - h[i + 2]) + best[i + 2]);
+            }
+            StringBuilder out = new StringBuilder().append(best[0]).append("\n1");
+            int i = 0;
+            while (i < n - 1) {
+                i += (Math.abs(h[i] - h[i + 1]) + best[i + 1] == best[i]) ? 1 : 2;
+                out.append(' ').append(i + 1);
+            }
+            System.out.println(out);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "2\n1 10000"
+      yield "3\n7 7 7"
+      yield "5\n1 10000 1 10000 1"
+      n = 100000
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 10000)) for _ in range(n))
+      yield f"{n}\n" + " ".join("5" for _ in range(n))
+      yield f"{n}\n" + " ".join(str(i % 2 * 9999 + 1) for i in range(n))
+      for _ in range(5):
+          n = rng.randint(2, 50)
+          yield f"{n}\n" + " ".join(str(rng.randint(1, 20)) for _ in range(n))
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(2, 11)
+          yield f"{n}\n" + " ".join(str(rng.randint(1, 6)) for _ in range(n))

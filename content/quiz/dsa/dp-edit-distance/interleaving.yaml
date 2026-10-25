@@ -1,0 +1,63 @@
+id: quiz:dsa:dp-edit-distance:interleaving
+family: interleaving
+concept: dsa:dp-edit-distance
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: length-check
+  band: 1
+  format: mcq
+  prompt: s1 has 3 characters, s2 has 4 and s3 has 8. Can s3 interleave s1 and s2?
+  options:
+  - No, the lengths do not add up
+  - Yes, if the characters match
+  - It depends on the order
+  - Only if s1 is a prefix of s3
+  answer: 0
+  misconceptions:
+  - null
+  - interleave-length-check
+  - interleave-length-check
+  - pattern-dp-vs-greedy
+  explanation: An interleaving uses every character exactly once, so 3 + 4 must be 8.
+- id: index
+  band: 3
+  format: mcq
+  prompt: Which character of s3 does cell ok[i][j] look at?
+  options:
+  - s3[i + j − 1]
+  - s3[i − 1]
+  - s3[j − 1]
+  - s3[i + j]
+  answer: 0
+  misconceptions:
+  - null
+  - lcs-index-offset
+  - lcs-index-offset
+  - off-by-one-output
+  explanation: i + j characters of s3 are used, and the last one has index i + j − 1.
+- id: greedy
+  band: 4
+  format: classify
+  prompt: Both s1 and s2 offer the next character of s3. What should the solution do?
+  options:
+  - Keep both possibilities (the table does this)
+  - Always take it from s1
+  - Always take it from s2
+  - Give up
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-dp-vs-greedy
+  - pattern-dp-vs-greedy
+  - interleave-length-check
+  explanation: A tie is a real choice; greedy can pick the wrong source.
+status: provisional
+provenance:
+  origin: original

@@ -1,0 +1,235 @@
+id: quiz:dsa:dp-lcs:lcs
+family: lcs
+concept: dsa:dp-lcs
+pattern: dsa:dp-lcs/lcs
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: lcs_length
+  params:
+    letters:
+    - 2
+    - 3
+    length:
+    - 3
+    - 6
+  reference: lcs_brute(a, b)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: match greedily with a pointer into b
+  misconception: lcs-greedy-match
+- rule: take up-left on a mismatch
+  misconception: lcs-mismatch-diagonal
+- rule: reset to 0 on a mismatch (common substring)
+  misconception: pattern-subsequence-vs-substring
+- rule: compare a[i] with b[j] in a prefix-length table
+  misconception: lcs-index-offset
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is an LCS problem?
+  options:
+  - Fewest deletions to make two words equal
+  - Longest block that appears in both words
+  - Does word A appear inside word B as a block?
+  - Sort the letters of both words
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subsequence-vs-substring
+  - pattern-subsequence-vs-substring
+  - dp-vague-state
+  explanation: Kept letters form a common subsequence; blocks are substrings.
+- id: state-meaning
+  band: 1
+  format: mcq
+  prompt: What does dp[i][j] mean in the LCS table?
+  options:
+  - The LCS length of a[:i] and b[:j]
+  - Whether a[i] equals b[j]
+  - The LCS of a[i:] and b[j:] plus one
+  - The common substring ending at i and j
+  answer: 0
+  misconceptions:
+  - null
+  - dp-vague-state
+  - lcs-index-offset
+  - pattern-subsequence-vs-substring
+  explanation: Indexes are prefix lengths, so row 0 and column 0 are empty prefixes.
+- id: base
+  band: 2
+  format: mcq
+  prompt: What are row 0 and column 0 of the LCS table?
+  options:
+  - All 0
+  - All 1
+  - The string lengths
+  - Infinity
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - lcs-index-offset
+  - dp-wrong-base-case
+  explanation: An empty prefix shares nothing with anything.
+- id: match-cell
+  band: 2
+  format: trace
+  prompt: a[i−1] == b[j−1]. Up = 3, left = 3, up-left = 2. What is dp[i][j]?
+  options:
+  - '3'
+  - '4'
+  - '2'
+  - '5'
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-subproblem
+  - dp-missing-plus-one
+  - double-count
+  explanation: up-left + 1 = 3. Adding 1 to up or left could count a character twice.
+- id: mismatch-cell
+  band: 3
+  format: trace
+  prompt: a[i−1] != b[j−1]. Up = 2, left = 3, up-left = 2. What is dp[i][j]?
+  options:
+  - '3'
+  - '2'
+  - '4'
+  - '0'
+  answer: 0
+  misconceptions:
+  - null
+  - lcs-mismatch-diagonal
+  - dp-missing-plus-one
+  - pattern-subsequence-vs-substring
+  explanation: max(up, left) = 3.
+- id: greedy-fails
+  band: 3
+  format: classify
+  prompt: Why does matching each character of a with its first occurrence in b fail for LCS?
+  options:
+  - An early match can skip characters of b that later matches needed
+  - Because b is shorter
+  - It only fails on palindromes
+  - It does not fail
+  answer: 0
+  misconceptions:
+  - null
+  - lcs-greedy-match
+  - lcs-greedy-match
+  - lcs-greedy-match
+  explanation: zabcd vs abczd - matching z jumps past a, b and c.
+- id: index-offset
+  band: 3
+  format: bug_spot
+  prompt: The table has n + 1 rows, but the code compares a[i] with b[j]. What goes wrong?
+  options:
+  - It compares the wrong characters and reads past the end of the strings
+  - Nothing
+  - Only the first row is wrong
+  - It becomes the substring version
+  answer: 0
+  misconceptions:
+  - null
+  - lcs-index-offset
+  - lcs-index-offset
+  - pattern-subsequence-vs-substring
+  explanation: Row i is the prefix of length i, whose last character is a[i − 1].
+- id: two-rows
+  band: 4
+  format: mcq
+  prompt: You only need the LCS length. How much memory do you need?
+  options:
+  - Two rows of m + 1 cells
+  - The full (n + 1) × (m + 1) table
+  - One cell
+  - O(n + m) for each row
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-value-vs-choice
+  - dp-compressed-loses-path
+  - dp-vague-state
+  explanation: Each cell reads only this row and the previous one.
+- id: deletions
+  band: 4
+  format: mcq
+  prompt: Strings of length 5 and 7 have an LCS of 3. Fewest deletions to make them equal?
+  options:
+  - '6'
+  - '9'
+  - '4'
+  - '2'
+  answer: 0
+  misconceptions:
+  - null
+  - scs-forget-lcs
+  - lcs-mismatch-diagonal
+  - count-vs-sum
+  explanation: 5 + 7 − 2 · 3 = 6.
+- id: complexity
+  band: 5
+  format: complexity
+  prompt: Two strings of length n and m. Time of the table version?
+  options:
+  - O(n · m)
+  - O(2^(n+m))
+  - O(n + m)
+  - O(n log m)
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - lcs-greedy-match
+  - pattern-search-vs-scan
+  explanation: (n + 1)(m + 1) cells, each O(1).
+- id: substring-transfer
+  band: 6
+  format: classify
+  prompt: Longest stretch of consecutive days with the same weather in two cities' logs. What changes from
+    LCS?
+  options:
+  - Reset to 0 on a mismatch and take the largest cell
+  - Nothing
+  - Use two pointers
+  - Use max(up, left) on a match
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-subsequence-vs-substring
+  - pattern-two-pointers-vs-lcs
+  - dp-wrong-subproblem
+  explanation: Consecutive days are a substring; a mismatch breaks the stretch.
+- id: weighted-transfer
+  band: 6
+  format: classify
+  prompt: Each matched character scores its own value instead of 1. What changes?
+  options:
+  - The match step adds the value instead of 1
+  - The mismatch step adds the value
+  - The table becomes 1D
+  - Greedy now works
+  answer: 0
+  misconceptions:
+  - null
+  - lcs-mismatch-diagonal
+  - pattern-value-vs-choice
+  - lcs-greedy-match
+  explanation: Only matched pairs score, so only the diagonal step changes.
+status: provisional
+provenance:
+  origin: original

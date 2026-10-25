@@ -85,9 +85,11 @@ def test_pool_partition_is_stable_and_near_seventy_percent():
 
 
 def test_legacy_bank_wraps_every_item_with_bands_and_pools():
-    items = pools.keep_practice(pools.legacy_bank(default_catalog()))
-    assert len(items) == 284
-    assert len({i.key for i in items}) == 284
+    catalog = default_catalog()
+    items = pools.keep_practice(pools.legacy_bank(catalog))
+    total = sum(len(c.quiz) for c in catalog.concepts.values())
+    assert len(items) == total >= 284
+    assert len({i.key for i in items}) == total
     assert {i.band for i in items} <= {1, 2, 3, 5, 6}  # difficulty 4 and 5 map to bands 5 and 6
     assert all(i.d_prior == DEFAULT.prior(i.band) for i in items)
     assert all(i.status == "provisional" and i.reviewed for i in items)

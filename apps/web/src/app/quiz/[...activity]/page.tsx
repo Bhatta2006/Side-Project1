@@ -16,6 +16,8 @@ import { AttentionIcon } from '@/components/socrat/states';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { codeSpans } from '@/components/markdown';
+import { SocFigure } from '@/components/socrat/soc';
 
 function Options({ q, choice, onChoose, graded }: { q: QuizQuestion; choice: number | null; onChoose(i: number): void; graded: boolean }) {
   return (
@@ -69,7 +71,7 @@ function GateMeter({ gate, asked }: { gate: Gate; asked: number }) {
   const position = Math.max(0, gate.levels.indexOf(gate.level));
   const left = gate.max_strikes - gate.strikes;
   return (
-    <div className="mb-8 grid gap-4 rounded-card border bg-card p-5 sm:grid-cols-[1fr_auto] sm:items-center lg:p-6">
+    <div className="mb-8 grid gap-4 paper rounded-card p-5 sm:grid-cols-[1fr_auto] sm:items-center lg:p-6">
       <div className="min-w-0">
         <p className="flex items-center gap-2 font-semibold"><StatusIcon status="locked" size={20} /> Checkpoint: {gate.module}</p>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -105,7 +107,8 @@ function GateResult({ gate }: { gate: Gate }) {
   const percent = Math.round((gate.score ?? 0) * 100);
   if (gate.passed) {
     return (
-      <section data-tone="hero" className="mb-8 rounded-card bg-forest p-6 text-forest-foreground animate-pop lg:p-8">
+      <section data-tone="hero" className="relative mb-8 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground animate-pop lg:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute right-6 -bottom-3 hidden w-[170px] sm:block"><SocFigure books mood="proud" idle className="h-auto w-full" /></div>
         <p className="text-[15px] text-(--card-muted)">Checkpoint passed. Weighted score {percent}%.</p>
         <h1 className="type-display-l mt-2">{gate.unlocks ? `${gate.unlocks} unlocked` : 'Course checkpoint passed'}</h1>
         <p className="mt-3 text-base text-(--card-muted)">{gate.hard_correct} correct at the hardest level. Your plan now opens the next module.</p>
@@ -120,10 +123,11 @@ function GateResult({ gate }: { gate: Gate }) {
     );
   }
   return (
-    <section className="mb-8 rounded-card border border-attention bg-card p-6 lg:p-8">
+    <section className="relative mb-8 overflow-hidden rounded-card border border-attention bg-card p-6 lg:p-8">
+      <div aria-hidden="true" className="pointer-events-none absolute right-6 bottom-4 hidden w-[120px] sm:block"><SocFigure mood="worried" idle className="h-auto w-full" /></div>
       <p className="flex items-center gap-2 text-[15px] text-muted-foreground"><AttentionIcon /> Checkpoint: {gate.module}. Score {percent}%.</p>
       <h1 className="type-display-l mt-2">Not yet</h1>
-      <p className="mt-3 text-base text-muted-foreground">
+      <p className="mt-3 max-w-xl text-base text-muted-foreground sm:pr-[130px]">
         Passing needs {Math.round(gate.pass_score * 100)}% and {gate.hard_needed} correct at the hardest level ({gate.hard_correct} this time).
         Your plan added focused reviews on the weakest topics.
       </p>
@@ -212,7 +216,7 @@ export default function Quiz() {
         )}
         {topics.length ? (
           <section className="mb-8" aria-labelledby="revisit-heading">
-            <h2 id="revisit-heading" className="mb-3 font-display text-xl font-bold tracking-[-0.03em]">Topics worth revisiting</h2>
+            <h2 id="revisit-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Topics worth revisiting</h2>
             <ul className="grid gap-2">
               {topics.map(([id, name]) => (
                 <li key={id} className="flex min-h-14 items-center gap-3 rounded-[16px] bg-raised px-4 py-2">
@@ -226,12 +230,12 @@ export default function Quiz() {
         ) : null}
         {wrong.length ? (
           <section className="mb-8" aria-labelledby="answers-heading">
-            <h2 id="answers-heading" className="mb-3 font-display text-xl font-bold tracking-[-0.03em]">Answers to review</h2>
+            <h2 id="answers-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Answers to review</h2>
             <div className="grid gap-3">
               {wrong.map(q => (
-                <div key={q.id} className="grid gap-3 rounded-card border bg-card p-5">
+                <div key={q.id} className="grid gap-3 paper rounded-card p-5">
                   <Badge className="w-fit">{q.concept_title}</Badge>
-                  <p className="font-semibold">{q.prompt}</p>
+                  <p className="font-semibold">{codeSpans(q.prompt)}</p>
                   {q.code ? <pre className="code-block">{q.code}</pre> : null}
                   <p className="text-[15px]"><span className="font-bold">Correct answer:</span> {q.answer !== undefined ? q.options[q.answer] : ''}</p>
                   {q.explanation ? <p className="text-sm text-muted-foreground">{q.explanation}</p> : null}
@@ -262,7 +266,7 @@ export default function Quiz() {
 
       <div key={q.id} className="grid gap-5 animate-in fade-in duration-200">
         {kind === 'checkpoint' || kind === 'review' ? <Badge className="w-fit">{kind === 'review' ? `Review: ${q.concept_title}` : q.concept_title}</Badge> : null}
-        <h1 className="type-title text-balance">{q.prompt}</h1>
+        <h1 className="type-title text-balance">{codeSpans(q.prompt)}</h1>
         {q.code ? <pre className="code-block">{q.code}</pre> : null}
         <Options q={q} choice={choice} onChoose={setChoice} graded={graded} />
 

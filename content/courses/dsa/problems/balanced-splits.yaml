@@ -1,0 +1,172 @@
+id: balanced-splits
+title: Balanced splits
+concepts: [tree-patterns]
+difficulty: medium
+statement: |
+  A binary tree has `n` nodes numbered 1 to n, rooted at node 1; node i holds the value
+  `v_i`. A node is **balanced** if the sum of all values in its left subtree equals the sum of
+  all values in its right subtree. A missing subtree has sum 0, so a leaf is always balanced.
+
+  Print the number of balanced nodes.
+input_format: |
+  The first line contains n. The second line contains v_1 … v_n. Each of the next n lines
+  contains the left and right child of node i (0 = none).
+output_format: The number of balanced nodes.
+constraints:
+  - 1 ≤ n ≤ 10^5
+  - −10^9 ≤ v_i ≤ 10^9
+  - the input describes a binary tree rooted at node 1
+examples:
+  - input: "5\n1 2 2 3 -3\n2 3\n4 5\n0 0\n0 0\n0 0"
+    output: "4"
+    explanation: "Leaves 3, 4 and 5 are balanced. Node 2 is not (3 against −3). The root is: its left subtree sums to 2 + 3 − 3 = 2 and its right subtree to 2."
+  - input: "2\n5 7\n2 0\n0 0"
+    output: "1"
+hints:
+  - "A node needs the total of each of its subtrees. What should each node return to its parent?"
+  - "Let sum[x] = v_x + sum[left] + sum[right]. A node is balanced when sum[left] == sum[right]."
+  - "Compute sums children-first: take the BFS order from the root and process it backwards, so a chain of 10^5 nodes needs no recursion."
+approach: |
+  Return information from children. Each node's subtree sum is its value plus its children's
+  sums (0 for a missing child). Walk the nodes in reverse BFS order so children finish first,
+  compare sum[left] with sum[right] at every node, and count the matches. Sums reach
+  10^14, so use 64-bit integers. O(n) time and memory.
+reference: |
+  import sys
+  data = sys.stdin.buffer.read().split()
+  n = int(data[0])
+  val = [0] + [int(x) for x in data[1:n + 1]]
+  left, right = [0] * (n + 1), [0] * (n + 1)
+  for i in range(1, n + 1):
+      left[i], right[i] = int(data[n + 2 * i - 1]), int(data[n + 2 * i])
+  order = [1]
+  for x in order:
+      if left[x]:
+          order.append(left[x])
+      if right[x]:
+          order.append(right[x])
+  total = [0] * (n + 1)
+  count = 0
+  for x in reversed(order):
+      a, b = total[left[x]], total[right[x]]
+      if a == b:
+          count += 1
+      total[x] = val[x] + a + b
+  print(count)
+brute: |
+  n = int(input())
+  val = [0] + list(map(int, input().split()))
+  kids = [(0, 0)] + [tuple(map(int, input().split())) for _ in range(n)]
+
+  def subtree(x):
+      if x == 0:
+          return 0
+      l, r = kids[x]
+      return val[x] + subtree(l) + subtree(r)
+
+  print(sum(1 for x in range(1, n + 1) if subtree(kids[x][0]) == subtree(kids[x][1])))
+references:
+  cpp: |
+    #include <cstdio>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n;
+        if (scanf("%d", &n) != 1) return 0;
+        vector<long long> val(n + 1, 0), total(n + 1, 0);
+        vector<int> left(n + 1), right(n + 1), order = {1};
+        for (int i = 1; i <= n; i++) scanf("%lld", &val[i]);
+        for (int i = 1; i <= n; i++) scanf("%d %d", &left[i], &right[i]);
+        for (size_t k = 0; k < order.size(); k++) {
+            int x = order[k];
+            if (left[x]) order.push_back(left[x]);
+            if (right[x]) order.push_back(right[x]);
+        }
+        int count = 0;
+        for (int k = (int)order.size() - 1; k >= 0; k--) {
+            int x = order[k];
+            long long a = total[left[x]], b = total[right[x]];
+            if (a == b) count++;
+            total[x] = val[x] + a + b;
+        }
+        printf("%d\n", count);
+    }
+  java: |
+    import java.io.*;
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) throws IOException {
+            StreamTokenizer st = new StreamTokenizer(new BufferedReader(new InputStreamReader(System.in)));
+            st.resetSyntax();
+            st.wordChars('-', '-');
+            st.wordChars('0', '9');
+            st.whitespaceChars(0, ' ');
+            st.nextToken();
+            int n = Integer.parseInt(st.sval);
+            long[] val = new long[n + 1], total = new long[n + 1];
+            int[] left = new int[n + 1], right = new int[n + 1], order = new int[n];
+            for (int i = 1; i <= n; i++) { st.nextToken(); val[i] = Long.parseLong(st.sval); }
+            for (int i = 1; i <= n; i++) {
+                st.nextToken(); left[i] = Integer.parseInt(st.sval);
+                st.nextToken(); right[i] = Integer.parseInt(st.sval);
+            }
+            int size = 0;
+            order[size++] = 1;
+            for (int k = 0; k < size; k++) {
+                int x = order[k];
+                if (left[x] != 0) order[size++] = left[x];
+                if (right[x] != 0) order[size++] = right[x];
+            }
+            int count = 0;
+            for (int k = size - 1; k >= 0; k--) {
+                int x = order[k];
+                long a = total[left[x]], b = total[right[x]];
+                if (a == b) count++;
+                total[x] = val[x] + a + b;
+            }
+            System.out.println(count);
+        }
+    }
+generator: |
+  def tree(rng, n, lo, hi, shape):
+      left, right = [0] * (n + 1), [0] * (n + 1)
+      for node in range(2, n + 1):
+          if shape == "chain":
+              parent = node - 1
+              (left if rng.random() < 0.5 else right)[parent] = node
+              continue
+          while True:
+              parent = rng.randint(max(1, node - 50), node - 1) if shape == "deep" else rng.randint(1, node - 1)
+              side = left if rng.random() < 0.5 else right
+              if side[parent] == 0:
+                  side[parent] = node
+                  break
+      vals = " ".join(str(rng.randint(lo, hi)) for _ in range(n))
+      return f"{n}\n{vals}\n" + "\n".join(f"{left[i]} {right[i]}" for i in range(1, n + 1))
+
+  def cases(rng):
+      yield "1\n-5\n0 0"
+      yield "3\n0 0 0\n2 3\n0 0\n0 0"
+      yield tree(rng, 100000, -10**9, 10**9, "random")
+      yield tree(rng, 100000, -2, 2, "random")
+      yield tree(rng, 100000, 0, 0, "chain")
+      yield tree(rng, 100000, -10**9, 10**9, "deep")
+      yield tree(rng, 100000, -1, 1, "chain")
+      for _ in range(4):
+          yield tree(rng, rng.randint(1, 60), -3, 3, "random")
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          n = rng.randint(1, 9)
+          left, right = [0] * (n + 1), [0] * (n + 1)
+          for node in range(2, n + 1):
+              while True:
+                  parent = rng.randint(1, node - 1)
+                  side = left if rng.random() < 0.5 else right
+                  if side[parent] == 0:
+                      side[parent] = node
+                      break
+          vals = " ".join(str(rng.randint(-3, 3)) for _ in range(n))
+          yield f"{n}\n{vals}\n" + "\n".join(f"{left[i]} {right[i]}" for i in range(1, n + 1))

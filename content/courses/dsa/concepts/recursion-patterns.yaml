@@ -1,0 +1,956 @@
+id: recursion-patterns
+title: Recursion patterns
+summary: 'Trust the function: pick or not pick, generate strings, recurse on stacks, divide and reduce,
+  and fast power.'
+module: recursive-structures
+prerequisites:
+- zero:recursion
+- complexity
+difficulty: 3
+estimated_minutes: 70
+lesson: |
+  Zero's recursion lesson taught the leap of faith: assume the call on a smaller input
+  already works, and only write the step that uses it. Interview recursion is a handful of
+  shapes built on that idea. Learn the shapes and most "generate", "count the ways" and
+  "reduce the problem" questions become a matter of naming the **state** (what the call
+  needs to know), the **choices** (which calls it makes) and the **base case** (when it
+  stops).
+
+  | Shape | Each call decides | Calls per step | Typical cost |
+  |---|---|---|---|
+  | Pick or not pick | whether element i is in | 2 | O(2ⁿ) |
+  | String generation | the next character | up to the alphabet size | output size |
+  | Recursive stack ops | what to do with the top | 1 | O(n) or O(n²) |
+  | Divide and reduce | how to shrink to a smaller n | 1 | O(n) or O(log n) |
+  | Fast power | the half power | 1 | O(log n) |
+
+  Backtracking (next lesson) is these shapes plus undoing choices and pruning.
+
+  ## Pick or not pick
+
+  ### Recognition cues
+
+  - "Subsequences", "subsets", "choose some elements": every element is either in or out.
+  - Count them, list them, or find the best, under a condition on the chosen ones (a sum, a
+    size).
+  - n is small, around 20, because there are 2ⁿ choices.
+
+  ### Template
+
+  Count the subsequences whose sum is k. Input: n and k, then the n numbers.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+
+
+  def ways(i, total):  # ways to finish from index i, given the sum chosen so far
+      if i == n:  # every element decided: is this one choice a hit?
+          return 1 if total == k else 0
+      take = ways(i + 1, total + a[i])  # pick a[i]
+      skip = ways(i + 1, total)  # do not pick a[i]
+      return take + skip
+
+
+  print(ways(0, 0))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n;
+  long long k;
+  vector<long long> a;
+
+  long long ways(int i, long long total) {  // ways to finish from index i, given the sum so far
+      if (i == n) return total == k ? 1 : 0;  // every element decided: is this one choice a hit?
+      long long take = ways(i + 1, total + a[i]);  // pick a[i]
+      long long skip = ways(i + 1, total);  // do not pick a[i]
+      return take + skip;
+  }
+
+  int main() {
+      cin >> n >> k;
+      a.resize(n);
+      for (auto& x : a) cin >> x;
+      cout << ways(0, 0) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int n;
+      static long k;
+      static long[] a;
+
+      static long ways(int i, long total) {  // ways to finish from index i, given the sum so far
+          if (i == n) return total == k ? 1 : 0;  // every element decided: is this one choice a hit?
+          long take = ways(i + 1, total + a[i]);  // pick a[i]
+          long skip = ways(i + 1, total);  // do not pick a[i]
+          return take + skip;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          k = in.nextLong();
+          a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          System.out.println(ways(0, 0));
+      }
+  }
+  ```
+
+  ### Anchor problem: subsequences with sum k
+
+  ```text
+  4 3
+  1 2 0 3
+  ```
+
+  Four subsequences sum to 3: `1 2`, `1 2 0`, `3` and `0 3`. The answer is **4**.
+
+  **Step 1 — brute force with bitmasks.** Every number from 0 to 2ⁿ − 1 is one choice: bit i
+  says whether a[i] is in.
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+  count = 0
+  for mask in range(1 << n):  # one mask per choice of elements
+      if sum(a[i] for i in range(n) if mask >> i & 1) == k:
+          count += 1
+  print(count)
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int main() {
+      int n;
+      long long k;
+      cin >> n >> k;
+      vector<long long> a(n);
+      for (auto& x : a) cin >> x;
+      long long count = 0;
+      for (int mask = 0; mask < (1 << n); mask++) {  // one mask per choice of elements
+          long long total = 0;
+          for (int i = 0; i < n; i++)
+              if (mask >> i & 1) total += a[i];
+          if (total == k) count++;
+      }
+      cout << count << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          long k = in.nextLong();
+          long[] a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          long count = 0;
+          for (int mask = 0; mask < (1 << n); mask++) {  // one mask per choice of elements
+              long total = 0;
+              for (int i = 0; i < n; i++)
+                  if ((mask >> i & 1) == 1) total += a[i];
+              if (total == k) count++;
+          }
+          System.out.println(count);
+      }
+  }
+  ```
+
+  It prints 4. It works, but it rebuilds every sum from scratch (O(n · 2ⁿ)), cannot stop a
+  hopeless branch early, and stops at n ≈ 30 where masks run out. The recursive form fixes all
+  three: the sum is carried along, a branch can be cut, and the same shape memoizes into DP.
+
+  **Step 2 — wrong first attempt: stop when the sum is reached.**
+
+  ```python
+  import sys
+
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+
+
+  def ways(i, total):
+      if total == k:  # looks like an early win...
+          return 1
+      if i == n:
+          return 0
+      return ways(i + 1, total + a[i]) + ways(i + 1, total)
+
+
+  print(ways(0, 0))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  int n;
+  long long k;
+  vector<long long> a;
+
+  long long ways(int i, long long total) {
+      if (total == k) return 1;  // looks like an early win...
+      if (i == n) return 0;
+      return ways(i + 1, total + a[i]) + ways(i + 1, total);
+  }
+
+  int main() {
+      cin >> n >> k;
+      a.resize(n);
+      for (auto& x : a) cin >> x;
+      cout << ways(0, 0) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int n;
+      static long k;
+      static long[] a;
+
+      static long ways(int i, long total) {
+          if (total == k) return 1;  // looks like an early win...
+          if (i == n) return 0;
+          return ways(i + 1, total + a[i]) + ways(i + 1, total);
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          n = in.nextInt();
+          k = in.nextLong();
+          a = new long[n];
+          for (int i = 0; i < n; i++) a[i] = in.nextLong();
+          System.out.println(ways(0, 0));
+      }
+  }
+  ```
+
+  It prints **3**. After taking 1 and 2 the sum is 3, so it returns at once, before deciding
+  the 0. But `1 2` and `1 2 0` are different subsequences. A choice is only finished when
+  **every** index has been decided; that is the base case.
+
+  **Step 3 — pick or not pick.** The template. Each call decides index i and trusts the calls
+  below it. The top of the call tree:
+
+  | call | take a[i] | skip a[i] | returns |
+  |---|---|---|---|
+  | ways(0, 0) | ways(1, 1) = 2 | ways(1, 0) = 2 | **4** |
+  | ways(1, 1) | ways(2, 3) = 2 (`1 2`, `1 2 0`) | ways(2, 1) = 0 | 2 |
+  | ways(1, 0) | ways(2, 2) = 0 | ways(2, 0) = 2 (`3`, `0 3`) | 2 |
+
+  **Step 4 — what it costs, and where it leads.** 2ⁿ leaves, O(1) work each: O(2ⁿ) time and
+  O(n) stack depth. With non-negative numbers, a branch whose total already exceeds k can
+  return 0 at once (pruning). When the sums are small, `ways(i, total)` repeats for the same
+  arguments: memoize it and this becomes the subset-count DP of the 0/1 knapsack lesson.
+
+  ### Variants
+
+  1. *Subsets*: list every choice instead of counting; print at the base case.
+  2. *Target sum*: each element is added or subtracted, two choices per index again.
+  3. *Combination sum*: an element may be picked again, so "pick" stays at i.
+  4. *Subsets II* and *combination sum II*: duplicates in the input; skip equal values in the
+     not-pick branch.
+  5. *Partition equal subset sum*: pick or not pick, then memoize.
+
+  ### Contrast
+
+  **Subsequence or subarray?** Pick or not pick chooses any elements, so there are 2ⁿ
+  candidates. A subarray is contiguous: only n(n + 1)/2 candidates, handled by prefix sums or
+  windows. "Sum is k" means very different algorithms in the two cases.
+
+  ### Common mistakes
+
+  - Returning as soon as the condition holds, before every index is decided.
+  - A base case that returns 1 without checking the condition, counting all 2ⁿ choices.
+  - Forgetting to add a[i] in the take branch, which makes both branches identical.
+  - Using a shared list for the chosen elements without removing what was added (see
+    backtracking).
+
+  ## String generation
+
+  ### Recognition cues
+
+  - "Generate all" strings of a given length under a rule: balanced brackets, letters per
+    phone digit, no two equal neighbours.
+  - The output itself is exponential, so the goal is to **never build an invalid prefix**.
+  - The state is the string so far plus the counts the rule needs.
+
+  ### Template
+
+  Print every balanced string of n pairs of brackets, in lexicographic order. Input: n.
+
+  ```python
+  import sys
+
+  n = int(sys.stdin.read())
+  out = []
+
+
+  def build(s, opened, closed):  # s holds `opened` "(" and `closed` ")"
+      if len(s) == 2 * n:
+          out.append(s)
+          return
+      if opened < n:  # another "(" is allowed while some remain
+          build(s + "(", opened + 1, closed)
+      if closed < opened:  # ")" may only close something already open
+          build(s + ")", opened, closed + 1)
+
+
+  build("", 0, 0)
+  print("\n".join(out))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <string>
+  using namespace std;
+
+  int n;
+
+  void build(const string& s, int opened, int closed) {  // s holds `opened` "(" and `closed` ")"
+      if ((int)s.size() == 2 * n) {
+          cout << s << "\n";
+          return;
+      }
+      if (opened < n) build(s + "(", opened + 1, closed);  // another "(" while some remain
+      if (closed < opened) build(s + ")", opened, closed + 1);  // ")" only closes an open one
+  }
+
+  int main() {
+      cin >> n;
+      build("", 0, 0);
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int n;
+      static StringBuilder out = new StringBuilder();
+
+      static void build(String s, int opened, int closed) {  // s holds `opened` "(" and `closed` ")"
+          if (s.length() == 2 * n) {
+              out.append(s).append('\n');
+              return;
+          }
+          if (opened < n) build(s + "(", opened + 1, closed);  // another "(" while some remain
+          if (closed < opened) build(s + ")", opened, closed + 1);  // ")" only closes an open one
+      }
+
+      public static void main(String[] args) {
+          n = new Scanner(System.in).nextInt();
+          build("", 0, 0);
+          System.out.print(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: three pairs
+
+  `3` prints five strings: `((()))`, `(()())`, `(())()`, `()(())` and `()()()`. Trying `(`
+  before `)` gives them in lexicographic order, since `(` comes first in ASCII.
+
+  **Wrong first attempt — limit each bracket to n.** With `closed < n` instead of
+  `closed < opened`, strings like `())(()` appear: every count is right, but a `)` arrives with
+  nothing open. The rule that keeps a prefix valid is about the **prefix**, not the totals.
+  Generating all 2²ⁿ strings and filtering is correct but wastes nearly all the work.
+
+  ### Variants
+
+  1. *Generate parentheses*: the anchor.
+  2. *Letter combinations of a phone number*: one call per digit, one branch per letter.
+  3. *Letter case permutation*: two branches for each letter, one for each other character.
+  4. *The k-th happy string*: no two equal neighbours; count instead of listing to skip ahead.
+  5. *Binary strings without consecutive ones*: a `1` is allowed only after a `0`.
+
+  ### Contrast
+
+  **Filter at the end, or only extend valid prefixes?** Filtering is simple but explores every
+  string. If a rule can be checked on a prefix (open brackets ≥ closed), check it before each
+  extension, and the work is proportional to the output.
+
+  ### Common mistakes
+
+  - Checking the rule only on the finished string.
+  - `closed < n` instead of `closed < opened`.
+  - Building strings with repeated concatenation in a loop when a shared buffer with undo
+    would do (fine for small n).
+
+  ## Recursive stack ops
+
+  ### Recognition cues
+
+  - Rearrange a stack (reverse it, sort it, delete its middle) with **only** push, pop and
+    peek: no loops over its contents, no second structure.
+  - The call stack is the hidden second structure: each call holds one popped element.
+
+  ### Template
+
+  Reverse a stack. Input: n, then the stack from bottom to top. Output: bottom to top.
+
+  ```python
+  import sys
+
+  stack = [int(x) for x in sys.stdin.read().split()[1:]]  # bottom first
+
+
+  def insert_bottom(x):  # put x under everything, using only push and pop
+      if not stack:
+          stack.append(x)
+          return
+      top = stack.pop()  # hold the top in this call
+      insert_bottom(x)
+      stack.append(top)  # and put it back on the way out
+
+
+  def reverse():
+      if stack:
+          top = stack.pop()
+          reverse()  # trust it: the rest is now reversed
+          insert_bottom(top)  # the old top belongs at the bottom
+
+
+  reverse()
+  print(" ".join(map(str, stack)))
+  ```
+
+  ```cpp
+  #include <iostream>
+  #include <vector>
+  using namespace std;
+
+  vector<int> st;  // a stack: only push_back, pop_back and back
+
+  void insertBottom(int x) {  // put x under everything, using only push and pop
+      if (st.empty()) { st.push_back(x); return; }
+      int top = st.back();  // hold the top in this call
+      st.pop_back();
+      insertBottom(x);
+      st.push_back(top);  // and put it back on the way out
+  }
+
+  void reverseStack() {
+      if (st.empty()) return;
+      int top = st.back();
+      st.pop_back();
+      reverseStack();  // trust it: the rest is now reversed
+      insertBottom(top);  // the old top belongs at the bottom
+  }
+
+  int main() {
+      int n;
+      cin >> n;
+      st.resize(n);
+      for (auto& x : st) cin >> x;
+      reverseStack();
+      for (int i = 0; i < n; i++) cout << st[i] << (i + 1 < n ? " " : "\n");
+  }
+  ```
+
+  ```java
+  import java.util.*;
+
+  public class Solution {
+      static List<Integer> st = new ArrayList<>();  // a stack: add, remove the last, read the last
+
+      static void insertBottom(int x) {  // put x under everything, using only push and pop
+          if (st.isEmpty()) { st.add(x); return; }
+          int top = st.remove(st.size() - 1);  // hold the top in this call
+          insertBottom(x);
+          st.add(top);  // and put it back on the way out
+      }
+
+      static void reverseStack() {
+          if (st.isEmpty()) return;
+          int top = st.remove(st.size() - 1);
+          reverseStack();  // trust it: the rest is now reversed
+          insertBottom(top);  // the old top belongs at the bottom
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          for (int i = 0; i < n; i++) st.add(in.nextInt());
+          reverseStack();
+          StringBuilder out = new StringBuilder();
+          for (int i = 0; i < n; i++) out.append(st.get(i)).append(i + 1 < n ? " " : "\n");
+          System.out.print(out);
+      }
+  }
+  ```
+
+  ### Anchor problem: reverse 1 2 3 4
+
+  `4` then `1 2 3 4` (4 on top) prints `4 3 2 1`.
+
+  **Wrong first attempt — pop, recurse, push back.** `reverse()` that pops the top, reverses the
+  rest and pushes the top back **on top** leaves the stack unchanged: 1 2 3 4. The old top
+  must go to the bottom, which is a second recursion (`insert_bottom`). That is O(n) per
+  insert, O(n²) in total, which is the price of "no extra structure".
+
+  ### Variants
+
+  1. *Sort a stack*: like reverse, but insert each popped element in its sorted place.
+  2. *Delete the middle element*: pop down to the middle, drop it, push back.
+  3. *Reverse a queue* with recursion.
+
+  ### Contrast
+
+  **Recursion or an explicit second stack?** With a second stack, reversal is one loop in
+  O(n). The recursive version exists to practise trusting calls; in real code, prefer the
+  explicit structure.
+
+  ### Common mistakes
+
+  - Pushing the held element back on top instead of at the bottom.
+  - Forgetting the empty-stack base case in the insert.
+  - Deep recursion for large n (Python's default limit is 1000 frames).
+
+  ## Divide and reduce
+
+  ### Recognition cues
+
+  - The answer for n follows from the answer for a **smaller** n (n − 1, or n / 2) by a small
+    adjustment: renumbering, shifting, mirroring.
+  - Simulating the whole process is O(n²) or worse.
+  - Classics: Josephus, the Tower of Hanoi, the k-th symbol in a grammar.
+
+  ### Template
+
+  Josephus: n people in a circle, every k-th is removed. Print the survivor (1-based).
+  Input: n and k.
+
+  ```python
+  import sys
+
+  sys.setrecursionlimit(20000)
+  n, k = map(int, sys.stdin.read().split())
+
+
+  def survivor(m):  # 0-based seat of the survivor among m people
+      if m == 1:
+          return 0
+      return (survivor(m - 1) + k) % m  # renumber from the person after the first removal
+
+
+  print(survivor(n) + 1)
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  int k;
+
+  int survivor(int m) {  // 0-based seat of the survivor among m people
+      if (m == 1) return 0;
+      return (survivor(m - 1) + k) % m;  // renumber from the person after the first removal
+  }
+
+  int main() {
+      int n;
+      cin >> n >> k;
+      cout << survivor(n) + 1 << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static int k;
+
+      static int survivor(int m) {  // 0-based seat of the survivor among m people
+          if (m == 1) return 0;
+          return (survivor(m - 1) + k) % m;  // renumber from the person after the first removal
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          int n = in.nextInt();
+          k = in.nextInt();
+          System.out.println(survivor(n) + 1);
+      }
+  }
+  ```
+
+  ### Anchor problem: five people, every second one
+
+  `5 2`: people 2, 4, 1 and 5 leave in that order, and person **3** survives. The recursion:
+  survivor(1) = 0, survivor(2) = (0 + 2) % 2 = 0, survivor(3) = (0 + 2) % 3 = 2,
+  survivor(4) = (2 + 2) % 4 = 0, survivor(5) = (0 + 2) % 5 = 2, and 2 + 1 = 3.
+
+  **Wrong first attempt — forget the renumbering.** After the first removal, the circle of
+  m − 1 people starts counting from the person **after** the one removed. The smaller answer
+  is in that new numbering, so it must be shifted by k (mod m) to get back. Returning
+  `survivor(m − 1)` unchanged, or shifting by 1, gives the wrong seat.
+
+  ### Variants
+
+  1. *Find the winner of the circular game*: the anchor.
+  2. *Josephus problem I* (CSES): print the order of removal, which needs simulation.
+  3. *K-th symbol in grammar*: row n is row n − 1 followed by its complement, so recurse on the
+     half that contains k.
+  4. *Tower of Hanoi* (CSES): move n − 1 discs aside, move the largest, move them back:
+     2ⁿ − 1 moves.
+  5. *Elimination game*: halve the list each round, tracking where the head moves.
+
+  ### Contrast
+
+  **Simulate or reduce?** A simulation with a list removes from the middle each step: O(n²).
+  If the remaining process is the same problem on fewer elements with renumbered positions,
+  reduce instead: O(n) here, O(log n) when n halves.
+
+  ### Common mistakes
+
+  - Mixing 0-based and 1-based seats: compute 0-based, add 1 at the end.
+  - Forgetting the shift when mapping the smaller answer back.
+  - Deep recursion: an iterative loop over m = 2 … n does the same in O(1) memory.
+
+  ## Fast power
+
+  ### Recognition cues
+
+  - xⁿ with n up to 10¹⁸, usually modulo m.
+  - "Apply the same step n times" where two half-runs combine into a whole run.
+
+  ### Template
+
+  Print x^e mod m. Input: x, e and m.
+
+  ```python
+  import sys
+
+  x, e, m = map(int, sys.stdin.read().split())
+
+
+  def power(b, p):  # b^p mod m by halving p
+      if p == 0:
+          return 1 % m
+      half = power(b, p // 2)  # computed once, then squared
+      result = half * half % m
+      return result * b % m if p % 2 else result
+
+
+  print(power(x % m, e))
+  ```
+
+  ```cpp
+  #include <iostream>
+  using namespace std;
+
+  long long m;
+
+  long long power(long long b, long long p) {  // b^p mod m by halving p
+      if (p == 0) return 1 % m;
+      long long half = power(b, p / 2);  // computed once, then squared
+      long long result = half * half % m;
+      return p % 2 ? result * b % m : result;
+  }
+
+  int main() {
+      long long x, e;
+      cin >> x >> e >> m;
+      cout << power(x % m, e) << "\n";
+  }
+  ```
+
+  ```java
+  import java.util.Scanner;
+
+  public class Solution {
+      static long m;
+
+      static long power(long b, long p) {  // b^p mod m by halving p
+          if (p == 0) return 1 % m;
+          long half = power(b, p / 2);  // computed once, then squared
+          long result = half * half % m;
+          return p % 2 == 1 ? result * b % m : result;
+      }
+
+      public static void main(String[] args) {
+          Scanner in = new Scanner(System.in);
+          long x = in.nextLong(), e = in.nextLong();
+          m = in.nextLong();
+          System.out.println(power(x % m, e));
+      }
+  }
+  ```
+
+  ### Anchor problem: 3¹³ mod 1000
+
+  `3 13 1000` prints **323**: 3¹³ = 1594323. The calls are power(3, 13) → power(3, 6) →
+  power(3, 3) → power(3, 1) → power(3, 0): five calls instead of thirteen multiplications.
+
+  **Wrong first attempt — call the half twice.** `power(b, p // 2) * power(b, p // 2)` looks
+  the same, but each call makes two more: 2^(log p) = p calls, no better than multiplying p
+  times. Store the half once and square it. (The competitive programming course teaches the
+  iterative, bit-by-bit version in its fast power pattern.)
+
+  ### Variants
+
+  1. *Pow(x, n)*: real numbers and negative n, so compute 1 / x^(−n).
+  2. *Count good numbers*: 5^(even positions) · 4^(odd positions) mod 10⁹ + 7.
+  3. *Exponentiation* (CSES): many queries of the template.
+  4. *Super pow*: an exponent given as a digit array, reduced one digit at a time.
+
+  ### Contrast
+
+  **Halve the exponent, or count down?** Counting down (`b · power(b, p − 1)`) is O(p) and,
+  recursively, overflows the stack for large p. Halving is O(log p) and depth log p.
+
+  ### Common mistakes
+
+  - Two recursive calls for the half.
+  - Forgetting `% m` after each multiplication, or 32-bit products overflowing before it.
+  - `1 % m` at p = 0 matters only for m = 1, where every answer is 0.
+
+  ## Worked walkthrough
+
+  **Problem.** Target sum: put `+` or `−` before each of `1 1 1 1 1` so the total is 3. How
+  many ways?
+
+  1. *Shape.* Each index has two choices: pick or not pick, with "add" and "subtract" as the
+     choices.
+  2. *State.* (i, total): the index to decide next and the total so far.
+  3. *Base case.* i = 5: count 1 if the total is 3.
+  4. *Count.* A total of 3 needs four `+` and one `−`, and the `−` can be on any of the five
+     ones: **5** ways. The recursion reaches the same count by trying all 32 sign patterns.
+  5. *Next step.* With larger inputs, (i, total) repeats, so memoize: it becomes a counting DP.
+
+  ### Why this works
+
+  The recursion tree has one level per index and one branch per choice, so the paths from the
+  root to the leaves are exactly the possible choices, each once. Each call returns the number
+  of good leaves below it, and its own count is the sum over its branches because the branches
+  share no leaves. By induction from the leaves up, the root returns the number of good
+  choices. Stopping early or skipping a branch removes leaves, which is why those changes give
+  wrong counts.
+
+  ### Boundary cases and cost
+
+  - n = 0: one choice, the empty one; it counts when k = 0.
+  - k = 0: the empty subsequence counts too, and so does every choice of zeros.
+  - Recursion depth equals n (or the exponent's bit length for fast power); Python needs
+    `sys.setrecursionlimit` beyond about 1000 frames.
+  - Cost: O(2ⁿ) for pick or not pick, proportional to the output for generation, O(n²) for
+    stack reversal, O(n) for Josephus and O(log e) for fast power.
+
+  ### Check your understanding
+
+  `3 1` then `1 0 1`: how many subsequences sum to 1, and which does "stop when the sum is
+  reached" miss?
+
+  Try it on paper before reading the reasoning below.
+
+  > The ones at index 0 and index 2, each with or without the 0: 4 subsequences. Stopping as
+  > soon as the sum is 1 counts "first 1" once and never decides the 0 after it, so it finds 3.
+key_points:
+- Name the state, the choices and the base case; trust the smaller call.
+- 'Pick or not pick: two branches per index; a choice is finished only when every index is decided.'
+- Carry the running total in the call, so each leaf costs O(1).
+- 'String generation: only extend valid prefixes, such as ")" only when closed < opened.'
+- 'Recursive stack ops: each call holds one popped element; reverse needs insert-at-bottom.'
+- 'Divide and reduce: answer for n from the answer for a smaller n, shifted back (Josephus).'
+- 'Fast power: compute the half once and square it, O(log n).'
+pitfalls:
+- Returning as soon as the sum is reached, before every index is decided.
+- A base case that counts every choice.
+- Allowing ")" whenever fewer than n have been used.
+- Pushing the held element back on top when reversing a stack.
+- Forgetting to shift the smaller Josephus answer.
+- Calling the half power twice.
+resources:
+- title: Recursion in Programming – Full Course
+  url: https://www.youtube.com/watch?v=IJDJ0kBx2LM
+  kind: video
+  source: freeCodeCamp
+  minutes: 110
+  level: core
+- title: "Tech Interview Handbook: Recursion cheatsheet"
+  url: https://www.techinterviewhandbook.org/algorithms/recursion/
+  kind: article
+  source: Tech Interview Handbook
+  minutes: 10
+  level: core
+- title: Recursion trees visualized
+  url: https://visualgo.net/en/recursion
+  kind: visualizer
+  source: VisuAlgo
+  minutes: 15
+  level: core
+- title: Subsets – Backtracking
+  url: https://www.youtube.com/watch?v=REOH22Xwdkk
+  kind: video
+  source: NeetCode
+  minutes: 9
+  level: deep
+quiz:
+- id: two-branches
+  kind: mcq
+  prompt: In pick or not pick, what does each call decide?
+  options:
+  - Whether element i is in the chosen subsequence
+  - Which element comes next in a sorted order
+  - Where to split the array
+  - The size of the subsequence
+  answer: 0
+  explanation: Two branches per index, so 2ⁿ choices.
+  difficulty: 1
+- id: leaves
+  kind: mcq
+  prompt: How many leaves does the pick or not pick tree have for n = 10?
+  options:
+  - '1024'
+  - '10'
+  - '100'
+  - '20'
+  answer: 0
+  explanation: 2¹⁰ choices.
+  difficulty: 2
+- id: early-stop
+  kind: mcq
+  prompt: 1 2 0 3 with k = 3. Stopping as soon as the sum reaches 3 gives 3. What is the right count?
+  options:
+  - '4'
+  - '3'
+  - '2'
+  - '16'
+  answer: 0
+  explanation: 1 2 and 1 2 0 are different subsequences.
+  difficulty: 2
+- id: close-rule
+  kind: mcq
+  prompt: Generating balanced brackets, when may ")" be added?
+  options:
+  - When fewer ")" than "(" are in the string so far
+  - When fewer than n ")" have been used
+  - Always
+  - Only at the end
+  answer: 0
+  explanation: It must close something already open.
+  difficulty: 2
+- id: catalan-three
+  kind: mcq
+  prompt: How many balanced strings of 3 bracket pairs are there?
+  options:
+  - '5'
+  - '6'
+  - '8'
+  - '20'
+  answer: 0
+  explanation: ((())), (()()), (())(), ()(()), ()()().
+  difficulty: 3
+- id: stack-bottom
+  kind: mcq
+  prompt: Reversing a stack with recursion, where does the popped top go after the rest is reversed?
+  options:
+  - To the bottom, through a second recursion
+  - Back on top
+  - Into a second stack
+  - It is discarded
+  answer: 0
+  explanation: Pushing it back on top leaves the stack unchanged.
+  difficulty: 3
+- id: josephus
+  kind: mcq
+  prompt: Josephus with 5 people, every 2nd removed. Who survives?
+  options:
+  - '3'
+  - '5'
+  - '1'
+  - '4'
+  answer: 0
+  explanation: 2, 4, 1 and 5 leave in that order.
+  difficulty: 4
+- id: half-twice
+  kind: mcq
+  prompt: power(b, p) returns power(b, p // 2) * power(b, p // 2) for even p. How many calls for p = 1024?
+  options:
+  - About 2000, as many as multiplying p times
+  - About 11
+  - About 1024²
+  - '1'
+  answer: 0
+  explanation: Each call makes two, so the tree has about 2p nodes.
+  difficulty: 4
+- id: memo-link
+  kind: mcq
+  prompt: When does counting subsequences with sum k become a DP?
+  options:
+  - When (i, total) repeats, because the sums are small; memoize it
+  - Never
+  - When n is above 30
+  - When the array is sorted
+  answer: 0
+  explanation: That is the subset-count table of the 0/1 knapsack lesson.
+  difficulty: 5
+problems:
+- squad-selection
+- seating-plans
+practice_links:
+- title: Subsets
+  url: https://leetcode.com/problems/subsets/
+  platform: LeetCode
+  difficulty: medium
+- title: Target Sum
+  url: https://leetcode.com/problems/target-sum/
+  platform: LeetCode
+  difficulty: medium
+- title: Combination Sum
+  url: https://leetcode.com/problems/combination-sum/
+  platform: LeetCode
+  difficulty: medium
+- title: Generate Parentheses
+  url: https://leetcode.com/problems/generate-parentheses/
+  platform: LeetCode
+  difficulty: medium
+- title: Letter Combinations of a Phone Number
+  url: https://leetcode.com/problems/letter-combinations-of-a-phone-number/
+  platform: LeetCode
+  difficulty: medium
+- title: Find the Winner of the Circular Game
+  url: https://leetcode.com/problems/find-the-winner-of-the-circular-game/
+  platform: LeetCode
+  difficulty: medium
+- title: K-th Symbol in Grammar
+  url: https://leetcode.com/problems/k-th-symbol-in-grammar/
+  platform: LeetCode
+  difficulty: medium
+- title: Pow(x, n)
+  url: https://leetcode.com/problems/powx-n/
+  platform: LeetCode
+  difficulty: medium
+- title: Tower of Hanoi
+  url: https://cses.fi/problemset/task/2165
+  platform: CSES
+  difficulty: easy
+provenance:
+  origin: original
+status: live

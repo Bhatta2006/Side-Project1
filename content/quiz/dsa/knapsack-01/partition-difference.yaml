@@ -1,0 +1,63 @@
+id: quiz:dsa:knapsack-01:partition-difference
+family: partition-difference
+concept: dsa:knapsack-01
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: answer-formula
+  band: 2
+  format: mcq
+  prompt: Total 23, the best reachable sum up to half is 11. What is the minimum difference?
+  options:
+  - '1'
+  - '0'
+  - '12'
+  - '11'
+  answer: 0
+  misconceptions:
+  - null
+  - partition-half-not-difference
+  - knapsack-ignore-capacity
+  - confuse-index-value
+  explanation: The other side is 23 − 11 = 12, so the difference is 23 − 2·11 = 1.
+- id: greedy-piles
+  band: 3
+  format: classify
+  prompt: Numbers 3 3 2 2 2. Greedy into the lighter pile gives a difference of 2. What is the best?
+  options:
+  - '0'
+  - '2'
+  - '1'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - greedy-partition
+  - greedy-partition
+  - greedy-partition
+  explanation: '{3, 3} and {2, 2, 2} both sum to 6.'
+- id: stones-same
+  band: 4
+  format: classify
+  prompt: Smashing stones until one is left, minimise it. Which known problem is this?
+  options:
+  - Minimum difference partition
+  - Unbounded knapsack
+  - Sorting
+  - Sliding window
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-partition-greedy-vs-dp
+  - pattern-01-vs-unbounded-knapsack
+  - pattern-sort-breaks-order
+  explanation: 'Each smash puts one stone on each side: the last stone is a signed sum.'
+status: provisional
+provenance:
+  origin: original

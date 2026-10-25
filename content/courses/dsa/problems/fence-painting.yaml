@@ -1,0 +1,109 @@
+id: fence-painting
+title: Colouring the posts
+concepts: [dp-introduction]
+difficulty: medium
+statement: |
+  A fence has `n` posts in a row, and you have paint in `k` colours. Every post gets one
+  colour. To keep the fence interesting, no **three consecutive** posts may share the same
+  colour (two in a row is fine).
+
+  How many different ways are there to paint the fence? Two ways differ if some post gets a
+  different colour. Print the answer modulo 1,000,000,007.
+input_format: |
+  One line with two integers n and k.
+output_format: The number of valid paintings modulo 1000000007.
+constraints:
+  - 1 ≤ n ≤ 10^5
+  - 1 ≤ k ≤ 10^5
+examples:
+  - input: "3 2"
+    output: "6"
+    explanation: Of the 8 paintings with 2 colours, only "AAA" and "BBB" break the rule.
+  - input: "1 5"
+    output: "5"
+  - input: "4 1"
+    output: "0"
+hints:
+  - Think about the last post. Is it the same colour as the post before it, or a different one?
+  - Let same[i] and diff[i] count paintings of the first i posts whose last two posts match or differ. Which of them can be followed by a post of the same colour?
+  - "same[i] = diff[i − 1] (repeat the last colour once), and diff[i] = (same[i − 1] + diff[i − 1]) · (k − 1). Combined, total[i] = (k − 1) · (total[i − 1] + total[i − 2])."
+approach: |
+  Classify paintings by whether the last two posts match. A matching pair can only extend a
+  painting whose last two posts differ; a new colour can follow anything in k − 1 ways. So
+  total[i] = (k − 1)·(total[i − 1] + total[i − 2]) with total[1] = k and total[2] = k². Keep
+  two rolling values and take everything modulo 1e9 + 7. O(n) time, O(1) memory.
+reference: |
+  MOD = 10**9 + 7
+  n, k = map(int, input().split())
+  if n == 1:
+      print(k % MOD)
+  else:
+      prev, cur = k % MOD, k * k % MOD  # total(1), total(2)
+      for _ in range(n - 2):
+          prev, cur = cur, (k - 1) * (prev + cur) % MOD
+      print(cur)
+brute: |
+  from itertools import product
+  n, k = map(int, input().split())
+  count = 0
+  for colours in product(range(k), repeat=n):
+      if all(not (colours[i] == colours[i - 1] == colours[i - 2]) for i in range(2, n)):
+          count += 1
+  print(count % (10**9 + 7))
+references:
+  cpp: |
+    #include <iostream>
+    using namespace std;
+
+    int main() {
+        const long long MOD = 1000000007;
+        long long n, k;
+        cin >> n >> k;
+        if (n == 1) {
+            cout << k % MOD << "\n";
+            return 0;
+        }
+        long long prev = k % MOD, cur = k % MOD * (k % MOD) % MOD;  // total(1), total(2)
+        for (long long i = 0; i < n - 2; i++) {
+            long long next = (k - 1) % MOD * ((prev + cur) % MOD) % MOD;
+            prev = cur;
+            cur = next;
+        }
+        cout << cur << "\n";
+    }
+  java: |
+    import java.util.Scanner;
+
+    public class Solution {
+        public static void main(String[] args) {
+            final long MOD = 1_000_000_007L;
+            Scanner in = new Scanner(System.in);
+            long n = in.nextLong(), k = in.nextLong();
+            if (n == 1) {
+                System.out.println(k % MOD);
+                return;
+            }
+            long prev = k % MOD, cur = k % MOD * (k % MOD) % MOD;  // total(1), total(2)
+            for (long i = 0; i < n - 2; i++) {
+                long next = (k - 1) % MOD * ((prev + cur) % MOD) % MOD;
+                prev = cur;
+                cur = next;
+            }
+            System.out.println(cur);
+        }
+    }
+generator: |
+  def cases(rng):
+      yield "1 1"
+      yield "2 1"
+      yield "3 1"
+      yield "2 100000"
+      yield "100000 100000"
+      yield "100000 2"
+      yield "99999 1"
+      for _ in range(6):
+          yield f"{rng.randint(1, 100000)} {rng.randint(1, 100000)}"
+small_generator: |
+  def cases(rng):
+      for _ in range(300):
+          yield f"{rng.randint(1, 7)} {rng.randint(1, 3)}"

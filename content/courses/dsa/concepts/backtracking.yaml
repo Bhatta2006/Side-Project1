@@ -2,7 +2,7 @@ id: backtracking
 title: Backtracking
 summary: Explore every choice recursively — choose, explore, un-choose — and prune branches that cannot succeed.
 module: recursive-structures
-prerequisites: [zero:recursion, complexity]
+prerequisites: [zero:recursion, complexity, recursion-patterns]
 difficulty: 4
 estimated_minutes: 60
 lesson: |

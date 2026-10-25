@@ -1,0 +1,62 @@
+id: quiz:zero:operators-and-expressions:compound-and-increment
+family: compound-and-increment
+concept: zero:operators-and-expressions
+format: mcq
+tracks:
+- foundations
+languages:
+- python
+- cpp
+- java
+items:
+- id: plus-equals
+  band: 1
+  format: trace
+  prompt: total = 5, then total += 3. What is total?
+  options:
+  - '8'
+  - '3'
+  - '5'
+  - '53'
+  answer: 0
+  misconceptions:
+  - null
+  - compound-eq-plus
+  - overwrite-not-accumulate
+  - trace-step-slip
+  explanation: total = total + 3.
+- id: eq-plus
+  band: 2
+  format: trace
+  prompt: total starts at 0, and for each x in 3 8 5 2 the loop runs total =+ x. What is total at the end?
+  options:
+  - '2'
+  - '18'
+  - '0'
+  - An error
+  answer: 0
+  misconceptions:
+  - null
+  - compound-eq-plus
+  - accumulator-starts-at-bound
+  - syntax-delimiters
+  explanation: =+ x means = (+x), so total is just the last x.
+- id: product
+  band: 3
+  format: trace
+  prompt: p = 0, then p *= x for x in 2 3 4. What is p?
+  options:
+  - '0'
+  - '24'
+  - '9'
+  - '1'
+  answer: 0
+  misconceptions:
+  - null
+  - product-init-zero
+  - sum-not-product
+  - accumulator-init-one
+  explanation: Anything times 0 is 0; a product must start at 1.
+status: provisional
+provenance:
+  origin: original

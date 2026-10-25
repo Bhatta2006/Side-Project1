@@ -1,0 +1,234 @@
+id: quiz:dsa:dp-on-trees:rob-or-skip
+family: rob-or-skip
+concept: dsa:dp-on-trees
+pattern: dsa:dp-on-trees/rob-or-skip
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: tree_rob
+  params:
+    nodes:
+    - 3
+    - 7
+    value:
+    - 1
+    - 9
+  reference: rob_brute(val, left, right)
+  seeds:
+    practice:
+      start: 0
+      stop: 42
+    assessment:
+      start: 42
+      stop: 60
+distractors:
+- rule: take every other level
+  misconception: rob-alternate-levels
+- rule: add every value
+  misconception: tree-sum-all
+- rule: answer with take of the root only
+  misconception: rob-answer-take-only
+- rule: take the single best house
+  misconception: knapsack-single-item
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Which question is rob-or-skip DP on a tree?
+  options:
+  - Invite people to maximise fun, never a person together with their direct manager
+  - The deepest node in the tree
+  - The sum of all values
+  - The nodes on each level
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-one-answer-vs-states
+  - tree-sum-all
+  - rob-alternate-levels
+  explanation: No two adjacent nodes, maximise the total.
+- id: states
+  band: 1
+  format: mcq
+  prompt: Why does each node keep two numbers, take and skip?
+  options:
+  - The parent's choice depends on whether the child was chosen
+  - To store the left and right subtrees
+  - To avoid recursion
+  - One for each level
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-one-answer-vs-states
+  - confuse-index-value
+  - rob-alternate-levels
+  explanation: A robbed parent needs the child's skip value.
+- id: take
+  band: 2
+  format: trace
+  prompt: Node value 6; left child take 4, skip 5; right child take 2, skip 3. What is take[x]?
+  options:
+  - '14'
+  - '12'
+  - '17'
+  - '6'
+  answer: 0
+  misconceptions:
+  - null
+  - rob-take-adds-take
+  - rob-skip-forces-take
+  - dp-wrong-subproblem
+  explanation: 6 + skip 5 + skip 3.
+- id: skip
+  band: 2
+  format: trace
+  prompt: Same node. What is skip[x]?
+  options:
+  - '8'
+  - '6'
+  - '7'
+  - '14'
+  answer: 0
+  misconceptions:
+  - null
+  - rob-skip-forces-take
+  - rob-skip-forces-take
+  - count-vs-sum
+  explanation: max(4, 5) + max(2, 3) = 5 + 3.
+- id: levels
+  band: 3
+  format: classify
+  prompt: Why is "take all odd levels or all even levels" not enough?
+  options:
+  - The best set can mix parities, such as the first and fourth level of a chain
+  - Levels can be adjacent
+  - It is too slow
+  - It is always optimal
+  answer: 0
+  misconceptions:
+  - null
+  - rob-alternate-levels
+  - rob-alternate-levels
+  - pattern-brute-force-default
+  explanation: 10 → 1 → 1 → 10 needs levels 1 and 4.
+- id: root
+  band: 3
+  format: bug_spot
+  prompt: The code prints take[root]. When is that wrong?
+  options:
+  - When skipping the root gives more
+  - Never
+  - Only for a single node
+  - When the tree is a chain of 2
+  answer: 0
+  misconceptions:
+  - null
+  - rob-answer-take-only
+  - rob-answer-take-only
+  - dp-wrong-base-case
+  explanation: The answer is max(take, skip) at the root.
+- id: adjacent
+  band: 4
+  format: bug_spot
+  prompt: take[x] adds take of the children. What does that allow?
+  options:
+  - Robbing a house and its child together
+  - Skipping too many houses
+  - Nothing
+  - Robbing the root twice
+  answer: 0
+  misconceptions:
+  - null
+  - rob-take-adds-take
+  - rob-skip-forces-take
+  - rob-take-adds-take
+  explanation: A robbed parent forces its children to be skipped.
+- id: complexity
+  band: 4
+  format: complexity
+  prompt: n nodes. Time of the take/skip pass?
+  options:
+  - O(n)
+  - O(2^n)
+  - O(n²)
+  - O(n log n)
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  explanation: Two numbers per node, each from its two children.
+- id: recursion
+  band: 5
+  format: classify
+  prompt: The plain recursion reaches into grandchildren. Why is it slow without memoization?
+  options:
+  - Each node is reached from both its parent and its grandparent, so calls multiply
+  - Recursion is always slow
+  - It visits the leaves twice only
+  - It is not slow
+  answer: 0
+  misconceptions:
+  - null
+  - dp-recompute-subproblems
+  - dp-recompute-subproblems
+  - pattern-brute-force-default
+  explanation: On a chain the number of calls grows like the Fibonacci numbers.
+- id: chain
+  band: 5
+  format: trace
+  prompt: A chain 2 → 7 → 9. What is the most money?
+  options:
+  - '11'
+  - '9'
+  - '16'
+  - '18'
+  answer: 0
+  misconceptions:
+  - null
+  - knapsack-single-item
+  - rob-take-adds-take
+  - tree-sum-all
+  explanation: Nodes 1 and 3.
+- id: cover-transfer
+  band: 6
+  format: classify
+  prompt: Every edge must have at least one guarded end; minimise guards. How does skip[x] change?
+  options:
+  - A skipped node forces both children to be guarded (take)
+  - It stays max(take, skip) per child
+  - It becomes 0
+  - Nothing changes
+  answer: 0
+  misconceptions:
+  - null
+  - rob-skip-forces-take
+  - dp-wrong-base-case
+  - pattern-one-answer-vs-states
+  explanation: The edge between x and a child needs the child guarded if x is not.
+- id: camera-transfer
+  band: 6
+  format: classify
+  prompt: A camera covers its node and its neighbours; minimise cameras. How many states per node?
+  options:
+  - Three - camera, covered by a child, waiting for the parent
+  - Two
+  - One
+  - Four
+  answer: 0
+  misconceptions:
+  - null
+  - cover-two-states-only
+  - pattern-one-answer-vs-states
+  - cover-two-states-only
+  explanation: Coverage can come from below or from above.
+status: provisional
+provenance:
+  origin: original

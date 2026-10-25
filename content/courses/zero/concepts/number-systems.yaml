@@ -1,0 +1,73 @@
+id: number-systems
+title: Number systems and bits
+summary: Binary, octal and hex, two's complement at a glance, and the bitwise operators with their everyday
+  tricks.
+module: control-flow
+prerequisites:
+- math-on-numbers
+difficulty: 3
+estimated_minutes: 45
+status: draft
+lesson: '## Base conversion
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Bit operators
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Bit tricks
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

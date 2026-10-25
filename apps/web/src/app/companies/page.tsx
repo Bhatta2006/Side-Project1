@@ -116,7 +116,7 @@ export default function Companies() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           {showList ? (
-            <aside aria-label="Companies" className="h-fit rounded-card border bg-card p-3 lg:sticky lg:top-24">
+            <aside aria-label="Companies" className="h-fit paper rounded-card p-3 lg:sticky lg:top-24">
               <div className="relative mb-2">
                 <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <input type="search" placeholder="Search companies" aria-label="Search companies" value={query} onChange={e => setQuery(e.target.value)} className="h-12 w-full rounded-control border border-border-strong bg-card pr-3 pl-10 text-[15px] outline-none focus-visible:border-ring" />
@@ -146,7 +146,7 @@ export default function Companies() {
                 <Button variant="ghost" size="sm" className="-ml-3 mb-2" onClick={() => choose('')}><ArrowLeft data-icon="inline-start" /> All companies</Button>
               ) : null}
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-                <h2 id="company-heading" className="font-display text-2xl font-bold tracking-[-0.03em]">
+                <h2 id="company-heading" className="font-display text-2xl font-semibold tracking-[-0.03em]">
                   {view?.name ?? 'Loading'} {view ? <span className="text-base font-semibold text-muted-foreground tabular-nums">{view.total} unlocked</span> : null}
                 </h2>
                 <div className="flex flex-wrap gap-2">
@@ -162,7 +162,7 @@ export default function Companies() {
                 </div>
               </div>
 
-              <div className="hidden overflow-hidden rounded-card border bg-card md:block">
+              <div className="hidden overflow-hidden paper rounded-card md:block">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
@@ -197,7 +197,7 @@ export default function Companies() {
               </div>
               <ul className="grid gap-3 md:hidden">
                 {view?.items.map(p => (
-                  <li key={p.id} className="grid gap-3 rounded-card border bg-card p-4">
+                  <li key={p.id} className="grid gap-3 paper rounded-card p-4">
                     <ProblemName problem={p} className="text-base" />
                     <div className="flex flex-wrap items-center gap-3"><Difficulty level={p.difficulty} /><Frequency value={p.frequency} /></div>
                     {p.concept ? <Link href={conceptHref(p.concept.id)} className="inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4"><StatusIcon status={statusFromBand(p.concept.band)} size={20} />{p.concept.title}</Link> : null}

@@ -1,0 +1,80 @@
+id: quiz:dsa:dp-advanced-patterns:game-minimax
+family: game-minimax
+concept: dsa:dp-advanced-patterns
+format: mcq
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+items:
+- id: transition
+  band: 2
+  format: mcq
+  prompt: diff[i][j] is the mover's best (mine − theirs) on a[i..j]. What does taking a[j] give?
+  options:
+  - a[j] − diff[i][j−1]
+  - a[j] + diff[i][j−1]
+  - a[j]
+  - diff[i][j−1] − a[j]
+  answer: 0
+  misconceptions:
+  - null
+  - game-own-score-only
+  - game-greedy-end
+  - game-own-score-only
+  explanation: After the move the opponent moves on the rest and gets that difference.
+- id: greedy
+  band: 3
+  format: trace
+  prompt: 4 5 1 3, both play well. Taking the larger end each time gives the first player 7. What is the
+    best?
+  options:
+  - '8'
+  - '7'
+  - '9'
+  - '13'
+  answer: 0
+  misconceptions:
+  - null
+  - game-greedy-end
+  - off-by-one-output
+  - count-vs-sum
+  explanation: Take 3 first; the opponent must open the 5.
+- id: score
+  band: 4
+  format: mcq
+  prompt: The total is 20 and the first player's best difference is 4. What is the first player's score?
+  options:
+  - '12'
+  - '8'
+  - '24'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - game-own-score-only
+  - count-vs-sum
+  - game-own-score-only
+  explanation: mine + theirs = 20 and mine − theirs = 4, so mine = 12.
+- id: contrast
+  band: 5
+  format: classify
+  prompt: Why does a greedy "best move now" fail in two-player games?
+  options:
+  - It ignores the opponent's best reply
+  - Moves cannot be compared
+  - Games have no optimal strategy
+  - It does not fail
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-game-greedy-vs-minimax
+  - game-greedy-end
+  - pattern-game-greedy-vs-minimax
+  explanation: Minimax assumes the opponent then plays their best move too.
+status: provisional
+provenance:
+  origin: original

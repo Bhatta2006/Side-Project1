@@ -1,0 +1,74 @@
+id: advanced-data-structures
+title: Advanced data structures (awareness)
+summary: When an interview needs a Fenwick tree, a segment tree or an ordered set, and how to use them.
+module: design-and-practice
+prerequisites:
+- binary-trees
+- prefix-sums
+- bit-manipulation
+difficulty: 5
+estimated_minutes: 50
+status: draft
+lesson: '## Fenwick intro
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Segment tree intro
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+
+  ## Ordered set
+
+
+  ### Recognition cues
+
+
+  ### Template
+
+
+  ### Anchor problem
+
+
+  ### Variants
+
+
+  ### Contrast
+
+
+  ### Common mistakes
+
+  '

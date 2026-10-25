@@ -1,0 +1,126 @@
+concept: dsa:dp-lcs
+pattern: dsa:dp-lcs/lcs
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the LCS pattern pack (syllabus expansion, Phase 2).
+rollback: remove content/atoms/dsa/dp-lcs/lcs.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+- id: lcs-worked
+  kind: worked
+  title: 'Worked: zabcd and abczd'
+  objective: Fill the prefix table and read the answer.
+  seconds: 100
+  body: 'Row z matches only column z, so it ends 0 0 0 0 1 1. Row a matches column a: 1, and the 1 carries
+    right. Row b matches column b: up-left (1) + 1 = 2. Row c matches column c: 2 + 1 = 3. Row d matches
+    the last column: up-left is 3 (row c, column z), so the answer is 4. Greedy matching z first would
+    have reached only 2.'
+  why: Each mismatch keeps the better of dropping a character from a or from b.
+- id: lcs-faded
+  kind: faded
+  title: 'Your turn: abc and acb'
+  objective: Apply the match and mismatch rules yourself.
+  seconds: 90
+  body: Rows are prefixes of abc, columns prefixes of acb. Row a is 1 1 1.
+  steps:
+  - state: Row b, column a (a vs b differ). Up is 1, left is 0.
+    prompt: What is dp[b][a]?
+    options:
+    - '1'
+    - '0'
+    - '2'
+    answer: 0
+    explanation: max(up 1, left 0) = 1.
+  - state: Row b, column c (b vs c differ). Up is 1, left is 1.
+    prompt: What is dp[b][c]?
+    options:
+    - '1'
+    - '2'
+    - '0'
+    answer: 0
+    explanation: max(1, 1) = 1.
+  - state: Row b, column b (match). Up-left (row a, column c) is 1.
+    prompt: What is dp[b][b]?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    answer: 0
+    explanation: up-left + 1 = 2, the subsequence ab.
+- id: lcs-visualizer
+  kind: visualizer
+  title: 'Step through: a mismatch cell'
+  objective: See why a mismatch takes max of up and left, not up-left.
+  seconds: 110
+  body: a = ab, b = ba. Fill the 2 × 2 table.
+  steps:
+  - state: 'Cell (a, ba): the last characters are a and a, a match. Up-left is dp[0][1] = 0.'
+    prompt: What is dp[1][2]?
+    options:
+    - '1'
+    - '0'
+    - '2'
+    answer: 0
+    explanation: Up-left (0) + 1 = 1.
+  - state: 'Cell (ab, b): match b with b. Up-left is dp[1][0] = 0.'
+    prompt: What is dp[2][1]?
+    options:
+    - '1'
+    - '2'
+    - '0'
+    answer: 0
+    explanation: 0 + 1 = 1.
+  - state: 'Cell (ab, ba): b vs a differ. Up = 1, left = 1, up-left = 0.'
+    prompt: What is dp[2][2]?
+    options:
+    - '1'
+    - '0'
+    - '2'
+    answer: 0
+    explanation: max(up, left) = 1. Taking up-left would wrongly give 0.
+- id: lcs-micro
+  kind: micro
+  title: 'Pitfall: up-left on a mismatch'
+  objective: Know why a mismatch must keep max(up, left).
+  seconds: 80
+  misconception: lcs-mismatch-diagonal
+  body: 'When a[i−1] and b[j−1] differ, at most one of them is useless here; the other may still match an
+    earlier character of the other string. Up-left drops both. For ab and ba, the last cell would become
+    0 instead of 1, even though a (or b) is common. Take the larger of up (drop a[i−1]) and left (drop
+    b[j−1]).'
+  why: A mismatch removes one character at a time, never two.
+- id: lcs-classify
+  kind: classify
+  title: Which pattern?
+  objective: Separate LCS from its neighbours.
+  seconds: 90
+  body: For each problem, choose the best-fitting approach.
+  steps:
+  - state: Fewest characters to delete from two words so that they become equal.
+    prompt: Which approach?
+    options:
+    - LCS table, then n + m − 2·LCS
+    - Longest common substring
+    - Two pointers
+    answer: 0
+    explanation: The kept characters are a common subsequence.
+  - state: Longest block of consecutive notes that appears in both melodies.
+    prompt: Which approach?
+    options:
+    - Common substring table (reset on mismatch)
+    - LCS table
+    - Greedy matching
+    answer: 0
+    explanation: Consecutive means contiguous, so a mismatch breaks the block.
+  - state: Is "cat" a subsequence of "character"?
+    prompt: Which approach?
+    options:
+    - Two pointers, matching as early as possible
+    - Full LCS table
+    - Palindrome table
+    answer: 0
+    explanation: All of the pattern must match, so earliest matching is safe and O(n).

@@ -1,0 +1,125 @@
+id: dsa:dp-stocks/stock-state-machine
+concept: dsa:dp-stocks
+title: 'Stock state machine: hold or not, with trades left'
+tracks:
+- interview
+- competitive
+recognise:
+- Daily prices; buy and sell, holding at most one share at a time
+- A limit on trades, a cooldown after selling, or a fee per trade
+- The future depends only on what you hold and how many trades are left
+state: cash[t], hold[t] = best money without / with a share, at most t buys used
+transition: 'each day, t from k down: cash[t] = max(cash[t], hold[t] + p); hold[t] = max(hold[t], cash[t−1] − p)'
+base_cases:
+- cash[t] = 0, hold[t] = −∞ before the first day
+complexity:
+  time: O(n · k)
+  space: O(k)
+template:
+  python: |
+    n, k = map(int, input().split())
+    prices = list(map(int, input().split()))
+    NEG = -10**18  # "holding is impossible"
+    cash = [0] * (k + 1)  # cash[t]: best money with no share, at most t buys used
+    hold = [NEG] * (k + 1)  # hold[t]: best money holding one share, at most t buys used
+    for price in prices:
+        for t in range(k, 0, -1):  # t down, so cash[t - 1] is still yesterday's
+            cash[t] = max(cash[t], hold[t] + price)  # sell today, or keep resting
+            hold[t] = max(hold[t], cash[t - 1] - price)  # buy today with one more transaction
+    print(cash[k])
+  cpp: |
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+    using namespace std;
+
+    int main() {
+        int n, k;
+        cin >> n >> k;
+        const long long NEG = -1e18;  // "holding is impossible"
+        vector<long long> cash(k + 1, 0), hold(k + 1, NEG);  // best money without / with a share
+        for (int d = 0; d < n; d++) {
+            long long price;
+            cin >> price;
+            for (int t = k; t >= 1; t--) {  // t down, so cash[t - 1] is still yesterday's
+                cash[t] = max(cash[t], hold[t] + price);  // sell today, or keep resting
+                hold[t] = max(hold[t], cash[t - 1] - price);  // buy with one more transaction
+            }
+        }
+        cout << cash[k] << "\n";
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            int n = in.nextInt(), k = in.nextInt();
+            final long NEG = (long) -1e18;  // "holding is impossible"
+            long[] cash = new long[k + 1], hold = new long[k + 1];  // best money without / with a share
+            Arrays.fill(hold, NEG);
+            for (int d = 0; d < n; d++) {
+                long price = in.nextLong();
+                for (int t = k; t >= 1; t--) {  // t down, so cash[t - 1] is still yesterday's
+                    cash[t] = Math.max(cash[t], hold[t] + price);  // sell today, or keep resting
+                    hold[t] = Math.max(hold[t], cash[t - 1] - price);  // buy with one more transaction
+                }
+            }
+            System.out.println(cash[k]);
+        }
+    }
+template_io:
+  stdin: |
+    10 2
+    1 2 4 2 5 7 2 4 9 0
+  expected: '13'
+variants:
+- id: one-trade
+  band: 1
+  title: One transaction
+  problem: leetcode:best-time-to-buy-and-sell-stock
+- id: unlimited
+  band: 2
+  title: Unlimited transactions
+  problem: leetcode:best-time-to-buy-and-sell-stock-ii
+- id: fee
+  band: 3
+  title: A fee per trade
+  problem: leetcode:best-time-to-buy-and-sell-stock-with-transaction-fee
+- id: cooldown
+  band: 4
+  title: Rest one day after selling
+  problem: leetcode:best-time-to-buy-and-sell-stock-with-cooldown
+- id: two-trades
+  band: 5
+  title: At most two transactions
+  problem: leetcode:best-time-to-buy-and-sell-stock-iii
+- id: k-trades
+  band: 6
+  title: At most k transactions
+  problem: leetcode:best-time-to-buy-and-sell-stock-iv
+pitfalls:
+- stock-hold-init-zero
+- stock-buy-wrong-count
+- stock-greedy-runs
+- pattern-stock-unlimited-vs-limited
+atoms:
+- stk-worked
+- stk-faded
+- stk-visualizer
+- stk-micro
+- stk-classify
+quiz_family: quiz:dsa:dp-stocks:stock-state-machine
+problems:
+  external:
+  - leetcode:best-time-to-buy-and-sell-stock
+  - leetcode:best-time-to-buy-and-sell-stock-ii
+  - leetcode:best-time-to-buy-and-sell-stock-with-transaction-fee
+  - leetcode:best-time-to-buy-and-sell-stock-with-cooldown
+  - leetcode:best-time-to-buy-and-sell-stock-iii
+  - leetcode:best-time-to-buy-and-sell-stock-iv
+showcase:
+- 'Six stock problems, one machine: the one-line change for each'
+status: provisional
+provenance:
+  origin: original

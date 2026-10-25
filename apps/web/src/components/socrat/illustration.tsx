@@ -1,28 +1,60 @@
 import { cn } from '@/lib/utils';
+import { SocFigure, type SocMood } from '@/components/socrat/soc';
 
 /**
- * Flat geometric compositions: circles, half-circles, rounded squares and arcs with an
- * occasional 1.5 px line. Colours come from tokens so both themes work. Never contain text.
- * Lime appears only as one small dot, and only in `welcome` (landing and login).
+ * Notebook doodles: ink line drawings over offset blocks of the book colours (blue, red, yellow),
+ * like a risograph print that slipped a little in registration. The ink draws itself in as the
+ * doodle scrolls into view (CSS scroll-driven animation; static where unsupported or with reduced
+ * motion), or on load with `draw="load"`. Never contain text that must be read.
  */
-export type IllustrationName = 'stack' | 'orbit' | 'welcome' | 'ladder' | 'empty';
+export type IllustrationName = 'stack' | 'orbit' | 'welcome' | 'ladder' | 'empty' | 'bulb' | 'target' | 'plane';
 
-const V = 'var(--primary)';
-const L = 'var(--secondary)';
-const C = 'var(--mark-cream)';
-const I = 'var(--ink)';
-const LINE = 'var(--illo-line)';
+const INK = 'var(--illo-line)';
+const BLUE = 'var(--book-blue)';
+const RED = 'var(--book-red)';
+const YELLOW = 'var(--highlight)';
 
-function Welcome({ proof }: { proof: boolean }) {
+/** An ink stroke that draws in. */
+function Ink({ d, w = 2.6, dash }: { d: string; w?: number; dash?: boolean }) {
+  return <path d={d} pathLength={dash ? undefined : 1} data-ink={dash ? undefined : ''} fill="none" stroke={INK} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={dash ? '3 7' : undefined} />;
+}
+/** A flat colour block, printed slightly off the ink line. */
+function Fill({ d, color, dx = 5, dy = 4 }: { d: string; color: string; dx?: number; dy?: number }) {
+  return <path d={d} fill={color} data-fill="" transform={`translate(${dx} ${dy})`} />;
+}
+function Spark({ x, y, s = 9, color = YELLOW }: { x: number; y: number; s?: number; color?: string }) {
+  const d = `M${x} ${y - s}Q${x + s * 0.2} ${y - s * 0.2} ${x + s} ${y}Q${x + s * 0.2} ${y + s * 0.2} ${x} ${y + s}Q${x - s * 0.2} ${y + s * 0.2} ${x - s} ${y}Q${x - s * 0.2} ${y - s * 0.2} ${x} ${y - s}Z`;
+  return <><Fill d={d} color={color} dx={2} dy={2} /><Ink d={d} w={2} /></>;
+}
+
+function Plane() {
+  const wing = 'M30 122L206 52L132 186L112 142Z';
   return (
     <>
-      <rect x="18" y="64" width="128" height="128" rx="32" fill={V} />
-      <path d="M150 60a74 74 0 0 1 0 148Z" fill={C} />
-      <path d="M84 196a66 66 0 0 1 132 0" fill="none" stroke={L} strokeWidth="22" />
-      <circle cx="198" cy="58" r="22" fill={I} />
-      {proof ? <circle cx="62" cy="40" r="7" fill="var(--proof)" stroke="var(--proof-stroke)" strokeWidth="1.5" /> : null}
-      <path d="M10 150c40-46 96-60 150-30s70 10 82-14" fill="none" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M40 222c34-26 78-30 118-12" fill="none" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
+      <Ink d="M24 214c30-6 40-34 18-40s-26 26 4 30c40 6 58-30 70-56" dash />
+      <Fill d={wing} color={BLUE} />
+      <Ink d={wing} />
+      <Ink d="M112 142L206 52" />
+      <Ink d="M112 142l-4 34 24 10" w={2.2} />
+      <Spark x={196} y={150} s={11} />
+      <Spark x={60} y={60} s={7} color={RED} />
+    </>
+  );
+}
+
+function Welcome() {
+  // A notebook page with a highlighted line and Soc's question mark.
+  const page = 'M44 46h132a10 10 0 0 1 10 10v140a10 10 0 0 1-10 10H44Z';
+  return (
+    <>
+      <Fill d={page} color={BLUE} dx={7} dy={6} />
+      <path d={page} fill="var(--card)" />
+      <Ink d={page} />
+      <path d="M68 92h86" stroke={YELLOW} strokeWidth="14" strokeLinecap="round" opacity="0.9" />
+      {[92, 118, 144, 170].map(y => <Ink key={y} d={`M68 ${y}h${y === 92 ? 86 : y === 170 ? 52 : 92}`} w={2} />)}
+      <Ink d="M58 46v160" w={1.6} />
+      <text x="188" y="72" fontSize="54" fill={RED} style={{ fontFamily: 'var(--font-hand)' }} transform="rotate(10 198 56)">?</text>
+      <Spark x={30} y={194} s={8} />
     </>
   );
 }
@@ -30,78 +62,126 @@ function Welcome({ proof }: { proof: boolean }) {
 function Orbit() {
   return (
     <>
-      <circle cx="140" cy="120" r="88" fill="none" stroke={L} strokeWidth="1.5" />
-      <path d="M52 120a88 88 0 0 1 176 0" fill="none" stroke={C} strokeWidth="18" strokeLinecap="round" />
-      <circle cx="140" cy="120" r="46" fill={I} />
-      <path d="M140 74a46 46 0 0 1 0 92Z" fill={L} />
-      <circle cx="52" cy="120" r="14" fill={C} />
-      <path d="M20 200c50-30 120-36 200-6" fill="none" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
+      <Ink d="M44 120c0-30 34-50 76-50s76 20 76 50-34 50-76 50-76-20-76-50Z" w={2} dash />
+      <Ink d="M80 54c26-14 70 14 98 62s28 92 2 106-70-14-98-62-28-92-2-106Z" w={2} dash />
+      <Fill d="M102 88c-12 0-12 8-12 16s0 14-8 16c8 2 8 8 8 16s0 16 12 16" color={YELLOW} dx={4} dy={3} />
+      <Ink d="M102 88c-12 0-12 8-12 16s0 14-8 16c8 2 8 8 8 16s0 16 12 16" w={3} />
+      <Ink d="M138 88c12 0 12 8 12 16s0 14 8 16c-8 2-8 8-8 16s0 16-12 16" w={3} />
+      <circle cx="196" cy="120" r="11" fill={BLUE} data-fill="" />
+      <circle cx="80" cy="54" r="8" fill={RED} data-fill="" />
+      <circle cx="180" cy="222" r="7" fill={YELLOW} data-fill="" />
+      <Ink d="M196 109a11 11 0 1 1 0 22a11 11 0 1 1 0-22" w={2} />
     </>
   );
 }
 
 function Stack() {
+  const books: [number, number, number, string, number][] = [[40, 170, 150, YELLOW, -2], [56, 138, 128, RED, 2], [46, 104, 140, BLUE, -3]];
   return (
     <>
-      <rect x="40" y="128" width="112" height="64" rx="20" fill={C} />
-      <rect x="72" y="84" width="112" height="64" rx="20" fill={L} />
-      <rect x="104" y="40" width="96" height="64" rx="20" fill={I} />
-      <circle cx="176" cy="172" r="26" fill={I} />
-      <path d="M176 146a26 26 0 0 1 0 52Z" fill={C} />
-      <path d="M24 70c30 10 50 40 52 74" fill="none" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
+      {books.map(([x, y, w, color, r]) => {
+        const d = `M${x} ${y}h${w}v30H${x}Z`;
+        return (
+          <g key={y} transform={`rotate(${r} ${x + w / 2} ${y + 15})`}>
+            <Fill d={d} color={color} />
+            <Ink d={d} />
+            <Ink d={`M${x + 16} ${y + 10}h${w - 26}M${x + 16} ${y + 20}h${w - 40}`} w={1.6} />
+          </g>
+        );
+      })}
+      {/* A pencil leaning on the stack */}
+      <Fill d="M186 34l20 10-36 84-20-10Z" color={YELLOW} dx={3} dy={3} />
+      <Ink d="M186 34l20 10-36 84-20-10ZM150 118l-6 22 16-12" />
+      <Spark x={34} y={70} s={8} color={RED} />
     </>
   );
 }
 
 function Ladder() {
+  const steps: [number, number, string][] = [[34, 150, YELLOW], [92, 110, RED], [150, 70, BLUE]];
   return (
     <>
-      <rect x="28" y="152" width="48" height="56" rx="16" fill={C} />
-      <rect x="88" y="112" width="48" height="96" rx="16" fill={L} />
-      <rect x="148" y="64" width="48" height="144" rx="16" fill={I} />
-      <path d="M172 64a24 24 0 0 1 24-24v0" fill="none" stroke={LINE} strokeWidth="1.5" />
-      <circle cx="172" cy="36" r="14" fill={C} />
-      <path d="M20 132c40-56 110-86 196-94" fill="none" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 6" />
+      {steps.map(([x, y, color]) => {
+        const d = `M${x} ${y}h50V${206}H${x}Z`;
+        return <g key={x}><Fill d={d} color={color} /><Ink d={d} /></g>;
+      })}
+      <Ink d="M175 70V30" />
+      <Fill d="M175 30l30 9-30 9Z" color={RED} dx={2} dy={2} />
+      <Ink d="M175 30l30 9-30 9" w={2.2} />
+      <Ink d="M22 128c30-50 80-84 136-96" w={2} dash />
+      <Ink d="M20 206h204" w={2} />
     </>
   );
 }
 
 function Empty() {
+  // An open notebook, a pencil and an unanswered question.
+  const left = 'M120 70c-24-12-52-14-80-8v118c28-6 56-4 80 8Z';
+  const right = 'M120 70c24-12 52-14 80-8v118c-28-6-56-4-80 8Z';
   return (
     <>
-      <circle cx="120" cy="120" r="72" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeDasharray="6 7" />
-      <path d="M120 72a48 48 0 0 1 0 96Z" fill={L} />
-      <path d="M120 72a48 48 0 0 0 0 96Z" fill={C} opacity="0.55" />
+      <Fill d={`${left}${right}`} color={BLUE} dx={6} dy={6} />
+      <path d={`${left}${right}`} fill="var(--card)" />
+      <Ink d={left} />
+      <Ink d={right} />
+      {[96, 116, 136, 156].map(y => <Ink key={y} d={`M54 ${y - 4}c20-3 40-2 56 4M134 ${y}c16-6 36-7 56-4`} w={1.4} />)}
+      <text x="150" y="58" fontSize="46" fill={RED} style={{ fontFamily: 'var(--font-hand)' }} transform="rotate(8 160 42)">?</text>
+      <Fill d="M60 210l100-30 4 12-100 30Z" color={YELLOW} dx={2} dy={2} />
+      <Ink d="M60 210l100-30 4 12-100 30ZM60 210l-14 10 18 2" w={2.2} />
     </>
   );
 }
 
-export function Illustration({ name, className, proof = false }: { name: IllustrationName; className?: string; proof?: boolean }) {
+function Bulb() {
+  const glass = 'M120 40c-34 0-58 26-58 58 0 22 12 36 24 48 6 6 8 12 8 20h52c0-8 2-14 8-20 12-12 24-26 24-48 0-32-24-58-58-58Z';
   return (
-    <svg viewBox="0 0 240 240" className={cn('block', className)} aria-hidden="true" focusable="false">
-      {name === 'welcome' ? <Welcome proof={proof} /> : name === 'orbit' ? <Orbit /> : name === 'stack' ? <Stack /> : name === 'ladder' ? <Ladder /> : <Empty />}
+    <>
+      <Fill d={glass} color={YELLOW} />
+      <Ink d={glass} />
+      <Ink d="M98 182h44M102 198h36M110 212h20" />
+      <Ink d="M108 150c-4-20 4-40 12-50 8 10 16 30 12 50" w={2} />
+      {[[40, 60, 22, 48], [200, 60, 218, 48], [30, 110, 12, 110], [210, 110, 228, 110], [52, 160, 38, 172], [188, 160, 202, 172]].map(([x1, y1, x2, y2]) => (
+        <Ink key={`${x1}${y1}`} d={`M${x1} ${y1}L${x2} ${y2}`} w={2.4} />
+      ))}
+      <Spark x={196} y={210} s={8} color={BLUE} />
+    </>
+  );
+}
+
+function Target() {
+  return (
+    <>
+      <circle cx="118" cy="126" r="78" fill={RED} data-fill="" transform="translate(5 4)" />
+      <circle cx="118" cy="126" r="78" fill="var(--card)" />
+      <Ink d="M118 48a78 78 0 1 1 0 156a78 78 0 1 1 0-156" />
+      <circle cx="118" cy="126" r="50" fill={YELLOW} data-fill="" transform="translate(4 3)" />
+      <Ink d="M118 76a50 50 0 1 1 0 100a50 50 0 1 1 0-100" />
+      <circle cx="118" cy="126" r="20" fill={BLUE} data-fill="" />
+      <Ink d="M118 106a20 20 0 1 1 0 40a20 20 0 1 1 0-40" />
+      <Ink d="M120 124L212 36M212 36l-22 2M212 36l-2 22M200 48l-18-2M200 48l-2 18" w={2.6} />
+    </>
+  );
+}
+
+const DRAW: Record<IllustrationName, () => React.ReactNode> = {
+  welcome: Welcome, orbit: Orbit, stack: Stack, ladder: Ladder, empty: Empty, bulb: Bulb, target: Target, plane: Plane,
+};
+
+export function Illustration({ name, className, draw = 'scroll' }: { name: IllustrationName; className?: string; proof?: boolean; draw?: 'scroll' | 'load' | 'none' }) {
+  const Drawing = DRAW[name];
+  return (
+    <svg viewBox="0 0 240 240" className={cn('doodle block overflow-visible', draw !== 'none' && `doodle-${draw}`, className)} aria-hidden="true" focusable="false">
+      <Drawing />
     </svg>
   );
 }
 
 /**
- * Soc, the tutor: a round, bearded purple face (public/soc, made by scripts/make-soc.mjs).
- * Decorative unless `label` is given (only where it acts as a control). Inside a button or
- * link, Soc nods when it is hovered or focused (see .soc-avatar in globals.css).
+ * Soc, the tutor: the stone bust (see soc.tsx), sized as an avatar. Decorative unless `label` is
+ * given (only where it acts as a control). Inside a button or link, Soc nods when it is hovered or
+ * focused (see .soc-avatar in globals.css). `mood` matches the moment: happy on a pass, thinking
+ * while he waits, worried on an error.
  */
-export function Soc({ size = 48, className, label }: { size?: number; className?: string; label?: string }) {
-  const source = size <= 48 ? 96 : size <= 96 ? 192 : 384;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- a fixed-size local asset; no loader needed
-    <img
-      src={`/soc/soc-${source}.webp`}
-      width={size}
-      height={size}
-      alt={label ?? ''}
-      aria-hidden={label ? undefined : true}
-      draggable={false}
-      decoding="async"
-      className={cn('soc-avatar flex-none select-none', className)}
-    />
-  );
+export function Soc({ size = 48, className, label, mood = 'neutral' }: { size?: number; className?: string; label?: string; mood?: SocMood }) {
+  return <SocFigure size={size} mood={mood} title={label} className={cn('soc-avatar flex-none', className)} />;
 }
