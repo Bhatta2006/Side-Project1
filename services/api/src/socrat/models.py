@@ -42,6 +42,9 @@ class User(Base):
     tour_seen_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Verified Google email, kept only for accounts on SOCRAT_ADMIN_EMAILS; null for learners.
     admin_email: Mapped[str | None] = mapped_column(String(254), nullable=True)
+    # Lowercased, verified (an emailed code, or Google's email_verified); links sign-in methods.
+    email: Mapped[str | None] = mapped_column(String(254), nullable=True, unique=True)
+    password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
 
 class LoginSession(Base):
@@ -50,6 +53,22 @@ class LoginSession(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     csrf_token: Mapped[str] = mapped_column(String(128))
     expires_at: Mapped[int] = mapped_column(Integer, index=True)
+
+
+class EmailCode(Base):
+    """A one-time code emailed to confirm a sign-up or a password reset."""
+
+    __tablename__ = "email_codes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    email: Mapped[str] = mapped_column(String(254), index=True)
+    purpose: Mapped[str] = mapped_column(String(16))  # signup | reset
+    code_hash: Mapped[str] = mapped_column(String(64))
+    # Sign-up only: the chosen password and name, applied once the code is confirmed.
+    password_hash: Mapped[str] = mapped_column(String(200), default="")
+    display_name: Mapped[str] = mapped_column(String(80), default="")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    expires_at: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
 class Enrollment(Base):
@@ -265,6 +284,25 @@ class AssistantMessage(Base):
     created_at: Mapped[int] = mapped_column(Integer, default=now, index=True)
     # Strictly increasing order within a thread (several messages can share a second).
     seq: Mapped[int] = mapped_column(BigInteger, default=time.time_ns, index=True)
+
+
+class PlaygroundJob(Base):
+    """One visual generation, run by the worker so it outlives the request that asked for it."""
+
+    __tablename__ = "playground_jobs"
+    __table_args__ = (Index("ix_playground_jobs_status", "status", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # also the saved artifact's id
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    thread_id: Mapped[str] = mapped_column(ForeignKey("assistant_threads.id", ondelete="CASCADE"))
+    prompt: Mapped[str] = mapped_column(Text)
+    level: Mapped[str] = mapped_column(String(16))
+    language: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16))  # queued|running|ready|failed|cancelled
+    progress: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[str] = mapped_column(String(64), default="")
+    tries: Mapped[int] = mapped_column(Integer, default=0)
+    heartbeat_at: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
 class LessonVariant(Base):

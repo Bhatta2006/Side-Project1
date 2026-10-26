@@ -261,12 +261,17 @@ class OpenAIProvider:
         import openai
 
         self.settings = settings
-        self.chat_template_kwargs = dict(chat_template_kwargs or {})
+        # A vLLM/Nebius extension: api.openai.com (no base URL) rejects it, so a value left over
+        # from a compatible endpoint must not break every request after switching to OpenAI.
+        self.chat_template_kwargs = (
+            dict(chat_template_kwargs or {}) if settings.openai_base_url else {}
+        )
         self.client = openai.AsyncOpenAI(
             api_key=settings.openai_api_key.get_secret_value() or None,
             base_url=settings.openai_base_url or None,
             timeout=settings.ai_timeout_seconds,
-            max_retries=1,
+            # The SDK backs off between tries, riding out brief DNS or network blips.
+            max_retries=2,
         )
 
     async def converse(

@@ -12,7 +12,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from socrat.catalog.registry import Catalog
-from socrat.models import AssistantMessage, AssistantThread, Subscription, User, now
+from socrat.models import (
+    AssistantMessage,
+    AssistantThread,
+    PlaygroundJob,
+    Subscription,
+    User,
+    now,
+)
 
 # ponytail: process-wide flag set by create_app; the concept guard has no settings handle.
 ENABLED = False
@@ -79,6 +86,20 @@ def window_start(user: User | None, unit: str, stamp: int) -> int:
 
 
 def used(db: Session, user_id: str, feature: str, since: int) -> int:
+    if feature == "playground":
+        # Generations that failed or were cancelled are not charged to the learner's allowance.
+        return (
+            db.scalar(
+                select(func.count())
+                .select_from(PlaygroundJob)
+                .where(
+                    PlaygroundJob.user_id == user_id,
+                    PlaygroundJob.status.in_(("queued", "running", "ready")),
+                    PlaygroundJob.created_at >= since,
+                )
+            )
+            or 0
+        )
     playground = AssistantThread.scope == PLAYGROUND_SCOPE
     return (
         db.scalar(
@@ -89,7 +110,7 @@ def used(db: Session, user_id: str, feature: str, since: int) -> int:
                 AssistantThread.user_id == user_id,
                 AssistantMessage.role == "user",
                 AssistantMessage.created_at >= since,
-                playground if feature == "playground" else ~playground,
+                ~playground,
             )
         )
         or 0

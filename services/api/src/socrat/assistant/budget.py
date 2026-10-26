@@ -34,28 +34,40 @@ def cost(settings: Settings, input_tokens: int, output_tokens: int) -> float:
     ) / 1_000_000
 
 
-def spent(db: Session, *, since_day: str, user_id: str | None = None) -> float:
+def spent(
+    db: Session, *, since_day: str, user_id: str | None = None, exclude: str | None = None
+) -> float:
     query = select(func.coalesce(func.sum(AIUsage.cost_usd), 0.0)).where(AIUsage.day >= since_day)
     if user_id is not None:
         query = query.where(AIUsage.user_id == user_id)
+    if exclude is not None:
+        query = query.where(AIUsage.feature != exclude)
     return float(db.scalar(query) or 0.0)
 
 
-def check(db: Session, settings: Settings, user_id: str | None, stamp: int):
+def check(db: Session, settings: Settings, user_id: str | None, stamp: int, feature: str = ""):
     """Raise ProviderError when the next model call is not allowed."""
     if not settings.ai_enabled:
         raise ProviderError("ai_disabled")
     today = day_of(stamp)
-    if user_id is not None:
+    # The playground's per-learner limit is its plan's generation count (entitlements.PLANS), with
+    # one generation at a time; the per-learner rate and spend limits are the tutor's, so neither
+    # feature uses up the other's allowance.
+    if user_id is not None and feature != "playground":
         recent = db.scalar(
             select(func.count())
             .select_from(AIUsage)
-            .where(AIUsage.user_id == user_id, AIUsage.created_at > stamp - 60)
+            .where(
+                AIUsage.user_id == user_id,
+                AIUsage.feature != "playground",
+                AIUsage.created_at > stamp - 60,
+            )
         )
         if (recent or 0) >= settings.ai_user_calls_per_minute:
             raise ProviderError("ai_rate_limited")
         if settings.ai_user_daily_budget_usd and (
-            spent(db, since_day=today, user_id=user_id) >= settings.ai_user_daily_budget_usd
+            spent(db, since_day=today, user_id=user_id, exclude="playground")
+            >= settings.ai_user_daily_budget_usd
         ):
             raise ProviderError("ai_budget_reached")
     if settings.ai_daily_budget_usd and spent(db, since_day=today) >= settings.ai_daily_budget_usd:
@@ -141,10 +153,10 @@ class Metered:
     ) -> AsyncIterator[Event]:
         if self.inner.name != "offline":
             if self.db is not None:
-                check(self.db, self.settings, self.user_id, now())
+                check(self.db, self.settings, self.user_id, now(), self.feature)
             else:
                 with Session(self.engine) as db:
-                    check(db, self.settings, self.user_id, now())
+                    check(db, self.settings, self.user_id, now(), self.feature)
         async for event in self.inner.converse(system, turns, max_tokens, *args, **kwargs):
             if event.kind != "usage":
                 yield event

@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import UTC, datetime
 
 import pytest
@@ -8,7 +9,7 @@ from test_learner_api import client, login, onboard  # noqa: F401,F811
 
 from socrat import billing, entitlements
 from socrat.catalog.registry import default_catalog
-from socrat.models import AssistantMessage, AssistantThread, User
+from socrat.models import AssistantMessage, AssistantThread, PlaygroundJob, User
 
 
 @pytest.fixture
@@ -77,6 +78,45 @@ def test_free_plan_limits_then_paid_unlocks(paid):
         with pytest.raises(HTTPException) as err:
             entitlements.enforce(db, uid, "chat", 1_800_000_100)
         assert err.value.status_code == 429 and err.value.detail == "chat_week_limit"
+
+
+def test_failed_and_cancelled_visuals_are_not_charged_to_the_plan(paid, monkeypatch):
+    api, _, _ = paid
+    uid = user_id(api)
+    monkeypatch.setattr(entitlements, "plan_of", lambda *args: "plus")  # 3 visuals a day
+    stamp = 1_800_000_000
+
+    def job(db, thread, status):
+        db.add(
+            PlaygroundJob(
+                id=str(uuid.uuid4()),
+                user_id=uid,
+                thread_id=thread.id,
+                prompt="Explain heaps",
+                level="standard",
+                language="python",
+                status=status,
+                progress={},
+                error="",
+                tries=0,
+                heartbeat_at=0,
+                created_at=stamp,
+            )
+        )
+        db.flush()
+
+    with Session(api.app.state.engine) as db, db.begin():
+        thread = AssistantThread(user_id=uid, scope=entitlements.PLAYGROUND_SCOPE)
+        db.add(thread)
+        db.flush()
+        for status in ["failed", "cancelled", "failed", "ready", "ready"]:
+            job(db, thread, status)
+        entitlements.enforce(db, uid, "playground", stamp + 60)  # 2 of 3 used
+        assert entitlements.usage(db, uid, stamp + 60)["playground"]["used"] == 2
+        job(db, thread, "ready")
+        with pytest.raises(HTTPException) as err:
+            entitlements.enforce(db, uid, "playground", stamp + 60)
+        assert err.value.status_code == 429 and err.value.detail == "playground_day_limit"
 
 
 def test_checkout_verify_grants_plan_and_rejects_bad_signature(paid):

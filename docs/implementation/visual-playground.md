@@ -14,9 +14,14 @@ is not the default experience. Generated material is labelled as not verified fo
 ## Pipeline
 
 1. The server checks session, CSRF, active enrollment, independent-work/assessment restrictions,
-   quotas, one outstanding generation per learner, and the request's idempotency identity.
-2. The configured assistant provider generates a complete document. SSE reports generation,
-   browser checking and repairs; partial HTML is never sent to the canvas.
+   quotas, one outstanding generation per learner, and the request's idempotency identity, then
+   queues a `playground_jobs` row and answers 202 with the job.
+2. `socrat.worker` claims queued jobs (up to `SOCRAT_EXPLAINER_CONCURRENT_LIMIT` at once) and the
+   configured assistant provider generates a complete document. The worker records progress and a
+   heartbeat every 5 s; the page polls `GET /playground/jobs/{id}`, and a reload resumes from
+   `pending` in the saved-visuals list. Closing the tab does not stop a job; Cancel does. A job whose
+   worker stopped heartbeating for 30 s (a deploy, a crash) is retried once, then fails as
+   `playground_generation_interrupted`. Partial HTML is never sent to the canvas.
 3. Python validates bounded, balanced markup. External resources, navigation, nested browsing
    contexts, forms, inline handlers and model-supplied script nonces are rejected.
 4. A separate Node/Playwright checker parses every model script with Acorn, rejects forbidden
@@ -27,11 +32,20 @@ is not the default experience. Generated material is labelled as not verified fo
    exact request, generated source and bounded rendered-state observations for wrong subjects, contradictions, incorrect computations,
    fake interactions and missing visual labels. Material findings use the same bounded repair loop;
    no prescribed examples or subject-specific answers are supplied to either model call.
-   The review is advisory once the browser check has passed. Findings on the final attempt ship
-   with `qa.ai_review = "flagged"`. An unparseable review is retried once, and if the reviewer
+   The review is advisory: a visual that passed the browser check never regenerates for a finding
+   (a full attempt rarely fits the deadline). Findings ship as `qa.ai_review = "flagged"` with
+   `qa.review_notes`, shown to the learner. An unparseable review is retried once, and if the reviewer
    is still unavailable the visual ships with `qa.ai_review = "unavailable"` instead of failing.
-   The checker reports its verdict and exits without waiting for the browser to finish closing,
-   which took about 6 s with Edge on Windows and pushed passing visuals past the 18-second budget.
+   Only markup and browser-check failures trigger repairs; progress events carry `attempt` and, during a
+   repair, the step (`failed`) that rejected the previous attempt. A busy checker
+   (429) is retried with backoff, and a checker that crashes without a verdict reports an
+   infrastructure failure rather than a fault in the visual.
+   The checker service keeps one warm Chromium and gives each check a fresh context, up to
+   `SOCRAT_EXPLAINER_CHECKER_CONCURRENCY` (default 4) at once, so launch time never counts against a
+   visual. A check has 15 s; a context that will not close (a runaway script) restarts the browser,
+   and checks caught by a browser crash or restart report infrastructure failure. `/health` is
+   healthy only once the browser has launched. The native fallback (no checker URL, development
+   only) still launches a browser per check and exits without waiting for it to close.
 5. Accepted source and metadata are saved privately in the existing assistant-message store.
    The browser receives metadata and a signed, expiring frame URL, not HTML inserted into React.
 6. The canvas uses `sandbox="allow-scripts"`, without `allow-same-origin`, and a response CSP with
@@ -84,10 +98,15 @@ The local Compose file includes the checker with development-only credentials.
 
 Production generation fails closed if the separate sandbox or checker is missing. The global
 `SOCRAT_EXPLAINER_ENABLED` switch disables generation and frame loading. Generation has a total
-300-second deadline including AI review and repairs; browser checks have an 18-second process budget, and malformed output is
+300-second deadline including AI review and repairs; browser checks have a 15-second budget, and malformed output is
 bounded to 300 KB. Failed generations preserve the learner's request and never substitute content.
-The default visual quota is 20 generations per learner per day, in addition to the shared assistant
-quota, with one pending request per learner and four simultaneous generations per API process.
+A learner's visual allowance is their plan's generation count (`entitlements.PLANS`: Plus 3 and
+Pro 15 a day), with a server-wide cap of `SOCRAT_EXPLAINER_DAILY_MESSAGES` (default 20) in any 24
+hours. Only queued, running and ready generations count; failed and cancelled ones are not charged.
+The tutor's per-learner spend and burst limits do not apply to the playground, and playground spend
+does not count against them. The site-wide kill switch and daily/monthly AI budgets apply to both,
+and are checked before a generation is queued. There is one pending request per learner and four
+simultaneous generations per worker; further requests wait in the queue.
 
 ## Checks
 

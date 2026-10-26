@@ -1,27 +1,27 @@
-import asyncio
 import json
 import uuid
 from urllib.parse import urlencode, urlparse
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.assistant import budget
 from socrat.assistant import service as assistant
-from socrat.assistant.gateway import ProviderError, make_provider
+from socrat.assistant.gateway import ProviderError
 from socrat.database import record_event
-from socrat.explainer import generator
+from socrat.explainer import jobs
 from socrat.explainer.artifact import compile_document
+from socrat.explainer.jobs import playground_code
 from socrat.learn.routes import active, catalog, engine, guard_instruction, user_of
-from socrat.models import AssistantMessage, AssistantThread, User, now
+from socrat.models import AssistantMessage, AssistantThread, PlaygroundJob, User, now
 
 router = APIRouter(prefix="/api/v1/playground")
 SCOPE = "playground:visual"
-GENERATION_SECONDS = 300
 
 
 class CreateInput(BaseModel):
@@ -109,147 +109,111 @@ def public(row, settings, user_id):
     }
 
 
-@router.post("/generate")
-async def create(body: CreateInput, request: Request):
+def view(db, job, settings):
+    """A job's status for the polling client; a finished job carries its artifact."""
+    data = dict(
+        id=job.id,
+        status=job.status,
+        progress=job.progress,
+        error=job.error or None,
+        request=job.prompt,
+        level=job.level,
+        created_at=job.created_at,
+    )
+    if job.status == "ready":
+        data["artifact"] = public(owned(db, job.id, job.user_id), settings, job.user_id)
+    return data
+
+
+def job_of(db, job_id, user_id):
+    job = db.get(PlaygroundJob, job_id)
+    if job is None or job.user_id != user_id:
+        raise HTTPException(404, "not_found")
+    return job
+
+
+@router.post("/generate", status_code=202)
+def create(body: CreateInput, request: Request):
     settings = request.app.state.settings
-    running = getattr(request.app.state, "explainer_running", None)
-    if running is None:
-        running = request.app.state.explainer_running = set()
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
         enrollment = active(db, user)
         guard_instruction(db, catalog(), user, body.concept)
         available(settings)
-        user_id, language = user.id, enrollment.language
+        user_id = user.id
         # Bind the idempotency identity to the authenticated learner, never to a body user_id.
-        artifact_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"visual:{user_id}:{body.request_id}"))
-        previous = db.get(AssistantMessage, artifact_id)
+        job_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"visual:{user_id}:{body.request_id}"))
+        previous = db.get(PlaygroundJob, job_id)
         if previous:
-            if (
-                json.loads(previous.content).get("request") != body.prompt
-                or json.loads(previous.content).get("level") != body.level
-            ):
+            if previous.prompt != body.prompt or previous.level != body.level:
                 raise HTTPException(409, "playground_idempotency_conflict")
-            cached = public(owned(db, artifact_id, user_id), settings, user_id)
-            if "text/event-stream" in request.headers.get("accept", ""):
-                return StreamingResponse(
-                    iter(
-                        [
-                            f"event: ready\ndata: {json.dumps(dict(event='ready', artifact=cached))}\n\n"
-                        ]
-                    ),
-                    media_type="text/event-stream",
-                )
-            return cached
+            return view(db, previous, settings)
         thread = assistant.thread_for(db, user_id, SCOPE)
         db.flush()
+        # Locking the learner's thread serializes their concurrent requests.
         thread = db.scalars(
             select(AssistantThread).where(AssistantThread.id == thread.id).with_for_update()
         ).one()
-        pending = thread.ladder.get("pending", {})
-        if user_id in running or pending.get("until", 0) > now():
-            raise HTTPException(409, "playground_request_in_progress")
-        if len(running) >= settings.explainer_concurrent_limit:
-            raise HTTPException(503, "playground_busy")
-        assistant.check_quota(db, settings, user_id, now(), "playground")
-        used = (
-            db.scalar(
-                select(func.count())
-                .select_from(AssistantMessage)
-                .where(
-                    AssistantMessage.thread_id == thread.id,
-                    AssistantMessage.role == "user",
-                    AssistantMessage.created_at >= now() - 86400,
-                )
+        if db.scalar(
+            select(PlaygroundJob.id).where(
+                PlaygroundJob.user_id == user_id, PlaygroundJob.status.in_(jobs.ACTIVE)
             )
-            or 0
-        )
-        if used >= settings.explainer_daily_messages:
+        ):
+            raise HTTPException(409, "playground_request_in_progress")
+        assistant.check_quota(db, settings, user_id, now(), "playground")
+        # Server-wide safety cap, counted like the plan allowance (failures are not charged).
+        if (
+            entitlements.used(db, user_id, "playground", now() - 86400)
+            >= settings.explainer_daily_messages
+        ):
             raise HTTPException(429, "playground_daily_limit")
-        thread.ladder = dict(
-            thread.ladder, pending=dict(id=artifact_id, until=now() + GENERATION_SECONDS)
-        )
+        # Fail now, not minutes into the job, when AI is paused or the site-wide budget is spent.
+        try:
+            budget.check(db, settings, None, now(), "playground")
+        except ProviderError as exc:
+            raise HTTPException(503, playground_code(str(exc))) from exc
         db.add(
             AssistantMessage(
                 thread_id=thread.id, role="user", content=body.prompt, created_at=now()
             )
         )
-        thread_id = thread.id
-        record_event(db, user_id, "explainer.requested", artifact_id)
-    running.add(user_id)
-
-    async def events():
-        try:
-            async with asyncio.timeout(GENERATION_SECONDS):
-                provider_settings = settings
-                if settings.explainer_model:
-                    key = "openai_model" if settings.ai_provider == "openai" else "ai_model"
-                    provider_settings = settings.model_copy(update={key: settings.explainer_model})
-                provider = budget.Metered(
-                    make_provider(
-                        provider_settings,
-                        chat_template_kwargs=settings.explainer_chat_template_kwargs,
-                    ),
-                    engine(request),
-                    provider_settings,
-                    user_id=user_id,
-                    feature="playground",
-                )
-                async for event in generator.generate(
-                    provider, provider_settings, body.prompt, language, body.level
-                ):
-                    if event["event"] != "document":
-                        yield event
-                        continue
-                    with Session(engine(request)) as db, db.begin():
-                        learner = db.get(User, user_id)
-                        if learner is None:
-                            raise HTTPException(401, "authentication_required")
-                        guard_instruction(db, catalog(), learner)
-                        row = AssistantMessage(
-                            id=artifact_id,
-                            thread_id=thread_id,
-                            role="assistant",
-                            content=json.dumps(event["document"]),
-                            provider=settings.ai_provider,
-                            created_at=now(),
-                        )
-                        db.add(row)
-                        db.flush()
-                        record_event(db, user_id, "explainer.created", artifact_id)
-                        result = public(row, settings, user_id)
-                    yield dict(event="ready", artifact=result)
-        except TimeoutError:
-            yield dict(event="error", code="playground_generation_timeout")
-        except ProviderError as exc:
-            yield dict(event="error", code=str(exc))
-        except HTTPException as exc:
-            yield dict(event="error", code=str(exc.detail))
-        finally:
-            running.discard(user_id)
-            with Session(engine(request)) as db, db.begin():
-                thread = db.get(AssistantThread, thread_id)
-                if thread and thread.ladder.get("pending", {}).get("id") == artifact_id:
-                    thread.ladder = {
-                        key: value for key, value in thread.ladder.items() if key != "pending"
-                    }
-
-    if "text/event-stream" in request.headers.get("accept", ""):
-
-        async def stream_events():
-            async for event in events():
-                yield f"event: {event['event']}\ndata: {json.dumps(event)}\n\n"
-
-        return StreamingResponse(
-            stream_events(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"}
+        job = PlaygroundJob(
+            id=job_id,
+            user_id=user_id,
+            thread_id=thread.id,
+            prompt=body.prompt,
+            level=body.level,
+            language=enrollment.language,
+            status="queued",
+            progress={},
+            error="",
+            tries=0,
+            heartbeat_at=0,
+            created_at=now(),
         )
-    async for event in events():
-        if event["event"] == "ready":
-            return event["artifact"]
-        if event["event"] == "error":
-            code = event["code"]
-            raise HTTPException(504 if code.endswith("timeout") else 502, code)
-    raise HTTPException(502, "playground_generation_invalid")
+        db.add(job)
+        record_event(db, user_id, "explainer.requested", job_id)
+        db.flush()
+        return view(db, job, settings)
+
+
+# ponytail: clients poll every ~1.5 s; push (LISTEN/NOTIFY + SSE) if polling load ever matters.
+@router.get("/jobs/{job_id}")
+def job_status(job_id: str, request: Request):
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        guard_instruction(db, catalog(), user)
+        return view(db, job_of(db, job_id, user.id), request.app.state.settings)
+
+
+@router.post("/jobs/{job_id}/cancel")
+def cancel(job_id: str, request: Request):
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        job = job_of(db, job_id, user.id)
+        if job.status in jobs.ACTIVE:
+            job.status = "cancelled"
+        return dict(status=job.status)
 
 
 @router.get("/artifacts")
@@ -257,6 +221,12 @@ def history(request: Request):
     with Session(engine(request)) as db:
         user = user_of(request, db)
         guard_instruction(db, catalog(), user)
+        # A generation still running (the learner reloaded or came back) is resumed by the page.
+        pending = db.scalars(
+            select(PlaygroundJob)
+            .where(PlaygroundJob.user_id == user.id, PlaygroundJob.status.in_(jobs.ACTIVE))
+            .limit(1)
+        ).first()
         rows = db.scalars(
             select(AssistantMessage)
             .join(AssistantThread)
@@ -273,7 +243,8 @@ def history(request: Request):
             items=[
                 dict(id=row.id, title=json.loads(row.content)["title"], created_at=row.created_at)
                 for row in rows
-            ]
+            ],
+            pending=view(db, pending, request.app.state.settings) if pending else None,
         )
 
 

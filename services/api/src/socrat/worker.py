@@ -1,13 +1,17 @@
-"""Transactional internal outbox consumer. External consumers need their own idempotency."""
+"""Transactional internal outbox consumer and Playground generation runner.
 
+External consumers need their own idempotency.
+"""
+
+import asyncio
 import logging
-import time
 
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from socrat.config import Settings
 from socrat.database import make_engine
+from socrat.explainer import jobs
 from socrat.models import DeliveredEvent, OutboxEvent, now
 
 
@@ -27,16 +31,33 @@ def drain_once(engine: Engine) -> int:
         return len(events)
 
 
+def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):
+    while len(running) < settings.explainer_concurrent_limit and (job_id := jobs.claim(engine)):
+        task = asyncio.create_task(jobs.run(engine, settings, job_id))
+        running.add(task)
+        task.add_done_callback(running.discard)
+
+
+async def serve(settings: Settings, engine: Engine):
+    running: set[asyncio.Task] = set()
+    while True:
+        try:
+            drain_once(engine)
+        except Exception:
+            logging.error("outbox_batch_failed")  # No payloads, identities or credentials.
+        try:
+            start_jobs(engine, settings, running)
+        except Exception:
+            logging.exception("playground_claim_failed")
+        # ponytail: 2 s polling pickup; LISTEN/NOTIFY if queue latency ever matters.
+        await asyncio.sleep(2)
+
+
 def main():
     settings = Settings()
     engine = make_engine(settings.database_url_value)
     try:
-        while True:
-            try:
-                drain_once(engine)
-            except Exception:
-                logging.error("outbox_batch_failed")  # No payloads, identities or credentials.
-            time.sleep(2)
+        asyncio.run(serve(settings, engine))
     finally:
         engine.dispose()
 

@@ -39,6 +39,7 @@ export interface BillingStatus {
 export interface Features {
   dev_login: boolean;
   oidc_login: boolean;
+  email_login?: boolean;
   ai_provider: 'anthropic' | 'openai' | 'offline';
   code_execution: boolean;
   execution_backend: string;

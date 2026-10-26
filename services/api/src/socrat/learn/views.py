@@ -495,6 +495,7 @@ def export(db: Session, user: User) -> dict:
         profile=dict(
             id=user.id,
             display_name=user.display_name,
+            email=user.email,
             birth_year=user.birth_year,
             timezone=user.timezone,
             created_at=user.created_at,

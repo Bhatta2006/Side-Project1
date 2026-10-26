@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronRight, Flame } from 'lucide-react';
@@ -10,7 +11,6 @@ import type { Activity, AssessmentStatus, PlanView, Recommendations, Today } fro
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal, Ring } from '@/components/common';
 import { Level, PlatformTag, ProblemName } from '@/components/practice';
-import Assistant from '@/components/assistant';
 import { AdaptingCard } from '@/components/socrat/adapting';
 import { ReasonChip } from '@/components/socrat/reason-chip';
 import { Illustration, Soc } from '@/components/socrat/illustration';
@@ -23,6 +23,10 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { CommunityCard } from '@/components/community-link';
+
+// The chat loads on demand, as on the problem page: it opens only when asked, and its code
+// otherwise sits in Today's first load. An early openSignal still opens it once it arrives.
+const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 const VERB: Record<string, string> = {
   lesson: 'Start lesson',
@@ -181,7 +185,7 @@ export default function TodayPage() {
           <div className="px-(--card-spacing)"><WeekStrip studiedToday={today.streak.studied_today} /></div>
         </Card>
 
-          {/* 4. Hero: the next recommended activity. */}
+        {/* 4. Hero: the next recommended activity. */}
         <Reveal index={1} className="col-span-12 lg:col-span-8">
           {next ? (
             <Card tone="hero" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
@@ -233,13 +237,7 @@ export default function TodayPage() {
           )}
         </Reveal>
 
-
-        {/* How Socrat is adapting: after the hero, so the next step stays the first action. */}
-        <Reveal index={2} className="col-span-12 lg:order-none">
-          <AdaptingCard today={today} onDecided={load} onAsk={() => setAskSoc(n => n + 1)} />
-        </Reveal>
-
-        {/* Talk to your tutor. */}
+        {/* Talk to your tutor: beside the hero (8 + 4 columns), so it must come straight after it. */}
         <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
           <Card className="relative h-full min-h-72 overflow-hidden lg:min-h-80" aria-labelledby="soc-heading">
             <div className="relative flex h-full flex-col gap-4 px-(--card-spacing)">
@@ -258,6 +256,12 @@ export default function TodayPage() {
               </button>
             </div>
           </Card>
+        </Reveal>
+
+        {/* How Socrat is adapting: a full-width row under the hero and Ask Soc, so the next step
+            stays the first action and the 8 + 4 rows below keep their pairs. */}
+        <Reveal index={3} className="col-span-12">
+          <AdaptingCard today={today} onDecided={load} onAsk={() => setAskSoc(n => n + 1)} />
         </Reveal>
 
         {/* Skill map of the current module. */}

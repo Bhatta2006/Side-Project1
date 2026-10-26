@@ -8,7 +8,7 @@ export interface VisualArtifact {
   accuracy: string;
   created_at: number;
   frame_url: string;
-  qa: { step_count: number; checks: string[]; ai_review?: 'passed' | 'flagged' | 'unavailable' };
+  qa: { step_count: number; checks: string[]; ai_review?: 'passed' | 'flagged' | 'unavailable'; review_notes?: string };
 }
 
 export interface VisualState { count: number; current: number; description: string; height: number }
