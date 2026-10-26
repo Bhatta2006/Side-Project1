@@ -15,7 +15,7 @@ export function PracticeNav({ className }: { className?: string }) {
     nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
   }, [pathname]);
   return (
-    <nav ref={nav} aria-label="Practice" className={cn('no-scrollbar mb-6 max-w-full overflow-x-auto', className)}>
+    <nav ref={nav} data-tour="practice-nav" aria-label="Practice" className={cn('no-scrollbar mb-6 max-w-full overflow-x-auto', className)}>
       <ul className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1">
         {PRACTICE_SEGMENTS.map(segment => {
           const active = pathname === segment.href || pathname.startsWith(`${segment.href}/`);

@@ -71,7 +71,7 @@ export default function ProgressPage() {
         ) : null}
 
         {/* Hero: course completion. */}
-        <section className="relative flex flex-wrap items-center gap-6 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:gap-10 lg:p-8" data-tone="hero" aria-labelledby="course-heading">
+        <section className="relative flex flex-wrap items-center gap-6 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:gap-10 lg:p-8" data-tone="hero" data-tour="evidence-course" aria-labelledby="course-heading">
           <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[190px] xl:block"><SocFigure books mood="proud" idle className="h-auto w-full" /></div>
           <Ring value={data.progress.percent} size={128} stroke={6} label={<span className="font-display text-3xl">{data.progress.percent}%</span>} ariaLabel={`Course ${data.progress.percent} percent complete`} />
           <div className="min-w-0 flex-1 xl:pr-[220px]">

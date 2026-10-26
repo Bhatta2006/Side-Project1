@@ -103,6 +103,8 @@
 @keyframes pulse-slow {
   50% { opacity: 0.55; }
 }
+/* The tour scrolls its target to the top; keep it clear of the sticky header. */
+[data-tour] { scroll-margin-top: 96px; }
 
 /*
  * "Learn it. Then prove it." A notebook page: warm paper with faint rules and a red margin, ink type,

@@ -381,7 +381,7 @@ export default function PlaygroundPage() {
           ) : null}
           {notice ? <SuccessLine className="mt-6">{notice}</SuccessLine> : null}
 
-          <div className="mt-6 grid gap-4 paper rounded-card p-5 lg:p-6">
+          <div data-tour="playground-ask" className="mt-6 grid gap-4 paper rounded-card p-5 lg:p-6">
             <label htmlFor="visual-request" className="font-semibold">Your question</label>
             <Textarea
               ref={input}
