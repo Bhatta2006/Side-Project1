@@ -580,18 +580,24 @@ def guard_instruction(db: Session, cat: Catalog | None, user: User, qualified: s
     enrollment = learn.active_enrollment(db, user.id)
     if enrollment is None:
         raise HTTPException(404, "no_active_enrollment")
-    if qualified is not None:
-        cat = cat or catalog()
-    if qualified is not None and qualified not in learn.curriculum(cat, enrollment):
+
+    def require_independent_work_finished():
+        if sessions.instruction_blocked(db, enrollment, now()) or assessments.in_progress(
+            db, enrollment, now()
+        ):
+            raise HTTPException(423, "independent_work_in_progress")
+
+    if qualified is None:
+        require_independent_work_finished()
+        return
+    full = cat or catalog()
+    if qualified not in learn.curriculum(full, enrollment):
         raise HTTPException(404, "not_found")
-    if sessions.instruction_blocked(db, enrollment, now()) or assessments.in_progress(
-        db, enrollment, now()
-    ):
-        raise HTTPException(423, "independent_work_in_progress")
-    if qualified is not None and enrollment.status == "active":
-        learn.require_unlocked(db, cat, enrollment, qualified, now())
-    elif qualified is not None:  # a paused or finished course still keeps to the plan
-        entitlements.require_concept(db, cat, user.id, qualified, now())
+    require_independent_work_finished()
+    if enrollment.status == "active":
+        learn.require_unlocked(db, full, enrollment, qualified, now())
+    else:  # a paused or finished course still keeps to the plan
+        entitlements.require_concept(db, full, user.id, qualified, now())
 
 
 def activity_concept(cat: Catalog, activity_id: str) -> str | None:
