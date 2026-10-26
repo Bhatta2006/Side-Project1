@@ -1,0 +1,89 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Bug, Lightbulb, MessageSquareHeart, PenLine } from 'lucide-react';
+import { api, explain } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import type { Category } from '@/components/report-problem';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+
+const CATEGORIES: readonly (readonly [Category, string, typeof Bug, string])[] = [
+  ['bug', 'Report a bug', Bug, 'What you did, what you expected, what you saw'],
+  ['idea', 'Ask for a feature', Lightbulb, 'What would make Socrat better for you?'],
+  ['feedback', 'Share feedback', MessageSquareHeart, 'What you liked, what felt off, anything'],
+  ['content', 'Wrong lesson or question', PenLine, 'Which lesson or question, and what is wrong'],
+];
+
+/** Mounted once per shell (lazily). Sends the message and the page path, nothing else. */
+export default function FeedbackDialog() {
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [category, setCategory] = useState<Category>('bug');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    const show = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (CATEGORIES.some(([value]) => value === detail)) setCategory(detail);
+      setOpen(true);
+    };
+    window.addEventListener('socrat:report', show);
+    return () => window.removeEventListener('socrat:report', show);
+  }, []);
+
+  async function send() {
+    setSending(true);
+    try {
+      await api.post('/problem-reports', { message: message.trim(), category, route: window.location.pathname.slice(0, 120) });
+      toast.success('Thank you! We read every note.');
+      setMessage('');
+      setOpen(false);
+    } catch (e) {
+      toast.error(explain(e));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const placeholder = CATEGORIES.find(([value]) => value === category)?.[3];
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Help us build Socrat</DialogTitle>
+          <DialogDescription>You&apos;re one of our beta testers. Bugs, ideas and opinions all help. We include the page you are on; nothing else from your screen.</DialogDescription>
+        </DialogHeader>
+        <div role="radiogroup" aria-label="What is it about?" className="grid grid-cols-2 gap-2">
+          {CATEGORIES.map(([value, label, Icon]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={category === value}
+              onClick={() => setCategory(value)}
+              className={cn(
+                'flex min-h-12 items-center gap-2 rounded-[14px_18px_12px_16px] border-2 border-dashed border-border-strong px-3 py-2 text-left text-sm font-medium transition-[transform,box-shadow]',
+                category === value && '-translate-x-0.5 -translate-y-0.5 border-solid border-[var(--soc-outline)] bg-[var(--highlight)] text-[#15161E] shadow-[3px_3px_0_var(--soc-outline)]',
+              )}
+            >
+              <Icon className="size-4 flex-none" aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </div>
+        <label className="grid gap-1.5 text-sm font-medium">
+          Tell us more
+          <Textarea rows={5} maxLength={2000} value={message} onChange={e => setMessage(e.target.value)} placeholder={placeholder} />
+        </label>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={send} disabled={sending || message.trim().length < 3}>{sending ? 'Sending' : 'Send'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

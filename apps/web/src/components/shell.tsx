@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -37,7 +38,6 @@ import type { BillingStatus, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
 import { FeedbackButton, ReportProblem, openReportProblem } from '@/components/report-problem';
-import Assistant from '@/components/assistant';
 import { Tour } from '@/components/tour';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { Soc } from '@/components/socrat/illustration';
@@ -189,6 +189,8 @@ function useAssessmentReady(learning: boolean) {
   return ready;
 }
 
+// The tutor panel loads after first paint so it never counts against every route's JS budget.
+const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 const ownTutor = (path: string) => path === '/today' || path === '/plan' || path.startsWith('/learn/') || /^\/problems\/[^/]+$/.test(path);
 
