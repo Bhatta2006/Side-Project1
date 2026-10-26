@@ -12,6 +12,9 @@ import { Toaster } from '@/components/ui/sonner';
 import { WebVitals } from '@/components/web-vitals';
 import { ErrorReporter } from '@/components/error-reporter';
 import { PwaSetup } from '@/components/install-app';
+import { LEGAL } from '@/lib/legal';
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-F12E455TW1';
 
 // Geist Sans sets everything, display and body. Handwritten margin notes use Delicious Handrawn
 // (SIL OFL 1.1, vendored in src/fonts), only for asides.
@@ -29,13 +32,34 @@ const jetbrains = localFont({
   preload: false,
 });
 
+const DESCRIPTION = 'Learn it. Then prove it. A personal programming tutor for learning to code, interview preparation and contests.';
+
 export const metadata: Metadata = {
-  title: { default: 'Socrat', template: '%s · Socrat' },
-  description: 'Learn it. Then prove it. A personal programming tutor for learning to code, interview preparation and contests.',
-  robots: { index: false, follow: false },
+  metadataBase: new URL(LEGAL.site),
+  title: { default: 'Socrat: a tutor that asks before it tells', template: '%s · Socrat' },
+  description: DESCRIPTION,
+  // Signed-in app routes are kept out of search in robots.ts; the public pages are indexable.
+  robots: { index: true, follow: true },
   applicationName: 'Socrat',
   appleWebApp: { capable: true, title: 'Socrat', statusBarStyle: 'default' },
-  icons: { apple: '/icons/apple-touch-icon.png' },
+  // Google wants a favicon in multiples of 48px, linked from the page; /favicon.ico is the fallback.
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/icons/apple-touch-icon.png',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Socrat',
+    title: 'Socrat: a tutor that asks before it tells',
+    description: DESCRIPTION,
+    url: '/',
+    images: [{ url: '/icons/image.png', width: 1254, height: 1254, alt: 'Socrat' }],
+  },
+  twitter: { card: 'summary', title: 'Socrat', description: DESCRIPTION, images: ['/icons/image.png'] },
 };
 
 export const viewport: Viewport = {
@@ -50,6 +74,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${GeistSans.variable} ${delicious.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_SCRIPT }} />
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+        <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');` }} />
       </head>
       <body>
         <WebVitals />
