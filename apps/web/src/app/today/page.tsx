@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronRight, Flame } from 'lucide-react';
@@ -10,7 +11,6 @@ import type { Activity, AssessmentStatus, PlanView, Recommendations, Today } fro
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal, Ring } from '@/components/common';
 import { Level, PlatformTag, ProblemName } from '@/components/practice';
-import Assistant from '@/components/assistant';
 import { AdaptingCard } from '@/components/socrat/adapting';
 import { ReasonChip } from '@/components/socrat/reason-chip';
 import { Illustration, Soc } from '@/components/socrat/illustration';
@@ -23,6 +23,10 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { CommunityCard } from '@/components/community-link';
+
+// The chat loads on demand, as on the problem page: it opens only when asked, and its code
+// otherwise sits in Today's first load. An early openSignal still opens it once it arrives.
+const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 const VERB: Record<string, string> = {
   lesson: 'Start lesson',
