@@ -14,7 +14,7 @@ push to main ─► continuous-integration (lint, tests, scans, build)
 
 1. **Two DNS names on two different registrable domains.** `APP_HOST` (the site) and `SANDBOX_HOST` (signed Playground frames), for example `socrat.app` and `socrat-visuals.net`. The API refuses to enable the Playground when both share a registrable domain, because generated visuals must not be able to reach the app's cookies. Both point at the VM's public IP.
 2. **An OIDC provider** (Google, Microsoft, Auth0, …). Production has no developer login. The redirect URI to register is `https://<APP_HOST>/api/v1/auth/callback`.
-3. **An AI provider key** for the tutor and Playground (any OpenAI-compatible endpoint such as Nebius, or Anthropic).
+3. **An AI provider key** for the tutor and Playground: an OpenAI API key (recommended, with `gpt-5.4-mini`), any OpenAI-compatible endpoint, or Anthropic. It goes in the `ai_api_key` secret file.
 4. **Python and C++ run in the learner's browser** (`SOCRAT_BROWSER_RUNTIMES='["python","cpp"]'`, the default); nothing executes on the VM. The web image copies the runtimes (about 115 MB) into `public/runtimes/` at build time, served with immutable caching. If a proxy sits in front of the web container, it must pass `/runner/*` and `/runtimes/*` through unchanged (including their `Content-Security-Policy` and `Cache-Control` headers) and allow responses of about 80 MB. Java needs the gVisor runner host described in `infra/execution/` and `docs/security/`; never enable the `local_process` backend on an internet-facing host.
 5. **LLM budgets:** set `SOCRAT_AI_PRICE_INPUT_PER_MTOK` / `SOCRAT_AI_PRICE_OUTPUT_PER_MTOK` to your provider's prices and adjust the `SOCRAT_AI_*_BUDGET_USD` caps; `SOCRAT_AI_ENABLED=false` switches every model call off. Optional `SOCRAT_SENTRY_DSN` forwards server errors to Sentry or GlitchTip.
 
@@ -40,6 +40,7 @@ printf '%s' 'YOUR_OIDC_CLIENT_SECRET' > oidc_client_secret
 printf '%s' 'YOUR_RAZORPAY_KEY_SECRET' > razorpay_key_secret          # Razorpay -> Settings -> API Keys
 printf '%s' 'YOUR_RAZORPAY_WEBHOOK_SECRET' > razorpay_webhook_secret  # the secret you set on the webhook
 printf '%s' 'YOUR_AI_PROVIDER_API_KEY' > ai_api_key
+printf '%s' 'YOUR_RESEND_API_KEY' > resend_api_key             # Resend -> API Keys (sending access)
 chmod 600 *
 
 # 3. The deploy user must be in the docker group (cloud-init does this for `ubuntu`).
@@ -74,11 +75,15 @@ Create a **`production` environment** (Settings → Environments) and add requir
 | `SOCRAT_OIDC_CLIENT_ID` | yes | OIDC client id |
 | `SOCRAT_BILLING_ENABLED` | for paid plans | `true` turns on Free/Plus/Pro limits and checkout; default `false` |
 | `SOCRAT_RAZORPAY_KEY_ID` | for paid plans | Razorpay Key ID (`rzp_live_...`). Public, so a variable, not a secret |
+| `SOCRAT_EMAIL_FROM` | for email sign-in | `Socrat <no-reply@your-verified-domain>`; email sign-in stays hidden until this and the `resend_api_key` secret are set |
 | `SOCRAT_AI_PROVIDER` | recommended | `openai` (any OpenAI-compatible endpoint) or `anthropic`; default `openai` |
-| `SOCRAT_OPENAI_BASE_URL` | for Nebius etc. | `https://api.tokenfactory.us-central1.nebius.com/v1/` |
-| `SOCRAT_OPENAI_MODEL` | yes for `openai` | tutor model id |
+| `SOCRAT_OPENAI_BASE_URL` | only for compatible endpoints | leave unset for api.openai.com; e.g. a vLLM or Nebius `/v1/` URL |
+| `SOCRAT_OPENAI_MODEL` | yes for `openai` | `gpt-5.4-mini` (tutor, lessons, trial and Playground) |
 | `SOCRAT_EXPLAINER_MODEL` | optional | Playground model id (defaults to the tutor model) |
-| `SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS` | optional | `{"enable_thinking": false}` |
+| `SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS` | compatible endpoints only | `{"enable_thinking": false}` for Qwen3; ignored for api.openai.com |
+| `SOCRAT_AI_PRICE_INPUT_PER_MTOK` / `SOCRAT_AI_PRICE_OUTPUT_PER_MTOK` | recommended | the model's prices; default GPT-5.4 mini: `0.75` / `4.5` |
+| `SOCRAT_AI_DAILY_BUDGET_USD` / `SOCRAT_AI_MONTHLY_BUDGET_USD` | recommended | site-wide caps; defaults `25` / `400` |
+| `SOCRAT_AI_USER_DAILY_BUDGET_USD` | optional | per-learner tutor cap (the Playground uses plan counts); default `0.5` |
 | `SOCRAT_CONTENT_ADMIN_IDENTITIES` | optional | JSON list of `"issuer\|subject"` allowed to review content |
 | `SOCRAT_ADMIN_SUBJECTS` | optional | JSON list of OIDC subjects allowed into `/admin` |
 

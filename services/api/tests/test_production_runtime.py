@@ -65,6 +65,7 @@ def test_production_secrets_are_files_and_never_inline():
         "explainer_checker_secret",
         "razorpay_key_secret",
         "razorpay_webhook_secret",
+        "resend_api_key",
     }
     sandbox = env["SOCRAT_EXPLAINER_SANDBOX_ORIGIN"]
     assert sandbox.startswith("https://${SANDBOX_HOST")

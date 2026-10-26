@@ -91,8 +91,23 @@ def test_openai_streams_text_without_tools():
     assert fake.requests[0]["messages"][0] == {"role": "system", "content": "sys"}
 
 
+def test_chat_template_options_are_sent_only_to_compatible_endpoints():
+    official = settings(ai_provider="openai", openai_model="gpt-5.4-mini", openai_api_key="k")
+    assert (
+        make_provider(
+            official, chat_template_kwargs={"enable_thinking": False}
+        ).chat_template_kwargs
+        == {}
+    )
+
+
 def test_chat_template_options_are_explicit_and_do_not_change_other_provider_instances():
-    config = settings(ai_provider="openai", openai_model="m", openai_api_key="k")
+    config = settings(
+        ai_provider="openai",
+        openai_model="m",
+        openai_api_key="k",
+        openai_base_url="https://compatible.example/v1/",
+    )
     provider = make_provider(config, chat_template_kwargs={"enable_thinking": False})
     fake = FakeCompletions([[chunk('{"issues":[]}', finish="stop")]])
     provider.client = NS(chat=NS(completions=fake))

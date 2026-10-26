@@ -19,7 +19,7 @@ HEALTH_URL="${SOCRAT_HEALTH_URL:-}"
 fail() { echo "deploy: $*" >&2; exit 1; }
 
 required=(RELEASE_SHA SOCRAT_API_IMAGE SOCRAT_WEB_IMAGE SOCRAT_EXPLAINER_IMAGE APP_HOST SANDBOX_HOST TLS_EMAIL SOCRAT_OIDC_ISSUER SOCRAT_OIDC_CLIENT_ID)
-optional=(SOCRAT_AI_PROVIDER SOCRAT_OPENAI_BASE_URL SOCRAT_OPENAI_MODEL SOCRAT_AI_TIMEOUT_SECONDS SOCRAT_EXPLAINER_ENABLED SOCRAT_EXPLAINER_MODEL SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS SOCRAT_EXPLAINER_DAILY_MESSAGES SOCRAT_CONTENT_ADMIN_IDENTITIES SOCRAT_ADMIN_SUBJECTS SOCRAT_TUTOR_MODEL_ENABLED SOCRAT_BILLING_ENABLED SOCRAT_RAZORPAY_KEY_ID)
+optional=(SOCRAT_AI_PROVIDER SOCRAT_OPENAI_BASE_URL SOCRAT_OPENAI_MODEL SOCRAT_AI_TIMEOUT_SECONDS SOCRAT_EXPLAINER_ENABLED SOCRAT_EXPLAINER_MODEL SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS SOCRAT_EXPLAINER_DAILY_MESSAGES SOCRAT_CONTENT_ADMIN_IDENTITIES SOCRAT_ADMIN_SUBJECTS SOCRAT_TUTOR_MODEL_ENABLED SOCRAT_BILLING_ENABLED SOCRAT_RAZORPAY_KEY_ID SOCRAT_AI_PRICE_INPUT_PER_MTOK SOCRAT_AI_PRICE_OUTPUT_PER_MTOK SOCRAT_AI_DAILY_BUDGET_USD SOCRAT_AI_MONTHLY_BUDGET_USD SOCRAT_AI_USER_DAILY_BUDGET_USD SOCRAT_EMAIL_FROM)
 
 for name in "${required[@]}"; do
   [[ -n "${!name:-}" ]] || fail "$name is required"
@@ -30,7 +30,7 @@ for name in SOCRAT_API_IMAGE SOCRAT_WEB_IMAGE SOCRAT_EXPLAINER_IMAGE; do
 done
 [[ "$APP_HOST" != "$SANDBOX_HOST" ]] || fail "APP_HOST and SANDBOX_HOST must differ (and use different registrable domains)"
 
-for secret in postgres_password session_secret oidc_client_secret metrics_token ai_api_key explainer_checker_secret razorpay_key_secret razorpay_webhook_secret; do
+for secret in postgres_password session_secret oidc_client_secret metrics_token ai_api_key explainer_checker_secret razorpay_key_secret razorpay_webhook_secret resend_api_key; do
   file="$SOCRAT_SECRETS_DIR/$secret"
   [[ -s "$file" ]] || fail "missing secret file $file"
   # Containers run as non-root users, so the files are world-readable; the directory (0700) is the boundary.

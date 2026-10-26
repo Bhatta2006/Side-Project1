@@ -102,19 +102,20 @@ services:
       SOCRAT_AI_TIMEOUT_SECONDS: "${SOCRAT_AI_TIMEOUT_SECONDS:-60}"
       # LLM cost guardrails: SOCRAT_AI_ENABLED=false is the kill switch. Set the prices to your
       # provider's per-million-token prices so budgets and the /admin spend card are accurate.
+      # Defaults: GPT-5.4 mini ($0.75 input, $4.50 output).
       SOCRAT_AI_ENABLED: "${SOCRAT_AI_ENABLED:-true}"
       SOCRAT_SENTRY_DSN: "${SOCRAT_SENTRY_DSN:-}"
       SOCRAT_RELEASE: "${SOCRAT_RELEASE:-}"
-      SOCRAT_AI_PRICE_INPUT_PER_MTOK: "${SOCRAT_AI_PRICE_INPUT_PER_MTOK:-3}"
-      SOCRAT_AI_PRICE_OUTPUT_PER_MTOK: "${SOCRAT_AI_PRICE_OUTPUT_PER_MTOK:-15}"
+      SOCRAT_AI_PRICE_INPUT_PER_MTOK: "${SOCRAT_AI_PRICE_INPUT_PER_MTOK:-0.75}"
+      SOCRAT_AI_PRICE_OUTPUT_PER_MTOK: "${SOCRAT_AI_PRICE_OUTPUT_PER_MTOK:-4.5}"
       SOCRAT_AI_USER_DAILY_BUDGET_USD: "${SOCRAT_AI_USER_DAILY_BUDGET_USD:-0.5}"
       SOCRAT_AI_DAILY_BUDGET_USD: "${SOCRAT_AI_DAILY_BUDGET_USD:-25}"
       SOCRAT_AI_MONTHLY_BUDGET_USD: "${SOCRAT_AI_MONTHLY_BUDGET_USD:-400}"
       # Playground (AI visual explainer): frames are served from a second, unrelated registrable domain.
       SOCRAT_EXPLAINER_ENABLED: "${SOCRAT_EXPLAINER_ENABLED:-true}"
       SOCRAT_EXPLAINER_MODEL: "${SOCRAT_EXPLAINER_MODEL:-}"
-      # A reasoning model spends the 12k-token output limit thinking and truncates visuals: for Qwen3
-      # on vLLM/Nebius set {"enable_thinking":false}. The API logs "ended without </html>" when it happens.
+      # vLLM/Nebius only (ignored for api.openai.com): a reasoning model there can spend the 12k-token
+      # output limit thinking and truncate visuals; for Qwen3 set {"enable_thinking":false}.
       SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS: "${SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS:-{}}"
       SOCRAT_EXPLAINER_DAILY_MESSAGES: "${SOCRAT_EXPLAINER_DAILY_MESSAGES:-20}"
       SOCRAT_EXPLAINER_SANDBOX_ORIGIN: "https://${SANDBOX_HOST:?Set SANDBOX_HOST to a DNS name on a different registrable domain}"
@@ -125,6 +126,9 @@ services:
       SOCRAT_RAZORPAY_KEY_ID: "${SOCRAT_RAZORPAY_KEY_ID:-}"
       SOCRAT_RAZORPAY_KEY_SECRET_FILE: /run/secrets/razorpay_key_secret
       SOCRAT_RAZORPAY_WEBHOOK_SECRET_FILE: /run/secrets/razorpay_webhook_secret
+      # Email-and-password accounts: one-time codes are sent through Resend from a verified domain.
+      SOCRAT_EMAIL_FROM: "${SOCRAT_EMAIL_FROM:-}"
+      SOCRAT_RESEND_API_KEY_FILE: /run/secrets/resend_api_key
     secrets: &api-secrets
       - postgres_password
       - session_secret
@@ -134,6 +138,7 @@ services:
       - explainer_checker_secret
       - razorpay_key_secret
       - razorpay_webhook_secret
+      - resend_api_key
     networks:
       - backend
       # Outbound HTTPS for OIDC discovery and the AI provider. Not a destination allow-list.
@@ -318,6 +323,8 @@ secrets:
     file: "${SOCRAT_SECRETS_DIR:?Set SOCRAT_SECRETS_DIR}/razorpay_key_secret"
   razorpay_webhook_secret:
     file: "${SOCRAT_SECRETS_DIR:?Set SOCRAT_SECRETS_DIR}/razorpay_webhook_secret"
+  resend_api_key:
+    file: "${SOCRAT_SECRETS_DIR:?Set SOCRAT_SECRETS_DIR}/resend_api_key"
 
 networks:
   edge:
