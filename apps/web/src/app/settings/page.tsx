@@ -248,7 +248,7 @@ export default function Settings() {
       <div className="grid gap-4 lg:gap-6">
         <Appearance />
 
-        <form onSubmit={save}>
+        <form onSubmit={save} data-tour="settings-schedule">
           <Section id="schedule-heading" title="Profile and schedule" description="How Socrat addresses you and how much time you have.">
             <div className="grid gap-6">
               <div className="grid gap-6 sm:grid-cols-2">

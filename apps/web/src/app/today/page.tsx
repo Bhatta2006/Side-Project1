@@ -188,7 +188,7 @@ export default function TodayPage() {
         {/* 4. Hero: the next recommended activity. */}
         <Reveal index={1} className="col-span-12 lg:col-span-8">
           {next ? (
-            <Card tone="hero" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
+            <Card tone="hero" data-tour="today-next" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
               {/* Soc on his books, cheering the next step on. */}
               <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[230px] sm:block lg:right-12 lg:w-[250px]">
                 <SocFigure books mood="happy" idle className="h-auto w-full drop-shadow-[0_18px_24px_rgb(0_0_0/0.25)]" />
@@ -215,7 +215,7 @@ export default function TodayPage() {
               </div>
             </Card>
           ) : (
-            <Card tone="hero" className="relative" aria-labelledby="next-heading">
+            <Card tone="hero" data-tour="today-next" className="relative" aria-labelledby="next-heading">
               <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[200px] sm:block">
                 <SocFigure books mood={today.study_day ? 'proud' : 'sleepy'} idle className="h-auto w-full" />
               </div>
