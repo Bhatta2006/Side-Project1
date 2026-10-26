@@ -8,6 +8,7 @@ This module is imported only on Windows.
 
 import ctypes as ct
 import sys
+import time
 from ctypes import wintypes as wt
 
 # Lets mypy skip the Win32-only ctypes APIs below when type-checking on Linux (CI).
@@ -55,6 +56,21 @@ class ExtendedLimit(ct.Structure):
     ]
 
 
+class Accounting(ct.Structure):
+    """JOBOBJECT_BASIC_ACCOUNTING_INFORMATION."""
+
+    _fields_ = [
+        ("user_time", ct.c_int64),
+        ("kernel_time", ct.c_int64),
+        ("period_user_time", ct.c_int64),
+        ("period_kernel_time", ct.c_int64),
+        ("page_faults", wt.DWORD),
+        ("total_processes", wt.DWORD),
+        ("active_processes", wt.DWORD),
+        ("terminated_processes", wt.DWORD),
+    ]
+
+
 class ThreadEntry(ct.Structure):
     _fields_ = [
         ("size", wt.DWORD),
@@ -73,6 +89,11 @@ for name, args, result in (
     ("SetInformationJobObject", [wt.HANDLE, ct.c_int, ct.c_void_p, wt.DWORD], wt.BOOL),
     ("AssignProcessToJobObject", [wt.HANDLE, wt.HANDLE], wt.BOOL),
     ("TerminateJobObject", [wt.HANDLE, wt.UINT], wt.BOOL),
+    (
+        "QueryInformationJobObject",
+        [wt.HANDLE, ct.c_int, ct.c_void_p, wt.DWORD, ct.POINTER(wt.DWORD)],
+        wt.BOOL,
+    ),
     ("CloseHandle", [wt.HANDLE], wt.BOOL),
     ("CreateToolhelp32Snapshot", [wt.DWORD, wt.DWORD], wt.HANDLE),
     ("Thread32First", [wt.HANDLE, ct.POINTER(ThreadEntry)], wt.BOOL),
@@ -135,8 +156,28 @@ class WindowsJob:
         finally:
             kernel.CloseHandle(snapshot)
 
-    def kill(self):
+    def kill(self, seconds: float = 5):
+        """Terminate every process in the job and wait until all of them have exited.
+
+        TerminateJobObject only starts termination. A process that is still exiting keeps its
+        working directory open, so deleting the job's temporary directory straight away fails
+        with "being used by another process" after a spawn burst.
+        """
         checked(kernel.TerminateJobObject(self.handle, 1))
+        info = Accounting()
+        deadline = time.monotonic() + seconds
+        while True:
+            # Class 1: JobObjectBasicAccountingInformation.
+            checked(
+                kernel.QueryInformationJobObject(
+                    self.handle, 1, ct.byref(info), ct.sizeof(info), None
+                )
+            )
+            if info.active_processes == 0:
+                return
+            if time.monotonic() > deadline:
+                raise OSError(f"{info.active_processes} job processes did not exit")
+            time.sleep(0.01)
 
     def close(self):
         if self.handle:
