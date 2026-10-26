@@ -21,7 +21,7 @@ const config: NextConfig = {
       // Everything except the code-runner workers, which carry their own policy below.
       { source: '/((?!runner/).*)', headers: [
         ...common,
-        { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : '') + "; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.razorpay.com; connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com; worker-src 'self'; font-src 'self'; frame-src https://api.razorpay.com " + (process.env.NEXT_PUBLIC_EXPLAINER_SANDBOX_ORIGIN || 'http://127.0.0.1:8000') + "; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" },
+        { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.googletagmanager.com" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : '') + "; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.razorpay.com https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; worker-src 'self'; font-src 'self'; frame-src https://api.razorpay.com " + (process.env.NEXT_PUBLIC_EXPLAINER_SANDBOX_ORIGIN || 'http://127.0.0.1:8000') + "; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" },
       ] },
       // Workers compile WebAssembly, and Pyodide evaluates generated glue code. They have no
       // DOM; the page's own policy is unchanged.
