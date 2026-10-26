@@ -1086,6 +1086,46 @@ def assistant_thread(scope: str, request: Request):
         return assistant.thread_view(db, user.id, scope)
 
 
+class ChatScope(Strict):
+    scope: str = Field(max_length=200)
+
+
+@router.get("/assistant/chats")
+def assistant_chats(scope: str, request: Request):
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        return assistant.list_chats(db, user.id, scope)
+
+
+@router.post("/assistant/chats")
+def assistant_new_chat(body: ChatScope, request: Request):
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        return assistant.new_chat(db, user.id, body.scope, now())
+
+
+@router.get("/assistant/chats/{thread_id}")
+def assistant_chat(thread_id: str, request: Request):
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        guard_instruction(db, catalog(), user)
+        return assistant.chat_view(db, user.id, thread_id)
+
+
+@router.post("/assistant/chats/{thread_id}/resume")
+def assistant_resume_chat(thread_id: str, request: Request):
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        return assistant.resume_chat(db, user.id, thread_id, now())
+
+
+@router.get("/assistant/context")
+def assistant_context(scope: str, request: Request):
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        return assistant.context_view(db, catalog(), user, scope, now())
+
+
 @router.post("/assistant/messages")
 async def assistant_message(body: MessageInput, request: Request):
     cat = catalog()

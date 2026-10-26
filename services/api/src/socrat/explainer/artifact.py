@@ -14,7 +14,7 @@ TAGS = set(
     "html head body title meta style script main section article header footer nav aside figure figcaption div span p h1 h2 h3 h4 h5 h6 strong em b i u s small mark sub sup abbr cite q dfn time var samp kbd code pre blockquote ul ol li dl dt dd table thead tbody tfoot tr th td caption button input label select option optgroup textarea fieldset legend output details summary progress meter br hr svg g path rect circle ellipse line polyline polygon text tspan defs desc marker lineargradient radialgradient stop clippath mask pattern symbol use canvas math mrow mi mn mo mfrac msup msub msqrt mroot mtext".split()
 )
 TAGS.update(
-    "filter fegaussianblur feoffset feflood feblend fecolormatrix fecomposite femerge femergenode fedropshadow".split()
+    "filter feturbulence fedisplacementmap fegaussianblur feoffset feflood feblend fecolormatrix fecomposite femerge femergenode fedropshadow".split()
 )
 VOID = {"meta", "input", "br", "hr"}
 URL_ATTRS = {
@@ -202,6 +202,8 @@ def validate(raw: str) -> Document:
 
 BASE_STYLE = """
 :root{color-scheme:light dark;--background:Canvas;--foreground:CanvasText;--card:Canvas;--muted:ButtonFace;--muted-foreground:GrayText;--border:ButtonBorder;--primary:AccentColor;--primary-foreground:AccentColorText;--radius:.7rem}
+:root{--ink:var(--foreground);--pen:#CC2A24;--highlight:#F6E05E;--hand:"Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS","Comic Neue",cursive;--paper-lines:repeating-linear-gradient(to bottom,transparent 0,transparent 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 28px)}
+:root[style*="color-scheme: dark"]{--pen:#FF7D72;--highlight:#E9D53A}
 *{box-sizing:border-box}html,body{margin:0;background:var(--background);color:var(--foreground);font-family:ui-sans-serif,system-ui,sans-serif}body{padding:20px;line-height:1.55}button,input,select,textarea{font:inherit}button,input,select{min-height:44px}button{cursor:pointer}button:disabled{cursor:default;opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:3px}svg,canvas{max-width:100%}pre{overflow:auto}#visual{min-height:220px}#transcript{margin-top:24px}a{pointer-events:none}
 @media(max-width:600px){body{padding:12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

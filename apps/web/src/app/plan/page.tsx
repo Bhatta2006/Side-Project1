@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, MessageCircle } from 'lucide-react';
@@ -7,7 +8,6 @@ import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { KIND_LABEL, NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, formatStamp, hours } from '@/lib/routes';
 import type { PlanView, RoadmapItem } from '@/lib/types';
-import Assistant from '@/components/assistant';
 import { Milestones, PathStyles, WeeklyReviewPanel } from '@/components/socrat/plan-adaptive';
 import { ProposalList } from '@/components/socrat/proposals';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import { Soc } from '@/components/socrat/illustration';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ReasonChip } from '@/components/socrat/reason-chip';
+
+const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 const FINISHED = ['mastered', 'practiced'];
 const FOCUS_LABEL = { foundations: 'programming foundations', interview: 'coding interviews', contest: 'contests' } as const;
@@ -336,7 +338,7 @@ export default function PlanPage() {
           ) : null}
         </aside>
       </div>
-      <Assistant scope="plan" title="Plan with Soc" openSignal={planChat} launcher={false} />
+      <Assistant scope="plan" title="Plan with Soc" openSignal={planChat} />
     </Page>
   );
 }

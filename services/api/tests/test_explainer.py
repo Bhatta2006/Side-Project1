@@ -514,3 +514,11 @@ def test_production_requires_independent_sandbox_and_checker():
         with pytest.raises(HTTPException) as rejected:
             routes.available(settings)
         assert rejected.value.status_code == 503
+
+
+def test_prompt_skeleton_passes_the_validator_and_asks_for_a_hand_drawn_visual():
+    artifact.validate(generator.SKELETON)
+    assert "feTurbulence" in generator.SKELETON and "var(--hand)" in generator.SKELETON
+    assert "Show, do not tell" in generator.SYSTEM
+    compiled, _ = artifact.compile_document(generator.SKELETON, "c", "http://host.socrat.invalid")
+    assert "--paper-lines" in compiled and "--pen" in compiled

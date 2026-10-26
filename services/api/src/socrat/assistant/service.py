@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from socrat import entitlements
 from socrat.assessments import service as assessments
-from socrat.assistant import socratic
+from socrat.assistant import engine, socratic
 from socrat.assistant.gateway import Provider, ProviderError, ToolRunner, ToolSpec, Turn, complete
 from socrat.assistant.prompts import LESSON_STYLES, LESSON_SYSTEM, SYSTEM, render_context
 from socrat.assistant.tools import LABELS
@@ -66,6 +66,7 @@ class TurnPlan:
     fallback: str
     reveal_blocked: str = ""
     paused: str = ""  # policy reply that replaces the model (e.g. during an assessment)
+    move: engine.Move | None = None  # the teaching engine's decision for this reply
 
 
 def validate_scope(scope: str) -> str:
@@ -412,6 +413,14 @@ def prepare(
         sections["help_policy"] = (
             "ALLOWED_LEVEL: 5 — general questions about learning and the plan."
         )
+    teaching, state = engine.decide(
+        engine.State.from_dict(thread.ladder.get("engine")),
+        engine.classify(message, new_attempt),
+        scope,
+        intent,
+    )
+    thread.ladder = {**thread.ladder, "engine": state.to_dict()}
+    sections["teaching_move"] = engine.instruction(teaching)
     text = message.strip() or ("I'd like a hint." if intent == "hint" else "Can you help me?")
     if intent == "reveal_confirmed" and not reveal_blocked:
         text = "I've tried my best and I'm still stuck. Please walk me through the full solution."
@@ -443,7 +452,9 @@ def prepare(
             paused = "This topic is part of the Founding Member plan. Upgrade to unlock it, then we can work through it together."
         elif gate is not None:
             paused = "This concept follows a locked prerequisite. Complete the checkpoint first, then we can work through it together."
-    return TurnPlan(thread.id, scope, allowed, problem, turns, fallback, reveal_blocked, paused)
+    return TurnPlan(
+        thread.id, scope, allowed, problem, turns, fallback, reveal_blocked, paused, teaching
+    )
 
 
 def _sse(event: str, data: dict) -> str:
@@ -469,6 +480,8 @@ async def stream_reply(
             "reveal_blocked": plan.reveal_blocked,
         },
     )
+    if plan.move is not None and not plan.paused and not plan.reveal_blocked:
+        yield "move", {"name": plan.move.name, "label": plan.move.label}
     if plan.paused:
         yield "delta", {"text": plan.paused}
         yield "done", {"text": plan.paused, "level": 0, "provider": "policy"}
@@ -535,6 +548,11 @@ async def stream_reply(
             raise ProviderError("leak_guard")
         if not shown.strip():
             raise ProviderError("empty_reply")
+        # The engine's promise (e.g. end by checking understanding) holds whatever the model wrote.
+        extra = engine.closing(shown, plan.move)
+        shown += extra
+        if extra and not guarded:
+            yield "delta", {"text": extra}
         if guarded:
             # Validate the complete answer before any protected problem text reaches SSE.
             yield "delta", {"text": shown}
@@ -677,6 +695,186 @@ def thread_view(db: Session, user_id: str, scope: str) -> dict:
             }
             for m in rows
         ],
+    }
+
+
+ARCHIVED = "#"  # archived chats keep their scope with a suffix: "<scope>#<thread id>"
+CONTEXT_TITLES = {
+    "learner": "About you",
+    "mastery": "What you know",
+    "next_up": "Next in your plan",
+    "recent_results": "Recent results",
+    "adaptive": "Where you're stuck and trends",
+}
+
+
+def _owned_thread(db: Session, user_id: str, thread_id: str) -> AssistantThread:
+    thread = db.get(AssistantThread, thread_id)
+    if (
+        thread is None
+        or thread.user_id != user_id
+        or not _SCOPE.match(thread.scope.split(ARCHIVED)[0])
+    ):
+        raise HTTPException(404, "not_found")
+    return thread
+
+
+def _has_messages(db: Session, thread: AssistantThread) -> bool:
+    return bool(
+        db.scalar(
+            select(AssistantMessage.id).where(AssistantMessage.thread_id == thread.id).limit(1)
+        )
+    )
+
+
+def new_chat(db: Session, user_id: str, scope: str, now: int) -> dict:
+    """Archive the current chat for this scope. The hint ladder carries over so a fresh chat
+    never resets how much help a problem allows; only the conversation starts over."""
+    scope = validate_scope(scope)
+    current = db.scalar(
+        select(AssistantThread).where(
+            AssistantThread.user_id == user_id, AssistantThread.scope == scope
+        )
+    )
+    if current is None or not _has_messages(db, current):
+        return {"scope": scope, "archived": None}
+    current.scope = f"{scope}{ARCHIVED}{current.id}"
+    db.flush()
+    carried = {k: v for k, v in current.ladder.items() if k != "engine"}
+    db.add(
+        AssistantThread(
+            user_id=user_id, scope=scope, ladder=carried, created_at=now, updated_at=now
+        )
+    )
+    db.flush()
+    return {"scope": scope, "archived": current.id}
+
+
+def list_chats(db: Session, user_id: str, scope: str) -> dict:
+    scope = validate_scope(scope)
+    threads = list(
+        db.scalars(
+            select(AssistantThread)
+            .where(
+                AssistantThread.user_id == user_id,
+                (AssistantThread.scope == scope)
+                | AssistantThread.scope.startswith(f"{scope}{ARCHIVED}", autoescape=True),
+            )
+            # The current chat first, then the newest archived ones.
+            .order_by((AssistantThread.scope == scope).desc(), AssistantThread.updated_at.desc())
+            .limit(30)
+        )
+    )
+    items = []
+    for thread in threads:
+        first = db.scalar(
+            select(AssistantMessage.content)
+            .where(AssistantMessage.thread_id == thread.id, AssistantMessage.role == "user")
+            .order_by(AssistantMessage.seq)
+            .limit(1)
+        )
+        count = db.scalar(
+            select(func.count())
+            .select_from(AssistantMessage)
+            .where(AssistantMessage.thread_id == thread.id)
+        )
+        if not count:
+            continue
+        items.append(
+            {
+                "id": thread.id,
+                "title": (first or "Chat")[:80],
+                "messages": count,
+                "updated_at": thread.updated_at,
+                "current": thread.scope == scope,
+            }
+        )
+    return {"scope": scope, "items": items}
+
+
+def chat_view(db: Session, user_id: str, thread_id: str) -> dict:
+    """One chat, current or archived, read in full."""
+    thread = _owned_thread(db, user_id, thread_id)
+    base = thread.scope.split(ARCHIVED)[0]
+    view = (
+        thread_view(db, user_id, base)
+        if thread.scope == base
+        else {
+            "scope": base,
+            "ladder": {},
+            "reveal": None,
+            "messages": [
+                {
+                    "id": m.id,
+                    "role": m.role,
+                    "content": m.content,
+                    "level": m.level,
+                    "rating": m.rating,
+                    "at": m.created_at,
+                }
+                for m in db.scalars(
+                    select(AssistantMessage)
+                    .where(AssistantMessage.thread_id == thread.id)
+                    .order_by(AssistantMessage.seq)
+                    .limit(200)
+                )
+            ],
+        }
+    )
+    return {**view, "thread_id": thread.id, "archived": thread.scope != base}
+
+
+def resume_chat(db: Session, user_id: str, thread_id: str, now: int) -> dict:
+    """Make an archived chat current again; the chat it replaces is archived in turn."""
+    thread = _owned_thread(db, user_id, thread_id)
+    base = thread.scope.split(ARCHIVED)[0]
+    if thread.scope == base:
+        return {"scope": base, "thread_id": thread.id}
+    current = db.scalar(
+        select(AssistantThread).where(
+            AssistantThread.user_id == user_id, AssistantThread.scope == base
+        )
+    )
+    ladder = {k: v for k, v in (current.ladder if current else {}).items() if k != "engine"}
+    if current is not None:
+        if _has_messages(db, current):
+            current.scope = f"{base}{ARCHIVED}{current.id}"
+        else:
+            db.delete(current)
+        db.flush()
+    thread.scope = base
+    # The newest hint ladder wins, so resuming an old chat cannot change how much help is allowed.
+    thread.ladder = (
+        {**ladder, "engine": thread.ladder.get("engine", {})} if ladder else thread.ladder
+    )
+    thread.updated_at = now
+    db.flush()
+    return {"scope": base, "thread_id": thread.id}
+
+
+def context_view(db: Session, catalog: Catalog, user: User, scope: str, now: int) -> dict:
+    """What Soc reads before every reply in this chat, shown to the learner as-is."""
+    scope = validate_scope(scope)
+    enrollment = learn.active_enrollment(db, user.id)
+    sections = learner_sections(db, catalog, user, enrollment, now)
+    thread = db.scalar(
+        select(AssistantThread).where(
+            AssistantThread.user_id == user.id, AssistantThread.scope == scope
+        )
+    )
+    state = engine.State.from_dict(thread.ladder.get("engine") if thread else None)
+    return {
+        "scope": scope,
+        "sections": [
+            {
+                "title": CONTEXT_TITLES.get(name, name.replace("_", " ").capitalize()),
+                "text": text.strip(),
+            }
+            for name, text in sections.items()
+            if text and text.strip()
+        ],
+        "teaching": engine.describe(state),
+        "history_turns": HISTORY_TURNS,
     }
 
 

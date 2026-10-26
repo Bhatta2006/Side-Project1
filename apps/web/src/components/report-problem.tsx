@@ -1,74 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import { api, explain } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { Textarea } from '@/components/ui/textarea';
+import dynamic from 'next/dynamic';
+import { PenLine } from 'lucide-react';
 
-/** Opens the "Report a problem" dialog from anywhere (menu, error page, settings). */
-export function openReportProblem() {
-  window.dispatchEvent(new CustomEvent('socrat:report'));
+export type Category = 'bug' | 'idea' | 'feedback' | 'content';
+
+/** Opens the feedback dialog from anywhere (header button, menu, error page, settings). */
+export function openReportProblem(category: Category = 'bug') {
+  window.dispatchEvent(new CustomEvent('socrat:report', { detail: category }));
 }
 
-const CATEGORIES = [
-  ['bug', 'Something is broken'],
-  ['content', 'A lesson, question or problem is wrong'],
-  ['idea', 'An idea or request'],
-  ['other', 'Something else'],
-] as const;
+/** The dialog loads after first paint so it costs nothing on routes until it is opened. */
+export const ReportProblem = dynamic(() => import('@/components/feedback-dialog'), { ssr: false });
 
-/** Mounted once in the app shell. Sends the message and the page path, nothing else. */
-export function ReportProblem() {
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number][0]>('bug');
-  const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    const show = () => setOpen(true);
-    window.addEventListener('socrat:report', show);
-    return () => window.removeEventListener('socrat:report', show);
-  }, []);
-
-  async function send() {
-    setSending(true);
-    try {
-      await api.post('/problem-reports', { message: message.trim(), category, route: window.location.pathname.slice(0, 120) });
-      toast.success('Thanks. We read every report.');
-      setMessage('');
-      setOpen(false);
-    } catch (e) {
-      toast.error(explain(e));
-    } finally {
-      setSending(false);
-    }
-  }
-
+/** Always-visible header button for beta testers: a yellow sticky note in ink. */
+export function FeedbackButton() {
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Report a problem</DialogTitle>
-          <DialogDescription>Tell us what happened. We include the page you are on; nothing else from your screen.</DialogDescription>
-        </DialogHeader>
-        <label className="grid gap-1.5 text-sm font-medium">
-          What is it about?
-          <NativeSelect value={category} onChange={e => setCategory(e.target.value as typeof category)}>
-            {CATEGORIES.map(([value, label]) => <NativeSelectOption key={value} value={value}>{label}</NativeSelectOption>)}
-          </NativeSelect>
-        </label>
-        <label className="grid gap-1.5 text-sm font-medium">
-          What happened?
-          <Textarea rows={5} maxLength={2000} value={message} onChange={e => setMessage(e.target.value)} placeholder="What you did, what you expected, what you saw" />
-        </label>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={send} disabled={sending || message.trim().length < 3}>{sending ? 'Sending' : 'Send report'}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <button
+      type="button"
+      onClick={() => openReportProblem('feedback')}
+      aria-label="Send feedback, ask for a feature or report a bug"
+      className="group inline-flex h-9 -rotate-2 items-center gap-1.5 rounded-[10px_14px_9px_12px] border-2 border-[var(--soc-outline)] bg-[var(--highlight)] px-3 text-[#15161E] shadow-[2px_2px_0_var(--soc-outline)] transition-[transform,box-shadow] duration-200 ease-[var(--ease-soft)] hover:-translate-y-0.5 hover:rotate-0 hover:shadow-[3px_4px_0_var(--soc-outline)] active:translate-y-0 active:shadow-none"
+    >
+      <PenLine className="size-4 transition-transform group-hover:-rotate-12" strokeWidth={2} aria-hidden="true" />
+      <span className="font-hand text-[18px] leading-none">Feedback</span>
+      <span className="hidden rounded-full border border-[#15161E] px-1.5 text-[10px] font-bold tracking-wide uppercase sm:inline">beta</span>
+    </button>
   );
 }

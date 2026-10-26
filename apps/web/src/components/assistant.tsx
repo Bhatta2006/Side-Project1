@@ -5,11 +5,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api, explain, stream } from '@/lib/api';
 import type { ChatMessage, Proposal, ProposalsView } from '@/lib/types';
 import { ProposalList } from '@/components/socrat/proposals';
-import { Check, Lightbulb, SendHorizontal, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, History, Lightbulb, SendHorizontal, SquarePen, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { prefersReducedMotion } from '@/lib/motion';
 import { Soc } from '@/components/socrat/illustration';
 import Markdown from './markdown';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
 interface Ladder {
@@ -29,6 +29,26 @@ interface Props {
   openSignal?: number;
   /** Hide the floating launcher, or show it on phones only, when the page has its own "Ask Soc" control. */
   launcher?: boolean | 'phone';
+}
+
+interface ChatSummary { id: string; title: string; messages: number; updated_at: number; current: boolean }
+interface SocContext { sections: { title: string; text: string }[]; teaching: string; history_turns: number }
+type View = 'chat' | 'history' | 'context';
+
+/** Soc is thinking: a pencil scribble that keeps drawing itself, with what Soc is doing in hand. */
+function Thinking({ label }: { label?: string }) {
+  return (
+    <span className="flex items-center gap-2 py-1" role="status">
+      <svg viewBox="0 0 64 20" className="soc-scribble h-5 w-14 flex-none text-pen" aria-hidden="true">
+        <path d="M2 12c5-9 9 7 14-1s8-7 12 1 8 6 12-2 8-6 12 1 6 4 10-1" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      </svg>
+      <span className="font-hand text-[19px] leading-none text-muted-foreground">{label ? `${label.toLowerCase()}…` : 'thinking…'}</span>
+    </span>
+  );
+}
+
+function when(seconds: number) {
+  return new Date(seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 const LEVEL_TEXT = ['Asking what you tried', 'Guiding question', 'Conceptual nudge', 'Approach', 'Partial plan', 'Full walkthrough'];
@@ -53,6 +73,13 @@ export default function Assistant({ scope, title, language, context, onSent, ope
   const [activity, setActivity] = useState<string[]>([]);
   // Plan changes Soc proposed in chat; they apply only when the learner accepts them here.
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [view, setView] = useState<View>('chat');
+  const [chats, setChats] = useState<ChatSummary[] | null>(null);
+  const [socContext, setSocContext] = useState<SocContext | null>(null);
+  // An archived chat being read; it can be continued, not written to.
+  const [archived, setArchived] = useState<{ id: string; messages: ChatMessage[] } | null>(null);
+  // How many characters of the streaming reply are on screen; null when nothing is typing.
+  const [typed, setTyped] = useState<number | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
@@ -73,7 +100,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
   }, [open]);
 
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
-  useEffect(() => { setLoaded(false); setMessages([]); setLadder({}); }, [scope]);
+  useEffect(() => { setLoaded(false); setMessages([]); setLadder({}); setView('chat'); setArchived(null); }, [scope]);
   const refreshReveal = useCallback(() => {
     if (!problem) return;
     api
@@ -90,6 +117,54 @@ export default function Assistant({ scope, title, language, context, onSent, ope
       .then(t => { setMessages(t.messages); setLadder(t.ladder ?? {}); setReveal(t.reveal); setLoaded(true); })
       .catch(e => setError(explain(e)));
   }, [open, loaded, scope, refreshReveal]);
+
+  // Type the reply out smoothly, however the server chunks it; catch up faster when far behind.
+  useEffect(() => {
+    if (typed === null) return;
+    const last = messages[messages.length - 1];
+    const length = last?.role === 'assistant' ? last.content.length : 0;
+    if (typed >= length) { if (!busy) setTyped(null); return; }
+    const frame = requestAnimationFrame(() => setTyped(t => (t === null ? null : Math.min(length, t + Math.max(2, Math.ceil((length - t) / 12))))));
+    return () => cancelAnimationFrame(frame);
+  }, [typed, messages, busy]);
+
+  function showHistory() {
+    setView('history'); setChats(null); setError('');
+    api.get<{ items: ChatSummary[] }>(`/assistant/chats?scope=${encodeURIComponent(scope)}`)
+      .then(r => setChats(r.items))
+      .catch(e => { setChats([]); setError(explain(e)); });
+  }
+  function showContext() {
+    setView('context'); setSocContext(null); setError('');
+    api.get<SocContext>(`/assistant/context?scope=${encodeURIComponent(scope)}`)
+      .then(setSocContext)
+      .catch(e => setError(explain(e)));
+  }
+  async function newChat() {
+    if (busy) return;
+    setError('');
+    try {
+      await api.post('/assistant/chats', { scope });
+      // Reloading picks up the carried-over hint ladder on a problem.
+      setMessages([]); setArchived(null); setView('chat'); setLoaded(false);
+      requestAnimationFrame(() => input.current?.focus());
+    } catch (e) { setError(explain(e)); }
+  }
+  async function openChat(chat: ChatSummary) {
+    setError('');
+    if (chat.current) { setArchived(null); setView('chat'); return; }
+    try {
+      const t = await api.get<{ messages: ChatMessage[] }>(`/assistant/chats/${chat.id}`);
+      setArchived({ id: chat.id, messages: t.messages }); setView('chat');
+    } catch (e) { setError(explain(e)); }
+  }
+  async function continueChat() {
+    if (!archived) return;
+    try {
+      await api.post(`/assistant/chats/${archived.id}/resume`, {});
+      setArchived(null); setLoaded(false);
+    } catch (e) { setError(explain(e)); }
+  }
   useEffect(() => {
     if (!open || problem) return;
     loadProposals();
@@ -124,6 +199,8 @@ export default function Assistant({ scope, title, language, context, onSent, ope
     setMessages(m => [...m, { role: 'user', content: shown }, { role: 'assistant', content: '' }]);
     setDraft('');
     setActivity([]);
+    setView('chat'); setArchived(null);
+    if (!prefersReducedMotion()) setTyped(0);
     let reply = '';
     let proposed = false;
     let finished = false;
@@ -133,7 +210,8 @@ export default function Assistant({ scope, title, language, context, onSent, ope
       for await (const { event, data } of stream('/assistant/messages', {
         scope, message, intent, code: extra.code, new_attempt: extra.newAttempt,
       })) {
-        if (event === 'tool') {
+        if (event === 'move') setActivity([String(data.label)]);
+        else if (event === 'tool') {
           if (String(data.name).startsWith('propose_')) proposed = true;
           setActivity(a => (a.includes(String(data.label)) ? a : [...a, String(data.label)]));
         }
@@ -155,6 +233,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
       onSent?.();
     } catch (e) {
       setMessages(m => m.slice(0, -2));
+      setTyped(null);
       setDraft(message);
       setError(explain(e));
     } finally {
@@ -216,10 +295,72 @@ export default function Assistant({ scope, title, language, context, onSent, ope
             ) : <p className="text-[13px] text-muted-foreground">Asks before it tells. Knows your plan.</p>}
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close tutor"><X /></Button>
+        <div className="flex flex-none items-center">
+          <Button variant="ghost" size="icon-sm" onClick={() => void newChat()} disabled={busy || (!messages.length && !archived)} aria-label="New chat" title="New chat"><SquarePen /></Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => (view === 'history' ? setView('chat') : showHistory())} aria-pressed={view === 'history'} aria-label="Chat history" title="Chat history"><History /></Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => (view === 'context' ? setView('chat') : showContext())} aria-pressed={view === 'context'} aria-label="What Soc knows" title="What Soc knows"><BookOpen /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close tutor"><X /></Button>
+        </div>
       </header>
+      {view === 'history' ? (
+        <div className="chat-page flex-1 overflow-y-auto px-4 py-4">
+          <button type="button" onClick={() => setView('chat')} className="mb-3 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold"><ArrowLeft className="size-4" /> Back to chat</button>
+          <h3 className="font-hand mb-2 text-[24px] leading-none text-pen">your chats</h3>
+          {chats === null ? <Thinking label="Finding your chats" /> : !chats.length ? (
+            <p className="text-[15px] text-muted-foreground">No chats here yet. Ask Soc something and it shows up here.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {chats.map(chat => (
+                <li key={chat.id}>
+                  <button type="button" onClick={() => void openChat(chat)} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-[14px_18px_12px_16px] border-2 border-border-strong bg-card px-3 py-2 text-left transition-[transform,box-shadow] hover:-translate-y-0.5 hover:border-[var(--soc-outline)] hover:shadow-[3px_3px_0_var(--soc-outline)]">
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{chat.title}</span>
+                      <span className="block text-[13px] text-muted-foreground">{when(chat.updated_at)} · {chat.messages} messages</span>
+                    </span>
+                    {chat.current ? <span className="font-hand flex-none text-[17px] text-pen">current</span> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Button type="button" variant="outline" size="sm" className="mt-4" disabled={busy || (!messages.length && !archived)} onClick={() => void newChat()}><SquarePen data-icon="inline-start" /> Start a new chat</Button>
+        </div>
+      ) : view === 'context' ? (
+        <div className="chat-page flex-1 overflow-y-auto px-4 py-4">
+          <button type="button" onClick={() => setView('chat')} className="mb-3 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold"><ArrowLeft className="size-4" /> Back to chat</button>
+          <h3 className="font-hand text-[24px] leading-none text-pen">what soc knows</h3>
+          <p className="mt-1 mb-3 text-[13px] text-muted-foreground">Soc reads this before every reply, plus the last {socContext?.history_turns ?? 12} messages of this chat{problem ? ' and the code in your editor' : ''}. Nothing else.</p>
+          {!socContext ? <Thinking label="Opening the notebook" /> : (
+            <div className="grid gap-2">
+              <div className="rounded-[14px_18px_12px_16px] border-2 border-dashed border-border-strong bg-card px-3 py-2 text-sm">
+                <p className="font-semibold">How Soc is teaching this chat</p>
+                <p className="text-muted-foreground">{socContext.teaching}</p>
+              </div>
+              {socContext.sections.map(section => (
+                <details key={section.title} className="group rounded-[14px_18px_12px_16px] border border-border-strong bg-card px-3 py-2 text-sm">
+                  <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">{section.title}<span className="text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true">›</span></summary>
+                  <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{section.text}</p>
+                </details>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : archived ? (
+        <div className="chat-page flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[14px_18px_12px_16px] border-2 border-dashed border-border-strong bg-card px-3 py-2 text-sm">
+            <span>An earlier chat (read-only)</span>
+            <span className="flex gap-1">
+              <Button type="button" size="sm" variant="ghost" onClick={() => setArchived(null)}>Back</Button>
+              <Button type="button" size="sm" onClick={() => void continueChat()}>Continue this chat</Button>
+            </span>
+          </div>
+          {archived.messages.map((m, i) => m.role === 'user'
+            ? <div key={i} className="chat-bubble-user">{m.content}</div>
+            : <div key={i} className="flex items-end gap-2"><Soc size={28} className="mb-1" /><div className="chat-bubble-assistant min-w-0 flex-1"><Markdown source={m.content} language={language} className="prose-compact" /></div></div>)}
+        </div>
+      ) : null}
       {/* The conversation is written on a ruled page with a red margin. */}
-      <div ref={scroller} className="chat-page flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
+      <div ref={scroller} hidden={view !== 'chat' || Boolean(archived)} className="chat-page flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
         {!messages.length ? (
           <div className="text-[15px] text-muted-foreground">
             <div className="mb-3 flex items-end gap-3">
@@ -244,27 +385,28 @@ export default function Assistant({ scope, title, language, context, onSent, ope
             ) : null}
           </div>
         ) : null}
-        {messages.map((m, i) =>
-          m.role === 'user' ? (
+        {messages.map((m, i) => {
+          const typing = typed !== null && i === messages.length - 1 && m.role === 'assistant';
+          const content = typing ? m.content.slice(0, typed) : m.content;
+          return m.role === 'user' ? (
             <div key={i} className="chat-bubble-user">{m.content}</div>
           ) : (
             <div key={i} className="flex items-end gap-2">
             <Soc size={28} mood={busy && i === messages.length - 1 ? 'thinking' : m.rating === 1 ? 'happy' : 'neutral'} className="mb-1" />
             <div className="chat-bubble-assistant min-w-0 flex-1">
-              {busy && i === messages.length - 1 && activity.length ? (
-                <ul className="mb-2 grid gap-1 text-xs text-muted-foreground" aria-label="What the tutor is checking">
-                  {activity.map((a, j) => (
-                    <li key={a} className="flex items-center gap-2">
-                      {j === activity.length - 1 && !m.content ? <Spinner className="size-3" /> : <Check className="size-3" />}
-                      {a}
-                    </li>
+              {/* Finished steps get a tick; the step in progress is the scribble below. */}
+              {busy && i === messages.length - 1 && activity.length > 1 && !content ? (
+                <ul className="mb-1 grid gap-1 text-xs text-muted-foreground" aria-label="What the tutor checked">
+                  {activity.slice(0, -1).map(a => (
+                    <li key={a} className="flex items-center gap-2"><Check className="size-3" />{a}</li>
                   ))}
                 </ul>
               ) : null}
-              {m.content ? (
+              {content ? (
                 <>
-                <Markdown source={m.content} language={language} className="prose-compact" />
-                {m.id && !(busy && i === messages.length - 1) ? (
+                {/* While typing, a pen-stroke caret trails the last word. */}
+                <Markdown source={typing ? `${content}▍` : content} language={language} className="prose-compact" />
+                {m.id && !typing && !(busy && i === messages.length - 1) ? (
                   <div className="mt-1.5 flex justify-end gap-0.5">
                     {([1, -1] as const).map(value => {
                       const on = m.rating === value;
@@ -285,15 +427,11 @@ export default function Assistant({ scope, title, language, context, onSent, ope
                   </div>
                 ) : null}
                 </>
-              ) : activity.length && busy && i === messages.length - 1 ? null : (
-                <span className="flex items-center gap-1 py-1" aria-label="Thinking">
-                  {[0, 1, 2].map(n => <span key={n} className="size-1.5 animate-pulse-slow rounded-full bg-muted-foreground" style={{ animationDelay: `${n * 200}ms` }} />)}
-                </span>
-              )}
+              ) : <Thinking label={activity[activity.length - 1]} />}
             </div>
             </div>
-          ),
-        )}
+          );
+        })}
         {proposals.length && !busy ? (
           <div aria-label="Plan changes Soc suggested">
             <ProposalList compact proposals={proposals} onDecided={v => setProposals(v.pending.filter(p => p.source === 'tutor'))} />

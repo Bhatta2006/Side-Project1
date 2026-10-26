@@ -593,3 +593,7 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
   background-attachment: local;
   padding-left: 36px;
 }
+
+/* Soc thinking: a pencil scribble that keeps drawing itself. */
+.soc-scribble path { stroke-dasharray: 46 120; animation: soc-scribble 1.3s linear infinite; }
+@keyframes soc-scribble { from { stroke-dashoffset: 166; } to { stroke-dashoffset: 0; } }
