@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import Script from 'next/script';
 import localFont from 'next/font/local';
 import { GeistSans } from 'geist/font/sans';
 import './globals.css';
@@ -75,10 +74,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${GeistSans.variable} ${delicious.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_SCRIPT }} />
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+        <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');` }} />
       </head>
       <body>
-        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
-        <Script id="gtag-init" strategy="afterInteractive">{`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`}</Script>
         <WebVitals />
         <ErrorReporter />
         <PwaSetup />
