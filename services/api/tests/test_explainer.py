@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import time
 import uuid
 from pathlib import Path
@@ -104,6 +105,18 @@ def test_real_browser_preflight():
     broken = HTML.replace("get currentStep(){return index}", "get currentStep(){return 0}")
     with pytest.raises(artifact.ArtifactError, match="currentStep must report"):
         asyncio.run(generator.render_check(artifact.validate(broken), Settings(environment="test")))
+    # A trace table in a closed <details> keeps its cell and row breaks in the saved transcript.
+    traced = re.sub(
+        r'(<section id="transcript"[^>]*>)',
+        r"\1<details><summary>Trace</summary><table><tr><th>Step</th><th>Array</th></tr>"
+        r"<tr><td>0</td><td>[7, 2]</td></tr></table></details>",
+        HTML,
+        count=1,
+    )
+    transcript = asyncio.run(
+        generator.render_check(artifact.validate(traced), Settings(environment="test"))
+    )["transcript"]
+    assert "Step\tArray" in transcript and "\n0\t[7, 2]" in transcript
     nonzero = HTML.replace("let index=0;", "let index=2;")
     assert asyncio.run(
         generator.render_check(artifact.validate(nonzero), Settings(environment="test"))

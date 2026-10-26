@@ -92,7 +92,11 @@ export async function run(context, input) {
     if (!Number.isInteger(count) || count < 1 || count > 2000) throw Error('Initial stepCount must be from 1 to 2000; initialize a complete visual using your own example before exposing the interface');
     if (!Number.isInteger(api.currentStep) || api.currentStep < 0 || api.currentStep >= count) throw Error('Expose get currentStep() returning the actual selected zero-based step, including after input edits');
     if (!text.trim()) throw Error('describe() must explain the current initial state before any user interaction');
-    const transcript = document.querySelector('#transcript')?.textContent.trim() || '';
+    // innerText keeps row and cell breaks (textContent runs table cells together into one word);
+    // it skips closed <details>, so open them first.
+    const section = document.querySelector('#transcript');
+    section?.querySelectorAll('details').forEach(details => { details.open = true; });
+    const transcript = section?.innerText.trim() || '';
     if (transcript.length < 100 || transcript.length > 30000) throw Error('Include a complete teaching explanation in section id=transcript');
     const controls = [...document.querySelectorAll('input,select,button')];
     if (!controls.length) throw Error('Include controls for learner input or experimentation');

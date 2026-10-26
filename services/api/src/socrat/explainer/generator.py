@@ -392,4 +392,8 @@ async def generate(provider: Provider, settings: Settings, request: str, languag
         except ProviderError as exc:
             if str(exc).startswith(("playground_", "ai_")):
                 raise
+            # Learners see one code; operators need the provider's (unreachable, http_401, ...).
+            logging.getLogger("socrat.explainer").warning(
+                "visual attempt %d: AI provider failed: %s (%r)", attempt + 1, exc, exc.__cause__
+            )
             raise ProviderError("playground_generation_unavailable") from exc
