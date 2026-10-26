@@ -203,7 +203,7 @@ function PlanCard({ collapsed }: { collapsed: boolean }) {
   const free = plan === 'free';
   const label = top ? 'Manage plan' : free ? 'Become a Founding Member' : 'Upgrade to Pro';
   const href = top ? '/settings#plan-heading' : '/pricing';
-  const hint = status.cancel_at_period_end && status.renews_at ? `Ends ${new Date(status.renews_at * 1000).toLocaleDateString()}` : free ? `Every topic, daily Soc, for ₹${status.prices.plus.month.INR / 100} a month` : 'Every topic unlocked · company questions on Pro';
+  const hint = status.cancel_at_period_end && status.renews_at ? `Ends ${new Date(status.renews_at * 1000).toLocaleDateString()}` : free ? `every topic and daily Soc for ₹${status.prices.plus.month.INR / 100}/month` : 'Every topic unlocked · company questions on Pro';
   return (
     <div className="px-3 pb-2">
       <Tooltip>
@@ -214,11 +214,12 @@ function PlanCard({ collapsed }: { collapsed: boolean }) {
         </TooltipTrigger>
         <TooltipContent side="right">{PLAN_NAME[plan]} plan · {label}</TooltipContent>
       </Tooltip>
-      <section aria-label="Your plan" className={cn('hidden rounded-[18px] border p-3', free ? 'border-[1.5px] border-proof-stroke bg-proof text-proof-foreground' : 'border-border-strong bg-card', !collapsed && 'lg:block')}>
-        <p className={cn('text-xs', free ? 'font-semibold text-proof-foreground/75' : 'text-muted-foreground')}>{free ? 'Founding member price' : 'Your plan'}</p>
-        <p className="font-display text-lg font-bold tracking-[-0.02em]">{free ? "You're on Free" : PLAN_NAME[plan]}</p>
-        <p className={cn('mt-0.5 text-[13px]', free ? 'text-proof-foreground/75' : 'text-muted-foreground')}>{hint}</p>
-        <Button asChild size="sm" variant={top ? 'outline' : free ? 'ink' : 'default'} className="mt-3 w-full"><Link href={href}>{label}</Link></Button>
+      <section aria-label="Your plan" className={cn('hidden rounded-2xl border px-3 py-2.5', free ? 'border-proof-stroke bg-proof text-proof-foreground' : 'border-border-strong bg-card', !collapsed && 'lg:block')}>
+        <p className="text-sm font-semibold">{free ? "You're on Free" : `${PLAN_NAME[plan]} plan`}</p>
+        <p className={cn('mt-0.5 text-xs leading-snug', free ? 'text-proof-foreground/75' : 'text-muted-foreground')}>
+          {free && !status.cancel_at_period_end ? <span className="font-semibold text-proof-foreground">Founding price: </span> : null}{hint}
+        </p>
+        <Button asChild size="xs" variant={top ? 'outline' : free ? 'ink' : 'default'} className="mt-2 w-full"><Link href={href}>{label}</Link></Button>
       </section>
     </div>
   );

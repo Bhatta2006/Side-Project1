@@ -181,7 +181,7 @@ export default function TodayPage() {
           <div className="px-(--card-spacing)"><WeekStrip studiedToday={today.streak.studied_today} /></div>
         </Card>
 
-          {/* 4. Hero: the next recommended activity. */}
+        {/* 4. Hero: the next recommended activity. */}
         <Reveal index={1} className="col-span-12 lg:col-span-8">
           {next ? (
             <Card tone="hero" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
@@ -233,13 +233,7 @@ export default function TodayPage() {
           )}
         </Reveal>
 
-
-        {/* How Socrat is adapting: after the hero, so the next step stays the first action. */}
-        <Reveal index={2} className="col-span-12 lg:order-none">
-          <AdaptingCard today={today} onDecided={load} onAsk={() => setAskSoc(n => n + 1)} />
-        </Reveal>
-
-        {/* Talk to your tutor. */}
+        {/* Talk to your tutor: beside the hero (8 + 4 columns), so it must come straight after it. */}
         <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
           <Card className="relative h-full min-h-72 overflow-hidden lg:min-h-80" aria-labelledby="soc-heading">
             <div className="relative flex h-full flex-col gap-4 px-(--card-spacing)">
@@ -258,6 +252,12 @@ export default function TodayPage() {
               </button>
             </div>
           </Card>
+        </Reveal>
+
+        {/* How Socrat is adapting: a full-width row under the hero and Ask Soc, so the next step
+            stays the first action and the 8 + 4 rows below keep their pairs. */}
+        <Reveal index={3} className="col-span-12">
+          <AdaptingCard today={today} onDecided={load} onAsk={() => setAskSoc(n => n + 1)} />
         </Reveal>
 
         {/* Skill map of the current module. */}
