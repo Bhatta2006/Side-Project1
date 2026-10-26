@@ -144,7 +144,7 @@ def test_grafana_provisions_a_private_operational_dashboard():
     }
 
 
-def test_ci_validates_operations_and_publishes_attested_multiarch_images():
+def test_ci_validates_operations_and_publishes_attested_arm64_images():
     workflow_path = ROOT / ".github" / "workflows" / "ci.yml"
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
     verify_steps = workflow["jobs"]["verify"]["steps"]
@@ -164,7 +164,11 @@ def test_ci_validates_operations_and_publishes_attested_multiarch_images():
         "attestations": "write",
     }
     publish_text = json.dumps(publish)
-    assert "linux/amd64,linux/arm64" in publish_text
+    # Oracle Ampere (ARM) is the only deploy target: every image is built for it, and only it.
+    platforms = [
+        s["with"]["platforms"] for s in publish["steps"] if "platforms" in s.get("with", {})
+    ]
+    assert platforms == ["linux/arm64"] * 3  # api, web, visual checker
     assert publish_text.count("actions/attest@") == 3  # api, web, visual checker
     assert ":sha-${{ github.sha }}" in publish_text
 
