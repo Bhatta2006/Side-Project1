@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import time
+import unittest.mock
 import uuid
 from pathlib import Path
 from urllib.parse import urlparse
@@ -313,7 +314,12 @@ def work(client):  # noqa: F811
         while job_id := jobs.claim(client.app.state.engine):
             await jobs.run(client.app.state.engine, client.app.state.settings, job_id)
 
-    asyncio.run(drain())
+    def no_catalog():
+        raise AssertionError("the worker must not load the ~770 MB catalog (512 MB limit)")
+
+    # Production OOM-killed the worker at the final save while it loaded the catalog.
+    with unittest.mock.patch("socrat.learn.routes.default_catalog", no_catalog):
+        asyncio.run(drain())
 
 
 def generate(client, headers, payload):  # noqa: F811

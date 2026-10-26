@@ -571,13 +571,17 @@ ACTIVITY = (
 SELF_COMPLETE = {"lesson", "example", "explain", "checkin", "stretch"}
 
 
-def guard_instruction(db: Session, cat: Catalog, user: User, qualified: str | None = None):
+def guard_instruction(db: Session, cat: Catalog | None, user: User, qualified: str | None = None):
+    """``cat`` may be None: it is loaded only to check a ``qualified`` concept. The catalog takes
+    ~770 MB, so the Playground worker (512 MB) must not load it to save a finished visual."""
     from socrat.assessments import service as assessments
     from socrat.learn import sessions
 
     enrollment = learn.active_enrollment(db, user.id)
     if enrollment is None:
         raise HTTPException(404, "no_active_enrollment")
+    if qualified is not None:
+        cat = cat or catalog()
     if qualified is not None and qualified not in learn.curriculum(cat, enrollment):
         raise HTTPException(404, "not_found")
     if sessions.instruction_blocked(db, enrollment, now()) or assessments.in_progress(
