@@ -192,9 +192,20 @@ class Settings(DatabaseSettings):
     try_daily_budget_usd: float = Field(default=3.0, ge=0, le=10_000)
     try_messages_per_hour: int = Field(default=20, ge=1, le=500)
 
+    # Email-and-password accounts. One-time codes are sent through Resend (resend.com) from a
+    # verified domain; email_from looks like "Socrat <no-reply@example.com>".
+    resend_api_key: SecretStr = SecretStr("")
+    resend_api_key_file: str = ""
+    email_from: str = Field(default="", max_length=200)
+
     @property
     def secure(self) -> bool:
         return self.environment in {"staging", "production"}
+
+    @property
+    def email_login_enabled(self) -> bool:
+        # Local development writes codes to the API log instead of sending them.
+        return bool(self.resend_api_key.get_secret_value() and self.email_from) or not self.secure
 
     @property
     def execution_enabled(self) -> bool:
@@ -254,6 +265,9 @@ class Settings(DatabaseSettings):
             "explainer_checker_secret",
             self.explainer_checker_secret,
             self.explainer_checker_secret_file,
+        )
+        self.resend_api_key = _secret_from_file(
+            "resend_api_key", self.resend_api_key, self.resend_api_key_file
         )
         if self.environment == "test":
             self.codeforces_autosync = False

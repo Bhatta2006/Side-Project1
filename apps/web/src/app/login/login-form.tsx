@@ -10,6 +10,7 @@ import type { Features } from '@/lib/types';
 import { LiveSoc } from '@/components/socrat/live-soc';
 import type { SocMood } from '@/components/socrat/soc';
 import { ErrorState } from '@/components/socrat/states';
+import { EmailAuth } from './email-auth';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,11 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
     if (!loading && profile) router.replace(destination(profile, 'active') ?? requestedPath() ?? '/today');
   }, [loading, profile, router]);
 
+  async function signedIn() {
+    const next = await refresh();
+    router.replace(destination(next, 'active') ?? requestedPath() ?? '/today');
+  }
+
   async function devLogin(event: React.FormEvent) {
     event.preventDefault();
     const display = name.trim();
@@ -66,8 +72,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
     try {
       const subject = await subjectFor(display);
       await api.post('/auth/dev-login', { subject, display_name: display });
-      const next = await refresh();
-      router.replace(destination(next, 'active') ?? requestedPath() ?? '/today');
+      await signedIn();
     } catch (e) {
       setError(explain(e));
       setBusy(false);
@@ -104,7 +109,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
         <section className="login-panel paper flex flex-col justify-center rounded-[28px] p-6 sm:p-8 lg:p-12" aria-labelledby="login-title">
           <div className="mx-auto w-full max-w-md">
             <h1 id="login-title" className="type-display-l">Log in</h1>
-            <p className="mt-3 text-base text-muted-foreground">New to Socrat? Logging in creates your account.</p>
+            <p className="mt-3 text-base text-muted-foreground">{features?.email_login ? 'Log in, or create an account with Google or your email.' : 'New to Socrat? Logging in creates your account.'}</p>
             <div className="mt-6 flex items-center gap-3 lg:hidden"><LiveSoc books={false} size={64} mood={mood} say={null} className="w-16" /><p className="font-hand text-[22px] text-pen">{line ?? 'hello there!'}</p></div>
 
             <div className="mt-8 grid gap-4">
@@ -119,6 +124,12 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
                 <Button asChild variant="outline" size="lg" className="w-full">
                   <a href="/api/v1/auth/login"><GoogleMark /> Continue with Google</a>
                 </Button>
+              ) : null}
+              {features?.email_login ? (
+                <>
+                  {features.oidc_login ? <p className="flex items-center gap-3 text-[13px] text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">or</p> : null}
+                  <EmailAuth onSignedIn={signedIn} onBusy={setBusy} />
+                </>
               ) : null}
               {features ? (
                 <p className="text-center text-[13px] text-muted-foreground">
@@ -143,7 +154,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
                   {!name.trim() ? <p className="text-[13px] text-muted-foreground">Enter a name to continue.</p> : null}
                 </form>
               ) : null}
-              {features && !features.oidc_login && !features.dev_login ? (
+              {features && !features.oidc_login && !features.dev_login && !features.email_login ? (
                 <p className="text-[15px] text-muted-foreground">Sign-in is not configured on this server.</p>
               ) : null}
               {error ? <ErrorState title="Could not log in" message={error} /> : null}

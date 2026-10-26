@@ -26,6 +26,7 @@ from socrat.auth import COOKIE, establish_session, require_csrf, require_session
 from socrat.billing import router as billing_router
 from socrat.config import Settings
 from socrat.database import make_engine, record_event
+from socrat.email_auth import router as email_auth_router
 from socrat.explainer.routes import router as explainer_router
 from socrat.learn.routes import router as learner_router
 from socrat.learn.session_routes import router as session_router
@@ -102,6 +103,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(passport_router)
     app.include_router(trial_router)
     app.include_router(billing_router)
+    app.include_router(email_auth_router)
     entitlements.ENABLED = settings.billing_enabled
     app.include_router(errors.router)
     app.add_middleware(
@@ -228,6 +230,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "dev_login": settings.dev_login_enabled,
             "oidc_login": bool(settings.oidc_issuer),
+            "email_login": settings.email_login_enabled,
             "ai_provider": settings.ai_provider,
             "code_execution": settings.execution_enabled,
             "execution_backend": settings.execution_backend,
@@ -284,8 +287,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             request.session.clear()
             raise HTTPException(401, "identity_verification_failed") from exc
         request.session.clear()
+        # Only an address the provider has verified may link to an email-and-password account.
+        email = str(identity.get("email") or "").strip().lower()[:254]
         response = establish_session(
-            request, RedirectResponse("/start", status_code=303), identity["iss"], identity["sub"]
+            request,
+            RedirectResponse("/start", status_code=303),
+            identity["iss"],
+            identity["sub"],
+            email=email if email and identity.get("email_verified") is True else None,
         )
         name = str(identity.get("given_name") or identity.get("name") or "")[:80]
         with Session(engine) as db, db.begin():

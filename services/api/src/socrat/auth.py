@@ -53,19 +53,43 @@ def returning_dev_user(db: Session, subject: str, display_name: str) -> User | N
 
 
 def establish_session(
-    request: Request, response, issuer: str, subject: str, display_name: str = ""
+    request: Request,
+    response,
+    issuer: str,
+    subject: str,
+    display_name: str = "",
+    email: str | None = None,
 ):
-    settings = request.app.state.settings
+    """Sign in an external identity. ``email`` must already be verified by the identity provider."""
     with Session(request.app.state.engine) as db, db.begin():
         user = db.scalar(select(User).where(User.issuer == issuer, User.subject == subject))
         if user is None and issuer == "local-development" and display_name:
             user = returning_dev_user(db, subject, display_name)
             if user is not None:
                 user.subject = subject
+        if user is None and email:
+            # A verified email claims the email-and-password account that owns it.
+            user = db.scalar(select(User).where(User.email == email, User.issuer == "email"))
+            if user is not None:
+                user.issuer, user.subject = issuer, subject
         if user is None:
             user = User(issuer=issuer, subject=subject)
             db.add(user)
-            db.flush()
+        if (
+            email
+            and user.email is None
+            and db.scalar(select(User.id).where(User.email == email)) is None
+        ):
+            user.email = email
+        db.flush()
+        user_id = user.id
+    return open_session(request, response, user_id)
+
+
+def open_session(request: Request, response, user_id: str):
+    """Start a session for an authenticated user and set its cookie on ``response``."""
+    settings = request.app.state.settings
+    with Session(request.app.state.engine) as db, db.begin():
         old = db.get(LoginSession, token_hash(request.cookies.get(COOKIE, "")))
         if old:
             db.delete(old)
@@ -73,12 +97,12 @@ def establish_session(
         db.add(
             LoginSession(
                 token_hash=token_hash(token),
-                user_id=user.id,
+                user_id=user_id,
                 csrf_token=secrets.token_urlsafe(32),
                 expires_at=int(time.time()) + settings.session_ttl_seconds,
             )
         )
-        record_event(db, user.id, "auth.login")
+        record_event(db, user_id, "auth.login")
     response.set_cookie(
         COOKIE,
         token,
