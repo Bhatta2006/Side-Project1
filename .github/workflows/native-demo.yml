@@ -1,8 +1,18 @@
 name: native-development-execution
 on:
   pull_request:
+    paths: &native_paths
+      - 'services/execution/**'
+      - 'services/api/src/socrat/execution/**'
+      - 'services/api/tests/test_local_backend.py'
+      - 'services/api/tests/test_execution_worker.py'
+      - 'tests/editor-diagnostics*'
+      - 'scripts/dev/**'
+      - 'uv.lock'
+      - '.github/workflows/native-demo.yml'
   push:
     branches: [main, sathish, ramkrsna1]
+    paths: *native_paths
 permissions:
   contents: read
 jobs:
@@ -53,8 +63,6 @@ jobs:
         run: python -c "from pathlib import Path; Path('.cache').mkdir(exist_ok=True)"
       - run: node --experimental-strip-types --test tests/editor-diagnostics.test.mjs
       - run: uv run pytest services/api/tests/test_local_backend.py services/api/tests/test_execution_worker.py --basetemp=.cache/ci-native-tests
-      - run: npm run typecheck
-      - run: npm run build
       # The v1 demo journeys (playwright.demo.config.ts) and reference bundles (scripts/demo/) were
       # removed with the v2 backend; learner journeys run in ci.yml (npm run test:e2e). This job
       # proves the native stack itself boots and serves on each OS.

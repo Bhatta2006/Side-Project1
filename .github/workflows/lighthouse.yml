@@ -5,9 +5,8 @@ name: lighthouse
 # Field numbers from real visits are in /admin → Page speed. Assertions warn (not fail)
 # until the LCP render delay noted in docs/product/launch-backlog.md (item 15) is fixed.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  schedule:
+    - cron: "31 3 * * *"  # daily 03:31 UTC; assertions only warn, so it does not gate PRs
   workflow_dispatch:
 
 permissions:
