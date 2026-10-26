@@ -1,10 +1,11 @@
 """Real native Windows/POSIX execution, never simulated result callbacks."""
 
+import os
 import time
 
 import psutil
 import pytest
-from runner.local_backend import LocalProcessBackend
+from runner.local_backend import LocalProcessBackend, job_directory
 from runner.worker import execute
 
 from socrat.execution.protocol import (
@@ -211,6 +212,16 @@ def test_compiled_spawn_bomb_leaves_no_orphan(language, tmp_path):
     for process in psutil.process_iter(["cmdline"]):
         command = " ".join(process.info["cmdline"] or [])
         assert marker not in command and str(tmp_path) not in command
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows file locks only")
+def test_job_directory_waits_for_a_released_lock(tmp_path):
+    import threading
+
+    with job_directory(tmp_path) as directory:
+        held = open(os.path.join(directory, "held"), "w")
+        threading.Timer(0.3, held.close).start()
     assert not list(tmp_path.iterdir())
 
 

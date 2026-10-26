@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,6 +32,24 @@ class Captured:
     stderr: str
     wall_ms: int
     limit: str = ""
+
+
+@contextmanager
+def job_directory(root: Path | None):
+    holder = tempfile.TemporaryDirectory(prefix="socrat-job-", dir=root)
+    try:
+        yield holder.name
+    finally:
+        # TerminateJobObject returns before the killed tree releases its cwd and file handles.
+        deadline = time.monotonic() + 5
+        while True:
+            try:
+                holder.cleanup()
+                break
+            except PermissionError:
+                if os.name != "nt" or time.monotonic() > deadline:
+                    raise
+                time.sleep(0.05)
 
 
 def strip_directory(text: str, directory: Path) -> str:
@@ -229,7 +248,7 @@ class LocalProcessBackend:
         if not commands:
             raise SandboxUnavailable("toolchain_missing")
         limits = profile.limits
-        with tempfile.TemporaryDirectory(prefix="socrat-job-", dir=self.temp_root) as temporary:
+        with job_directory(self.temp_root) as temporary:
             directory = Path(temporary)
             source = (
                 directory

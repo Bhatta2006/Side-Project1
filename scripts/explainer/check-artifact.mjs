@@ -140,11 +140,15 @@ async function main() {
     // Closing can take several seconds (Edge on Windows: ~6 s) while the verdict is already known.
     // The caller waits for this process to exit under an 18 s budget, so a slow close used to fail
     // visuals that had passed. Give it a moment, then exit; Playwright kills the browser on exit.
-    await Promise.race([browser.close().catch(() => undefined), new Promise(resolve => setTimeout(resolve, CLOSE_GRACE_MS))]);
+    await closeWithin(browser, CLOSE_GRACE_MS);
   }
 }
 
 const CLOSE_GRACE_MS = 500;
+
+export function closeWithin(browser, ms) {
+  return Promise.race([browser.close().catch(() => undefined), new Promise(resolve => setTimeout(resolve, ms))]);
+}
 
 if (process.argv[1]?.endsWith('check-artifact.mjs')) {
   main()

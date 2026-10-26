@@ -97,9 +97,9 @@ def test_real_browser_preflight():
     checked = asyncio.run(
         generator.render_check(artifact.validate(HTML), Settings(environment="test"))
     )
-    # The checker must exit once its verdict is known; waiting for a slow browser close (about 6 s
-    # with Edge on Windows) pushed passing visuals past the 18 s budget under load.
-    assert time.monotonic() - started < 6
+    # check-artifact.test.mjs proves the checker skips a slow browser close; this only keeps a passing
+    # visual well inside the 18 s budget, with room for a cold, loaded CI runner (6.5 s seen).
+    assert time.monotonic() - started < 12
     assert checked["ok"] and checked["step_count"] == 4
     broken = HTML.replace("get currentStep(){return index}", "get currentStep(){return 0}")
     with pytest.raises(artifact.ArtifactError, match="currentStep must report"):
