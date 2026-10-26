@@ -460,7 +460,7 @@ export default function Lesson() {
           <Pitfalls concept={concept} />
         </aside>
       </div>
-      <Assistant scope={`concept:${concept.id}`} title="Ask Soc" language={concept.language} openSignal={askSoc} launcher="phone" />
+      <Assistant scope={`concept:${concept.id}`} title="Ask Soc" language={concept.language} openSignal={askSoc} />
     </div>
   );
 }

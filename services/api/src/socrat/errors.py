@@ -198,7 +198,7 @@ class ProblemReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
     message: str = Field(min_length=3, max_length=2000)
     route: str = Field(max_length=120, pattern=r"^/[^?#]*$")
-    category: Literal["bug", "content", "idea", "other"] = "bug"
+    category: Literal["bug", "content", "idea", "feedback", "other"] = "bug"
 
 
 @router.post("/problem-reports")

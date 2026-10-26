@@ -336,7 +336,7 @@ export default function PlanPage() {
           ) : null}
         </aside>
       </div>
-      <Assistant scope="plan" title="Plan with Soc" openSignal={planChat} launcher={false} />
+      <Assistant scope="plan" title="Plan with Soc" openSignal={planChat} />
     </Page>
   );
 }
