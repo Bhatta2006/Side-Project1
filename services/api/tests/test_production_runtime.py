@@ -26,9 +26,10 @@ def test_production_services_and_networks_are_locked_down():
         "caddy",
     }
     assert spec["networks"]["backend"]["internal"] is True
-    # Only the API may reach the internet (OIDC and the AI provider); the checker and database may not.
+    # Only the API and worker may reach the internet (OIDC and the AI provider); the checker and
+    # database may not.
     egress = {n for n, s in services.items() if "egress" in s.get("networks", [])}
-    assert egress == {"api"}
+    assert egress == {"api", "worker"}
     assert services["explainer-checker"]["networks"] == ["backend"]
     for name, service in services.items():
         assert "build" not in service

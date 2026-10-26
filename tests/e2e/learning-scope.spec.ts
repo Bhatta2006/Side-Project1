@@ -21,12 +21,19 @@ async function enrolled(page: Page) {
 }
 
 async function mockVisual(page: Page) {
-  await page.route('**/api/v1/playground/artifacts', route => route.fulfill({ json: { items: [] } }));
+  await page.route('**/api/v1/playground/artifacts', route => route.fulfill({ json: { items: [], pending: null } }));
   await page.route(frameURL + '**', route => route.fulfill({ contentType: 'text/html', headers: { 'Content-Security-Policy': fixture.csp, 'Referrer-Policy': 'no-referrer' }, body: fixture.html }));
+  // Generation is a server job: queued as running, then one poll finds it ready.
+  let request = '';
   await page.route('**/api/v1/playground/generate', route => {
-    const request = route.request().postDataJSON().prompt;
-    return route.fulfill({ contentType: 'text/event-stream', body: `event: progress\ndata: ${JSON.stringify({ phase: 'checking' })}\n\nevent: ready\ndata: ${JSON.stringify({ artifact: artifact(request) })}\n\n` });
+    request = route.request().postDataJSON().prompt;
+    return route.fulfill({ status: 202, json: job(request, 'running') });
   });
+  await page.route('**/api/v1/playground/jobs/visual-job', route => route.fulfill({ json: job(request, 'ready') }));
+}
+
+function job(request: string, status: string, error: string | null = null) {
+  return { id: 'visual-job', status, error, request, level: 'standard', created_at: Math.floor(Date.now() / 1000), progress: { phase: 'checking', attempt: 1, characters: 9000 }, ...(status === 'ready' ? { artifact: artifact(request) } : {}) };
 }
 
 test('generated visual is embedded, interactive, editable, keyboard operable and isolated', async ({ page }, info) => {
@@ -146,7 +153,7 @@ test('failed generation preserves the request and reporting removes a saved visu
   await enrolled(page); await mockVisual(page); await page.goto('/playground');
   const request = 'Explain multiplication with editable groups';
   await page.getByLabel('Your question', { exact: true }).fill(request);
-  await page.route('**/api/v1/playground/generate', route => route.fulfill({ contentType: 'text/event-stream', body: 'event: error\ndata: {"code":"playground_generation_invalid"}\n\n' }));
+  await page.route('**/api/v1/playground/generate', route => route.fulfill({ status: 202, json: job(request, 'failed', 'playground_generation_invalid') }));
   await page.getByRole('button', { name: 'Generate', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Your request is still here' })).toBeVisible();
   await expect(page.getByLabel('Your question', { exact: true })).toHaveValue(request);

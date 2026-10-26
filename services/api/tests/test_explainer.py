@@ -13,8 +13,8 @@ from test_learner_api import client, login, onboard  # noqa: F401
 
 from socrat.assistant.gateway import Event
 from socrat.config import Settings
-from socrat.explainer import artifact, generator, routes
-from socrat.models import AssistantMessage
+from socrat.explainer import artifact, generator, jobs, routes
+from socrat.models import AssistantMessage, PlaygroundJob
 
 HTML = (Path(__file__).parent / "fixtures/visual.html").read_text(encoding="utf-8")
 QA = dict(ok=True, step_count=4, checks=["working-interaction"])
@@ -38,7 +38,7 @@ def configured(client, monkeypatch):  # noqa: F811
     onboard(client, headers)
     client.app.state.settings.ai_provider = "openai"
     provider = Provider([HTML] * 20)
-    monkeypatch.setattr(routes, "make_provider", lambda _, **kwargs: provider)
+    monkeypatch.setattr(jobs, "make_provider", lambda _, **kwargs: provider)
 
     async def check(*args):
         return QA
@@ -168,6 +168,8 @@ def test_generate_has_no_prescribed_examples_and_repairs_invalid_html(monkeypatc
     )
     assert "No example or lesson is prescribed" in provider.calls[0][0]
     assert "Repair the complete HTML" in provider.calls[1][1][-1].content
+    # A document cut off at the output limit is asked to be shorter, not patched.
+    assert "cut off before </html>" in provider.calls[1][1][-1].content
 
 
 def test_ai_review_uses_the_request_and_document_and_rejects_contradictions():
@@ -227,15 +229,8 @@ def test_prompt_lists_the_allowed_elements_and_forbids_hand_computed_traces():
     artifact.validate(HTML.replace("</h1>", " <kbd>Enter</kbd> <sub>2</sub></h1>", 1))
 
 
-def test_ai_review_findings_repair_the_document_without_changing_the_request(monkeypatch):
-    provider = Provider(
-        [
-            HTML,
-            '{"issues":["The visual label contradicts the computed result"]}',
-            HTML,
-            '{"issues":[]}',
-        ]
-    )
+def test_ai_review_findings_flag_the_visual_instead_of_regenerating(monkeypatch):
+    provider = Provider([HTML, '{"issues":["The visual label contradicts the computed result"]}'])
 
     async def check(*args):
         return QA
@@ -253,11 +248,66 @@ def test_ai_review_findings_repair_the_document_without_changing_the_request(mon
 
     events = asyncio.run(run())
     assert any(event.get("phase") == "reviewing" for event in events)
-    assert events[-1]["document"]["qa"]["ai_review"] == "passed"
+    qa = events[-1]["document"]["qa"]
+    assert qa["ai_review"] == "flagged" and qa["review_notes"].startswith("The visual label")
     assert events[-1]["document"]["request"] == request
-    repair = provider.calls[2][1]
-    assert json.loads(repair[0].content)["learner_request"] == request
-    assert "visual label contradicts" in repair[-1].content
+    assert len(provider.calls) == 2  # one generation and one review, no regeneration
+
+
+def test_checker_rejection_restarts_the_steps_and_names_the_failed_step(monkeypatch):
+    provider = Provider([HTML, HTML])
+    checks = iter([artifact.ArtifactError("Label every control"), QA])
+
+    async def check(*args):
+        result = next(checks)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    async def review(*args):
+        pass
+
+    monkeypatch.setattr(generator, "render_check", check)
+    monkeypatch.setattr(generator, "review", review)
+
+    async def run():
+        return [
+            event
+            async for event in generator.generate(
+                provider, Settings(environment="test"), "Explain a queue", "python", "standard"
+            )
+        ]
+
+    progress = [
+        (e["phase"], e["attempt"], e.get("failed"))
+        for e in asyncio.run(run())[:-1]
+        if e["phase"] != "generating" or not e["characters"]  # skip character-count updates
+    ]
+    assert progress == [
+        ("generating", 1, None),
+        ("checking", 1, None),
+        ("generating", 2, "checking"),
+        ("checking", 2, "checking"),
+        ("reviewing", 2, "checking"),
+    ]
+    assert "Label every control" in provider.calls[1][1][-1].content
+
+
+def work(client):  # noqa: F811
+    """Run queued generations the way the worker does."""
+
+    async def drain():
+        while job_id := jobs.claim(client.app.state.engine):
+            await jobs.run(client.app.state.engine, client.app.state.settings, job_id)
+
+    asyncio.run(drain())
+
+
+def generate(client, headers, payload):  # noqa: F811
+    queued = client.post("/api/v1/playground/generate", headers=headers, json=payload)
+    assert queued.status_code == 202, queued.text
+    work(client)
+    return client.get("/api/v1/playground/jobs/" + queued.json()["id"]).json()
 
 
 def test_owned_persistent_artifact_idempotency_frame_and_report(client, configured):  # noqa: F811
@@ -267,14 +317,17 @@ def test_owned_persistent_artifact_idempotency_frame_and_report(client, configur
         prompt="Explain electromagnetic induction with a moving magnet",
         request_id=str(uuid.uuid4()),
     )
-    result = client.post("/api/v1/playground/generate", headers=headers, json=payload)
-    assert result.status_code == 200, result.text
-    data = result.json()
+    queued = client.post("/api/v1/playground/generate", headers=headers, json=payload).json()
+    assert queued["status"] == "queued" and len(provider.calls) == 0
+    # A reload finds the generation still pending and resumes it.
+    assert client.get("/api/v1/playground/artifacts").json()["pending"]["id"] == queued["id"]
+    work(client)
+    job = client.get("/api/v1/playground/jobs/" + queued["id"]).json()
+    assert job["status"] == "ready" and job["progress"]["phase"] == "reviewing"
+    data = job["artifact"]
     assert "html" not in data and data["request"] == payload["prompt"] and len(provider.calls) == 1
-    assert (
-        client.post("/api/v1/playground/generate", headers=headers, json=payload).json()["id"]
-        == data["id"]
-    )
+    replay = client.post("/api/v1/playground/generate", headers=headers, json=payload).json()
+    assert replay["artifact"]["id"] == data["id"]
     assert len(provider.calls) == 1
     assert (
         client.post(
@@ -284,8 +337,8 @@ def test_owned_persistent_artifact_idempotency_frame_and_report(client, configur
         ).status_code
         == 409
     )
-    history = client.get("/api/v1/playground/artifacts").json()["items"]
-    assert history[0]["id"] == data["id"]
+    history = client.get("/api/v1/playground/artifacts").json()
+    assert history["items"][0]["id"] == data["id"] and history["pending"] is None
     assert client.get("/api/v1/playground/artifacts/" + data["id"]).status_code == 200
     frame_url = urlparse(data["frame_url"])
     frame = client.get(frame_url.path + "?" + frame_url.query)
@@ -307,7 +360,62 @@ def test_owned_persistent_artifact_idempotency_frame_and_report(client, configur
     assert client.get("/api/v1/playground/artifacts").json()["items"] == []
 
 
-def test_stream_progress_quota_scope_and_csrf(client, configured):  # noqa: F811
+def test_one_pending_job_cancel_and_interrupted_jobs(client, configured):  # noqa: F811
+    headers, provider = configured
+    first = client.post(
+        "/api/v1/playground/generate", headers=headers, json={"prompt": "Explain heaps visually"}
+    ).json()
+    second = client.post(
+        "/api/v1/playground/generate", headers=headers, json={"prompt": "Explain tries visually"}
+    )
+    assert second.status_code == 409
+    assert second.json()["error"]["code"] == "playground_request_in_progress"
+    cancel_url = "/api/v1/playground/jobs/" + first["id"] + "/cancel"
+    assert client.post(cancel_url).status_code == 403  # CSRF
+    assert client.post(cancel_url, headers=headers).json() == {"status": "cancelled"}
+    work(client)
+    assert len(provider.calls) == 0  # a cancelled job never reaches the model
+    # A worker that died mid-generation (a deploy) stops beating: retried once, then failed.
+    third = client.post(
+        "/api/v1/playground/generate", headers=headers, json={"prompt": "Explain graphs visually"}
+    ).json()
+    engine = client.app.state.engine
+    for _ in range(jobs.MAX_TRIES):
+        assert jobs.claim(engine) == third["id"]
+        with Session(engine) as db, db.begin():
+            db.get(PlaygroundJob, third["id"]).heartbeat_at = 0
+    assert jobs.claim(engine) is None
+    job = client.get("/api/v1/playground/jobs/" + third["id"]).json()
+    assert job["status"] == "failed" and job["error"] == "playground_generation_interrupted"
+    other = login(client, subject="other")
+    onboard(client, other)
+    assert client.get("/api/v1/playground/jobs/" + third["id"]).status_code == 404
+
+
+def test_ai_guardrails_stop_before_queueing_and_fail_jobs_in_playground_terms(
+    client,  # noqa: F811
+    configured,
+    monkeypatch,
+):
+    headers, _ = configured
+    settings = client.app.state.settings
+    settings.ai_enabled = False
+    paused = client.post(
+        "/api/v1/playground/generate", headers=headers, json={"prompt": "Explain sets visually"}
+    )
+    assert paused.status_code == 503 and paused.json()["error"]["code"] == "playground_ai_disabled"
+    settings.ai_enabled = True
+
+    async def spent(*args, **kwargs):
+        raise generator.ProviderError("ai_budget_reached")
+        yield  # an async generator, like the real one
+
+    monkeypatch.setattr(generator, "generate", spent)
+    job = generate(client, headers, {"prompt": "Explain sets visually"})
+    assert job["status"] == "failed" and job["error"] == "playground_ai_budget_reached"
+
+
+def test_job_progress_quota_scope_and_csrf(client, configured):  # noqa: F811
     headers, _ = configured
     payload = dict(prompt="Explain recursion visually")
     assert client.post("/api/v1/playground/generate", json=payload).status_code == 403
@@ -320,17 +428,9 @@ def test_stream_progress_quota_scope_and_csrf(client, configured):  # noqa: F811
         == 404
     )
     client.app.state.settings.ai_daily_messages = 1
-    streamed = client.post(
-        "/api/v1/playground/generate",
-        headers={**headers, "Accept": "text/event-stream"},
-        json=payload,
-    )
-    assert (
-        streamed.status_code == 200
-        and "event: progress" in streamed.text
-        and "event: ready" in streamed.text
-    )
-    assert "<script" not in streamed.text
+    job = generate(client, headers, payload)
+    assert job["status"] == "ready" and job["progress"]["attempt"] == 1
+    assert "<script" not in json.dumps(job)
     assert (
         client.post("/api/v1/playground/generate", headers=headers, json=payload).status_code == 429
     )
@@ -361,10 +461,10 @@ def test_visual_quota_and_model_override_do_not_change_tutor_settings(
         received.append((settings.openai_model, kwargs))
         return provider
 
-    monkeypatch.setattr(routes, "make_provider", factory)
+    monkeypatch.setattr(jobs, "make_provider", factory)
     payload = {"prompt": "Explain a cellular process visually"}
-    first = client.post("/api/v1/playground/generate", headers=headers, json=payload)
-    assert first.status_code == 200 and first.json()["model"] == "visual-coder-model"
+    first = generate(client, headers, payload)
+    assert first["artifact"]["model"] == "visual-coder-model"
     assert received == [
         ("visual-coder-model", {"chat_template_kwargs": {"enable_thinking": False}})
     ]
@@ -375,9 +475,7 @@ def test_visual_quota_and_model_override_do_not_change_tutor_settings(
 
 def test_other_learner_cannot_read_or_report_artifact(client, configured):  # noqa: F811
     headers, _ = configured
-    result = client.post(
-        "/api/v1/playground/generate", headers=headers, json={"prompt": "Explain vectors"}
-    ).json()
+    result = generate(client, headers, {"prompt": "Explain vectors"})["artifact"]
     second = login(client, subject="other")
     onboard(client, second)
     url = "/api/v1/playground/artifacts/" + result["id"]

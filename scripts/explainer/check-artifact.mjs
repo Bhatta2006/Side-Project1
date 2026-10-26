@@ -35,113 +35,120 @@ export function inspectScripts(scripts) {
   }
 }
 
+export const launchOptions = () => ({
+  channel: process.env.SOCRAT_EXPLAINER_BROWSER_CHANNEL || (process.platform === 'win32' ? 'msedge' : undefined),
+  // A container's default seccomp profile blocks the user namespaces Chromium's sandbox needs; the
+  // checker container (no egress, non-root, no-new-privileges) sets SOCRAT_EXPLAINER_NO_SANDBOX=1.
+  chromiumSandbox: process.platform !== 'win32' && process.env.SOCRAT_EXPLAINER_NO_SANDBOX !== '1',
+  args: ['--site-per-process'],
+});
+export const contextOptions = { viewport: { width: 1000, height: 900 }, reducedMotion: 'reduce', serviceWorkers: 'block' };
+
 async function main() {
   let raw = '';
   for await (const chunk of process.stdin) { raw += chunk; if (raw.length > 700_000) throw Error('Document too large'); }
   const input = JSON.parse(raw);
-  inspectScripts(input.scripts);
-  const browser = await chromium.launch({
-    channel: process.env.SOCRAT_EXPLAINER_BROWSER_CHANNEL || (process.platform === 'win32' ? 'msedge' : undefined),
-    // A container's default seccomp profile blocks the user namespaces Chromium's sandbox needs; the
-    // checker container (no egress, non-root, no-new-privileges) sets SOCRAT_EXPLAINER_NO_SANDBOX=1.
-    chromiumSandbox: process.platform !== 'win32' && process.env.SOCRAT_EXPLAINER_NO_SANDBOX !== '1',
-    args: ['--site-per-process'],
-  });
+  const browser = await chromium.launch(launchOptions());
   try {
-    const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, reducedMotion: 'reduce', serviceWorkers: 'block' });
-    const page = await context.newPage();
-    page.setDefaultTimeout(4000);
-    page.setDefaultNavigationTimeout(20000); // a cold browser start is not the visual's fault
-    const errors = [], blocked = [];
-    page.on('pageerror', error => errors.push(String(error.message).slice(0,180)));
-    page.on('console', message => { if (message.type() === 'error') errors.push(message.text().slice(0,180)); });
-    const host = 'http://host.socrat.invalid/', visual = 'http://visual.socrat.invalid/';
-    await context.route('**/*', route => {
-      const url = route.request().url();
-      if (url === host) return route.fulfill({ contentType: 'text/html', body: `<html lang="en"><head><title>Visual check</title></head><body><main><iframe title="Visual explanation" sandbox="allow-scripts" src="${visual}" width="1000" height="900"></iframe></main></body></html>` });
-      if (url === visual) return route.fulfill({ contentType: 'text/html', headers: { 'Content-Security-Policy': input.csp.replace(/frame-ancestors [^;]+/, 'frame-ancestors ' + host.slice(0,-1)), 'Origin-Agent-Cluster': '?1' }, body: input.html });
-      blocked.push('external request'); return route.abort();
-    });
-    // Created before goto(), so it must not reject unhandled while goto is still running (a cold
-    // browser start made it time out and crash the checker with no output).
-    const frameReady = page.waitForEvent('framenavigated', { predicate: f => f.url() === visual, timeout: 12000 });
-    frameReady.catch(() => undefined);
-    await page.goto(host);
-    const frame = await frameReady;
-    if (!frame) throw Error('Visual did not load');
-    try { await frame.waitForFunction(() => document.readyState === 'complete' && window.__explainer); }
-    catch { throw Error(errors[0] || 'Initialize window.__explainer and a working initial visual immediately on load'); }
-    const initial = await frame.evaluate(() => {
-      const api = window.__explainer, region = document.querySelector('#visual');
-      if (!region || region.getBoundingClientRect().height < 120 || region.getBoundingClientRect().width < 100) throw Error('Visual canvas is blank or too small');
-      if (typeof api.step !== 'function' || typeof api.reset !== 'function' || typeof api.describe !== 'function') throw Error('Missing step/reset/describe controls');
-      const count = Number(api.stepCount), text = String(api.describe());
-      if (!Number.isInteger(count) || count < 1 || count > 2000) throw Error('Initial stepCount must be from 1 to 2000; initialize a complete visual using your own example before exposing the interface');
-      if (!Number.isInteger(api.currentStep) || api.currentStep < 0 || api.currentStep >= count) throw Error('Expose get currentStep() returning the actual selected zero-based step, including after input edits');
-      if (!text.trim()) throw Error('describe() must explain the current initial state before any user interaction');
-      const transcript = document.querySelector('#transcript')?.textContent.trim() || '';
-      if (transcript.length < 100 || transcript.length > 30000) throw Error('Include a complete teaching explanation in section id=transcript');
-      const controls = [...document.querySelectorAll('input,select,button')];
-      if (!controls.length) throw Error('Include controls for learner input or experimentation');
-      for (const control of controls) {
-        const labelled = control.getAttribute('aria-label') || control.getAttribute('aria-labelledby') || control.labels?.length || (control.tagName === 'BUTTON' && control.textContent.trim());
-        if (!labelled) throw Error('Label every control');
-      }
-      const drawn = region.querySelector('svg path,svg rect,svg circle,svg text,canvas') || region.children.length > 1;
-      if (!drawn) throw Error('Include a real visual, not just explanatory text');
-      return { count, current: api.currentStep, text, title: document.title, transcript };
-    });
-    const snapshot = () => frame.evaluate(() => {
-      const region=document.querySelector('#visual');
-      return region.innerHTML+[...region.querySelectorAll('canvas')].map(c=>c.toDataURL()).join('');
-    });
-    const observe = () => frame.evaluate(() => ({ step:window.__explainer.currentStep, description:String(window.__explainer.describe()).slice(0,6000), visible_text:document.body.innerText.slice(0,4000) }));
-    const observations = [await observe()];
-    if (initial.count > 1) {
-      const firstVisual = await snapshot();
-      for (const index of new Set([0,1,Math.floor(initial.count/2),initial.count-1])) {
-        if (index === initial.current) continue;
-        await frame.evaluate(i => window.__explainer.step(i), index);
-        if (await frame.evaluate(() => window.__explainer.currentStep) !== index) throw Error('currentStep must report the index selected by step(index)');
-        await page.waitForTimeout(80);
-        const next = await frame.evaluate(() => String(window.__explainer.describe()));
-        observations.push(await observe());
-        if (!next.trim() || next === initial.text || await snapshot() === firstVisual) throw Error('Stepping must change both the visual and its state explanation');
-      }
-    } else {
-      const fields = frame.locator('input:not([type=hidden]),textarea,select');
-      const inputControl = (await fields.count() ? fields : frame.locator('button')).first();
-      const before = await frame.evaluate(() => document.querySelector('#visual').innerHTML + window.__explainer.describe() + document.body.textContent);
-      await inputControl.evaluate(element => {
-        if (element.tagName === 'BUTTON') element.click();
-        else {
-          if (element.tagName === 'SELECT') element.value = element.options[(element.selectedIndex+1)%element.options.length].value;
-          else if (['checkbox','radio'].includes(element.type)) element.checked = !element.checked;
-          else if (['range','number'].includes(element.type)) { const step=Number(element.step)||1,next=Number(element.value)+step; element.value=String(element.max && next>Number(element.max) ? Number(element.value)-step : next); }
-          else { const number=element.value.match(/-?\d+(?:\.\d+)?/); element.value=number ? element.value.replace(number[0],String(Number(number[0])+1)) : element.value+'a'; }
-          element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}));
-        }
-      });
-      const state = () => frame.evaluate(() => document.querySelector('#visual').innerHTML + window.__explainer.describe() + document.body.textContent);
-      let after = await state();
-      // Many apps apply an edited input with a button ("Search", "Run"); press the first one.
-      if (before === after && await fields.count() && await frame.locator('button').count()) {
-        await frame.locator('button').first().evaluate(button => button.click());
-        after = await state();
-      }
-      observations.push(await observe());
-      if (before === after) throw Error('Input controls must change the visual or its explanation');
-    }
-    await frame.evaluate(() => window.__explainer.reset());
-    if (errors.length || blocked.length) throw Error(errors.length ? 'Visual script error: '+errors[0] : 'Visual attempted external access');
-    const count = await frame.evaluate(() => Number(window.__explainer.stepCount));
-    return { ok: true, step_count: count, title: initial.title, transcript: initial.transcript, observations, checks: ['script-syntax','capability-policy','sandbox-load','nonblank-canvas','labelled-controls','working-interaction','reset'] };
+    return await run(await browser.newContext(contextOptions), input);
   } finally {
     // Closing can take several seconds (Edge on Windows: ~6 s) while the verdict is already known.
     // The caller waits for this process to exit under an 18 s budget, so a slow close used to fail
     // visuals that had passed. Give it a moment, then exit; Playwright kills the browser on exit.
     await Promise.race([browser.close().catch(() => undefined), new Promise(resolve => setTimeout(resolve, CLOSE_GRACE_MS))]);
   }
+}
+
+/** Check one visual in a fresh browser context. The caller owns (and closes) the context. */
+export async function run(context, input) {
+  inspectScripts(input.scripts);
+  const page = await context.newPage();
+  page.setDefaultTimeout(4000);
+  page.setDefaultNavigationTimeout(10000);
+  const errors = [], blocked = [];
+  page.on('pageerror', error => errors.push(String(error.message).slice(0,180)));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text().slice(0,180)); });
+  const host = 'http://host.socrat.invalid/', visual = 'http://visual.socrat.invalid/';
+  await context.route('**/*', route => {
+    const url = route.request().url();
+    if (url === host) return route.fulfill({ contentType: 'text/html', body: `<html lang="en"><head><title>Visual check</title></head><body><main><iframe title="Visual explanation" sandbox="allow-scripts" src="${visual}" width="1000" height="900"></iframe></main></body></html>` });
+    if (url === visual) return route.fulfill({ contentType: 'text/html', headers: { 'Content-Security-Policy': input.csp.replace(/frame-ancestors [^;]+/, 'frame-ancestors ' + host.slice(0,-1)), 'Origin-Agent-Cluster': '?1' }, body: input.html });
+    blocked.push('external request'); return route.abort();
+  });
+  // Created before goto(), so it must not reject unhandled while goto is still running (a cold
+  // browser start made it time out and crash the checker with no output).
+  const frameReady = page.waitForEvent('framenavigated', { predicate: f => f.url() === visual, timeout: 12000 });
+  frameReady.catch(() => undefined);
+  await page.goto(host);
+  const frame = await frameReady;
+  if (!frame) throw Error('Visual did not load');
+  try { await frame.waitForFunction(() => document.readyState === 'complete' && window.__explainer); }
+  catch { throw Error(errors[0] || 'Initialize window.__explainer and a working initial visual immediately on load'); }
+  const initial = await frame.evaluate(() => {
+    const api = window.__explainer, region = document.querySelector('#visual');
+    if (!region || region.getBoundingClientRect().height < 120 || region.getBoundingClientRect().width < 100) throw Error('Visual canvas is blank or too small');
+    if (typeof api.step !== 'function' || typeof api.reset !== 'function' || typeof api.describe !== 'function') throw Error('Missing step/reset/describe controls');
+    const count = Number(api.stepCount), text = String(api.describe());
+    if (!Number.isInteger(count) || count < 1 || count > 2000) throw Error('Initial stepCount must be from 1 to 2000; initialize a complete visual using your own example before exposing the interface');
+    if (!Number.isInteger(api.currentStep) || api.currentStep < 0 || api.currentStep >= count) throw Error('Expose get currentStep() returning the actual selected zero-based step, including after input edits');
+    if (!text.trim()) throw Error('describe() must explain the current initial state before any user interaction');
+    const transcript = document.querySelector('#transcript')?.textContent.trim() || '';
+    if (transcript.length < 100 || transcript.length > 30000) throw Error('Include a complete teaching explanation in section id=transcript');
+    const controls = [...document.querySelectorAll('input,select,button')];
+    if (!controls.length) throw Error('Include controls for learner input or experimentation');
+    for (const control of controls) {
+      const labelled = control.getAttribute('aria-label') || control.getAttribute('aria-labelledby') || control.labels?.length || (control.tagName === 'BUTTON' && control.textContent.trim());
+      if (!labelled) throw Error('Label every control');
+    }
+    const drawn = region.querySelector('svg path,svg rect,svg circle,svg text,canvas') || region.children.length > 1;
+    if (!drawn) throw Error('Include a real visual, not just explanatory text');
+    return { count, current: api.currentStep, text, title: document.title, transcript };
+  });
+  const snapshot = () => frame.evaluate(() => {
+    const region=document.querySelector('#visual');
+    return region.innerHTML+[...region.querySelectorAll('canvas')].map(c=>c.toDataURL()).join('');
+  });
+  const observe = () => frame.evaluate(() => ({ step:window.__explainer.currentStep, description:String(window.__explainer.describe()).slice(0,6000), visible_text:document.body.innerText.slice(0,4000) }));
+  const observations = [await observe()];
+  if (initial.count > 1) {
+    const firstVisual = await snapshot();
+    for (const index of new Set([0,1,Math.floor(initial.count/2),initial.count-1])) {
+      if (index === initial.current) continue;
+      await frame.evaluate(i => window.__explainer.step(i), index);
+      if (await frame.evaluate(() => window.__explainer.currentStep) !== index) throw Error('currentStep must report the index selected by step(index)');
+      await page.waitForTimeout(80);
+      const next = await frame.evaluate(() => String(window.__explainer.describe()));
+      observations.push(await observe());
+      if (!next.trim() || next === initial.text || await snapshot() === firstVisual) throw Error('Stepping must change both the visual and its state explanation');
+    }
+  } else {
+    const fields = frame.locator('input:not([type=hidden]),textarea,select');
+    const inputControl = (await fields.count() ? fields : frame.locator('button')).first();
+    const before = await frame.evaluate(() => document.querySelector('#visual').innerHTML + window.__explainer.describe() + document.body.textContent);
+    await inputControl.evaluate(element => {
+      if (element.tagName === 'BUTTON') element.click();
+      else {
+        if (element.tagName === 'SELECT') element.value = element.options[(element.selectedIndex+1)%element.options.length].value;
+        else if (['checkbox','radio'].includes(element.type)) element.checked = !element.checked;
+        else if (['range','number'].includes(element.type)) { const step=Number(element.step)||1,next=Number(element.value)+step; element.value=String(element.max && next>Number(element.max) ? Number(element.value)-step : next); }
+        else { const number=element.value.match(/-?\d+(?:\.\d+)?/); element.value=number ? element.value.replace(number[0],String(Number(number[0])+1)) : element.value+'a'; }
+        element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    });
+    const state = () => frame.evaluate(() => document.querySelector('#visual').innerHTML + window.__explainer.describe() + document.body.textContent);
+    let after = await state();
+    // Many apps apply an edited input with a button ("Search", "Run"); press the first one.
+    if (before === after && await fields.count() && await frame.locator('button').count()) {
+      await frame.locator('button').first().evaluate(button => button.click());
+      after = await state();
+    }
+    observations.push(await observe());
+    if (before === after) throw Error('Input controls must change the visual or its explanation');
+  }
+  await frame.evaluate(() => window.__explainer.reset());
+  if (errors.length || blocked.length) throw Error(errors.length ? 'Visual script error: '+errors[0] : 'Visual attempted external access');
+  const count = await frame.evaluate(() => Number(window.__explainer.stepCount));
+  return { ok: true, step_count: count, title: initial.title, transcript: initial.transcript, observations, checks: ['script-syntax','capability-policy','sandbox-load','nonblank-canvas','labelled-controls','working-interaction','reset'] };
 }
 
 const CLOSE_GRACE_MS = 500;

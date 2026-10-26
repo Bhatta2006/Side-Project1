@@ -267,6 +267,25 @@ class AssistantMessage(Base):
     seq: Mapped[int] = mapped_column(BigInteger, default=time.time_ns, index=True)
 
 
+class PlaygroundJob(Base):
+    """One visual generation, run by the worker so it outlives the request that asked for it."""
+
+    __tablename__ = "playground_jobs"
+    __table_args__ = (Index("ix_playground_jobs_status", "status", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # also the saved artifact's id
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    thread_id: Mapped[str] = mapped_column(ForeignKey("assistant_threads.id", ondelete="CASCADE"))
+    prompt: Mapped[str] = mapped_column(Text)
+    level: Mapped[str] = mapped_column(String(16))
+    language: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16))  # queued|running|ready|failed|cancelled
+    progress: Mapped[dict] = mapped_column(JSON, default=dict)
+    error: Mapped[str] = mapped_column(String(64), default="")
+    tries: Mapped[int] = mapped_column(Integer, default=0)
+    heartbeat_at: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
 class LessonVariant(Base):
     __tablename__ = "lesson_variants"
     concept: Mapped[str] = mapped_column(String(160), primary_key=True)

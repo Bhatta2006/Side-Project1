@@ -134,6 +134,30 @@ def test_zero_means_no_cap_and_offline_is_never_metered(engine):
         assert db.scalar(select(func.count()).select_from(AIUsage)) == 2
 
 
+def test_playground_and_tutor_do_not_use_up_each_others_allowance(engine):
+    config = settings(ai_daily_budget_usd=100.0, ai_user_calls_per_minute=2)
+    tutor = budget.Metered(Scripted(tokens=10_000), engine, config, user_id="u1", feature="tutor")
+    ask(tutor)
+    with pytest.raises(ProviderError, match="ai_budget_reached"):
+        ask(tutor)
+    # The playground is limited by its plan's generation count, not the tutor's spend or burst caps.
+    visuals = budget.Metered(
+        Scripted(tokens=50_000), engine, config, user_id="u1", feature="playground"
+    )
+    for _ in range(3):
+        ask(visuals)
+    # And playground spend never counts against the tutor.
+    other = budget.Metered(
+        Scripted(tokens=50_000), engine, config, user_id="u2", feature="playground"
+    )
+    ask(other)
+    assert ask(budget.Metered(Scripted(), engine, config, user_id="u2", feature="tutor")) == "ok"
+    # The site-wide budget still covers everything.
+    capped = settings(ai_daily_budget_usd=0.1)
+    with pytest.raises(ProviderError, match="ai_budget_reached"):
+        ask(budget.Metered(Scripted(), engine, capped, user_id="u2", feature="playground"))
+
+
 def test_summary_for_the_owner_dashboard(engine):
     config = settings(ai_user_daily_budget_usd=0, ai_daily_budget_usd=0)
     ask(budget.Metered(Scripted(tokens=2000), engine, config, user_id="u1", feature="tutor"))

@@ -16,6 +16,7 @@ trap 'for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done; wait ||
 for n in $(seq 1 90); do curl -fsS http://127.0.0.1:8000/api/health/ready >/dev/null 2>&1 && break; sleep 1; done
 curl -fsS http://127.0.0.1:8000/api/health/ready >/dev/null
 .venv/bin/python -m runner.worker >.cache/native-worker.log 2>&1 & pids+=("$!")
+.venv/bin/python -m socrat.worker >.cache/native-jobs.log 2>&1 & pids+=("$!")  # outbox and Playground generations
 node apps/web/scripts/copy-runtimes.mjs
 node node_modules/next/dist/bin/next dev apps/web --hostname 127.0.0.1 --port 3000 >.cache/native-web.log 2>&1 & pids+=("$!")
 for n in $(seq 1 120); do curl -fsS http://localhost:3000 >/dev/null 2>&1 && break; sleep 1; done

@@ -28,6 +28,8 @@ try {
     if (-not $ready) { Start-Sleep -Milliseconds 400 }
   } until ($ready)
   $children += Start-Process -FilePath '.venv/Scripts/python.exe' -ArgumentList '-m runner.worker' -WindowStyle Hidden -PassThru -RedirectStandardOutput .cache/native-worker.log -RedirectStandardError .cache/native-worker-error.log
+  # Outbox delivery and Playground generations.
+  $children += Start-Process -FilePath '.venv/Scripts/python.exe' -ArgumentList '-m socrat.worker' -WindowStyle Hidden -PassThru -RedirectStandardOutput .cache/native-jobs.log -RedirectStandardError .cache/native-jobs-error.log
   node apps/web/scripts/copy-runtimes.mjs; if ($LASTEXITCODE) { throw 'Copying the browser code runtimes failed' }
   $children += Start-Process -FilePath (Get-Command node).Source -ArgumentList 'node_modules/next/dist/bin/next dev apps/web --hostname 127.0.0.1 --port 3000' -WindowStyle Hidden -PassThru -RedirectStandardOutput .cache/native-web.log -RedirectStandardError .cache/native-web-error.log
   $deadline = (Get-Date).AddSeconds(120)

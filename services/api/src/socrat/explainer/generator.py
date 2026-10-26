@@ -146,7 +146,7 @@ async def review(
             if event.kind == "text":
                 raw += event.text
                 if len(raw) > 8000:
-                    raise ArtifactError("The content review could not complete")
+                    raise ProviderError("playground_review_unavailable")
         try:
             issues = parse_review(raw)
             break
@@ -166,14 +166,19 @@ async def render_check(document, settings: Settings) -> dict:
     if settings.explainer_checker_url:
         try:
             async with httpx.AsyncClient(timeout=25, follow_redirects=False) as client:
-                response = await client.post(
-                    settings.explainer_checker_url,
-                    json=payload,
-                    headers={
-                        "Authorization": "Bearer "
-                        + settings.explainer_checker_secret.get_secret_value(),
-                    },
-                )
+                # A busy checker (429) is capacity, not a fault in the visual: wait for a slot.
+                for wait in (0, 2, 4, 8):
+                    await asyncio.sleep(wait)
+                    response = await client.post(
+                        settings.explainer_checker_url,
+                        json=payload,
+                        headers={
+                            "Authorization": "Bearer "
+                            + settings.explainer_checker_secret.get_secret_value(),
+                        },
+                    )
+                    if response.status_code != 429:
+                        break
                 response.raise_for_status()
                 result = response.json()
         except (httpx.HTTPError, ValueError) as exc:
@@ -275,8 +280,11 @@ async def generate(provider: Provider, settings: Settings, request: str, languag
             json.dumps(dict(learner_request=request, default_language=language, depth=level)),
         )
     ]
+    failed = None
     for attempt in range(4):
-        yield dict(event="progress", phase="repairing" if attempt else "generating", characters=0)
+        # Every attempt restarts the steps; a repair's events name the step that rejected the last.
+        phase = "generating"
+        yield dict(event="progress", phase=phase, attempt=attempt + 1, failed=failed, characters=0)
         raw = ""
         try:
             last_size = 0
@@ -288,12 +296,32 @@ async def generate(provider: Provider, settings: Settings, request: str, languag
                     raise ArtifactError("Document exceeds the 300 KB limit")
                 if len(raw) - last_size >= 1500:
                     last_size = len(raw)
-                    yield dict(event="progress", phase="generating", characters=last_size)
+                    yield dict(
+                        event="progress",
+                        phase=phase,
+                        attempt=attempt + 1,
+                        failed=failed,
+                        characters=last_size,
+                    )
             document = validate(raw)
-            yield dict(event="progress", phase="checking", characters=len(raw))
+            phase = "checking"
+            yield dict(
+                event="progress",
+                phase=phase,
+                attempt=attempt + 1,
+                failed=failed,
+                characters=len(raw),
+            )
             qa = await render_check(document, settings)
             qa = dict(qa)
-            yield dict(event="progress", phase="reviewing", characters=len(raw))
+            phase = "reviewing"
+            yield dict(
+                event="progress",
+                phase=phase,
+                attempt=attempt + 1,
+                failed=failed,
+                characters=len(raw),
+            )
             try:
                 await review(provider, document.html, request, qa.pop("observations", []))
                 qa["ai_review"] = "passed"
@@ -303,12 +331,10 @@ async def generate(provider: Provider, settings: Settings, request: str, languag
                     raise
                 qa["ai_review"] = "unavailable"
             except ArtifactError as exc:
-                # The model reviewer is advisory on the last attempt: a visual that passed every browser
-                # check ships, flagged, rather than failing the learner after three repairs.
-                if attempt < 3 or "ontent review" not in str(exc):
-                    raise
+                # The reviewer is advisory: a visual that passed every browser check ships, flagged.
+                # Regenerating for a finding costs a full attempt that rarely fits the deadline.
                 qa["ai_review"] = "flagged"
-                qa["review_notes"] = str(exc)[:500]
+                qa["review_notes"] = str(exc).removeprefix("Content review: ")[:500]
             transcript = qa.pop("transcript", document.transcript)
             title = qa.pop("title", document.title)
             yield dict(
@@ -337,6 +363,21 @@ async def generate(provider: Provider, settings: Settings, request: str, languag
             )
             if attempt == 3:
                 raise ProviderError("playground_generation_invalid") from exc
+            failed = phase
+            problem = str(exc)
+            if phase == "generating" and "</html>" not in raw[-200:].lower():
+                # Cut off at the output limit. Repairing the fragment just runs out again.
+                logging.getLogger("socrat.explainer").warning(
+                    "visual attempt %d ended without </html> (%d characters): the output limit was "
+                    "reached; a reasoning model may need SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS "
+                    '{"enable_thinking":false} or a non-reasoning SOCRAT_EXPLAINER_MODEL',
+                    attempt + 1,
+                    len(raw),
+                )
+                problem = (
+                    "The document was cut off before </html> because it was too long. Write a "
+                    "shorter, complete document: compact CSS, fewer comments, under 12,000 characters"
+                )
             turns += [
                 Turn("assistant", raw[:MAX_BYTES]),
                 Turn(
@@ -344,7 +385,7 @@ async def generate(provider: Provider, settings: Settings, request: str, languag
                     (
                         "Repair the complete HTML document. Keep answering the exact original learner_request; "
                         "do not change the topic or replace it with a preset example. Fix this validation problem: "
-                        + str(exc)
+                        + problem
                     ),
                 ),
             ]

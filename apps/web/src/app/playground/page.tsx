@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, MoreHorizontal, PanelRightClose, PanelRightOpen } from 'lucide-react';
-import { ApiError, api, explain, stream } from '@/lib/api';
+import { ApiError, api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import type { VisualArtifact } from '@/lib/explainer';
 import { cn } from '@/lib/utils';
@@ -24,17 +24,27 @@ const VisualExplainer = dynamic(() => import('@/components/visual-explainer'), {
 type Level = VisualArtifact['level'];
 interface Suggestion { id: string; title: string; reason: string }
 interface Saved { id: string; title: string; created_at: number }
+interface Job {
+  id: string; status: 'queued' | 'running' | 'ready' | 'failed' | 'cancelled'; error: string | null;
+  progress: { phase?: string; attempt?: number; failed?: string; characters?: number };
+  request: string; level: Level; created_at: number; artifact?: VisualArtifact;
+}
 
 const LEVELS: [Level, string][] = [['simple', 'Simple'], ['standard', 'Standard'], ['deep', 'Go deep']];
-// The real phases the generator reports. Repairing appears only when it happens.
+// The real phases the generator reports. Each repair attempt restarts them.
 const PHASES = [
   ['generating', 'Building the visual'],
   ['checking', 'Checking that it runs'],
   ['reviewing', 'Reviewing it'],
-  ['repairing', 'Repairing it'],
 ] as const;
+const ATTEMPTS = 4;
+// Why the previous attempt was rejected, by the step that rejected it.
+const FAILED: Record<string, string> = {
+  generating: 'The last version came out incomplete',
+  checking: 'The last version did not work when we ran it',
+};
 // Errors where retrying cannot help right now.
-const NO_RETRY = new Set(['upgrade_required', 'playground_day_limit', 'playground_daily_limit', 'playground_unavailable', 'playground_sandbox_unavailable']);
+const NO_RETRY = new Set(['upgrade_required', 'playground_day_limit', 'playground_daily_limit', 'playground_unavailable', 'playground_sandbox_unavailable', 'playground_ai_budget_reached', 'playground_ai_disabled', 'assistant_daily_limit']);
 
 function savedDate(seconds: number) {
   return new Date(seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -78,8 +88,9 @@ export default function PlaygroundPage() {
   const [previewVersion, setPreviewVersion] = useState(0);
   const [fromSaved, setFromSaved] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [phase, setPhase] = useState('generating');
-  const [seen, setSeen] = useState<string[]>([]);
+  const [progress, setProgress] = useState({ phase: 'generating', attempt: 1, failed: '', characters: 0 });
+  const [queued, setQueued] = useState(false);
+  const [startedAt, setStartedAt] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [failure, setFailure] = useState<{ code: string; message: string } | null>(null);
   const [notice, setNotice] = useState('');
@@ -98,6 +109,58 @@ export default function PlaygroundPage() {
     setMac(/Mac|iPhone|iPad/.test(navigator.platform));
     setPanelOpen(window.matchMedia('(min-width: 1280px)').matches);
   }, []);
+  // Generation runs on the server as a job: start it, then follow it until it settles. Leaving
+  // the page does not stop it; coming back resumes following it.
+  const jobId = useRef('');
+  const stopped = useRef(false);
+  useEffect(() => () => { stopped.current = true; }, []);
+  const follow = useCallback(async (first: Job) => {
+    jobId.current = first.id; stopped.current = false;
+    setBusy(true); setArtifact(null); setFailure(null); setNotice(''); setFromSaved(false);
+    setPrompt(first.request); setLevel(first.level); setStartedAt(first.created_at * 1000);
+    try {
+      let job = first, misses = 0;
+      while (job.status === 'queued' || job.status === 'running') {
+        const { phase = 'generating', attempt = 1, failed = '', characters = 0 } = job.progress;
+        setQueued(job.status === 'queued'); setProgress({ phase, attempt, failed, characters });
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        if (stopped.current) return;
+        try { job = await api.get<Job>(`/playground/jobs/${job.id}`); misses = 0; }
+        catch (e) { if (e instanceof ApiError || ++misses > 20) throw e; } // ride out a brief network drop
+      }
+      if (job.status === 'ready' && job.artifact) {
+        const result = job.artifact;
+        setArtifact(result);
+        setSaved(rows => [{ id: result.id, title: result.title, created_at: result.created_at }, ...rows.filter(row => row.id !== result.id)].slice(0, 20));
+      } else if (job.status === 'cancelled') setNotice('Cancelled. Your question is still here. It did not count toward today’s visuals.');
+      else {
+        // Failed generations are not charged to the learner's allowance; say so.
+        const code = job.error ?? 'playground_generation_unavailable';
+        setFailure({ code, message: `${explain(new ApiError(502, code))} It did not count toward today’s visuals.` });
+      }
+    } catch (e) {
+      if (!stopped.current) setFailure({ code: e instanceof ApiError ? e.code : '', message: explain(e) });
+    } finally { if (!stopped.current) setBusy(false); }
+  }, []);
+  const generate = useCallback(async (request: string, depth: Level) => {
+    setBusy(true); setArtifact(null); setFailure(null); setNotice(''); setQueued(true); setStartedAt(Date.now());
+    setProgress({ phase: 'generating', attempt: 1, failed: '', characters: 0 }); setPrompt(request); setLevel(depth);
+    stopped.current = false; jobId.current = '';
+    try {
+      const job = await api.post<Job>('/playground/generate', { prompt: request.trim(), level: depth, request_id: crypto.randomUUID() });
+      // Cancelled while the request was in flight: cancel the job it created.
+      if (stopped.current) { await api.post(`/playground/jobs/${job.id}/cancel`).catch(() => undefined); return; }
+      await follow(job);
+    } catch (e) {
+      setFailure({ code: e instanceof ApiError ? e.code : '', message: explain(e) }); setBusy(false);
+    }
+  }, [follow]);
+  async function cancel() {
+    stopped.current = true;
+    if (jobId.current) await api.post(`/playground/jobs/${jobId.current}/cancel`).catch(() => undefined);
+    setBusy(false); setNotice('Cancelled. Your question is still here.');
+  }
+
   useEffect(() => {
     if (!allowed) return;
     let active = true;
@@ -107,54 +170,29 @@ export default function PlaygroundPage() {
     if (sample) setPrompt(p => p || sample.slice(0, 4000));
     Promise.all([
       api.get<{ suggestions: Suggestion[]; concepts?: { id: string; title: string }[] }>('/playground'),
-      api.get<{ items: Saved[] }>('/playground/artifacts'),
+      api.get<{ items: Saved[]; pending: Job | null }>('/playground/artifacts'),
     ]).then(([overview, history]) => {
       if (!active) return;
       setSuggestions(overview.suggestions);
       setSaved(history.items);
+      if (history.pending) { void follow(history.pending); return; }
       // A lesson link passes its skill as a request topic only, never as a preset lesson.
       const title = concept ? overview.concepts?.find(c => c.id === concept)?.title : undefined;
       if (title) setPrompt(p => p || title);
     }).catch(e => { if (active) setFailure({ code: '', message: explain(e) }); });
     return () => { active = false; };
-  }, [allowed]);
+  }, [allowed, follow]);
   useEffect(() => {
     if (artifact) { resultHeading.current?.focus({ preventScroll: true }); resultHeading.current?.scrollIntoView({ block: 'start' }); }
   }, [artifact]);
   useEffect(() => {
     if (!busy) return;
-    const started = Date.now();
-    setElapsed(0);
-    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    // Counted from when the job was created, so a resumed generation shows its real age.
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [busy]);
-
-  const abort = useRef<AbortController | null>(null);
-  const generate = useCallback(async (request: string, depth: Level) => {
-    abort.current = new AbortController();
-    setBusy(true); setArtifact(null); setFailure(null); setNotice(''); setPhase('generating'); setSeen(['generating']); setFromSaved(false);
-    setPrompt(request); setLevel(depth);
-    try {
-      let complete = false;
-      for await (const event of stream('/playground/generate', { prompt: request.trim(), level: depth, request_id: crypto.randomUUID() }, abort.current.signal)) {
-        if (event.event === 'progress') {
-          const next = String(event.data.phase);
-          setPhase(next);
-          setSeen(list => (list.includes(next) ? list : [...list, next]));
-        } else if (event.event === 'error') throw new ApiError(502, String(event.data.code));
-        else if (event.event === 'ready') {
-          const result = event.data.artifact as unknown as VisualArtifact;
-          setArtifact(result);
-          setSaved(rows => [{ id: result.id, title: result.title, created_at: result.created_at }, ...rows.filter(row => row.id !== result.id)].slice(0, 20));
-          complete = true;
-        }
-      }
-      if (!complete) throw new Error('Generation ended before the visual was ready');
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') setNotice('Cancelled. Your question is still here.');
-      else setFailure({ code: e instanceof ApiError ? e.code : '', message: explain(e) });
-    } finally { setBusy(false); }
-  }, []);
+  }, [busy, startedAt]);
 
   async function openSaved(id: string) {
     setFailure(null); setNotice('');
@@ -269,9 +307,11 @@ export default function PlaygroundPage() {
 
   // Generating: the real phases, an elapsed counter, no fake progress.
   if (busy) {
-    const visible = PHASES.filter(([id]) => id !== 'repairing' || seen.includes('repairing'));
-    const order = visible.map(([id]) => id as string);
-    const at = order.indexOf(phase);
+    const { phase, attempt, failed, characters } = progress;
+    const at = queued ? -1 : PHASES.findIndex(([id]) => id === phase);
+    const repairing = attempt > 1;
+    const label = (id: string, text: string) => (id === 'generating' && repairing ? 'Fixing the visual' : text);
+    const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
     return (
       <Page wide>
         <h1 className="sr-only">Playground</h1>
@@ -280,8 +320,14 @@ export default function PlaygroundPage() {
           <div className="w-full max-w-md">
             <div className="mb-4 flex items-end gap-3"><SocFigure mood="thinking" idle size={96} /><p className="font-hand pb-3 text-[22px] text-pen">sketching it out for you…</p></div>
             <h2 id="generating-heading" className="type-display-m">Building your visual</h2>
+            {queued ? <p className="mt-3 text-[15px]">Waiting for a free slot. Your visual starts as soon as one opens.</p> : null}
+            {repairing ? (
+              <p className="mt-3 text-[15px]">
+                <span className="font-semibold">Attempt {attempt} of {ATTEMPTS}.</span> {FAILED[failed] ?? 'The last version had a problem'}, so Socrat is fixing it.
+              </p>
+            ) : null}
             <ol className="mt-6 grid gap-4" aria-label="Generation steps">
-              {visible.map(([id, label], i) => {
+              {PHASES.map(([id, text], i) => {
                 const state = i < at ? 'done' : i === at ? 'active' : 'pending';
                 return (
                   <li key={id} className="flex items-center gap-3">
@@ -290,15 +336,18 @@ export default function PlaygroundPage() {
                     ) : state === 'active' ? (
                       <svg viewBox="0 0 24 24" className="size-7 animate-spin [animation-duration:2.4s]" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="var(--border)" strokeWidth="2.5" /><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" /></svg>
                     ) : <StatusIcon status="not_seen" size={28} />}
-                    <span className={cn('text-[17px]', state === 'active' ? 'font-bold' : state === 'pending' ? 'text-muted-foreground' : '')}>{label}</span>
-                    <span className="ml-auto text-[13px] text-muted-foreground">{state === 'done' ? 'Done' : state === 'active' ? 'In progress' : ''}</span>
+                    <span className={cn('text-[17px]', state === 'active' ? 'font-bold' : state === 'pending' ? 'text-muted-foreground' : '')}>{label(id, text)}</span>
+                    <span className="ml-auto text-[13px] text-muted-foreground tabular-nums">
+                      {state === 'done' ? 'Done' : state === 'active' ? (id === 'generating' && characters ? `${characters.toLocaleString()} characters` : 'In progress') : ''}
+                    </span>
                   </li>
                 );
               })}
             </ol>
-            <p className="sr-only" role="status" aria-live="polite">{visible.find(([id]) => id === phase)?.[1] ?? 'Building the visual'}</p>
-            <p className="mt-6 text-[15px] text-muted-foreground tabular-nums">This usually takes a minute or two. {elapsed}s so far.</p>
-            <Button variant="outline" className="mt-4" onClick={() => abort.current?.abort()}>Cancel</Button>
+            <p className="sr-only" role="status" aria-live="polite">{queued ? 'Waiting for a free slot' : (repairing ? `Attempt ${attempt}. ` : '') + label(phase, PHASES[at]?.[1] ?? 'Building the visual')}</p>
+            <p className="mt-6 text-[15px] text-muted-foreground tabular-nums">This usually takes 2 to 4 minutes. {clock} so far.</p>
+            <p className="mt-1 text-[15px] text-muted-foreground">You can leave this page. Your visual keeps building and opens here when you come back.</p>
+            <Button variant="outline" className="mt-4" onClick={() => void cancel()}>Cancel</Button>
           </div>
         </section>
       </Page>

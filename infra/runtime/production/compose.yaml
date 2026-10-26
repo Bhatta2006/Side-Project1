@@ -69,7 +69,7 @@ services:
   api:
     image: "${SOCRAT_API_IMAGE:?Set SOCRAT_API_IMAGE to the published ghcr.io API image}"
     restart: unless-stopped
-    environment:
+    environment: &api-environment
       <<: *database-environment
       SOCRAT_ENVIRONMENT: production
       SOCRAT_PUBLIC_ORIGIN: "https://${APP_HOST:?Set APP_HOST to the owned application DNS name}"
@@ -113,6 +113,8 @@ services:
       # Playground (AI visual explainer): frames are served from a second, unrelated registrable domain.
       SOCRAT_EXPLAINER_ENABLED: "${SOCRAT_EXPLAINER_ENABLED:-true}"
       SOCRAT_EXPLAINER_MODEL: "${SOCRAT_EXPLAINER_MODEL:-}"
+      # A reasoning model spends the 12k-token output limit thinking and truncates visuals: for Qwen3
+      # on vLLM/Nebius set {"enable_thinking":false}. The API logs "ended without </html>" when it happens.
       SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS: "${SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS:-{}}"
       SOCRAT_EXPLAINER_DAILY_MESSAGES: "${SOCRAT_EXPLAINER_DAILY_MESSAGES:-20}"
       SOCRAT_EXPLAINER_SANDBOX_ORIGIN: "https://${SANDBOX_HOST:?Set SANDBOX_HOST to a DNS name on a different registrable domain}"
@@ -123,7 +125,7 @@ services:
       SOCRAT_RAZORPAY_KEY_ID: "${SOCRAT_RAZORPAY_KEY_ID:-}"
       SOCRAT_RAZORPAY_KEY_SECRET_FILE: /run/secrets/razorpay_key_secret
       SOCRAT_RAZORPAY_WEBHOOK_SECRET_FILE: /run/secrets/razorpay_webhook_secret
-    secrets:
+    secrets: &api-secrets
       - postgres_password
       - session_secret
       - oidc_client_secret
@@ -163,21 +165,24 @@ services:
         limits: { cpus: "1.50", memory: 1536M }
     logging: *bounded-logging
 
+  # Also runs Playground generations, so it shares the API's AI and checker configuration.
   worker:
     image: "${SOCRAT_API_IMAGE:?Set SOCRAT_API_IMAGE to the published ghcr.io API image}"
     command: ["python", "-m", "socrat.worker"]
     restart: unless-stopped
     environment:
-      <<: *database-environment
+      <<: *api-environment
       PYTHONPATH: services/api/src
-      SOCRAT_REMINDERS_ENABLED: "true"
-    secrets:
-      - postgres_password
+    secrets: *api-secrets
     networks:
       - backend
+      # Outbound HTTPS for the AI provider.
+      - egress
     depends_on:
       migrate:
         condition: service_completed_successfully
+      explainer-checker:
+        condition: service_healthy
     read_only: true
     tmpfs:
       - /tmp:size=32m,noexec,nosuid
