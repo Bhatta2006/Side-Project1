@@ -6,20 +6,47 @@ const reserved = new Set(['eval','Function','AsyncFunction','GeneratorFunction',
 const forbiddenProperties = new Set(['constructor','__proto__','prototype','cookie','defaultView','location','domain','write','writeln','open','postMessage','sendBeacon','registerProtocolHandler','serviceWorker','contentWindow','contentDocument']);
 const windowProperties = new Set(['__explainer','getComputedStyle','matchMedia','innerWidth','innerHeight','devicePixelRatio','addEventListener','removeEventListener','requestAnimationFrame','cancelAnimationFrame','setTimeout','clearTimeout','setInterval','clearInterval']);
 
+const patternNames = pattern => !pattern ? [] :
+  pattern.type === 'Identifier' ? [pattern.name] :
+  pattern.type === 'ObjectPattern' ? pattern.properties.flatMap(p => patternNames(p.type === 'RestElement' ? p.argument : p.value)) :
+  pattern.type === 'ArrayPattern' ? pattern.elements.flatMap(patternNames) :
+  pattern.type === 'AssignmentPattern' ? patternNames(pattern.left) :
+  pattern.type === 'RestElement' ? patternNames(pattern.argument) : [];
+const declarationNames = statement =>
+  statement?.type === 'VariableDeclaration' ? statement.declarations.flatMap(d => patternNames(d.id)) :
+  ['FunctionDeclaration','ClassDeclaration'].includes(statement?.type) ? [statement.id.name] : [];
+// Names a scope node binds for its own subtree, so a local `parent` is not the browser's parent.
+// ponytail: a `var` nested in an inner block only counts inside that block; a false rejection, never a false pass.
+function declared(node) {
+  switch (node.type) {
+    case 'Program': case 'BlockStatement': case 'StaticBlock': return node.body.flatMap(declarationNames);
+    case 'SwitchStatement': return node.cases.flatMap(c => c.consequent.flatMap(declarationNames));
+    case 'FunctionDeclaration': case 'FunctionExpression': case 'ArrowFunctionExpression':
+      return [...node.params.flatMap(patternNames), ...(node.type === 'FunctionExpression' && node.id ? [node.id.name] : [])];
+    case 'ClassExpression': return node.id ? [node.id.name] : [];
+    case 'ForStatement': return declarationNames(node.init);
+    case 'ForInStatement': case 'ForOfStatement': return declarationNames(node.left);
+    case 'CatchClause': return patternNames(node.param);
+    default: return null;
+  }
+}
+
 export function inspectScripts(scripts) {
   for (const script of scripts) {
     let root;
     try { root = acorn.parse(script, { ecmaVersion: 'latest', sourceType: 'script' }); }
     catch (error) { throw Error(`JavaScript syntax error at script line ${error.loc?.line}: ${script.split('\n')[(error.loc?.line || 1)-1].trim().slice(0,140)}`); }
-    const pending = [[root, null, '']];
+    const pending = [[root, null, '', new Set()]];
     while (pending.length) {
-      const [node, parent, key] = pending.pop();
+      let [node, parent, key, bound] = pending.pop();
+      const names = declared(node);
+      if (names?.length) bound = new Set([...bound, ...names]);
       if (!node || typeof node !== 'object') continue;
       if (['ImportExpression','ImportDeclaration','WithStatement'].includes(node.type)) throw Error('Use local JavaScript without imports or with statements');
       const propertyName = node.type === 'MemberExpression' ? (node.computed ? node.property.value : node.property.name) : null;
       if (forbiddenProperties.has(propertyName)) throw Error('Forbidden browser capability: ' + propertyName);
       if (node.type === 'MemberExpression' && node.object.name === 'window' && !windowProperties.has(propertyName)) throw Error('Unsupported window capability: ' + (propertyName || 'dynamic property'));
-      if (node.type === 'Identifier' && reserved.has(node.name)) {
+      if (node.type === 'Identifier' && reserved.has(node.name) && !bound.has(node.name)) {
         const isKey = (parent?.type === 'MemberExpression' && key === 'property' && !parent.computed) || (parent?.type === 'Property' && key === 'key' && !parent.computed && !parent.shorthand);
         if (!isKey) throw Error('Reserved browser capability: ' + node.name + '; use another name for local variables');
       }
@@ -28,8 +55,8 @@ export function inspectScripts(scripts) {
       if (node.type === 'CallExpression' && ['setTimeout','setInterval'].includes(node.callee.name) && ['Literal','TemplateLiteral'].includes(node.arguments[0]?.type)) throw Error('Timers must take functions');
       for (const [name, value] of Object.entries(node)) {
         if (Array.isArray(value)) {
-          for (const child of value) if (child?.type) pending.push([child, node, name]);
-        } else if (value?.type) pending.push([value, node, name]);
+          for (const child of value) if (child?.type) pending.push([child, node, name, bound]);
+        } else if (value?.type) pending.push([value, node, name, bound]);
       }
     }
   }
