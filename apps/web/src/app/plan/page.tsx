@@ -146,7 +146,7 @@ export default function PlanPage() {
           {/* Hero: the current module. */}
           {current ? (
             <Reveal index={1}>
-              <Card tone="hero" className="relative" aria-labelledby="module-heading">
+              <Card tone="hero" data-tour="skills-current" className="relative" aria-labelledby="module-heading">
                 <Soc size={176} mood="proud" className="pointer-events-none absolute top-1/2 right-8 hidden -translate-y-1/2 lg:block" />
                 <div className="relative grid gap-5 px-(--card-spacing) lg:max-w-[62%]">
                   <p className="type-label text-(--card-muted)">Current module{current.bridge ? `, bridge from ${current.course}` : ''}</p>
