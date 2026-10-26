@@ -444,7 +444,7 @@ export default function TodayPage() {
         </aside>
       </div>
       <CommunityCard className="mt-6" />
-      <Assistant scope="general" title="Ask Soc" openSignal={askSoc} launcher="phone" />
+      <Assistant scope="general" title="Ask Soc" openSignal={askSoc} />
     </Page>
   );
 }

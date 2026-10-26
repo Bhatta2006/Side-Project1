@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,7 +12,6 @@ import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@
 import type { ConceptView, Resource } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Markdown, { outline } from '@/components/markdown';
-import Assistant from '@/components/assistant';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
 import { Illustration, Soc } from '@/components/socrat/illustration';
@@ -23,6 +23,8 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+
+const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 const STYLES = [
   ['simpler', 'More simply'],
@@ -460,7 +462,7 @@ export default function Lesson() {
           <Pitfalls concept={concept} />
         </aside>
       </div>
-      <Assistant scope={`concept:${concept.id}`} title="Ask Soc" language={concept.language} openSignal={askSoc} launcher="phone" />
+      <Assistant scope={`concept:${concept.id}`} title="Ask Soc" language={concept.language} openSignal={askSoc} />
     </div>
   );
 }

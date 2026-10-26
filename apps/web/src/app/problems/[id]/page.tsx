@@ -556,7 +556,6 @@ export default function Problem() {
         title="Ask Soc"
         language={lang}
         openSignal={hintSignal}
-        launcher={false}
         context={() => ({ code: latest.current.source, newAttempt: attempted.current })}
         onSent={() => { attempted.current = false; }}
       />
