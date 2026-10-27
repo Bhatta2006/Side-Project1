@@ -62,6 +62,8 @@ def test_artifact_validation_and_compiler_boundaries():
     assert "connect-src 'none'" in csp and "script-src 'nonce-" in csp
     assert csp.endswith(", script-src 'unsafe-inline'")
     assert "<script nonce=" in compiled and "frame-id" in compiled
+    # Side-by-side panels with fixed widths must wrap instead of needing a sideways scroll.
+    assert "flexWrap = 'wrap'" in compiled and "gridTemplateColumns" in compiled
     filtered = HTML.replace(
         '<rect id="bar"',
         '<defs><filter id="glow"><feGaussianBlur stdDeviation="2"></feGaussianBlur></filter></defs><rect id="bar"',
