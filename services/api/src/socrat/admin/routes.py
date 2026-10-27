@@ -1,6 +1,6 @@
 """Admin API: only users on the SOCRAT_ADMIN_SUBJECTS allow-list may read it."""
 
-from typing import Literal
+from typing import Literal, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -234,7 +234,12 @@ def users(
             query = query.where(
                 or_(User.display_name.ilike(like), User.subject.ilike(like), User.id == needle)
             )
-        rows = [plan_row(u, s, stamp, b, r) for u, s, b, r in db.execute(query)]
+        rows = []
+        for row in db.execute(query):
+            user, sub, bug_count, referred_count = cast(
+                tuple[User, Subscription | None, int, int], tuple(row)
+            )
+            rows.append(plan_row(user, sub, stamp, bug_count, referred_count))
         live = list(
             db.scalars(
                 select(Subscription).where(

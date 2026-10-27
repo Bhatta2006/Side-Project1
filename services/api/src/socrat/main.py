@@ -24,7 +24,6 @@ from socrat.admin.routes import router as admin_router
 from socrat.assessments.routes import router as assessments_router
 from socrat.auth import COOKIE, establish_session, require_csrf, require_session
 from socrat.billing import router as billing_router
-from socrat.referrals import router as referrals_router
 from socrat.config import Settings
 from socrat.database import make_engine, record_event
 from socrat.email_auth import router as email_auth_router
@@ -36,6 +35,7 @@ from socrat.library.routes import router as library_router
 from socrat.models import User
 from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
+from socrat.referrals import router as referrals_router
 from socrat.schema_revision import SCHEMA_REVISION
 from socrat.trial import router as trial_router
 from socrat.vitals import router as vitals_router
