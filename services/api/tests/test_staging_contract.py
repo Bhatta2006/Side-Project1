@@ -147,15 +147,17 @@ def test_grafana_provisions_a_private_operational_dashboard():
 def test_ci_validates_operations_and_publishes_attested_arm64_images():
     workflow_path = ROOT / ".github" / "workflows" / "ci.yml"
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    verify_steps = workflow["jobs"]["verify"]["steps"]
-    verify_commands = "\n".join(str(step.get("run", "")) for step in verify_steps)
-    assert "restore-smoke.sh" in verify_commands
-    assert "infra/runtime/staging/compose.yaml config --quiet" in verify_commands
-    assert "--entrypoint /bin/promtool" in verify_commands
-    assert "check config /etc/prometheus/prometheus.yml" in verify_commands
-    assert "caddy validate --config /etc/caddy/Caddyfile" in verify_commands
+    jobs = workflow["jobs"]
+    infra_commands = "\n".join(str(step.get("run", "")) for step in jobs["infra"]["steps"])
+    assert "restore-smoke.sh" in infra_commands
+    assert "infra/runtime/staging/compose.yaml config --quiet" in infra_commands
+    assert "--entrypoint /bin/promtool" in infra_commands
+    assert "check config /etc/prometheus/prometheus.yml" in infra_commands
+    assert "caddy validate --config /etc/caddy/Caddyfile" in infra_commands
+    # `verify` is the check branch protection requires: it must wait for every other check.
+    assert set(jobs["verify"]["needs"]) == set(jobs) - {"verify", "secret-scan", "publish-images"}
 
-    publish = workflow["jobs"]["publish-images"]
+    publish = jobs["publish-images"]
     assert set(publish["needs"]) == {"secret-scan", "verify"}
     assert publish["permissions"] == {
         "contents": "read",
@@ -168,8 +170,14 @@ def test_ci_validates_operations_and_publishes_attested_arm64_images():
     platforms = [
         s["with"]["platforms"] for s in publish["steps"] if "platforms" in s.get("with", {})
     ]
-    assert platforms == ["linux/arm64"] * 3  # api, web, visual checker
-    assert publish_text.count("actions/attest@") == 3  # api, web, visual checker
+    # One matrix job builds, publishes and attests each of the three images.
+    assert [m["name"] for m in publish["strategy"]["matrix"]["include"]] == [
+        "api",
+        "web",
+        "explainer",  # the visual checker
+    ]
+    assert platforms == ["linux/arm64"]
+    assert publish_text.count("actions/attest@") == 1
     assert ":sha-${{ github.sha }}" in publish_text
 
     workflow_text = workflow_path.read_text(encoding="utf-8")

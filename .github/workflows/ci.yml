@@ -261,12 +261,10 @@ jobs:
           echo "A required check did not pass: ${{ join(needs.*.result, ', ') }}" >&2
           exit 1
 
-  # Builds start as soon as the secret scan passes, in parallel with the checks, so a merge to
-  # main reaches the deploy after the slowest of them rather than after both. Nothing is
-  # deployed from these images until the whole workflow has succeeded (deploy.yml).
+  # Images are only built from a commit whose checks passed. The three builds run side by side.
   publish-images:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [secret-scan]
+    needs: [secret-scan, verify]
     runs-on: ubuntu-latest
     permissions:
       contents: read
