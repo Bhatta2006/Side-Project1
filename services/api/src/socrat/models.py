@@ -45,6 +45,8 @@ class User(Base):
     # Lowercased, verified (an emailed code, or Google's email_verified); links sign-in methods.
     email: Mapped[str | None] = mapped_column(String(254), nullable=True, unique=True)
     password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Share code for the referral link; made the first time the learner opens Invite friends.
+    referral_code: Mapped[str | None] = mapped_column(String(12), nullable=True, unique=True)
 
 
 class LoginSession(Base):
@@ -630,6 +632,29 @@ class Subscription(Base):
     # An upgrade awaiting payment: "plan:interval:currency:razorpay_subscription_id".
     pending: Mapped[str | None] = mapped_column(String(96), nullable=True)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class Referral(Base):
+    """Who invited whom. A learner can be referred once, by one referrer."""
+
+    __tablename__ = "referrals"
+    friend_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    referrer_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class ReferralReward(Base):
+    """A ladder rung a learner reached. `granted_at` is null while it waits for a paid plan to end."""
+
+    __tablename__ = "referral_rewards"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    rung: Mapped[str] = mapped_column(String(48), primary_key=True)
+    earned_at: Mapped[int] = mapped_column(Integer, default=now)
+    granted_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class BillingPlan(Base):

@@ -24,6 +24,7 @@ from socrat.admin.routes import router as admin_router
 from socrat.assessments.routes import router as assessments_router
 from socrat.auth import COOKIE, establish_session, require_csrf, require_session
 from socrat.billing import router as billing_router
+from socrat.referrals import router as referrals_router
 from socrat.config import Settings
 from socrat.database import make_engine, record_event
 from socrat.email_auth import router as email_auth_router
@@ -103,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(passport_router)
     app.include_router(trial_router)
     app.include_router(billing_router)
+    app.include_router(referrals_router)
     app.include_router(email_auth_router)
     entitlements.ENABLED = settings.billing_enabled
     app.include_router(errors.router)

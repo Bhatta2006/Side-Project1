@@ -38,6 +38,7 @@ import type { BillingStatus, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
 import { FeedbackButton, ReportProblem, openReportProblem } from '@/components/report-problem';
+import { ReferButton, Referrals, useReferralCapture } from '@/components/referrals';
 import { Tour } from '@/components/tour';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { Soc } from '@/components/socrat/illustration';
@@ -368,7 +369,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
             <Link href={profile ? '/today' : '/'} aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
             <nav className="flex items-center gap-2" aria-label="Site">
-              {profile ? <FeedbackButton /> : null}
+              {profile ? <><ReferButton /><FeedbackButton /></> : null}
               <ThemeToggle />
               {profile ? (
                 ['/start', '/placement'].includes(pathname) ? null : <Button asChild size="sm"><Link href="/today">Open app</Link></Button>
@@ -383,7 +384,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
         </header>
       )}
       <main id="main" tabIndex={-1} className="outline-none"><PageTransition>{children}</PageTransition></main>
-      {profile ? <ReportProblem /> : null}
+      {profile ? <><ReportProblem /><Referrals /></> : null}
     </>
   );
 }
@@ -397,6 +398,7 @@ export default function Shell({ children }: { children: ReactNode }) {
     try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === 'true'); } catch { /* default expanded */ }
   }, []);
   const ready = useAssessmentReady(learning);
+  useReferralCapture();
 
   if (!learning) return <MarketingShell>{children}</MarketingShell>;
 
@@ -416,6 +418,7 @@ export default function Shell({ children }: { children: ReactNode }) {
           <Link href="/today" className="rounded-full md:hidden" aria-label="Socrat, Today"><Wordmark size={26} /></Link>
           <div className="min-w-0 flex-1"><CommandMenu /></div>
           <div className="ml-auto flex items-center gap-1.5">
+            <ReferButton />
             <FeedbackButton />
             <Momentum />
             <ThemeToggle />
@@ -427,6 +430,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       <MobileNav active={active} ready={ready} />
       <Tour />
       <ReportProblem />
+      <Referrals />
       {/* Soc is one tap away everywhere; pages with their own tutor (lesson, problem, plan, today) mount a scoped one. */}
       {ownTutor(pathname) ? null : <Assistant scope="general" title="Ask Soc" />}
     </div>

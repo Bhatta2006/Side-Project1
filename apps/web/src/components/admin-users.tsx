@@ -15,23 +15,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 interface Row {
   id: string; name: string; subject: string; joined_at: number; plan: PlanId; status: string | null;
-  interval: string | null; ends_at: number | null; cancelling: boolean; comped: boolean;
+  interval: string | null; ends_at: number | null; cancelling: boolean; comped: boolean; bugs: number; referred: number;
 }
-interface Users { items: Row[]; totals: { users: number; plus: number; pro: number; comped: number; mrr_inr: number } }
+interface Users { items: Row[]; totals: { users: number; plus: number; pro: number; comped: number; mrr_inr: number; referrals: number; rewards: number } }
+type Sort = 'new' | 'bugs' | 'referred';
 
 const day = (s: number) => new Date(s * 1000).toLocaleDateString();
 
 /** Learners and their plans; an admin can grant a plan for some days or end one now. */
 export function AdminUsers() {
   const [q, setQ] = useState('');
+  const [sort, setSort] = useState<Sort>('new');
   const [data, setData] = useState<Users | null>(null);
   const [error, setError] = useState('');
   const [grant, setGrant] = useState<Record<string, { plan: PlanId; days: number }>>({});
   const [busy, setBusy] = useState('');
 
   const load = useCallback(() => {
-    api.get<Users>(`/admin/users?q=${encodeURIComponent(q)}&limit=100`).then(setData).catch(e => setError(explain(e)));
-  }, [q]);
+    api.get<Users>(`/admin/users?q=${encodeURIComponent(q)}&limit=100&sort=${sort}`).then(setData).catch(e => setError(explain(e)));
+  }, [q, sort]);
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); }, [load]);
 
   async function apply(id: string) {
@@ -54,27 +56,35 @@ export function AdminUsers() {
   return (
     <div className="grid gap-6">
       {t ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard label="Accounts" value={t.users.toLocaleString()} hint={t.comped ? `${t.comped} on a granted plan` : undefined} />
           <StatCard label={`Paying ${PLAN_NAME.plus}s`} value={t.plus.toLocaleString()} />
           <StatCard label="Paying Pro" value={t.pro.toLocaleString()} />
           <StatCard label="Monthly recurring (INR)" value={money(t.mrr_inr, 'INR')} hint="Yearly plans counted as a twelfth" />
+          <StatCard label="Friends referred" value={t.referrals.toLocaleString()} hint={`${t.rewards} referral rewards granted`} />
         </div>
       ) : null}
       {error ? <ErrorNote message={error} /> : null}
       <Card className="gap-0 overflow-hidden pb-0">
         <CardHeader className="pb-3">
           <CardTitle>Learners and plans</CardTitle>
-          <CardDescription>Newest first. Granting adds days to the current plan; Free ends access now. Billing itself is managed in Razorpay.</CardDescription>
-          <div className="relative mt-3 max-w-sm">
+          <CardDescription>Sort by bugs reported or friends referred to find who to reward. Granting adds days to the current plan; Free ends access now. Billing itself is managed in Razorpay.</CardDescription>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Name, account subject or id" aria-label="Search learners" className="h-10 w-full rounded-full border border-border-strong bg-card pr-4 pl-9 text-sm" />
+          </div>
+          <NativeSelect value={sort} onChange={e => setSort(e.target.value as Sort)} aria-label="Sort learners">
+            <NativeSelectOption value="new">Newest first</NativeSelectOption>
+            <NativeSelectOption value="bugs">Most bugs reported</NativeSelectOption>
+            <NativeSelectOption value="referred">Most friends referred</NativeSelectOption>
+          </NativeSelect>
           </div>
         </CardHeader>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow><TableHead className="pl-4">Learner</TableHead><TableHead>Joined</TableHead><TableHead>Plan</TableHead><TableHead className="pr-4">Change plan</TableHead></TableRow>
+              <TableRow><TableHead className="pl-4">Learner</TableHead><TableHead>Joined</TableHead><TableHead>Plan</TableHead><TableHead className="text-right">Bugs</TableHead><TableHead className="text-right">Referred</TableHead><TableHead className="pr-4">Change plan</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               {data?.items.map(r => {
@@ -92,6 +102,8 @@ export function AdminUsers() {
                       </div>
                       {r.ends_at ? <p className="mt-0.5 text-xs text-muted-foreground">until {day(r.ends_at)}</p> : null}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums">{r.bugs ?? 0}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.referred ?? 0}</TableCell>
                     <TableCell className="pr-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <NativeSelect size="sm" value={choice.plan} onChange={e => set({ plan: e.target.value as PlanId })} aria-label={`Plan for ${r.name || r.subject}`}>
