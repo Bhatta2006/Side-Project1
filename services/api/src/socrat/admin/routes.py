@@ -1,6 +1,6 @@
 """Admin API: only users on the SOCRAT_ADMIN_SUBJECTS allow-list may read it."""
 
-from typing import Literal
+from typing import Literal, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,7 +12,17 @@ from socrat.admin import drafts
 from socrat.admin import service as admin
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, is_admin, user_of
-from socrat.models import ContentIssue, Evidence, LearningSession, Subscription, User, now
+from socrat.models import (
+    ContentIssue,
+    ErrorReport,
+    Evidence,
+    LearningSession,
+    Referral,
+    ReferralReward,
+    Subscription,
+    User,
+    now,
+)
 
 router = APIRouter(prefix="/api/v1/admin")
 
@@ -162,7 +172,9 @@ class PlanGrant(BaseModel):
     days: int = Field(default=30, ge=1, le=3660)
 
 
-def plan_row(user: User, sub: Subscription | None, stamp: int) -> dict:
+def plan_row(
+    user: User, sub: Subscription | None, stamp: int, bugs: int = 0, referred: int = 0
+) -> dict:
     live = (
         sub
         if sub is not None and sub.plan in entitlements.PLANS and sub.current_end > stamp
@@ -179,18 +191,41 @@ def plan_row(user: User, sub: Subscription | None, stamp: int) -> dict:
         ends_at=live.current_end if live else None,
         cancelling=bool(live and live.cancel_at_period_end),
         comped=bool(sub and sub.razorpay_subscription_id.startswith("comp_")),
+        bugs=bugs,
+        referred=referred,
     )
 
 
 @router.get("/users")
-def users(request: Request, q: str = "", limit: int = 50):
+def users(
+    request: Request,
+    q: str = "",
+    limit: int = 50,
+    sort: Literal["new", "bugs", "referred"] = "new",
+):
+    """Learners with their plan, bug reports sent and friends referred (to reward the best)."""
     stamp = now()
     with Session(engine(request)) as db:
         require_admin(request, db)
+        bugs = (
+            select(ErrorReport.user_id, func.count().label("n"))
+            .where(ErrorReport.source == "learner", ErrorReport.message.startswith("[bug]"))
+            .group_by(ErrorReport.user_id)
+            .subquery()
+        )
+        referred = (
+            select(Referral.referrer_id, func.count().label("n"))
+            .group_by(Referral.referrer_id)
+            .subquery()
+        )
+        bug_n, referred_n = func.coalesce(bugs.c.n, 0), func.coalesce(referred.c.n, 0)
+        order = {"new": User.created_at, "bugs": bug_n, "referred": referred_n}[sort]
         query = (
-            select(User, Subscription)
+            select(User, Subscription, bug_n, referred_n)
             .outerjoin(Subscription, Subscription.user_id == User.id)
-            .order_by(User.created_at.desc())
+            .outerjoin(bugs, bugs.c.user_id == User.id)
+            .outerjoin(referred, referred.c.referrer_id == User.id)
+            .order_by(order.desc(), User.created_at.desc())
             .limit(max(1, min(limit, 200)))
         )
         needle = q.strip()[:80]
@@ -199,7 +234,12 @@ def users(request: Request, q: str = "", limit: int = 50):
             query = query.where(
                 or_(User.display_name.ilike(like), User.subject.ilike(like), User.id == needle)
             )
-        rows = [plan_row(u, s, stamp) for u, s in db.execute(query)]
+        rows = []
+        for row in db.execute(query):
+            user, sub, bug_count, referred_count = cast(
+                tuple[User, Subscription | None, int, int], tuple(row)
+            )
+            rows.append(plan_row(user, sub, stamp, bug_count, referred_count))
         live = list(
             db.scalars(
                 select(Subscription).where(
@@ -222,6 +262,13 @@ def users(request: Request, q: str = "", limit: int = 50):
                 pro=sum(s.plan == "pro" for s in paying),
                 comped=len(live) - len(paying),
                 mrr_inr=mrr,
+                referrals=db.scalar(select(func.count()).select_from(Referral)) or 0,
+                rewards=db.scalar(
+                    select(func.count())
+                    .select_from(ReferralReward)
+                    .where(ReferralReward.granted_at.is_not(None))
+                )
+                or 0,
             ),
         )
 
@@ -240,18 +287,8 @@ def set_plan(user_id: str, body: PlanGrant, request: Request):
         if body.plan == "free":
             if sub is not None:
                 sub.current_end, sub.status, sub.updated_at = stamp, "revoked", stamp
-        else:
-            if sub is None:
-                sub = Subscription(
-                    user_id=user_id,
-                    razorpay_subscription_id=f"comp_{user_id}",
-                    interval="month",
-                    currency="INR",
-                )
-                db.add(sub)
-            sub.plan, sub.status, sub.pending = body.plan, "active", None
-            sub.current_end = max(sub.current_end or 0, stamp) + body.days * 86400
-            sub.cancel_at_period_end, sub.updated_at = False, stamp
+        elif not billing.comp(db, user_id, body.plan, body.days, stamp, replace=True):
+            raise HTTPException(409, "plan_not_grantable")
         record_event(db, admin_user.id, "admin.plan_set", f"{user_id}:{body.plan}:{body.days}")
         db.flush()
-        return plan_row(target, sub, stamp)
+        return plan_row(target, db.get(Subscription, user_id), stamp)

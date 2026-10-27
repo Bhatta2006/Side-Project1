@@ -35,6 +35,7 @@ from socrat.library.routes import router as library_router
 from socrat.models import User
 from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
+from socrat.referrals import router as referrals_router
 from socrat.schema_revision import SCHEMA_REVISION
 from socrat.trial import router as trial_router
 from socrat.vitals import router as vitals_router
@@ -103,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(passport_router)
     app.include_router(trial_router)
     app.include_router(billing_router)
+    app.include_router(referrals_router)
     app.include_router(email_auth_router)
     entitlements.ENABLED = settings.billing_enabled
     app.include_router(errors.router)
