@@ -13,7 +13,7 @@ from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.config import Settings
 from socrat.database import record_event
 from socrat.explainer import generator
-from socrat.learn.routes import catalog, guard_instruction
+from socrat.learn.routes import guard_instruction
 from socrat.models import AssistantMessage, PlaygroundJob, User, now
 
 GENERATION_SECONDS = 300
@@ -115,7 +115,7 @@ async def run(engine: Engine, settings: Settings, job_id: str):
                     learner = db.get(User, user_id)
                     if learner is None:
                         raise HTTPException(401, "authentication_required")
-                    guard_instruction(db, catalog(), learner)
+                    guard_instruction(db, None, learner)
                     db.add(
                         AssistantMessage(
                             id=job_id,
