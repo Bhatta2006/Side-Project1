@@ -159,6 +159,14 @@ def test_ci_validates_operations_and_publishes_attested_arm64_images():
 
     publish = jobs["publish-images"]
     assert set(publish["needs"]) == {"secret-scan", "verify"}
+    # `images` is skipped on main, and a skipped ancestor skips publishing unless the condition
+    # names the results it needs (this silently stopped a release once).
+    for required in (
+        "always()",
+        "needs.secret-scan.result == 'success'",
+        "needs.verify.result == 'success'",
+    ):
+        assert required in publish["if"]
     assert publish["permissions"] == {
         "contents": "read",
         "packages": "write",
