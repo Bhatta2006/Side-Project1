@@ -148,8 +148,6 @@ const MESSAGES: Record<string, string> = {
   chat_week_limit: "You've used this week's free messages with Soc. They reset on Monday, or upgrade for daily messages.",
   chat_day_limit: "You've used today's messages with Soc. They reset at midnight, or move up a plan for more.",
   playground_day_limit: "You've used today's visual generations. They reset at midnight, or move up a plan for more.",
-  referral_code_invalid: 'That invite link is not valid. Ask your friend to send it again.',
-  plan_not_grantable: 'This learner pays through Razorpay or has a checkout open, so a plan cannot be granted now.',
   already_subscribed: 'You already have a paid plan. Manage it in Settings.',
   billing_unavailable: 'Payments are not available right now. Please try again later.',
   billing_provider_error: 'The payment provider did not answer. Nothing was charged. Please try again.',

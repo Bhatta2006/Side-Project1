@@ -38,7 +38,7 @@ import type { BillingStatus, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/command-menu';
 import { FeedbackButton, ReportProblem, openReportProblem } from '@/components/report-problem';
-import { ReferButton, Referrals, useReferralCapture } from '@/components/referrals';
+import { ReferButton } from '@/components/referrals';
 import { Tour } from '@/components/tour';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { Soc } from '@/components/socrat/illustration';
@@ -384,7 +384,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
         </header>
       )}
       <main id="main" tabIndex={-1} className="outline-none"><PageTransition>{children}</PageTransition></main>
-      {profile ? <><ReportProblem /><Referrals /></> : null}
+      {profile ? <ReportProblem /> : null}
     </>
   );
 }
@@ -398,7 +398,6 @@ export default function Shell({ children }: { children: ReactNode }) {
     try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === 'true'); } catch { /* default expanded */ }
   }, []);
   const ready = useAssessmentReady(learning);
-  useReferralCapture();
 
   if (!learning) return <MarketingShell>{children}</MarketingShell>;
 
@@ -430,7 +429,6 @@ export default function Shell({ children }: { children: ReactNode }) {
       <MobileNav active={active} ready={ready} />
       <Tour />
       <ReportProblem />
-      <Referrals />
       {/* Soc is one tap away everywhere; pages with their own tutor (lesson, problem, plan, today) mount a scoped one. */}
       {ownTutor(pathname) ? null : <Assistant scope="general" title="Ask Soc" />}
     </div>

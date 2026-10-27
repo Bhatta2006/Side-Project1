@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
-import { api, explain } from '@/lib/api';
+import { ApiError, api, explain } from '@/lib/api';
 import { money } from '@/lib/billing';
 import { PLAN_NAME } from '@/lib/plans';
 import type { PlanId } from '@/lib/types';
@@ -46,7 +46,7 @@ export function AdminUsers() {
       setData(d => d && { ...d, items: d.items.map(r => (r.id === id ? row : r)) });
       load();
     } catch (e) {
-      setError(explain(e));
+      setError(e instanceof ApiError && e.code === 'plan_not_grantable' ? 'This learner pays through Razorpay or has a checkout open, so a plan cannot be granted now.' : explain(e));
     } finally {
       setBusy('');
     }

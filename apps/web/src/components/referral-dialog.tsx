@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Check, Copy, Lock, Share2 } from 'lucide-react';
-import { api, explain } from '@/lib/api';
+import { ApiError, api, explain } from '@/lib/api';
 import { money } from '@/lib/billing';
 import { PLAN_NAME, PLUS_WAS_INR } from '@/lib/plans';
 import type { PlanId } from '@/lib/types';
@@ -21,6 +21,8 @@ interface Overview {
 // What a reward is worth at list price: Plus at its pre-founding price, Pro at its monthly price (paise).
 const MONTH: Partial<Record<PlanId, number>> = { plus: PLUS_WAS_INR, pro: 99900 };
 const worth = (plan: PlanId, days: number) => Math.round(((MONTH[plan] ?? 0) * days) / 30);
+// Old account, own link, already invited: nothing the visitor can act on.
+const QUIET = ['referral_already_used', 'referral_own_code', 'referral_not_new'];
 const span = (days: number) => (days === 7 ? '1 week' : days % 30 === 0 ? `${days / 30} month${days > 30 ? 's' : ''}` : `${days} days`);
 
 /** Mounted once per shell (lazily): the invite link and the reward ladder. */
@@ -35,6 +37,22 @@ export default function ReferralDialog() {
     };
     window.addEventListener('socrat:refer', show);
     return () => window.removeEventListener('socrat:refer', show);
+  }, []);
+
+  // Mounted only for signed-in learners: claims the invite code proxy.ts saved from /?ref=, once.
+  useEffect(() => {
+    const code = /(?:^|; )socrat_ref=([A-Za-z0-9]+)/.exec(document.cookie)?.[1];
+    if (!code) return;
+    api.post<{ welcomed: boolean; days: number; referrer: string }>('/referrals/claim', { code })
+      .then(r => {
+        const from = r.referrer ? `${r.referrer} invited you` : 'You were invited';
+        if (r.welcomed) toast.success(`${from}: ${r.days} days of ${PLAN_NAME.plus} are yours, free.`);
+      })
+      .catch(e => {
+        if (e instanceof ApiError && QUIET.includes(e.code)) return;
+        toast.error(e instanceof ApiError && e.code === 'referral_code_invalid' ? 'That invite link is not valid. Ask your friend to send it again.' : explain(e));
+      })
+      .finally(() => { document.cookie = 'socrat_ref=; Max-Age=0; path=/'; });
   }, []);
 
   const link = data ? `${window.location.origin}/?ref=${data.code}` : '';
