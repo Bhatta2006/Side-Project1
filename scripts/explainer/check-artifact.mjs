@@ -111,6 +111,7 @@ export async function run(context, input) {
   if (!frame) throw Error('Visual did not load');
   try { await frame.waitForFunction(() => document.readyState === 'complete' && window.__explainer); }
   catch { throw Error(errors[0] || 'Initialize window.__explainer and a working initial visual immediately on load'); }
+  // A script that threw while drawing is the real cause of any follow-on 'blank' or 'missing' finding.
   const initial = await frame.evaluate(() => {
     const api = window.__explainer, region = document.querySelector('#visual');
     if (!region || region.getBoundingClientRect().height < 120 || region.getBoundingClientRect().width < 100) throw Error('Visual canvas is blank or too small');
@@ -134,13 +135,19 @@ export async function run(context, input) {
     const drawn = region.querySelector('svg path,svg rect,svg circle,svg text,canvas') || region.children.length > 1;
     if (!drawn) throw Error('Include a real visual, not just explanatory text');
     return { count, current: api.currentStep, text, title: document.title, transcript };
-  });
+  }).catch(error => { throw errors.length ? Error('Visual script error: ' + errors[0]) : error; });
   const snapshot = () => frame.evaluate(() => {
     const region=document.querySelector('#visual');
     return region.innerHTML+[...region.querySelectorAll('canvas')].map(c=>c.toDataURL()).join('');
   });
   const observe = () => frame.evaluate(() => ({ step:window.__explainer.currentStep, description:String(window.__explainer.describe()).slice(0,6000), visible_text:document.body.innerText.slice(0,4000) }));
+  // The host's drawing kit audits the layout: overlapping or cut-off text in any observed state fails.
+  const layout = async () => {
+    const problems = await frame.evaluate(() => (typeof Sketch === 'undefined' ? [] : Sketch.audit()));
+    if (problems.length) throw Error('Layout problem (shorten the text or use fewer items): ' + problems.slice(0, 3).join('; '));
+  };
   const observations = [await observe()];
+  await layout();
   if (initial.count > 1) {
     const firstVisual = await snapshot();
     for (const index of new Set([0,1,Math.floor(initial.count/2),initial.count-1])) {
@@ -150,6 +157,7 @@ export async function run(context, input) {
       await page.waitForTimeout(80);
       const next = await frame.evaluate(() => String(window.__explainer.describe()));
       observations.push(await observe());
+      await layout();
       if (!next.trim() || next === initial.text || await snapshot() === firstVisual) throw Error('Stepping must change both the visual and its state explanation');
     }
   } else {
@@ -174,12 +182,13 @@ export async function run(context, input) {
       after = await state();
     }
     observations.push(await observe());
+    await layout();
     if (before === after) throw Error('Input controls must change the visual or its explanation');
   }
   await frame.evaluate(() => window.__explainer.reset());
   if (errors.length || blocked.length) throw Error(errors.length ? 'Visual script error: '+errors[0] : 'Visual attempted external access');
   const count = await frame.evaluate(() => Number(window.__explainer.stepCount));
-  return { ok: true, step_count: count, title: initial.title, transcript: initial.transcript, observations, checks: ['script-syntax','capability-policy','sandbox-load','nonblank-canvas','labelled-controls','working-interaction','reset'] };
+  return { ok: true, step_count: count, title: initial.title, transcript: initial.transcript, observations, checks: ['script-syntax','capability-policy','sandbox-load','nonblank-canvas','labelled-controls','working-interaction','layout','reset'] };
 }
 
 const CLOSE_GRACE_MS = 500;

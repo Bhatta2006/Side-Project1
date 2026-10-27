@@ -23,9 +23,6 @@ main{max-width:760px;margin:0 auto}
 h1{font-family:var(--hand);font-size:30px;font-weight:400;margin:0 0 4px}
 .note{font-family:var(--hand);font-size:20px;color:var(--pen);min-height:2.6em;margin:6px 0 12px}
 .sheet{background:var(--paper-lines),var(--card);border:2px solid var(--ink);border-radius:14px 18px 12px 20px/18px 12px 20px 14px;padding:10px;box-shadow:4px 5px 0 var(--ink)}
-svg{width:100%;height:auto;display:block}
-.ink{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.label{font-family:var(--hand);font-size:18px;fill:var(--ink)}
 .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:14px}
 .controls label{display:grid;gap:4px;font-family:var(--hand);font-size:18px}
 .controls input,.controls select,.controls button{border:2px solid var(--ink);border-radius:10px 14px 10px 12px;background:var(--card);color:var(--foreground);padding:0 12px}
@@ -34,21 +31,39 @@ svg{width:100%;height:auto;display:block}
 <body><main>
 <h1>Binary search, drawn</h1>
 <p id="note" class="note" role="status"></p>
-<section id="visual" aria-label="The array being searched" class="sheet">
-<svg viewBox="0 0 640 300" role="img" aria-labelledby="board-desc"><desc id="board-desc">Boxes for each array value with arrows for low, mid and high.</desc>
-<defs><filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="3"></feTurbulence><feDisplacementMap in="SourceGraphic" scale="2.5"></feDisplacementMap></filter></defs>
-<g id="shapes" filter="url(#rough)"></g><g id="labels"></g></svg>
-</section>
+<section id="visual" aria-label="The array being searched" class="sheet"><div id="board"></div></section>
 <div class="controls"><label for="target">Look for<input id="target" type="number" value="23"></label></div>
 <section id="transcript"><h2>In short</h2><p>Two to four plain sentences: the one idea, why it works, one thing to watch out for.</p></section>
 </main>
 <script>
-const NS='http://www.w3.org/2000/svg';
-const shapes=document.getElementById('shapes'),labels=document.getElementById('labels'),note=document.getElementById('note'),target=document.getElementById('target');
+const board=Sketch.mount('#board',{desc:'Boxes for each array value, with pointers for low, mid and high.'});
+const note=document.getElementById('note'),target=document.getElementById('target');
+const DATA=[3,8,12,17,23,31,42,56];
 let steps=[],step=0;
-function el(parent,tag,attrs,text){const node=document.createElementNS(NS,tag);for(const k in attrs)node.setAttribute(k,String(attrs[k]));if(text!==undefined)node.textContent=String(text);parent.appendChild(node);return node;}
-function compute(){/* build EVERY state from the current inputs: steps=[{...,note:'...'}, ...] */}
-function render(){shapes.replaceChildren();labels.replaceChildren();const s=steps[step];/* draw s with el(): shapes in #shapes, text in #labels */note.textContent=s.note;}
+function compute(){/* build EVERY state from the current inputs */
+  steps=[];const t=Number(target.value);let lo=0,hi=DATA.length-1;
+  steps.push({lo,hi,mid:-1,note:'Look for '+t+'. The whole array is still in play.'});
+  while(lo<=hi&&steps.length<40){
+    const mid=Math.floor((lo+hi)/2);
+    if(DATA[mid]===t){steps.push({lo,hi,mid,found:true,note:DATA[mid]+' is at index '+mid+'. Found it.'});return;}
+    const right=DATA[mid]<t;
+    steps.push({lo,hi,mid,note:DATA[mid]+(right?' is too small, so the left half goes.':' is too big, so the right half goes.')});
+    if(right)lo=mid+1;else hi=mid-1;
+  }
+  steps.push({lo,hi,mid:-1,note:t+' is not in the array.'});
+}
+function render(){/* describe the scene as data; Sketch does all the layout */
+  const s=steps[step];
+  const pointers=[];
+  if(s.lo<=s.hi){pointers.push({at:'a.'+s.lo,text:'lo'},{at:'a.'+s.hi,text:'hi'});}
+  if(s.mid>=0)pointers.push({at:'a.'+s.mid,text:'mid',tone:'primary'});
+  board.draw({
+    rows:[{id:'a',label:'Array',items:DATA.map((v,i)=>({text:v,state:i===s.mid?(s.found?'hit':'active'):(i<s.lo||i>s.hi?'dim':'')}))}],
+    pointers,
+    focus:s.found?['a.'+s.mid]:[]
+  });
+  note.textContent=s.note;
+}
 window.__explainer={describe(){return note.textContent},get stepCount(){return steps.length},get currentStep(){return step},step(i){step=Math.max(0,Math.min(steps.length-1,i));render()},reset(){target.value='23';compute();step=0;render()}};
 target.addEventListener('input',()=>{compute();step=Math.min(step,steps.length-1);render()});
 compute();render();
@@ -77,21 +92,44 @@ through the drawing and changing an input, with almost no reading.
   data) that genuinely change the drawing. The host provides Previous, Next, Play and Reset; do
   not add your own.
 
-# Hand-drawn style
-- Draw with inline SVG. Shapes have no fill or a light fill and an ink stroke (class "ink": stroke
-  var(--ink), stroke-width 2-3, round caps and joins). Put shapes in a group with
-  filter="url(#rough)" (feTurbulence + feDisplacementMap) so lines look sketched. Keep ALL text
-  outside that filtered group so it stays crisp.
-- Text in the drawing and the notes uses font-family var(--hand). Body text stays system sans.
-- Colour meaning: var(--ink) for normal lines and text; var(--pen) (red) for the one thing that
-  changed or matters right now: circle it, underline it or point at it with a curved arrow;
-  var(--highlight) (yellow, with var(--ink) text on top) as a highlighter behind the active item;
-  var(--primary) (blue) only for a second category; var(--muted-foreground) for done or inactive.
-- Arrows are slightly curved paths with an open, hand-drawn arrowhead (two short lines).
-- Wrap the drawing in a "sheet": the class in the skeleton gives ruled paper (var(--paper-lines)),
-  an ink border with uneven radii and a small offset shadow.
-- Generous space, big readable labels (at least 16px in viewBox units), no gradients, no glow, no
-  emoji, no clip art. Responsive down to 320px wide: use a viewBox and width:100%.
+# Drawing: use Sketch, never hand-placed SVG
+The host provides a global `Sketch` kit that does ALL layout. You describe the scene as data; it
+measures text, sizes boxes, routes arrows, places labels and the host rejects anything that would
+overlap. Never write <svg> markup, coordinates, x/y numbers, viewBox, path data, circles or
+arrowheads yourself, and never add shapes "for decoration". If an idea does not fit the vocabulary
+below, express it with rows, links and pointers anyway: clear and plain beats clever.
+
+  const board = Sketch.mount('#board', {desc: 'what the drawing shows'});   // once
+  board.draw(scene);                                                          // in render(), every time
+
+scene = {
+  rows: [ {id, label?, kind?: 'bars', items: [ {id?, text, state?, chips?, value?} ]} ],
+  links:    [ {from, to, label?, tone?} ],     // curved arrow between two items
+  pointers: [ {at, text, tone?} ],             // short arrow under one item: lo, mid, i, head
+  focus:    [ id, ... ]                        // pen outline around the one thing that matters now
+}
+- rows are stacked top to bottom, each centred and evenly spaced; a row that is too long wraps by
+  itself. row.id is a short word with no "." or "#". Put inputs on top and results below, or
+  levels of a tree one row each (links from parent to child).
+- Item id: "row.item" where item is item.id, or the zero-based position when item.id is missing
+  ("cells.3"). A chip inside an item is "row.item#0", "#1" ... in order.
+- text is short (a value, a name, an index; one or two words). Long sentences belong in the note.
+- state: '' (plain), 'active' (yellow highlighter), 'hit' (pen outline: found or chosen),
+  'done' or 'dim' (greyed: finished or ruled out).
+- chips: small boxes drawn INSIDE an item (strings or {text, state}); use them for what an item
+  holds: a bucket's entries, a stack's contents, a node's keys.
+- kind 'bars': items need a numeric value; the bar heights are scaled for you.
+- links: label is one to three characters (a hash, a weight, a count). Use tone 'pen' for the
+  link that is new this step. At most about 10 links per scene.
+- pointers: name only what moves (indexes, heads, pivots). tone 'pen' (default) or 'primary'.
+- focus: at most one or two ids. It is an outline that hugs the item, so it can only mark
+  something that exists; an unknown id is an error and the visual is rejected.
+- Every id in links, pointers and focus must exist in the same scene. Build the scene from the
+  step's state; do not carry shapes between steps. Redraw everything from scratch each render().
+- Colour meaning is built in: ink for structure, pen (red) for the one thing that changed,
+  highlighter yellow for the active item, grey for done. Do not restyle anything.
+- Only the note uses var(--hand) outside the drawing. No gradients, glow, emoji or clip art; keep
+  the sheet from the skeleton.
 
 # Start from this skeleton
 It already satisfies the host contract. Keep its structure, ids, the __explainer object and the
@@ -102,6 +140,9 @@ compute()/render() split, and replace the example with the learner's subject:
 
 # Rules the host checks (a document that breaks any of them is rejected)
 - Initialize a complete, informative visual on load with your example; never an empty canvas.
+- The drawing is checked in a real browser at several steps: text that overlaps other text, or is
+  cut off, rejects the visual. Keep texts short and the scene small (at most about 12 items per
+  row, about 4 rows) so everything has room.
 - compute() derives every step from the current inputs; render() draws ONLY from steps[step].
   Never hand-write values the JavaScript computes (indexes, traces, totals, results) as static
   text; geometry, labels and notes must come from the same state.
@@ -110,8 +151,8 @@ compute()/render() split, and replace the example with the learner's subject:
   step(index); reset() restores the initial inputs and step 0. If stepCount > 1, every step must
   change both the drawing and the note. Every input must change the drawing or the note.
 - Define everything __explainer uses before the first compute()/render() call.
-- A descriptive <title> (2-140 characters), an <h1>, <section id="visual" aria-label="...">,
-  <section id="transcript">, unique ids, a label for every control, an SVG <desc>.
+- A descriptive <title> (2-140 characters), an <h1>, <section id="visual" aria-label="..."> holding
+  <div id="board"></div>, <section id="transcript">, unique ids, a label for every control.
 - Every element explicitly closed (except void elements such as input and meta).
 - Inline vanilla JavaScript with addEventListener only; no inline on* attributes; no alert,
   prompt or confirm. Quote SVG attribute values. CSS var() is CSS, not JavaScript.
@@ -395,7 +436,7 @@ async def generate(provider: Provider, settings: Settings, request: str, languag
                     model=settings.openai_model
                     if settings.ai_provider == "openai"
                     else settings.ai_model,
-                    prompt_version="visual-sketch-v3",
+                    prompt_version="visual-sketch-v4",
                     qa=qa,
                     accuracy="AI-generated; factual accuracy is not verified",
                 ),

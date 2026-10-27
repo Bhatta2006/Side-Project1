@@ -69,7 +69,10 @@ test('learner pages', async ({ page }) => {
   test.setTimeout(180_000);
   await freezePicks(page);
   await newLearner(page);
+  // Today keeps one section open at a time: check the picks, then open Progress for the shot.
+  await page.getByRole('tab', { name: /^Practice/ }).click();
   await expect(page.getByRole('heading', { name: 'Practice picked for you' })).toBeVisible();
+  await page.getByRole('tab', { name: /^Progress/ }).click();
   const header = page.locator('header').filter({ has: page.getByRole('heading', { level: 1 }) });
   const chrome: Locator[] = [];
 
@@ -83,6 +86,7 @@ test('learner pages', async ({ page }) => {
 
   await page.goto('/progress');
   await expect(page.getByRole('heading', { name: 'Mastery by module' })).toBeVisible();
+  await page.getByRole('tab', { name: /^Activity/ }).click();
   await shoot(page, 'progress', [...chrome, header, page.locator('[aria-labelledby="activity-heading"]')]);
 
   await page.goto('/learn/zero/programs-and-output');

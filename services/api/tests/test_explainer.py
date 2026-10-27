@@ -524,7 +524,34 @@ def test_production_requires_independent_sandbox_and_checker():
 
 def test_prompt_skeleton_passes_the_validator_and_asks_for_a_hand_drawn_visual():
     artifact.validate(generator.SKELETON)
-    assert "feTurbulence" in generator.SKELETON and "var(--hand)" in generator.SKELETON
+    assert "Sketch.mount" in generator.SKELETON and "var(--hand)" in generator.SKELETON
     assert "Show, do not tell" in generator.SYSTEM
+    assert "never write <svg> markup" in generator.SYSTEM.lower().replace("  ", " ") or (
+        "Never write <svg> markup" in generator.SYSTEM
+    )
     compiled, _ = artifact.compile_document(generator.SKELETON, "c", "http://host.socrat.invalid")
     assert "--paper-lines" in compiled and "--pen" in compiled
+    # The host's kit does the layout and arrives before the generated script that calls it.
+    assert "feTurbulence" in artifact.KIT
+    assert compiled.index("const Sketch") < compiled.index("Sketch.mount")
+
+
+def test_browser_check_runs_the_skeleton_and_rejects_overlapping_text():
+    settings = Settings(environment="test")
+    skeleton = generator.SKELETON.replace(
+        "Two to four plain sentences: the one idea, why it works, one thing to watch out for.",
+        "Binary search halves the range each step. It works because the array is sorted, so one "
+        "comparison rules out half of what is left. Watch out for arrays that are not sorted.",
+    )
+    assert asyncio.run(generator.render_check(artifact.validate(skeleton), settings))["ok"]
+    # Hand-placed text that lands on other text is a layout failure, not a visual.
+    crowded = HTML.replace(
+        '<text id="value" x="30" y="180">0</text>',
+        '<text id="value" x="30" y="180">0</text><text x="32" y="182">overlapping</text>',
+    )
+    with pytest.raises(artifact.ArtifactError, match="Layout problem"):
+        asyncio.run(generator.render_check(artifact.validate(crowded), settings))
+    # An id the scene does not contain is a script error the generator can repair.
+    unknown = skeleton.replace("focus:s.found?['a.'+s.mid]:[]", "focus:['a.99']")
+    with pytest.raises(artifact.ArtifactError, match="unknown id"):
+        asyncio.run(generator.render_check(artifact.validate(unknown), settings))
