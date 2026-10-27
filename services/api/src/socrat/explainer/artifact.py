@@ -6,8 +6,12 @@ import re
 import secrets
 from dataclasses import dataclass
 from html.parser import HTMLParser
+from pathlib import Path
 
 from socrat.catalog.registry import REPO_ROOT
+
+# The host's drawing kit (layout, links, pointers, audit); generated scripts call it, never replace it.
+KIT = (Path(__file__).parent / "kit.js").read_text(encoding="utf-8")
 
 MAX_BYTES = 300_000
 TAGS = set(
@@ -273,7 +277,10 @@ document.addEventListener('DOMContentLoaded',()=>{send('ready');update()});
 setInterval(()=>{if(!failed){send('heartbeat');update()}},1000);
 })();
 """.replace("CONFIG", config)
-    clean = clean.replace("</head>", f"<style>{BASE_STYLE}{theme_style}</style></head>")
+    clean = clean.replace(
+        "</head>",
+        f'<style>{BASE_STYLE}{theme_style}</style><script nonce="{nonce}">{KIT}</script></head>',
+    )
     clean = clean.replace("</body>", f'<script nonce="{nonce}">{runtime}</script></body>')
     # Both policies must pass: copying an inline nonce must never authorize external scripts.
     csp = (

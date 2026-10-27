@@ -23,6 +23,7 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { CommunityCard } from '@/components/community-link';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
 // otherwise sits in Today's first load. An early openSignal still opens it once it arrives.
@@ -103,6 +104,14 @@ function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
   );
 }
 
+const TABS = ['session', 'map', 'practice', 'progress'] as const;
+type TabId = (typeof TABS)[number];
+
+/** A small headline number with a caption, for the compact status line. */
+function Pill({ children }: { children: React.ReactNode }) {
+  return <li className="inline-flex min-h-9 items-center gap-1.5 rounded-full border bg-card px-3.5 text-sm font-medium">{children}</li>;
+}
+
 export default function TodayPage() {
   const allowed = useGuard('active');
   const planLocked = usePlanLocks();
@@ -113,6 +122,7 @@ export default function TodayPage() {
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [assessment, setAssessment] = useState<AssessmentStatus | null>(null);
   const [askSoc, setAskSoc] = useState(0);
+  const [tab, setTab] = useState<TabId>('session');
 
   const load = useCallback(() => {
     setError('');
@@ -122,6 +132,15 @@ export default function TodayPage() {
     api.get<{ current: AssessmentStatus }>('/assessments').then(r => setAssessment(r.current)).catch(() => undefined);
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
+  // The open section lives in the URL hash, so a link or a refresh lands where the learner was.
+  useEffect(() => {
+    const wanted = window.location.hash.slice(1) as TabId;
+    if (TABS.includes(wanted)) setTab(wanted);
+  }, []);
+  const pick = (value: string) => {
+    setTab(value as TabId);
+    window.history.replaceState(null, '', `#${value}`);
+  };
 
   if (!allowed || (!today && !error)) return <Loading label="Loading today" />;
   if (!today) return <Page><ErrorNote message={error} retry={load} /></Page>;
@@ -141,10 +160,20 @@ export default function TodayPage() {
   const session = [...today.done.map(a => ({ a, done: true })), ...queue.map(a => ({ a, done: false }))];
   // A learner who has not started sees a plan, not a column of zeros.
   const fresh = today.streak.current === 0 && today.done.length === 0 && today.progress.finished === 0 && today.streak.week_minutes === 0;
+  const active: TabId = tab === 'map' && !goal ? 'session' : tab;
+  const practiceCount = (recs?.problems.length ?? 0) + (recs?.topics.length ?? 0);
+
+  // Each tab names what is inside it, so nothing is a mystery click.
+  const tabs: { id: TabId; label: string; hint: string }[] = [
+    { id: 'session', label: 'Session', hint: session.length ? (today.done.length ? `${today.done.length}/${session.length}` : `${session.length}`) : '' },
+    ...(goal ? [{ id: 'map' as const, label: 'Skill map', hint: `${goal.finished}/${goal.total}` }] : []),
+    { id: 'practice', label: 'Practice', hint: practiceCount ? String(practiceCount) : '' },
+    { id: 'progress', label: 'Progress', hint: `${today.progress.percent}%` },
+  ];
 
   return (
     <Page wide>
-      {/* 1. Header: phone shows "Hi, name" and today's minutes; desktop shows the greeting. */}
+      {/* 1. Header: the greeting and one quiet line of numbers. */}
       <Reveal>
         <header className="mb-6 flex items-center justify-between gap-4 lg:mb-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -161,12 +190,12 @@ export default function TodayPage() {
               </p>
             </div>
           </div>
-          <p className="flex-none text-right lg:hidden">
-            <span className="sr-only">Today: </span>
-            <span className="type-display-m tabular-nums">{today.minutes.goal}</span>
-            <span className="ml-1 text-sm font-semibold text-muted-foreground">min today</span>
-          </p>
         </header>
+        <ul className="-mt-2 mb-6 flex flex-wrap gap-2 lg:-mt-4 lg:mb-8" aria-label="Today at a glance">
+          <Pill><Flame className="size-4" strokeWidth={1.5} aria-hidden="true" />{fresh ? 'Start your streak today' : `${today.streak.current}-day streak`}</Pill>
+          <Pill><span className="tabular-nums">{today.minutes.done} of {today.minutes.goal} min today</span></Pill>
+          {today.reviews_due ? <Pill><StatusIcon status="review" size={16} /> {today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</Pill> : null}
+        </ul>
       </Reveal>
 
       {/* 2. Return after absence. */}
@@ -180,12 +209,7 @@ export default function TodayPage() {
       ) : null}
 
       <div className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
-        {/* 3. Week strip (phone and tablet). */}
-        <Card className="col-span-12 lg:hidden" size="sm" aria-label="This week">
-          <div className="px-(--card-spacing)"><WeekStrip studiedToday={today.streak.studied_today} /></div>
-        </Card>
-
-        {/* 4. Hero: the next recommended activity. */}
+        {/* 3. Hero: the next recommended activity. */}
         <Reveal index={1} className="col-span-12 lg:col-span-8">
           {next ? (
             <Card tone="hero" data-tour="today-next" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
@@ -237,7 +261,7 @@ export default function TodayPage() {
           )}
         </Reveal>
 
-        {/* Talk to your tutor: beside the hero (8 + 4 columns), so it must come straight after it. */}
+        {/* Talk to your tutor: beside the hero (8 + 4 columns). */}
         <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
           <Card className="relative h-full min-h-72 overflow-hidden lg:min-h-80" aria-labelledby="soc-heading">
             <div className="relative flex h-full flex-col gap-4 px-(--card-spacing)">
@@ -258,190 +282,192 @@ export default function TodayPage() {
           </Card>
         </Reveal>
 
-        {/* How Socrat is adapting: a full-width row under the hero and Ask Soc, so the next step
-            stays the first action and the 8 + 4 rows below keep their pairs. */}
-        <Reveal index={3} className="col-span-12">
-          <AdaptingCard today={today} onDecided={load} onAsk={() => setAskSoc(n => n + 1)} />
-        </Reveal>
-
-        {/* Skill map of the current module. */}
-        {goal ? (
-          <Reveal index={3} className="col-span-12 lg:col-span-8">
-            <Card className="h-full" aria-labelledby="map-heading">
-              <div className="flex flex-1 flex-col px-(--card-spacing)">
-                <p id="map-heading" className="type-label mb-5 text-muted-foreground">Your skill map: {goal.title}</p>
-                <SkillGrid
-                  label={goal.title}
-                  nodes={goal.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: planLocked(c.concept) ? 'locked' : statusFromRoadmap(c), current: c.concept === goal.current, reviewDue: c.review_due }))}
-                />
-              </div>
-            </Card>
+        {/* 4. Needs you: only things that are due or open, one line each. */}
+        {review || today.reviews_due || assessmentOpen ? (
+          <Reveal index={3} className="col-span-12 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-6">
+            {review || today.reviews_due ? (
+              <Link href={review ? activityHref(review.id) : '/plan'} className="group flex min-h-20 items-center gap-4 rounded-card bg-cream p-4 text-cream-foreground transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--cream),var(--foreground)_4%)] lg:p-5">
+                <StatusIcon status="review" size={32} />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-lg leading-tight font-semibold tracking-[-0.02em]">Review due{review ? `: ${review.title.replace(/^Review:?\s*/i, '')}` : ''}</span>
+                  {today.reviews_due > 1 ? <span className="mt-0.5 block text-sm text-muted-foreground">{today.reviews_due} reviews due</span> : null}
+                </span>
+                <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </Link>
+            ) : null}
+            {assessmentOpen ? (
+              <Link href="/assessments" className="group flex min-h-20 items-center gap-4 rounded-card border bg-card p-4 transition-transform duration-200 hover:-translate-y-0.5 lg:p-5" aria-label={`${NAME.assessment}: ${assessment.state === 'in_progress' ? 'continue' : 'open'}`}>
+                <span className="min-w-0 flex-1">
+                  <span className="mb-1 block"><Badge>{assessment.state === 'in_progress' ? 'In progress' : 'Available'}</Badge></span>
+                  <span className="block font-display text-lg leading-tight font-semibold tracking-[-0.02em]">{NAME.assessment}</span>
+                  <span className="block truncate text-sm text-muted-foreground">On what you studied: {assessment.topics.slice(0, 3).join(', ')}{assessment.topics.length > 3 ? ', and more' : ''}</span>
+                </span>
+                <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </Link>
+            ) : null}
           </Reveal>
         ) : null}
 
-        {/* Proof and milestone. */}
-        <div className={cn('col-span-12 grid content-start gap-3 sm:gap-4 lg:gap-6', goal ? 'lg:col-span-4' : 'lg:col-span-12 lg:grid-cols-2')}>
-          <Reveal index={4}>
-            <Link href="/progress" className="paper group flex items-center gap-4 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
-              <StatusIcon status="mastered" size={48} />
-              <span className="font-display text-6xl leading-none font-semibold tracking-[-0.04em] tabular-nums">{learned}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-display text-xl leading-tight font-semibold tracking-[-0.02em]">{learned === 1 ? 'skill' : 'skills'} learned</span>
-                <span className="block text-[13px] text-muted-foreground">{mastered} mastered after review{today.progress.assumed ? `, ${today.progress.assumed} to confirm` : ''}</span>
-              </span>
-              <ChevronRight className="size-5 flex-none text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-            </Link>
-          </Reveal>
-          {goal ? (
-            <Reveal index={5}>
-              <Card aria-labelledby="milestone-heading">
-                <div className="grid gap-3 px-(--card-spacing)">
-                  <p className="type-label text-muted-foreground">Next milestone</p>
-                  <h2 id="milestone-heading" className="font-display text-2xl leading-tight font-semibold tracking-[-0.03em]">{goal.title}</h2>
-                  <p className="text-[15px] text-muted-foreground">
-                    {goal.total - goal.finished > 0 ? `Complete ${goal.total - goal.finished} more skill${goal.total - goal.finished === 1 ? '' : 's'} to reach this milestone.` : 'Milestone reached. The next module is opening up.'}
+        {/* 5. Everything else, one section at a time. */}
+        <Reveal index={4} className="col-span-12">
+          <Tabs value={active} onValueChange={pick} className="gap-5">
+            <TabsList className="w-full justify-start sm:w-fit" aria-label="Sections of today">
+              {tabs.map(t => (
+                <TabsTrigger key={t.id} value={t.id} className="flex-none px-4 sm:px-5">
+                  {t.label}
+                  {t.hint ? <span className="text-[13px] font-semibold text-muted-foreground tabular-nums">{t.hint}</span> : null}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {/* Session: what today holds, in order, and why the plan looks like this. */}
+            <TabsContent value="session" className="grid gap-3 sm:gap-4 lg:grid-cols-12 lg:gap-6">
+              <div className="grid content-start gap-3 sm:gap-4 lg:col-span-7 lg:gap-6">
+                {session.length ? (
+                  <Card aria-labelledby="agenda-heading">
+                    <div className="flex items-baseline justify-between gap-3 px-(--card-spacing)">
+                      <h2 id="agenda-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Today&apos;s session</h2>
+                      <span className="text-sm font-semibold text-muted-foreground tabular-nums">{today.done.length ? `${today.done.length} of ${session.length} done` : `${session.length} step${session.length === 1 ? '' : 's'}, in order`}</span>
+                    </div>
+                    <ul className="grid px-[calc(var(--card-spacing)-12px)]">
+                      {session.map(({ a, done }) => <SessionRow key={a.id} activity={a} done={done} />)}
+                    </ul>
+                  </Card>
+                ) : (
+                  <p className="rounded-card border border-dashed px-5 py-6 text-[15px] text-muted-foreground">Nothing else is planned for today.</p>
+                )}
+              </div>
+              <div className="grid content-start gap-3 sm:gap-4 lg:col-span-5 lg:gap-6">
+                <AdaptingCard today={today} onDecided={load} onAsk={() => setAskSoc(n => n + 1)} />
+              </div>
+            </TabsContent>
+
+            {/* Skill map: where you are in the current module. */}
+            {goal ? (
+              <TabsContent value="map">
+                <Card aria-labelledby="map-heading">
+                  <div className="grid gap-5 px-(--card-spacing)">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <p className="type-label text-muted-foreground">Next milestone</p>
+                        <h2 id="map-heading" className="font-display text-2xl leading-tight font-semibold tracking-[-0.03em]">{goal.title}</h2>
+                      </div>
+                      <p className="text-[15px] text-muted-foreground">
+                        {goal.total - goal.finished > 0 ? `${goal.total - goal.finished} more skill${goal.total - goal.finished === 1 ? '' : 's'} to reach it.` : 'Milestone reached. The next module is opening up.'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <GrowBar value={goalPercent} label={`${goal.title}: ${goal.finished} of ${goal.total} skills`} />
+                      <span className="text-sm font-semibold text-muted-foreground tabular-nums">{Math.round(goalPercent)}%</span>
+                    </div>
+                    <SkillGrid
+                      label={goal.title}
+                      nodes={goal.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: planLocked(c.concept) ? 'locked' : statusFromRoadmap(c), current: c.concept === goal.current, reviewDue: c.review_due }))}
+                    />
+                  </div>
+                </Card>
+              </TabsContent>
+            ) : null}
+
+            {/* Practice: problems picked for you, skills worth learning, and the Playground. */}
+            <TabsContent value="practice" className="grid gap-3 sm:gap-4 lg:grid-cols-12 lg:gap-6">
+              <div className="grid min-w-0 content-start gap-4 lg:col-span-8">
+                {recs?.problems.length ? (
+                  <section aria-labelledby="practice-heading" className="min-w-0">
+                    <div className="mb-3 flex items-baseline justify-between gap-3">
+                      <h2 id="practice-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Practice picked for you</h2>
+                      <Link href="/library" className="text-[15px] font-semibold underline underline-offset-4">See all problems</Link>
+                    </div>
+                    <ul className="grid gap-3 sm:grid-cols-2">
+                      {recs.problems.map(p => (
+                        <li key={p.id} className="flex flex-col gap-3 paper rounded-card p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <ProblemName problem={p} className="text-base" />
+                            <StatusIcon status={p.status === 'solved' ? 'practised' : 'not_seen'} size={22} title={p.status === 'solved' ? 'Solved' : 'Not solved yet'} />
+                          </div>
+                          <p className="text-sm text-muted-foreground">{p.reason}</p>
+                          <div className="mt-auto flex flex-wrap items-center gap-2"><PlatformTag platform={p.platform} /><Level problem={p} /></div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : (
+                  <p className="rounded-card border border-dashed px-5 py-6 text-[15px] text-muted-foreground">Practice picks appear here once you have studied a skill.</p>
+                )}
+                {recs?.topics.length ? (
+                  <Card aria-labelledby="learn-next-heading">
+                    <div className="px-(--card-spacing)">
+                      <h2 id="learn-next-heading" className="mb-3 font-display text-lg font-semibold tracking-[-0.02em]">Skills to learn next</h2>
+                      <ul className="grid gap-1 sm:grid-cols-2">
+                        {recs.topics.map(t => (
+                          <li key={t.id}>
+                            <Link href={conceptHref(t.id)} className="-mx-2 flex min-h-12 items-start gap-3 rounded-[14px] px-2 py-2 transition-colors hover:bg-raised">
+                              <StatusIcon status={statusFromBand(t.band)} size={22} className="mt-0.5" />
+                              <span className="min-w-0">
+                                <span className="block font-semibold">{t.title}</span>
+                                <span className="block text-[13px] text-muted-foreground">{t.reason}</span>
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </Card>
+                ) : null}
+              </div>
+              <div className="lg:col-span-4">
+                <Link href="/playground" className="paper doodle-host group relative flex min-h-40 flex-col justify-between gap-3 overflow-hidden rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
+                  <span className="type-label text-brand">{NAME.playground}</span>
+                  <Illustration name="orbit" className="pointer-events-none absolute -top-3 -right-3 size-24 opacity-90" />
+                  <span className="flex items-end justify-between gap-3">
+                    <span className="font-display text-lg leading-tight font-semibold tracking-[-0.02em]">{weak ? `Explore ${weak.title} visually` : 'Ask about any concept'}</span>
+                    <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  </span>
+                </Link>
+              </div>
+            </TabsContent>
+
+            {/* Progress: the streak, the course, and the way to the full evidence. */}
+            <TabsContent value="progress" className="grid gap-3 sm:gap-4 lg:grid-cols-3 lg:gap-6">
+              <Card aria-labelledby="week-heading">
+                <div className="grid gap-4 px-(--card-spacing)">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 id="week-heading" className="flex items-center gap-2 font-display text-lg font-semibold tracking-[-0.02em]">
+                      <Flame className="size-5" strokeWidth={1.5} aria-hidden="true" /> {fresh ? 'Start your streak today' : `${today.streak.current}-day streak`}
+                    </h2>
+                    <Ring value={minutePercent} size={56} ariaLabel={`${today.minutes.done} of ${today.minutes.goal} minutes today`} label={<span className="text-[13px]">{today.minutes.done}</span>} />
+                  </div>
+                  <WeekStrip studiedToday={today.streak.studied_today} />
+                  <p className="text-sm text-muted-foreground">
+                    {fresh ? `A ${today.minutes.goal}-minute session is all it takes. Your week goal is ${today.streak.week_goal} min.` : `${today.minutes.done} of ${today.minutes.goal} min today. ${today.streak.week_minutes} of ${today.streak.week_goal} min this week.`}
                   </p>
-                  <div className="flex items-center gap-4">
-                    <GrowBar value={goalPercent} label={`${goal.title}: ${goal.finished} of ${goal.total} skills`} />
-                    <span className="text-sm font-semibold text-muted-foreground tabular-nums">{Math.round(goalPercent)}%</span>
+                </div>
+              </Card>
+
+              <Card aria-labelledby="course-heading">
+                <div className="flex items-center gap-5 px-(--card-spacing)">
+                  <Ring value={today.progress.percent} size={80} label={<span className="text-base">{today.progress.percent}%</span>} ariaLabel={`Course ${today.progress.percent} percent complete`} />
+                  <div className="min-w-0">
+                    <h2 id="course-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Course progress</h2>
+                    <p className="text-sm text-muted-foreground">{fresh ? `${today.progress.total} skills ahead of you.` : `${today.progress.finished} of ${today.progress.total} skills. ${PACE_LABEL[today.pace]} pace.`}</p>
+                    <p className="mt-1 text-sm text-muted-foreground" data-visual-mask="">Projected finish {formatDate(today.projected_finish, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                   </div>
                 </div>
               </Card>
-            </Reveal>
-          ) : null}
-        </div>
 
-        {/* The rest of today. */}
-        <div className="col-span-12 grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-3 sm:gap-4 lg:col-span-8 lg:gap-6">
-          {/* 5. Review due and Playground. */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-            {review || today.reviews_due ? (
-              <Link href={review ? activityHref(review.id) : '/plan'} className="group flex min-h-28 flex-col justify-between gap-3 rounded-card bg-cream text-cream-foreground p-5 transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--cream),var(--foreground)_4%)] lg:p-6">
-                <StatusIcon status="review" size={32} />
-                <span>
-                  <span className="block font-display text-lg leading-tight font-semibold tracking-[-0.02em]">
-                    Review due{review ? `: ${review.title.replace(/^Review:?\s*/i, '')}` : ''}
-                  </span>
-                  {today.reviews_due > 1 ? <span className="mt-1 block text-sm text-muted-foreground">{today.reviews_due} reviews due</span> : null}
+              <Link href="/progress" className="paper group flex items-center gap-4 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
+                <StatusIcon status="mastered" size={48} />
+                <span className="font-display text-6xl leading-none font-semibold tracking-[-0.04em] tabular-nums">{learned}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-xl leading-tight font-semibold tracking-[-0.02em]">{learned === 1 ? 'skill' : 'skills'} learned</span>
+                  <span className="block text-[13px] text-muted-foreground">{mastered} mastered after review{today.progress.assumed ? `, ${today.progress.assumed} to confirm` : ''}</span>
+                  <span className="mt-1 block text-[13px] font-semibold underline underline-offset-4">Open {NAME.evidence}</span>
                 </span>
+                <ChevronRight className="size-5 flex-none text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </Link>
-            ) : null}
-            <Link href="/playground" className={cn('paper doodle-host group relative flex min-h-28 flex-col justify-between gap-3 overflow-hidden rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6', !(review || today.reviews_due) && 'col-span-2')}>
-              <span className="type-label text-brand">{NAME.playground}</span>
-              <Illustration name="orbit" className="pointer-events-none absolute -top-3 -right-3 size-24 opacity-90" />
-              <span className="flex items-end justify-between gap-3">
-                <span className="font-display text-lg leading-tight font-semibold tracking-[-0.02em]">{weak ? `Explore ${weak.title} visually` : 'Ask about any concept'}</span>
-                <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </span>
-            </Link>
-          </div>
-
-          {/* 7. Weekly assessment: a card when open, a quiet line when not ready. */}
-          {assessmentOpen ? (
-            <Card aria-labelledby="assessment-heading">
-              <div className="flex flex-wrap items-center justify-between gap-4 px-(--card-spacing)">
-                <div className="min-w-0">
-                  <div className="mb-2"><Badge>{assessment.state === 'in_progress' ? 'In progress' : 'Available'}</Badge></div>
-                  <h2 id="assessment-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">{NAME.assessment}</h2>
-                  <p className="truncate text-sm text-muted-foreground">On what you studied: {assessment.topics.slice(0, 3).join(', ')}{assessment.topics.length > 3 ? ', and more' : ''}</p>
-                </div>
-                <Button asChild variant="outline"><Link href="/assessments">{assessment.state === 'in_progress' ? 'Continue assessment' : 'Open assessment'}</Link></Button>
-              </div>
-            </Card>
-          ) : assessment ? (
-            <p className="px-1 text-sm text-muted-foreground">{NAME.assessment}: unlocks as you study more topics this week.</p>
-          ) : null}
-
-          {/* Today's plan: what the session holds, in order. */}
-          {session.length ? (
-            <Card aria-labelledby="agenda-heading">
-              <div className="flex items-baseline justify-between gap-3 px-(--card-spacing)">
-                <h2 id="agenda-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Today&apos;s session</h2>
-                <span className="text-sm font-semibold text-muted-foreground tabular-nums">{today.done.length ? `${today.done.length} of ${session.length} done` : `${session.length} step${session.length === 1 ? '' : 's'}, in order`}</span>
-              </div>
-              <ul className="grid px-[calc(var(--card-spacing)-12px)]">
-                {session.map(({ a, done }) => <SessionRow key={a.id} activity={a} done={done} />)}
-              </ul>
-            </Card>
-          ) : null}
-
-          {/* 8. Practice recommendations. */}
-          {recs?.problems.length ? (
-            <section aria-labelledby="practice-heading" className="min-w-0">
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h2 id="practice-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Practice picked for you</h2>
-                <Link href="/library" className="text-[15px] font-semibold underline underline-offset-4">See all problems</Link>
-              </div>
-              <ul className="-mx-4 flex scroll-pl-4 snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
-                {recs.problems.map(p => (
-                  <li key={p.id} className="flex w-[78%] flex-none snap-start flex-col gap-3 paper rounded-card p-5 sm:w-auto">
-                    <div className="flex items-start justify-between gap-3">
-                      <ProblemName problem={p} className="text-base" />
-                      <StatusIcon status={p.status === 'solved' ? 'practised' : 'not_seen'} size={22} title={p.status === 'solved' ? 'Solved' : 'Not solved yet'} />
-                    </div>
-                    <p className="text-sm text-muted-foreground">{p.reason}</p>
-                    <div className="mt-auto flex flex-wrap items-center gap-2"><PlatformTag platform={p.platform} /><Level problem={p} /></div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </div>
-
-        {/* Support column. */}
-        <aside className="col-span-12 grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-3 sm:gap-4 lg:col-span-4 lg:gap-6" aria-label="Support">
-          <Card className="hidden lg:flex" aria-labelledby="week-heading">
-            <div className="grid gap-4 px-(--card-spacing)">
-              <div className="flex items-center justify-between gap-3">
-                <h2 id="week-heading" className="flex items-center gap-2 font-display text-lg font-semibold tracking-[-0.02em]">
-                  <Flame className="size-5" strokeWidth={1.5} aria-hidden="true" /> {fresh ? 'Start your streak today' : `${today.streak.current}-day streak`}
-                </h2>
-                <Ring value={minutePercent} size={56} ariaLabel={`${today.minutes.done} of ${today.minutes.goal} minutes today`} label={<span className="text-[13px]">{today.minutes.done}</span>} />
-              </div>
-              <WeekStrip studiedToday={today.streak.studied_today} />
-              <p className="text-sm text-muted-foreground">
-                {fresh ? `A ${today.minutes.goal}-minute session is all it takes. Your week goal is ${today.streak.week_goal} min.` : `${today.minutes.done} of ${today.minutes.goal} min today. ${today.streak.week_minutes} of ${today.streak.week_goal} min this week.`}
-              </p>
-            </div>
-          </Card>
-
-          {recs?.topics.length ? (
-            <Card aria-labelledby="learn-next-heading">
-              <div className="px-(--card-spacing)">
-                <h2 id="learn-next-heading" className="mb-3 font-display text-lg font-semibold tracking-[-0.02em]">Skills to learn next</h2>
-                <ul className="grid gap-1">
-                  {recs.topics.map(t => (
-                    <li key={t.id}>
-                      <Link href={conceptHref(t.id)} className="-mx-2 flex min-h-12 items-start gap-3 rounded-[14px] px-2 py-2 transition-colors hover:bg-raised">
-                        <StatusIcon status={statusFromBand(t.band)} size={22} className="mt-0.5" />
-                        <span className="min-w-0">
-                          <span className="block font-semibold">{t.title}</span>
-                          <span className="block text-[13px] text-muted-foreground">{t.reason}</span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Card>
-          ) : null}
-
-          {/* 9. Course progress: ring with the real percent. */}
-          <Card aria-labelledby="course-heading">
-            <div className="flex items-center gap-5 px-(--card-spacing)">
-              <Ring value={today.progress.percent} size={80} label={<span className="text-base">{today.progress.percent}%</span>} ariaLabel={`Course ${today.progress.percent} percent complete`} />
-              <div className="min-w-0">
-                <h2 id="course-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Course progress</h2>
-                <p className="text-sm text-muted-foreground">{fresh ? `${today.progress.total} skills ahead of you.` : `${today.progress.finished} of ${today.progress.total} skills. ${PACE_LABEL[today.pace]} pace.`}</p>
-                <p className="mt-1 text-sm text-muted-foreground" data-visual-mask="">Projected finish {formatDate(today.projected_finish, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-              </div>
-            </div>
-          </Card>
-          <Link href="/progress" className="flex min-h-12 items-center justify-between gap-3 rounded-card border border-dashed border-border-strong px-5 py-3 text-[15px] font-medium transition-colors hover:border-foreground/40 hover:bg-card">
-            Check your progress in {NAME.evidence}
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
-        </aside>
+            </TabsContent>
+          </Tabs>
+        </Reveal>
       </div>
       <CommunityCard className="mt-6" />
       <Assistant scope="general" title="Ask Soc" openSignal={askSoc} />

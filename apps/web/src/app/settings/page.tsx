@@ -47,6 +47,50 @@ function Section({ id, title, description, children, className }: { id: string; 
   );
 }
 
+const NAV = [
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'schedule', label: 'Profile and schedule' },
+  { id: 'connections', label: 'Plan and connections' },
+  { id: 'account', label: 'Data and account' },
+] as const;
+
+/** Which section is in view, so the nav can say where you are. */
+function useActiveSection() {
+  const [active, setActive] = useState<string>(NAV[0].id);
+  useEffect(() => {
+    const seen = new Map<string, boolean>();
+    const observer = new IntersectionObserver(entries => {
+      for (const e of entries) seen.set(e.target.id, e.isIntersecting);
+      const first = NAV.find(n => seen.get(n.id));
+      if (first) setActive(first.id);
+    }, { rootMargin: '-96px 0px -55% 0px' });
+    for (const n of NAV) { const el = document.getElementById(n.id); if (el) observer.observe(el); }
+    return () => observer.disconnect();
+  }, []);
+  return [active, setActive] as const;
+}
+
+function SectionNav({ active, onPick }: { active: string; onPick: (id: string) => void }) {
+  return (
+    <nav aria-label="Settings sections" className="sticky top-16 z-10 -mx-4 border-b bg-background/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:top-24 lg:mx-0 lg:self-start lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+      <ul className="no-scrollbar flex gap-1 overflow-x-auto lg:grid lg:overflow-visible">
+        {NAV.map(n => (
+          <li key={n.id} className="flex-none">
+            <a
+              href={`#${n.id}`}
+              aria-current={active === n.id ? 'location' : undefined}
+              onClick={() => onPick(n.id)}
+              className={cn('flex min-h-10 items-center rounded-full px-4 text-[15px] font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground lg:rounded-[14px]', active === n.id && 'bg-raised font-bold text-foreground')}
+            >
+              {n.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 /** Current plan, what is left of it this period, and cancelling. */
 function PlanSection() {
   const [status, setStatus] = useState<BillingStatus | null>(null);
@@ -116,45 +160,49 @@ function Appearance() {
   useEffect(() => setMounted(true), []);
   return (
     <Section id="appearance-heading" title="Appearance" description="System follows your device.">
-      <div className="grid max-w-lg grid-cols-3 gap-3" role="radiogroup" aria-label="Theme">
-        {THEMES.map(t => {
-          const active = mounted && (theme ?? 'system') === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => setTheme(t.id)}
-              className={cn('grid gap-2 rounded-[20px] border border-border-strong p-2 pb-3 text-left transition-colors hover:bg-raised', active && 'border-primary ring-1 ring-primary')}
-            >
-              <ThemePreview id={t.id} />
-              <span className="flex items-center gap-1.5 px-1 text-[15px] font-medium">
-                {active ? <Check className="size-4 text-brand" aria-hidden="true" /> : null}
-                <span className={cn(active && 'font-bold')}>{t.label}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="mt-6 flex items-start justify-between gap-4 border-t pt-5">
-        <div>
-          <label htmlFor="reduce-motion" className="font-semibold">Reduce motion</label>
-          <p id="reduce-motion-help" className="text-sm text-muted-foreground">
-            Turns off fades, slides and visual playback in this browser. {motion.reduced && !motion.setting ? 'Your device already asks for less motion.' : ''}
-          </p>
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
+        <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Theme">
+          {THEMES.map(t => {
+            const active = mounted && (theme ?? 'system') === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setTheme(t.id)}
+                className={cn('grid content-start gap-2 rounded-[20px] border border-border-strong p-2 pb-3 text-left transition-colors hover:bg-raised', active && 'border-primary ring-1 ring-primary')}
+              >
+                <ThemePreview id={t.id} />
+                <span className="flex items-center gap-1.5 px-1 text-[15px] font-medium">
+                  {active ? <Check className="size-4 text-brand" aria-hidden="true" /> : null}
+                  <span className={cn(active && 'font-bold')}>{t.label}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <Switch id="reduce-motion" checked={motion.setting} onCheckedChange={motion.set} aria-describedby="reduce-motion-help" />
-      </div>
-      {profile?.enrollment?.status === 'active' ? (
-        <div className="mt-6 flex items-center justify-between gap-4 border-t pt-5">
-          <div>
-            <p className="font-semibold">Tour of Socrat</p>
-            <p className="text-sm text-muted-foreground">A one-minute walk through each section.</p>
+        <div className="grid content-start divide-y">
+          <div className="flex items-start justify-between gap-4 pb-5">
+            <div>
+              <label htmlFor="reduce-motion" className="font-semibold">Reduce motion</label>
+              <p id="reduce-motion-help" className="text-sm text-muted-foreground">
+                Turns off fades, slides and visual playback in this browser. {motion.reduced && !motion.setting ? 'Your device already asks for less motion.' : ''}
+              </p>
+            </div>
+            <Switch id="reduce-motion" checked={motion.setting} onCheckedChange={motion.set} aria-describedby="reduce-motion-help" />
           </div>
-          <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent(TOUR_EVENT))}>Replay tour</Button>
+          {profile?.enrollment?.status === 'active' ? (
+            <div className="flex items-center justify-between gap-4 pt-5">
+              <div>
+                <p className="font-semibold">Tour of Socrat</p>
+                <p className="text-sm text-muted-foreground">A one-minute walk through each section.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent(TOUR_EVENT))}>Replay tour</Button>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
     </Section>
   );
 }
@@ -174,6 +222,7 @@ export default function Settings() {
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState<'idle' | 'busy' | 'done'>('idle');
   const [confirmDelete, setConfirmDelete] = useState('');
+  const [section, setSection] = useActiveSection();
 
   useEffect(() => {
     if (!profile?.enrollment) return;
@@ -243,15 +292,17 @@ export default function Settings() {
   const toggleDay = (i: number) => setWeekdays(w => (w.includes(i) ? (w.length > 1 ? w.filter(x => x !== i) : w) : [...w, i].sort()));
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader eyebrow="make it yours" title={NAME.settings} description="Changes to your schedule update your plan straight away." actions={<Soc size={88} mood="wink" className="hidden sm:block" />} />
-      <div className="grid gap-4 lg:gap-6">
-        <Appearance />
+      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
+        <SectionNav active={section} onPick={setSection} />
+        <div className="grid min-w-0 gap-10">
+        <div id="appearance" className="scroll-mt-32"><Appearance /></div>
 
-        <form onSubmit={save} data-tour="settings-schedule">
+        <form id="schedule" onSubmit={save} data-tour="settings-schedule" className="scroll-mt-32">
           <Section id="schedule-heading" title="Profile and schedule" description="How Socrat addresses you and how much time you have.">
             <div className="grid gap-6">
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 <Field>
                   <FieldLabel htmlFor="settings-name">Name</FieldLabel>
                   <Input id="settings-name" value={name} onChange={e => setName(e.target.value)} maxLength={80} />
@@ -262,7 +313,13 @@ export default function Settings() {
                     {(course?.languages ?? [language]).map(l => <NativeSelectOption key={l} value={l}>{LANGUAGE_LABEL[l]}</NativeSelectOption>)}
                   </NativeSelect>
                 </Field>
+                <Field>
+                  <FieldLabel htmlFor="settings-target">Target date</FieldLabel>
+                  <Input id="settings-target" type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} aria-describedby="settings-target-help" />
+                  <FieldDescription id="settings-target-help">Leave empty for no deadline.</FieldDescription>
+                </Field>
               </div>
+              <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
               <fieldset>
                 <legend className="mb-2 text-[15px] font-semibold">Time per study day</legend>
                 <div className="flex flex-wrap gap-2">
@@ -276,11 +333,7 @@ export default function Settings() {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{hours(minutes)} on {weekdays.length} day{weekdays.length === 1 ? '' : 's'} is {hours(minutes * weekdays.length)} a week.</p>
               </fieldset>
-              <Field className="max-w-xs">
-                <FieldLabel htmlFor="settings-target">Target date</FieldLabel>
-                <Input id="settings-target" type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} aria-describedby="settings-target-help" />
-                <FieldDescription id="settings-target-help">Leave empty for no deadline.</FieldDescription>
-              </Field>
+              </div>
               <div className="flex flex-wrap items-center gap-4 border-t pt-5">
                 <Button disabled={busy} aria-busy={busy}>{busy ? 'Saving' : 'Save changes'}</Button>
                 {status ? <SuccessLine>{status}</SuccessLine> : null}
@@ -289,12 +342,13 @@ export default function Settings() {
           </Section>
         </form>
 
-        <CodeforcesLink />
+        <div id="connections" className="scroll-mt-32 grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
+          <PlanSection />
+          <CodeforcesLink />
+          <AppSection />
+        </div>
 
-        <PlanSection />
-
-        <AppSection />
-
+        <div id="account" className="scroll-mt-32 grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
         <Section id="data-heading" title="Your data" description={<>Download everything Socrat stores about you: profile, enrollments, results, code submissions and tutor conversations. How we use it: <a href="/privacy" className="underline underline-offset-4">privacy policy</a> · <a href="/terms" className="underline underline-offset-4">terms</a>.</>}>
           <div className="flex flex-wrap items-center gap-4">
             <Button variant="outline" onClick={exportData} disabled={exporting === 'busy'} aria-busy={exporting === 'busy'}>
@@ -308,6 +362,7 @@ export default function Settings() {
           <Button variant="outline" onClick={async () => { await signOut(); router.replace('/login'); }}><LogOut data-icon="inline-start" /> Log out</Button>
         </Section>
 
+          <div className="lg:col-span-2">
         <Section id="danger-heading" title="Danger zone" description="Permanently removes your account, progress, code and conversations." className="border-attention">
           <AlertDialog onOpenChange={open => { if (!open) setConfirmDelete(''); }}>
             <AlertDialogTrigger asChild><Button variant="destructive">Delete account</Button></AlertDialogTrigger>
@@ -326,7 +381,10 @@ export default function Settings() {
             </AlertDialogContent>
           </AlertDialog>
         </Section>
+          </div>
+        </div>
         {error ? <ErrorNote message={error} /> : null}
+        </div>
       </div>
     </Page>
   );
