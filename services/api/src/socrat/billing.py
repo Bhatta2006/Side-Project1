@@ -74,40 +74,6 @@ def sign(secret: str, message: str) -> str:
     return hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
 
 
-def is_comp(sub: Subscription | None) -> bool:
-    return sub is not None and sub.razorpay_subscription_id.startswith("comp_")
-
-
-def comp(
-    db: Session, user_id: str, plan: str, days: int, stamp: int, replace: bool = False
-) -> bool:
-    """Grant a free plan for some days. Refused (False) while the learner pays through Razorpay
-    or has a checkout open, and, unless `replace`, while a granted higher plan still runs."""
-    sub = db.get(Subscription, user_id)
-    live = sub is not None and sub.plan in RANK and sub.current_end > stamp
-    if sub is not None and not is_comp(sub) and (live or sub.status == "created" or sub.pending):
-        return False
-    if sub is None:
-        sub = Subscription(
-            user_id=user_id,
-            razorpay_subscription_id=f"comp_{user_id}",
-            interval="month",
-            currency="INR",
-        )
-        db.add(sub)
-    if not live or not is_comp(sub):
-        sub.razorpay_subscription_id, sub.current_end = f"comp_{user_id}", stamp
-    elif RANK[plan] < RANK[sub.plan]:
-        if not replace:
-            return False
-        sub.current_end = stamp  # an admin downgrade starts now
-    # An upgrade keeps the days left: they run on the better plan.
-    sub.plan, sub.status, sub.pending = plan, "active", None
-    sub.current_end = max(sub.current_end or 0, stamp) + days * 86400
-    sub.cancel_at_period_end, sub.updated_at = False, stamp
-    return True
-
-
 def plan_id(db: Session, settings, body: Checkout) -> str:
     amount = PRICES[body.plan][body.interval][body.currency]
     key = f"{body.plan}:{body.interval}:{body.currency}:{amount}"  # a new price is a new Razorpay plan
@@ -137,12 +103,9 @@ def prices():
 
 @router.get("/status")
 def status(request: Request):
-    from socrat import referrals  # it imports billing
-
-    with Session(engine(request)) as db, db.begin():
+    with Session(engine(request)) as db:
         user = user_of(request, db)
         stamp = now()
-        referrals.sync(db, user.id, stamp)  # rewards land on the next app load
         plan = entitlements.plan_of(db, user.id, stamp)
         sub = db.get(Subscription, user.id)
         paid = sub is not None and plan != "free"
@@ -164,9 +127,7 @@ def checkout(body: Checkout, request: Request):
         raise HTTPException(404, "not_found")
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
-        sub = db.get(Subscription, user.id)
-        # A granted plan (admin or referral) never blocks buying; paying replaces it.
-        current = "free" if is_comp(sub) else entitlements.plan_of(db, user.id)
+        current = entitlements.plan_of(db, user.id)
         if RANK[body.plan] <= RANK[current]:  # only moving up is allowed while subscribed
             raise HTTPException(409, "already_subscribed")
         made = razorpay(
@@ -178,6 +139,7 @@ def checkout(body: Checkout, request: Request):
             customer_notify=1,
             notes=dict(user_id=user.id),
         )
+        sub = db.get(Subscription, user.id)
         if sub is not None and current != "free":
             # Upgrade: keep the paid plan working until the new payment is verified.
             sub.pending = f"{body.plan}:{body.interval}:{body.currency}:{made['id']}"
