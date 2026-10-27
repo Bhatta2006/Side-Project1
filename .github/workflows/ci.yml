@@ -8,6 +8,14 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request replaces its running checks. Every push to main has its own
+# group, so none is cancelled or dropped from the queue and each one reaches the deploy.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The checks run side by side instead of one after another. Branch protection requires the
+# `secret-scan` and `verify` checks, so `verify` is the gate that waits for all the others.
 jobs:
   secret-scan:
     runs-on: ubuntu-latest
@@ -23,47 +31,47 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"
 
-  verify:
+  lint:
     runs-on: ubuntu-latest
-    env:
-      POSTGRES_PASSWORD: ci-only-password
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: "3.12"
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
-        with:
-          version: "0.12.20"
-          enable-cache: true
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: "24"
-          cache: npm
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
-        with:
-          terraform_version: "1.16.4"
-      - run: uv sync --frozen
+      - uses: ./.github/actions/python-env
+      - run: uv run ruff format --check services/api services/execution
+      - run: uv run ruff check services/api services/execution
+      - run: uv run mypy services/api/src services/execution/src
+
+  content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./.github/actions/python-env
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '21'
-      - run: npm ci
-      # Needed by the explainer browser-checker tests (services/api), not only by e2e.
-      - run: npx playwright install --with-deps chromium
-      - name: Start the CI database
-        run: docker compose up --detach --wait postgres
-      - run: uv run ruff format --check services/api services/execution
-      - run: uv run ruff check services/api services/execution
-      - run: uv run mypy services/api/src services/execution/src
       - name: Validate authored content atoms in Python, C++20 and Java
         run: uv run python scripts/content/validate_atoms.py
       - name: Verify generated quiz items in Python, C++20 and Java
         run: uv run python scripts/content/validate_quiz.py --check
       - name: Lint pattern packs and run their templates
         run: uv run python scripts/content/lint_patterns.py
-      # Judge tests are generated from each problem's reference solution into the untracked
-      # .cache/content-tests; the catalog refuses to load without them.
+
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./.github/actions/python-env
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: ./.github/actions/node-env
+      # Needed by the explainer browser-checker tests (services/api), not only by e2e.
+      - run: npx playwright install --with-deps chromium
+      - name: Start the CI database
+        run: docker compose up --detach --wait postgres
       # Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor, which Chromium's
       # sandbox needs. The playground checker keeps its sandbox on, so allow them here rather
       # than launching Chromium without it.
@@ -72,6 +80,8 @@ jobs:
           if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
             sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           fi
+      # Judge tests are generated from each problem's reference solution into the untracked
+      # .cache/content-tests; the catalog refuses to load without them.
       - name: Build course content and judge tests
         run: uv run python scripts/content/build.py
       - run: uv run pytest --cov=socrat --cov-report=term-missing --cov-fail-under=85
@@ -80,6 +90,65 @@ jobs:
       - run: uv run alembic upgrade head
         env:
           SOCRAT_DATABASE_URL: postgresql+psycopg://socrat:ci-only-password@127.0.0.1:5432/socrat
+      - name: Stop the CI database
+        if: always()
+        run: docker compose down --volumes --remove-orphans
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./.github/actions/node-env
+      - run: npm run typecheck
+      - run: npm run build
+      - name: First-load JS budget per route (gzip)
+        run: node scripts/web/bundle-report.mjs --budget-kb 250
+      - run: npm run test:m0
+      # scripts/validation/test-m0-contracts.ps1 is not run here: it checks the M0 delivery docs,
+      # which the v2 rewrite moved to docs/archive/, and ~200 links those moves broke. Re-enable it
+      # once the docs and their links are reconciled.
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./.github/actions/python-env
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+      - run: uv run pip-audit
+      - run: npm audit --audit-level=high # reads package-lock.json, so no install is needed
+
+  # Pull requests prove the Dockerfiles still build. On main the publish job builds the same
+  # images for the deploy target, so building them here as well would only repeat the work.
+  images:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: services/api/Dockerfile
+          tags: socrat-api:ci
+          cache-from: type=gha,scope=ci-api
+          cache-to: type=gha,mode=max,scope=ci-api
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          tags: socrat-web:ci
+          cache-from: type=gha,scope=ci-web
+          cache-to: type=gha,mode=max,scope=ci-web
+
+  # Infra checks only run when infra files changed; otherwise this job ends after the diff.
+  infra:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Detect infra and operations changes
         id: infra
         shell: bash
@@ -90,24 +159,19 @@ jobs:
             git diff --quiet "$base" HEAD -- infra scripts/operations docker-compose.yml && changed=false
           fi
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
+        if: steps.infra.outputs.changed == 'true'
+        with:
+          terraform_version: "1.16.4"
+      - name: Start the CI database
+        if: steps.infra.outputs.changed == 'true'
+        run: docker compose up --detach --wait postgres
       - name: Exercise PostgreSQL backup and restore
         if: steps.infra.outputs.changed == 'true'
         shell: bash
         run: |
           archive="$(bash scripts/operations/backup-postgres.sh --output-directory .cache/ci-backups)"
           bash scripts/operations/restore-smoke.sh --archive "$archive"
-      - run: npm run typecheck
-      - run: npm run build
-      - name: First-load JS budget per route (gzip)
-        run: node scripts/web/bundle-report.mjs --budget-kb 250
-      - run: docker build --file services/api/Dockerfile --tag socrat-api:ci .
-      - run: docker build --file apps/web/Dockerfile --tag socrat-web:ci .
-      - run: npm run test:m0
-      # scripts/validation/test-m0-contracts.ps1 is not run here: it checks the M0 delivery docs,
-      # which the v2 rewrite moved to docs/archive/, and ~200 links those moves broke. Re-enable it
-      # once the docs and their links are reconciled.
-      - run: uv run pip-audit
-      - run: npm audit --audit-level=high
       - name: Create non-secret staging validation fixtures
         if: steps.infra.outputs.changed == 'true'
         shell: bash
@@ -182,11 +246,28 @@ jobs:
       - run: terraform -chdir=infra/oci/modules/staging-foundation test
         if: steps.infra.outputs.changed == 'true'
       - name: Stop the CI database
-        if: always()
+        if: always() && steps.infra.outputs.changed == 'true'
         run: docker compose down --volumes --remove-orphans
 
+  # The one check branch protection asks for: green only when every check above is green.
+  verify:
+    if: always()
+    needs: [lint, content, tests, web, audit, images, infra]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every check passed (the images check is skipped on main)
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "A required check did not pass: ${{ join(needs.*.result, ', ') }}" >&2
+          exit 1
+
+  # Images are only built from a commit whose checks passed. The three builds run side by side.
   publish-images:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # The images job is skipped on main, and a skipped job anywhere up the chain skips everything
+    # below it unless the condition names the results it needs. So `always()` plus explicit results.
+    if: >-
+      always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && needs.secret-scan.result == 'success' && needs.verify.result == 'success'
     needs: [secret-scan, verify]
     runs-on: ubuntu-latest
     permissions:
@@ -194,11 +275,18 @@ jobs:
       packages: write
       id-token: write
       attestations: write
-    outputs:
-      owner: ${{ steps.owner.outputs.name }}
-      api_digest: ${{ steps.api.outputs.digest }}
-      web_digest: ${{ steps.web.outputs.digest }}
-      explainer_digest: ${{ steps.explainer.outputs.digest }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            file: services/api/Dockerfile
+          - name: web
+            file: apps/web/Dockerfile
+            # Baked into the CSP frame-src of the web app: the Playground sandbox host for this deployment.
+            args: NEXT_PUBLIC_EXPLAINER_SANDBOX_ORIGIN=${{ vars.SOCRAT_SANDBOX_ORIGIN || 'https://socrat.dathcodes.dev' }}
+          - name: explainer
+            file: services/explainer/Dockerfile
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Resolve the lowercase image namespace
@@ -211,56 +299,24 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and publish API image
-        id: api
+      - name: Build and publish the ${{ matrix.name }} image
+        id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
-          file: services/api/Dockerfile
+          file: ${{ matrix.file }}
           platforms: linux/arm64  # Oracle Ampere (ARM) is the only deploy target
           push: true
-          tags: ghcr.io/${{ steps.owner.outputs.name }}/socrat-api:sha-${{ github.sha }}
+          build-args: ${{ matrix.args }}
+          tags: ghcr.io/${{ steps.owner.outputs.name }}/socrat-${{ matrix.name }}:sha-${{ github.sha }}
+          cache-from: type=gha,scope=publish-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=publish-${{ matrix.name }}
       # GitHub artifact attestations are unavailable for private, user-owned repositories.
       # Keep image publishing enabled there and attest images when the repository is public.
-      - name: Attest API image
+      - name: Attest the ${{ matrix.name }} image
         if: ${{ github.event.repository.private == false }}
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-name: ghcr.io/${{ steps.owner.outputs.name }}/socrat-api
-          subject-digest: ${{ steps.api.outputs.digest }}
-          push-to-registry: true
-      - name: Build and publish web image
-        id: web
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          file: apps/web/Dockerfile
-          platforms: linux/arm64  # Oracle Ampere (ARM) is the only deploy target
-          push: true
-          # Baked into the CSP frame-src of the web app: the Playground sandbox host for this deployment.
-          build-args: |
-            NEXT_PUBLIC_EXPLAINER_SANDBOX_ORIGIN=${{ vars.SOCRAT_SANDBOX_ORIGIN || 'https://socrat.dathcodes.dev' }}
-          tags: ghcr.io/${{ steps.owner.outputs.name }}/socrat-web:sha-${{ github.sha }}
-      - name: Attest web image
-        if: ${{ github.event.repository.private == false }}
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-name: ghcr.io/${{ steps.owner.outputs.name }}/socrat-web
-          subject-digest: ${{ steps.web.outputs.digest }}
-          push-to-registry: true
-      - name: Build and publish visual checker image
-        id: explainer
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          file: services/explainer/Dockerfile
-          platforms: linux/arm64  # Oracle Ampere (ARM) is the only deploy target
-          push: true
-          tags: ghcr.io/${{ steps.owner.outputs.name }}/socrat-explainer:sha-${{ github.sha }}
-      - name: Attest visual checker image
-        if: ${{ github.event.repository.private == false }}
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-name: ghcr.io/${{ steps.owner.outputs.name }}/socrat-explainer
-          subject-digest: ${{ steps.explainer.outputs.digest }}
+          subject-name: ghcr.io/${{ steps.owner.outputs.name }}/socrat-${{ matrix.name }}
+          subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true

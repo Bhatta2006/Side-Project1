@@ -1,0 +1,12 @@
+name: Node environment
+description: Node 24 with the locked npm dependencies installed
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      with:
+        node-version: "24"
+        cache: npm
+    - run: npm ci
+      shell: bash
