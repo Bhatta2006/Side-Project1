@@ -233,7 +233,21 @@ def compile_document(
 const config = CONFIG, root = document.documentElement;
 let current = 0, failed = false;
 const send = (type, data={}) => parent.postMessage({type,channel:config.channel,...data}, config.origin);
+// Side-by-side panels with fixed widths would need a sideways scroll: let those rows wrap or stack.
+// shortcut: only flex and grid rows are repaired; inline-block rows, tables and absolute layouts still scroll.
+const wrap = () => {
+  for (const el of document.body.querySelectorAll('*')) {
+    if (!(el.scrollWidth > el.clientWidth + 1)) continue;
+    const style = getComputedStyle(el);
+    if (style.overflowX !== 'visible') continue;
+    if (style.display.includes('flex')) el.style.flexWrap = 'wrap';
+    else if (style.display.includes('grid')) el.style.gridTemplateColumns = 'repeat(auto-fit,minmax(min(100%,260px),1fr))';
+    else continue;
+    for (const child of el.children) { child.style.minWidth = '0'; child.style.maxWidth = '100%'; }
+  }
+};
 const state = () => {
+  wrap();
   const api = window.__explainer;
   if (!api || typeof api.describe !== 'function' || typeof api.step !== 'function' || typeof api.reset !== 'function') throw Error('Missing visual controls');
   const count = Number(api.stepCount), description = String(api.describe());
@@ -255,6 +269,7 @@ addEventListener('message',event => {
     try { current=Math.max(0,Math.min(Number(window.__explainer.stepCount)-1,data.index));window.__explainer.step(current);update(); } catch { failed=true;send('error'); }
   } else if (data.type==='reset') { try {current=0;window.__explainer.reset();update();} catch {failed=true;send('error');} }
 });
+addEventListener('resize',()=>update());
 addEventListener('error',()=>{failed=true;send('error')});
 addEventListener('unhandledrejection',()=>{failed=true;send('error')});
 document.addEventListener('click',()=>setTimeout(update,0));document.addEventListener('input',()=>setTimeout(update,0));document.addEventListener('change',()=>setTimeout(update,0));
