@@ -17,6 +17,8 @@ import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/pra
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
 import { EmptyState, LockedState } from '@/components/socrat/states';
+import { openReportProblem } from '@/components/report-problem';
+import { WrittenAnswers } from '@/components/graded-work';
 import { FeelControls, SupportStep } from '@/components/socrat/support-step';
 import { SUPPORT_STEPS } from '@/lib/routes';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -149,7 +151,7 @@ export default function Lesson() {
   const [concept, setConcept] = useState<ConceptView | null>(null);
   const [error, setError] = useState('');
   const [upgrade, setUpgrade] = useState(false);
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState<'' | 'gate' | 'preparing'>('');
   const [variant, setVariant] = useState<{ style: string; content: string } | null>(null);
   const [explaining, setExplaining] = useState('');
   const [completing, setCompleting] = useState(false);
@@ -166,8 +168,8 @@ export default function Lesson() {
   const load = useCallback(() => {
     setError('');
     api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(e => {
-      setLocked(e instanceof ApiError && e.code === 'concept_locked');
       setUpgrade(e instanceof ApiError && e.code === 'upgrade_required');
+      setLocked(e instanceof ApiError && e.code === 'concept_locked' ? 'gate' : e instanceof ApiError && e.code === 'concept_preparing' ? 'preparing' : '');
       setError(explain(e));
     });
   }, [qualified]);
@@ -213,6 +215,15 @@ export default function Lesson() {
         <EmptyState title="This topic is for Founding Members" action={<Button asChild><Link href="/pricing">Become a Founding Member</Link></Button>}>
           The free plan covers the first two modules of each course. Founding Members unlock every topic, checkpoint and practice problem for ₹99 a month.
         </EmptyState>
+      </div>
+    );
+  }
+  if (!concept && locked === 'preparing') {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <LockedState title="This lesson is being prepared" href="/plan" action="Back to your plan">
+          It opens as soon as it is ready. Keep going with the topics before it.
+        </LockedState>
       </div>
     );
   }
@@ -281,6 +292,15 @@ export default function Lesson() {
             <SupportStep step={step} concept={qualified} language={concept.language} onAsk={() => setAskSoc(n => n + 1)} />
           ) : null}
 
+          {concept.ai_generated ? (
+            <p className="mb-6 flex items-start gap-2 rounded-[16px] border border-border-strong px-4 py-3 text-sm text-muted-foreground">
+              <TriangleAlert className="mt-0.5 size-4 flex-none" aria-hidden />
+              <span>
+                {concept.attribution || 'Written by Socrat AI and checked by AI models.'}{' '}
+                <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={openReportProblem}>Report a problem</button> if something looks wrong.
+              </span>
+            </p>
+          ) : null}
           <Markdown source={concept.lesson} language={concept.language} />
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
@@ -351,6 +371,11 @@ export default function Lesson() {
           </div>
 
           <div className="mt-10 grid gap-4">
+            {concept.prompts?.length ? (
+              <Section id="written-heading" title="Explain it in your own words">
+                <WrittenAnswers concept={concept.id} prompts={concept.prompts} onGraded={load} />
+              </Section>
+            ) : null}
             {concept.problems.length ? (
               <Section id="judged-heading" title="Practice problems">
                 <ul className="grid gap-2">

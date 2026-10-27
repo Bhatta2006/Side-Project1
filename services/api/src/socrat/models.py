@@ -230,13 +230,16 @@ class Submission(Base):
     __tablename__ = "submissions"
     __table_args__ = (Index("ix_submissions_status_created", "status", "created_at"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # None for verification jobs of the course generator (mode "verify"): no learner.
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
+    )
     enrollment_id: Mapped[str | None] = mapped_column(
         ForeignKey("enrollments.id", ondelete="CASCADE"), nullable=True
     )
     problem_id: Mapped[str] = mapped_column(String(64), index=True)
     language: Mapped[str] = mapped_column(String(16))
-    mode: Mapped[str] = mapped_column(String(8))  # run|submit
+    mode: Mapped[str] = mapped_column(String(8))  # run|submit|verify
     source: Mapped[str] = mapped_column(Text)
     custom_input: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="queued")  # queued|running|done|failed
@@ -663,3 +666,56 @@ class BillingPlan(Base):
     __tablename__ = "billing_plans"
     key: Mapped[str] = mapped_column(String(48), primary_key=True)
     razorpay_plan_id: Mapped[str] = mapped_column(String(64))
+
+
+class GeneratedCourse(Base):
+    """A course stored in the database rather than ``content/courses`` (the generation
+    pipeline's output). ``payload`` is the ``Course`` schema without concepts or problems."""
+
+    __tablename__ = "generated_courses"
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    # review: outline awaiting the owner; published: served to learners.
+    status: Mapped[str] = mapped_column(String(16), default="published")
+    brief: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Why generation is paused ("budget" or "owner"); empty while it runs. Learners keep
+    # everything already released either way.
+    paused: Mapped[str] = mapped_column(String(24), default="")
+    projects: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Project``s
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    # Bumped on every change to the course or its concepts; the catalog cache keys on it.
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class GeneratedConcept(Base):
+    """One concept of a generated course; ``payload`` is the ``Concept`` schema."""
+
+    __tablename__ = "generated_concepts"
+    course_id: Mapped[str] = mapped_column(
+        ForeignKey("generated_courses.id", ondelete="CASCADE"), primary_key=True
+    )
+    concept_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    atoms: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # an ``AtomPack``
+    problems: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Problem``s
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class GenerationJob(Base):
+    """One run of the course-generation agents (e.g. brief → outline). The worker claims
+    queued jobs; ``log`` keeps each agent round (verdicts, issues, cost) for the admin."""
+
+    __tablename__ = "generation_jobs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    kind: Mapped[str] = mapped_column(String(24))
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    target: Mapped[str] = mapped_column(String(80), default="")  # concept id for a package
+    input: Mapped[dict] = mapped_column(JSON)
+    output: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # last draft, kept for audit
+    state: Mapped[str] = mapped_column(String(16), default="queued", index=True)
+    log: Mapped[list] = mapped_column(JSON, default=list)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    error: Mapped[str] = mapped_column(String(500), default="")
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)

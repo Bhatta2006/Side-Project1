@@ -370,7 +370,9 @@ def build_plan(
         key = target.removeprefix("module:")
         if f"{kind}:{key}" in completed:
             continue
-        if kind == "testout" and (key in locked or key not in catalog.concepts):
+        if kind == "testout" and (
+            key in locked or key not in catalog.concepts or catalog.concept(key).status == "planned"
+        ):
             continue
         if kind == "moduletest" and any(c in locked for c in gates.module_concepts(catalog, key)):
             continue
@@ -387,7 +389,11 @@ def build_plan(
             )
         )
     for probe in sorted(probes):
-        if probe in catalog.concepts and f"probe:{probe}" not in completed:
+        if (
+            probe in catalog.concepts
+            and catalog.concept(probe).status != "planned"
+            and f"probe:{probe}" not in completed
+        ):
             front.append(
                 Activity(
                     f"probe:{probe}",
@@ -422,6 +428,13 @@ def build_plan(
             )
             status = "skipped" if qualified in skipped_candidates else "optional"
             roadmap.append({**entry_base, "status": status, "why": why})
+            continue
+        if concept.status == "planned":
+            # Outlined but not generated yet: on the roadmap and in the forecast, never queued.
+            locked_minutes += sum(
+                a.minutes for a in concept_activities(catalog, qualified, state, pace, style)
+            )
+            roadmap.append({**entry_base, "status": "preparing"})
             continue
         if qualified in locked:
             # Behind a gate: shown on the roadmap and counted in the forecast, not scheduled.
@@ -682,7 +695,7 @@ def milestone_weeks(
         if activity.concept in catalog.concepts:
             finish_at[activity.concept] = spent
     for item in roadmap:
-        if item["status"] == "locked":
+        if item["status"] in {"locked", "preparing"}:
             spent += item["minutes"]
             finish_at[item["concept"]] = spent
     weeks: dict[int, list[str]] = {}
@@ -697,7 +710,8 @@ def milestone_weeks(
                 week=week + 1,
                 ends=(today + timedelta(days=7 * (week + 1) - 1)).isoformat(),
                 concepts=[dict(concept=c, title=catalog.concept(c).title) for c in concepts],
-                outcome=f"You'll be able to: {lead.key_points[0].rstrip('.')}.",
+                # Planned concepts have no key points yet; their summary stands in.
+                outcome=f"You'll be able to: {(lead.key_points or [lead.summary])[0].rstrip('.')}.",
             )
         )
     return out

@@ -149,11 +149,40 @@ class QuizItem(Model):
         return self
 
 
+class Criterion(Model):
+    criterion: str = Field(min_length=2, max_length=120)
+    points: int = Field(ge=1, le=4)
+    look_for: str = Field(min_length=5, max_length=400)  # what earns the points
+
+
+class Prompt(Model):
+    """A free-text question answered in the learner's own words and graded against its
+    rubric (AI-graded evidence: ``explain``). The model answer is shown only after grading."""
+
+    id: Slug
+    prompt: str = Field(min_length=10, max_length=1000)
+    rubric: list[Criterion] = Field(min_length=2, max_length=6)
+    model_answer: str = Field(min_length=20, max_length=3000)
+    max_words: int = Field(default=250, ge=30, le=600)
+
+
 class PracticeLink(Model):
     title: str = Field(min_length=2, max_length=160)
     url: HttpUrl
     platform: str = Field(min_length=2, max_length=40)
     difficulty: Literal["easy", "medium", "hard"]
+
+
+class Outline(Model):
+    """What a generated concept must teach, set when the course outline is planned. The
+    authoring agents write the lesson from it; hand-authored concepts leave it empty."""
+
+    depth: Literal["overview", "practitioner", "mastery"] = "practitioner"
+    objectives: list[str] = Field(min_length=1, max_length=6)  # observable, start with a verb
+    misconceptions: list[str] = Field(default_factory=list, max_length=6)
+    assessment: list[Literal["quiz", "code", "explain", "project"]] = Field(
+        min_length=1, max_length=4
+    )
 
 
 class Concept(Model):
@@ -164,19 +193,25 @@ class Concept(Model):
     prerequisites: list[Ref] = Field(default_factory=list)
     difficulty: int = Field(ge=1, le=5)
     estimated_minutes: int = Field(ge=10, le=600)
-    lesson: str = Field(min_length=1)
+    lesson: str = ""  # empty only while planned
     key_points: list[str] = Field(default_factory=list, max_length=8)
     pitfalls: list[str] = Field(default_factory=list, max_length=8)
     resources: list[Resource] = Field(default_factory=list, max_length=8)
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
+    prompts: list[Prompt] = Field(default_factory=list, max_length=4)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None
+    outline: Outline | None = None
     # A draft is being authored: validated and kept in the graph, but never served.
-    status: Literal["draft", "live"] = "live"
+    # A planned concept is an outline entry whose content is not generated yet: it is in
+    # the graph and on the roadmap, but its lesson and activities are held.
+    status: Literal["draft", "live", "planned"] = "live"
 
     @model_validator(mode="after")
     def live_is_complete(self):
+        if self.status != "planned" and not self.lesson:
+            raise ValueError(f"concept {self.id} needs a lesson")
         if self.status == "live":
             missing = [
                 name

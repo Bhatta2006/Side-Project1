@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { SocFigure } from '@/components/socrat/soc';
 
-const KIND: Record<string, string> = { quiz: 'concept check', code: 'problem', checkpoint: 'checkpoint', review: 'review', placement: 'placement', external: 'practice', verified: 'Codeforces', guided: 'guided step', trace: 'trace', retrieval: 'recall', debug: 'debugging', explanation: 'explanation' };
+const KIND: Record<string, string> = { quiz: 'concept check', code: 'problem', checkpoint: 'checkpoint', review: 'review', placement: 'placement', external: 'practice', verified: 'Codeforces', guided: 'guided step', trace: 'trace', retrieval: 'recall', debug: 'debugging', explanation: 'explanation', explain: 'written answer (AI-graded)', project: 'project milestone (AI-graded)' };
 
 function level(minutes: number) {
   if (!minutes) return 0;

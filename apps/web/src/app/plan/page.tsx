@@ -7,7 +7,8 @@ import { ChevronDown, MessageCircle } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { KIND_LABEL, NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, formatStamp, hours } from '@/lib/routes';
-import type { PlanView, RoadmapItem } from '@/lib/types';
+import type { PlanView, ProjectView, RoadmapItem } from '@/lib/types';
+import Assistant from '@/components/assistant';
 import { Milestones, PathStyles, WeeklyReviewPanel } from '@/components/socrat/plan-adaptive';
 import { ProposalList } from '@/components/socrat/proposals';
 import { Button } from '@/components/ui/button';
@@ -72,6 +73,7 @@ export default function PlanPage() {
   const allowed = useGuard('active');
   const planLocked = usePlanLocks();
   const [plan, setPlan] = useState<PlanView | null>(null);
+  const [projects, setProjects] = useState<ProjectView[]>([]);
   const [error, setError] = useState('');
   const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
   const [planChat, setPlanChat] = useState(0);
@@ -94,6 +96,7 @@ export default function PlanPage() {
   const load = useCallback(() => {
     setError('');
     api.get<PlanView>('/plan').then(setPlan).catch(e => setError(explain(e)));
+    api.get<{ projects: ProjectView[] }>('/projects').then(r => setProjects(r.projects)).catch(() => undefined);
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
 
@@ -236,7 +239,7 @@ export default function PlanPage() {
                                   <span className="font-semibold">{c.title}</span>
                                   {c.why ? <span className="block text-[13px] text-muted-foreground">{c.why}</span> : null}
                                 </span>
-                                <StatusLabel status={status} detail={byPlan ? 'Founding Member' : status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
+                                <StatusLabel status={status} detail={byPlan ? 'Founding Member' : c.status === 'preparing' ? 'Being prepared' : status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
                                 <span className="flex flex-wrap gap-1.5">
                                   {here ? <Badge>Current</Badge> : null}
                                   {c.review_due ? <Badge>Review due</Badge> : null}
@@ -269,6 +272,18 @@ export default function PlanPage() {
           <Disclosure id="milestones-heading" title="Weekly milestones" defaultOpen>
             <Milestones milestones={plan.milestones} />
           </Disclosure>
+          {projects.length ? (
+            <Disclosure id="projects-heading" title="Projects" defaultOpen>
+              <ul className="grid gap-2 text-[15px]">
+                {projects.map(p => (
+                  <li key={p.id}>
+                    <Link href="/projects" className="font-semibold underline underline-offset-4">{p.title}</Link>{' '}
+                    <span className="text-muted-foreground">{p.milestones.filter(m => m.done).length} of {p.milestones.length} milestones</span>
+                  </li>
+                ))}
+              </ul>
+            </Disclosure>
+          ) : null}
           <Disclosure id="path-heading" title="How you&apos;ll get there">
             <PathStyles onChanged={load} />
             {stretch ? (

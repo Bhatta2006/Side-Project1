@@ -44,7 +44,12 @@ def enroll(
     )
     db.add(enrollment)
     db.flush()
-    path = catalog.closure(catalog.course_concepts(course_id))
+    # Planned concepts have no questions to probe with yet.
+    path = [
+        c
+        for c in catalog.closure(catalog.course_concepts(course_id))
+        if catalog.concept(c).status != "planned"
+    ]
     start = f"{course_id}:{level.start_concept}" if level.start_concept else None
     state = placement.start(
         catalog, path, start, seed=int(enrollment.id.replace("-", "")[:8], 16), language=language
@@ -114,6 +119,9 @@ def finish(
         learn.set_state(db, enrollment, concept, placed(known, now), now)
     enrollment.status = "active"
     enrollment.placement = state.to_dict()
+    from socrat.coursegen import prefetch
+
+    prefetch.request(db, enrollment, now, catalog)
 
 
 def summary(catalog: Catalog, enrollment: Enrollment) -> dict:

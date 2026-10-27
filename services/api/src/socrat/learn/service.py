@@ -226,6 +226,9 @@ def complete_activity(
     minutes = max(1, round(min(MAX_ACTIVITY_SECONDS, now - record.started_at) / 60))
     bump_daily(db, user, now, minutes=minutes, solved=int(solved))
     record_event(db, user.id, "activity.completed")
+    from socrat.coursegen import prefetch
+
+    prefetch.request(db, enrollment, now)  # generated courses: write what comes next
     return True
 
 
@@ -310,6 +313,8 @@ def require_unlocked(
 ) -> None:
     if concept not in curriculum(catalog, enrollment):
         raise HTTPException(404, "not_found")
+    if catalog.concept(concept).status == "planned":
+        raise HTTPException(423, "concept_preparing")
     gate = locked_concepts(db, catalog, enrollment, now).get(concept)
     if gate is not None:
         raise lock_error(gate)

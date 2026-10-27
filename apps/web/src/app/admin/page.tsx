@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { ReviewQueue } from '@/components/review-queue';
 import { AdminUsers } from '@/components/admin-users';
 import { useSession } from '@/lib/session';
+import { CourseBuilder } from '@/components/course-builder';
 
 interface Overview {
   funnel: { step: string; learners: number; share: number }[];
@@ -206,9 +207,11 @@ export default function Admin() {
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
           <TabsTrigger value="users">Users and plans</TabsTrigger>
           <TabsTrigger value="review">Review queue</TabsTrigger>
+          <TabsTrigger value="courses">Courses</TabsTrigger>
         </TabsList>
         <TabsContent value="users"><AdminUsers /></TabsContent>
         <TabsContent value="review"><ReviewQueue /></TabsContent>
+        <TabsContent value="courses"><CourseBuilder /></TabsContent>
         <TabsContent value="metrics">
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,3 +1,3 @@
 """Supported schema head for readiness and recovery checks."""
 
-SCHEMA_REVISION = "0021_referrals"
+SCHEMA_REVISION = "0027_generated_projects"

@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from socrat import entitlements
 from socrat.catalog import practice
 from socrat.catalog.registry import Catalog
-from socrat.learn import achievements, resources
+from socrat.coursegen.package import AI_AUTHOR
+from socrat.learn import achievements, graded, resources
 from socrat.learn import service as learn
 from socrat.library import service as library
 from socrat.mastery.model import ConceptState, band
@@ -289,7 +290,11 @@ def concept_view(
         summary=concept.summary,
         module=catalog.module_of(qualified),
         lesson=concept.lesson,
+        # Generated lessons say so, with how they were checked (no human review).
+        ai_generated=bool(concept.provenance and concept.provenance.author == AI_AUTHOR),
+        attribution=concept.provenance.attribution_md if concept.provenance else "",
         exercises=resources.selected(qualified, language, "exercises"),
+        prompts=graded.prompt_views(db, enrollment, qualified, concept),
         key_points=concept.key_points,
         pitfalls=concept.pitfalls,
         resources=resources.personalised(db, user.id, qualified, concept, language, current_band),

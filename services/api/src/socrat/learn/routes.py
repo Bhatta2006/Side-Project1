@@ -17,7 +17,7 @@ from socrat.assistant import service as assistant
 from socrat.assistant.gateway import make_provider
 from socrat.assistant.tools import Toolbox
 from socrat.auth import COOKIE, require_csrf, require_session
-from socrat.catalog import practice
+from socrat.catalog import generated, practice
 from socrat.catalog.registry import Catalog, CatalogError, default_catalog
 from socrat.database import record_event
 from socrat.execution.protocol import ResultEnvelope
@@ -151,7 +151,7 @@ class Callback(BaseModel):
 
 def catalog() -> Catalog:
     try:
-        return default_catalog()
+        return generated.merged(default_catalog())
     except CatalogError as exc:
         raise HTTPException(503, "content_unavailable") from exc
 
