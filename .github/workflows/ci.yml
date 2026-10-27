@@ -263,7 +263,11 @@ jobs:
 
   # Images are only built from a commit whose checks passed. The three builds run side by side.
   publish-images:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # The images job is skipped on main, and a skipped job anywhere up the chain skips everything
+    # below it unless the condition names the results it needs. So `always()` plus explicit results.
+    if: >-
+      always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && needs.secret-scan.result == 'success' && needs.verify.result == 'success'
     needs: [secret-scan, verify]
     runs-on: ubuntu-latest
     permissions:
