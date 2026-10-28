@@ -37,7 +37,7 @@ interface LogEntry {
 }
 interface Job { id: string; kind: string; state: JobState; log: LogEntry[]; cost_usd: number; error: string; created_at: number; updated_at: number }
 interface Summary { id: string; title: string; status: CourseStatus; paused: string; concepts: number | null; live: number; job: Job | null; spent_usd: number; budget_usd: number }
-interface Brief { id: string; title: string; audience: string; outcome: string; background: string; languages: string[]; reuse: string[]; references: string[]; notes: string; budget_usd: number; concept_budget_usd?: number }
+interface Brief { id: string; title: string; audience: string; outcome: string; background: string; languages: string[]; reuse: string[]; references: string[]; notes: string; budget_usd: number; concept_budget_usd?: number; style?: { name: string; learner: string; format: string; session_minutes: number } | null }
 interface OutlineConcept {
   id: string; title: string; summary: string; module: string; prerequisites: string[]; difficulty: number; estimated_minutes: number;
   status: 'planned' | 'live' | 'draft';
@@ -73,7 +73,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-const EMPTY = { id: '', title: '', audience: '', outcome: '', background: '', languages: 'python', reuse: '', references: '', notes: '', budget: '5' };
+const EMPTY = { id: '', title: '', audience: '', outcome: '', background: '', languages: 'python', reuse: '', references: '', notes: '', style: '', budget: '5' };
 
 /** The owner's brief: everything the agents need to plan a course. */
 function BriefForm({ onCreated }: { onCreated: () => void }) {
@@ -89,6 +89,7 @@ function BriefForm({ onCreated }: { onCreated: () => void }) {
         id: form.id.trim(), title: form.title.trim(), audience: form.audience.trim(), outcome: form.outcome.trim(),
         background: form.background.trim(), languages: lines(form.languages), reuse: lines(form.reuse),
         references: lines(form.references), notes: form.notes.trim(), budget_usd: Number(form.budget),
+        ...(form.style.trim() ? { style_request: form.style.trim() } : {}),
       });
       toast.success('Brief sent. The architect is planning the outline.');
       setForm(EMPTY);
@@ -114,6 +115,7 @@ function BriefForm({ onCreated }: { onCreated: () => void }) {
           <Field label="What learners can do at the end"><Textarea required minLength={10} maxLength={600} rows={3} value={form.outcome} onChange={set('outcome')} /></Field>
           <Field label="What they already know"><Textarea maxLength={600} rows={2} value={form.background} onChange={set('background')} /></Field>
           <Field label="Notes for the architect"><Textarea maxLength={2000} rows={2} value={form.notes} onChange={set('notes')} /></Field>
+          <Field label="How should it be taught? (optional)" hint="Any style in your own words: 'quantum mechanics for kids under 10', 'a gamified 5-minute daily', 'Harvard-level and rigorous'"><Textarea maxLength={600} rows={2} value={form.style} onChange={set('style')} /></Field>
           <Field label="Code languages" hint="Comma separated: python, cpp, java"><Input value={form.languages} onChange={set('languages')} /></Field>
           <Field label="Existing concepts to build on" hint="Comma separated, e.g. zero:loops, dsa:complexity"><Input value={form.reuse} onChange={set('reuse')} /></Field>
           <Field label="References to align with" hint="One per line: docs, books, syllabi"><Textarea rows={2} value={form.references} onChange={set('references')} /></Field>
@@ -404,6 +406,7 @@ export function CourseBuilder() {
                   <dl className="grid gap-1 text-sm">
                     <div><dt className="inline font-medium">For: </dt><dd className="inline">{open.brief.audience}</dd></div>
                     <div><dt className="inline font-medium">Outcome: </dt><dd className="inline">{open.brief.outcome}</dd></div>
+                    {open.brief.style ? <div><dt className="inline font-medium">Style: </dt><dd className="inline">{open.brief.style.name} ({open.brief.style.format}, about {open.brief.style.session_minutes} min a sitting)</dd></div> : null}
                     {open.brief.background ? <div><dt className="inline font-medium">Background: </dt><dd className="inline">{open.brief.background}</dd></div> : null}
                   </dl>
                 </Section>

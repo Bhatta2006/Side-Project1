@@ -8,7 +8,6 @@ import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { KIND_LABEL, NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, formatStamp, hours } from '@/lib/routes';
 import type { PlanView, ProjectView, RoadmapItem } from '@/lib/types';
-import Assistant from '@/components/assistant';
 import { Milestones, PathStyles, WeeklyReviewPanel } from '@/components/socrat/plan-adaptive';
 import { ProposalList } from '@/components/socrat/proposals';
 import { Button } from '@/components/ui/button';

@@ -162,7 +162,7 @@ learner: it overrides the default reply length and register below.
 """
 _SECTION = "# Who you are talking to"
 _PATH = "# Where the path leads"
-_TEACHING = "# Teaching"
+_TEACHING = "# Teaching\n"
 assert SYSTEM.count(_SECTION) == SYSTEM.count(_PATH) == SYSTEM.count(_TEACHING) == 1
 GENERAL_SYSTEM = (
     GENERAL_IDENTITY
