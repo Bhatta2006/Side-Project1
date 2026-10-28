@@ -118,7 +118,7 @@ test('the practice library filters, saves and never shows raw links', async ({ p
   await onboard(page, /Competitive Programming/, /never written code|new to programming/);
   await expect(page).toHaveURL(/\/(today|placement)$/);
 
-  await page.goto('/today');
+  await page.goto('/today#practice');
   await expect(page.getByRole('heading', { name: 'Practice picked for you' })).toBeVisible();
   expect((await (await page.request.get('/api/v1/library?sort=easiest')).json()).total).toBe(0);
   await page.goto('/learn/zero/input-and-arithmetic');
