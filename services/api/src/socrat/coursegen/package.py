@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
+from socrat.catalog import shape
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Concept, Course, Prompt, Provenance, QuizItem
@@ -68,6 +69,7 @@ def context(
             f"Course: {course.title} — {course.description}",
             f"Learners: {brief['audience']}\nAlready know: {brief.get('background') or 'see prerequisites'}",
             f"Course code languages: {', '.join(course.languages)}",
+            practice_line(course),
             "Concept to teach:\n"
             + json.dumps(
                 {
@@ -85,6 +87,24 @@ def context(
             "Other concepts in this module (stay out of their territory):\n"
             + ("\n".join(siblings) or "- none"),
         ]
+    )
+
+
+def practice_line(course: Course) -> str:
+    """How learners practise and prove this subject, so authors write for that studio."""
+    s = shape.effective(course)
+    tools = ", ".join(s.tools) or "none"
+    return (
+        f"Practice studio: {s.name} ({s.studio}); loop: {s.loop}; evidence: "
+        f"{', '.join(s.evidence)}; tools: {tools}. Write for this: "
+        + {
+            "code": "worked examples in code, edge cases that break naive solutions.",
+            "workbench": "derive step by step, show each algebra step, and give problems whose "
+            "answers can be checked symbolically or numerically.",
+            "lab": "start from a prediction the learner commits to, say what to vary and observe "
+            "in a simulation, then explain the result with the model; use units.",
+            "reading": "explain clearly with examples and ask the learner to explain back.",
+        }[s.studio]
     )
 
 

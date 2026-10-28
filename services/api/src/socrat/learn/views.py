@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
-from socrat.catalog import practice
+from socrat.catalog import practice, shape
 from socrat.catalog.registry import Catalog
 from socrat.coursegen.package import AI_AUTHOR
 from socrat.learn import achievements, graded, resources
@@ -48,6 +48,8 @@ def course_card(catalog: Catalog, course_id: str) -> dict:
         tagline=course.tagline,
         description=course.description,
         languages=course.languages,
+        shape=shape.effective(course).model_dump(mode="json")
+        | {"name": shape.effective(course).name},
         levels=[dict(id=x.id, label=x.label, description=x.description) for x in course.levels],
         modules=[
             dict(id=m.id, title=m.title, summary=m.summary, concepts=len(m.concepts))

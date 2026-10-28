@@ -5,6 +5,7 @@ import json
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Course, Language, Ref, Slug
 from socrat.style import spec as styles
@@ -30,6 +31,8 @@ class Brief(BaseModel):
     budget_usd: float = Field(default=5.0, gt=0, le=1000)
     # One concept package (all its rounds) may not cost more than this.
     concept_budget_usd: float = Field(default=2.0, gt=0, le=100)
+    # A researcher finds public sources first; lessons cite them and credit them.
+    research: bool = True
 
 
 def to_course(brief: Brief, outline: dict) -> Course:
@@ -64,6 +67,7 @@ def to_course(brief: Brief, outline: dict) -> Course:
             "version": "0.1.0",
             "languages": brief.languages,
             "levels": outline["levels"],
+            "shape": outline["shape"],
             "modules": [
                 {
                     "id": m["id"],
@@ -91,6 +95,7 @@ def from_course(course: Course) -> dict:
         "tagline": course.tagline,
         "description": course.description,
         "levels": [level.model_dump(mode="json") for level in course.levels],
+        "shape": shape.effective(course).model_dump(mode="json"),
         "modules": [
             {
                 "id": m.id,
@@ -144,6 +149,13 @@ def gold_example(catalog: Catalog) -> str:
 SHAPE = """{
   "tagline": "5-140 chars",
   "description": "20-1200 chars: what the course covers and who it is for",
+  "shape": {
+    "studio": "code | workbench | lab | reading",
+    "loop": "solve | derive | predict-observe-explain | read-reflect",
+    "evidence": ["tests | derivation | numeric | explanation | quiz (1-4, distinct)"],
+    "tools": ["editor | graph | cas | simulation (0-3, distinct)"],
+    "label": "optional name for the practice area, at most 24 chars"
+  },
   "levels": [
     {"id": "brand-new", "label": "...", "description": "...", "start_concept": null},
     {"id": "...", "label": "...", "description": "...", "start_concept": "<concept id in this course>"}
@@ -186,6 +198,12 @@ Rules:
 - Assessment: "quiz" always fits; "code" only when the course languages apply; "explain"
   for reasoning; "project" for module capstones.
 - Levels: 2-4 self-reported starting points. The first has start_concept null.
+- Shape: how this subject is practised and proven. Choose the studio from what learners
+  actually do. code: programming (editor, tests). workbench: math (graphs, symbolic
+  answers, derivations; loop solve or derive). lab: physics or science with simulations
+  (loop predict-observe-explain). reading: any other subject until it has its own studio
+  (quiz and explanation only). Pick only evidence and tools that studio supports. A course
+  with no code should not list the editor tool or the tests evidence.
 - Write original text. Do not copy any published syllabus.
 - If the brief carries a learning style, it governs the plan: concept size follows the
   session length (a 5-minute session means 3-8 minute concepts and many of them), depth tags
@@ -210,6 +228,8 @@ Check:
 - Style fit: when the brief has a learning style, concept size, depth, assessments and
   titles must suit it (a mismatch is blocking).
 - Duplicates, vague titles, levels whose start_concept makes no sense.
+- Shape: the studio, loop and evidence must fit how this subject is really learned (a
+  physics course on the code studio, or a math course proven by tests, is blocking).
 
 verdict is "pass" only when nothing blocking remains. Reply with one JSON object only:
 {"verdict": "pass" | "revise",

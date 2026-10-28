@@ -23,10 +23,10 @@ from sqlalchemy import Engine, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from socrat.assistant.gateway import ProviderError, make_provider
-from socrat.catalog import generated
+from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.config import Settings
-from socrat.coursegen import execute, roles
+from socrat.coursegen import execute, research, roles
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -257,11 +257,13 @@ async def run_package(
     executor = executor or execute.Broker(engine, settings)
     # Code in quiz items and atoms only when every course language can be run to check it.
     runnable = executor.available(course.languages)
-    code = list(course.languages) if runnable == list(course.languages) else []
+    editor = "editor" in shape.effective(course).tools
+    code = list(course.languages) if editor and runnable == list(course.languages) else []
     style = brief.style
     ctx = pkg.context(base, course, brief.model_dump(), concept, style)
     reference = pkg.gold(base) if style is None or style.shows_reference() else None
     note = pkg.STYLE_NOTE if style else ""
+    cited: list[dict] = []
     version = concept.provenance.version + 1 if concept.provenance else 1
     lesson = quiz = atoms = None
     notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
@@ -281,6 +283,21 @@ async def run_package(
         models[role] = reply.model
         return reply
 
+    if brief.research and not data.get("previous"):
+        found = await ask("researcher", research.RESEARCHER, research.prompt(ctx), 2000)
+        cited = await research.screen(found.data, http)
+        _note(
+            engine,
+            job_id,
+            {
+                "role": "researcher",
+                "sources": [{k: s[k] for k in ("n", "title", "url")} for s in cited],
+            },
+            found.cost_usd,
+        )
+        if cited:
+            ctx = "\n\n".join([ctx, research.block(cited)])
+
     for attempt in range(1, ROUNDS + 1):
         if _over_budget(engine, course_id, brief.budget_usd):
             pause_for_budget(engine, course_id, job_id)
@@ -298,6 +315,7 @@ async def run_package(
                 continue
             lesson = reply.data
             problems = pkg.check_lesson(concept, course, lesson, style)
+            problems += research.check(str(lesson.get("lesson", "")), cited)
             problems += [
                 f"This resource link is unreachable or not public https; replace it: {url}"
                 for url in await pkg.broken_links(lesson, http)
@@ -314,6 +332,7 @@ async def run_package(
                 redo |= {"lesson"}
                 continue
             notes["lesson"] = []
+            lesson = research.attach(lesson, cited)
         pending = {}
         if "quiz" in redo or quiz is None:
             example = pkg.quiz_example(reference)
@@ -344,7 +363,7 @@ async def run_package(
             continue
         attribution = (
             f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
-            "before release. Not reviewed by a person."
+            "before release. Not reviewed by a person." + research.credit(cited)
         )
         live, problems = pkg.build_concept(concept, lesson, quiz, version, attribution, code)
         pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version, code)

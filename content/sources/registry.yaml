@@ -394,3 +394,39 @@ sources:
     license_class: permissive
     license_status: unverified
     action: verify
+  # Math and physics sources (adaptive-mentor work, 2026-10-28). Nothing here is verified
+  # on its own license page yet; sources inform facts, lessons are always original prose.
+  - id: phet
+    name: PhET Interactive Simulations (University of Colorado Boulder)
+    url: https://phet.colorado.edu/
+    content: Physics and math simulations
+    license: CC BY 4.0 for the HTML simulations; commercial use needs a separate licence
+    spdx: [CC-BY-4.0]
+    license_class: mixed
+    license_status: unverified
+    action: verify
+    notes: Owner approved for admin testing only (2026-10-28); settle the commercial terms before launch.
+  - id: khan-academy
+    name: Khan Academy
+    url: https://www.khanacademy.org/
+    content: Math and science lessons
+    license: CC BY-NC-SA (reported)
+    license_class: non-commercial
+    license_status: unverified
+    action: link-only
+  - id: libretexts
+    name: LibreTexts
+    url: https://libretexts.org/
+    content: Open textbooks
+    license: Varies per text
+    license_class: mixed
+    license_status: unverified
+    action: per-item
+  - id: nist-physics
+    name: NIST Physical Measurement Laboratory (CODATA constants)
+    url: https://physics.nist.gov/
+    content: Physical constants and reference data
+    license: US government work (reported public domain)
+    license_class: permissive
+    license_status: unverified
+    action: verify

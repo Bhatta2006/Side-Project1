@@ -29,6 +29,7 @@ ROLES = {
     "designer",  # projects
     "grader",  # learners' free-text answers and project milestones
     "stylist",  # a free-text learning wish -> a style spec
+    "researcher",  # finds open, public sources for a concept
 }
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {
@@ -40,6 +41,8 @@ KEYS = {
     "price_output_per_mtok": ("ai_price_output_per_mtok",),
 }
 DEFAULT_EFFORT = "high"  # outlines and reviews are worth the extra thinking
+# Finding and screening sources is retrieval, not reasoning: low effort keeps the cost down.
+ROLE_EFFORT = {"researcher": "low", "stylist": "low"}
 
 
 def check_roles(roles: dict) -> None:
@@ -52,7 +55,10 @@ def check_roles(roles: dict) -> None:
 
 
 def role_settings(settings: Settings, role: str) -> Settings:
-    update: dict = {"ai_effort": DEFAULT_EFFORT, "ai_timeout_seconds": settings.gen_timeout_seconds}
+    update: dict = {
+        "ai_effort": ROLE_EFFORT.get(role, DEFAULT_EFFORT),
+        "ai_timeout_seconds": settings.gen_timeout_seconds,
+    }
     for key, value in settings.gen_roles.get(role, {}).items():
         for field in KEYS[key]:
             update[field] = value

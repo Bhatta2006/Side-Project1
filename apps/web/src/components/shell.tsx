@@ -11,25 +11,28 @@ import {
   ChartNoAxesColumn,
   Download,
   Flame,
+  FlaskConical,
   House,
   LogOut,
   MessageCircle,
   MessageSquareWarning,
   Monitor,
   Moon,
+  NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
   Route,
   Settings,
   Shapes,
   ShieldCheck,
+  Sigma,
   SquareCode,
   Sparkles,
   Sun,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { NAV, navFor, type NavKey } from '@/lib/routes';
+import { NAV, navFor, navItems, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { PLAN_NAME } from '@/lib/plans';
 import { useInstall } from '@/lib/pwa';
@@ -64,7 +67,13 @@ const ICON: Record<NavKey, LucideIcon> = {
   settings: Settings,
 };
 // Settings lives in the avatar menu on phones.
-const MOBILE = NAV.filter(item => item.key !== 'settings');
+const MOBILE_KEYS = NAV.filter(item => item.key !== 'settings').map(item => item.key);
+
+/** The studio's own icon in the Practice slot. */
+const STUDIO_ICON: Record<string, LucideIcon> = { workbench: Sigma, lab: FlaskConical, reading: NotebookPen };
+function iconFor(item: { key: NavKey }, studio?: string): LucideIcon {
+  return (item.key === 'practice' && studio && STUDIO_ICON[studio]) || ICON[item.key];
+}
 
 function DevBanner() {
   const { features } = useSession();
@@ -252,8 +261,8 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
       </div>
       <nav aria-label="Main" className="flex-1 px-3 pt-2">
         <ul className="grid gap-1">
-          {NAV.map(item => {
-            const Icon = ICON[item.key];
+          {navItems(profile?.enrollment?.shape).map(item => {
+            const Icon = iconFor(item, profile?.enrollment?.shape?.studio);
             const current = active === item.key;
             const flagged = ready && item.key === 'evidence';
             const link = (
@@ -326,11 +335,13 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
 
 /** Phone: five destinations. 64 px plus the safe area; active item has a brand pill behind its icon. */
 function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean }) {
+  const { profile } = useSession();
+  const mobile = navItems(profile?.enrollment?.shape).filter(item => MOBILE_KEYS.includes(item.key));
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
       <ul className="grid h-16 grid-cols-5">
-        {MOBILE.map(item => {
-          const Icon = ICON[item.key];
+        {mobile.map(item => {
+          const Icon = iconFor(item, profile?.enrollment?.shape?.studio);
           const current = active === item.key;
           return (
             <li key={item.key}>

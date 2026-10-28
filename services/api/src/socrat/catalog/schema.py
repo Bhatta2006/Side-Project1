@@ -11,6 +11,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from socrat.catalog.shape import CourseShape
+
 Slug = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
 Ref = Annotated[str, Field(pattern=r"^([a-z][a-z0-9-]{0,63}:)?[a-z][a-z0-9-]{0,63}$")]
 Language = Literal["python", "cpp", "java"]
@@ -293,6 +295,8 @@ class Course(Model):
     modules: list[Module] = Field(min_length=1)
     concepts: list[Concept] = Field(default_factory=list)
     problems: list[Problem] = Field(default_factory=list)
+    # How this course is practised and evidenced; none means a programming course.
+    shape: CourseShape | None = None
 
     def concept(self, concept_id: str) -> Concept:
         return next(item for item in self.concepts if item.id == concept_id)

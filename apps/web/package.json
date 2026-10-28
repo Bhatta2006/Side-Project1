@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "runtimes": "node scripts/copy-runtimes.mjs",
+    "check:smoke": "node scripts/check-smoke.mjs",
     "predev": "node scripts/copy-runtimes.mjs",
     "dev": "next dev --hostname 127.0.0.1",
     "prebuild": "node scripts/copy-runtimes.mjs",

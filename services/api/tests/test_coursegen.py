@@ -21,6 +21,7 @@ BRIEF = dict(
     outcome="Explain how a model learns from data and train a tiny one in Python.",
     reuse=["zero:programs-and-output"],
     budget_usd=5.0,
+    research=False,
 )
 
 
@@ -42,6 +43,7 @@ def concept(cid, prerequisites=(), depth="overview"):
 OUTLINE = dict(
     tagline="How machines learn from examples.",
     description="A first, deep course on how models learn from data, from loss to training.",
+    shape=dict(studio="code", loop="solve", evidence=["tests", "quiz"], tools=["editor"]),
     levels=[
         dict(
             id="brand-new", label="New", description="Start at the beginning.", start_concept=None

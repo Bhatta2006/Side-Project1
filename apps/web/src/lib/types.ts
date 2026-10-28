@@ -2,6 +2,15 @@ export type Language = 'python' | 'cpp' | 'java';
 export type Band = 'not_started' | 'needs_practice' | 'developing' | 'likely_known' | 'strong';
 export type Pace = 'support' | 'steady' | 'fast';
 
+/** How a course is practised and evidenced; code is the default for programming courses. */
+export interface CourseShape {
+  studio: 'code' | 'workbench' | 'lab' | 'reading';
+  loop: string;
+  evidence: string[];
+  tools: string[];
+  name: string;
+}
+
 export interface Enrollment {
   id: string;
   course: string;
@@ -11,6 +20,8 @@ export interface Enrollment {
   weekdays: number[];
   goal: Record<string, string | number>;
   level: string;
+  /** Only sent for accounts the studios are enabled for; absent means a programming course. */
+  shape?: CourseShape | null;
 }
 
 export interface Profile {
