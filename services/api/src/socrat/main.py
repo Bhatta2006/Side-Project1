@@ -41,6 +41,7 @@ from socrat.models import User
 from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
 from socrat.schema_revision import SCHEMA_REVISION
+from socrat.style.routes import router as style_router
 from socrat.trial import router as trial_router
 from socrat.vitals import router as vitals_router
 
@@ -113,6 +114,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(assessments_router)
     app.include_router(admin_router)
     app.include_router(coursegen_router)
+    app.include_router(style_router)
     app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)

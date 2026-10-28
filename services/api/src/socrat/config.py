@@ -180,6 +180,7 @@ class Settings(DatabaseSettings):
     # own provider, model, effort and prices, e.g. SOCRAT_GEN_ROLES='{"critic": {"provider":
     # "openai", "model": "...", "base_url": "..."}}'; unset keys fall back to SOCRAT_AI_*.
     gen_roles: dict[str, dict[str, str | float]] = Field(default_factory=dict)
+    style_engine_enabled: bool = True  # learning styles; admin accounts only while testing
     gen_runner: bool = True  # run queued generation jobs in the API process (off in tests)
     gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
     gen_quarantine_reports: int = Field(default=3, ge=1, le=100)  # distinct learners

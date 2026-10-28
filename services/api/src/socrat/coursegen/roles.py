@@ -28,6 +28,7 @@ ROLES = {
     "engineer",
     "designer",  # projects
     "grader",  # learners' free-text answers and project milestones
+    "stylist",  # a free-text learning wish -> a style spec
 }
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {

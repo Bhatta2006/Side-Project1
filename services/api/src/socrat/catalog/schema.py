@@ -192,7 +192,7 @@ class Concept(Model):
     module: Slug
     prerequisites: list[Ref] = Field(default_factory=list)
     difficulty: int = Field(ge=1, le=5)
-    estimated_minutes: int = Field(ge=10, le=600)
+    estimated_minutes: int = Field(ge=3, le=600)
     lesson: str = ""  # empty only while planned
     key_points: list[str] = Field(default_factory=list, max_length=8)
     pitfalls: list[str] = Field(default_factory=list, max_length=8)

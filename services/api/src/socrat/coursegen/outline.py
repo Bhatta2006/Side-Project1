@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Course, Language, Ref, Slug
+from socrat.style import spec as styles
 
 
 class Brief(BaseModel):
@@ -22,6 +23,10 @@ class Brief(BaseModel):
     reuse: list[Ref] = Field(default_factory=list, max_length=40)  # e.g. zero:loops
     references: list[str] = Field(default_factory=list, max_length=10)
     notes: str = Field(default="", max_length=2000)
+    # How learners want to learn (admin testing): a ready style, or a free-text wish the
+    # Stylist agent turns into one before the outline is written.
+    style: styles.StyleSpec | None = None
+    style_request: str = Field(default="", max_length=600)
     budget_usd: float = Field(default=5.0, gt=0, le=1000)
     # One concept package (all its rounds) may not cost more than this.
     concept_budget_usd: float = Field(default=2.0, gt=0, le=100)
@@ -150,7 +155,7 @@ SHAPE = """{
        "summary": "10-300 chars",
        "prerequisites": ["earlier-concept-id", "zero:existing-id"],
        "difficulty": 1-5,
-       "estimated_minutes": 10-600,
+       "estimated_minutes": 10-600 (3-600 when the learning style asks for short sessions),
        "depth": "overview | practitioner | mastery",
        "objectives": ["1-6 observable outcomes, each starting with a verb"],
        "misconceptions": ["up to 6 concrete wrong beliefs learners hold"],
@@ -182,6 +187,10 @@ Rules:
   for reasoning; "project" for module capstones.
 - Levels: 2-4 self-reported starting points. The first has start_concept null.
 - Write original text. Do not copy any published syllabus.
+- If the brief carries a learning style, it governs the plan: concept size follows the
+  session length (a 5-minute session means 3-8 minute concepts and many of them), depth tags
+  and assessments follow the learner and rigor (no "code" or "project" for young learners or
+  overviews unless asked), and titles speak the learner's register.
 
 Reply with one JSON object only, in exactly this shape:
 {SHAPE}"""
@@ -198,6 +207,8 @@ Check:
 - Order and prerequisites: missing or wrong edges, concepts used before they are taught,
   existing Socrat concepts that should be reused instead of re-taught.
 - Depth tags fit the audience; objectives are observable; misconceptions are concrete.
+- Style fit: when the brief has a learning style, concept size, depth, assessments and
+  titles must suit it (a mismatch is blocking).
 - Duplicates, vague titles, levels whose start_concept makes no sense.
 
 verdict is "pass" only when nothing blocking remains. Reply with one JSON object only:
@@ -214,6 +225,7 @@ def architect_prompt(
 ) -> str:
     parts = [
         "Brief:\n" + brief.model_dump_json(indent=2, exclude={"budget_usd"}),
+        *([styles.block(brief.style)] if brief.style else []),
         "Existing Socrat concepts you may use as prerequisites:\n" + known_concepts(catalog),
         "For quality, granularity and ordering, match the hand-authored DSA course:\n"
         + gold_example(catalog),
@@ -232,6 +244,7 @@ def critic_prompt(brief: Brief, outline: dict) -> str:
     return (
         "Brief:\n"
         + brief.model_dump_json(indent=2, exclude={"budget_usd"})
+        + (f"\n\n{styles.block(brief.style)}" if brief.style else "")
         + "\n\nOutline to review:\n"
         + json.dumps(outline, indent=1)
     )

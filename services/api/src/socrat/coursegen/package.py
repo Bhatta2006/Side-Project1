@@ -18,6 +18,7 @@ from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Concept, Course, Prompt, Provenance, QuizItem
 from socrat.coursegen import execute, links
 from socrat.judge.service import normalized
+from socrat.style import spec as styles
 
 AI_AUTHOR = "Socrat AI course team"
 GOLD = "dsa:sliding-window"  # a hand-authored lesson of typical depth, shown to authors
@@ -33,13 +34,20 @@ DIMENSIONS = (
     "clarity",
     "accessibility",
 )
+STYLE_DIMENSION = "style_fit"  # scored only when the course has a learning style
 
 
 def errors_of(exc: ValidationError, limit: int = 12) -> list[str]:
     return [f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:limit]]
 
 
-def context(catalog: Catalog, course: Course, brief: dict, concept: Concept) -> str:
+def context(
+    catalog: Catalog,
+    course: Course,
+    brief: dict,
+    concept: Concept,
+    style: styles.StyleSpec | None = None,
+) -> str:
     """What every author needs: the concept's contract, the course, and its neighbours."""
     prerequisites = []
     for ref in concept.prerequisites:
@@ -56,6 +64,7 @@ def context(catalog: Catalog, course: Course, brief: dict, concept: Concept) -> 
     ]
     return "\n\n".join(
         [
+            *([styles.block(style)] if style else []),
             f"Course: {course.title} — {course.description}",
             f"Learners: {brief['audience']}\nAlready know: {brief.get('background') or 'see prerequisites'}",
             f"Course code languages: {', '.join(course.languages)}",
@@ -159,6 +168,19 @@ Reply with one JSON object only:
  "lesson": ["specific fixes"], "quiz": ["..."], "atoms": ["..."]}"""
 
 
+STYLE_NOTE = """
+
+A LEARNING STYLE block is part of the context. Follow it: the lesson's length, register,
+examples, tone and structure come from the style, not from the default rules above (the
+"## " heading count, section list and reference lesson depth are defaults the style may
+override). Quiz and atoms use the style's register too; item counts stay within 4-8."""
+
+STYLE_REVIEW = """
+
+A LEARNING STYLE block is part of the context. Judge depth and clarity against that style,
+not against the reference lesson. Also score "style_fit" 1-5: would the learner described
+find the length, register, tone, examples and rigor right for them? Add "style_fit" to scores."""
+
 QUIZ_CODE = """Code items are allowed. Up to 3 items may be "kind": "output" with
 "code": {{"<language>": "complete program"}} for each of: {languages}. Each program reads no
 input and prints exactly the text of the correct option; it is run, and the item is
@@ -211,18 +233,29 @@ def quiz_example(reference: Concept | None) -> str:
     return "Reference items for quality:\n" + json.dumps(items, indent=1)
 
 
-def check_lesson(concept: Concept, course: Course, draft: dict) -> list[str]:
+def check_lesson(
+    concept: Concept, course: Course, draft: dict, style: styles.StyleSpec | None = None
+) -> list[str]:
     """Deterministic lesson gates; links are checked separately (network)."""
     problems = []
     depth = concept.outline.depth if concept.outline else "practitioner"
     text = str(draft.get("lesson", ""))
-    if len(text) < MIN_LESSON[depth]:
+    floor, ceiling = MIN_LESSON[depth], None
+    if style is not None and style.format != "standard":
+        floor, ceiling = style.lesson_bounds()
+    if len(text) < floor:
         problems.append(
-            f"The lesson is {len(text)} characters; a {depth} concept needs at least "
-            f"{MIN_LESSON[depth]}. Add worked examples, reasoning and edge cases, not padding."
+            f"The lesson is {len(text)} characters; this concept needs at least "
+            f"{floor}. Add worked examples, reasoning and edge cases, not padding."
         )
-    if len(re.findall(r"^## ", text, re.MULTILINE)) < 3:
-        problems.append("Use at least three '## ' section headings.")
+    if ceiling and len(text) > ceiling:
+        problems.append(
+            f"The lesson is {len(text)} characters; this style allows at most {ceiling}. "
+            "Keep one idea and cut the rest."
+        )
+    wanted = style.min_headings() if style is not None else 3
+    if len(re.findall(r"^## ", text, re.MULTILINE)) < wanted:
+        problems.append(f"Use at least {wanted} '## ' section heading{'s' if wanted > 1 else ''}.")
     fences = set(re.findall(r"^```([a-zA-Z+#]*)", text, re.MULTILINE)) - {""}
     allowed = set(course.languages) | {"text", "math", "plaintext"}
     stray = {f for f in fences if f.lower() not in allowed}
@@ -411,8 +444,12 @@ async def broken_links(lesson: dict, client=None) -> list[str]:
     return await links.broken(urls, client) if urls else []
 
 
-def verdict(facts: dict | None, review: dict | None) -> tuple[bool, dict[str, list[str]], dict]:
-    """Pass/fail from the fact claims and rubric, plus revision notes by artifact."""
+def verdict(
+    facts: dict | None, review: dict | None, style: bool = False
+) -> tuple[bool, dict[str, list[str]], dict]:
+    """Pass/fail from the fact claims and rubric, plus revision notes by artifact.
+    ``style``: the course has a learning style, so style_fit is scored and must be ≥ 4."""
+    dimensions = (*DIMENSIONS, STYLE_DIMENSION) if style else DIMENSIONS
     notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
     blocking = False
     for claim in (facts or {}).get("claims", []):
@@ -431,7 +468,7 @@ def verdict(facts: dict | None, review: dict | None) -> tuple[bool, dict[str, li
         )
         blocking |= claim.get("verdict") == "incorrect"
     scores = {}
-    for dim in DIMENSIONS:
+    for dim in dimensions:
         try:
             scores[dim] = int((review or {}).get("scores", {}).get(dim, 0))
         except (TypeError, ValueError):
@@ -442,6 +479,6 @@ def verdict(facts: dict | None, review: dict | None) -> tuple[bool, dict[str, li
         not blocking
         and facts is not None
         and scores["correctness"] == 5
-        and all(scores[d] >= 4 for d in DIMENSIONS)
+        and all(scores[d] >= 4 for d in dimensions)
     )
     return passed, notes, scores

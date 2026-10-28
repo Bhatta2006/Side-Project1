@@ -38,6 +38,7 @@ from socrat.coursegen.outline import (
     to_course,
 )
 from socrat.models import GeneratedCourse, GenerationJob, now
+from socrat.style import spec as styles
 
 log = logging.getLogger(__name__)
 
@@ -120,6 +121,10 @@ async def run_outline(
         job = db.get(GenerationJob, job_id)
         brief = Brief.model_validate(job.input["brief"])
         stored = generated.course(db, brief.id)
+    if brief.style is None and brief.style_request.strip():
+        spec, source = await styles.interpret(engine, settings, brief.style_request, make)
+        brief = brief.model_copy(update={"style": spec})
+        _note(engine, job_id, {"role": "stylist", "style": spec.name, "source": source})
     previous = from_course(stored) if stored is not None and job.input.get("revise") else None
     issues = [job.input["notes"]] if job.input.get("notes") else []
     best = None
@@ -253,8 +258,10 @@ async def run_package(
     # Code in quiz items and atoms only when every course language can be run to check it.
     runnable = executor.available(course.languages)
     code = list(course.languages) if runnable == list(course.languages) else []
-    ctx = pkg.context(base, course, brief.model_dump(), concept)
-    reference = pkg.gold(base)
+    style = brief.style
+    ctx = pkg.context(base, course, brief.model_dump(), concept, style)
+    reference = pkg.gold(base) if style is None or style.shows_reference() else None
+    note = pkg.STYLE_NOTE if style else ""
     version = concept.provenance.version + 1 if concept.provenance else 1
     lesson = quiz = atoms = None
     notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
@@ -283,14 +290,14 @@ async def run_package(
             break
         if "lesson" in redo:
             prompt = pkg.lesson_prompt(ctx, reference, lesson, notes["lesson"])
-            reply = await ask("author", pkg.LESSON, prompt, 16000)
+            reply = await ask("author", pkg.LESSON + note, prompt, 16000)
             if reply.data is None:
                 notes["lesson"] = [reply.problem]
                 entry = {"role": "author", "round": attempt, "issues": notes["lesson"]}
                 _note(engine, job_id, entry, reply.cost_usd)
                 continue
             lesson = reply.data
-            problems = pkg.check_lesson(concept, course, lesson)
+            problems = pkg.check_lesson(concept, course, lesson, style)
             problems += [
                 f"This resource link is unreachable or not public https; replace it: {url}"
                 for url in await pkg.broken_links(lesson, http)
@@ -315,11 +322,11 @@ async def run_package(
             if concept.outline and "explain" in concept.outline.assessment:
                 example += "\n\n" + pkg.PROMPTS.format()
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
-            pending["quiz"] = ask("quiz", pkg.QUIZ, prompt, 6000)
+            pending["quiz"] = ask("quiz", pkg.QUIZ + note, prompt, 6000)
         if "atoms" in redo or atoms is None:
             extra = pkg.ATOMS_CODE.format(languages=", ".join(code)) if code else ""
             prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], extra)
-            pending["atoms"] = ask("atoms", pkg.ATOMS, prompt, 8000)
+            pending["atoms"] = ask("atoms", pkg.ATOMS + note, prompt, 8000)
         replies = dict(zip(pending, await asyncio.gather(*pending.values()), strict=True))
         for name, reply in replies.items():
             if reply.data is None:
@@ -368,9 +375,14 @@ async def run_package(
         review_prompt = pkg.lesson_prompt(ctx, reference, None, [])
         facts, review = await asyncio.gather(
             ask("facts", pkg.FACTS, f"{ctx}\n\nPackage:\n{bundle}", 8000),
-            ask("reviewer", pkg.REVIEW, f"{review_prompt}\n\nPackage to review:\n{bundle}", 6000),
+            ask(
+                "reviewer",
+                pkg.REVIEW + (pkg.STYLE_REVIEW if style else ""),
+                f"{review_prompt}\n\nPackage to review:\n{bundle}",
+                6000,
+            ),
         )
-        passed, notes, scores = pkg.verdict(facts.data, review.data)
+        passed, notes, scores = pkg.verdict(facts.data, review.data, style is not None)
         summary = str((review.data or {}).get("summary", review.problem))[:1000]
         entry = {
             "role": "reviewer",
