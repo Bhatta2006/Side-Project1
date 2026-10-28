@@ -1159,6 +1159,7 @@ async def assistant_message(body: MessageInput, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
         user_id = user.id
+        engine_tools = style_access.enabled(settings, user)
         turn = assistant.prepare(
             db,
             cat,
@@ -1175,7 +1176,7 @@ async def assistant_message(body: MessageInput, request: Request):
     provider = budget.Metered(
         make_provider(settings), bind, settings, user_id=user_id, feature="tutor"
     )
-    toolbox = Toolbox(bind, cat, user_id)
+    toolbox = Toolbox(bind, cat, user_id, engine_tools=engine_tools)
 
     async def events():
         async for event, data in assistant.stream_reply(

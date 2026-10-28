@@ -438,6 +438,7 @@ def prepare(
         mentor_note = mentor.tutor_note(enrollment, catalog, scope)
         if mentor_note:
             sections["mentor"] = mentor_note
+        sections["verified_tools"] = VERIFIED_TOOLS
     text = message.strip() or ("I'd like a hint." if intent == "hint" else "Can you help me?")
     if intent == "reveal_confirmed" and not reveal_blocked:
         text = "I've tried my best and I'm still stuck. Please walk me through the full solution."
@@ -483,6 +484,11 @@ def prepare(
     )
 
 
+VERIFIED_TOOLS = (
+    "You have verified tools. When a learner shows math working or an answer, check it with "
+    "math_check before saying it is right or wrong; never judge algebra or units from memory. "
+    "Report what the tool found in plain words."
+)
 STYLE_KEY = styles.STYLE_KEY
 
 

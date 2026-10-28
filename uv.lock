@@ -1265,6 +1265,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "sentry-sdk" },
     { name = "sqlalchemy" },
+    { name = "sympy" },
     { name = "tzdata" },
     { name = "uvicorn" },
 ]
@@ -1278,7 +1279,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "pyyaml" },
     { name = "ruff" },
-    { name = "sympy" },
     { name = "types-pyyaml" },
 ]
 
@@ -1298,6 +1298,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3,<7" },
     { name = "sentry-sdk", specifier = ">=2.20,<3" },
     { name = "sqlalchemy", specifier = ">=2.0,<3" },
+    { name = "sympy", specifier = "==1.14.0" },
     { name = "tzdata", specifier = ">=2025.1" },
     { name = "uvicorn", specifier = ">=0.34,<1" },
 ]
@@ -1311,7 +1312,6 @@ dev = [
     { name = "pytest-cov", specifier = ">=6,<8" },
     { name = "pyyaml", specifier = ">=6.0.3,<7" },
     { name = "ruff", specifier = ">=0.11,<1" },
-    { name = "sympy", specifier = "==1.14.0" },
     { name = "types-pyyaml", specifier = ">=6,<7" },
 ]
 

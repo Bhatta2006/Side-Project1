@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from socrat import harness
 from socrat.adaptive import proposals as plan_proposals
 from socrat.adaptive import service as adaptive
 from socrat.adaptive.suggest import Draft
@@ -269,6 +270,7 @@ LABELS = {
     "propose_plan_change": "Suggesting a change to your plan",
     "propose_goal": "Drafting your goal",
     "record_observation": "Noting that for your plan",
+    "math_check": "Checking the math",
 }
 
 
@@ -301,13 +303,26 @@ def resolve_concept(catalog: Catalog, value: str) -> str | None:
 
 
 class Toolbox:
-    def __init__(self, bind: Engine, catalog: Catalog, user_id: str):
+    def __init__(self, bind: Engine, catalog: Catalog, user_id: str, engine_tools: bool = False):
         self.bind = bind
         self.catalog = catalog
         self.user_id = user_id
-        self.specs = TOOLS
+        # The harness's verified capabilities (admins only while the engine is tested).
+        self.verified = (
+            {c.tool_name: c for c in harness.capabilities().values() if c.tutor}
+            if engine_tools
+            else {}
+        )
+        self.specs = TOOLS + [
+            ToolSpec(c.tool_name, c.summary, c.parameters) for c in self.verified.values()
+        ]
 
     async def run(self, name: str, arguments: dict) -> tuple[str, bool]:
+        if name in self.verified:
+            result = await asyncio.to_thread(harness.call, self.verified[name].name, arguments)
+            if not result.ok:
+                return f"Error: {result.error}", True
+            return json.dumps(result.output, ensure_ascii=False, separators=(",", ":")), False
         return await asyncio.to_thread(self._run, name, arguments)
 
     def _run(self, name: str, arguments: dict) -> tuple[str, bool]:
