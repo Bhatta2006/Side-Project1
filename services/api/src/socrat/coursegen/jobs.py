@@ -258,6 +258,7 @@ async def run_package(
     # Code in quiz items and atoms only when every course language can be run to check it.
     runnable = executor.available(course.languages)
     editor = "editor" in shape.effective(course).tools
+    workbench = "cas" in shape.effective(course).tools
     code = list(course.languages) if editor and runnable == list(course.languages) else []
     style = brief.style
     ctx = pkg.context(base, course, brief.model_dump(), concept, style)
@@ -340,6 +341,8 @@ async def run_package(
                 example += "\n\n" + pkg.QUIZ_CODE.format(languages=", ".join(code))
             if concept.outline and "explain" in concept.outline.assessment:
                 example += "\n\n" + pkg.PROMPTS.format()
+            if workbench:
+                example += "\n\n" + pkg.EXERCISES.format()
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             pending["quiz"] = ask("quiz", pkg.QUIZ + note, prompt, 6000)
         if "atoms" in redo or atoms is None:
@@ -365,7 +368,9 @@ async def run_package(
             f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
             "before release. Not reviewed by a person." + research.credit(cited)
         )
-        live, problems = pkg.build_concept(concept, lesson, quiz, version, attribution, code)
+        live, problems = await asyncio.to_thread(
+            pkg.build_concept, concept, lesson, quiz, version, attribution, code, workbench
+        )
         pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version, code)
         output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}
         if live is not None and pack is not None and code:
@@ -387,6 +392,7 @@ async def run_package(
                 **shown,
                 "quiz": [q.model_dump(mode="json", exclude_none=True) for q in live.quiz],
                 "prompts": [x.model_dump(mode="json") for x in live.prompts],
+                "exercises": [x.model_dump(mode="json") for x in live.exercises],
                 "atoms": [a.model_dump(mode="json", exclude_none=True) for a in pack.atoms],
             },
             indent=1,

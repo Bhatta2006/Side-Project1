@@ -187,6 +187,26 @@ class Outline(Model):
     )
 
 
+class Exercise(Model):
+    """A worked-out problem a studio grades with the harness (never by a model)."""
+
+    id: Slug
+    prompt: str = Field(min_length=5, max_length=2000)
+    check: Literal["equivalent", "equation", "numeric", "steps"]
+    expected: str = Field(min_length=1, max_length=200)  # the reference answer, as text
+    unit: str = Field(default="", max_length=40)
+    hints: list[str] = Field(default_factory=list, max_length=3)
+    plot: list[str] = Field(default_factory=list, max_length=3)  # expressions in x to draw
+    difficulty: int = Field(ge=1, le=5)
+    explanation: str = Field(min_length=5, max_length=2000)  # the worked solution, shown after
+
+    @model_validator(mode="after")
+    def hints_are_short(self):
+        if any(len(h) > 300 for h in self.hints) or any(len(p) > 120 for p in self.plot):
+            raise ValueError("hints are at most 300 characters and plots 120")
+        return self
+
+
 class Concept(Model):
     id: Slug
     title: str = Field(min_length=2, max_length=100)
@@ -201,6 +221,7 @@ class Concept(Model):
     resources: list[Resource] = Field(default_factory=list, max_length=8)
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
     prompts: list[Prompt] = Field(default_factory=list, max_length=4)
+    exercises: list[Exercise] = Field(default_factory=list, max_length=10)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None

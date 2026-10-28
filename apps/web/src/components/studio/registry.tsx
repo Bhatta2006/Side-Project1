@@ -9,6 +9,7 @@ import type { CourseShape, Today } from '@/lib/types';
 import { Loading } from '@/components/common';
 import { EmptyState } from '@/components/socrat/states';
 import { Button } from '@/components/ui/button';
+import { Workbench } from './workbench';
 
 export type Studio = CourseShape['studio'];
 export interface StudioProps { shape: CourseShape }
@@ -54,4 +55,5 @@ function Notebook() {
 /** Studios with their own tools register here (the math workbench and physics lab add theirs). */
 export const STUDIOS: Partial<Record<Studio, ComponentType<StudioProps>>> = {
   reading: Notebook,
+  workbench: Workbench,
 };

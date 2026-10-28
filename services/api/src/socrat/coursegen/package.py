@@ -13,10 +13,11 @@ from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
+from socrat import harness
 from socrat.catalog import shape
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
-from socrat.catalog.schema import Concept, Course, Prompt, Provenance, QuizItem
+from socrat.catalog.schema import Concept, Course, Exercise, Prompt, Provenance, QuizItem
 from socrat.coursegen import execute, links
 from socrat.judge.service import normalized
 from socrat.style import spec as styles
@@ -201,6 +202,20 @@ A LEARNING STYLE block is part of the context. Judge depth and clarity against t
 not against the reference lesson. Also score "style_fit" 1-5: would the learner described
 find the length, register, tone, examples and rigor right for them? Add "style_fit" to scores."""
 
+EXERCISES = """This course practises in a math workbench that checks answers with a computer
+algebra system. Add "exercises": 3-6 problems the learner solves by typing an answer, easy to
+hard. Each is checked by code, so the reference answer must be exactly right.
+"exercises": [{{"id": "kebab-case", "prompt": "...", "check": "equivalent|equation|numeric|steps",
+  "expected": "...", "unit": "", "hints": ["nudge", "bigger nudge"], "plot": [],
+  "difficulty": 1, "explanation": "the worked solution"}}]
+- equivalent: a formula or expression, written like (x+1)^2 or sin(x)^2 + cos(x)^2. The learner may
+  write any equivalent form. equation: a solved equation such as x=3 (any equivalent equation is
+  accepted). steps: the learner shows working line by line and the last line must equal expected.
+- numeric: "expected" is a plain number such as 9.8 and "unit" its unit such as m/s^2.
+- plot: up to 3 expressions in x worth drawing for this problem (the learner sees the graph).
+- Use only `x`, `y`, `t`, numbers, + - * / ^, parentheses, sqrt, sin, cos, tan, exp, ln, pi.
+- Each problem has one answer, no trick wording, and hints that teach without giving it away."""
+
 QUIZ_CODE = """Code items are allowed. Up to 3 items may be "kind": "output" with
 "code": {{"<language>": "complete program"}} for each of: {languages}. Each program reads no
 input and prints exactly the text of the correct option; it is run, and the item is
@@ -286,6 +301,50 @@ def check_lesson(
     return problems
 
 
+def check_exercises(raw) -> tuple[list[Exercise], list[str]]:
+    """Exercises that parse, and whose reference answers the harness itself accepts."""
+    problems: list[str] = []
+    items = raw if isinstance(raw, list) else []
+    if not 3 <= len(items) <= 8:
+        return [], [f"Write 3-6 exercises; got {len(items)}."]
+    parsed = []
+    for entry in items:
+        where = entry.get("id", "?") if isinstance(entry, dict) else "?"
+        try:
+            ex = Exercise.model_validate(entry)
+        except (ValidationError, TypeError) as exc:
+            detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
+            problems.append(f"exercise {where}: {'; '.join(detail)}")
+            continue
+        if ex.check == "numeric":
+            request = {
+                "op": "numeric",
+                "expected": ex.expected,
+                "given": f"{ex.expected} {ex.unit}",
+                "unit": ex.unit,
+            }
+        else:
+            op = "equation" if ex.check == "equation" else "equivalent"
+            request = {"op": op, "expected": ex.expected, "given": ex.expected}
+        verdict = harness.call("math.check", request)
+        if not verdict.ok or verdict.output.get("verdict") != "correct":
+            why = verdict.error or verdict.output.get("reason", "")
+            problems.append(
+                f"exercise {ex.id}: the reference answer is not valid math the checker accepts ({why})"
+            )
+            continue
+        for expr in ex.plot:
+            seen = harness.call("math.check", {"op": "equivalent", "expected": expr, "given": expr})
+            if not seen.ok or seen.output.get("verdict") != "correct":
+                problems.append(
+                    f"exercise {ex.id}: cannot plot {expr!r}; use x, numbers and basic functions"
+                )
+        parsed.append(ex)
+    if len({e.id for e in parsed}) != len(parsed):
+        problems.append("Exercise ids must be unique.")
+    return parsed, problems
+
+
 def build_concept(
     concept: Concept,
     lesson: dict,
@@ -293,6 +352,7 @@ def build_concept(
     version: int,
     attribution: str,
     languages: list[str] = (),
+    workbench: bool = False,
 ):
     """The live concept, or (None, problems by artifact). ``languages``: code items allowed
     (and required in each of them), verified later by ``run_code``. Free-text prompts are
@@ -332,6 +392,10 @@ def build_concept(
             problems["quiz"].append(f"prompt {where}: {'; '.join(detail)}")
     if len({x.id for x in prompts}) != len(prompts):
         problems["quiz"].append("Prompt ids must be unique.")
+    exercises: list[Exercise] = []
+    if workbench:
+        exercises, bad = check_exercises(quiz.get("exercises"))
+        problems["quiz"].extend(bad)
     if any(problems.values()):
         return None, problems
     try:
@@ -343,6 +407,7 @@ def build_concept(
                 "pitfalls": lesson.get("pitfalls", []),
                 "quiz": parsed,
                 "prompts": prompts,
+                "exercises": exercises,
                 "provenance": Provenance(
                     author=AI_AUTHOR, version=version, attribution_md=attribution
                 ),

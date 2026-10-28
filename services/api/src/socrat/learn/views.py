@@ -297,6 +297,7 @@ def concept_view(
         attribution=concept.provenance.attribution_md if concept.provenance else "",
         exercises=resources.selected(qualified, language, "exercises"),
         prompts=graded.prompt_views(db, enrollment, qualified, concept),
+        workbench=len(concept.exercises),
         key_points=concept.key_points,
         pitfalls=concept.pitfalls,
         resources=resources.personalised(db, user.id, qualified, concept, language, current_band),

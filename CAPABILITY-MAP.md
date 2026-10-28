@@ -10,6 +10,7 @@ Everything is admin-only while testing.
 | sourced-content | Researcher agent: open and public sources only, license allow-list, citations and provenance on every lesson, cache and reuse to keep cost low | course-shape |
 | studio-shell | Fixed spine plus a dynamic Studio slot; renderer registry per studio type; Evidence adapts to evidence kinds; existing code practice becomes the "code" studio | course-shape |
 | mentor-core | Teaching-moves policy over the existing skill profile and planner; bounded autonomy (auto vs propose); undo; learner-visible "why" log | course-shape |
+| harness | The engine's single contract: typed, sandboxed, verified capabilities (math.check first) called by the tutor, builder gates and studios; the model is replaceable | answer-checking |
 | math-workbench | Studio for math: JSXGraph graphs, answer and derivation checking | studio-shell, answer-checking, sourced-content |
 | physics-lab | Studio for physics: simulations (PhET for testing, own JSXGraph sims), predict-observe-explain loop, units checking | studio-shell, answer-checking, math-workbench, sourced-content |
 
@@ -25,6 +26,8 @@ Boundaries between modules:
 - `course-shape` owns the schema; everyone else reads it.
 - `mentor-core` never renders UI; it writes decisions and the "why" log. `studio-shell`
   shows them.
+- `harness` is the product: subject abilities (math, units, simulations, CAD, music) are registered
+  capabilities, never special cases inside a studio or a prompt. Models explain; capabilities verify.
 - `answer-checking` has no knowledge of courses; studios call it.
 - `sourced-content` owns the license allow-list and the citation record; builders may not
   bypass it.
