@@ -10,6 +10,7 @@ import { KIND_LABEL, NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, f
 import type { PlanView, ProjectView, RoadmapItem } from '@/lib/types';
 import { Milestones, PathStyles, WeeklyReviewPanel } from '@/components/socrat/plan-adaptive';
 import { ProposalList } from '@/components/socrat/proposals';
+import { MentorLog } from '@/components/mentor-log';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal } from '@/components/common';
@@ -133,6 +134,7 @@ export default function PlanPage() {
 
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
         <div className="grid min-w-0 content-start gap-4 lg:col-span-8 lg:gap-6">
+          <MentorLog />
           {pending.length ? (
             <Card id="proposals" aria-labelledby="proposals-heading">
               <div className="grid gap-3 px-(--card-spacing)">

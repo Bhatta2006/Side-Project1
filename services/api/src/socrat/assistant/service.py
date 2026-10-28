@@ -33,6 +33,7 @@ from socrat.learn import service as learn
 from socrat.library import recommend
 from socrat.library import service as library
 from socrat.mastery.model import band
+from socrat.mentor import service as mentor
 from socrat.models import (
     AssistantMessage,
     AssistantThread,
@@ -433,6 +434,10 @@ def prepare(
     style = personal_style(settings, user, enrollment)
     if style is not None:
         sections["learning_style"] = styles.tutor_block(style)
+    if enrollment is not None and style_access.enabled(settings, user):
+        mentor_note = mentor.tutor_note(enrollment, catalog, scope)
+        if mentor_note:
+            sections["mentor"] = mentor_note
     text = message.strip() or ("I'd like a hint." if intent == "hint" else "Can you help me?")
     if intent == "reveal_confirmed" and not reveal_blocked:
         text = "I've tried my best and I'm still stuck. Please walk me through the full solution."

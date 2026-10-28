@@ -37,6 +37,7 @@ from socrat.learn.routes import router as learner_router
 from socrat.learn.session_routes import router as session_router
 from socrat.library import autosync
 from socrat.library.routes import router as library_router
+from socrat.mentor.routes import router as mentor_router
 from socrat.models import User
 from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
@@ -115,6 +116,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_router)
     app.include_router(coursegen_router)
     app.include_router(style_router)
+    app.include_router(mentor_router)
     app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)

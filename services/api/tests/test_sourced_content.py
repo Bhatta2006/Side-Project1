@@ -41,6 +41,24 @@ def test_candidates_drop_duplicates_and_malformed_entries():
     assert research.candidates("not json") == [] and research.candidates({"sources": 3}) == []
 
 
+def test_sources_are_ranked_by_fit_for_the_learner_and_weak_fits_are_dropped():
+    data = {
+        "sources": [
+            {"title": "A", "url": "https://a.org/1", "supports": "x", "fit": 3, "role": "explain"},
+            {"title": "B", "url": "https://b.org/1", "supports": "x", "fit": 5, "role": "visual"},
+            {"title": "C", "url": "https://c.org/1", "supports": "x", "fit": 2, "role": "explain"},
+        ]
+    }
+    kept = research.candidates(data)
+    assert [s["title"] for s in kept] == ["B", "A"]
+    assert (
+        research.attach({"lesson": "t [1]"}, [{**kept[0], "n": 1, "license": "x"}])["resources"][0][
+            "kind"
+        ]
+        == "interactive"
+    )
+
+
 def test_screen_keeps_only_reachable_sources_numbered_and_license_tagged(web):  # noqa: F811
     kept = asyncio.run(research.screen(SOURCES, web()))
     assert [(s["n"], s["url"]) for s in kept] == [(1, GOOD[0])]

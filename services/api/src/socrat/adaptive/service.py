@@ -160,6 +160,15 @@ def review_scale_for(db: Session, enrollment: Enrollment) -> float:
     return profiles.review_scale(scores)
 
 
+def overrides_with_mentor(data: dict) -> dict:
+    """The learner's overrides, plus the pace the mentor set; what the learner said wins."""
+    overrides = dict(data.get("overrides", {}))
+    mentor_feel = data.get("mentor", {}).get("feel", {})
+    if mentor_feel:
+        overrides["feel"] = {**mentor_feel, **overrides.get("feel", {})}
+    return overrides
+
+
 def inputs(
     db: Session,
     catalog: Catalog,
@@ -174,7 +183,7 @@ def inputs(
         course_id=enrollment.course_id,
         goal=dict(enrollment.goal or {}),
         style=data.get("style", "balanced"),
-        overrides=dict(data.get("overrides", {})),
+        overrides=overrides_with_mentor(data),
         stuck=stuck_map(skill, now),
         tried=tried(db, enrollment),
         adherence=adherence_for(db, enrollment, today),
