@@ -37,6 +37,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
 // The tutor panel opens on demand: load it after hydration so it stays out of first-load JS.
+// Only the 'Visual' tab needs it, so it loads when that tab is opened.
+const ConceptVisual = dynamic(() => import('@/components/socrat/concept-visual').then(m => m.ConceptVisual), { ssr: false });
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 type Tone = 'success' | 'info' | 'error' | 'warning';
@@ -335,6 +337,7 @@ export default function Problem() {
               <TabsList variant="line" className="h-12">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="attempts">Attempts{problem.history.length ? ` (${problem.history.length})` : ''}</TabsTrigger>
+                <TabsTrigger value="visual">Visual</TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="description" className="max-h-none overflow-y-auto p-5 lg:max-h-[calc(100dvh-13rem)]">
@@ -364,6 +367,10 @@ export default function Problem() {
                   {ex.explanation ? <p className="mt-2 text-sm text-muted-foreground">{ex.explanation}</p> : null}
                 </div>
               ))}
+            </TabsContent>
+            <TabsContent value="visual" className="p-5">
+              <p className="mb-3 text-[15px] text-muted-foreground">A visual of {problem.concept.title}, the idea behind this problem. It does not solve it.</p>
+              <ConceptVisual concept={problem.concept.id} title={problem.concept.title} problem={problem.id} />
             </TabsContent>
             <TabsContent value="attempts" className="p-5">
               {problem.history.length ? (

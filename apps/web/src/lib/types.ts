@@ -96,7 +96,8 @@ export type ActivityKind =
   | 'example'
   | 'explain'
   | 'checkin'
-  | 'stretch';
+  | 'stretch'
+  | 'transfer';
 
 export interface Activity {
   id: string;
@@ -112,7 +113,7 @@ export interface Activity {
 
 export type ReasonCode =
   | 'path' | 'assumed_confirm' | 'failed_check_refresh' | 'stuck_support' | 'review_due'
-  | 'checkpoint' | 'checkpoint_retry' | 'chosen_testout' | 'probe' | 'approved_refresh' | 'stretch';
+  | 'checkpoint' | 'checkpoint_retry' | 'chosen_testout' | 'probe' | 'approved_refresh' | 'stretch' | 'transfer';
 
 /** A concept check or review served by the adaptive engine. */
 export interface AdaptiveSession {
@@ -302,6 +303,10 @@ export interface RoadmapItem {
   lesson_done: boolean;
   quiz_done: boolean;
   review_due: boolean;
+  /** Qualified ids of the concepts this one builds on; may include ones outside the enrolled roadmap. */
+  requires: string[];
+  /** Transfer check: verified, due (take it), pending (solve the problem), wait (cooling down). */
+  transfer?: 'verified' | 'due' | 'pending' | 'wait' | null;
   roadmap_resources: { title: string; url: string; source: string; language: string | null }[];
   concept: string;
   title: string;
@@ -549,6 +554,30 @@ export interface Gate {
 export interface LockInfo {
   gate: string;
   module: string;
+  /** The checkpoint is passed; a transfer check still holds the module shut. */
+  needs_transfer?: boolean;
+  /** The transfer check to take now, if one is open. */
+  transfer?: string | null;
+}
+
+export type TransferView =
+  | { concept: string; title: string; state: 'unavailable' | 'verified' }
+  | { concept: string; title: string; state: 'wait'; retry_at: number }
+  | { concept: string; title: string; state: 'solve'; problem: string }
+  | {
+      concept: string;
+      title: string;
+      state: 'classify';
+      problem: { id: string; statement: string; input_format: string; output_format: string; constraints: string[]; examples: { input: string; output: string; explanation?: string }[] };
+      choices: { id: string; title: string }[];
+    };
+
+export interface TransferResult {
+  correct: boolean;
+  state: 'solve' | 'wait';
+  problem?: string;
+  retry_at?: number;
+  answer?: string;
 }
 
 export interface Case {
@@ -701,13 +730,14 @@ export interface PassportView {
   member_since: string;
   course: string | null;
   language: Language | null;
-  mastered: { id: string; title: string; evidence: number }[];
+  mastered: { id: string; title: string; evidence: number; transfer_verified: boolean }[];
   practising: { id: string; title: string; evidence: number }[];
   counts: {
     unaided_solves: number;
     judged_solves: number;
     assisted_solves: number;
     checks_passed: number;
+    transfer_verified: number;
     checkpoints: number;
     weekly_assessments: number;
     longest_streak: number;

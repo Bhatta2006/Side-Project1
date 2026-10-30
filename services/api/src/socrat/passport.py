@@ -54,6 +54,7 @@ def evidence(db: Session, catalog: Catalog, user: User, stamp: int) -> dict:
             judged_solves=0,
             assisted_solves=0,
             checks_passed=0,
+            transfer_verified=0,
             checkpoints=0,
             weekly_assessments=0,
             longest_streak=0,
@@ -72,7 +73,13 @@ def evidence(db: Session, catalog: Catalog, user: User, stamp: int) -> dict:
         if not state.evidence_count:
             continue
         label = band(state, stamp)
-        entry = dict(id=item["concept"], title=item["title"], evidence=state.evidence_count)
+        entry = dict(
+            id=item["concept"],
+            title=item["title"],
+            evidence=state.evidence_count,
+            # Solved a problem it had never seen, after naming the technique, with no help.
+            transfer_verified=item.get("transfer") == "verified",
+        )
         if label == "strong":
             mastered.append(entry)
         elif label in {"developing", "likely_known"}:
@@ -110,6 +117,7 @@ def evidence(db: Session, catalog: Catalog, user: User, stamp: int) -> dict:
             judged_solves=solves["independent_solves"] + solves["assisted_solves"],
             assisted_solves=solves["assisted_solves"],
             checks_passed=checks or 0,
+            transfer_verified=sum(m["transfer_verified"] for m in mastered),
             checkpoints=len(facts.events.get("gates", [])),
             weekly_assessments=weekly or 0,
             longest_streak=streak["longest"],

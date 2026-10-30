@@ -5,6 +5,7 @@ export function activityHref(id: string): string {
   const [kind, ...rest] = id.split(':');
   if (kind === 'lesson') return `/learn/${rest.join('/')}`;
   if (kind === 'problem') return `/problems/${rest.join('/')}`;
+  if (kind === 'transfer') return `/transfer/${rest.join('/')}`;
   // Support steps live on the concept's lesson page, which shows the step on top.
   if (SUPPORT_STEPS.includes(kind)) return `/learn/${rest.join('/')}?step=${kind}`;
   if (kind === 'quiz') return `/quiz/${rest.join('/')}`; // concept checks: /quiz/zero/programs-and-output
@@ -49,7 +50,7 @@ export type NavKey = 'today' | 'skills' | 'practice' | 'playground' | 'evidence'
 /** Six destinations. Each lists the routes that live under it, for the active state. */
 export const NAV: { key: NavKey; href: string; label: string; owns: string[] }[] = [
   { key: 'today', href: '/today', label: NAME.today, owns: ['/today'] },
-  { key: 'skills', href: '/plan', label: NAME.skills, owns: ['/plan', '/learn', '/quiz'] },
+  { key: 'skills', href: '/plan', label: NAME.skills, owns: ['/plan', '/graph', '/learn', '/quiz', '/transfer'] },
   { key: 'practice', href: '/library', label: NAME.practice, owns: ['/library', '/companies', '/company-sprint', '/sprint', '/problems'] },
   { key: 'playground', href: '/playground', label: NAME.playground, owns: ['/playground'] },
   { key: 'evidence', href: '/progress', label: NAME.evidence, owns: ['/progress', '/assessments'] },
@@ -82,6 +83,7 @@ export const KIND_LABEL: Record<ActivityKind, string> = {
   explain: 'Another explanation',
   checkin: 'Talk it through',
   stretch: 'Stretch',
+  transfer: 'Transfer check',
 };
 
 export const STYLE_LABEL = {

@@ -25,6 +25,7 @@ EvidenceKind = Literal[
     "explanation",
     "testout",
     "tutor",
+    "transfer",
 ]
 WEIGHTS: dict[str, float] = {
     "placement": 1.0,
@@ -43,6 +44,8 @@ WEIGHTS: dict[str, float] = {
     "testout": 8.0,
     # A tutor observation can only flag a gap (score <= 0.5), never manufacture mastery.
     "tutor": 0.15,
+    # Independent solve of a problem never seen before, after naming the technique unaided.
+    "transfer": 1.2,
 }
 # Socratic assistance level 0–5 → how much a success still counts.
 ASSISTANCE = (1.0, 0.85, 0.7, 0.5, 0.3, 0.1)
