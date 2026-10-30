@@ -195,6 +195,8 @@ def expected_seconds(catalog: Catalog, activity_id: str, enrollment: Enrollment)
         return 15 * 60
     if kind in {"probe", "testout"}:
         return 10 * 60
+    if kind == "transfer":
+        return 15 * 60
     if kind in {"example", "explain", "checkin", "stretch"}:
         return {"checkin": 5, "stretch": 20}.get(kind, 10) * 60
     if kind == "problem":
@@ -287,12 +289,16 @@ def locked_concepts(
     Content outside the learner's plan is locked here too (gate `PLAN_GATE`), so every
     picker that skips locked concepts (quizzes, sessions, practice, Soc) skips it as well.
     """
+    from socrat.learn import transfers
+
+    states, completed = states_for(db, enrollment), completed_for(db, enrollment)
     locked = gates.locked_concepts(
         catalog,
         enrollment.course_id,
-        states_for(db, enrollment),
-        completed_for(db, enrollment),
+        states,
+        completed,
         now,
+        transfers.current(db, catalog, enrollment, states, completed, now).blocking,
     )
     for concept in entitlements.plan_locked(db, catalog, enrollment.user_id, now):
         locked[concept] = entitlements.PLAN_GATE
@@ -430,11 +436,14 @@ def build_for(
     adaptive = adaptive_service.inputs(db, catalog, enrollment, states, today, now)
     if style is not None:
         adaptive = replace(adaptive, style=style)
+    from socrat.learn import transfers
+
+    completed = completed_for(db, enrollment)
     plan = build_plan(
         catalog,
         catalog.course_concepts(enrollment.course_id),
         states,
-        completed_for(db, enrollment),
+        completed,
         history_for(db, enrollment),
         today,
         now,
@@ -443,6 +452,7 @@ def build_for(
         course_id=enrollment.course_id,
         cooldowns=gate_cooldowns(db, enrollment),
         adaptive=adaptive,
+        transfer=transfers.current(db, catalog, enrollment, states, completed, now),
     )
     return plan, adaptive
 

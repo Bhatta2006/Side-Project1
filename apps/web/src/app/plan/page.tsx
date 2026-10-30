@@ -125,6 +125,7 @@ export default function PlanPage() {
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setPlanChat(n => n + 1)}><MessageCircle data-icon="inline-start" /> Plan with Soc</Button>
+            <Button asChild variant="outline"><Link href="/graph">Skill graph</Link></Button>
           </div>
         </header>
       </Reveal>
@@ -220,9 +221,19 @@ export default function PlanPage() {
                     </summary>
                     <div className="grid gap-3 px-5 pb-5 lg:px-6 lg:pb-6">
                       {module.locked_by ? (
-                        <LockedState title={`Locked until ${module.locked_by.module}`} href={activityHref(module.locked_by.gate)}>
-                          Already know this? Pass the {module.locked_by.module} checkpoint (up to 10 questions) to unlock it now.
-                        </LockedState>
+                        module.locked_by.needs_transfer ? (
+                          <LockedState
+                            title={`Locked until you prove a ${module.locked_by.module} skill`}
+                            href={module.locked_by.transfer ? activityHref(module.locked_by.transfer) : '/today'}
+                            action={module.locked_by.transfer ? 'Take the transfer check' : 'See Today'}
+                          >
+                            The checkpoint is passed. Solve one problem you have not seen, unaided, to open this module.{module.locked_by.transfer ? '' : ' Your next problem opens tomorrow.'}
+                          </LockedState>
+                        ) : (
+                          <LockedState title={`Locked until ${module.locked_by.module}`} href={activityHref(module.locked_by.gate)}>
+                            Already know this? Pass the {module.locked_by.module} checkpoint (up to 10 questions) to unlock it now.
+                          </LockedState>
+                        )
                       ) : null}
                       <ul className="grid gap-2">
                         {module.concepts.map(c => {
@@ -240,6 +251,7 @@ export default function PlanPage() {
                                 <span className="flex flex-wrap gap-1.5">
                                   {here ? <Badge>Current</Badge> : null}
                                   {c.review_due ? <Badge>Review due</Badge> : null}
+                                  {c.transfer === 'verified' ? <Badge variant="secondary">Transfer verified</Badge> : null}
                                   {c.lesson_done ? <Badge variant="secondary">Lesson read</Badge> : null}
                                   {c.quiz_done ? <Badge variant="secondary">Concept check done</Badge> : null}
                                   {c.reason_codes?.map(code => <ReasonChip key={code} code={code} />)}

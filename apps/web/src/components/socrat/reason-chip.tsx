@@ -14,6 +14,7 @@ export const REASON_LABEL: Record<ReasonCode, string> = {
   probe: 'Finding the gap',
   approved_refresh: 'Refresher you approved',
   stretch: 'Stretch',
+  transfer: 'Proves it transfers',
 };
 
 /** Outlined pill, text plus a dot: never colour alone. Plain path items get no chip. */

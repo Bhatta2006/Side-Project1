@@ -22,6 +22,7 @@ import Markdown from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { AttentionIcon, LockedState } from '@/components/socrat/states';
 import { Soc } from '@/components/socrat/illustration';
+import { ConceptVisual } from '@/components/socrat/concept-visual';
 import { StatusIcon } from '@/components/socrat/status';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -335,6 +336,7 @@ export default function Problem() {
               <TabsList variant="line" className="h-12">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="attempts">Attempts{problem.history.length ? ` (${problem.history.length})` : ''}</TabsTrigger>
+                <TabsTrigger value="visual">Visual</TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="description" className="max-h-none overflow-y-auto p-5 lg:max-h-[calc(100dvh-13rem)]">
@@ -364,6 +366,10 @@ export default function Problem() {
                   {ex.explanation ? <p className="mt-2 text-sm text-muted-foreground">{ex.explanation}</p> : null}
                 </div>
               ))}
+            </TabsContent>
+            <TabsContent value="visual" className="p-5">
+              <p className="mb-3 text-[15px] text-muted-foreground">A visual of {problem.concept.title}, the idea behind this problem. It does not solve it.</p>
+              <ConceptVisual concept={problem.concept.id} title={problem.concept.title} problem={problem.id} />
             </TabsContent>
             <TabsContent value="attempts" className="p-5">
               {problem.history.length ? (
