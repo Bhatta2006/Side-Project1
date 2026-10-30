@@ -22,7 +22,6 @@ import Markdown from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { AttentionIcon, LockedState } from '@/components/socrat/states';
 import { Soc } from '@/components/socrat/illustration';
-import { ConceptVisual } from '@/components/socrat/concept-visual';
 import { StatusIcon } from '@/components/socrat/status';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -38,6 +37,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
 // The tutor panel opens on demand: load it after hydration so it stays out of first-load JS.
+// Only the 'Visual' tab needs it, so it loads when that tab is opened.
+const ConceptVisual = dynamic(() => import('@/components/socrat/concept-visual').then(m => m.ConceptVisual), { ssr: false });
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 type Tone = 'success' | 'info' | 'error' | 'warning';

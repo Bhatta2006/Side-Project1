@@ -1,5 +1,6 @@
 import json
 import uuid
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -264,7 +265,9 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
     job = db.get(PlaygroundJob, row.job_id) if row is not None and row.job_id else None
     if row is not None and row.status == "generating" and row.source_hash == source:
         return dict(
-            state="generating", progress=job.progress if job else {}, mine=job.user_id == user.id
+            state="generating",
+            progress=job.progress if job else {},
+            mine=bool(job and job.user_id == user.id),
         )
     if not start:
         failed = row is not None and row.status == "failed" and row.source_hash == source
@@ -286,7 +289,8 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
         db.add(row)
         db.flush()  # a learner who got here first wins; the other attaches to their job
     else:
-        for name, value in dict(fresh, reports=[], updated_at=now()).items():
+        values: dict[str, Any] = dict(fresh, reports=[], updated_at=now())
+        for name, value in values.items():
             setattr(row, name, value)
     # Whoever asks first starts the one generation; it is not charged to their plan.
     enqueue(

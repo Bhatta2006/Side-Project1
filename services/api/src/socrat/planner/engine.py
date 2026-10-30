@@ -596,8 +596,8 @@ def build_plan(
     )[: transfers.MAX_QUEUED]
     for q in checks:
         blocked = module_of(catalog, q) in transfer.blocking
-        pending = transfer.status[q] == "pending"
-        if pending:
+        unfinished = transfer.status[q] == "pending"
+        if unfinished:
             reason = "You named the technique; now solve the problem on your own."
         elif blocked:
             reason = "The next module opens once you show a skill here works on new problems."
@@ -608,7 +608,7 @@ def build_plan(
                 transfers.activity_id(q),
                 "transfer",
                 q,
-                f"{'Finish' if pending else 'Prove it'}: {catalog.concept(q).title}",
+                f"{'Finish' if unfinished else 'Prove it'}: {catalog.concept(q).title}",
                 TRANSFER_MINUTES,
                 reason=reason,
                 code="transfer",

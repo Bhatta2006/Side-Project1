@@ -40,9 +40,11 @@ def seen_problems(db: Session, enrollment: Enrollment) -> set[str]:
             )
         )
     }
-    asked = db.scalars(
-        select(Evidence.details).where(
-            Evidence.enrollment_id == enrollment.id, Evidence.kind == "transfer"
+    asked: list[dict] = list(
+        db.scalars(
+            select(Evidence.details).where(
+                Evidence.enrollment_id == enrollment.id, Evidence.kind == "transfer"
+            )
         )
     )
     return seen | {d["problem"] for d in asked if d.get("problem")}
