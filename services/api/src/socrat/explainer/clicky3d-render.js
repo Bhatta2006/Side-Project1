@@ -1260,7 +1260,8 @@ void main() { fragColor = vec4(0.2, 0.4, 0.6, 1.0); }`),
       gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.useProgram(programs.ids.p);
       gl.uniformMatrix4fv(programs.ids.u.uViewProjection, false, camera.viewProjection);
-      for (const object of objects) drawObject(programs.ids, object, camera, false);
+      // Particles (noInk) stay out of the id buffer, so the ink pass never outlines them.
+      for (const object of objects) if (!object.noInk) drawObject(programs.ids, object, camera, false);
 
       const readsClear = glass.length > 0;
       if (readsClear) {
@@ -1269,7 +1270,7 @@ void main() { fragColor = vec4(0.2, 0.4, 0.6, 1.0); }`),
         gl.clear(gl.DEPTH_BUFFER_BIT);
         gl.useProgram(programs.ids.p);
         gl.uniformMatrix4fv(programs.ids.u.uViewProjection, false, camera.viewProjection);
-        for (const object of objects) if (!object.transparent) drawObject(programs.ids, object, camera, false);
+        for (const object of objects) if (!object.transparent && !object.noInk) drawObject(programs.ids, object, camera, false);
       }
 
       // Resolve.

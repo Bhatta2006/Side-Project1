@@ -147,7 +147,7 @@ export async function run(context, input) {
       ...(typeof Sketch === 'undefined' ? [] : Sketch.audit()),
       ...(typeof Clicky3D === 'undefined' ? [] : Clicky3D.audit()),
     ]);
-    if (problems.length) throw Error('Layout problem (shorten the text or use fewer items): ' + problems.slice(0, 3).join('; '));
+    if (problems.length) throw Error('Layout problem: ' + problems.slice(0, 3).join('; ') + (problems.some(p => /overlaps|runs outside/.test(p)) ? '. Shorten the text or use fewer items' : ''));
   };
   const observations = [await observe()];
   await layout();
@@ -198,6 +198,6 @@ const CLOSE_GRACE_MS = 500;
 
 if (process.argv[1]?.endsWith('check-artifact.mjs')) {
   main()
-    .catch(error => { const infrastructure = String(error.message).includes('browserType.launch'); return { ok: false, infrastructure, reason: infrastructure ? 'Browser checker unavailable' : String(error.message).slice(0,300), ...(infrastructure ? { detail: String(error.message).slice(0,600) } : {}) }; })
+    .catch(error => { const infrastructure = String(error.message).includes('browserType.launch'); return { ok: false, infrastructure, reason: infrastructure ? 'Browser checker unavailable' : String(error.message).slice(0,1200), ...(infrastructure ? { detail: String(error.message).slice(0,600) } : {}) }; })
     .then(result => process.stdout.write(JSON.stringify(result), () => process.exit(result.ok ? 0 : 1)));
 }

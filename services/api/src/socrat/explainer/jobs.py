@@ -104,8 +104,14 @@ async def run(engine: Engine, settings: Settings, job_id: str):
                 provider, provider_settings, prompt, language, level, mode
             ):
                 if event["event"] == "progress":
-                    progress = {k: v for k, v in event.items() if k != "event" and v is not None}
-                    if save(engine, job_id, progress=progress) != "running":
+                    progress = {
+                        k: v
+                        for k, v in event.items()
+                        if k not in ("event", "mode") and v is not None
+                    }
+                    # An auto request learns its medium from the router's first event.
+                    extra = {"mode": event["mode"]} if event.get("mode") else {}
+                    if save(engine, job_id, progress=progress, **extra) != "running":
                         return
                     continue
                 with Session(engine) as db, db.begin():
