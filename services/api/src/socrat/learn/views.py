@@ -35,7 +35,7 @@ from socrat.models import (
     WeeklyAssessment,
 )
 from socrat.models import now as now_seconds
-from socrat.planner.engine import Plan
+from socrat.planner.engine import Plan, module_of
 
 LANGUAGES = {"python": "Python", "cpp": "C++", "java": "Java"}
 
@@ -102,6 +102,7 @@ def describe(catalog: Catalog, activity_id: str) -> dict:
         "explain": f"{concept.title}, explained another way",
         "checkin": f"Talk it through: {concept.title}",
         "stretch": f"Stretch: a harder {concept.title} problem",
+        "transfer": f"Prove it: {concept.title}",
     }
     return dict(kind=kind, title=titles.get(kind, concept.title), concept=target)
 
@@ -225,6 +226,7 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
                 quiz_done=f"quiz:{item['concept']}" in completed,
                 review_due=states.get(item["concept"], ConceptState()).due(now),
                 reason_codes=reason_codes.get(item["concept"], []),
+                requires=catalog.prerequisites[item["concept"]],
                 roadmap_resources=resources.selected(
                     item["concept"], enrollment.language, "roadmap"
                 ),
@@ -233,8 +235,19 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
         if item.get("locked_by"):
             gate_module = item["locked_by"].removeprefix("checkpoint:")
             gate_course, gate_id = gate_module.split(":", 1)
+            held = gate_module in plan.held
+            wanted = [
+                r["concept"]
+                for r in plan.roadmap
+                if held
+                and module_of(catalog, r["concept"]) == gate_module
+                and r.get("transfer") in {"due", "pending"}
+            ]
             index[module_key]["locked_by"] = dict(
                 gate=item["locked_by"],
+                # The checkpoint is passed; a transfer check is what still holds the module shut.
+                needs_transfer=held,
+                transfer=f"transfer:{wanted[0]}" if wanted else None,
                 module=next(
                     m.title for m in catalog.course(gate_course).modules if m.id == gate_id
                 ),

@@ -15,6 +15,7 @@ import Markdown, { outline } from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
 import { Illustration, Soc } from '@/components/socrat/illustration';
+import { ConceptVisual } from '@/components/socrat/concept-visual';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
 import { EmptyState, LockedState } from '@/components/socrat/states';
 import { openReportProblem } from '@/components/report-problem';
@@ -272,6 +273,11 @@ export default function Lesson() {
           <Stepper concept={concept} className="mb-8 lg:hidden" />
           <p className="type-body-l mb-6 max-w-[68ch] text-muted-foreground text-pretty">{concept.summary}</p>
 
+          {/* The concept's shared visual sits above the reading; free-form requests stay in the Playground. */}
+          <section className="mb-8" aria-label={`${concept.title}, visual`}>
+            <ConceptVisual concept={concept.id} title={concept.title} />
+          </section>
+
           {concept.locked ? (
             <LockedState title={`Preview only. Practice and checks unlock after ${concept.locked.module}.`} href={activityHref(concept.locked.gate)} className="mb-6">
               Read ahead freely. The checkpoint unlocks the rest.
@@ -334,14 +340,6 @@ export default function Lesson() {
             ) : null}
           </section>
 
-          {/* Playground: the skill is passed as a request topic only. */}
-          <Link href={`/playground?concept=${encodeURIComponent(concept.id)}`} className="group mt-6 flex max-w-[68ch] items-center justify-between gap-4 rounded-card bg-cream p-5 text-cream-foreground shadow-[0_10px_24px_-18px_rgb(21_22_30/0.35)] transition-[transform,background-color] duration-200 hover:-translate-y-0.5 hover:-rotate-[0.4deg] lg:p-6">
-            <span>
-              <span className="type-label block">{NAME.playground}</span>
-              <span className="mt-1 block font-display text-xl font-semibold tracking-[-0.02em]">Explore {concept.title} visually</span>
-            </span>
-            <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-          </Link>
 
           {/* End of lesson: reading is not proof. */}
           <section className="mt-10 max-w-[68ch] border-t pt-8" aria-labelledby="finish-heading">

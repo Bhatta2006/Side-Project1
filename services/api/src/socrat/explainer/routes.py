@@ -1,12 +1,14 @@
 import json
 import uuid
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
@@ -14,11 +16,19 @@ from socrat.assistant import budget
 from socrat.assistant import service as assistant
 from socrat.assistant.gateway import ProviderError
 from socrat.database import record_event
-from socrat.explainer import jobs
+from socrat.explainer import jobs, shared
 from socrat.explainer.artifact import compile_document
 from socrat.explainer.jobs import playground_code
+from socrat.learn import transfers
 from socrat.learn.routes import active, catalog, engine, guard_instruction, user_of
-from socrat.models import AssistantMessage, AssistantThread, PlaygroundJob, User, now
+from socrat.models import (
+    AssistantMessage,
+    AssistantThread,
+    PlaygroundJob,
+    SharedVisual,
+    User,
+    now,
+)
 
 router = APIRouter(prefix="/api/v1/playground")
 SCOPE = "playground:visual"
@@ -84,8 +94,14 @@ def owned(db, artifact_id, user_id):
         .where(
             AssistantMessage.id == artifact_id,
             AssistantMessage.role == "assistant",
-            AssistantThread.user_id == user_id,
             AssistantThread.scope == SCOPE,
+            # Your own saved visuals, and any visual the whole site shares.
+            or_(
+                AssistantThread.user_id == user_id,
+                AssistantMessage.id.in_(
+                    select(SharedVisual.artifact_id).where(SharedVisual.status == "ready")
+                ),
+            ),
         )
     )
     if row is None:
@@ -135,6 +151,71 @@ def job_of(db, job_id, user_id):
     return job
 
 
+def enqueue(db, settings, user_id, language, prompt, level, job_id, shared=False):
+    """Queue one generation for ``user_id``, after the checks every generation passes.
+
+    A ``shared`` one fills the cache for every learner, so it skips that learner's own plan
+    allowance and chat count; a daily cap still bounds how many one learner can start."""
+    thread = assistant.thread_for(db, user_id, SCOPE)
+    db.flush()
+    # Locking the learner's thread serializes their concurrent requests.
+    thread = db.scalars(
+        select(AssistantThread).where(AssistantThread.id == thread.id).with_for_update()
+    ).one()
+    if db.scalar(
+        select(PlaygroundJob.id).where(
+            PlaygroundJob.user_id == user_id, PlaygroundJob.status.in_(jobs.ACTIVE)
+        )
+    ):
+        raise HTTPException(409, "playground_request_in_progress")
+    if shared:
+        fills = db.scalar(
+            select(func.count())
+            .select_from(PlaygroundJob)
+            .where(
+                PlaygroundJob.user_id == user_id,
+                PlaygroundJob.shared.is_(True),
+                PlaygroundJob.created_at >= now() - 86400,
+            )
+        )
+        if (fills or 0) >= settings.explainer_daily_messages:
+            raise HTTPException(429, "playground_daily_limit")
+    else:
+        assistant.check_quota(db, settings, user_id, now(), "playground")
+        # Server-wide safety cap, counted like the plan allowance (failures are not charged).
+        if (
+            entitlements.used(db, user_id, "playground", now() - 86400)
+            >= settings.explainer_daily_messages
+        ):
+            raise HTTPException(429, "playground_daily_limit")
+    # Fail now, not minutes into the job, when AI is paused or the site-wide budget is spent.
+    try:
+        budget.check(db, settings, None, now(), "playground")
+    except ProviderError as exc:
+        raise HTTPException(503, playground_code(str(exc))) from exc
+    if not shared:  # a cache fill is not something the learner typed, nor counted against them
+        db.add(AssistantMessage(thread_id=thread.id, role="user", content=prompt, created_at=now()))
+    job = PlaygroundJob(
+        id=job_id,
+        user_id=user_id,
+        thread_id=thread.id,
+        prompt=prompt,
+        level=level,
+        language=language,
+        status="queued",
+        progress={},
+        error="",
+        tries=0,
+        heartbeat_at=0,
+        created_at=now(),
+        shared=shared,
+    )
+    db.add(job)
+    record_event(db, user_id, "explainer.requested", job_id)
+    db.flush()
+    return job
+
+
 @router.post("/generate", status_code=202)
 def create(body: CreateInput, request: Request):
     settings = request.app.state.settings
@@ -156,54 +237,110 @@ def create(body: CreateInput, request: Request):
             ):
                 raise HTTPException(409, "playground_idempotency_conflict")
             return view(db, previous, settings)
-        thread = assistant.thread_for(db, user_id, SCOPE)
-        db.flush()
-        # Locking the learner's thread serializes their concurrent requests.
-        thread = db.scalars(
-            select(AssistantThread).where(AssistantThread.id == thread.id).with_for_update()
-        ).one()
-        if db.scalar(
-            select(PlaygroundJob.id).where(
-                PlaygroundJob.user_id == user_id, PlaygroundJob.status.in_(jobs.ACTIVE)
-            )
-        ):
-            raise HTTPException(409, "playground_request_in_progress")
-        assistant.check_quota(db, settings, user_id, now(), "playground")
-        # Server-wide safety cap, counted like the plan allowance (failures are not charged).
-        if (
-            entitlements.used(db, user_id, "playground", now() - 86400)
-            >= settings.explainer_daily_messages
-        ):
-            raise HTTPException(429, "playground_daily_limit")
-        # Fail now, not minutes into the job, when AI is paused or the site-wide budget is spent.
-        try:
-            budget.check(db, settings, None, now(), "playground")
-        except ProviderError as exc:
-            raise HTTPException(503, playground_code(str(exc))) from exc
-        db.add(
-            AssistantMessage(
-                thread_id=thread.id, role="user", content=body.prompt, created_at=now()
-            )
+        return view(
+            db,
+            enqueue(db, settings, user_id, enrollment.language, body.prompt, body.level, job_id),
+            settings,
         )
-        job = PlaygroundJob(
-            id=job_id,
-            user_id=user_id,
-            thread_id=thread.id,
-            prompt=body.prompt,
+
+
+class SharedInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    concept: str = Field(pattern=r"^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$")
+    level: str = Field(default="standard", pattern=r"^(simple|standard|deep)$")
+    # The problem the learner is on, so a check that must be unaided never offers a visual.
+    problem: str | None = Field(default=None, pattern=r"^[a-z0-9][a-z0-9-]{0,127}$")
+
+
+def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool):
+    """The shared visual for a concept: served from the index, or (on a miss) generated once."""
+    cat = catalog()
+    guard_instruction(db, cat, user, body.concept)
+    if body.problem and transfers.is_pending(db, cat, enrollment, body.problem):
+        raise HTTPException(423, "independent_work_in_progress")
+    concept = cat.concept(body.concept)
+    source = shared.fingerprint(concept)
+    key = (body.concept, body.level, enrollment.language)
+    row = db.get(SharedVisual, key, with_for_update=True)
+    if row is not None:
+        shared.settle(db, row)
+    if shared.usable(row, source):
+        available(settings)
+        if start:
+            row.hits += 1
+        artifact = public(owned(db, row.artifact_id, user.id), settings, user.id)
+        return dict(state="ready", artifact=artifact)
+    job = db.get(PlaygroundJob, row.job_id) if row is not None and row.job_id else None
+    if row is not None and row.status == "generating" and row.source_hash == source:
+        return dict(
+            state="generating",
+            progress=job.progress if job else {},
+            mine=bool(job and job.user_id == user.id),
+        )
+    if not start:
+        failed = row is not None and row.status == "failed" and row.source_hash == source
+        return dict(state="failed" if failed else "none", error=(job.error if job else "") or None)
+    available(settings)
+    job_id = str(uuid.uuid4())
+    fresh = dict(status="generating", job_id=job_id, artifact_id=None, source_hash=source)
+    if row is None:
+        row = SharedVisual(
+            concept=body.concept,
             level=body.level,
             mode=body.mode,
             language=enrollment.language,
-            status="queued",
-            progress={},
-            error="",
-            tries=0,
-            heartbeat_at=0,
+            reports=[],
+            hits=0,
             created_at=now(),
+            updated_at=now(),
+            **fresh,
         )
-        db.add(job)
-        record_event(db, user_id, "explainer.requested", job_id)
-        db.flush()
-        return view(db, job, settings)
+        db.add(row)
+        db.flush()  # a learner who got here first wins; the other attaches to their job
+    else:
+        values: dict[str, Any] = dict(fresh, reports=[], updated_at=now())
+        for name, value in values.items():
+            setattr(row, name, value)
+    # Whoever asks first starts the one generation; it is not charged to their plan.
+    enqueue(
+        db,
+        settings,
+        user.id,
+        enrollment.language,
+        shared.prompt_for(concept),
+        body.level,
+        job_id,
+        shared=True,
+    )
+    return dict(state="generating", progress={}, mine=True)
+
+
+@router.post("/shared")
+def shared_start(body: SharedInput, request: Request):
+    settings = request.app.state.settings
+    for attempt in (1, 2):
+        try:
+            with Session(engine(request)) as db, db.begin():
+                user = user_of(request, db, write=True)
+                return serve_shared(db, settings, user, active(db, user), body, start=True)
+        except IntegrityError:
+            if attempt == 2:
+                raise HTTPException(409, "playground_request_in_progress") from None
+
+
+@router.get("/shared")
+def shared_state(
+    request: Request,
+    concept: str = Query(pattern=r"^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$"),
+    level: str = Query(default="standard", pattern=r"^(simple|standard|deep)$"),
+    problem: str | None = Query(default=None, pattern=r"^[a-z0-9][a-z0-9-]{0,127}$"),
+):
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db)
+        body = SharedInput(concept=concept, level=level, problem=problem)
+        return serve_shared(
+            db, request.app.state.settings, user, active(db, user), body, start=False
+        )
 
 
 # ponytail: clients poll every ~1.5 s; push (LISTEN/NOTIFY + SSE) if polling load ever matters.
@@ -271,6 +408,11 @@ def report(artifact_id: str, body: ReportInput, request: Request):
         user = user_of(request, db, write=True)
         guard_instruction(db, catalog(), user)
         row = owned(db, artifact_id, user.id)
+        flagged = db.scalar(select(SharedVisual).where(SharedVisual.artifact_id == artifact_id))
+        if flagged is not None:  # a shared visual is retired by several learners, not one
+            shared.report(db, flagged, row, user.id, body.reason)
+            record_event(db, user.id, "explainer.reported", artifact_id)
+            return dict(reported=True)
         row.rating = -1
         db.add(
             AssistantMessage(

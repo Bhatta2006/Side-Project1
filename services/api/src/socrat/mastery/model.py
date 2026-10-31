@@ -27,6 +27,7 @@ EvidenceKind = Literal[
     "tutor",
     "explain",  # a free-text answer graded by AI against a released rubric
     "project",  # a project milestone graded by AI against the project rubric
+    "transfer",
 ]
 WEIGHTS: dict[str, float] = {
     "placement": 1.0,
@@ -49,6 +50,8 @@ WEIGHTS: dict[str, float] = {
     # and can never master a concept on its own (``ConceptState.mastered``).
     "explain": 0.4,
     "project": 0.8,
+    # Independent solve of a problem never seen before, after naming the technique unaided.
+    "transfer": 1.2,
 }
 AI_GRADED = {"explain", "project"}
 # Socratic assistance level 0–5 → how much a success still counts.

@@ -17,6 +17,7 @@ from typing import Literal
 
 from socrat.adaptive.stuck import Stuck, next_rung
 from socrat.catalog.registry import Catalog
+from socrat.mastery import transfer as transfers
 from socrat.mastery.model import DAY, ConceptState
 from socrat.planner import gates, goals
 
@@ -31,6 +32,7 @@ STYLE_FACTOR: dict[str, float] = {
 REVIEW_MINUTES = 5
 CHECKPOINT_MINUTES = 15
 TESTOUT_MINUTES = 10
+TRANSFER_MINUTES = 15
 SUPPORT_MINUTES = {"example": 10, "explain": 10, "checkin": 5}
 MAX_REVIEWS_PER_DAY = 2
 HORIZON_DAYS = 14
@@ -50,6 +52,7 @@ ActivityKind = Literal[
     "explain",
     "checkin",
     "stretch",
+    "transfer",
 ]
 
 
@@ -98,6 +101,8 @@ class Plan:
     forecast: dict = field(default_factory=dict)
     # Signals for suggestions; never applied by the planner itself.
     needs_repair: dict[str, str] = field(default_factory=dict)  # concept -> weak prerequisite
+    # Modules whose checkpoint is passed but which stay shut until a transfer check is passed.
+    held: frozenset[str] = frozenset()
 
     def to_dict(self) -> dict:
         return {
@@ -310,6 +315,7 @@ def build_plan(
     course_id: str | None = None,
     cooldowns: dict[str, int] | None = None,
     adaptive: Adaptive | None = None,
+    transfer: transfers.Transfer | None = None,
 ) -> Plan:
     if not weekdays:
         raise ValueError("at least one study weekday is required")
@@ -348,10 +354,17 @@ def build_plan(
         }
         path = ordered(catalog, path, score)
     cooldowns = cooldowns or {}
+    transfer = transfer or transfers.Transfer()
     gate_targets = (
-        gates.locked_modules(catalog, course_id, states, completed, now) if course_id else {}
+        gates.locked_modules(catalog, course_id, states, completed, now, transfer.blocking)
+        if course_id
+        else {}
     )
-    locked = gates.locked_concepts(catalog, course_id, states, completed, now) if course_id else {}
+    locked = (
+        gates.locked_concepts(catalog, course_id, states, completed, now, transfer.blocking)
+        if course_id
+        else {}
+    )
     locked_minutes = 0
     roadmap: list[dict] = []
     queue: list[Activity] = []
@@ -419,6 +432,7 @@ def build_plan(
             "relevance": relevance[qualified],
             "priority": qualified in priority,
             "deferred": qualified in set(overrides.get("defer", [])),
+            "transfer": transfer.status.get(qualified),
         }
         if qualified in aside and not state.mastered(now):
             why = (
@@ -588,6 +602,31 @@ def build_plan(
                         )
                     )
         roadmap.append({**entry_base, "status": status, **({"why": why} if why else {})})
+    # A check that holds a module shut goes first; the rest wait their turn, a couple at a time.
+    checks = sorted(
+        (q for q in path if transfer.status.get(q) in {"due", "pending"} and q not in locked),
+        key=lambda q: module_of(catalog, q) not in transfer.blocking,
+    )[: transfers.MAX_QUEUED]
+    for q in checks:
+        blocked = module_of(catalog, q) in transfer.blocking
+        unfinished = transfer.status[q] == "pending"
+        if unfinished:
+            reason = "You named the technique; now solve the problem on your own."
+        elif blocked:
+            reason = "The next module opens once you show a skill here works on new problems."
+        else:
+            reason = "Show you can use it on a problem you have never seen."
+        (front if blocked else queue).append(
+            Activity(
+                transfers.activity_id(q),
+                "transfer",
+                q,
+                f"{'Finish' if unfinished else 'Prove it'}: {catalog.concept(q).title}",
+                TRANSFER_MINUTES,
+                reason=reason,
+                code="transfer",
+            )
+        )
     queue = front + queue
     if skipped:
         reasons.append(
@@ -598,10 +637,17 @@ def build_plan(
         reasons.append(f"{len(aside)} concept(s) set aside as optional for your goal.")
     if locked:
         first_gate = next(iter(locked.values()))
-        reasons.append(
-            f"Later modules unlock as you pass checkpoints — next up: "
-            f"{gates_title(catalog, first_gate.removeprefix('checkpoint:'))} checkpoint."
-        )
+        first = first_gate.removeprefix("checkpoint:")
+        if first in transfer.blocking:
+            reasons.append(
+                f"Later modules unlock once you prove a {gates_title(catalog, first)} skill "
+                "on problems you have not seen."
+            )
+        else:
+            reasons.append(
+                f"Later modules unlock as you pass checkpoints — next up: "
+                f"{gates_title(catalog, first)} checkpoint."
+            )
     queued_reviews = {a.concept for a in queue if a.kind in {"review", "testout"}}
     reviews = sorted(
         (states[q].next_review_at, q)
@@ -674,6 +720,7 @@ def build_plan(
         milestones=milestones,
         forecast=forecast,
         needs_repair=needs_repair,
+        held=transfer.blocking,
     )
 
 

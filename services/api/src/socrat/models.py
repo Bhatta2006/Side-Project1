@@ -309,6 +309,30 @@ class PlaygroundJob(Base):
     tries: Mapped[int] = mapped_column(Integer, default=0)
     heartbeat_at: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
+    # Fills the shared visual cache for everyone, so it is not charged to this learner's plan.
+    shared: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class SharedVisual(Base):
+    """One visual per concept, depth and language, generated once and shown to every learner.
+
+    ``artifact_id`` is the saved artifact (an assistant message in the generating learner's
+    playground thread); ``source_hash`` ties it to the lesson text it was made from, so an edited
+    lesson is regenerated instead of served stale.
+    """
+
+    __tablename__ = "shared_visuals"
+    concept: Mapped[str] = mapped_column(String(160), primary_key=True)
+    level: Mapped[str] = mapped_column(String(16), primary_key=True)
+    language: Mapped[str] = mapped_column(String(16), primary_key=True)
+    status: Mapped[str] = mapped_column(String(16))  # generating|ready|failed|retired
+    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    artifact_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    source_hash: Mapped[str] = mapped_column(String(32), default="")
+    reports: Mapped[list] = mapped_column(JSON, default=list)  # distinct learners who flagged it
+    hits: Mapped[int] = mapped_column(Integer, default=0)  # times it was served without a new run
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
 class LessonVariant(Base):

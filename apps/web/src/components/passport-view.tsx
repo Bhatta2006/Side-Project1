@@ -31,10 +31,11 @@ export function PassportCard({ passport, headingLevel = 1 }: { passport: Passpor
         </p>
       </header>
 
-      <section aria-label="Verified results" className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <section aria-label="Verified results" className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat value={c.unaided_solves} label="Solved unaided" hint="Judged problems, no hints" />
         <Stat value={c.judged_solves} label="Judged solves" hint={c.assisted_solves ? `${c.assisted_solves} with tutor help` : 'All hidden tests passed'} />
         <Stat value={c.checks_passed} label="Checks passed" hint="Concept checks and reviews, unaided" />
+        <Stat value={c.transfer_verified} label="Transfer verified" hint="Unseen problem, technique named, no help" />
         <Stat value={c.checkpoints} label="Checkpoints" hint={c.weekly_assessments ? `${c.weekly_assessments} weekly assessments` : 'Module test-outs'} />
       </section>
 
@@ -46,6 +47,7 @@ export function PassportCard({ passport, headingLevel = 1 }: { passport: Passpor
             {passport.mastered.map(s => (
               <li key={s.id} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 text-[15px] font-semibold text-primary-foreground">
                 <CheckCircle2 className="size-4" aria-hidden="true" />{s.title}
+                {s.transfer_verified ? <span className="rounded-full bg-primary-foreground/20 px-2 text-[12px]">Verified on a new problem</span> : null}
               </li>
             ))}
           </ul>
