@@ -17,7 +17,15 @@ from socrat import harness
 from socrat.catalog import shape
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
-from socrat.catalog.schema import Concept, Course, Exercise, Prompt, Provenance, QuizItem
+from socrat.catalog.schema import (
+    Concept,
+    Course,
+    Exercise,
+    Experiment,
+    Prompt,
+    Provenance,
+    QuizItem,
+)
 from socrat.coursegen import execute, links
 from socrat.judge.service import normalized
 from socrat.style import spec as styles
@@ -216,6 +224,20 @@ hard. Each is checked by code, so the reference answer must be exactly right.
 - Use only `x`, `y`, `t`, numbers, + - * / ^, parentheses, sqrt, sin, cos, tan, exp, ln, pi.
 - Each problem has one answer, no trick wording, and hints that teach without giving it away."""
 
+EXPERIMENTS = """This course practises in a physics lab: the learner predicts one result, a vetted
+simulation runs, and they compare and explain. Add "experiments": 2-4, easy to hard. The
+simulation (not you) computes the true result, so never write the answer in the prompt.
+"experiments": [{{"id": "kebab-case", "prompt": "the scenario, ending with what to predict",
+  "model": "projectile|free_fall|pendulum|spring_mass|circuit", "params": {{"name": number}},
+  "predict": "a quantity this model reports", "tolerance": 0.05, "vary": "a parameter or empty",
+  "hints": ["nudge", "bigger nudge"], "difficulty": 1, "explanation": "why, using the model"}}]
+Models, their parameters and what they report:
+{models}
+- params must give every parameter of the model, inside its limits, with the units shown.
+- The prompt states the setup in plain words and units and asks for the "predict" quantity.
+- vary: one parameter the learner may change afterwards to see its effect (or empty).
+- explanation: the physics reasoning (which law or formula, what depends on what)."""
+
 QUIZ_CODE = """Code items are allowed. Up to 3 items may be "kind": "output" with
 "code": {{"<language>": "complete program"}} for each of: {languages}. Each program reads no
 input and prints exactly the text of the correct option; it is run, and the item is
@@ -345,6 +367,57 @@ def check_exercises(raw) -> tuple[list[Exercise], list[str]]:
     return parsed, problems
 
 
+def models_text() -> str:
+    """The lab's experiment models for the author's prompt."""
+    from socrat.harness import physics
+
+    lines = []
+    for name, m in physics.MODELS.items():
+        params = ", ".join(f"{k} ({p.unit}, {p.low:g}-{p.high:g})" for k, p in m.params.items())
+        reports = ", ".join(f"{k} ({u})" for k, u in m.outputs.items())
+        lines.append(f"- {name}: params {params}; reports {reports}")
+    return "\n".join(lines)
+
+
+def check_experiments(raw) -> tuple[list[Experiment], list[str]]:
+    """Experiments that parse and that the vetted simulation actually runs."""
+    from socrat.lab import service as lab
+
+    items = raw if isinstance(raw, list) else []
+    if not 2 <= len(items) <= 5:
+        return [], [f"Write 2-4 experiments; got {len(items)}."]
+    problems: list[str] = []
+    parsed = []
+    for entry in items:
+        where = entry.get("id", "?") if isinstance(entry, dict) else "?"
+        try:
+            ex = Experiment.model_validate(entry)
+        except (ValidationError, TypeError) as exc:
+            detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
+            problems.append(f"experiment {where}: {'; '.join(detail)}")
+            continue
+        if bad := lab.problems(ex):
+            problems.append(f"experiment {ex.id}: {'; '.join(bad)}")
+            continue
+        run = harness.call("physics.simulate", dict(model=ex.model, params=ex.params))
+        if not run.ok:
+            problems.append(f"experiment {ex.id}: the simulation did not run ({run.error})")
+            continue
+        answer = run.output["outputs"][ex.predict]["value"]
+        stated = [float(n) for n in re.findall(r"\d+(?:\.\d+)?", ex.prompt.replace(",", ""))]
+        if any(
+            abs(n - answer) <= 0.005 * abs(answer)
+            for n in stated
+            if answer and n not in ex.params.values()
+        ):
+            problems.append(f"experiment {ex.id}: the prompt gives away the result; remove it")
+            continue
+        parsed.append(ex)
+    if len({e.id for e in parsed}) != len(parsed):
+        problems.append("Experiment ids must be unique.")
+    return parsed, problems
+
+
 def build_concept(
     concept: Concept,
     lesson: dict,
@@ -353,6 +426,7 @@ def build_concept(
     attribution: str,
     languages: list[str] = (),
     workbench: bool = False,
+    lab: bool = False,
 ):
     """The live concept, or (None, problems by artifact). ``languages``: code items allowed
     (and required in each of them), verified later by ``run_code``. Free-text prompts are
@@ -396,6 +470,10 @@ def build_concept(
     if workbench:
         exercises, bad = check_exercises(quiz.get("exercises"))
         problems["quiz"].extend(bad)
+    experiments: list[Experiment] = []
+    if lab:
+        experiments, bad = check_experiments(quiz.get("experiments"))
+        problems["quiz"].extend(bad)
     if any(problems.values()):
         return None, problems
     try:
@@ -408,6 +486,7 @@ def build_concept(
                 "quiz": parsed,
                 "prompts": prompts,
                 "exercises": exercises,
+                "experiments": experiments,
                 "provenance": Provenance(
                     author=AI_AUTHOR, version=version, attribution_md=attribution
                 ),

@@ -207,6 +207,31 @@ class Exercise(Model):
         return self
 
 
+class Experiment(Model):
+    """A lab experiment: predict one result, run the vetted simulation, compare, explain.
+
+    The true answer is never stored: the harness computes it from ``model`` and ``params`` when
+    the learner commits a prediction, so it cannot be wrong or leak through the listing.
+    """
+
+    id: Slug
+    prompt: str = Field(min_length=5, max_length=1500)  # the scenario; asks for the prediction
+    model: str = Field(min_length=2, max_length=40)  # a model in harness.physics.MODELS
+    params: dict[str, float] = Field(max_length=8)
+    predict: str = Field(min_length=2, max_length=40)  # the reported quantity to predict
+    tolerance: float = Field(default=0.05, ge=0.005, le=0.25)  # relative; 0.05 is 5%
+    vary: str = ""  # a parameter the learner may change afterwards to see the effect
+    hints: list[str] = Field(default_factory=list, max_length=3)
+    difficulty: int = Field(ge=1, le=5)
+    explanation: str = Field(min_length=5, max_length=2000)  # why, in the model's terms
+
+    @model_validator(mode="after")
+    def hints_are_short(self):
+        if any(len(h) > 300 for h in self.hints):
+            raise ValueError("hints are at most 300 characters")
+        return self
+
+
 class Concept(Model):
     id: Slug
     title: str = Field(min_length=2, max_length=100)
@@ -222,6 +247,7 @@ class Concept(Model):
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
     prompts: list[Prompt] = Field(default_factory=list, max_length=4)
     exercises: list[Exercise] = Field(default_factory=list, max_length=10)
+    experiments: list[Experiment] = Field(default_factory=list, max_length=6)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None

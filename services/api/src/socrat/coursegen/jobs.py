@@ -259,6 +259,7 @@ async def run_package(
     runnable = executor.available(course.languages)
     editor = "editor" in shape.effective(course).tools
     workbench = "cas" in shape.effective(course).tools
+    lab = "simulation" in shape.effective(course).tools
     code = list(course.languages) if editor and runnable == list(course.languages) else []
     style = brief.style
     ctx = pkg.context(base, course, brief.model_dump(), concept, style)
@@ -369,7 +370,7 @@ async def run_package(
             "before release. Not reviewed by a person." + research.credit(cited)
         )
         live, problems = await asyncio.to_thread(
-            pkg.build_concept, concept, lesson, quiz, version, attribution, code, workbench
+            pkg.build_concept, concept, lesson, quiz, version, attribution, code, workbench, lab
         )
         pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version, code)
         output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}
@@ -393,6 +394,7 @@ async def run_package(
                 "quiz": [q.model_dump(mode="json", exclude_none=True) for q in live.quiz],
                 "prompts": [x.model_dump(mode="json") for x in live.prompts],
                 "exercises": [x.model_dump(mode="json") for x in live.exercises],
+                "experiments": [x.model_dump(mode="json") for x in live.experiments],
                 "atoms": [a.model_dump(mode="json", exclude_none=True) for a in pack.atoms],
             },
             indent=1,

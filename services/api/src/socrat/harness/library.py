@@ -49,3 +49,42 @@ MATH_CHECK = register(
         },
     )
 )
+
+
+class PhysicsSimulate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    model: str = Field(min_length=1, max_length=40)
+    params: dict[str, float] = Field(default_factory=dict, max_length=8)
+
+
+def _physics_simulate(arguments: dict) -> dict:
+    from socrat.harness import physics
+
+    return physics.simulate(arguments["model"], arguments.get("params", {}))
+
+
+PHYSICS_SIMULATE = register(
+    Capability(
+        name="physics.simulate",
+        summary=(
+            "Run a vetted physics experiment and get its true results with units, instead of "
+            "estimating. model is one of projectile (speed m/s, angle deg, height m, gravity "
+            "m/s^2), free_fall (height, gravity), pendulum (length m, gravity, amplitude deg), "
+            "spring_mass (mass kg, stiffness N/m, amplitude m), circuit (voltage V, resistance "
+            "ohm). Use it before telling a learner what an experiment will do."
+        ),
+        input=PhysicsSimulate,
+        run=_physics_simulate,
+        parameters={
+            "type": "object",
+            "properties": {
+                "model": {
+                    "type": "string",
+                    "enum": ["projectile", "free_fall", "pendulum", "spring_mass", "circuit"],
+                },
+                "params": {"type": "object", "additionalProperties": {"type": "number"}},
+            },
+            "required": ["model", "params"],
+        },
+    )
+)

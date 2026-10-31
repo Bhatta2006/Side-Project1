@@ -298,6 +298,7 @@ def concept_view(
         exercises=resources.selected(qualified, language, "exercises"),
         prompts=graded.prompt_views(db, enrollment, qualified, concept),
         workbench=len(concept.exercises),
+        lab=len(concept.experiments),
         key_points=concept.key_points,
         pitfalls=concept.pitfalls,
         resources=resources.personalised(db, user.id, qualified, concept, language, current_band),

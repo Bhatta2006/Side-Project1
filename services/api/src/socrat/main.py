@@ -32,6 +32,7 @@ from socrat.coursegen.routes import router as coursegen_router
 from socrat.database import make_engine, record_event
 from socrat.email_auth import router as email_auth_router
 from socrat.explainer.routes import router as explainer_router
+from socrat.lab.routes import router as lab_router
 from socrat.learn.graded_routes import router as graded_router
 from socrat.learn.routes import router as learner_router
 from socrat.learn.session_routes import router as session_router
@@ -119,6 +120,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(style_router)
     app.include_router(mentor_router)
     app.include_router(workbench_router)
+    app.include_router(lab_router)
     app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)

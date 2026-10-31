@@ -19,7 +19,21 @@ Models explain and ask. Deterministic, sandboxed capabilities decide what is tru
   assistance; "show me" writes a miss; wrong tries are feedback only.
 - UI: `components/studio/workbench.tsx` with JSXGraph graphs (`graph.tsx`), registered in the studio registry.
 
+## Physics lab (predict, observe, explain)
+- Capability `physics.simulate` (`harness/physics.py`): vetted closed-form models (projectile, free_fall, pendulum,
+  spring_mass, circuit) with parameter limits and units. Each has a test against a known result.
+- Builder: shapes with the `simulation` tool ask for 2-4 `experiments` (model, params, quantity to predict, optional
+  parameter to vary). `check_experiments` rejects ones the simulation cannot run, or whose prompt states the answer.
+  The true result is never stored: the harness computes it when the learner predicts.
+- Learner API (admin-only while testing): `GET /api/v1/lab/{course}/{concept}` (setup, no results),
+  `POST /api/v1/lab/predict` (grades with `math.check` numeric and the experiment's tolerance, reveals the run),
+  `POST /api/v1/lab/vary` (explore one parameter after predicting; writes nothing).
+- Evidence: the first prediction per experiment is recorded once as `quiz` evidence: 1.0 within tolerance, 0.5 within
+  double, else 0.0; hints count as assistance.
+- UI: `components/studio/lab.tsx` (SVG trace, readout, slider), registered as the `lab` studio.
+- Not graded: the "explain" step is shown (model-written why) but there is no free-text grading yet.
+
 ## Not yet
 - Existing code execution (`coursegen/execute.py`) is not a harness capability yet.
 - Tutor-side evidence from `math_check` is advisory; only workbench grading writes evidence.
-- Physics lab (units are already checked by `math.check` numeric).
+- Graded free-text explanations for the lab; more experiment models (waves, optics, thermal).
