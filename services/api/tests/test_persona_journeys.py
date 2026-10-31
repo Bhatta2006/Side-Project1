@@ -15,6 +15,7 @@ from test_learner_api import client, login, onboard  # noqa: F401
 from socrat import models
 from socrat.catalog.registry import default_catalog
 from socrat.learn import service as learn
+from socrat.learn import transfers
 from socrat.models import Enrollment, User
 
 DAY = 86_400
@@ -76,6 +77,27 @@ def solve(client, cat, activity_id: str, clock, accepted=True):  # noqa: F811
             learn.complete_activity(db, user, enrollment, activity_id, clock["t"], solved=True)
 
 
+def take_transfer(client, headers, cat, concept: str, clock):  # noqa: F811
+    """A strong learner names the technique, then solves the unseen problem unaided."""
+    view = client.get(f"/api/v1/transfer/{concept}").json()
+    if view["state"] == "classify":
+        named = client.post(
+            f"/api/v1/transfer/{concept}/classify",
+            json={"problem": view["problem"]["id"], "choice": concept},
+            headers=headers,
+        )
+        assert named.status_code == 200 and named.json()["correct"], named.text
+        problem_id = named.json()["problem"]
+    else:
+        assert view["state"] == "solve", view
+        problem_id = view["problem"]
+    solve(client, cat, f"problem:{problem_id}", clock)
+    with Session(client.app.state.engine) as db, db.begin():
+        enrollment = db.scalar(select(Enrollment).where(Enrollment.active.is_(True)))
+        user = db.get(User, enrollment.user_id)
+        transfers.on_solve(db, cat, user, enrollment, problem_id, 0, clock["t"])
+
+
 def walk(client, headers, clock, policy, max_steps=900, max_days=120):  # noqa: F811
     """Follow Today until the course is complete. Returns the log of steps taken."""
     cat = default_catalog()
@@ -107,6 +129,8 @@ def walk(client, headers, clock, policy, max_steps=900, max_days=120):  # noqa: 
             take(client, headers, cat, nxt["id"], lambda q, n=nxt: policy(n, q, log))
         elif kind == "problem":
             solve(client, cat, nxt["id"], clock, accepted=policy(nxt, None, log))
+        elif kind == "transfer":
+            take_transfer(client, headers, cat, nxt["concept"], clock)
         else:
             raise AssertionError(f"unknown kind {kind}")
         clock["t"] += 120

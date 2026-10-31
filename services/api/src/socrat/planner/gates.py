@@ -39,8 +39,12 @@ def cleared(
     states: dict[str, ConceptState],
     completed: set[str],
     now: int,
+    held: frozenset[str] = frozenset(),
 ) -> bool:
-    """A module is cleared by passing its gate, or when every concept is already known."""
+    """A module is cleared by passing its gate, or when every concept is already known.
+    ``held`` names modules held shut by a transfer check that is still to be passed."""
+    if module_key in held:
+        return False
     if gate_id(module_key) in completed:
         return True
     concepts = module_concepts(catalog, module_key)
@@ -55,6 +59,7 @@ def locked_modules(
     states: dict[str, ConceptState],
     completed: set[str],
     now: int,
+    held: frozenset[str] = frozenset(),
 ) -> dict[str, str]:
     """Locked module key -> the gate that opens the way to it (the first uncleared one)."""
     locked: dict[str, str] = {}
@@ -62,7 +67,7 @@ def locked_modules(
     for key in module_keys(catalog, course_id):
         if blocking:
             locked[key] = blocking
-        elif not cleared(catalog, key, states, completed, now):
+        elif not cleared(catalog, key, states, completed, now, held):
             blocking = gate_id(key)
     return locked
 
@@ -73,10 +78,11 @@ def locked_concepts(
     states: dict[str, ConceptState],
     completed: set[str],
     now: int,
+    held: frozenset[str] = frozenset(),
 ) -> dict[str, str]:
     return {
         concept: gate
-        for key, gate in locked_modules(catalog, course_id, states, completed, now).items()
+        for key, gate in locked_modules(catalog, course_id, states, completed, now, held).items()
         for concept in module_concepts(catalog, key)
     }
 

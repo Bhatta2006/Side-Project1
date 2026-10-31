@@ -6,8 +6,8 @@ Additive: three nullable or defaulted columns.
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0024_concept_packages"
-down_revision = "0023_generation_jobs"
+revision = "0026_concept_packages"
+down_revision = "0025_generation_jobs"
 branch_labels = None
 depends_on = None
 

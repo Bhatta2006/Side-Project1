@@ -6,8 +6,8 @@ Additive: one defaulted column.
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0025_generation_pause"
-down_revision = "0024_concept_packages"
+revision = "0027_generation_pause"
+down_revision = "0026_concept_packages"
 branch_labels = None
 depends_on = None
 

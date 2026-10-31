@@ -96,6 +96,7 @@ def used(db: Session, user_id: str, feature: str, since: int) -> int:
                     PlaygroundJob.user_id == user_id,
                     PlaygroundJob.status.in_(("queued", "running", "ready")),
                     PlaygroundJob.created_at >= since,
+                    PlaygroundJob.shared.is_(False),  # cache fills belong to everyone
                 )
             )
             or 0

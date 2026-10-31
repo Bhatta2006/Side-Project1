@@ -6,8 +6,8 @@ Additive: two new tables only.
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0022_generated_courses"
-down_revision = "0021_referrals"
+revision = "0024_generated_courses"
+down_revision = "0023_playground_shared_flag"
 branch_labels = None
 depends_on = None
 

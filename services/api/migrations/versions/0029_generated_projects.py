@@ -6,8 +6,8 @@ Additive: one nullable JSON column, a list of ``Project`` payloads.
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0027_generated_projects"
-down_revision = "0026_generated_problems"
+revision = "0029_generated_projects"
+down_revision = "0028_generated_problems"
 branch_labels = None
 depends_on = None
 

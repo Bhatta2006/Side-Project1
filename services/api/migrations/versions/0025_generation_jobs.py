@@ -6,8 +6,8 @@ Additive: one new table and two columns (existing generated courses stay publish
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0023_generation_jobs"
-down_revision = "0022_generated_courses"
+revision = "0025_generation_jobs"
+down_revision = "0024_generated_courses"
 branch_labels = None
 depends_on = None
 

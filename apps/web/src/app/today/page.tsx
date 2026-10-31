@@ -43,6 +43,7 @@ const VERB: Record<string, string> = {
   explain: 'Read it another way',
   checkin: 'Talk it through',
   stretch: 'Try the stretch',
+  transfer: 'Start the check',
 };
 const CHIP: Record<string, string> = {
   lesson: 'lesson',
@@ -58,6 +59,7 @@ const CHIP: Record<string, string> = {
   explain: 'lesson',
   checkin: 'tutor',
   stretch: 'practice',
+  transfer: 'check',
 };
 
 function greeting(name: string) {

@@ -22,7 +22,7 @@ from socrat.catalog.registry import Catalog, CatalogError, default_catalog
 from socrat.database import record_event
 from socrat.execution.protocol import ResultEnvelope
 from socrat.judge import service as judge
-from socrat.learn import placement, playground, quizzes, resources, views
+from socrat.learn import placement, playground, quizzes, resources, transfers, views
 from socrat.learn import service as learn
 from socrat.mastery.model import ConceptState, band
 from socrat.models import (
@@ -111,6 +111,11 @@ class PlacementAnswer(Strict):
 class QuizAnswer(Strict):
     item: str = Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")
     choice: int = Field(ge=0, le=9)
+
+
+class TransferAnswer(Strict):
+    problem: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,127}$")
+    choice: str = Field(pattern=r"^[a-z][a-z0-9-]{0,63}:[a-z0-9-]{1,100}$")
 
 
 class SourceInput(BaseModel):
@@ -581,7 +586,7 @@ async def explain(qualified: str, body: ExplainInput, request: Request):
 
 ACTIVITY = (
     r"^(lesson|quiz|review|remedial|problem|checkpoint|probe|testout|moduletest"
-    r"|example|explain|checkin|stretch):[a-z0-9:-]{1,160}$"
+    r"|example|explain|checkin|stretch|transfer):[a-z0-9:-]{1,160}$"
 )
 # Activities the learner finishes themselves (reading, talking it through, a stretch).
 SELF_COMPLETE = {"lesson", "example", "explain", "checkin", "stretch"}
@@ -710,6 +715,36 @@ def quiz_answer(activity_id: str, body: QuizAnswer, request: Request):
         session = quizzes.open_session(db, cat, enrollment, valid_activity(cat, activity_id), now())
         quizzes.answer(db, cat, user, enrollment, session, body.item, body.choice, now())
         return quizzes.session_view(cat, session, enrollment.language, db)
+
+
+# ---------------------------------------------------------------- transfer checks
+
+
+@router.get("/transfer/{qualified}")
+def transfer_check(qualified: str, request: Request):
+    cat = catalog()
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db)
+        guard_instruction(db, cat, user, qualified)
+        enrollment = active(db, user)
+        learn.require_unlocked(db, cat, enrollment, qualified, now())
+        return transfers.view(db, cat, enrollment, qualified, now())
+
+
+@router.post("/transfer/{qualified}/classify")
+def transfer_classify(qualified: str, body: TransferAnswer, request: Request):
+    cat = catalog()
+    try:
+        with Session(engine(request)) as db, db.begin():
+            user = user_of(request, db, write=True)
+            guard_instruction(db, cat, user, qualified)
+            enrollment = active(db, user)
+            learn.require_unlocked(db, cat, enrollment, qualified, now())
+            return transfers.classify(
+                db, cat, enrollment, qualified, body.problem, body.choice, now()
+            )
+    except IntegrityError:
+        raise HTTPException(409, "transfer_in_progress") from None
 
 
 # ---------------------------------------------------------------- company practice
@@ -1053,6 +1088,7 @@ def on_submission(db: Session, cat: Catalog, job: Submission, stamp: int):
                 outcome={"assistance": job.assistance},
                 solved=True,
             )
+        transfers.on_solve(db, cat, user, enrollment, job.problem_id, job.assistance, stamp)
         return
     if job.verdict in {"system_error", ""}:
         return
