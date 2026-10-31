@@ -619,6 +619,49 @@ def test_film_check_names_the_field_to_repair(change, message):
         films.check(film)
 
 
+def test_round_parts_take_the_axis_the_film_implies():
+    film = {
+        "parts": [
+            {"id": "wheel", "kind": "group", "parent": "bike"},
+            {"id": "tire", "kind": "tire", "parent": "wheel", "recipe": {"r": 0.6}},
+            {"id": "hub", "kind": "cyl", "parent": "wheel", "recipe": {"axis": "y"}},
+            {"id": "gear", "kind": "gear", "recipe": {"axis": "z"}},
+            {"id": "tip", "kind": "lathe", "on": {"part": "body", "face": "-z"}},
+            {"id": "knob", "kind": "cyl", "rot": [90, 0, 0], "on": {"part": "body", "face": "+x"}},
+        ],
+        "motions": [
+            {"id": "roll", "part": "wheel", "type": "spin", "axis": "x"},
+            {"id": "turn", "part": "gear", "type": "spin", "axis": "y"},
+        ],
+    }
+    changes = films.orient(film)
+    parts = {p["id"]: p for p in film["parts"]}
+    # A spinning wheel group's tire turns about the spin axis; the author's own axis stays.
+    assert parts["tire"]["recipe"]["axis"] == "x" and parts["hub"]["recipe"]["axis"] == "y"
+    # A gear with a stated axis keeps it, and its spin follows the gear.
+    assert parts["gear"]["recipe"]["axis"] == "z" and film["motions"][1]["axis"] == "z"
+    # A long part on a side face runs out of that face; a rotated part is the author's choice.
+    assert parts["tip"]["recipe"]["axis"] == "-z" and "recipe" not in parts["knob"]
+    assert len(changes) == 3
+
+
+def test_bad_part_ids_are_renamed_everywhere_they_are_used():
+    film = film_example()
+    old = film["parts"][1]["id"]
+    for part in film["parts"]:
+        if part.get("parent") == old:
+            part["parent"] = "the casing"
+    film["parts"][1]["id"] = "the casing"
+    checked = films.check(film)
+    assert checked["parts"][1]["id"] == "the-casing"
+    assert any(p.get("parent") == "the-casing" for p in checked["parts"]) or not any(
+        p.get("parent") == "the casing" for p in checked["parts"]
+    )
+    assert films.rename_ids({"parts": [{"id": "9 lives"}, {"id": "ok"}]}) == {
+        "9 lives": "p-9-lives"
+    }
+
+
 def test_film_show_names_a_part_or_nothing_without_failing():
     film = film_example()
     film["chapters"][2]["show"] = ["fan", "combustor", "ghost", "compressor"]

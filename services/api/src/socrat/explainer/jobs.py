@@ -16,13 +16,32 @@ from socrat.explainer import generator
 from socrat.learn.routes import guard_instruction
 from socrat.models import AssistantMessage, PlaygroundJob, User, now
 
-GENERATION_SECONDS = 300
+# A large model writing a 3D film with a repair round can take several minutes.
+GENERATION_SECONDS = 600
 ACTIVE = ("queued", "running")
 BEAT_SECONDS = 5
 # A running job whose worker stopped beating (a deploy, a crash) is picked up again, at most once.
 STALE_SECONDS = 30
 MAX_TRIES = 2
 log = logging.getLogger("socrat.explainer")
+
+
+def explainer_settings(settings: Settings) -> tuple[Settings, Settings | None]:
+    """Settings for the playground model, and for the 3D-only model when one is configured."""
+    key = "openai_model" if settings.ai_provider == "openai" else "ai_model"
+    update: dict = {
+        "ai_timeout_seconds": max(settings.ai_timeout_seconds, settings.explainer_timeout_seconds)
+    }
+    if settings.explainer_model:
+        update[key] = settings.explainer_model
+    base = settings.model_copy(update=update)
+    if not settings.explainer_3d_model:
+        return base, None
+    film = {key: settings.explainer_3d_model}
+    if settings.explainer_3d_price_input_per_mtok or settings.explainer_3d_price_output_per_mtok:
+        film["ai_price_input_per_mtok"] = settings.explainer_3d_price_input_per_mtok
+        film["ai_price_output_per_mtok"] = settings.explainer_3d_price_output_per_mtok
+    return base, base.model_copy(update=film)
 
 
 def playground_code(code: str) -> str:
@@ -87,21 +106,23 @@ async def run(engine: Engine, settings: Settings, job_id: str):
     beater = asyncio.create_task(beat())
     try:
         async with asyncio.timeout(GENERATION_SECONDS):
-            provider_settings = settings
-            if settings.explainer_model:
-                key = "openai_model" if settings.ai_provider == "openai" else "ai_model"
-                provider_settings = settings.model_copy(update={key: settings.explainer_model})
-            provider = budget.Metered(
-                make_provider(
-                    provider_settings, chat_template_kwargs=settings.explainer_chat_template_kwargs
-                ),
-                engine,
-                provider_settings,
-                user_id=user_id,
-                feature="playground",
-            )
+            provider_settings, film_settings = explainer_settings(settings)
+
+            def metered(chosen):
+                return budget.Metered(
+                    make_provider(
+                        chosen, chat_template_kwargs=settings.explainer_chat_template_kwargs
+                    ),
+                    engine,
+                    chosen,
+                    user_id=user_id,
+                    feature="playground",
+                )
+
+            provider = metered(provider_settings)
+            film_provider = metered(film_settings) if film_settings else None
             async for event in generator.generate(
-                provider, provider_settings, prompt, language, level, mode
+                provider, provider_settings, prompt, language, level, mode, film_provider
             ):
                 if event["event"] == "progress":
                     progress = {

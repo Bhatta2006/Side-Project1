@@ -457,7 +457,8 @@ const Clicky3D = (() => {
     function seat(byId, placed, boxOf) {
       const children = new Map();
       for (const spec of byId.values()) {
-        if (spec.hidden) continue;
+        // `apart`: not part of the object (the surface a pen writes on, the road): never seated.
+        if (spec.hidden || spec.apart) continue;
         const key = String(spec.parent || '');
         if (!children.has(key)) children.set(key, []);
         children.get(key).push(spec);
@@ -947,7 +948,13 @@ const Clicky3D = (() => {
       pack(groups.left, 'y'); pack(groups.right, 'y'); pack(groups.top, 'x'); pack(groups.bottom, 'x');
       // A model that fills the stage leaves no row outside it: keep the row inside the stage.
       for (const item of groups.top.concat(groups.bottom)) item.y = clamp(item.y, minY(item), maxY(item));
-      for (const item of groups.free) { item.x = clamp(item.x, minX(item), maxX(item)); item.y = clamp(item.y, minY(item), maxY(item)); }
+      // Every callout stays inside the stage, whichever group placed it (a long label beside a
+      // wide model would otherwise hang off the edge).
+      for (const item of groups.left.concat(groups.right, groups.top, groups.bottom, groups.free)) {
+        if (item.width + 2 * edge <= width) item.x = clamp(item.x, minX(item), maxX(item));
+        else item.x = width / 2;
+        item.y = clamp(item.y, minY(item), maxY(item));
+      }
       for (const item of items) {
         const left = item.x - item.width / 2, top = item.y - item.height / 2;
         item.node.style.transform = 'translate3d(' + left.toFixed(1) + 'px,' + top.toFixed(1) + 'px,0)';
@@ -1161,10 +1168,23 @@ const Clicky3D = (() => {
       const frame = state.frame;
       if (frame && (frame.explode || 0) > 0.02) return [];
       const samples = state.lastSamples || [], owners = state.lastOwners || [];
+      const separate = part => { for (let p = part, d = 0; p && d < 24; p = p.parentPart, d++) if (p.spec && p.spec.apart) return true; return false; };
+      const movers = new Map();
+      const moving = part => {
+        if (!movers.has(part)) {
+          let on = false;
+          for (let p = part, d = 0; p && d < 24 && !on; p = p.parentPart, d++) on = !!frame.motion(p);
+          movers.set(part, on);
+        }
+        return movers.get(part);
+      };
       const boxes = new Map();
       samples.forEach((p, i) => {
         const part = owners[i];
+        if (separate(part)) return;
         if (frame && frame.pose && frame.pose(part)) return;
+        // A part that moves (a swinging pad, a sliding piston) leaves its seat by design.
+        if (frame && frame.motion && moving(part)) return;
         let box = boxes.get(part);
         if (!box) boxes.set(part, box = { part, lo: p.slice(), hi: p.slice() });
         for (let k = 0; k < 3; k++) { box.lo[k] = Math.min(box.lo[k], p[k]); box.hi[k] = Math.max(box.hi[k], p[k]); }

@@ -214,6 +214,9 @@ Quality bar: this must look like a real product cutaway, not a toy built from bo
   offset nudges it. Both parts must share the same parent; `at` is ignored when `on` is set.
   Dials, buttons, screens, ports, lenses on mounts, chips on boards, wheels on axles: attach them.
   The host rejects a model whose parts float apart (only the exploded view may separate them).
+  Something that is not part of the object but belongs in the scene (the screen a stylus
+  writes on, the road under a wheel, a hand) gets "apart": true; the host leaves it where you put
+  it. Never use it to excuse a part of the object that floats.
 - Natural pose: the object stands upright on the ground as it is used, its front (lens, face,
   intake, screen) facing +Z, so the default camera (yaw -30) sees a three-quarter front view.
 - Give casings and shells a shared cut so the film can open them; keep moving insides whole.
@@ -579,13 +582,20 @@ async def generate(
     language: str,
     level: str,
     mode: str = "sketch",
+    film_provider: Provider | None = None,
 ):
-    """Yield genuine progress, then one validated document; never render partial scripts."""
+    """Yield genuine progress, then one validated document; never render partial scripts.
+
+    film_provider, when given, writes and reviews 3D films (a stronger model); routing and
+    sketches stay on `provider`.
+    """
     if provider.name == "offline":
         raise ProviderError("playground_generation_unavailable")
     if mode == "auto":
         mode = await choose_mode(provider, request)
         yield dict(event="progress", phase="generating", attempt=1, mode=mode)
+    if mode == "3d" and film_provider is not None:
+        provider = film_provider
     system = SYSTEM_FILM if mode == "3d" else SYSTEM
     turns = [
         Turn(
