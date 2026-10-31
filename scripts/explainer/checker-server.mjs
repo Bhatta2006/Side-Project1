@@ -41,7 +41,7 @@ async function check(input) {
   } catch (error) {
     // A browser that died mid-check (a crash, or another check's restart) is not the visual's fault.
     if (!current.isConnected()) return { ok: false, infrastructure: true, reason: 'Browser check did not complete' };
-    return { ok: false, reason: String(error.message).slice(0, 300) };
+    return { ok: false, reason: String(error.message).slice(0, 1200) };
   } finally {
     clearTimeout(timer);
     const closed = await Promise.race([context.close().then(() => true, () => true), new Promise(resolve => setTimeout(() => resolve(false), CLOSE_MS))]);

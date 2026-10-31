@@ -43,7 +43,9 @@ test('generated visual is embedded, interactive, editable, keyboard operable and
   const sent = page.waitForRequest(r => r.url().endsWith('/playground/generate'));
   await page.getByRole('button', { name: 'Generate', exact: true }).click();
   const payload = (await sent).postDataJSON();
-  expect(Object.keys(payload).sort()).toEqual(['level','prompt','request_id']); expect(payload.prompt).toBe(request);
+  expect(Object.keys(payload).sort()).toEqual(['level','mode','prompt','request_id']); expect(payload.prompt).toBe(request);
+  // The prompt alone decides the medium unless the learner overrides it.
+  expect(payload.mode).toBe('auto');
   await expect(page.getByRole('heading', { name: 'Interactive multiplier', exact: true })).toBeVisible();
   await expect(page.getByText('Step 1 of 4', { exact: true })).toBeVisible();
   const iframe = page.frameLocator('iframe[title="Interactive multiplier — interactive visual"]');

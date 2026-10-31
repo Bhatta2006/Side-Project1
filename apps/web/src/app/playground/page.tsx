@@ -22,7 +22,9 @@ import { Illustration } from '@/components/socrat/illustration';
 
 const VisualExplainer = dynamic(() => import('@/components/visual-explainer'), { ssr: false, loading: () => <Skeleton className="h-[560px] w-full rounded-card" /> });
 type Level = VisualArtifact['level'];
-type Mode = NonNullable<VisualArtifact['mode']>;
+type Medium = NonNullable<VisualArtifact['mode']>;
+// auto: the prompt alone decides; the server picks sketch or 3D before it starts building.
+type Mode = 'auto' | Medium;
 interface Suggestion { id: string; title: string; reason: string }
 interface Saved { id: string; title: string; created_at: number }
 interface Job {
@@ -31,7 +33,11 @@ interface Job {
   request: string; level: Level; mode?: Mode; created_at: number; artifact?: VisualArtifact;
 }
 
-const MODES: [Mode, string][] = [['sketch', 'Sketch'], ['3d', '3D']];
+const MODES: [Mode, string, string][] = [
+  ['auto', 'Auto', 'Picks a sketch or a 3D model from your question'],
+  ['sketch', 'Sketch', 'A hand-drawn 2D sketch'],
+  ['3d', '3D', 'A studio-lit 3D model you can turn, zoom and take apart'],
+];
 const LEVELS: [Level, string][] = [['simple', 'Simple'], ['standard', 'Standard'], ['deep', 'Go deep']];
 // The real phases the generator reports. Each repair attempt restarts them.
 const PHASES = [
@@ -86,7 +92,9 @@ export default function PlaygroundPage() {
   const [saved, setSaved] = useState<Saved[]>([]);
   const [prompt, setPrompt] = useState('');
   const [level, setLevel] = useState<Level>('standard');
-  const [mode, setMode] = useState<Mode>('sketch');
+  const [mode, setMode] = useState<Mode>('auto');
+  // The medium the current job is building in, once the server has chosen it.
+  const [medium, setMedium] = useState<Medium | null>(null);
   const [artifact, setArtifact] = useState<VisualArtifact | null>(null);
   const [previewVersion, setPreviewVersion] = useState(0);
   const [fromSaved, setFromSaved] = useState(false);
@@ -121,12 +129,13 @@ export default function PlaygroundPage() {
     jobId.current = first.id; stopped.current = false;
     setBusy(true); setArtifact(null); setFailure(null); setNotice(''); setFromSaved(false);
     setPrompt(first.request); setLevel(first.level); setStartedAt(first.created_at * 1000);
-    setMode(first.mode ?? 'sketch');
+    setMedium(first.mode && first.mode !== 'auto' ? first.mode : null);
     try {
       let job = first, misses = 0;
       while (job.status === 'queued' || job.status === 'running') {
         const { phase = 'generating', attempt = 1, failed = '', characters = 0 } = job.progress;
         setQueued(job.status === 'queued'); setProgress({ phase, attempt, failed, characters });
+        if (job.mode && job.mode !== 'auto') setMedium(job.mode);
         await new Promise(resolve => setTimeout(resolve, 1500));
         if (stopped.current) return;
         try { job = await api.get<Job>(`/playground/jobs/${job.id}`); misses = 0; }
@@ -136,7 +145,6 @@ export default function PlaygroundPage() {
         const result = job.artifact;
         setArtifact(result);
         setSaved(rows => [{ id: result.id, title: result.title, created_at: result.created_at }, ...rows.filter(row => row.id !== result.id)].slice(0, 20));
-        setMode(result.mode ?? 'sketch');
       } else if (job.status === 'cancelled') setNotice('Cancelled. Your question is still here. It did not count toward today’s visuals.');
       else {
         // Failed generations are not charged to the learner's allowance; say so.
@@ -149,7 +157,7 @@ export default function PlaygroundPage() {
   }, []);
   const generate = useCallback(async (request: string, depth: Level, visualMode: Mode) => {
     setBusy(true); setArtifact(null); setFailure(null); setNotice(''); setQueued(true); setStartedAt(Date.now());
-    setProgress({ phase: 'generating', attempt: 1, failed: '', characters: 0 }); setPrompt(request); setLevel(depth); setMode(visualMode);
+    setProgress({ phase: 'generating', attempt: 1, failed: '', characters: 0 }); setPrompt(request); setLevel(depth); setMedium(visualMode === 'auto' ? null : visualMode);
     stopped.current = false; jobId.current = '';
     try {
       const job = await api.post<Job>('/playground/generate', { prompt: request.trim(), level: depth, mode: visualMode, request_id: crypto.randomUUID() });
@@ -204,7 +212,6 @@ export default function PlaygroundPage() {
     try {
       const result = await api.get<VisualArtifact>(`/playground/artifacts/${id}`);
       setPreviewVersion(value => value + 1); setArtifact(result); setPrompt(result.request); setLevel(result.level); setFromSaved(true);
-      setMode(result.mode ?? 'sketch');
     } catch (e) { setFailure({ code: e instanceof ApiError ? e.code : '', message: explain(e) }); }
   }
   async function report() {
@@ -245,8 +252,8 @@ export default function PlaygroundPage() {
           </p>
           <Button variant="outline" size="sm" onClick={() => startOver(true)}>Edit request</Button>
           <Button variant="outline" size="sm" onClick={() => startOver(false)}>New question</Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'simple', mode)} title="Creates a new, simpler visual">Explain more simply</Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'deep', mode)} title="Creates a new, deeper visual">Go deeper</Button>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'simple', artifact.mode ?? 'sketch')} title="Creates a new, simpler visual">Explain more simply</Button>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'deep', artifact.mode ?? 'sketch')} title="Creates a new, deeper visual">Go deeper</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="More actions"><MoreHorizontal /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -316,7 +323,8 @@ export default function PlaygroundPage() {
     const { phase, attempt, failed, characters } = progress;
     const at = queued ? -1 : PHASES.findIndex(([id]) => id === phase);
     const repairing = attempt > 1;
-    const label = (id: string, text: string) => (id === 'generating' && repairing ? 'Fixing the visual' : text);
+    const building = medium === '3d' ? 'Building the 3D model' : medium === 'sketch' ? 'Drawing the sketch' : 'Choosing sketch or 3D';
+    const label = (id: string, text: string) => (id === 'generating' ? (repairing ? 'Fixing the visual' : building) : text);
     const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
     return (
       <Page wide>
@@ -397,7 +405,7 @@ export default function PlaygroundPage() {
               rows={3}
               className="min-h-28"
               aria-describedby="visual-request-help"
-              placeholder="For example: how does binary search narrow the range? Let me change the target."
+              placeholder="Ask to see anything: how a jet engine works, why a wing lifts, how binary search narrows the range."
               onChange={event => setPrompt(event.target.value)}
               onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && canGenerate) { event.preventDefault(); void generate(prompt, level, mode); } }}
             />
@@ -405,8 +413,8 @@ export default function PlaygroundPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1" role="radiogroup" aria-label="Drawing style">
-                  {MODES.map(([id, label]) => (
-                    <button key={id} type="button" role="radio" aria-checked={mode === id} onClick={() => setMode(id)} className={cn('inline-flex h-full min-h-10 items-center rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground', mode === id && 'border-border bg-card font-bold text-foreground')} title={id === '3d' ? 'A studio-lit 3D model you can drag to turn and scroll to zoom' : 'A hand-drawn 2D sketch'}>
+                  {MODES.map(([id, label, hint]) => (
+                    <button key={id} type="button" role="radio" aria-checked={mode === id} onClick={() => setMode(id)} className={cn('inline-flex h-full min-h-10 items-center rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground', mode === id && 'border-border bg-card font-bold text-foreground')} title={hint}>
                       {label}
                     </button>
                   ))}

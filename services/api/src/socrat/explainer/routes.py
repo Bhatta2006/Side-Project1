@@ -30,7 +30,8 @@ class CreateInput(BaseModel):
         min_length=5, max_length=4000, validation_alias=AliasChoices("prompt", "confusion")
     )
     level: str = Field(default="standard", pattern=r"^(simple|standard|deep)$")
-    mode: str = Field(default="sketch", pattern=r"^(sketch|3d)$")
+    # auto lets the prompt alone decide; the worker resolves it to sketch or 3d before generating.
+    mode: str = Field(default="auto", pattern=r"^(auto|sketch|3d)$")
     request_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     concept: str | None = Field(
         default=None, pattern=r"^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$"
@@ -150,7 +151,8 @@ def create(body: CreateInput, request: Request):
             if (
                 previous.prompt != body.prompt
                 or previous.level != body.level
-                or previous.mode != body.mode
+                # An auto request matches whichever medium the router resolved it to.
+                or body.mode not in ("auto", previous.mode)
             ):
                 raise HTTPException(409, "playground_idempotency_conflict")
             return view(db, previous, settings)
