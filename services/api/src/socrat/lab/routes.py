@@ -26,7 +26,7 @@ class Variation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     concept: str = Field(pattern=CONCEPT)
     experiment: str = Field(min_length=1, max_length=64)
-    value: float = Field(ge=-1e9, le=1e9)
+    values: dict[str, float] = Field(min_length=1, max_length=8)
 
 
 def _allowed(request: Request, user) -> None:
@@ -76,7 +76,7 @@ def predict(body: Prediction, request: Request):
 
 @router.post("/vary")
 def vary(body: Variation, request: Request):
-    """Change the adjustable parameter and re-run; only after the learner has predicted."""
+    """Change any parameters and re-run; only after the learner has predicted."""
     with Session(engine(request)) as db:
         user = user_of(request, db)
         _allowed(request, user)
@@ -88,4 +88,4 @@ def vary(body: Variation, request: Request):
         learn.require_unlocked(db, cat, enrollment, body.concept, now())
         if service.recorded(db, enrollment, body.concept, experiment) is None:
             raise HTTPException(409, "predict_first")
-        return service.vary(experiment, body.value)
+        return service.vary(experiment, body.values)

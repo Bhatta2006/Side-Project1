@@ -220,7 +220,9 @@ hard. Each is checked by code, so the reference answer must be exactly right.
   write any equivalent form. equation: a solved equation such as x=3 (any equivalent equation is
   accepted). steps: the learner shows working line by line and the last line must equal expected.
 - numeric: "expected" is a plain number such as 9.8 and "unit" its unit such as m/s^2.
-- plot: up to 3 expressions in x worth drawing for this problem (the learner sees the graph).
+- plot: up to 3 expressions in x worth drawing for this problem (the learner sees the graph). A letter
+  a, b or c in a plot becomes a slider the learner drags (e.g. "a*x^2 + b"), so use them when the
+  point is how a parameter changes the curve.
 - Use only `x`, `y`, `t`, numbers, + - * / ^, parentheses, sqrt, sin, cos, tan, exp, ln, pi.
 - Each problem has one answer, no trick wording, and hints that teach without giving it away."""
 

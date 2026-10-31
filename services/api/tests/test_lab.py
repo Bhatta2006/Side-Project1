@@ -5,6 +5,7 @@ import math
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from test_coursegen_package import web  # noqa: F401
 from test_learner_api import client, login, onboard  # noqa: F401
 from test_style_engine import admin_headers
 
@@ -97,12 +98,18 @@ def test_the_lab_hides_the_result_grades_the_prediction_and_records_once(client,
     listing = client.get(f"/api/v1/lab/{course}/{slug}", headers=admin).json()
     first = listing["experiments"][0]
     assert first["predict"] == {"name": "fall_time", "unit": "s"} and first["done"] is False
-    assert "2.019" not in str(listing) and first["vary"]["name"] == "height"
+    assert (
+        "2.019" not in str(listing)
+        and first["vary"] == "height"
+        and first["knobs"]["gravity"]["unit"] == "m/s^2"
+    )
 
     def post(path, **kw):
         return client.post(f"/api/v1/lab/{path}", json=dict(concept=concept) | kw, headers=admin)
 
-    assert post("vary", experiment="drop", value=40).status_code == 409  # predict first
+    assert (
+        post("vary", experiment="drop", values={"height": 40}).status_code == 409
+    )  # predict first
 
     off = post("predict", experiment="drop", given="5").json()
     assert off["verdict"] == "incorrect" and off["evidence"] is True
@@ -114,11 +121,11 @@ def test_the_lab_hides_the_result_grades_the_prediction_and_records_once(client,
     assert right["verdict"] == "correct" and right["evidence"] is True
     assert post("predict", experiment="b", given="banana").json()["verdict"] == "unreadable"
 
-    taller = post("vary", experiment="drop", value=80).json()
+    taller = post("vary", experiment="drop", values={"height": 80}).json()
     assert taller["ok"] and math.isclose(
         taller["observed"]["outputs"]["fall_time"]["value"], math.sqrt(160 / 9.81), rel_tol=1e-4
     )
-    assert post("vary", experiment="drop", value=1e6).json()["ok"] is False
+    assert post("vary", experiment="drop", values={"height": 1e6}).json()["ok"] is False
     assert post("predict", experiment="nope", given="1").status_code == 404
 
     with Session(client.app.state.engine) as db:
@@ -130,3 +137,67 @@ def test_the_lab_hides_the_result_grades_the_prediction_and_records_once(client,
     assert client.get(f"/api/v1/lab/{course}/{slug}", headers=admin).json()["experiments"][0][
         "done"
     ]
+
+
+def test_a_physics_course_is_built_with_verified_experiments_and_flawed_ones_are_sent_back(
+    client,  # noqa: F811
+    web,  # noqa: F811
+):
+    import asyncio
+    import json
+
+    from test_coursegen import BRIEF, OUTLINE
+    from test_coursegen_package import ATOMS, FACTS_OK, PASS, QUIZ, lesson
+    from test_style_engine import StyledScripted
+
+    from socrat.assistant.gateway import Event, usage_event
+    from socrat.coursegen import jobs
+    from socrat.coursegen.outline import ARCHITECT
+
+    shape = dict(
+        studio="lab",
+        loop="predict-observe-explain",
+        evidence=["numeric"],
+        tools=["simulation", "graph"],
+    )
+    admin = admin_headers(client)
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF | {"budget_usd": 50}, headers=admin)
+    state = client.app.state
+
+    class Outline:
+        def make(self, settings):
+            class Provider:
+                name = "anthropic"
+
+                async def converse(self, system, turns, max_tokens, *args, **kwargs):
+                    reply = OUTLINE | {"shape": shape}
+                    if system != ARCHITECT:
+                        reply = {"verdict": "pass", "summary": "ok", "issues": []}
+                    yield Event("text", text=json.dumps(reply))
+                    yield usage_event(1000, 2000)
+
+            return Provider()
+
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), Outline().make))
+    client.post("/api/v1/admin/courses/ai-basics/publish", headers=admin)
+    client.post(
+        "/api/v1/admin/courses/ai-basics/concepts/generate",
+        json={"concepts": ["what-is-ml"]},
+        headers=admin,
+    )
+    flawed = QUIZ | {"experiments": [experiment(id="a"), experiment(id="b", model="warp_drive")]}
+    sound = QUIZ | {"experiments": [experiment(id="a"), experiment(id="b", predict="impact_speed")]}
+    script = StyledScripted(
+        author=[lesson()],
+        quiz=[flawed, sound],
+        atoms=[ATOMS, ATOMS],
+        facts=[FACTS_OK],
+        reviewer=[PASS],
+    )
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make, web()))
+    assert 'Add "experiments"' in script.prompts["quiz"][0]
+    assert "unknown experiment" in script.prompts["quiz"][1]
+    detail = client.get("/api/v1/admin/courses/ai-basics").json()
+    concept = next(c for c in detail["course"]["concepts"] if c["id"] == "what-is-ml")
+    assert concept["status"] == "live"
+    assert [e["id"] for e in concept["experiments"]] == ["a", "b"]

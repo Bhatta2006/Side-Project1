@@ -50,7 +50,8 @@ function Problem({ concept, exercise }: { concept: string; exercise: Exercise })
         <p className="font-medium">{exercise.prompt}</p>
         <Badge variant="secondary">{'●'.repeat(exercise.difficulty)}</Badge>
       </div>
-      <Graph expressions={exercise.plot} label={`Graph for: ${exercise.prompt}`} />
+      <Graph expressions={exercise.plot} label={`Graph for: ${exercise.prompt}`} mine={exercise.check === 'equivalent' && !done ? given : undefined} />
+      {exercise.plot.length && exercise.check === 'equivalent' ? <p className="text-xs text-muted-foreground">Solid lines are the problem. Type your answer and its graph appears dashed in red: they should land on top of each other.</p> : null}
       {exercise.check === 'steps' ? (
         <Textarea value={given} onChange={e => setGiven(e.target.value)} rows={4} placeholder={PLACEHOLDER.steps} disabled={done} aria-label="Your working" />
       ) : (

@@ -7,14 +7,31 @@ function jessie(expression: string) {
   return expression.replace(/\bln\(/g, 'log(').replace(/\bpi\b/g, 'PI');
 }
 
+const FUNCTIONS = new Set(['sin', 'cos', 'tan', 'exp', 'ln', 'sqrt', 'pi', 'log', 'abs']);
+
+/** Single letters other than x that a plot uses become sliders the learner can drag. */
+export function parametersOf(expressions: string[]): string[] {
+  const found = new Set<string>();
+  for (const e of expressions) {
+    for (const word of e.match(/[a-z]+/gi) ?? []) {
+      if (word.length === 1 && word !== 'x' && word !== 'e' && !FUNCTIONS.has(word)) found.add(word);
+    }
+  }
+  return [...found].sort().slice(0, 3);
+}
+
+type Board = { create: (t: string, a: unknown[], o?: object) => unknown; removeObject: (o: unknown) => void };
+
 /** Draws functions of x. JSXGraph is MIT/LGPL licensed and loaded only when a graph is shown. */
-export function Graph({ expressions, label }: { expressions: string[]; label: string }) {
+export function Graph({ expressions, label, mine }: { expressions: string[]; label: string; mine?: string }) {
   const host = useRef<HTMLDivElement>(null);
+  const board = useRef<Board | null>(null);
+  const curve = useRef<unknown>(null);
 
   useEffect(() => {
     const element = host.current;
     if (!element || !expressions.length) return;
-    let board: { jc?: unknown } | null = null;
+    let raw: unknown = null;
     let stopped = false;
     import('jsxgraph').then(module => {
       if (stopped) return;
@@ -26,7 +43,12 @@ export function Graph({ expressions, label }: { expressions: string[]; label: st
         boundingbox: [-6, 6, 6, -6], axis: true, showCopyright: false, showNavigation: false,
         pan: { enabled: true }, zoom: { wheel: false, pinch: true },
       });
-      board = created as unknown as { jc?: unknown };
+      raw = created;
+      board.current = created as unknown as Board;
+      parametersOf(expressions).forEach((name, i) => {
+        try { created.create('slider', [[-5.5, 5.2 - i * 0.9], [-1.5, 5.2 - i * 0.9], [-5, 1, 5]], { name, snapWidth: 0.1, withLabel: true }); }
+        catch { /* a missing slider leaves the parameter at its default */ }
+      });
       const colors = ['#4f46e5', '#0d9488', '#d97706'];
       expressions.forEach((e, i) => {
         try { created.create('functiongraph', [jessie(e)], { strokeColor: colors[i % colors.length], strokeWidth: 2 }); }
@@ -35,14 +57,26 @@ export function Graph({ expressions, label }: { expressions: string[]; label: st
     }).catch(() => { /* the graph is a help, never required */ });
     return () => {
       stopped = true;
-      if (board) {
+      board.current = null;
+      curve.current = null;
+      if (raw) {
         import('jsxgraph').then(module => {
           const JXG = (module as unknown as { default?: typeof module }).default ?? module;
-          (JXG as unknown as { JSXGraph: { freeBoard: (b: unknown) => void } }).JSXGraph.freeBoard(board);
+          (JXG as unknown as { JSXGraph: { freeBoard: (b: unknown) => void } }).JSXGraph.freeBoard(raw);
         }).catch(() => {});
       }
     };
   }, [expressions]);
+
+  // The learner's own answer, drawn as they type, so they can see how it compares.
+  useEffect(() => {
+    const b = board.current;
+    if (!b) return;
+    if (curve.current) { try { b.removeObject(curve.current); } catch { /* already gone */ } curve.current = null; }
+    if (!mine?.trim() || /[=,;]/.test(mine) || mine.length > 120) return;
+    try { curve.current = b.create('functiongraph', [jessie(mine.replace(/(\d)([a-z(])/gi, '$1*$2'))], { strokeColor: '#e11d48', strokeWidth: 2, dash: 2 }); }
+    catch { /* half-typed input is expected */ }
+  }, [mine, expressions]);
 
   if (!expressions.length) return null;
   return <div ref={host} role="img" aria-label={label} className="jxgbox h-64 w-full max-w-xl rounded-md border" />;

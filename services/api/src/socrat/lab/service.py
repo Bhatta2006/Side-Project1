@@ -26,16 +26,11 @@ NUMBER = re.compile(r"^\s*[-+]?[\d.]+(?:[eE][-+]?\d+)?\s*$")
 def public(experiment: Experiment) -> dict:
     """What the learner sees before predicting: the setup, never the result."""
     model = physics.MODELS[experiment.model]
-    vary = None
-    if experiment.vary:
-        spec = model.params[experiment.vary]
-        vary = dict(
-            name=experiment.vary,
-            unit=spec.unit,
-            low=spec.low,
-            high=spec.high,
-            value=experiment.params[experiment.vary],
-        )
+    knobs = {
+        k: dict(unit=spec.unit, low=spec.low, high=spec.high, value=experiment.params[k])
+        for k, spec in model.params.items()
+        if k in experiment.params
+    }
     return dict(
         id=experiment.id,
         prompt=experiment.prompt,
@@ -47,7 +42,8 @@ def public(experiment: Experiment) -> dict:
             if k in model.params
         },
         predict=dict(name=experiment.predict, unit=model.outputs[experiment.predict]),
-        vary=vary,
+        vary=experiment.vary,  # the knob worth trying first
+        knobs=knobs,
         hints=experiment.hints,
         difficulty=experiment.difficulty,
     )
@@ -159,14 +155,12 @@ def predict(
     )
 
 
-def vary(experiment: Experiment, value: float) -> dict:
-    """Re-run with the one adjustable parameter changed. Exploration only."""
-    if not experiment.vary:
-        return dict(ok=False, reason="This experiment has nothing to vary.")
-    spec = physics.MODELS[experiment.model].params[experiment.vary]
-    if not spec.low <= value <= spec.high:
-        return dict(ok=False, reason=f"Choose {spec.low:g} to {spec.high:g} {spec.unit}.")
-    run = _simulate(experiment, {**experiment.params, experiment.vary: value})
+def vary(experiment: Experiment, values: dict[str, float]) -> dict:
+    """Re-run with any of the parameters changed. Exploration only: nothing is recorded."""
+    merged = {**experiment.params, **values}
+    if bad := physics.problems(experiment.model, merged):
+        return dict(ok=False, reason="; ".join(bad))
+    run = _simulate(experiment, merged)
     if not run.ok:
         return dict(ok=False, reason=run.error)
     return dict(ok=True, observed=run.output)

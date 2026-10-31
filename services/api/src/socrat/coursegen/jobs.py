@@ -344,6 +344,8 @@ async def run_package(
                 example += "\n\n" + pkg.PROMPTS.format()
             if workbench:
                 example += "\n\n" + pkg.EXERCISES.format()
+            if lab:
+                example += "\n\n" + pkg.EXPERIMENTS.format(models=pkg.models_text())
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             pending["quiz"] = ask("quiz", pkg.QUIZ + note, prompt, 6000)
         if "atoms" in redo or atoms is None:
