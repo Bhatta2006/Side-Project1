@@ -26,6 +26,7 @@ def public(exercise: Exercise) -> dict:
         unit=exercise.unit,
         hints=exercise.hints,
         plot=exercise.plot,
+        points=[list(p) for p in exercise.points],
         difficulty=exercise.difficulty,
     )
 

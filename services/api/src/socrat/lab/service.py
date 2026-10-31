@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from socrat import harness
 from socrat.catalog.registry import Catalog
-from socrat.catalog.schema import Experiment
+from socrat.catalog.schema import Criterion, Experiment
 from socrat.harness import physics
 from socrat.learn import service as learn
 from socrat.models import Enrollment, Evidence
@@ -46,6 +46,36 @@ def public(experiment: Experiment) -> dict:
         knobs=knobs,
         hints=experiment.hints,
         difficulty=experiment.difficulty,
+        criteria=[dict(criterion=c.criterion, points=c.points) for c in rubric_of(experiment)],
+    )
+
+
+FALLBACK_RUBRIC = [
+    Criterion(
+        criterion="Names the principle",
+        points=2,
+        look_for="Says which law, formula or relationship in the model decides the result.",
+    ),
+    Criterion(
+        criterion="Explains the comparison",
+        points=2,
+        look_for="Connects that principle to the result they saw, including why their "
+        "prediction was right or off.",
+    ),
+]
+
+
+def rubric_of(experiment: Experiment) -> list[Criterion]:
+    """The experiment's own rubric, or a general one for experiments written without it."""
+    return experiment.rubric or FALLBACK_RUBRIC
+
+
+def task_for(experiment: Experiment, predicted: str, result: dict) -> str:
+    return (
+        f"{experiment.prompt}\n\nThe learner predicted {predicted or 'a value'}; the simulation "
+        f"gave {result['value']:g} {result['unit']} for {experiment.predict.replace('_', ' ')}. "
+        "Write 2-5 sentences explaining why the result came out this way, in the physics "
+        "of the model (not just restating the number)."
     )
 
 
@@ -72,19 +102,21 @@ def _activity(concept: str, experiment: Experiment) -> str:
     return f"lab:{concept}:{experiment.id}"
 
 
-def recorded(db: Session, enrollment: Enrollment, concept: str, experiment: Experiment):
+def recorded(
+    db: Session, enrollment: Enrollment, concept: str, experiment: Experiment, kind: str = "lab"
+):
     return db.scalar(
         select(Evidence)
         .where(
             Evidence.enrollment_id == enrollment.id,
-            Evidence.activity_id == _activity(concept, experiment),
+            Evidence.activity_id == _activity(concept, experiment).replace("lab:", f"{kind}:", 1),
         )
         .order_by(Evidence.created_at.desc())
         .limit(1)
     )
 
 
-def _simulate(experiment: Experiment, params: dict | None = None):
+def simulate(experiment: Experiment, params: dict | None = None):
     return harness.call(
         "physics.simulate", dict(model=experiment.model, params=params or experiment.params)
     )
@@ -113,7 +145,7 @@ def predict(
     now: int,
 ) -> dict:
     """Compare a prediction with the simulation. The first one is final and is recorded."""
-    truth = _simulate(experiment)
+    truth = simulate(experiment)
     if not truth.ok:
         return dict(verdict="unavailable", reason=truth.error, evidence=False)
     target = truth.output["outputs"][experiment.predict]
@@ -160,7 +192,7 @@ def vary(experiment: Experiment, values: dict[str, float]) -> dict:
     merged = {**experiment.params, **values}
     if bad := physics.problems(experiment.model, merged):
         return dict(ok=False, reason="; ".join(bad))
-    run = _simulate(experiment, merged)
+    run = simulate(experiment, merged)
     if not run.ok:
         return dict(ok=False, reason=run.error)
     return dict(ok=True, observed=run.output)

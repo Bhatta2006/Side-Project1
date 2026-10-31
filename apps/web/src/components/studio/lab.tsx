@@ -12,12 +12,14 @@ import { EmptyState } from '@/components/socrat/states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Scene, type Run } from './scene';
 import type { StudioProps } from './registry';
 
 interface Quantity { value: number; unit: string }
 interface Experiment {
-  id: string; prompt: string; title: string; model: string; difficulty: number; hints: string[]; done: boolean;
+  id: string; prompt: string; title: string; model: string; difficulty: number; hints: string[]; done: boolean; explained: boolean;
+  criteria: { criterion: string; points: number }[];
   params: Record<string, Quantity>;
   predict: { name: string; unit: string };
   vary: string;
@@ -43,7 +45,43 @@ function Readout({ observed, before, highlight }: { observed: Observed; before?:
   );
 }
 
-function Run({ concept, experiment }: { concept: string; experiment: Experiment }) {
+interface Graded { grade: { score: number; feedback: string; criteria: { criterion: string; points: number; max: number; note: string }[]; copied?: boolean }; model_answer: string }
+
+/** After the run: the learner explains the result in their own words and it is graded against a rubric. */
+function Explain({ concept, experiment }: { concept: string; experiment: Experiment }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Graded | null>(null);
+  const count = (text.match(/\S+/g) ?? []).length;
+  async function send() {
+    setBusy(true);
+    try { setResult(await api.post<Graded>('/lab/explain', { concept, experiment: experiment.id, answer: text })); }
+    catch (e) { toast.error(explain(e)); }
+    finally { setBusy(false); }
+  }
+  return (
+    <section className="grid gap-2" aria-label="Explain what you saw">
+      <p className="text-sm font-medium">Explain it: why did the result come out this way?</p>
+      <p className="text-xs text-muted-foreground">Graded on: {experiment.criteria.map(c => `${c.criterion} (${c.points})`).join(', ')}. 10 to 150 words, in your own words.</p>
+      <Textarea value={text} onChange={e => setText(e.target.value)} rows={4} disabled={busy} aria-label="Your explanation" />
+      <div className="flex items-center gap-3">
+        <Button disabled={busy || count < 10 || count > 150} onClick={() => void send()}>
+          {busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />} Grade my explanation
+        </Button>
+        <span className="text-xs text-muted-foreground">{count} words</span>
+      </div>
+      {result ? (
+        <div role="status" className="grid gap-2 rounded-md bg-muted p-3 text-sm">
+          <p className="font-medium">{Math.round(result.grade.score * 100)}%</p>
+          <p>{result.grade.feedback}</p>
+          <ul className="grid gap-1 text-muted-foreground">{result.grade.criteria.map(c => <li key={c.criterion}>{c.criterion}: {c.points}/{c.max}. {c.note}</li>)}</ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function Trial({ concept, experiment }: { concept: string; experiment: Experiment }) {
   const [given, setGiven] = useState('');
   const [shown, setShown] = useState(0);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -51,6 +89,7 @@ function Run({ concept, experiment }: { concept: string; experiment: Experiment 
   const [knobs, setKnobs] = useState<Record<string, number>>(() => Object.fromEntries(Object.entries(experiment.knobs).map(([k, v]) => [k, v.value])));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [rerun, setRerun] = useState<Observed | null>(null);
+  const [note, setNote] = useState('');
 
   async function commit() {
     setBusy(true);
@@ -60,17 +99,21 @@ function Run({ concept, experiment }: { concept: string; experiment: Experiment 
     finally { setBusy(false); }
   }
 
-  function tune(name: string, next: number) {
-    const values = { ...knobs, [name]: next };
+  const latest = useRef(knobs);
+  function tuneMany(change: Record<string, number>) {
+    const values = { ...latest.current, ...change };
+    latest.current = values;
     setKnobs(values);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       try {
-        const out = await api.post<{ ok: boolean; observed?: Observed }>('/lab/vary', { concept, experiment: experiment.id, values });
+        const out = await api.post<{ ok: boolean; reason?: string; observed?: Observed }>('/lab/vary', { concept, experiment: experiment.id, values });
+        setNote(out.ok ? '' : out.reason ?? '');
         if (out.ok && out.observed) setRerun(out.observed);
       } catch { /* exploring is optional; keep the last picture */ }
     }, 150);
   }
+  const tune = (name: string, next: number) => tuneMany({ [name]: next });
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const revealed = outcome?.observed && outcome.verdict !== 'unreadable' && outcome.verdict !== 'unavailable';
@@ -107,7 +150,7 @@ function Run({ concept, experiment }: { concept: string; experiment: Experiment 
           <p role="status" className={outcome.verdict === 'correct' ? 'text-sm font-medium text-success' : 'text-sm'}>
             {outcome.verdict === 'correct' ? 'Your prediction held.' : 'Not quite.'} You predicted {given || 'a value'} {experiment.predict.unit}; the experiment gave {outcome.result ? show(outcome.result) : ''}.
           </p>
-          {observed ? <Scene model={experiment.model} params={Object.fromEntries(Object.entries(observed.params).map(([k, q]) => [k, q.value]))} run={observed} ghost={rerun ? outcome.observed : null} label={`${experiment.title}, simulated`} /> : null}
+          {observed ? <Scene model={experiment.model} params={knobs} run={observed} ghost={rerun ? outcome.observed : null} label={`${experiment.title}, simulated`} onAim={experiment.model === 'projectile' ? (angle, speed) => tuneMany({ angle, speed }) : undefined} /> : null}
           {observed ? <Readout observed={observed} before={rerun ? outcome.observed : undefined} highlight={experiment.predict.name} /> : null}
           <div className="rounded-md bg-muted p-3 text-sm"><p className="mb-1 font-medium">Why</p><p>{outcome.explanation}</p></div>
           <fieldset className="grid gap-2">
@@ -120,6 +163,8 @@ function Run({ concept, experiment }: { concept: string; experiment: Experiment 
               </label>
             ))}
           </fieldset>
+          {note ? <p role="status" className="text-sm text-muted-foreground">{note}</p> : null}
+          <Explain concept={concept} experiment={experiment} />
         </div>
       )}
     </section>
@@ -149,7 +194,7 @@ export function Lab({ shape }: StudioProps) {
       <p className="text-sm text-muted-foreground">
         {listing.title} · <Link className="underline" href={conceptHref(listing.concept)}>read the lesson</Link>
       </p>
-      {listing.experiments.map(e => <Run key={e.id} concept={listing.concept} experiment={e} />)}
+      {listing.experiments.map(e => <Trial key={e.id} concept={listing.concept} experiment={e} />)}
     </div>
   );
 }

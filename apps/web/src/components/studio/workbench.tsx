@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Graph } from './graph';
 import type { StudioProps } from './registry';
 
-interface Exercise { id: string; prompt: string; check: 'equivalent' | 'equation' | 'numeric' | 'steps'; unit: string; hints: string[]; plot: string[]; difficulty: number }
+interface Exercise { id: string; prompt: string; check: 'equivalent' | 'equation' | 'numeric' | 'steps'; unit: string; hints: string[]; plot: string[]; points: [number, number][]; difficulty: number }
 interface Listing { concept: string; title: string; exercises: Exercise[] }
 interface Verdict { verdict: 'correct' | 'incorrect' | 'unreadable'; reason: string; hint_text?: string; step?: number; evidence: boolean; explanation?: string; expected?: string }
 
@@ -33,6 +33,7 @@ function Problem({ concept, exercise }: { concept: string; exercise: Exercise })
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [revealed, setRevealed] = useState<Verdict | null>(null);
   const [busy, setBusy] = useState(false);
+  const [fit, setFit] = useState<{ slope: number; intercept: number } | null>(null);
 
   async function send(extra: object = {}) {
     setBusy(true);
@@ -50,7 +51,8 @@ function Problem({ concept, exercise }: { concept: string; exercise: Exercise })
         <p className="font-medium">{exercise.prompt}</p>
         <Badge variant="secondary">{'●'.repeat(exercise.difficulty)}</Badge>
       </div>
-      <Graph expressions={exercise.plot} label={`Graph for: ${exercise.prompt}`} mine={exercise.check === 'equivalent' && !done ? given : undefined} />
+      <Graph expressions={exercise.plot} label={`Graph for: ${exercise.prompt}`} mine={exercise.check === 'equivalent' && !done ? given : undefined} points={exercise.points} onFit={(slope, intercept) => setFit({ slope, intercept })} />
+      {exercise.points.length && fit ? <p role="status" className="text-sm">Drag the two red handles onto the teal points. Your line: slope <b>{fit.slope}</b>, intercept <b>{fit.intercept}</b>.</p> : null}
       {exercise.plot.length && exercise.check === 'equivalent' ? <p className="text-xs text-muted-foreground">Solid lines are the problem. Type your answer and its graph appears dashed in red: they should land on top of each other.</p> : null}
       {exercise.check === 'steps' ? (
         <Textarea value={given} onChange={e => setGiven(e.target.value)} rows={4} placeholder={PLACEHOLDER.steps} disabled={done} aria-label="Your working" />

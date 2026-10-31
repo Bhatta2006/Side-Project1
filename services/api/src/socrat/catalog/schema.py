@@ -197,6 +197,7 @@ class Exercise(Model):
     unit: str = Field(default="", max_length=40)
     hints: list[str] = Field(default_factory=list, max_length=3)
     plot: list[str] = Field(default_factory=list, max_length=3)  # expressions in x to draw
+    points: list[tuple[float, float]] = Field(default_factory=list, max_length=12)  # data to fit
     difficulty: int = Field(ge=1, le=5)
     explanation: str = Field(min_length=5, max_length=2000)  # the worked solution, shown after
 
@@ -224,6 +225,7 @@ class Experiment(Model):
     hints: list[str] = Field(default_factory=list, max_length=3)
     difficulty: int = Field(ge=1, le=5)
     explanation: str = Field(min_length=5, max_length=2000)  # why, in the model's terms
+    rubric: list[Criterion] = Field(default_factory=list, max_length=4)  # grades the written why
 
     @model_validator(mode="after")
     def hints_are_short(self):

@@ -28,6 +28,10 @@ def experiment(**kw) -> dict:
         hints=["Use h = 1/2 g t^2.", "Solve for t."],
         difficulty=1,
         explanation="h = 1/2 g t^2, so t = sqrt(2h/g).",
+        rubric=[
+            dict(criterion="Law", points=2, look_for="Uses h = 1/2 g t^2 for a drop from rest."),
+            dict(criterion="Why", points=2, look_for="Says mass does not change the fall time."),
+        ],
     )
     return base | kw
 
@@ -44,6 +48,25 @@ def test_models_match_known_results():
     assert math.isclose(spring["outputs"]["energy"]["value"], 0.5, rel_tol=1e-6)
     circuit = physics.simulate("circuit", dict(voltage=12, resistance=100))["outputs"]
     assert math.isclose(circuit["current"]["value"], 0.12) and circuit["power"]["unit"] == "W"
+
+
+def test_the_other_subjects_match_known_results():
+    wave = physics.simulate("wave", dict(frequency=440, wavelength=0.78, amplitude=0.1))["outputs"]
+    assert math.isclose(wave["speed"]["value"], 343.2) and wave["period"]["unit"] == "s"
+    glass = physics.simulate("refraction", dict(n1=1, n2=1.5, angle_in=30))["outputs"]
+    assert math.isclose(glass["refracted_angle"]["value"], 19.4712, rel_tol=1e-4)
+    assert math.isclose(glass["critical_angle"]["value"], 90.0)
+    out = physics.simulate("refraction", dict(n1=1.5, n2=1, angle_in=10))["outputs"]
+    assert math.isclose(out["critical_angle"]["value"], 41.8103, rel_tol=1e-4)
+    assert (
+        "total internal reflection"
+        in physics.problems("refraction", dict(n1=1.5, n2=1, angle_in=60))[0]
+    )
+    water = physics.simulate(
+        "heating", dict(mass=1, specific_heat=4186, power=1000, start_temp=20, rise=10)
+    )
+    assert math.isclose(water["outputs"]["time"]["value"], 41.86, rel_tol=1e-4)
+    assert water["trace"][-1] == [41.86, 30.0]
 
 
 def test_the_harness_runs_the_simulation_and_refuses_bad_input():
@@ -201,3 +224,46 @@ def test_a_physics_course_is_built_with_verified_experiments_and_flawed_ones_are
     concept = next(c for c in detail["course"]["concepts"] if c["id"] == "what-is-ml")
     assert concept["status"] == "live"
     assert [e["id"] for e in concept["experiments"]] == ["a", "b"]
+
+
+def test_a_written_explanation_is_graded_against_the_rubric_and_recorded(client, monkeypatch):  # noqa: F811
+    from types import SimpleNamespace
+
+    cat, concept = _catalog_with_experiments()
+    monkeypatch.setattr("socrat.lab.routes.catalog", lambda: cat)
+    seen = {}
+
+    async def fake(request, user_id, task, rubric, work, reference=""):
+        seen.update(task=task, rubric=rubric, work=work)
+        grade = dict(score=0.75, criteria=[], feedback="Good.", model="m", copied=False)
+        return SimpleNamespace(score=0.75, to_dict=lambda: grade)
+
+    monkeypatch.setattr("socrat.lab.routes.graded", fake)
+    admin = admin_headers(client)
+    onboard(client, admin)
+    text = "The fall time depends on the height and gravity only, so a heavier ball lands together."
+
+    def explain(**kw):
+        body = dict(concept=concept, experiment="drop", answer=text) | kw
+        return client.post("/api/v1/lab/explain", json=body, headers=admin)
+
+    assert explain().status_code == 409  # predict first
+    client.post(
+        "/api/v1/lab/predict",
+        json=dict(concept=concept, experiment="drop", given="2"),
+        headers=admin,
+    )
+    assert explain(answer="too short").status_code == 422
+    out = explain().json()
+    assert out["grade"]["score"] == 0.75 and "h = 1/2" in out["model_answer"]
+    assert "predicted 2" in seen["task"] and "2.01" in seen["task"]
+    assert [c["criterion"] for c in seen["rubric"]] == ["Law", "Why"]
+    for _ in range(2):
+        assert explain().status_code == 200
+    assert explain().status_code == 429
+    course, slug = concept.split(":")
+    listing = client.get(f"/api/v1/lab/{course}/{slug}", headers=admin).json()["experiments"]
+    assert listing[0]["explained"] is True and listing[1]["explained"] is False
+    with Session(client.app.state.engine) as db:
+        rows = db.scalars(select(Evidence).where(Evidence.activity_id.like("lab-explain:%"))).all()
+        assert len(rows) == 3 and {r.score for r in rows} == {0.75}

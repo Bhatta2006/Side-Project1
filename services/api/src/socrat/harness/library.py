@@ -71,7 +71,7 @@ PHYSICS_SIMULATE = register(
             "estimating. model is one of projectile (speed m/s, angle deg, height m, gravity "
             "m/s^2), free_fall (height, gravity), pendulum (length m, gravity, amplitude deg), "
             "spring_mass (mass kg, stiffness N/m, amplitude m), circuit (voltage V, resistance "
-            "ohm). Use it before telling a learner what an experiment will do."
+            "ohm), wave (frequency Hz, wavelength m, amplitude m), refraction (n1, n2, angle_in deg), heating (mass kg, specific_heat J/kg/K, power W, start_temp C, rise K). Use it before telling a learner what an experiment will do."
         ),
         input=PhysicsSimulate,
         run=_physics_simulate,
@@ -80,7 +80,16 @@ PHYSICS_SIMULATE = register(
             "properties": {
                 "model": {
                     "type": "string",
-                    "enum": ["projectile", "free_fall", "pendulum", "spring_mass", "circuit"],
+                    "enum": [
+                        "projectile",
+                        "free_fall",
+                        "pendulum",
+                        "spring_mass",
+                        "circuit",
+                        "wave",
+                        "refraction",
+                        "heating",
+                    ],
                 },
                 "params": {"type": "object", "additionalProperties": {"type": "number"}},
             },

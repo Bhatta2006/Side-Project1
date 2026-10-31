@@ -223,22 +223,28 @@ hard. Each is checked by code, so the reference answer must be exactly right.
 - plot: up to 3 expressions in x worth drawing for this problem (the learner sees the graph). A letter
   a, b or c in a plot becomes a slider the learner drags (e.g. "a*x^2 + b"), so use them when the
   point is how a parameter changes the curve.
-- Use only `x`, `y`, `t`, numbers, + - * / ^, parentheses, sqrt, sin, cos, tan, exp, ln, pi.
+- points: optional, up to 12 [x, y] data points the learner fits a line to by dragging two handles
+  (they read the slope off their line). Put them exactly on a line with simple numbers (steps
+  of 0.5) and ask for the slope or intercept as the numeric answer.
+- Use only `x`, `y`, `t`, `a`, `b`, `c`, numbers, + - * / ^, parentheses, sqrt, sin, cos, tan, exp, ln, pi.
 - Each problem has one answer, no trick wording, and hints that teach without giving it away."""
 
 EXPERIMENTS = """This course practises in a physics lab: the learner predicts one result, a vetted
 simulation runs, and they compare and explain. Add "experiments": 2-4, easy to hard. The
 simulation (not you) computes the true result, so never write the answer in the prompt.
 "experiments": [{{"id": "kebab-case", "prompt": "the scenario, ending with what to predict",
-  "model": "projectile|free_fall|pendulum|spring_mass|circuit", "params": {{"name": number}},
+  "model": "projectile|free_fall|pendulum|spring_mass|circuit|wave|refraction|heating", "params": {{"name": number}},
   "predict": "a quantity this model reports", "tolerance": 0.05, "vary": "a parameter or empty",
-  "hints": ["nudge", "bigger nudge"], "difficulty": 1, "explanation": "why, using the model"}}]
+  "hints": ["nudge", "bigger nudge"], "difficulty": 1, "explanation": "why, using the model",
+  "rubric": [{{"criterion": "short name", "points": 2, "look_for": "what a good explanation says"}}]}}]
 Models, their parameters and what they report:
 {models}
 - params must give every parameter of the model, inside its limits, with the units shown.
 - The prompt states the setup in plain words and units and asks for the "predict" quantity.
 - vary: one parameter the learner may change afterwards to see its effect (or empty).
-- explanation: the physics reasoning (which law or formula, what depends on what)."""
+- explanation: the physics reasoning (which law or formula, what depends on what).
+- rubric: 2-4 criteria (points 1-4) a grader uses on the learner's own written explanation of why
+  the result came out as it did; each says what a good explanation contains."""
 
 QUIZ_CODE = """Code items are allowed. Up to 3 items may be "kind": "output" with
 "code": {{"<language>": "complete program"}} for each of: {languages}. Each program reads no
@@ -397,6 +403,9 @@ def check_experiments(raw) -> tuple[list[Experiment], list[str]]:
         except (ValidationError, TypeError) as exc:
             detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
             problems.append(f"experiment {where}: {'; '.join(detail)}")
+            continue
+        if not 2 <= len(ex.rubric) <= 4:
+            problems.append(f"experiment {ex.id}: add a rubric of 2-4 criteria")
             continue
         if bad := lab.problems(ex):
             problems.append(f"experiment {ex.id}: {'; '.join(bad)}")

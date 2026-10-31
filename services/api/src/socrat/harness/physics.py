@@ -26,6 +26,7 @@ class Model:
     params: dict[str, Param]
     outputs: dict[str, str]  # reported quantity -> unit
     run: object  # (values) -> (outputs, trace)
+    valid: object = None  # (values) -> reasons these values cannot run, beyond the limits
 
 
 def _projectile(p: dict) -> tuple[dict, list]:
@@ -81,6 +82,40 @@ def _circuit(p: dict) -> tuple[dict, list]:
     return dict(current=amps, power=volts * amps), []
 
 
+LIGHT = 299_792_458.0
+
+
+def _wave(p: dict) -> tuple[dict, list]:
+    f, wavelength, amp = p["frequency"], p["wavelength"], p["amplitude"]
+    out = dict(speed=f * wavelength, period=1 / f, angular_frequency=2 * math.pi * f)
+    trace = [
+        [x, amp * math.sin(2 * math.pi * x / wavelength)]
+        for x in (2 * wavelength * i / POINTS for i in range(POINTS + 1))
+    ]
+    return out, trace
+
+
+def _refraction(p: dict) -> tuple[dict, list]:
+    n1, n2, theta = p["n1"], p["n2"], math.radians(p["angle_in"])
+    refracted = math.degrees(math.asin(n1 * math.sin(theta) / n2))
+    critical = math.degrees(math.asin(n2 / n1)) if n2 < n1 else 90.0
+    return dict(refracted_angle=refracted, critical_angle=critical, speed_in_second=LIGHT / n2), []
+
+
+def _refraction_valid(p: dict) -> list[str]:
+    if p["n1"] * math.sin(math.radians(p["angle_in"])) / p["n2"] > 1:
+        return ["total internal reflection: there is no refracted ray at this angle"]
+    return []
+
+
+def _heating(p: dict) -> tuple[dict, list]:
+    m, c, power, start, rise = p["mass"], p["specific_heat"], p["power"], p["start_temp"], p["rise"]
+    energy = m * c * rise
+    seconds = energy / power
+    trace = [[seconds * i / POINTS, start + rise * i / POINTS] for i in range(POINTS + 1)]
+    return dict(energy=energy, time=seconds, final_temp=start + rise), trace
+
+
 MODELS: dict[str, Model] = {
     "projectile": Model(
         "Projectile launched from a height",
@@ -125,6 +160,39 @@ MODELS: dict[str, Model] = {
         {"current": "A", "power": "W"},
         _circuit,
     ),
+    "wave": Model(
+        "Travelling wave",
+        {
+            "frequency": Param("Hz", 0.1, 500, 2),
+            "wavelength": Param("m", 0.01, 100, 1.5),
+            "amplitude": Param("m", 0.01, 5, 0.5),
+        },
+        {"speed": "m/s", "period": "s", "angular_frequency": "rad/s"},
+        _wave,
+    ),
+    "refraction": Model(
+        "Light crossing a boundary",
+        {
+            "n1": Param("", 1, 2.5, 1),
+            "n2": Param("", 1, 2.5, 1.5),
+            "angle_in": Param("deg", 0, 89, 30),
+        },
+        {"refracted_angle": "deg", "critical_angle": "deg", "speed_in_second": "m/s"},
+        _refraction,
+        _refraction_valid,
+    ),
+    "heating": Model(
+        "Heating a liquid",
+        {
+            "mass": Param("kg", 0.01, 100, 1),
+            "specific_heat": Param("J/kg/K", 100, 5000, 4186),
+            "power": Param("W", 10, 5000, 1000),
+            "start_temp": Param("C", 0, 90, 20),
+            "rise": Param("K", 1, 100, 10),
+        },
+        {"energy": "J", "time": "s", "final_temp": "C"},
+        _heating,
+    ),
 }
 
 
@@ -141,6 +209,8 @@ def problems(model: str, params: dict) -> list[str]:
         elif not spec.low <= value <= spec.high:
             out.append(f"{name} must be {spec.low:g} to {spec.high:g} {spec.unit}")
     out += [f"{name} is not a parameter of {model}" for name in params if name not in found.params]
+    if not out and found.valid:
+        out += found.valid({k: float(v) for k, v in params.items()})
     return out
 
 

@@ -23,14 +23,14 @@ export function parametersOf(expressions: string[]): string[] {
 type Board = { create: (t: string, a: unknown[], o?: object) => unknown; removeObject: (o: unknown) => void };
 
 /** Draws functions of x. JSXGraph is MIT/LGPL licensed and loaded only when a graph is shown. */
-export function Graph({ expressions, label, mine }: { expressions: string[]; label: string; mine?: string }) {
+export function Graph({ expressions, label, mine, points, onFit }: { expressions: string[]; label: string; mine?: string; points?: [number, number][]; onFit?: (slope: number, intercept: number) => void }) {
   const host = useRef<HTMLDivElement>(null);
   const board = useRef<Board | null>(null);
   const curve = useRef<unknown>(null);
 
   useEffect(() => {
     const element = host.current;
-    if (!element || !expressions.length) return;
+    if (!element || (!expressions.length && !points?.length)) return;
     let raw: unknown = null;
     let stopped = false;
     import('jsxgraph').then(module => {
@@ -39,12 +39,31 @@ export function Graph({ expressions, label, mine }: { expressions: string[]; lab
       const jsx = JXG as unknown as {
         JSXGraph: { initBoard: (el: HTMLElement, o: object) => { create: (t: string, a: unknown[], o?: object) => unknown }; freeBoard: (b: unknown) => void };
       };
+      const reach = Math.max(6, ...(points ?? []).flatMap(([x, y]) => [Math.abs(x), Math.abs(y)]).map(v => Math.ceil(v * 1.3)));
       const created = jsx.JSXGraph.initBoard(element, {
-        boundingbox: [-6, 6, 6, -6], axis: true, showCopyright: false, showNavigation: false,
+        boundingbox: [-reach, reach, reach, -reach], axis: true, showCopyright: false, showNavigation: false,
         pan: { enabled: true }, zoom: { wheel: false, pinch: true },
       });
       raw = created;
       board.current = created as unknown as Board;
+      if (points?.length) {
+        // Data to fit, and a line the learner positions by dragging two handles (snapped to half units).
+        points.forEach(([x, y]) => { try { created.create('point', [x, y], { fixed: true, size: 4, name: '', strokeColor: '#0d9488', fillColor: '#0d9488' }); } catch { /* skip */ } });
+        try {
+          const grab = { size: 6, name: '', snapToGrid: true, snapSizeX: 0.5, snapSizeY: 0.5, strokeColor: '#e11d48', fillColor: '#e11d48' };
+          const a = created.create('point', [-reach / 3, 0], grab) as { X: () => number; Y: () => number };
+          const b = created.create('point', [reach / 3, 0.5], grab) as { X: () => number; Y: () => number };
+          created.create('line', [a, b], { strokeColor: '#e11d48', strokeWidth: 2, dash: 2 });
+          const report = () => {
+            const dx = b.X() - a.X();
+            if (Math.abs(dx) < 1e-9) return;
+            const slope = (b.Y() - a.Y()) / dx;
+            onFit?.(Number(slope.toFixed(3)), Number((a.Y() - slope * a.X()).toFixed(3)));
+          };
+          (created as unknown as { on: (e: string, f: () => void) => void }).on('update', report);
+          report();
+        } catch { /* the data stays visible without the handles */ }
+      }
       parametersOf(expressions).forEach((name, i) => {
         try { created.create('slider', [[-5.5, 5.2 - i * 0.9], [-1.5, 5.2 - i * 0.9], [-5, 1, 5]], { name, snapWidth: 0.1, withLabel: true }); }
         catch { /* a missing slider leaves the parameter at its default */ }
@@ -66,7 +85,8 @@ export function Graph({ expressions, label, mine }: { expressions: string[]; lab
         }).catch(() => {});
       }
     };
-  }, [expressions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expressions, points]);
 
   // The learner's own answer, drawn as they type, so they can see how it compares.
   useEffect(() => {
@@ -78,6 +98,6 @@ export function Graph({ expressions, label, mine }: { expressions: string[]; lab
     catch { /* half-typed input is expected */ }
   }, [mine, expressions]);
 
-  if (!expressions.length) return null;
+  if (!expressions.length && !points?.length) return null;
   return <div ref={host} role="img" aria-label={label} className="jxgbox h-64 w-full max-w-xl rounded-md border" />;
 }

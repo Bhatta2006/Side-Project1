@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Pause, Play, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -13,6 +13,8 @@ type Params = Record<string, number>;
 const W = 400;
 const H = 220;
 const num = (p: Params, k: string, fallback = 0) => (Number.isFinite(p[k]) ? p[k] : fallback);
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const ARROW = 1.4; // pixels per m/s for the launch arrow
 
 /** Linear lookup of a traced series at x (points are sorted by x). */
 function at(trace: [number, number][], x: number): [number, number] {
@@ -28,14 +30,29 @@ function at(trace: [number, number][], x: number): [number, number] {
   return trace[trace.length - 1];
 }
 
-/** How long one pass of the experiment lasts, in simulated seconds. */
-export function durationOf(model: string, run: Run | null): number {
-  if (model === 'projectile') return run?.outputs.flight_time?.value ?? 2;
-  if (model === 'circuit') return 4;
-  return run?.trace.length ? run.trace[run.trace.length - 1][0] : 2;
+interface Timing {
+  /** Seconds the picture plays for. */
+  duration: number;
+  /** Simulated seconds per picture second (long experiments are sped up). */
+  scale: number;
+  /** Whether the clock reads in real simulated seconds. */
+  clock: boolean;
 }
 
-/** A clock that plays, pauses, loops and scrubs; time is simulated seconds. */
+/** How long one pass lasts, and how picture time maps to simulated time. */
+export function timingOf(model: string, run: Run | null): Timing {
+  const end = run?.trace.length ? run.trace[run.trace.length - 1][0] : 2;
+  switch (model) {
+    case 'projectile': return { duration: run?.outputs.flight_time?.value ?? 2, scale: 1, clock: true };
+    case 'circuit': return { duration: 4, scale: 1, clock: false };
+    case 'wave': return { duration: 4, scale: 1, clock: false };
+    case 'refraction': return { duration: 2, scale: 1, clock: false };
+    case 'heating': return { duration: 6, scale: Math.max(end, 1) / 6, clock: true };
+    default: return { duration: end, scale: 1, clock: true };
+  }
+}
+
+/** A clock that plays, pauses, loops and scrubs, in picture seconds. */
 function useClock(duration: number, speed: number) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -55,8 +72,9 @@ function useClock(duration: number, speed: number) {
 }
 
 const ink = 'currentColor';
+export type Aim = (angle: number, speed: number) => void;
 
-function Projectile({ p, run, ghost, t }: { p: Params; run: Run | null; ghost: Run | null; t: number }) {
+function Projectile({ p, run, ghost, t, svg, onAim }: { p: Params; run: Run | null; ghost: Run | null; t: number; svg: RefObject<SVGSVGElement | null>; onAim?: Aim }) {
   const angle = (num(p, 'angle', 45) * Math.PI) / 180;
   const all = [...(run?.trace ?? []), ...(ghost?.trace ?? [])];
   const fallbackX = (num(p, 'speed', 20) ** 2 * Math.sin(2 * angle)) / num(p, 'gravity', 9.81) || 20;
@@ -66,18 +84,41 @@ function Projectile({ p, run, ghost, t }: { p: Params; run: Run | null; ghost: R
   const px = (x: number) => 24 + x * s, py = (y: number) => H - 28 - y * s;
   const line = (tr: [number, number][]) => tr.map(([x, y], i) => `${i ? 'L' : 'M'}${px(x).toFixed(1)} ${py(y).toFixed(1)}`).join(' ');
   const flight = run?.outputs.flight_time?.value ?? 1;
-  const ball = run ? run.trace[Math.min(run.trace.length - 1, Math.round((t / flight) * (run.trace.length - 1)))] : [0, num(p, 'height')];
-  const done = run ? run.trace.slice(0, Math.round((t / flight) * (run.trace.length - 1)) + 1) : [];
-  const len = Math.min(52, 14 + num(p, 'speed', 20) * 0.5);
+  const index = run ? Math.min(run.trace.length - 1, Math.round((t / flight) * (run.trace.length - 1))) : 0;
+  const ball = run ? run.trace[index] : [0, num(p, 'height')];
+  const done = run ? run.trace.slice(0, index + 1) : [];
+  const [lx, ly] = [px(0), py(num(p, 'height'))];
+  const len = clamp(num(p, 'speed', 20) * ARROW, 14, 160);
+  const [hx, hy] = [lx + len * Math.cos(angle), ly - len * Math.sin(angle)];
+
+  function drag(e: React.PointerEvent<SVGCircleElement>) {
+    const el = svg.current;
+    if (!onAim || !el || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    const at = el.createSVGPoint();
+    at.x = e.clientX; at.y = e.clientY;
+    const m = el.getScreenCTM();
+    if (!m) return;
+    const q = at.matrixTransform(m.inverse());
+    const [dx, dy] = [q.x - lx, ly - q.y];
+    onAim(Math.round(clamp((Math.atan2(dy, Math.max(dx, 0.001)) * 180) / Math.PI, 0, 90)), Math.round(clamp(Math.hypot(dx, dy) / ARROW, 1, 100)));
+  }
+
   return (
     <>
       <line x1="8" x2={W - 8} y1={py(0)} y2={py(0)} stroke={ink} strokeOpacity="0.4" />
       {ghost ? <path d={line(ghost.trace)} fill="none" stroke={ink} strokeOpacity="0.3" strokeDasharray="4 4" /> : null}
       {run ? <path d={line(run.trace)} fill="none" stroke={ink} strokeOpacity="0.15" strokeWidth="2" /> : null}
       {done.length > 1 ? <path d={line(done)} fill="none" className="text-primary" stroke={ink} strokeWidth="2.5" /> : null}
-      {!run ? <line x1={px(0)} y1={py(num(p, 'height'))} x2={px(0) + len * Math.cos(angle)} y2={py(num(p, 'height')) - len * Math.sin(angle)} stroke={ink} strokeWidth="2" strokeDasharray="5 3" /> : null}
+      {!run || onAim ? <line x1={lx} y1={ly} x2={hx} y2={hy} stroke={ink} strokeWidth="2" strokeDasharray="5 3" /> : null}
       {run?.outputs.range ? <text x={px(run.outputs.range.value)} y={py(0) + 16} fontSize="11" textAnchor="middle" fill={ink}>{Number(run.outputs.range.value.toPrecision(3))} m</text> : null}
       <circle cx={px(ball[0])} cy={py(ball[1])} r="7" className="fill-primary" />
+      {run && onAim ? (
+        <g>
+          <circle cx={hx} cy={hy} r="9" className="cursor-grab fill-background stroke-primary" strokeWidth="2.5" style={{ touchAction: 'none' }}
+            onPointerDown={e => e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={drag} role="slider" aria-label="Aim the launch" aria-valuetext={`${Math.round(num(p, 'angle'))} degrees at ${Math.round(num(p, 'speed'))} metres per second`} />
+          <text x={hx + 12} y={hy - 8} fontSize="10" fill={ink}>{Math.round(num(p, 'angle'))}° · {Math.round(num(p, 'speed'))} m/s</text>
+        </g>
+      ) : null}
     </>
   );
 }
@@ -166,36 +207,120 @@ function Circuit({ p, run, t }: { p: Params; run: Run | null; t: number }) {
   );
 }
 
+/** A travelling wave in slow motion: the pattern moves right while each point only moves up and down. */
+function Wave({ p, t }: { p: Params; t: number }) {
+  const wavelength = Math.max(num(p, 'wavelength', 1.5), 0.001);
+  const amp = 14 + 66 * Math.sqrt(clamp(num(p, 'amplitude', 0.5) / 5, 0, 1));
+  const span = 3, left = 20, width = W - 40, perM = width / (span * wavelength);
+  const phase = t / 2; // two cycles per pass, so the wave is slow enough to follow
+  const y = (x: number) => 110 - amp * Math.sin(2 * Math.PI * (x / wavelength - phase));
+  const pts = Array.from({ length: 121 }, (_, i) => { const x = (i / 120) * span * wavelength; return `${i ? 'L' : 'M'}${(left + x * perM).toFixed(1)} ${y(x).toFixed(1)}`; }).join(' ');
+  const dotX = span * wavelength * 0.5;
+  const base = H - 36;
+  return (
+    <>
+      <line x1={left} x2={W - 20} y1="110" y2="110" stroke={ink} strokeOpacity="0.25" />
+      <path d={pts} fill="none" className="text-primary" stroke={ink} strokeWidth="2.5" />
+      <line x1={left + dotX * perM} x2={left + dotX * perM} y1="110" y2={y(dotX)} stroke={ink} strokeOpacity="0.4" strokeDasharray="3 3" />
+      <circle cx={left + dotX * perM} cy={y(dotX)} r="6" className="fill-primary" />
+      <line x1={left} x2={left + wavelength * perM} y1={base} y2={base} stroke={ink} />
+      <line x1={left} x2={left} y1={base - 5} y2={base + 5} stroke={ink} />
+      <line x1={left + wavelength * perM} x2={left + wavelength * perM} y1={base - 5} y2={base + 5} stroke={ink} />
+      <text x={left + (wavelength * perM) / 2} y={base + 16} fontSize="11" textAnchor="middle" fill={ink}>one wavelength = {Number(wavelength.toPrecision(3))} m</text>
+      <text x={W - 24} y="16" fontSize="10" textAnchor="end" fill={ink} fillOpacity="0.7">slow motion</text>
+    </>
+  );
+}
+
+/** Light bending at a boundary. The refracted ray appears only once the experiment has run. */
+function Refraction({ p, run, t }: { p: Params; run: Run | null; t: number }) {
+  const [n1, n2] = [num(p, 'n1', 1), num(p, 'n2', 1.5)];
+  const cx = W / 2, cy = 110, L = 92;
+  const a1 = (num(p, 'angle_in', 30) * Math.PI) / 180;
+  const out = run?.outputs.refracted_angle?.value;
+  const a2 = out === undefined ? null : (out * Math.PI) / 180;
+  const start = [cx - L * Math.sin(a1), cy - L * Math.cos(a1)];
+  const end = a2 === null ? null : [cx + L * Math.sin(a2), cy + L * Math.cos(a2)];
+  const u = (t % 2) / 2;
+  const photon = u < 0.5 ? [start[0] + (cx - start[0]) * u * 2, start[1] + (cy - start[1]) * u * 2] : end ? [cx + (end[0] - cx) * (u - 0.5) * 2, cy + (end[1] - cy) * (u - 0.5) * 2] : [cx, cy];
+  return (
+    <>
+      <rect x="0" y="0" width={W} height={cy} fill="#3b82f6" fillOpacity={0.05 + 0.1 * (n1 - 1)} />
+      <rect x="0" y={cy} width={W} height={H - cy} fill="#3b82f6" fillOpacity={0.05 + 0.1 * (n2 - 1)} />
+      <line x1="0" x2={W} y1={cy} y2={cy} stroke={ink} strokeOpacity="0.6" strokeWidth="2" />
+      <line x1={cx} x2={cx} y1="12" y2={H - 12} stroke={ink} strokeOpacity="0.4" strokeDasharray="4 4" />
+      <text x="10" y="18" fontSize="11" fill={ink}>n = {Number(n1.toPrecision(3))}</text>
+      <text x="10" y={H - 10} fontSize="11" fill={ink}>n = {Number(n2.toPrecision(3))}</text>
+      <line x1={start[0]} y1={start[1]} x2={cx} y2={cy} stroke="#f59e0b" strokeWidth="3" />
+      <text x={cx - 70} y={cy - 12} fontSize="11" fill={ink}>{Math.round(num(p, 'angle_in', 30) * 10) / 10}°</text>
+      {end ? <line x1={cx} y1={cy} x2={end[0]} y2={end[1]} stroke="#f59e0b" strokeWidth="3" /> : <text x={cx + 20} y={cy + 40} fontSize="22" fill={ink} fillOpacity="0.4">?</text>}
+      {out !== undefined ? <text x={cx + 14} y={cy + 56} fontSize="11" fill={ink}>{Number(out.toPrecision(3))}°</text> : null}
+      <circle cx={photon[0]} cy={photon[1]} r="5" fill="#fde68a" stroke="#f59e0b" />
+    </>
+  );
+}
+
+/** A beaker on a heater: the liquid warms and the thermometer climbs along the simulated curve. */
+function Heating({ p, run, t }: { p: Params; run: Run | null; t: number }) {
+  const start = num(p, 'start_temp', 20);
+  const temp = run ? at(run.trace, t)[1] : start;
+  const fraction = clamp(temp / 100, 0, 1);
+  const warm = `rgb(${Math.round(60 + 190 * fraction)}, ${Math.round(130 - 60 * fraction)}, ${Math.round(220 - 170 * fraction)})`;
+  const flame = 8 + 22 * clamp(num(p, 'power', 1000) / 5000, 0, 1);
+  const bubbles = temp > 85 ? [0, 1, 2, 3] : [];
+  return (
+    <>
+      <rect x="120" y="50" width="120" height="110" rx="6" fill="none" stroke={ink} strokeWidth="2.5" />
+      <rect x="123" y="80" width="114" height="77" fill={warm} fillOpacity="0.85" />
+      <text x="180" y="124" fontSize="13" textAnchor="middle" fill="#fff">{Number(num(p, 'mass', 1).toPrecision(3))} kg</text>
+      {bubbles.map(i => <circle key={i} cx={140 + i * 25} cy={150 - ((t * 40 + i * 20) % 60)} r="3" fill="#fff" fillOpacity="0.7" />)}
+      <path d={`M160 176 q ${flame / 2} -${flame * 1.6} 20 -${flame * 2} q -4 ${flame} 20 ${flame * 2}`} fill="#f59e0b" fillOpacity="0.85" transform={`translate(0 ${-flame * 0.4})`} />
+      <rect x="130" y="176" width="100" height="8" rx="3" fill={ink} fillOpacity="0.5" />
+      <rect x="290" y="30" width="14" height="150" rx="7" fill="none" stroke={ink} strokeWidth="2" />
+      <rect x="293" y={180 - 144 * fraction} width="8" height={144 * fraction} rx="4" fill="#ef4444" />
+      <circle cx="297" cy="186" r="11" fill="#ef4444" />
+      <text x="316" y={180 - 144 * fraction + 4} fontSize="12" fill={ink}>{Number(temp.toFixed(1))} °C</text>
+    </>
+  );
+}
+
 /**
  * An animated picture of the experiment. Before the run it shows the setup from the parameters;
  * after, it plays the simulation's own trace, so the picture can never disagree with the numbers.
+ * ``onAim`` makes the projectile's launch arrow draggable once it has run.
  */
-export function Scene({ model, params, run, ghost, label }: { model: string; params: Params; run: Run | null; ghost?: Run | null; label: string }) {
+export function Scene({ model, params, run, ghost, label, onAim }: { model: string; params: Params; run: Run | null; ghost?: Run | null; label: string; onAim?: Aim }) {
   const [speed, setSpeed] = useState(1);
-  const duration = durationOf(model, run);
+  const svg = useRef<SVGSVGElement>(null);
+  const { duration, scale, clock } = timingOf(model, run);
   const { t, setT, playing, setPlaying } = useClock(duration, speed);
-  const live = run !== null || model === 'circuit';
+  const live = run !== null || ['circuit', 'wave', 'refraction'].includes(model);
   useEffect(() => { setT(0); }, [run, setT]);
+  const sim = t * scale;
   const body = (() => {
     switch (model) {
-      case 'projectile': return <Projectile p={params} run={run} ghost={ghost ?? null} t={t} />;
-      case 'free_fall': return <FreeFall p={params} run={run} t={t} />;
-      case 'pendulum': return <Pendulum p={params} run={run} t={t} />;
-      case 'spring_mass': return <Spring p={params} run={run} t={t} />;
-      case 'circuit': return <Circuit p={params} run={run} t={t} />;
+      case 'projectile': return <Projectile p={params} run={run} ghost={ghost ?? null} t={sim} svg={svg} onAim={onAim} />;
+      case 'free_fall': return <FreeFall p={params} run={run} t={sim} />;
+      case 'pendulum': return <Pendulum p={params} run={run} t={sim} />;
+      case 'spring_mass': return <Spring p={params} run={run} t={sim} />;
+      case 'circuit': return <Circuit p={params} run={run} t={sim} />;
+      case 'wave': return <Wave p={params} t={sim} />;
+      case 'refraction': return <Refraction p={params} run={run} t={sim} />;
+      case 'heating': return <Heating p={params} run={run} t={sim} />;
       default: return null;
     }
   })();
   return (
     <figure className="grid gap-2">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="w-full max-w-lg rounded-md bg-muted text-foreground">{body}</svg>
+      <svg ref={svg} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="w-full max-w-lg touch-none rounded-md bg-muted text-foreground">{body}</svg>
+      {run && onAim && model === 'projectile' ? <figcaption className="text-xs text-muted-foreground">Drag the ring on the arrow to aim: angle and speed change together.</figcaption> : null}
       {live ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Button size="sm" variant="outline" onClick={() => setPlaying(!playing)} aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause /> : <Play />}</Button>
           <Button size="sm" variant="outline" onClick={() => { setT(0); setPlaying(true); }} aria-label="Replay"><RotateCcw /></Button>
           <input type="range" min={0} max={duration} step={duration / 200} value={t} aria-label="Time" className="min-w-24 flex-1"
             onChange={e => { setPlaying(false); setT(Number(e.target.value)); }} />
-          <span className="tabular-nums text-muted-foreground">{t.toFixed(2)} s</span>
+          {clock ? <span className="tabular-nums text-muted-foreground">{Number(sim.toPrecision(3))} s</span> : null}
           <select aria-label="Speed" value={speed} onChange={e => setSpeed(Number(e.target.value))} className="rounded-md border bg-background px-1 py-0.5 text-xs">
             <option value={0.25}>0.25×</option><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option>
           </select>
