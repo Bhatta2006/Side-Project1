@@ -302,6 +302,7 @@ class PlaygroundJob(Base):
     prompt: Mapped[str] = mapped_column(Text)
     level: Mapped[str] = mapped_column(String(16))
     language: Mapped[str] = mapped_column(String(32))
+    mode: Mapped[str] = mapped_column(String(16), default="sketch")  # sketch | 3d
     status: Mapped[str] = mapped_column(String(16))  # queued|running|ready|failed|cancelled
     progress: Mapped[dict] = mapped_column(JSON, default=dict)
     error: Mapped[str] = mapped_column(String(64), default="")
