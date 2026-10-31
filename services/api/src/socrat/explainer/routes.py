@@ -40,6 +40,7 @@ class CreateInput(BaseModel):
         min_length=5, max_length=4000, validation_alias=AliasChoices("prompt", "confusion")
     )
     level: str = Field(default="standard", pattern=r"^(simple|standard|deep)$")
+    mode: str = Field(default="sketch", pattern=r"^(sketch|3d)$")
     request_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     concept: str | None = Field(
         default=None, pattern=r"^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$"
@@ -134,6 +135,7 @@ def view(db, job, settings):
         error=job.error or None,
         request=job.prompt,
         level=job.level,
+        mode=job.mode or "sketch",
         created_at=job.created_at,
     )
     if job.status == "ready":
@@ -226,7 +228,11 @@ def create(body: CreateInput, request: Request):
         job_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"visual:{user_id}:{body.request_id}"))
         previous = db.get(PlaygroundJob, job_id)
         if previous:
-            if previous.prompt != body.prompt or previous.level != body.level:
+            if (
+                previous.prompt != body.prompt
+                or previous.level != body.level
+                or previous.mode != body.mode
+            ):
                 raise HTTPException(409, "playground_idempotency_conflict")
             return view(db, previous, settings)
         return view(
@@ -279,6 +285,7 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
         row = SharedVisual(
             concept=body.concept,
             level=body.level,
+            mode=body.mode,
             language=enrollment.language,
             reports=[],
             hits=0,
@@ -439,8 +446,14 @@ def frame(
             raise HTTPException(404, "not_found")
         guard_instruction(db, catalog(), user)
         row = owned(db, artifact_id, user.id)
+        content = json.loads(row.content)
+        # Older artifacts predate the mode field; they are always sketch documents.
         document, csp = compile_document(
-            json.loads(row.content)["html"], artifact_id, settings.public_origin, theme
+            content["html"],
+            artifact_id,
+            settings.public_origin,
+            theme,
+            mode=content.get("mode", "sketch"),
         )
     return HTMLResponse(
         document,

@@ -73,7 +73,7 @@ async def run(engine: Engine, settings: Settings, job_id: str):
         job = db.get(PlaygroundJob, job_id)
         assert job is not None
         user_id, thread_id = job.user_id, job.thread_id
-        prompt, level, language = job.prompt, job.level, job.language
+        prompt, level, language, mode = job.prompt, job.level, job.language, job.mode or "sketch"
     main = asyncio.current_task()
     assert main is not None
 
@@ -101,7 +101,7 @@ async def run(engine: Engine, settings: Settings, job_id: str):
                 feature="playground",
             )
             async for event in generator.generate(
-                provider, provider_settings, prompt, language, level
+                provider, provider_settings, prompt, language, level, mode
             ):
                 if event["event"] == "progress":
                     progress = {k: v for k, v in event.items() if k != "event" and v is not None}

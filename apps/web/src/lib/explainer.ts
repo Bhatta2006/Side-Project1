@@ -5,6 +5,7 @@ export interface VisualArtifact {
   transcript: string;
   level: 'simple' | 'standard' | 'deep';
   language: string;
+  mode?: 'sketch' | '3d';
   accuracy: string;
   created_at: number;
   frame_url: string;

@@ -143,7 +143,10 @@ export async function run(context, input) {
   const observe = () => frame.evaluate(() => ({ step:window.__explainer.currentStep, description:String(window.__explainer.describe()).slice(0,6000), visible_text:document.body.innerText.slice(0,4000) }));
   // The host's drawing kit audits the layout: overlapping or cut-off text in any observed state fails.
   const layout = async () => {
-    const problems = await frame.evaluate(() => (typeof Sketch === 'undefined' ? [] : Sketch.audit()));
+    const problems = await frame.evaluate(() => [
+      ...(typeof Sketch === 'undefined' ? [] : Sketch.audit()),
+      ...(typeof Clicky3D === 'undefined' ? [] : Clicky3D.audit()),
+    ]);
     if (problems.length) throw Error('Layout problem (shorten the text or use fewer items): ' + problems.slice(0, 3).join('; '));
   };
   const observations = [await observe()];

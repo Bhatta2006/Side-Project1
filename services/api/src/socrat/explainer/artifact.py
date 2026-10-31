@@ -12,6 +12,11 @@ from socrat.catalog.registry import REPO_ROOT
 
 # The host's drawing kit (layout, links, pointers, audit); generated scripts call it, never replace it.
 KIT = (Path(__file__).parent / "kit.js").read_text(encoding="utf-8")
+# The 3D stage: geometry kernel, WebGL2 renderer, then the Clicky3D scene kit that mounts them.
+STAGE_3D = [
+    (Path(__file__).parent / name).read_text(encoding="utf-8")
+    for name in ("clicky3d-geometry.js", "clicky3d-render.js", "clicky3d.js")
+]
 
 MAX_BYTES = 300_000
 TAGS = set(
@@ -216,7 +221,7 @@ html[data-reduced-motion=true] *,html[data-reduced-motion=true] *::before,html[d
 
 
 def compile_document(
-    document: str, channel: str, app_origin: str, theme: str = "light"
+    document: str, channel: str, app_origin: str, theme: str = "light", mode: str = "sketch"
 ) -> tuple[str, str]:
     """Revalidate stored content; only this compiler grants script nonces and messaging."""
     clean = validate(document).html
@@ -281,6 +286,9 @@ setInterval(()=>{if(!failed){send('heartbeat');update()}},1000);
         "</head>",
         f'<style>{BASE_STYLE}{theme_style}</style><script nonce="{nonce}">{KIT}</script></head>',
     )
+    if mode == "3d":
+        stage = "".join(f'<script nonce="{nonce}">{source}</script>' for source in STAGE_3D)
+        clean = clean.replace("</head>", stage + "</head>")
     clean = clean.replace("</body>", f'<script nonce="{nonce}">{runtime}</script></body>')
     # Both policies must pass: copying an inline nonce must never authorize external scripts.
     csp = (

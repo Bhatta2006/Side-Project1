@@ -22,14 +22,16 @@ import { Illustration } from '@/components/socrat/illustration';
 
 const VisualExplainer = dynamic(() => import('@/components/visual-explainer'), { ssr: false, loading: () => <Skeleton className="h-[560px] w-full rounded-card" /> });
 type Level = VisualArtifact['level'];
+type Mode = NonNullable<VisualArtifact['mode']>;
 interface Suggestion { id: string; title: string; reason: string }
 interface Saved { id: string; title: string; created_at: number }
 interface Job {
   id: string; status: 'queued' | 'running' | 'ready' | 'failed' | 'cancelled'; error: string | null;
   progress: { phase?: string; attempt?: number; failed?: string; characters?: number };
-  request: string; level: Level; created_at: number; artifact?: VisualArtifact;
+  request: string; level: Level; mode?: Mode; created_at: number; artifact?: VisualArtifact;
 }
 
+const MODES: [Mode, string][] = [['sketch', 'Sketch'], ['3d', '3D']];
 const LEVELS: [Level, string][] = [['simple', 'Simple'], ['standard', 'Standard'], ['deep', 'Go deep']];
 // The real phases the generator reports. Each repair attempt restarts them.
 const PHASES = [
@@ -84,6 +86,7 @@ export default function PlaygroundPage() {
   const [saved, setSaved] = useState<Saved[]>([]);
   const [prompt, setPrompt] = useState('');
   const [level, setLevel] = useState<Level>('standard');
+  const [mode, setMode] = useState<Mode>('sketch');
   const [artifact, setArtifact] = useState<VisualArtifact | null>(null);
   const [previewVersion, setPreviewVersion] = useState(0);
   const [fromSaved, setFromSaved] = useState(false);
@@ -118,6 +121,7 @@ export default function PlaygroundPage() {
     jobId.current = first.id; stopped.current = false;
     setBusy(true); setArtifact(null); setFailure(null); setNotice(''); setFromSaved(false);
     setPrompt(first.request); setLevel(first.level); setStartedAt(first.created_at * 1000);
+    setMode(first.mode ?? 'sketch');
     try {
       let job = first, misses = 0;
       while (job.status === 'queued' || job.status === 'running') {
@@ -132,6 +136,7 @@ export default function PlaygroundPage() {
         const result = job.artifact;
         setArtifact(result);
         setSaved(rows => [{ id: result.id, title: result.title, created_at: result.created_at }, ...rows.filter(row => row.id !== result.id)].slice(0, 20));
+        setMode(result.mode ?? 'sketch');
       } else if (job.status === 'cancelled') setNotice('Cancelled. Your question is still here. It did not count toward today’s visuals.');
       else {
         // Failed generations are not charged to the learner's allowance; say so.
@@ -142,12 +147,12 @@ export default function PlaygroundPage() {
       if (!stopped.current) setFailure({ code: e instanceof ApiError ? e.code : '', message: explain(e) });
     } finally { if (!stopped.current) setBusy(false); }
   }, []);
-  const generate = useCallback(async (request: string, depth: Level) => {
+  const generate = useCallback(async (request: string, depth: Level, visualMode: Mode) => {
     setBusy(true); setArtifact(null); setFailure(null); setNotice(''); setQueued(true); setStartedAt(Date.now());
-    setProgress({ phase: 'generating', attempt: 1, failed: '', characters: 0 }); setPrompt(request); setLevel(depth);
+    setProgress({ phase: 'generating', attempt: 1, failed: '', characters: 0 }); setPrompt(request); setLevel(depth); setMode(visualMode);
     stopped.current = false; jobId.current = '';
     try {
-      const job = await api.post<Job>('/playground/generate', { prompt: request.trim(), level: depth, request_id: crypto.randomUUID() });
+      const job = await api.post<Job>('/playground/generate', { prompt: request.trim(), level: depth, mode: visualMode, request_id: crypto.randomUUID() });
       // Cancelled while the request was in flight: cancel the job it created.
       if (stopped.current) { await api.post(`/playground/jobs/${job.id}/cancel`).catch(() => undefined); return; }
       await follow(job);
@@ -199,6 +204,7 @@ export default function PlaygroundPage() {
     try {
       const result = await api.get<VisualArtifact>(`/playground/artifacts/${id}`);
       setPreviewVersion(value => value + 1); setArtifact(result); setPrompt(result.request); setLevel(result.level); setFromSaved(true);
+      setMode(result.mode ?? 'sketch');
     } catch (e) { setFailure({ code: e instanceof ApiError ? e.code : '', message: explain(e) }); }
   }
   async function report() {
@@ -239,8 +245,8 @@ export default function PlaygroundPage() {
           </p>
           <Button variant="outline" size="sm" onClick={() => startOver(true)}>Edit request</Button>
           <Button variant="outline" size="sm" onClick={() => startOver(false)}>New question</Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'simple')} title="Creates a new, simpler visual">Explain more simply</Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'deep')} title="Creates a new, deeper visual">Go deeper</Button>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'simple', mode)} title="Creates a new, simpler visual">Explain more simply</Button>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => void generate(artifact.request, 'deep', mode)} title="Creates a new, deeper visual">Go deeper</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="More actions"><MoreHorizontal /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -372,8 +378,8 @@ export default function PlaygroundPage() {
               actions={
                 <>
                   {failure.code === 'upgrade_required' || failure.code === 'playground_day_limit' ? <Button asChild size="sm"><Link href="/pricing">See plans</Link></Button> : null}
-                  {retryable ? <Button size="sm" onClick={() => void generate(prompt, level)} disabled={!canGenerate}>Try again</Button> : null}
-                  {validation ? <Button size="sm" variant="outline" onClick={() => void generate(prompt, 'simple')} disabled={!canGenerate}>Simplify the request</Button> : null}
+                  {retryable ? <Button size="sm" onClick={() => void generate(prompt, level, mode)} disabled={!canGenerate}>Try again</Button> : null}
+                  {validation ? <Button size="sm" variant="outline" onClick={() => void generate(prompt, 'simple', 'sketch')} disabled={!canGenerate}>Simplify the request</Button> : null}
                   {retryable ? <Button size="sm" variant="outline" onClick={() => input.current?.focus()}>Edit request</Button> : null}
                 </>
               }
@@ -393,18 +399,27 @@ export default function PlaygroundPage() {
               aria-describedby="visual-request-help"
               placeholder="For example: how does binary search narrow the range? Let me change the target."
               onChange={event => setPrompt(event.target.value)}
-              onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && canGenerate) { event.preventDefault(); void generate(prompt, level); } }}
+              onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && canGenerate) { event.preventDefault(); void generate(prompt, level, mode); } }}
             />
             <p id="visual-request-help" className="text-[13px] text-muted-foreground tabular-nums">{prompt.length} of 4000 characters. Press {mac ? '⌘ + Enter' : 'Ctrl + Enter'} to generate.</p>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1" role="radiogroup" aria-label="Explanation depth">
-                {LEVELS.map(([id, label]) => (
-                  <button key={id} type="button" role="radio" aria-checked={level === id} onClick={() => setLevel(id)} className={cn('inline-flex h-full min-h-10 items-center rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground', level === id && 'border-border bg-card font-bold text-foreground')}>
-                    {label}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1" role="radiogroup" aria-label="Drawing style">
+                  {MODES.map(([id, label]) => (
+                    <button key={id} type="button" role="radio" aria-checked={mode === id} onClick={() => setMode(id)} className={cn('inline-flex h-full min-h-10 items-center rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground', mode === id && 'border-border bg-card font-bold text-foreground')} title={id === '3d' ? 'A studio-lit 3D model you can drag to turn and scroll to zoom' : 'A hand-drawn 2D sketch'}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1" role="radiogroup" aria-label="Explanation depth">
+                  {LEVELS.map(([id, label]) => (
+                    <button key={id} type="button" role="radio" aria-checked={level === id} onClick={() => setLevel(id)} className={cn('inline-flex h-full min-h-10 items-center rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground', level === id && 'border-border bg-card font-bold text-foreground')}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <Button size="lg" disabled={!canGenerate} onClick={() => void generate(prompt, level)}>Generate<ArrowCircle /></Button>
+              <Button size="lg" disabled={!canGenerate} onClick={() => void generate(prompt, level, mode)}>Generate<ArrowCircle /></Button>
             </div>
             {prompt.trim().length < 5 ? <p className="text-[13px] text-muted-foreground">Write at least a few words to generate.</p> : null}
           </div>
