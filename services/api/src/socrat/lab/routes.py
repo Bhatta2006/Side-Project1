@@ -45,6 +45,29 @@ def _allowed(request: Request, user) -> None:
         raise HTTPException(404, "not_found")
 
 
+@router.get("")
+def index(request: Request):
+    """The active course's topics that have experiments, so the studio can offer a choice."""
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        _allowed(request, user)
+        cat = catalog()
+        enrollment = active(db, user)
+        locked = learn.locked_concepts(db, cat, enrollment, now())
+        return dict(
+            concepts=[
+                dict(
+                    concept=q,
+                    title=cat.concept(q).title,
+                    experiments=len(cat.concept(q).experiments),
+                    locked=q in locked,
+                )
+                for q in cat.course_concepts(enrollment.course_id)
+                if cat.concept(q).experiments
+            ]
+        )
+
+
 @router.get("/{course}/{concept}")
 def experiments(course: str, concept: str, request: Request):
     """The concept's experiments with their setup and no results."""

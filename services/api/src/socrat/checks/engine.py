@@ -77,6 +77,11 @@ UNITS = {
     "L": u.liter,
     "eV": u.electronvolt,
     "rad": u.radian,
+    "deg": sp.Float(0.017453292519943295) * u.radian,
+    "ohm": u.ohm,
+    "mA": u.ampere / 1000,
+    "mV": u.volt / 1000,
+    "kohm": 1000 * u.ohm,
 }
 BASE = [u.meter, u.kilogram, u.second, u.ampere, u.kelvin]
 

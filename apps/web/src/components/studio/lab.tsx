@@ -171,30 +171,48 @@ function Trial({ concept, experiment }: { concept: string; experiment: Experimen
   );
 }
 
+interface Index { concepts: { concept: string; title: string; experiments: number; locked: boolean }[] }
+
 /** The physics studio: predict a result, run a vetted simulation, compare, then explore why. */
 export function Lab({ shape }: StudioProps) {
   void shape;
+  const [index, setIndex] = useState<Index | null | undefined>(undefined);
+  const [chosen, setChosen] = useState<string | null>(null);
   const [listing, setListing] = useState<Listing | null | undefined>(undefined);
+
   useEffect(() => {
-    api.get<Today>('/today')
-      .then(today => {
-        const concept = today.next?.concept;
-        return concept ? api.get<Listing>(`/lab/${concept.replace(':', '/')}`) : null;
+    Promise.all([api.get<Index>('/lab'), api.get<Today>('/today').catch(() => null)])
+      .then(([list, today]) => {
+        setIndex(list);
+        const next = today?.next?.concept;
+        const open = list.concepts.filter(c => !c.locked);
+        setChosen((open.find(c => c.concept === next) ?? open[0] ?? list.concepts[0])?.concept ?? null);
       })
-      .then(setListing)
-      .catch(() => setListing(null));
+      .catch(() => setIndex(null));
   }, []);
 
-  if (listing === undefined) return <Loading variant="article" label="Setting up your experiments" />;
-  if (!listing || !listing.experiments.length) {
+  useEffect(() => {
+    if (!chosen) return;
+    setListing(undefined);
+    api.get<Listing>(`/lab/${chosen.replace(':', '/')}`).then(setListing).catch(() => setListing(null));
+  }, [chosen]);
+
+  if (index === undefined || (chosen && listing === undefined)) return <Loading variant="article" label="Setting up your experiments" />;
+  if (!index || !index.concepts.length || !listing || !listing.experiments.length) {
     return <EmptyState title="No experiments for this topic yet">Read the lesson first; experiments appear here once the topic has them.</EmptyState>;
   }
   return (
     <div className="grid gap-4">
-      <p className="text-sm text-muted-foreground">
-        {listing.title} · <Link className="underline" href={conceptHref(listing.concept)}>read the lesson</Link>
-      </p>
-      {listing.experiments.map(e => <Trial key={e.id} concept={listing.concept} experiment={e} />)}
+      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        <label className="flex items-center gap-2">
+          Topic
+          <select value={chosen ?? ''} onChange={e => setChosen(e.target.value)} className="rounded-md border bg-background px-2 py-1 text-foreground" aria-label="Topic">
+            {index.concepts.map(c => <option key={c.concept} value={c.concept} disabled={c.locked}>{c.title}{c.locked ? ' (locked)' : ''}</option>)}
+          </select>
+        </label>
+        <Link className="underline" href={conceptHref(listing.concept)}>read the lesson</Link>
+      </div>
+      {listing.experiments.map(e => <Trial key={`${listing.concept}:${e.id}`} concept={listing.concept} experiment={e} />)}
     </div>
   );
 }

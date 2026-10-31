@@ -267,3 +267,16 @@ def test_a_written_explanation_is_graded_against_the_rubric_and_recorded(client,
     with Session(client.app.state.engine) as db:
         rows = db.scalars(select(Evidence).where(Evidence.activity_id.like("lab-explain:%"))).all()
         assert len(rows) == 3 and {r.score for r in rows} == {0.75}
+
+
+def test_angles_and_ohms_are_units_the_checker_reads():
+    for given, unit in (("19.47 deg", "deg"), ("0.34 rad", "rad"), ("100 ohm", "ohm")):
+        want = {"deg": 19.4712, "rad": 0.3398, "ohm": 100}[unit]
+        out = harness.call(
+            "math.check", dict(op="numeric", expected=str(want), given=given, unit=unit)
+        )
+        assert out.ok and out.output["verdict"] == "correct", (given, out)
+    mixed = harness.call(
+        "math.check", dict(op="numeric", expected="19.4712", given="0.3398 rad", unit="deg")
+    )
+    assert mixed.output["verdict"] == "correct"  # radians convert to degrees
