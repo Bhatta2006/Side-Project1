@@ -97,6 +97,63 @@ def parse(raw: str) -> dict:
     return film
 
 
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^\w-]+", "-", value).strip("-_")[:48] or "part"
+    return slug if slug[0].isalpha() else "p-" + slug[:46]
+
+
+def rename_ids(film: dict) -> dict[str, str]:
+    """Turn part ids like "brake pad" or "wheel.front" into valid slugs, everywhere they are used.
+
+    A dot is reserved for copies ("rotor.3"), so a dotted id the author declared is renamed too.
+    """
+    parts = [p for p in film.get("parts", []) if isinstance(p, dict)]
+    taken = {p["id"] for p in parts if isinstance(p.get("id"), str) and ID.fullmatch(p["id"])}
+    renamed: dict[str, str] = {}
+    for p in parts:
+        pid = p.get("id")
+        if not isinstance(pid, str) or not pid.strip() or ID.fullmatch(pid):
+            continue
+        new, n = _slug(pid), 2
+        while new in taken:
+            new, n = f"{_slug(pid)[:44]}-{n}", n + 1
+        taken.add(new)
+        renamed[pid] = p["id"] = new
+    if not renamed:
+        return renamed
+
+    def ref(value):
+        if not isinstance(value, str):
+            return value
+        if value in renamed:
+            return renamed[value]
+        base, dot, copy = value.rpartition(".")
+        return f"{renamed[base]}.{copy}" if dot and base in renamed and copy.isdigit() else value
+
+    for p in parts:
+        if "parent" in p:
+            p["parent"] = ref(p["parent"])
+        if isinstance(p.get("on"), dict) and "part" in p["on"]:
+            p["on"]["part"] = ref(p["on"]["part"])
+    for item in film.get("labels", []) + film.get("motions", []):
+        if isinstance(item, dict) and "part" in item:
+            item["part"] = ref(item["part"])
+    for flow in film.get("flows", []):
+        if isinstance(flow, dict) and "parent" in flow:
+            flow["parent"] = ref(flow["parent"])
+    for chapter in film.get("chapters", []):
+        if not isinstance(chapter, dict):
+            continue
+        for key in ("focus", "hide"):
+            if isinstance(chapter.get(key), list):
+                chapter[key] = [ref(v) for v in chapter[key]]
+        if isinstance(chapter.get("camera"), dict) and "target" in chapter["camera"]:
+            chapter["camera"]["target"] = ref(chapter["camera"]["target"])
+        if isinstance(chapter.get("pose"), dict):
+            chapter["pose"] = {ref(k): v for k, v in chapter["pose"].items()}
+    return renamed
+
+
 def check(film: dict) -> dict:
     """Validate a film against the player's contract; returns it unchanged."""
     _numbers_finite(film)
@@ -107,6 +164,7 @@ def check(film: dict) -> dict:
     parts = film.get("parts")
     if not isinstance(parts, list) or not 3 <= len(parts) <= MAX_PARTS:
         _fail(f"parts must list 3-{MAX_PARTS} parts")
+    rename_ids(film)
     ids: set[str] = set()
     for k, part in enumerate(parts):
         where = f"parts[{k}]"
@@ -137,6 +195,8 @@ def check(film: dict) -> dict:
         for key in ("at", "rot", "explode"):
             if key in part:
                 _vector(part[key], f"{where}.{key}", 360 if key == "rot" else 50)
+        if "apart" in part and not isinstance(part["apart"], bool):
+            _fail(f"{where}.apart must be true or false")
         copies = part.get("copies")
         if copies is not None:
             _number(copies, f"{where}.copies", 1, 120)
@@ -328,7 +388,76 @@ def check(film: dict) -> dict:
             _number(chapter["cut"], f"{where}.cut", 0, 1)
     if total > 120:
         _fail("The film runs over 120 seconds; shorten chapters")
+    orient(film)
     return film
+
+
+# Round kinds are built about +Y. A model that forgets recipe.axis gets wheels lying flat and
+# pens standing on end, although the film itself says which way the part really turns.
+ROUND = {"cyl", "cylinder", "cone", "tube", "lathe", "torus", "capsule", "spring", "gear", "rotor"}
+ROUND |= {"tire", "rim"}
+ELONGATED = {"cyl", "cylinder", "cone", "tube", "lathe", "capsule", "spring"}
+AXES = {"x", "-x", "y", "-y", "z", "-z", "+x", "+y", "+z"}
+
+
+def orient(film: dict) -> list[str]:
+    """Give round parts with no stated orientation the axis the film implies.
+
+    Evidence, strongest first: a spin motion on the part (or on the group that carries it)
+    turns about the part's own axis; a long part attached to a side face runs out of that
+    face. A part with recipe.axis or rot set is the author's choice and is left alone; a spin
+    on such a part follows the part's axis. Returns what changed, for logging.
+    """
+    parts = film["parts"]
+    by_id = {p["id"]: p for p in parts}
+    kids: dict[str, list] = {}
+    for p in parts:
+        kids.setdefault(p.get("parent") or "", []).append(p)
+
+    def free(p) -> bool:
+        recipe = p.get("recipe") or {}
+        return p.get("kind") in ROUND and "axis" not in recipe and not any(p.get("rot") or [])
+
+    changes: list[str] = []
+
+    def turn(p, axis: str, why: str) -> None:
+        p.setdefault("recipe", {})["axis"] = axis.lstrip("+")
+        changes.append(f"{p['id']} axis {axis.lstrip('+')} ({why})")
+
+    for motion in film.get("motions", []):
+        if motion.get("type", "spin") != "spin":
+            continue
+        axis = motion.get("axis", "y")
+        if not isinstance(axis, str) or axis not in AXES:
+            continue
+        target = by_id.get(str(motion.get("part", "")).split(".")[0])
+        if target is None:
+            continue
+        if target.get("kind") == "group":
+            # A spinning wheel or crank group: its round parts share the spin axis.
+            stack = [(child, 0) for child in kids.get(target["id"], [])]
+            while stack:
+                child, depth = stack.pop()
+                if free(child):
+                    turn(child, axis, f"spins with {target['id']}")
+                if child.get("kind") == "group" and depth < 2:
+                    stack += [(c, depth + 1) for c in kids.get(child["id"], [])]
+        elif free(target):
+            turn(target, axis, "spin axis")
+        elif target.get("kind") in ROUND and not any(target.get("rot") or []):
+            own = str((target.get("recipe") or {}).get("axis", "y")).lstrip("+-")
+            if own != axis.lstrip("+-"):
+                motion["axis"] = own
+                changes.append(
+                    f"{motion.get('id', target['id'])} spins about {own}, its part's axis"
+                )
+    for p in parts:
+        on = p.get("on")
+        if isinstance(on, dict) and p.get("kind") in ELONGATED and free(p):
+            face = on.get("face", "+y")
+            if face in ("+x", "-x", "+z", "-z"):
+                turn(p, face, f"runs out of {on.get('part')}'s {face} face")
+    return changes
 
 
 PAGE = """<!DOCTYPE html>
