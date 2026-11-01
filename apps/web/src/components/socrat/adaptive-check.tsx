@@ -17,15 +17,24 @@ import { Progress } from '@/components/ui/progress';
 const BANDS = 5;
 const key = (activityId: string) => `socrat:adaptive:${activityId}`;
 
+/** Why the engine picked this difficulty, in the learner's words. */
+const PACE: Record<string, string> = {
+  testout_start: 'starting in the middle',
+  jump_after_fast: 'quick and right, so two steps harder',
+  ladder_up: 'harder after a right answer',
+  confirm_after_slow: 'same level once more, you took your time',
+  easier_after_miss: 'a step easier after a miss',
+};
+
 /** Difficulty you can see: bars rise as the questions get harder. */
-export function DifficultyMeter({ band, reason }: { band: number; reason?: string }) {
-  const level = Math.min(Math.max(band, 1), BANDS);
+export function DifficultyMeter({ band, reason, of = BANDS }: { band: number; reason?: string; of?: number }) {
+  const level = Math.min(Math.max(band, 1), of);
   return (
-    <div className="flex flex-wrap items-end gap-1.5" role="img" aria-label={`Difficulty level ${level} of ${BANDS}`}>
-      {Array.from({ length: BANDS }, (_, i) => (
+    <div className="flex flex-wrap items-end gap-1.5" role="img" aria-label={`Difficulty level ${level} of ${of}`}>
+      {Array.from({ length: of }, (_, i) => (
         <span key={i} className={cn('w-6 rounded-md', i < level ? 'bg-primary' : 'bg-raised')} style={{ height: `${10 + i * 7}px` }} />
       ))}
-      <span className="ml-2 text-[13px] text-muted-foreground">Difficulty {level} of {BANDS}{reason ? ` · ${reason}` : ''}</span>
+      <span className="ml-2 text-[13px] text-muted-foreground">Difficulty {level} of {of}{reason ? ` · ${reason}` : ''}</span>
     </div>
   );
 }
@@ -36,7 +45,7 @@ export function DifficultyMeter({ band, reason }: { band: number; reason?: strin
  */
 export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, onLocked }: {
   activityId: string;
-  mode: 'concept_check' | 'review';
+  mode: 'concept_check' | 'review' | 'testout';
   concept: string;
   title: string;
   onFallback(): void;
@@ -50,6 +59,8 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const shownAt = useRef(Date.now());
+  const testout = mode === 'testout';
+  const top = testout ? 7 : BANDS;
 
   const starting = useRef('');
   const start = useCallback(async (retry = false) => {
@@ -92,6 +103,14 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
         choice: picked,
         time_s: Math.round((Date.now() - shownAt.current) / 1000),
       });
+      if (testout) {
+        // Graded at the end: no right/wrong between questions, straight on to the next.
+        setHistory(h => [...h, { band, correct: false }]);
+        setSession(result.session);
+        setChoice(null);
+        if (result.session.finished) try { sessionStorage.removeItem(key(activityId)); } catch { /* ignore */ }
+        return;
+      }
       if (result.outcome !== 'skipped') setHistory(h => [...h, { band, correct: result.outcome === 'correct' }]);
       setFeedback(result);
       if (result.session.finished) try { sessionStorage.removeItem(key(activityId)); } catch { /* ignore */ }
@@ -111,10 +130,50 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
   if (!session) return error ? <ErrorNote message={error} retry={() => start(true)} /> : <Loading variant="quiz" label="Loading the questions" />;
 
   if (session.finished && !feedback) {
-    const right = history.filter(h => h.correct).length;
-    const passed = session.passed ?? (history.length > 0 && right / history.length >= 0.8);
-    const peak = Math.max(0, ...history.map(h => h.band));
+    const trail = session.results ?? history;
+    const right = trail.filter(h => h.correct).length;
+    const passed = session.passed ?? (trail.length > 0 && right / trail.length >= 0.8);
+    const peak = Math.max(0, ...trail.map(h => h.band));
     const early = session.stop_reason === 'needs_lesson';
+    if (testout) {
+      const transfer = `/transfer/${concept.split(':').join('/')}`;
+      return (
+        <div className="grid gap-6">
+          <section data-tone={passed ? 'hero' : undefined} className={cn(passed ? 'rounded-card bg-forest p-6 text-forest-foreground lg:p-8 animate-pop' : 'rounded-card border border-attention bg-card p-6 lg:p-8')}>
+            <p className={cn('text-[15px]', passed ? 'text-(--card-muted)' : 'text-muted-foreground')}>Test-out complete</p>
+            <h1 className="type-display-l mt-2">{right} of {trail.length} correct</h1>
+            <p className={cn('mt-3 text-base', passed ? 'text-(--card-muted)' : 'text-muted-foreground')}>
+              {passed
+                ? `Proven. ${session.hard_correct ?? 0} right at difficulty ${session.hard_band ?? peak}, the hardest Socrat has on this. You skip it on your plan.`
+                : session.needs_transfer
+                  ? 'Strong answers, but Socrat only has a few questions on this skill. Solve one unseen problem on your own to prove it.'
+                  : session.stop_reason === 'strikes'
+                    ? 'Three misses, so Socrat stopped. Nothing is lost: your plan teaches this one normally.'
+                    : `Not proven yet: passing needs 75% and ${session.hard_needed ?? 2} right at the hardest level. Your plan teaches this one normally.`}
+            </p>
+            {peak ? <div className="mt-4"><DifficultyMeter band={peak} of={top} reason="highest reached" /></div> : null}
+          </section>
+          {trail.length ? (
+            <section aria-labelledby="trail-heading" className="paper rounded-card p-5">
+              <h2 id="trail-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">How it climbed</h2>
+              <ol className="mt-4 flex items-end gap-1.5" aria-label="Difficulty and result of each question">
+                {trail.map((h, i) => (
+                  <li key={i} className="flex flex-col items-center gap-1">
+                    <span className={cn('w-5 rounded-md', h.correct ? 'bg-primary' : 'border border-dashed border-attention bg-transparent')} style={{ height: `${8 + h.band * 7}px` }} />
+                    <span className="sr-only">Question {i + 1}: difficulty {h.band}, {h.correct ? 'right' : 'missed'}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
+          <div className="flex flex-wrap gap-3">
+            {session.needs_transfer ? <Button asChild size="lg"><Link href={transfer}>Solve the proof problem<ArrowCircle /></Link></Button> : null}
+            <Button asChild size="lg" variant={session.needs_transfer ? 'outline' : 'default'}><Link href="/today">Continue{session.needs_transfer ? null : <ArrowCircle />}</Link></Button>
+            {!passed && !session.needs_transfer ? <Button asChild size="lg" variant="outline"><Link href={conceptHref(concept)}>Read the lesson</Link></Button> : null}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="grid gap-6">
         <section data-tone={passed ? 'hero' : undefined} className={cn(passed ? 'rounded-card bg-forest p-6 text-forest-foreground lg:p-8 animate-pop' : 'rounded-card border border-attention bg-card p-6 lg:p-8')}>
@@ -155,11 +214,13 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
     <div className="grid gap-5">
       <div className="grid gap-2">
         <Progress value={(100 * answered) / session.max_items} aria-label={`${answered} answered, up to ${session.max_items}`} />
-        <p className="text-sm text-muted-foreground tabular-nums">Question {answered + (feedback ? 0 : 1)} · up to {session.max_items} · stops early once Socrat is sure</p>
+        <p className="text-sm text-muted-foreground tabular-nums">
+          Question {answered + (feedback ? 0 : 1)} · up to {session.max_items} · {testout ? 'quick right answers climb faster, three misses end it, results at the end' : 'stops early once Socrat is sure'}
+        </p>
       </div>
       {shown ? (
         <div key={shown.item} className="grid gap-5 animate-in fade-in duration-200">
-          <DifficultyMeter band={shown.band} reason={history.length ? (history[history.length - 1].correct ? 'harder after a right answer' : 'easier after a miss') : 'starting just below your level'} />
+          <DifficultyMeter band={shown.band} of={top} reason={testout ? PACE[shown.reason ?? ''] : history.length ? (history[history.length - 1].correct ? 'harder after a right answer' : 'easier after a miss') : 'starting just below your level'} />
           {shown.micro_lesson ? (
             <p className="rounded-[16px] bg-raised px-4 py-3 text-[15px]">
               A few misses in a row. Quick refresher before the next one: <Link href={conceptHref(shown.concept)} className="font-semibold underline underline-offset-4">reread the key idea</Link>.
@@ -176,7 +237,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button size="lg" disabled={busy || choice === null} aria-busy={busy} onClick={() => answer(choice)}>Check answer</Button>
-            <Button size="lg" variant="ghost" disabled={busy} onClick={() => answer(null)}>I haven&apos;t learned this yet</Button>
+            {testout ? null : <Button size="lg" variant="ghost" disabled={busy} onClick={() => answer(null)}>I haven&apos;t learned this yet</Button>}
           </div>
         </div>
       ) : feedback ? (

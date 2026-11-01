@@ -20,6 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import { codeSpans } from '@/components/markdown';
 import { UpgradeBanner } from '@/components/paywall';
 import { SocFigure } from '@/components/socrat/soc';
+import { useExamGuard } from '@/components/socrat/soc-moment';
 
 function Options({ q, choice, onChoose, graded }: { q: QuizQuestion; choice: number | null; onChoose(i: number): void; graded: boolean }) {
   return (
@@ -148,7 +149,7 @@ export default function Quiz() {
   const { features } = useSession();
   // Concept checks and reviews adapt question by question; everything else is a fixed set.
   const [fixed, setFixed] = useState(false);
-  const adaptive = (kind === 'quiz' || kind === 'review') && features?.adaptive_quiz === true && !fixed;
+  const adaptive = (kind === 'quiz' || kind === 'review' || kind === 'testout') && features?.adaptive_quiz === true && !fixed;
   const [locked, setLocked] = useState(false);
   const [upgrade, setUpgrade] = useState(false);
   const fallBack = useCallback(() => setFixed(true), []);
@@ -158,6 +159,9 @@ export default function Quiz() {
   const [choice, setChoice] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const finishedFixed = Boolean(session?.completed && (session.feedback === 'at_end' || index === (session?.questions.length ?? 0)));
+  // Checks and tests are your own work: no copy, paste or screenshots while one is open.
+  const guard = useExamGuard(allowed && kind !== 'review' && !finishedFixed && !locked && !upgrade);
 
   const load = useCallback(() => {
     setError('');
@@ -221,7 +225,8 @@ export default function Quiz() {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
         <QuizHeader title={label} topic={concept.split(':')[1]?.replaceAll('-', ' ')} value={0} />
-        <AdaptiveCheck activityId={activityId} mode={kind === 'review' ? 'review' : 'concept_check'} concept={concept} title={label} onFallback={fallBack} onLocked={lock} />
+        <AdaptiveCheck activityId={activityId} mode={kind === 'review' ? 'review' : kind === 'testout' ? 'testout' : 'concept_check'} concept={concept} title={label} onFallback={fallBack} onLocked={lock} />
+        {guard}
       </div>
     );
   }
@@ -303,6 +308,7 @@ export default function Quiz() {
   const answered = session.questions.filter(item => item.answered).length;
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
+      {guard}
       <QuizHeader title={title} topic={topic} count={session.gate ? undefined : `Question ${Math.min(index + 1, total)} of ${total}`} value={total ? (100 * answered) / total : 0} />
       {session.gate ? <GateMeter gate={session.gate} asked={Math.min(index + 1, total)} /> : null}
 

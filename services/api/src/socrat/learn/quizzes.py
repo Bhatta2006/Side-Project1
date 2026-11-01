@@ -47,6 +47,41 @@ def fitting(catalog: Catalog, concept: str, language: str) -> list[QuizItem]:
     return [q for q in quiz if q.fits(language)] or list(quiz)
 
 
+OPEN_TEST_SECONDS = 20 * 60  # a check touched this recently still counts as being taken
+
+
+def open_test(db: Session, enrollment: Enrollment, now: int) -> bool:
+    """Whether the learner is in the middle of a graded check or test right now.
+
+    The tutor steps back while one is open, so a question cannot be answered by asking Soc.
+    An abandoned check stops counting after ``OPEN_TEST_SECONDS``.
+    """
+    from socrat.models import QuizEngineSession
+
+    since = now - OPEN_TEST_SECONDS
+    legacy = db.scalar(
+        select(QuizSession.id).where(
+            QuizSession.enrollment_id == enrollment.id,
+            QuizSession.completed_at.is_(None),
+            QuizSession.created_at >= since,
+            ~QuizSession.activity_id.like("review:%"),
+        )
+    )
+    if legacy is not None:
+        return True
+    for row in db.scalars(
+        select(QuizEngineSession).where(
+            QuizEngineSession.enrollment_id == enrollment.id,
+            QuizEngineSession.completed_at.is_(None),
+            QuizEngineSession.mode.in_(("concept_check", "testout", "checkpoint", "weekly")),
+        )
+    ):
+        pending = (row.state or {}).get("pending") or {}
+        if int(pending.get("served_at") or row.created_at) >= since:
+            return True
+    return False
+
+
 # ---------------------------------------------------------------- gates
 
 
@@ -66,7 +101,13 @@ def recent_items(db: Session, enrollment: Enrollment, now: int, exclude: str = "
             QuizSession.id != exclude,
         )
     )
-    return {item_id for s in rows for _, item_id in s.items}
+    recent = {item_id for s in rows for _, item_id in s.items}
+    # Questions used in a weekly exam stay out of practice for months (bare legacy ids here).
+    from socrat.assessments.service import quarantined
+
+    for key in quarantined(db, enrollment, now):
+        recent.add(key.rsplit(":", 1)[-1])
+    return recent
 
 
 def next_gate_item(
@@ -455,7 +496,7 @@ def finish(
                 "attempts": attempts,
                 "retry_at": now + gates.COOLDOWN_SECONDS,
             }
-            learn.bump_daily(db, user, now, minutes=max(1, round(elapsed / 60)))
+            learn.bump_daily(db, user, now, minutes=round(elapsed / 60))
     elif session.activity_id.startswith("quiz:"):
         settle_check(
             db,
@@ -475,7 +516,7 @@ def finish(
             outcome={"score": score_of(catalog, session, enrollment.language)},
         )
     else:  # Reviews recur on a schedule; count the effort without completing them forever.
-        learn.bump_daily(db, user, now, minutes=max(1, round(elapsed / 60)))
+        learn.bump_daily(db, user, now, minutes=round(elapsed / 60))
 
 
 def settle_check(
@@ -491,7 +532,7 @@ def settle_check(
         if record.completed_at is None:
             record.outcome = {"score": score, "passed": False}
         elapsed = learn.elapsed(db, enrollment, activity_id, now)
-        learn.bump_daily(db, user, now, minutes=max(1, round(elapsed / 60)))
+        learn.bump_daily(db, user, now, minutes=round(elapsed / 60))
     # Taking the check means the lesson was read.
     learn.complete_activity(
         db,
@@ -545,3 +586,34 @@ def finish_testout(
         learn.complete_activity(
             db, user, enrollment, gate, now, outcome={**outcome, "via": "test_out"}
         )
+
+
+def settle_testout(
+    db: Session,
+    catalog: Catalog,
+    user: User,
+    enrollment: Enrollment,
+    activity_id: str,
+    per_concept: dict[str, list[bool]],
+    passed: bool,
+    score: float,
+    now: int,
+) -> None:
+    """Close a test-out the adaptive engine ran; ``passed`` is the engine's decision."""
+    elapsed = learn.elapsed(db, enrollment, activity_id, now)
+    expected = learn.expected_seconds(catalog, activity_id, enrollment)
+    for concept, results in per_concept.items():
+        fraction = sum(results) / len(results)
+        learn.record_evidence(
+            db,
+            enrollment,
+            concept,
+            "testout" if passed else "quiz",
+            1.0 if passed else fraction,
+            activity_id,
+            now,
+            elapsed_seconds=elapsed,
+            expected_seconds=expected,
+        )
+    outcome = {"score": round(score, 3), "passed": passed, "engine": "adaptive"}
+    learn.complete_activity(db, user, enrollment, activity_id, now, outcome=outcome)

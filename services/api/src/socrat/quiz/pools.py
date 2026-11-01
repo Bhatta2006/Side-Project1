@@ -15,6 +15,7 @@ import hashlib
 from collections import defaultdict
 from dataclasses import dataclass
 
+from socrat.catalog import dialect
 from socrat.catalog.quizbank import (
     BAND_FOR_DIFFICULTY,
     LEGACY_FORMAT,
@@ -97,6 +98,18 @@ def legacy_bank(catalog, cfg: EngineConfig = DEFAULT) -> list[Item]:
     return items
 
 
+def item_languages(family: QuizFamily, q) -> tuple[str, ...]:
+    """Languages a family item may be served in: its code's, else the family's minus any
+    whose syntax the prose does not speak (``7 // 2`` is Python, not C++)."""
+    if q.code:
+        return tuple(q.code)
+    allowed = tuple(family.languages)
+    spoken = dialect.spoken(q.prompt, *q.options, q.explanation)
+    if not spoken:
+        return allowed
+    return tuple(x for x in allowed if x in spoken) or ("__none__",)
+
+
 def family_bank(families: dict[str, QuizFamily], cfg: EngineConfig = DEFAULT) -> list[Item]:
     """Static family items. New content counts as evidence only after a human review."""
     items = []
@@ -117,7 +130,7 @@ def family_bank(families: dict[str, QuizFamily], cfg: EngineConfig = DEFAULT) ->
                     d_prior=cfg.prior(q.band),
                     pool=q.pool or pool_for_key(key, cfg),
                     status=status,
-                    languages=tuple(q.code),
+                    languages=item_languages(family, q),
                     misconceptions=tuple(q.misconceptions),
                     reviewed=reviewed,
                 )

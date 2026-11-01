@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import { CopyCodeBlock } from '@/components/socrat/copy-code-block';
+import './lesson-prose.css';
 
 /**
  * Minimal, dependency-free Markdown renderer for lessons and assistant replies.
@@ -111,6 +112,34 @@ export function inline(text: string): ReactNode[] {
   return out;
 }
 
+/** Big-O and Theta in running text, e.g. O(n log n), so costs stand out as small chips. */
+const COST = /(\b[OΘΩ]\([^()]*(?:\([^()]*\)[^()]*)*\))/g;
+
+/** Rich inline: everything `inline` does, plus cost chips in plain text. Lessons only. */
+function richInline(text: string): ReactNode[] {
+  return inline(text).flatMap((node, n): ReactNode[] => {
+    if (typeof node !== 'string') return [node];
+    return node.split(COST).map((part, i) => (i % 2 ? <span key={`c${n}-${i}`} className="cost">{part}</span> : part));
+  });
+}
+
+/** Lesson sections that read better as a margin note than as more body text. */
+type Callout = 'mistake' | 'insight' | 'cue' | 'example' | 'recipe' | 'check' | 'compare';
+const CALLOUTS: [RegExp, Callout, string][] = [
+  [/common mistakes|things to watch|pitfall|gotcha|watch out|boundary cases/i, 'mistake', 'watch out'],
+  [/why this works|big idea|key idea|intuition|in short|takeaway|remember/i, 'insight', 'the idea'],
+  [/recognition cues|when to use|spot it/i, 'cue', 'spot it'],
+  [/anchor|worked example|example/i, 'example', 'try this one'],
+  [/template|recipe|state, transition|steps/i, 'recipe', 'the recipe'],
+  [/check your understanding|self-check|quick check/i, 'check', 'check yourself'],
+  [/contrast|variants|compare/i, 'compare', 'compare'],
+];
+
+function calloutFor(text: string): [Callout, string] | null {
+  const hit = CALLOUTS.find(([rx]) => rx.test(text));
+  return hit ? [hit[1], hit[2]] : null;
+}
+
 const HEADINGS = ['h2', 'h2', 'h3', 'h4', 'h4', 'h4'] as const;
 
 /** Stable anchor for a heading, shared with the lesson's "On this page" links. */
@@ -126,54 +155,91 @@ export function outline(source: string): { id: string; text: string }[] {
   });
 }
 
-export default function Markdown({ source, language, className = '' }: { source: string; language?: string; className?: string }) {
+export default function Markdown({ source, language, className = '', rich = false }: {
+  source: string;
+  language?: string;
+  className?: string;
+  /** Lessons: margin-note callouts, highlighted key terms, formula cards and cost chips. */
+  rich?: boolean;
+}) {
   const blocks = parse(source).filter(b => {
     if (b.type !== 'code' || !language) return true;
     const owner = CODE_LANGUAGES[b.lang];
     return !owner || owner === language;
   });
-  return (
-    <div className={`prose-socrat ${className}`}>
-      {blocks.map((b, index) => {
-        switch (b.type) {
-          case 'heading': {
-            const Tag = HEADINGS[b.level - 1];
-            return <Tag key={index} id={b.level <= 2 ? slug(b.text.replace(/[`*_]/g, '')) : undefined}>{inline(b.text)}</Tag>;
-          }
-          case 'paragraph':
-            return <p key={index}>{inline(b.text)}</p>;
-          case 'code':
-            return <CopyCodeBlock key={index} code={b.text} lang={b.lang || undefined} />;
-          case 'list': {
-            const Tag = b.ordered ? 'ol' : 'ul';
-            return <Tag key={index}>{b.items.map((item, n) => <li key={n}>{inline(item)}</li>)}</Tag>;
-          }
-          case 'quote': {
-            // A quote right after "try it before reading the reasoning" is an answer: hidden until asked for.
-            const before = blocks[index - 1];
-            const answer = before?.type === 'paragraph' && /before reading|reasoning below|try it|think first/i.test(before.text);
-            return answer ? (
-              <details key={index} className="answer-reveal">
-                <summary>Show the reasoning</summary>
-                <blockquote>{inline(b.text)}</blockquote>
-              </details>
-            ) : <blockquote key={index}>{inline(b.text)}</blockquote>;
-          }
-          case 'table':
-            return (
-              <div key={index} className="table-scroll" tabIndex={0} role="region" aria-label="Table">
-                <table>
-                  <thead><tr>{b.head.map((h, n) => <th key={n}>{inline(h)}</th>)}</tr></thead>
-                  <tbody>{b.rows.map((row, r) => <tr key={r}>{row.map((c, n) => <td key={n}>{inline(c)}</td>)}</tr>)}</tbody>
-                </table>
-              </div>
-            );
-          case 'rule':
-            return <hr key={index} />;
-          default:
-            return <Fragment key={index} />;
+  const text = rich ? richInline : inline;
+  let lead = rich;
+
+  function render(b: Block, index: number): ReactNode {
+    switch (b.type) {
+      case 'heading': {
+        const Tag = HEADINGS[b.level - 1];
+        return <Tag key={index} id={b.level <= 2 ? slug(b.text.replace(/[`*_]/g, '')) : undefined}>{text(b.text)}</Tag>;
+      }
+      case 'paragraph': {
+        // A paragraph that is one code span on its own is a formula: give it room.
+        if (rich && /^`[^`]+`\.?$/.test(b.text.trim())) {
+          return <p key={index} className="formula"><code>{b.text.trim().replace(/\.$/, '').slice(1, -1)}</code></p>;
         }
-      })}
-    </div>
-  );
+        const first = lead;
+        lead = false;
+        return <p key={index} className={first ? 'lead' : undefined}>{text(b.text)}</p>;
+      }
+      case 'code':
+        return <CopyCodeBlock key={index} code={b.text} lang={b.lang || undefined} />;
+      case 'list': {
+        const Tag = b.ordered ? 'ol' : 'ul';
+        return <Tag key={index}>{b.items.map((item, n) => <li key={n}>{text(item)}</li>)}</Tag>;
+      }
+      case 'quote': {
+        // A quote right after "try it before reading the reasoning" is an answer: hidden until asked for.
+        const before = blocks[index - 1];
+        const answer = before?.type === 'paragraph' && /before reading|reasoning below|try it|think first/i.test(before.text);
+        return answer ? (
+          <details key={index} className="answer-reveal">
+            <summary>Show the reasoning</summary>
+            <blockquote>{text(b.text)}</blockquote>
+          </details>
+        ) : <blockquote key={index}>{text(b.text)}</blockquote>;
+      }
+      case 'table':
+        return (
+          <div key={index} className="table-scroll" tabIndex={0} role="region" aria-label="Table">
+            <table>
+              <thead><tr>{b.head.map((h, n) => <th key={n}>{text(h)}</th>)}</tr></thead>
+              <tbody>{b.rows.map((row, r) => <tr key={r}>{row.map((c, n) => <td key={n}>{text(c)}</td>)}</tr>)}</tbody>
+            </table>
+          </div>
+        );
+      case 'rule':
+        return <hr key={index} />;
+      default:
+        return <Fragment key={index} />;
+    }
+  }
+
+  const out: ReactNode[] = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    const kind = rich && b.type === 'heading' && b.level >= 3 ? calloutFor(b.text) : null;
+    if (b.type === 'heading' && kind) {
+      // A small section (### Common mistakes, ### Why this works, ...) becomes one margin-note card,
+      // running until the next heading.
+      const body: ReactNode[] = [];
+      let j = i + 1;
+      while (j < blocks.length && blocks[j].type !== 'heading') body.push(render(blocks[j], j++));
+      out.push(
+        <section key={i} className={`callout callout-${kind[0]}`} aria-label={b.text.replace(/[`*_]/g, '')}>
+          <p className="callout-note" aria-hidden="true">{kind[1]}</p>
+          {render(b, i)}
+          {body}
+        </section>,
+      );
+      i = j - 1;
+      continue;
+    }
+    if (rich && b.type === 'heading' && b.level <= 2 && /big idea/i.test(b.text)) lead = true;
+    out.push(render(b, i));
+  }
+  return <div className={`prose-socrat ${rich ? 'prose-lesson' : ''} ${className}`}>{out}</div>;
 }

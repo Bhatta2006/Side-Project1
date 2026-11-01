@@ -404,3 +404,123 @@ def concept_practice(
         )
         picks += extra[: 8 - len(picks)]
     return [row(catalog, learner, p, marks) for p in picks if learner.can_practice(p)]
+
+
+# ---------------------------------------------------------------- solved board
+
+DSA_COURSES = ("dsa", "cp")
+HEATMAP_DAYS = 365
+
+
+def _level(rating: int) -> str:
+    return "easy" if rating < 1200 else "medium" if rating < 1700 else "hard"
+
+
+def solved_board(db: Session, catalog, user, enrollment, now: int) -> dict:
+    """Problems solved, the way coding sites show it: by difficulty, a year of daily activity,
+    acceptance rate and the latest accepted solutions. Judge problems and marked library
+    problems both count; each problem once."""
+    from collections import Counter
+    from datetime import date, timedelta
+
+    from socrat.catalog import practice
+    from socrat.learn import service as learn
+
+    accepted: dict[str, int] = {}  # problem -> first accepted at
+    submits = 0
+    accepted_submits = 0
+    days: Counter = Counter()
+    rows = db.execute(
+        select(Submission.problem_id, Submission.verdict, Submission.created_at).where(
+            Submission.user_id == user.id, Submission.mode == "submit"
+        )
+    )
+    for problem_id, verdict, at in rows:
+        submits += 1
+        days[learn.local_day(user, at).isoformat()] += 1
+        if verdict == "accepted":
+            accepted_submits += 1
+            accepted[problem_id] = min(at, accepted.get(problem_id, at))
+    index = practice.default_index()
+    external: dict[str, int] = {}
+    for mark in db.scalars(
+        select(PracticeMark).where(PracticeMark.user_id == user.id, PracticeMark.status == "solved")
+    ):
+        if mark.problem_id in index.problems and mark.problem_id not in accepted:
+            at = mark.solved_at or mark.updated_at
+            external[mark.problem_id] = at
+            days[learn.local_day(user, at).isoformat()] += 1
+
+    def native_level(problem_id: str) -> str:
+        entry = catalog.problems.get(problem_id)
+        return getattr(entry[1], "difficulty", "medium") if entry else "medium"
+
+    levels = ("easy", "medium", "hard")
+    solved = Counter({x: 0 for x in levels})
+    for problem_id in accepted:
+        solved[native_level(problem_id)] += 1
+    for problem_id in external:
+        solved[_level(practice.rating_of(index.problems[problem_id]))] += 1
+    total = Counter({x: 0 for x in levels})
+    for _, problem in catalog.problems.values():
+        total[getattr(problem, "difficulty", "medium")] += 1
+    for problem in index.problems.values():
+        total[_level(practice.rating_of(problem))] += 1
+
+    today = learn.local_day(user, now)
+    start = today - timedelta(days=HEATMAP_DAYS - 1)
+    heat = [
+        dict(
+            day=(start + timedelta(days=i)).isoformat(),
+            count=days.get((start + timedelta(days=i)).isoformat(), 0),
+        )
+        for i in range(HEATMAP_DAYS)
+    ]
+    active = {d for d, n in days.items() if n}
+    current = 0
+    cursor = today if today.isoformat() in active else today - timedelta(days=1)
+    while cursor.isoformat() in active:
+        current += 1
+        cursor -= timedelta(days=1)
+    longest = run = 0
+    previous = None
+    for day in sorted(active):
+        stamp = date.fromisoformat(day)
+        run = run + 1 if previous and stamp - previous == timedelta(days=1) else 1
+        longest = max(longest, run)
+        previous = stamp
+
+    recent = sorted(
+        [(at, pid, "judge") for pid, at in accepted.items()]
+        + [(at, pid, "library") for pid, at in external.items()],
+        reverse=True,
+    )[:10]
+
+    def title(pid: str, source: str) -> tuple[str, str]:
+        if source == "judge":
+            entry = catalog.problems.get(pid)
+            return (entry[1].title if entry else pid), native_level(pid)
+        p = index.problems[pid]
+        return p.get("title", pid), _level(practice.rating_of(p))
+
+    return dict(
+        show=enrollment.course_id in DSA_COURSES,
+        solved=sum(solved.values()),
+        total=sum(total.values()),
+        by_difficulty=[dict(level=x, solved=solved[x], total=total[x]) for x in levels],
+        acceptance=round(accepted_submits / submits, 3) if submits else None,
+        submissions=submits,
+        active_days=len([d for d in heat if d["count"]]),
+        streak=dict(current=current, longest=longest),
+        heatmap=heat,
+        recent=[
+            dict(
+                id=pid,
+                source=source,
+                title=title(pid, source)[0],
+                level=title(pid, source)[1],
+                at=at,
+            )
+            for at, pid, source in recent
+        ],
+    )

@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pydantic import ValidationError
 
 from socrat import harness
-from socrat.catalog import shape
+from socrat.catalog import dialect, shape
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import (
@@ -250,7 +250,10 @@ QUIZ_CODE = """Code items are allowed. Up to 3 items may be "kind": "output" wit
 "code": {{"<language>": "complete program"}} for each of: {languages}. Each program reads no
 input and prints exactly the text of the correct option; it is run, and the item is
 rejected if the output differs or matches another option. Under 15 lines, equivalent in
-every language; Java uses "public class Solution". Other items are "kind": "mcq" without code."""
+every language; Java uses "public class Solution". Other items are "kind": "mcq" without code,
+and every learner sees them whatever their language, so they must hold in each of: {languages}.
+Never lean on syntax only one language has (input(), math.sqrt, a // b, std::cout,
+System.out); describe the idea in words, or make it an "output" item."""
 
 PROMPTS = """This concept is also assessed by free-text answers. Add "prompts": 1-3 questions
 the learner answers in their own words (explain why, compare, apply to a new case; never
@@ -454,6 +457,16 @@ def build_concept(
                 raise TypeError(f"kind {item['kind']} is not allowed; use mcq or output")
             if item["kind"] == "mcq":
                 item.pop("code", None)
+                spoken = dialect.spoken(
+                    str(item.get("prompt", "")),
+                    *[str(o) for o in item.get("options") or []],
+                    str(item.get("explanation", "")),
+                )
+                if len(languages) > 1 and spoken and not set(languages) <= spoken:
+                    raise TypeError(
+                        f"uses {', '.join(sorted(spoken))} syntax, but learners of "
+                        f"{', '.join(languages)} all see it; keep it language-neutral"
+                    )
             elif set(item.get("code") or {}) != set(languages):
                 raise TypeError(f"an output item needs code in exactly: {', '.join(languages)}")
             parsed.append(QuizItem.model_validate(item))

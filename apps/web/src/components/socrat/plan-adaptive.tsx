@@ -72,21 +72,63 @@ export function PathStyles({ onChanged }: { onChanged: () => void }) {
   );
 }
 
-/** B3: what each week should finish, and what that lets you do. */
+const SHOWN_WEEKS = 3;
+const SHOWN_TOPICS = 3;
+
+/** B3: what each week should finish, and what that lets you do.
+ * A quiet timeline: this week leads with its outcome, the next two follow in one line each,
+ * and the rest of the path waits behind "Show all weeks". */
 export function Milestones({ milestones }: { milestones: Milestone[] }) {
+  const [all, setAll] = useState(false);
   if (!milestones.length) return <p className="text-[15px] text-muted-foreground">Everything on your path is done.</p>;
+  const shown = all ? milestones : milestones.slice(0, SHOWN_WEEKS);
+  const rest = milestones.length - SHOWN_WEEKS;
   return (
-    <ol className="grid gap-3">
-      {milestones.map(m => (
-        <li key={m.week} className="rounded-[16px] bg-raised p-3">
-          <p className="text-[13px] text-muted-foreground" data-visual-mask="">
-            Week {m.week}, by {formatDate(m.ends, { weekday: 'short', month: 'short', day: 'numeric' })}
-          </p>
-          <p className="mt-0.5 font-semibold">{m.concepts.map(c => c.title).join(', ')}</p>
-          <p className="mt-1 text-[14px] text-muted-foreground">{m.outcome}</p>
-        </li>
-      ))}
-    </ol>
+    <div className="grid gap-3">
+      <ol className="relative grid">
+        {shown.map((m, i) => {
+          const current = i === 0;
+          const extra = m.concepts.length - SHOWN_TOPICS;
+          return (
+            <li key={m.week} className="relative grid grid-cols-[24px_minmax(0,1fr)] gap-x-3 pb-4 last:pb-0">
+              {/* The rail joining the weeks; it stops at the last one shown. */}
+              {i < shown.length - 1 ? <span aria-hidden="true" className="absolute top-6 bottom-0 left-[11px] w-px bg-border-strong" /> : null}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'mt-0.5 grid size-6 place-items-center rounded-full text-[12px] font-bold tabular-nums',
+                  current ? 'bg-primary text-primary-foreground' : 'border border-border-strong bg-card text-muted-foreground',
+                )}
+              >
+                {m.week}
+              </span>
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-baseline justify-between gap-x-2 text-[13px] text-muted-foreground" data-visual-mask="">
+                  <span className={cn(current && 'font-semibold text-foreground')}>{current ? 'This week' : `Week ${m.week}`}</span>
+                  <span className="tabular-nums">by {formatDate(m.ends, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                </p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label={`Topics for week ${m.week}`}>
+                  {m.concepts.slice(0, SHOWN_TOPICS).map(c => (
+                    <li key={c.concept} className="max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-[13px] font-medium">{c.title}</li>
+                  ))}
+                  {extra > 0 ? (
+                    <li className="rounded-full px-1.5 py-0.5 text-[13px] text-muted-foreground" title={m.concepts.slice(SHOWN_TOPICS).map(c => c.title).join(', ')}>
+                      +{extra} more
+                    </li>
+                  ) : null}
+                </ul>
+                {current && m.outcome ? <p className="mt-2 text-[14px] leading-snug text-muted-foreground">{m.outcome}</p> : null}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {rest > 0 ? (
+        <button type="button" onClick={() => setAll(v => !v)} aria-expanded={all} className="justify-self-start text-[14px] font-semibold underline underline-offset-4">
+          {all ? 'Show fewer weeks' : `Show all ${milestones.length} weeks`}
+        </button>
+      ) : null}
+    </div>
   );
 }
 

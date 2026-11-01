@@ -202,6 +202,8 @@ function useAssessmentReady(learning: boolean) {
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 const ownTutor = (path: string) => path === '/today' || path === '/plan' || path.startsWith('/learn/') || /^\/problems\/[^/]+$/.test(path);
+/** Checks and tests are proof of what the learner knows on their own: no tutor on these. */
+const examRoute = (path: string) => path.startsWith('/quiz/') || path.startsWith('/transfer/') || path === '/assessments';
 
 /** Current plan with the next step up: Free and Plus can upgrade, Pro manages. Hidden while billing is off. */
 function PlanCard({ collapsed }: { collapsed: boolean }) {
@@ -439,7 +441,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       <Tour />
       <ReportProblem />
       {/* Soc is one tap away everywhere; pages with their own tutor (lesson, problem, plan, today) mount a scoped one. */}
-      {ownTutor(pathname) ? null : <Assistant scope="general" title="Ask Soc" />}
+      {ownTutor(pathname) || examRoute(pathname) ? null : <Assistant scope="general" title="Ask Soc" />}
     </div>
   );
 }

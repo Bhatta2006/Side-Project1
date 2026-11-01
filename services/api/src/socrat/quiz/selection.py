@@ -38,6 +38,7 @@ class Step:
     misconception: str | None = None  # of the chosen wrong option, when tagged
     theta_before: float | None = None
     theta_after: float | None = None
+    seconds: int = 0  # time to answer, server-capped
 
     @property
     def independent(self) -> bool:
@@ -80,7 +81,38 @@ def answered(steps: list[Step]) -> list[Step]:
     return [s for s in steps if s.outcome != "skipped"]
 
 
+def paced_ladder(steps: list[Step], ctx: Context, cfg: EngineConfig = DEFAULT) -> Ladder:
+    """Test-out pacing: start in the middle, jump on fast or streaking right answers, hold on
+    slow ones, drop one band after a miss. Nothing is served below band 2 after the start."""
+    top = ctx.max_band
+    done = answered(steps)
+    if not done:
+        estimate = band_for(min(ctx.thetas[p] for p in ctx.patterns), cfg)
+        start = min(top, max(3, estimate))
+        return Ladder((1, top), (start, start), "testout_start")
+    last = done[-1]
+    cur = last.band
+    if last.outcome == "wrong":
+        down = max(1, cur - 1)
+        return Ladder((max(1, cur - 2), cur), (down, down), "easier_after_miss")
+    streak = 0
+    for s in reversed(done):
+        if not s.independent:
+            break
+        streak += 1
+    fast = last.seconds <= cfg.fast_base_s + cfg.fast_per_band_s * cur
+    slow = last.seconds > cfg.slow_base_s + cfg.slow_per_band_s * cur
+    low, high = max(1, cur - 1), min(top, cur + cfg.max_jump)
+    if slow and streak < 3:
+        return Ladder((low, high), (cur, cur), "confirm_after_slow")
+    step = 2 if fast or streak >= 3 else 1
+    up = min(top, cur + step)
+    return Ladder((low, high), (up, up), "jump_after_fast" if step == 2 else "ladder_up")
+
+
 def ladder(steps: list[Step], ctx: Context, cfg: EngineConfig = DEFAULT) -> Ladder:
+    if ctx.mode.paced:
+        return paced_ladder(steps, ctx, cfg)
     top = ctx.max_band
     done = answered(steps)
     if not done:
@@ -124,7 +156,7 @@ def candidates(items: list[Item], steps: list[Step], ctx: Context) -> list[Item]
     base = [
         i
         for i in items
-        if i.pool == ctx.mode.pool
+        if (ctx.mode.any_pool or i.pool == ctx.mode.pool)
         and i.status != "retired"
         and (i.status == "calibrated" or not ctx.mode.calibrated_only)
         and i.pattern in scope
@@ -176,7 +208,10 @@ def select(
         return Choice(None, "exhausted")
     # The ladder overrides variety: choose the band first, then vary within it.
     gap = min(distance(i.band, rule.preferred) for i in pool)
-    pool = varied([i for i in pool if distance(i.band, rule.preferred) == gap], steps, ctx, cfg)
+    pool = [i for i in pool if distance(i.band, rule.preferred) == gap]
+    if ctx.mode.any_pool:  # prefer the named pool (assessment: items never practised)
+        pool = [i for i in pool if i.pool == ctx.mode.pool] or pool
+    pool = varied(pool, steps, ctx, cfg)
     if rule.misconception:
         tagged = [i for i in pool if rule.misconception in i.misconceptions]
         pool = tagged or pool

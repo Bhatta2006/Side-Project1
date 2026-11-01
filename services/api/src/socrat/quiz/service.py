@@ -19,6 +19,7 @@ from socrat.catalog.registry import Catalog, qualify
 from socrat.catalog.schema import Language
 from socrat.learn import service as learn
 from socrat.models import (
+    ActivityRecord,
     Enrollment,
     ItemCalibration,
     ItemRating,
@@ -239,6 +240,10 @@ def context(
             )
         )
     )
+    if session.mode != "weekly":  # weekly questions stay out of every other quiz for months
+        from socrat.assessments.service import quarantined
+
+        seen = seen | quarantined(db, enrollment, now)
     top = max_band(db, cat, enrollment, session.concepts, now, cfg)
     ctx = Context(
         track=track,
@@ -253,6 +258,14 @@ def context(
         max_band=top,
         micro_shown=bool(session.state.get("micro_shown")),
     )
+    if spec.paced:
+        # A test-out must reach the hardest band this learner can be served on the concept.
+        fit = [
+            i
+            for i in items
+            if i.status != "retired" and (not i.languages or enrollment.language in i.languages)
+        ]
+        return ctx, items, min(top, max((i.band for i in fit), default=1))
     pool = [i for i in items if i.pool == spec.pool]
     return ctx, items, modes.ceiling(track, pool, top, cfg)
 
@@ -286,6 +299,8 @@ def advance(
                 db, user, enrollment, f"quiz:{session.concepts[0]}", score, now
             )
             state["score"] = round(score, 3)
+        elif session.mode == "testout":
+            state.update(settle_testout(db, cat, enrollment, session, ceiling_band, now, cfg))
     else:
         state["pending"] = dict(
             item=choice.item.key,
@@ -297,6 +312,60 @@ def advance(
         if choice.micro:
             state["micro_shown"] = True
     session.state = state
+
+
+def settle_testout(
+    db: Session,
+    cat: Catalog,
+    enrollment: Enrollment,
+    session: QuizEngineSession,
+    ceiling_band: int,
+    now: int,
+    cfg: EngineConfig = DEFAULT,
+) -> dict:
+    """Decide a finished test-out and write its evidence once.
+
+    Passing needs enough answers to mean something (the mode's ``min_items``), at most
+    ``max_wrong - 1`` misses, ``testout_pass`` accuracy and ``testout_hard_needed``
+    unaided corrects at the hardest band on offer. A concept whose bank is too thin to ask
+    ``min_items`` questions cannot be proven here: the learner is sent to a transfer check.
+    """
+    from socrat.learn import quizzes
+    from socrat.models import User
+
+    spec = spec_of(session, cfg)
+    done = [s for s in steps_of(session) if s.outcome != "skipped"]
+    right = sum(s.outcome == "correct" for s in done)
+    wrong = len(done) - right
+    hard = sum(1 for s in done if s.independent and s.band >= ceiling_band)
+    accuracy = right / len(done) if done else 0.0
+    enough = len(done) >= spec.min_items
+    strong = (
+        bool(done)
+        and wrong < (spec.max_wrong or 10**6)
+        and accuracy >= cfg.testout_pass
+        and hard >= cfg.testout_hard_needed
+    )
+    passed = strong and enough
+    user = db.get(User, enrollment.user_id)
+    if user is None:
+        raise HTTPException(401, "authentication_required")
+    by_key = {i.key: i.concept for i in bank(cat, cfg)}
+    per_concept: dict[str, list[bool]] = {}
+    for s in done:
+        per_concept.setdefault(by_key.get(s.item, session.concepts[0]), []).append(
+            s.outcome == "correct"
+        )
+    activity = session.state.get("activity") or f"testout:{session.concepts[0]}"
+    quizzes.settle_testout(db, cat, user, enrollment, activity, per_concept, passed, accuracy, now)
+    return dict(
+        passed=passed,
+        score=round(accuracy, 3),
+        hard_band=ceiling_band,
+        hard_correct=hard,
+        hard_needed=cfg.testout_hard_needed,
+        needs_transfer=strong and not enough,
+    )
 
 
 # ---------------------------------------------------------------- actions
@@ -318,6 +387,32 @@ def start(
     concepts = sorted(set(concepts))
     for concept in concepts:
         learn.require_unlocked(db, cat, enrollment, concept, now)
+    activity = None
+    if mode == "testout":
+        if len(concepts) != 1:
+            raise HTTPException(422, "one_concept_per_testout")
+        activity = f"testout:{concepts[0]}"
+        # One attempt: a finished test-out shows its result instead of starting over.
+        record = db.get(ActivityRecord, (enrollment.id, activity))
+        if record is not None and record.completed_at is not None:
+            earlier = next(
+                (
+                    row
+                    for row in db.scalars(
+                        select(QuizEngineSession)
+                        .where(
+                            QuizEngineSession.enrollment_id == enrollment.id,
+                            QuizEngineSession.mode == "testout",
+                            QuizEngineSession.completed_at.is_not(None),
+                        )
+                        .order_by(QuizEngineSession.created_at.desc())
+                    )
+                    if list(row.concepts) == concepts
+                ),
+                None,
+            )
+            if earlier is not None:
+                return earlier
     if not modes.available(spec, concepts, items_for(db, cat, cfg), cfg):
         return None
     session = QuizEngineSession(
@@ -325,11 +420,13 @@ def start(
         mode=mode,
         track=track_for(enrollment),
         concepts=concepts,
-        state={"steps": [], "pending": None},
+        state={"steps": [], "pending": None, **({"activity": activity} if activity else {})},
         created_at=now,
     )
     db.add(session)
     db.flush()
+    if activity:
+        learn.start_activity(db, enrollment, activity, now)
     advance(db, cat, enrollment, session, now, cfg)
     return session
 
@@ -381,9 +478,14 @@ def answer(
     if choice is not None and not 0 <= choice < len(shown["options"]):
         raise HTTPException(422, "invalid_choice")
     hints = int(pending["hints"])
+    spec = spec_of(session, cfg)
+    if pending.get("served_at"):  # the client's clock cannot claim more speed than the server saw
+        time_s = min(time_s, max(0, now - int(pending["served_at"])))
     outcome: Outcome
     authored: int | None = None
-    if choice is None:
+    if choice is None and spec.paced:
+        outcome, tag = "wrong", None  # a test-out has no "not learned yet": that is a miss
+    elif choice is None:
         outcome, tag = "skipped", None
     else:
         outcome = "correct" if choice == shown["answer"] else "wrong"
@@ -411,7 +513,7 @@ def answer(
         top,
         cfg,
     )
-    spec = spec_of(session, cfg)
+    step = replace(step, seconds=max(0, time_s))
     if change is not None:
         ability.theta, ability.n, ability.updated_at = change.theta, ability.n + 1, now
         if item.status != "calibrated":
@@ -462,6 +564,8 @@ def answer(
         "pending": None,
     }
     advance(db, cat, enrollment, session, now, cfg)
+    if spec.paced:  # graded at the end: no answer key mid-test
+        return dict(outcome="recorded", answer=None, explanation=None, misconception=None)
     return dict(
         outcome=outcome,
         answer=shown["answer"],
@@ -489,6 +593,7 @@ def view(cat: Catalog, session: QuizEngineSession, language: str, cfg: EngineCon
             prompt=shown["prompt"],
             code=shown["code"],
             options=shown["options"],
+            reason=pending.get("reason"),
             hints_used=pending["hints"],
             hints_available=len(shown["hints"]) if spec.hints else 0,
             micro_lesson=(
@@ -509,6 +614,20 @@ def view(cat: Catalog, session: QuizEngineSession, language: str, cfg: EngineCon
         stop_reason=session.state.get("stop"),
         score=session.state.get("score"),
         passed=session.state.get("passed"),
+        hard_band=session.state.get("hard_band"),
+        hard_correct=session.state.get("hard_correct"),
+        hard_needed=session.state.get("hard_needed"),
+        needs_transfer=session.state.get("needs_transfer"),
+        # Per-answer trail once finished, so a reloaded result page can still draw it.
+        results=(
+            [
+                dict(band=s.band, correct=s.outcome == "correct", seconds=s.seconds)
+                for s in steps
+                if s.outcome != "skipped"
+            ]
+            if session.completed_at is not None
+            else None
+        ),
     )
 
 

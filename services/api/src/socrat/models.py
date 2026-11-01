@@ -354,6 +354,8 @@ class DailyActivity(Base):
     activities: Mapped[int] = mapped_column(Integer, default=0)
     minutes: Mapped[int] = mapped_column(Integer, default=0)
     solved: Mapped[int] = mapped_column(Integer, default=0)
+    # Last moment already credited as study time today; later credits start after it.
+    counted_until: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class AuditEvent(Base):
@@ -435,6 +437,9 @@ class WeeklyAssessment(Base):
     finished_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     report: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Generated key -> {prompt, code, options, answer, explanation, edge}: hard questions
+    # written for this exam and proven by running them (assessments/hard.py).
+    generated: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class FocusSprint(Base):

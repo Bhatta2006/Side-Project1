@@ -30,6 +30,7 @@ ROLES = {
     "grader",  # learners' free-text answers and project milestones
     "stylist",  # a free-text learning wish -> a style spec
     "researcher",  # finds open, public sources for a concept
+    "weekly",  # hard, execution-verified weekly exam questions
 }
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {

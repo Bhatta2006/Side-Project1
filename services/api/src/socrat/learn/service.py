@@ -225,7 +225,7 @@ def complete_activity(
         return False
     record.completed_at = now
     record.outcome = outcome or {}
-    minutes = max(1, round(min(MAX_ACTIVITY_SECONDS, now - record.started_at) / 60))
+    minutes = round(min(MAX_ACTIVITY_SECONDS, now - record.started_at) / 60)
     bump_daily(db, user, now, minutes=minutes, solved=int(solved))
     record_event(db, user.id, "activity.completed")
     from socrat.coursegen import prefetch
@@ -235,14 +235,28 @@ def complete_activity(
 
 
 def bump_daily(db: Session, user: User, now: int, minutes: int = 0, solved: int = 0):
+    """Credit study time that ended ``now`` and lasted ``minutes``.
+
+    Activities overlap (a lesson stays open while its check runs, a quiz closes its lesson),
+    so only the part after the last credited moment counts: the minutes shown at the top
+    are wall-clock study time, never the same minute twice.
+    """
     day = local_day(user, now).isoformat()
     row = db.get(DailyActivity, (user.id, day))
     if row is None:
         row = DailyActivity(user_id=user.id, day=day, activities=0, minutes=0, solved=0)
         db.add(row)
-    row.activities += 1
-    row.minutes += minutes
-    row.solved += solved
+    row.activities = (row.activities or 0) + 1
+    if minutes > 0:
+        start = now - minutes * 60
+        counted = row.counted_until or 0
+        fresh = now - max(start, counted)
+        if fresh > 0:
+            # Carry seconds: credit whole minutes and keep the remainder for next time.
+            whole = fresh // 60
+            row.minutes = (row.minutes or 0) + whole
+            row.counted_until = max(start, counted) + whole * 60
+    row.solved = (row.solved or 0) + solved
 
 
 def minutes_by_day(db: Session, user: User) -> dict[date, int]:

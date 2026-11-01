@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, Maximize } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, conceptHref, formatStamp } from '@/lib/routes';
@@ -12,16 +12,15 @@ import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { Choice } from '@/components/choice';
 import { AttentionIcon, LockedState } from '@/components/socrat/states';
 import { StatusIcon, StatusLabel, statusFromBand } from '@/components/socrat/status';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { SocFigure } from '@/components/socrat/soc';
 import { UpgradeBanner } from '@/components/paywall';
+import { useExamGuard } from '@/components/socrat/soc-moment';
 import { PLAN_NAME } from '@/lib/plans';
+
+const TIME_LIMIT = 30 * 60;
 
 interface Overview {
   current: AssessmentStatus;
@@ -30,25 +29,64 @@ interface Overview {
   locked: boolean;
 }
 
-/** Remaining time: tabular, no colour change; text changes in the last five minutes. */
-function Countdown({ seconds, onExpire }: { seconds: number; onExpire: () => void }) {
-  const [left, setLeft] = useState(seconds);
+/**
+ * Remaining time, counted down to the server's deadline. The offset between the server and
+ * this device is measured once per response, so a wrong device clock or a re-render cannot
+ * move the deadline. Tabular, no colour change; the text changes in the last five minutes.
+ */
+function Countdown({ deadline, serverNow, onExpire }: { deadline: number; serverNow?: number; onExpire: () => void }) {
+  const offset = useRef(0);
+  useEffect(() => { if (serverNow) offset.current = serverNow - Date.now() / 1000; }, [serverNow]);
+  const remaining = useCallback(() => Math.max(0, Math.round(deadline - (Date.now() / 1000 + offset.current))), [deadline]);
+  const [left, setLeft] = useState(remaining);
+  const expired = useRef(false);
   useEffect(() => {
-    setLeft(seconds);
-    const started = Date.now();
-    const timer = setInterval(() => {
-      const next = Math.max(0, seconds - Math.floor((Date.now() - started) / 1000));
+    const tick = () => {
+      const next = remaining();
       setLeft(next);
-      if (next === 0) { clearInterval(timer); onExpire(); }
-    }, 1000);
+      if (next === 0 && !expired.current) { expired.current = true; onExpire(); }
+    };
+    tick();
+    const timer = setInterval(tick, 500);
     return () => clearInterval(timer);
-  }, [seconds, onExpire]);
+  }, [remaining, onExpire]);
   const minutes = Math.floor(left / 60);
   return (
-    <span className="inline-flex h-10 items-center rounded-full border border-border-strong px-4 font-display text-base font-bold tabular-nums" aria-label={`About ${Math.max(1, Math.ceil(left / 60))} minutes left`}>
-      {left <= 300 ? `${Math.max(1, Math.ceil(left / 60))} min left` : `${minutes}:${String(left % 60).padStart(2, '0')}`}
+    <span className="inline-flex h-10 items-center rounded-full border border-border-strong px-4 font-display text-base font-bold tabular-nums" role="timer" aria-label={`About ${Math.max(1, Math.ceil(left / 60))} minutes left`}>
+      {left <= 300 ? `${Math.max(left > 0 ? 1 : 0, Math.ceil(left / 60))} min left` : `${minutes}:${String(left % 60).padStart(2, '0')}`}
     </span>
   );
+}
+
+const fullscreenOn = () => typeof document !== 'undefined' && Boolean(document.fullscreenElement);
+async function enterFullscreen() {
+  try { await document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }); } catch { /* not allowed here: the overlay still covers the app */ }
+}
+function leaveFullscreen() {
+  if (fullscreenOn()) document.exitFullscreen?.().catch(() => undefined);
+}
+
+/** The exam covers the whole app and asks to stay in full screen until it ends. */
+function useFullscreenLock(active: boolean) {
+  const [inside, setInside] = useState(true);
+  const [exits, setExits] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    setInside(fullscreenOn() || !document.fullscreenEnabled);
+    const change = () => {
+      const on = fullscreenOn();
+      setInside(on || !document.fullscreenEnabled);
+      if (!on) setExits(n => n + 1);
+    };
+    const leave = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    document.addEventListener('fullscreenchange', change);
+    window.addEventListener('beforeunload', leave);
+    return () => {
+      document.removeEventListener('fullscreenchange', change);
+      window.removeEventListener('beforeunload', leave);
+    };
+  }, [active]);
+  return { inside, exits };
 }
 
 function Locked({ status }: { status: AssessmentStatus }) {
@@ -66,6 +104,20 @@ function Locked({ status }: { status: AssessmentStatus }) {
   );
 }
 
+function Upcoming({ status }: { status: AssessmentStatus }) {
+  const day = status.opens_on ? new Date(`${status.opens_on}T00:00:00`) : null;
+  return (
+    <section className="grid gap-3 paper rounded-card p-6 lg:p-8" aria-labelledby="upcoming-heading">
+      <div className="flex flex-wrap gap-2"><Badge>Week {status.week.split('-W')[1]}</Badge><Badge>{status.time_limit_minutes ?? 30} min, full screen</Badge></div>
+      <h2 id="upcoming-heading" className="type-display-l">Opens {day ? day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : 'on Sunday'}</h2>
+      <p className="max-w-2xl text-base text-muted-foreground">
+        The weekly exam runs on Sundays: the hardest questions Socrat has on what you studied this week, none you have seen before, plus a coding task. Thirty minutes, full screen, no tutor.
+      </p>
+      {status.topics.length ? <ul className="flex flex-wrap gap-2">{status.topics.map(t => <li key={t}><Badge>{t}</Badge></li>)}</ul> : null}
+    </section>
+  );
+}
+
 function Available({ status, onStart, busy }: { status: AssessmentStatus; onStart: (timed: boolean) => void; busy: boolean }) {
   return (
     <section className="relative flex flex-col gap-5 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:p-8" data-tone="hero" aria-labelledby="available-heading">
@@ -73,14 +125,11 @@ function Available({ status, onStart, busy }: { status: AssessmentStatus; onStar
       <div className="flex flex-wrap gap-2"><Badge>Available</Badge><Badge>Week {status.week.split('-W')[1]}</Badge></div>
       <h2 id="available-heading" className="type-display-l">{NAME.assessment}</h2>
       <p className="max-w-2xl text-base lg:pr-[200px]">
-        {status.questions} questions from what you studied in the last seven days, weighted toward what is still shaky, plus a coding task. Answers are shown at the end. No tutor or learning help until you submit.
+        {status.questions} of the hardest questions on what you studied this week, none you have seen before, plus a coding task. {status.time_limit_minutes} minutes in full screen. No tutor, no copy and paste. Answers are shown at the end.
       </p>
       <ul className="flex flex-wrap gap-2">{status.topics.map(t => <li key={t}><Badge>{t}</Badge></li>)}</ul>
       <div className="flex flex-wrap gap-3">
-        <Button variant="ink" size="lg" disabled={busy} aria-busy={busy} onClick={() => onStart(false)}>Start assessment<ArrowCircle loading={busy} /></Button>
-        <Button variant="outline" size="lg" className="border-current text-current hover:bg-[color-mix(in_srgb,currentColor,transparent_88%)]" disabled={busy} onClick={() => onStart(true)}>
-          Exam mode, {status.time_limit_minutes} min
-        </Button>
+        <Button variant="ink" size="lg" disabled={busy} aria-busy={busy} onClick={() => onStart(true)}>Start the {status.time_limit_minutes}-minute exam<ArrowCircle loading={busy} /></Button>
       </div>
     </section>
   );
@@ -93,21 +142,27 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const answered = view.questions.filter(q => q.answered).length;
   const total = view.questions.length;
   const q = view.questions[Math.min(index, total - 1)];
 
+  const guard = useExamGuard(true);
+  const { inside, exits } = useFullscreenLock(true);
   const finish = useCallback(async () => {
     setBusy(true);
     try {
       setView(await api.post<AssessmentView>(`/assessments/${view.id}/finish`));
+      leaveFullscreen();
     } catch (e) {
       setError(explain(e));
     } finally {
       setBusy(false);
     }
   }, [view.id, setView]);
-  const expire = useCallback(() => { api.get<AssessmentView>(`/assessments/${view.id}`).then(setView).catch(() => undefined); }, [view.id, setView]);
+  const expire = useCallback(() => {
+    api.get<AssessmentView>(`/assessments/${view.id}`).then(v => { setView(v); if (v.finished) leaveFullscreen(); }).catch(() => undefined);
+  }, [view.id, setView]);
 
   async function submit() {
     if (choice === null) return;
@@ -129,15 +184,27 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    // Covers the whole app (navigation included) until the exam ends.
+    <div className="fixed inset-0 z-[70] overflow-y-auto bg-background">
+    {guard}
+    {!inside ? (
+      <div className="fixed inset-0 z-[75] grid place-items-center bg-background/95 p-6 backdrop-blur-sm" role="alertdialog" aria-labelledby="fs-heading" aria-describedby="fs-text">
+        <div className="grid max-w-md gap-4 text-center">
+          <h2 id="fs-heading" className="font-display text-2xl font-semibold tracking-[-0.03em]">Back to full screen</h2>
+          <p id="fs-text" className="text-[15px] text-muted-foreground">The exam stays in full screen until you submit or the {Math.round(TIME_LIMIT / 60)} minutes run out. The clock keeps running.{exits > 1 ? ` You have left full screen ${exits} times.` : ''}</p>
+          <Button size="lg" className="justify-self-center" onClick={enterFullscreen}><Maximize /> Return to the exam</Button>
+        </div>
+      </div>
+    ) : null}
+    <div className="mx-auto grid w-full max-w-[1200px] gap-6 px-4 pt-6 pb-24 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-10">
       <div className="min-w-0">
         <div className="mb-4 grid gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-muted-foreground tabular-nums">Question {Math.min(index + 1, total)} of {total}. {answered} answered</p>
-            {view.timed && view.seconds_left !== null ? <Countdown seconds={view.seconds_left} onExpire={expire} /> : null}
+            <p className="text-sm font-semibold text-muted-foreground tabular-nums">{NAME.assessment}. Question {Math.min(index + 1, total)} of {total}. {answered} answered</p>
+            {view.deadline ? <Countdown deadline={view.deadline} serverNow={view.server_now} onExpire={expire} /> : null}
           </div>
           <Progress value={total ? (100 * answered) / total : 0} aria-label={`${answered} of ${total} answered`} />
-          <p className="text-sm font-semibold">No tutor or learning help during this assessment.</p>
+          <p className="text-sm font-semibold">No tutor, no copy and paste. Full screen until you submit.</p>
         </div>
         <div className="mb-6 flex flex-wrap gap-1.5" role="group" aria-label="Go to question">
           {view.questions.map((x, i) => (
@@ -185,12 +252,12 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
         {view.coding.length ? (
           <section className="paper rounded-card p-5" aria-labelledby="coding-heading">
             <h2 id="coding-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">Coding tasks</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Submit them in the editor. They count if accepted before you finish.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Submit them in the editor, then come back here. They count if accepted before you finish.</p>
             <ul className="mt-3 grid gap-2">
               {view.coding.map(c => (
                 <li key={c.id} className="flex min-h-11 items-center gap-3">
                   <StatusIcon status={c.solved ? 'practised' : 'not_seen'} size={22} title={c.solved ? 'Solved' : 'Not solved yet'} />
-                  <Link href={`/problems/${c.id}`} className="flex-1 font-semibold underline-offset-4 hover:underline">{c.title}</Link>
+                  <Link href={`/problems/${c.id}?assessment=${view.id}`} className="flex-1 font-semibold underline-offset-4 hover:underline">{c.title}</Link>
                 </li>
               ))}
             </ul>
@@ -198,24 +265,26 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
         ) : null}
         <section className="grid gap-3 paper rounded-card p-5" aria-label="Submit">
           <p className="text-[15px] text-muted-foreground">{answered === total ? 'All questions answered.' : `${total - answered} question${total - answered === 1 ? '' : 's'} left.`} You can submit at any time.</p>
-          <AlertDialog>
-            <AlertDialogTrigger asChild><Button disabled={busy}>Submit assessment</Button></AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Submit your assessment</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {answered < total ? `${total - answered} unanswered question${total - answered === 1 ? '' : 's'} will count as incorrect. ` : ''}
-                  You see every answer and a report straight away.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep going</AlertDialogCancel>
-                <AlertDialogAction onClick={finish}>Submit</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* Inline, not a dialog: a portalled dialog would sit under this full-screen exam layer. */}
+          {confirming ? (
+            <div className="grid gap-3 rounded-control border border-border-strong p-4" role="group" aria-labelledby="confirm-heading">
+              <p id="confirm-heading" className="font-semibold">Submit your assessment?</p>
+              <p className="text-sm text-muted-foreground">
+                {answered < total ? `${total - answered} unanswered question${total - answered === 1 ? '' : 's'} will count as incorrect. ` : ''}
+                You see every answer and a report straight away.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button disabled={busy} aria-busy={busy} onClick={finish}>{busy ? 'Submitting' : 'Submit'}</Button>
+                <Button variant="outline" disabled={busy} onClick={() => setConfirming(false)}>Keep going</Button>
+              </div>
+            </div>
+          ) : (
+            <Button disabled={busy} onClick={() => { setError(''); setConfirming(true); }}>Submit assessment</Button>
+          )}
+          {error && confirming ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
         </section>
       </aside>
+    </div>
     </div>
   );
 }
@@ -326,8 +395,10 @@ export default function Assessments() {
     setBusy(true);
     setError('');
     try {
+      await enterFullscreen(); // inside the click, so the browser allows it
       setView(await api.post<AssessmentView>('/assessments/start', { timed }));
     } catch (e) {
+      leaveFullscreen();
       setError(explain(e));
     } finally {
       setBusy(false);
@@ -344,15 +415,25 @@ export default function Assessments() {
       {inProgress ? (
         <h1 className="mb-6 font-display text-3xl font-semibold tracking-[-0.03em]">{NAME.assessment}</h1>
       ) : (
-        <PageHeader eyebrow={NAME.evidence} title={NAME.assessment} description="A short check each week, built from what you studied. It is a proof event: no help while you take it." />
+        <PageHeader eyebrow={NAME.evidence} title={NAME.assessment} description="Every Sunday, the toughest exam of your week, built from what you studied. It is a proof event: no help while you take it." />
       )}
+      {busy && !view ? (
+        // Generating and running the hard questions takes up to two minutes; the clock has not started.
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-background p-6" role="status" aria-live="polite">
+          <div className="grid max-w-md justify-items-center gap-4 text-center">
+            <SocFigure mood="thinking" idle className="h-auto w-[140px]" />
+            <h2 className="font-display text-2xl font-semibold tracking-[-0.03em]">Socrat is writing your exam</h2>
+            <p className="text-[15px] text-muted-foreground">Fresh edge-case questions on what you studied, each one run to prove its answer. This can take up to two minutes. Your 30 minutes start once it is ready.</p>
+          </div>
+        </div>
+      ) : null}
       {inProgress ? <Attempt view={view} setView={setView} /> : view?.finished ? <Report view={view} /> : overview.locked ? (
         <UpgradeBanner title="Prove what you learned this week" reason="assessment" action="Unlock weekly assessments">
           A timed check built only from the topics you studied, with a score you can track week over week. Included with {PLAN_NAME.plus} and Pro.
         </UpgradeBanner>
       ) : overview.current.state === 'available' ? (
         <Available status={overview.current} onStart={start} busy={busy} />
-      ) : <Locked status={overview.current} />}
+      ) : overview.current.state === 'upcoming' ? <Upcoming status={overview.current} /> : <Locked status={overview.current} />}
       {error ? <ErrorNote message={error} /> : null}
 
       {history.length && !inProgress ? (

@@ -11,6 +11,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from socrat.catalog import dialect
 from socrat.catalog.shape import CourseShape
 
 Slug = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
@@ -124,7 +125,10 @@ class QuizItem(Model):
             named = {names[prefix]}
         if self.code and language not in self.code:
             return False  # its code exists only in other languages
-        return not named or language in named
+        if named:
+            return language in named
+        # No explicit tag: the prose itself must not be written in another language's syntax.
+        return not dialect.foreign(language, self.prompt, *self.options, self.explanation)
 
     def order(self, seed: str) -> list[int]:
         """Display position -> authored option index, fixed per (seed, item).

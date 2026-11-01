@@ -151,7 +151,7 @@ def job_of(db, job_id, user_id):
     return job
 
 
-def enqueue(db, settings, user_id, language, prompt, level, job_id, shared=False):
+def enqueue(db, settings, user_id, language, prompt, level, job_id, shared=False, mode="sketch"):
     """Queue one generation for ``user_id``, after the checks every generation passes.
 
     A ``shared`` one fills the cache for every learner, so it skips that learner's own plan
@@ -201,6 +201,7 @@ def enqueue(db, settings, user_id, language, prompt, level, job_id, shared=False
         thread_id=thread.id,
         prompt=prompt,
         level=level,
+        mode=mode,
         language=language,
         status="queued",
         progress={},
@@ -239,7 +240,16 @@ def create(body: CreateInput, request: Request):
             return view(db, previous, settings)
         return view(
             db,
-            enqueue(db, settings, user_id, enrollment.language, body.prompt, body.level, job_id),
+            enqueue(
+                db,
+                settings,
+                user_id,
+                enrollment.language,
+                body.prompt,
+                body.level,
+                job_id,
+                mode=body.mode,
+            ),
             settings,
         )
 
@@ -287,7 +297,6 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
         row = SharedVisual(
             concept=body.concept,
             level=body.level,
-            mode=body.mode,
             language=enrollment.language,
             reports=[],
             hits=0,

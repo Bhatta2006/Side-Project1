@@ -135,9 +135,17 @@ export interface AdaptiveSession {
   served: number;
   max_items: number;
   finished: boolean;
-  stop_reason: 'max_items' | 'ceiling' | 'stable' | 'exhausted' | 'needs_lesson' | null;
+  stop_reason: 'max_items' | 'ceiling' | 'stable' | 'exhausted' | 'needs_lesson' | 'strikes' | null;
   score?: number | null;
   passed?: boolean | null;
+  /** Test-out: the hardest band on offer and unaided corrects there. */
+  hard_band?: number | null;
+  hard_correct?: number | null;
+  hard_needed?: number | null;
+  /** Test-out answered well but the bank was too small to prove it: a transfer check decides. */
+  needs_transfer?: boolean | null;
+  /** Once finished: each answer's band, result and seconds. */
+  results?: { band: number; correct: boolean; seconds: number }[] | null;
   current: {
     item: string;
     concept: string;
@@ -147,6 +155,8 @@ export interface AdaptiveSession {
     prompt: string;
     code: string | null;
     options: string[];
+    /** Why this difficulty was chosen (engine ladder rule). */
+    reason?: string | null;
     hints_used: number;
     hints_available: number;
     micro_lesson: { pattern: string; concept: string } | null;
@@ -154,8 +164,9 @@ export interface AdaptiveSession {
 }
 
 export interface AdaptiveAnswer {
-  outcome: 'correct' | 'wrong' | 'skipped';
-  answer: number;
+  /** 'recorded': a test-out, graded only at the end. */
+  outcome: 'correct' | 'wrong' | 'skipped' | 'recorded';
+  answer: number | null;
   explanation: string | null;
   misconception: string | null;
   session: AdaptiveSession;
@@ -707,13 +718,17 @@ export interface ChatMessage {
 }
 
 export interface AssessmentStatus {
-  state: 'locked' | 'available' | 'in_progress' | 'done';
+  /** 'upcoming': enough study this week, and the exam opens on Sunday. */
+  state: 'locked' | 'upcoming' | 'available' | 'in_progress' | 'done';
   week: string;
   id: string | null;
   topics: string[];
   questions?: number;
   time_limit_minutes?: number;
   needed: number;
+  /** Local date (YYYY-MM-DD) of the next exam day. */
+  opens_on?: string;
+  ready?: boolean;
 }
 
 export interface AssessmentReport {
@@ -735,6 +750,8 @@ export interface AssessmentView {
   started_at: number;
   deadline: number | null;
   seconds_left: number | null;
+  /** Server clock at the response, so the countdown does not trust the device clock. */
+  server_now?: number;
   finished: boolean;
   score: number | null;
   topics: { id: string; title: string; reason: 'studied' | 'review' }[];

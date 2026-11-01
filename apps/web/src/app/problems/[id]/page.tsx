@@ -21,7 +21,7 @@ import { parseDiagnostics } from '@/components/code-editor/diagnostics';
 import Markdown from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { AttentionIcon, LockedState } from '@/components/socrat/states';
-import { Soc } from '@/components/socrat/illustration';
+import { useExamGuard, useSocMoment } from '@/components/socrat/soc-moment';
 import { StatusIcon } from '@/components/socrat/status';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -157,7 +157,21 @@ export default function Problem() {
   const [useCustom, setUseCustom] = useState(false);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [error, setError] = useState('');
-  const [hintSignal, setHintSignal] = useState(0);
+  // Opened from a weekly exam (?assessment=<id>): no tutor, no copy and paste, and the way
+  // back after a submission leads to the exam, not to Today.
+  const [examId, setExamId] = useState<string | null>(null);
+  // Opened from a transfer check (?check=/transfer/...): the same rules, and the way back is the check.
+  const [checkBack, setCheckBack] = useState<string | null>(null);
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const id = query.get('assessment');
+    setExamId(id && /^[A-Za-z0-9-]{8,64}$/.test(id) ? id : null);
+    const back = query.get('check');
+    setCheckBack(back && /^\/transfer\/[a-z0-9/-]{1,160}$/.test(back) ? back : null);
+  }, []);
+  const proving = Boolean(examId || checkBack);
+  const examGuard = useExamGuard(proving);
+  const soc = useSocMoment();
   const attempted = useRef(false);
   const canExecuteRef = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -273,7 +287,7 @@ export default function Problem() {
       if (job.status !== 'done') setError('The runner is taking longer than usual. Your submission is saved; check back in a moment.');
       if (mode === 'submit' && job.verdict === 'accepted') {
         setProblem(p => (p ? { ...p, solved: true } : p));
-        toast.success('Accepted. Every test passed.');
+        soc.show('celebrate');
       }
       if (job.status === 'done') {
         setProblem(p => p && { ...p, history: [{ id: job.id, mode: job.mode, verdict: job.verdict, status: job.status, passed: job.passed, total: job.total, at: job.created_at }, ...p.history].slice(0, 10) });
@@ -307,8 +321,16 @@ export default function Problem() {
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 pt-4 pb-40 sm:px-6 md:pb-10 lg:px-10">
+      {examGuard}
+      {soc.element}
+      {proving ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-border-strong px-4 py-2.5 text-[15px]">
+          <span className="font-semibold">{examId ? 'Weekly exam coding task' : 'Transfer check'}. No tutor, no copy and paste.</span>
+          <Button asChild size="sm" variant="outline"><Link href={examId ? '/assessments' : checkBack ?? '/plan'}>{examId ? 'Back to the exam' : 'Back to the check'}</Link></Button>
+        </div>
+      ) : null}
       <header className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-b pb-4">
-        <Link href={conceptHref(problem.concept.id)} transitionTypes={['nav-back']} aria-label={`Back to ${problem.concept.title}`} className="grid size-11 flex-none place-items-center rounded-full border border-border-strong transition-colors hover:bg-raised">
+        <Link href={examId ? '/assessments' : conceptHref(problem.concept.id)} transitionTypes={['nav-back']} aria-label={examId ? 'Back to the exam' : `Back to ${problem.concept.title}`} className="grid size-11 flex-none place-items-center rounded-full border border-border-strong transition-colors hover:bg-raised">
           <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
         </Link>
         <h1 id="problem-title" className="min-w-0 flex-1 basis-40 font-display sm:truncate text-2xl font-semibold tracking-[-0.03em]">{problem.title}</h1>
@@ -496,15 +518,13 @@ export default function Problem() {
               <Textarea className="font-mono text-sm" rows={4} value={customInput} onChange={e => setCustomInput(e.target.value)} maxLength={20000} aria-label="Custom input" />
             </div>
           </details>
-          <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-wrap items-center gap-2 border-t bg-background px-4 py-3 sm:mx-0 sm:rounded-[20px] sm:border md:bottom-4 lg:static lg:border-0 lg:bg-transparent lg:p-0">
-            <Button variant="run" className="flex-1 sm:flex-none" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'run'} onClick={() => execute('run')}>
+          <div className={cn('sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-wrap items-center gap-2 border-t bg-background px-4 py-3 sm:mx-0 sm:rounded-[20px] sm:border md:bottom-4 lg:static lg:border-0 lg:bg-transparent lg:p-0', !proving && 'pr-[84px] sm:pr-[84px] lg:pr-0')}>
+            {/* Desktop runs and submits from the header; these are the phone and tablet copies. */}
+            <Button variant="run" className="flex-1 sm:flex-none lg:hidden" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'run'} onClick={() => execute('run')}>
               {pending === 'run' ? <Loader2 className="animate-spin" /> : <Play />} Run tests
             </Button>
-            <Button className="flex-1 sm:flex-none" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'submit'} onClick={() => execute('submit')}>
+            <Button className="flex-1 sm:flex-none lg:hidden" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'submit'} onClick={() => execute('submit')}>
               Submit solution<ArrowCircle loading={pending === 'submit'} />
-            </Button>
-            <Button variant="outline" className="w-full pl-1.5 sm:ml-auto sm:w-auto" onClick={() => setHintSignal(n => n + 1)} aria-haspopup="dialog">
-              <Soc size={32} mood={pending ? 'thinking' : verdict?.tone === 'success' ? 'happy' : verdict?.tone === 'error' ? 'worried' : 'neutral'} /> Ask Soc
             </Button>
           </div>
           {problem.locked ? <p className="text-sm text-muted-foreground">Run and submit unlock after the {problem.locked.module} checkpoint.</p> : null}
@@ -545,7 +565,9 @@ export default function Problem() {
                     <p className="text-[15px]">
                       {result.assistance >= 5 ? 'Solved with the full walkthrough. Try writing it again from memory tomorrow.' : result.assistance ? 'Solved. Hints count for a little less, and that is fine while you are learning.' : 'Solved without help. Nice work.'}
                     </p>
-                    <Button asChild><Link href="/today">Continue to {NAME.today}</Link></Button>
+                    {proving
+                      ? <Button asChild><Link href={examId ? '/assessments' : checkBack ?? '/plan'}>{examId ? 'Back to the exam' : 'Back to the check'}<ArrowCircle /></Link></Button>
+                      : <Button asChild><Link href="/today">Continue to {NAME.today}</Link></Button>}
                   </div>
                 ) : null}
                 <div className="grid gap-2">
@@ -558,14 +580,13 @@ export default function Problem() {
           {error ? <ErrorNote message={error} /> : null}
         </section>
       </div>
-      <Assistant
+      {proving ? null : <Assistant
         scope={`problem:${problem.id}`}
         title="Ask Soc"
         language={lang}
-        openSignal={hintSignal}
         context={() => ({ code: latest.current.source, newAttempt: attempted.current })}
         onSent={() => { attempted.current = false; }}
-      />
+      />}
     </div>
   );
 }

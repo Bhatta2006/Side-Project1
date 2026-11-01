@@ -1,0 +1,162 @@
+/*
+ * Lesson reading (Markdown with `rich`): a study notebook, not a textbook.
+ * Key terms are highlighted the way a learner would with a marker, formulas get room,
+ * costs are small chips, and short sections become margin-note cards with a handwritten
+ * label. Quiet colour: tints of the existing paper, pen and highlighter tokens only.
+ */
+
+.prose-lesson .lead {
+  font-size: 1.08em;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+/* Key terms: a highlighter stroke under the lower half of the word, not a coloured block. */
+.prose-lesson strong {
+  font-weight: 650;
+  background-image: linear-gradient(
+    transparent 58%,
+    color-mix(in srgb, var(--highlight) 55%, transparent) 58%,
+    color-mix(in srgb, var(--highlight) 55%, transparent) 92%,
+    transparent 92%
+  );
+  padding: 0 0.08em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.dark .prose-lesson strong {
+  background-image: linear-gradient(
+    transparent 62%,
+    color-mix(in srgb, var(--highlight) 30%, transparent) 62%,
+    color-mix(in srgb, var(--highlight) 30%, transparent) 94%,
+    transparent 94%
+  );
+}
+
+/* Inline code reads as a token you could type. */
+.prose-lesson :not(pre) > code {
+  background: color-mix(in srgb, var(--brand-text) 8%, var(--raised));
+  border: 1px solid color-mix(in srgb, var(--brand-text) 14%, transparent);
+  color: var(--foreground);
+}
+
+/* A formula on its own line: centred, larger, on a ruled card. */
+.prose-lesson .formula {
+  display: flex;
+  justify-content: center;
+  margin-block: 1.2em;
+  padding: 0.9em 1em;
+  border-block: 1px dashed var(--border-strong, var(--border));
+}
+.prose-lesson .formula code {
+  font-size: 1.05em;
+  background: none;
+  border: 0;
+  padding: 0;
+  letter-spacing: 0.01em;
+}
+
+/* Costs like O(n log n): a small outlined chip, mono, never wraps. */
+.prose-lesson .cost {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  white-space: nowrap;
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 999px;
+  padding: 0.05em 0.5em;
+}
+
+/* Margin-note cards. */
+.prose-lesson .callout {
+  position: relative;
+  margin-top: 1.6em;
+  padding: 1em 1.15em 1.05em 1.25em;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--callout-ink, var(--border-strong, var(--border)));
+  background: color-mix(in srgb, var(--callout-ink, var(--raised)) 5%, var(--card));
+}
+.prose-lesson .callout > * + * { margin-top: 0.7em; }
+.prose-lesson .callout h3,
+.prose-lesson .callout h4 {
+  margin-top: 0;
+  font-size: 1.02em;
+}
+.prose-lesson .callout-note {
+  position: absolute;
+  top: -0.85em;
+  right: 0.9em;
+  margin: 0;
+  padding: 0 0.4em;
+  font-family: var(--font-hand);
+  font-size: 1.15em;
+  line-height: 1.2;
+  color: var(--callout-ink, var(--muted-foreground));
+  background: var(--background);
+  transform: rotate(-2deg);
+}
+.prose-lesson .callout ul { list-style: none; padding-left: 0; }
+.prose-lesson .callout ul > li { position: relative; padding-left: 1.3em; }
+.prose-lesson .callout ul > li::before {
+  content: '';
+  position: absolute;
+  left: 0.2em;
+  top: 0.68em;
+  width: 0.45em;
+  height: 0.45em;
+  border-radius: 999px;
+  border: 1.5px solid var(--callout-ink, var(--muted-foreground));
+}
+
+.prose-lesson .callout-mistake { --callout-ink: var(--pen); }
+.prose-lesson .callout-mistake ul > li::before {
+  content: '×';
+  width: auto;
+  height: auto;
+  border: 0;
+  top: 0;
+  left: 0.1em;
+  font-weight: 700;
+  color: var(--pen);
+}
+.prose-lesson .callout-insight { --callout-ink: var(--brand-text); }
+.prose-lesson .callout-cue { --callout-ink: var(--brand-text); }
+.prose-lesson .callout-example { --callout-ink: var(--foreground); }
+.prose-lesson .callout-recipe { --callout-ink: var(--foreground); }
+.prose-lesson .callout-check { --callout-ink: var(--brand-text); }
+.prose-lesson .callout-compare { --callout-ink: var(--muted-foreground); }
+
+/* Worked steps: numbered circles instead of "1." so the sequence is easy to follow. */
+.prose-lesson ol { list-style: none; padding-left: 0; counter-reset: step; }
+.prose-lesson ol > li { position: relative; padding-left: 2.1em; counter-increment: step; }
+.prose-lesson ol > li + li { margin-top: 0.55em; }
+.prose-lesson ol > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  display: grid;
+  place-items: center;
+  width: 1.45em;
+  height: 1.45em;
+  border-radius: 999px;
+  border: 1.5px solid var(--foreground);
+  font-size: 0.8em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Notes and asides. */
+.prose-lesson blockquote {
+  border-left: 0;
+  padding: 0.8em 1em;
+  border-radius: 14px;
+  background: var(--raised);
+  color: var(--foreground);
+}
+
+@media print {
+  .prose-lesson .callout-note { background: none; }
+}

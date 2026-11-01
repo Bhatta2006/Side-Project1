@@ -1,3 +1,3 @@
 """Supported schema head for readiness and recovery checks."""
 
-SCHEMA_REVISION = "0029_merge_main"
+SCHEMA_REVISION = "0031_weekly_generated"

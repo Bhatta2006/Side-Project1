@@ -63,7 +63,7 @@ export default function TransferPage() {
       <div className="grid gap-4 px-(--card-spacing)">
         <h2 className="font-display text-xl font-semibold tracking-[-0.03em]">Now solve it</h2>
         <p className="text-[15px] text-muted-foreground">Write and submit the solution yourself. Asking the tutor about this problem, before or during, means this check does not count; you can take a new one tomorrow.</p>
-        <div><Button asChild><Link href={`/problems/${problem}`}>Open the problem</Link></Button></div>
+        <div><Button asChild><Link href={`/problems/${problem}?check=${encodeURIComponent(`/transfer/${concept.split(':').join('/')}`)}`}>Open the problem</Link></Button></div>
       </div>
     </Card>
   );

@@ -2,9 +2,11 @@
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
+from socrat.assessments import hard
 from socrat.assessments import service as assessments
 from socrat.learn.routes import active, catalog, engine, user_of
 from socrat.models import WeeklyAssessment, now
@@ -14,12 +16,12 @@ router = APIRouter(prefix="/api/v1/assessments")
 
 class StartInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    timed: bool = False
+    timed: bool = True  # ignored: every weekly is a 30-minute exam
 
 
 class AnswerInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    item: str = Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")
+    item: str = Field(pattern=r"^[a-z0-9][a-z0-9:._/-]{0,199}$")  # bank key, gen- key, legacy id
     choice: int = Field(ge=0, le=9)
 
 
@@ -45,15 +47,36 @@ def overview(request: Request):
 
 
 @router.post("/start")
-def start(body: StartInput, request: Request):
+async def start(body: StartInput, request: Request):
+    """Plans the exam from the bank, has the hardest questions written and proven by running
+    them (up to about two minutes, outside any transaction), then creates the attempt."""
     cat = catalog()
-    with Session(engine(request)) as db, db.begin():
+    db_engine = engine(request)
+    with Session(db_engine) as db, db.begin():
         user = user_of(request, db, write=True)
         entitlements.require(db, user.id, "assessment")
         enrollment = active(db, user)
-        stamp = now()
-        attempt = assessments.start(db, cat, user, enrollment, stamp, body.timed)
-        return assessments.view(db, cat, user, attempt, enrollment.language, stamp)
+        planned = assessments.plan(db, cat, user, enrollment, now())
+        if isinstance(planned, WeeklyAssessment):
+            return assessments.view(db, cat, user, planned, enrollment.language, now())
+        user_id = user.id
+    generated = await hard.generate(
+        db_engine, request.app.state.settings, cat, planned.wanted(), planned.language, user_id
+    )
+    try:
+        with Session(db_engine) as db, db.begin():
+            user = user_of(request, db, write=True)
+            enrollment = active(db, user)
+            stamp = now()
+            attempt = assessments.create(db, enrollment, planned, generated, stamp)
+            return assessments.view(db, cat, user, attempt, enrollment.language, stamp)
+    except IntegrityError:  # a second start (another tab) won the race: show that attempt
+        with Session(db_engine) as db, db.begin():
+            user = user_of(request, db)
+            enrollment = active(db, user)
+            stamp = now()
+            attempt = assessments.this_week(db, enrollment, planned.week)
+            return assessments.view(db, cat, user, attempt, enrollment.language, stamp)
 
 
 @router.get("/{assessment_id}")

@@ -307,7 +307,7 @@ export default function Lesson() {
               </span>
             </p>
           ) : null}
-          <Markdown source={concept.lesson} language={concept.language} />
+          <Markdown source={concept.lesson} language={concept.language} rich />
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
 
@@ -335,7 +335,7 @@ export default function Lesson() {
                   <h3 className="font-display text-lg font-semibold tracking-[-0.02em]">{STYLES.find(s => s[0] === variant.style)?.[1]}</h3>
                   <Button variant="ghost" size="sm" onClick={() => setVariant(null)}>Hide</Button>
                 </div>
-                <Markdown source={variant.content} language={concept.language} />
+                <Markdown source={variant.content} language={concept.language} rich />
               </div>
             ) : null}
           </section>
@@ -485,7 +485,8 @@ export default function Lesson() {
           <Pitfalls concept={concept} />
         </aside>
       </div>
-      <Assistant scope={`concept:${concept.id}`} title="Ask Soc" language={concept.language} openSignal={askSoc} />
+      {/* Desktop has the "Ask Soc" card in the side column; the floating launcher is for phones. */}
+      <Assistant scope={`concept:${concept.id}`} title="Ask Soc" language={concept.language} openSignal={askSoc} launcher="phone" />
     </div>
   );
 }

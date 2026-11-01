@@ -457,8 +457,14 @@ def prepare(
             "question with you."
         )
     if enrollment is not None:
-        from socrat.learn import sessions
+        from socrat.learn import quizzes, sessions
 
+        if not paused and quizzes.open_test(db, enrollment, now):
+            paused = (
+                "You're in the middle of a check, so I'm staying quiet until you finish it. "
+                "It shows what you can do on your own. Submit it and I'll go through every "
+                "question with you."
+            )
         if sessions.instruction_blocked(db, enrollment, now):
             paused = "This is your independent challenge. Try your own approach and submit an attempt; we can review it together afterwards."
         gate = (

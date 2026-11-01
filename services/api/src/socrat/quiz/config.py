@@ -13,7 +13,7 @@ from typing import Literal
 from socrat.mastery.model import EvidenceKind
 
 Track = Literal["foundations", "interview", "competitive"]
-Mode = Literal["placement", "concept_check", "review", "checkpoint", "weekly", "contest"]
+Mode = Literal["placement", "concept_check", "review", "checkpoint", "weekly", "contest", "testout"]
 Pool = Literal["practice", "assessment"]
 
 TRACKS: tuple[Track, ...] = ("foundations", "interview", "competitive")
@@ -34,6 +34,9 @@ class ModeSpec:
     win_first: bool = False  # cold start: first items one band below the estimate
     rating_ceiling: bool = False  # contest: never above the learner's current rating band
     stop_rules: bool = False  # concept check: ceiling and stability stop rules
+    any_pool: bool = False  # serve from both pools, preferring ``pool``
+    paced: bool = False  # test-out: speed and streaks move the ladder, misses end it
+    max_wrong: int | None = None  # paced: this many misses ends the session
 
 
 def _modes() -> Mapping[Mode, ModeSpec]:
@@ -52,6 +55,12 @@ def _modes() -> Mapping[Mode, ModeSpec]:
             "placement": assessment(12, 20, None),  # priors only, no mastery
             "checkpoint": assessment(13, 18, "checkpoint"),
             "weekly": assessment(12, 18, "quiz"),
+            # Proving a skill without studying it: unseen items first, climbs fast on quick
+            # right answers, holds on slow ones, ends after three misses. Evidence is
+            # written once at the end (quizzes.settle_testout), not per answer.
+            "testout": ModeSpec(
+                8, 14, "assessment", None, stop_rules=True, any_pool=True, paced=True, max_wrong=3
+            ),
         }
     )
 
@@ -107,6 +116,14 @@ class EngineConfig:
     practice_share: float = 0.70
     # Assessment modes need this many calibrated assessment items per requested concept.
     assessment_min_per_concept: int = 3
+    # Paced (test-out) ladder: seconds per band under which a right answer is "fast", and
+    # over which it is "slow" (the next item stays at the same band to confirm it).
+    fast_base_s: int = 12
+    fast_per_band_s: int = 6
+    slow_base_s: int = 45
+    slow_per_band_s: int = 20
+    testout_pass: float = 0.75  # accuracy over answered items
+    testout_hard_needed: int = 2  # independent corrects at the ceiling band
     modes: Mapping[Mode, ModeSpec] = field(default_factory=_modes)
 
     def prior(self, band: int) -> float:
