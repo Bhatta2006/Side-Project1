@@ -81,6 +81,8 @@ Create a **`production` environment** (Settings → Environments) and add requir
 | `SOCRAT_OPENAI_MODEL` | yes for `openai` | `gpt-5.4-mini` (tutor, lessons, trial and Playground) |
 | `SOCRAT_EXPLAINER_MODEL` | optional | Playground model id (defaults to the tutor model) |
 | `SOCRAT_EXPLAINER_CHAT_TEMPLATE_KWARGS` | compatible endpoints only | `{"enable_thinking": false}` for Qwen3; ignored for api.openai.com |
+| `SOCRAT_EXPLAINER_3D_ADMIN_ONLY` | optional, default `true` | 3D models are being tested: only admin accounts (`SOCRAT_ADMIN_SUBJECTS`, or a verified Google email in `admin_emails`) see the Auto/Sketch/3D picker or can request 3D; everyone else gets sketches. Set `false` to open 3D to all learners |
+| `SOCRAT_EXPLAINER_3D_MODEL` | optional | A stronger model that writes 3D films only (routing and sketches stay on `SOCRAT_EXPLAINER_MODEL`). Set `SOCRAT_EXPLAINER_3D_PRICE_INPUT_PER_MTOK` / `…_OUTPUT_PER_MTOK` with it so spend is costed right. Films take 2-4 minutes on large models; `SOCRAT_EXPLAINER_TIMEOUT_SECONDS` (default 180) is the per-request limit |
 | `SOCRAT_AI_PRICE_INPUT_PER_MTOK` / `SOCRAT_AI_PRICE_OUTPUT_PER_MTOK` | recommended | the model's prices; default GPT-5.4 mini: `0.75` / `4.5` |
 | `SOCRAT_AI_DAILY_BUDGET_USD` / `SOCRAT_AI_MONTHLY_BUDGET_USD` | recommended | site-wide caps; defaults `25` / `400` |
 | `SOCRAT_AI_USER_DAILY_BUDGET_USD` | optional | per-learner tutor cap (the Playground uses plan counts); default `0.5` |

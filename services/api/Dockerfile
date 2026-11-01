@@ -29,6 +29,7 @@ COPY services/api/src services/api/src
 COPY services/execution/src services/execution/src
 COPY content content
 COPY apps/web/src/app/globals.css apps/web/src/app/globals.css
+COPY apps/web/src/fonts apps/web/src/fonts
 COPY --from=content-build /app/.cache/content-tests .cache/content-tests
 
 RUN addgroup --system --gid 10001 socrat \

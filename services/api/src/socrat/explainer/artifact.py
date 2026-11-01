@@ -12,8 +12,35 @@ from socrat.catalog.registry import REPO_ROOT
 
 # The host's drawing kit (layout, links, pointers, audit); generated scripts call it, never replace it.
 KIT = (Path(__file__).parent / "kit.js").read_text(encoding="utf-8")
+# The 3D stage: geometry kernel, WebGL2 renderer, then the Clicky3D scene kit that mounts them.
+STAGE_3D = [
+    (Path(__file__).parent / name).read_text(encoding="utf-8")
+    for name in ("clicky3d-geometry.js", "clicky3d-render.js", "clicky3d.js")
+]
 
 MAX_BYTES = 300_000
+
+
+def _font_faces() -> str:
+    """Socrat's own typefaces, inlined: the sandbox only accepts data: fonts."""
+    import base64
+
+    faces = []
+    for family, name, weight in (
+        ("Geist", "geist-wght.woff2", "100 900"),
+        ("Delicious Handrawn", "delicious-handrawn-latin-400.woff2", "400"),
+    ):
+        path = REPO_ROOT / "apps/web/src/fonts" / name
+        if path.exists():
+            data = base64.b64encode(path.read_bytes()).decode("ascii")
+            faces.append(
+                f'@font-face{{font-family:"{family}";src:url(data:font/woff2;base64,{data}) format("woff2");'
+                f"font-weight:{weight};font-display:block}}"
+            )
+    return "".join(faces)
+
+
+FONT_FACES = _font_faces()
 TAGS = set(
     "html head body title meta style script main section article header footer nav aside figure figcaption div span p h1 h2 h3 h4 h5 h6 strong em b i u s small mark sub sup abbr cite q dfn time var samp kbd code pre blockquote ul ol li dl dt dd table thead tbody tfoot tr th td caption button input label select option optgroup textarea fieldset legend output details summary progress meter br hr svg g path rect circle ellipse line polyline polygon text tspan defs desc marker lineargradient radialgradient stop clippath mask pattern symbol use canvas math mrow mi mn mo mfrac msup msub msqrt mroot mtext".split()
 )
@@ -206,9 +233,9 @@ def validate(raw: str) -> Document:
 
 BASE_STYLE = """
 :root{color-scheme:light dark;--background:Canvas;--foreground:CanvasText;--card:Canvas;--muted:ButtonFace;--muted-foreground:GrayText;--border:ButtonBorder;--primary:AccentColor;--primary-foreground:AccentColorText;--radius:.7rem}
-:root{--ink:var(--foreground);--pen:#CC2A24;--highlight:#F6E05E;--hand:"Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS","Comic Neue",cursive;--paper-lines:repeating-linear-gradient(to bottom,transparent 0,transparent 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 28px)}
+:root{--ink:var(--foreground);--pen:#CC2A24;--highlight:#F6E05E;--sans:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;--hand:"Delicious Handrawn","Segoe Print","Bradley Hand",cursive;--paper-lines:repeating-linear-gradient(to bottom,transparent 0,transparent 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 28px)}
 :root[style*="color-scheme: dark"]{--pen:#FF7D72;--highlight:#E9D53A}
-*{box-sizing:border-box}html,body{margin:0;background:var(--background);color:var(--foreground);font-family:ui-sans-serif,system-ui,sans-serif}body{padding:20px;line-height:1.55}button,input,select,textarea{font:inherit}button,input,select{min-height:44px}button{cursor:pointer}button:disabled{cursor:default;opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:3px}svg,canvas{max-width:100%}pre{overflow:auto}#visual{min-height:220px}#transcript{margin-top:24px}a{pointer-events:none}
+*{box-sizing:border-box}html,body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--sans)}body{padding:20px;line-height:1.55}button,input,select,textarea{font:inherit}button,input,select{min-height:44px}button{cursor:pointer}button:disabled{cursor:default;opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:3px}svg,canvas{max-width:100%}pre{overflow:auto}#visual{min-height:220px}#transcript{margin-top:24px}a{pointer-events:none}
 @media(max-width:600px){body{padding:12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 html[data-reduced-motion=true] *,html[data-reduced-motion=true] *::before,html[data-reduced-motion=true] *::after{animation:none!important;transition:none!important}
@@ -216,7 +243,7 @@ html[data-reduced-motion=true] *,html[data-reduced-motion=true] *::before,html[d
 
 
 def compile_document(
-    document: str, channel: str, app_origin: str, theme: str = "light"
+    document: str, channel: str, app_origin: str, theme: str = "light", mode: str = "sketch"
 ) -> tuple[str, str]:
     """Revalidate stored content; only this compiler grants script nonces and messaging."""
     clean = validate(document).html
@@ -255,7 +282,9 @@ const state = () => {
   const reported = api.currentStep;
   if (reported !== undefined && (!Number.isInteger(reported) || reported < 0 || reported >= count)) throw Error('Invalid selected visual step');
   current = reported === undefined ? Math.min(current,count-1) : reported;
-  return {count,current,description:description.slice(0,6000),height:Math.min(1600,Math.max(420,document.body.scrollHeight+24))};
+  // A film keeps its own clock: the host's play button drives it instead of stepping.
+  const timed = typeof api.play === 'function' && typeof api.pause === 'function';
+  return {count,current,description:description.slice(0,6000),height:Math.min(1600,Math.max(420,document.body.scrollHeight+24)),timed,playing:timed&&!!api.playing};
 };
 const update = () => { if (failed) return; try { send('state',state()); } catch { failed=true;send('error'); } };
 addEventListener('message',event => {
@@ -267,6 +296,10 @@ addEventListener('message',event => {
     root.style.colorScheme=data.dark?'dark':'light';root.dataset.reducedMotion=String(!!data.reducedMotion);update();
   } else if (data.type==='step' && Number.isInteger(data.index)) {
     try { current=Math.max(0,Math.min(Number(window.__explainer.stepCount)-1,data.index));window.__explainer.step(current);update(); } catch { failed=true;send('error'); }
+  } else if ((data.type==='play'||data.type==='pause') && typeof window.__explainer.play==='function') {
+    try { data.type==='play' ? window.__explainer.play() : window.__explainer.pause(); update(); } catch { failed=true;send('error'); }
+  } else if (data.type==='rate' && Number.isFinite(data.value) && data.value>=0.25 && data.value<=4 && 'rate' in window.__explainer) {
+    window.__explainer.rate = data.value; update();
   } else if (data.type==='reset') { try {current=0;window.__explainer.reset();update();} catch {failed=true;send('error');} }
 });
 addEventListener('resize',()=>update());
@@ -279,8 +312,11 @@ setInterval(()=>{if(!failed){send('heartbeat');update()}},1000);
 """.replace("CONFIG", config)
     clean = clean.replace(
         "</head>",
-        f'<style>{BASE_STYLE}{theme_style}</style><script nonce="{nonce}">{KIT}</script></head>',
+        f'<style>{FONT_FACES}{BASE_STYLE}{theme_style}</style><script nonce="{nonce}">{KIT}</script></head>',
     )
+    if mode == "3d":
+        stage = "".join(f'<script nonce="{nonce}">{source}</script>' for source in STAGE_3D)
+        clean = clean.replace("</head>", stage + "</head>")
     clean = clean.replace("</body>", f'<script nonce="{nonce}">{runtime}</script></body>')
     # Both policies must pass: copying an inline nonce must never authorize external scripts.
     csp = (

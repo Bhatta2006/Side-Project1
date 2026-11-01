@@ -16,6 +16,7 @@ from test_learner_api import client, login, onboard  # noqa: F401
 from socrat.assistant.gateway import Event
 from socrat.config import Settings
 from socrat.explainer import artifact, generator, jobs, routes
+from socrat.explainer import film as films
 from socrat.models import AssistantMessage, PlaygroundJob
 
 HTML = (Path(__file__).parent / "fixtures/visual.html").read_text(encoding="utf-8")
@@ -39,6 +40,8 @@ def configured(client, monkeypatch):  # noqa: F811
     headers = login(client)
     onboard(client, headers)
     client.app.state.settings.ai_provider = "openai"
+    # The general tests exercise 3D itself; the restriction has its own test below.
+    client.app.state.settings.explainer_3d_admin_only = False
     provider = Provider([HTML] * 20)
     monkeypatch.setattr(jobs, "make_provider", lambda _, **kwargs: provider)
 
@@ -346,10 +349,12 @@ def test_owned_persistent_artifact_idempotency_frame_and_report(client, configur
     job = client.get("/api/v1/playground/jobs/" + queued["id"]).json()
     assert job["status"] == "ready" and job["progress"]["phase"] == "reviewing"
     data = job["artifact"]
-    assert "html" not in data and data["request"] == payload["prompt"] and len(provider.calls) == 1
+    # No mode was sent: the router picked the medium from the prompt, then one generation ran.
+    assert "html" not in data and data["request"] == payload["prompt"] and len(provider.calls) == 2
+    assert provider.calls[0][0] == generator.ROUTER and job["mode"] == data["mode"] == "sketch"
     replay = client.post("/api/v1/playground/generate", headers=headers, json=payload).json()
     assert replay["artifact"]["id"] == data["id"]
-    assert len(provider.calls) == 1
+    assert len(provider.calls) == 2
     assert (
         client.post(
             "/api/v1/playground/generate",
@@ -557,3 +562,333 @@ def test_browser_check_runs_the_skeleton_and_rejects_overlapping_text():
     unknown = skeleton.replace("focus:s.found?['a.'+s.mid]:[]", "focus:['a.99']")
     with pytest.raises(artifact.ArtifactError, match="unknown id"):
         asyncio.run(generator.render_check(artifact.validate(unknown), settings))
+
+
+def film_example():
+    return json.loads(generator.FILM_EXAMPLE)
+
+
+def test_example_film_passes_the_film_check_and_builds_a_valid_page():
+    film = films.check(films.parse(generator.FILM_EXAMPLE))
+    page = films.page(film)
+    document = artifact.validate(page)
+    assert document.title == film["title"] and "Chapters" in document.transcript
+    assert "Clicky3D.film" in page and "window.__explainer = player" in page
+    # The prompt embeds the example and documents the film's moving parts.
+    for phrase in ('"chapters"', "Motions act in the part's own frame", "Flows are streams"):
+        assert phrase in generator.SYSTEM_FILM
+    compiled, _ = artifact.compile_document(page, "c", "http://host.socrat.invalid", mode="3d")
+    # The stage arrives in the head, before the host page's script that plays the film.
+    assert compiled.index("const Clicky3D") < compiled.index("Clicky3D.film('#board'")
+
+
+def test_film_page_escapes_text_that_could_close_the_script():
+    film = film_example()
+    film["chapters"][0]["say"] = "Air </script><script>alert(1)</script> enters at the fan."
+    page = films.page(films.check(film))
+    assert "</script><script>alert" not in page
+    artifact.validate(page)
+
+
+@pytest.mark.parametrize(
+    "change, message",
+    [
+        (lambda f: f["parts"][1].update(kind="teapot"), "kind 'teapot' is unknown"),
+        (lambda f: f["parts"][1].update(parent="missing"), "parent 'missing' is not a part id"),
+        (
+            lambda f: f["labels"][0].update(part="nope"),
+            "labels\\[0\\].part 'nope' is not a part id",
+        ),
+        (lambda f: f["chapters"][2].update(run={"warp": 1}), "not a motion or flow id"),
+        (
+            lambda f: f["chapters"][3].update(say=f["chapters"][2]["say"]),
+            "repeats an earlier chapter",
+        ),
+        (
+            lambda f: f["chapters"][3].update(camera={"target": "nowhere"}),
+            "camera.target 'nowhere'",
+        ),
+        (lambda f: f.update(chapters=f["chapters"][:1]), "chapters must list 2-10"),
+        (lambda f: f["labels"][0].pop("detail"), r"labels\[0\]\.detail"),
+        (lambda f: f["parts"][1].update(on={"part": "nope"}), "on.part must name another part"),
+        (lambda f: f["parts"][2].update(at=[0, "x", 0]), "parts\\[2\\].at\\[1\\] must be a number"),
+    ],
+)
+def test_film_check_names_the_field_to_repair(change, message):
+    film = film_example()
+    change(film)
+    with pytest.raises(artifact.ArtifactError, match=message):
+        films.check(film)
+
+
+def test_round_parts_take_the_axis_the_film_implies():
+    film = {
+        "parts": [
+            {"id": "wheel", "kind": "group", "parent": "bike"},
+            {"id": "tire", "kind": "tire", "parent": "wheel", "recipe": {"r": 0.6}},
+            {"id": "hub", "kind": "cyl", "parent": "wheel", "recipe": {"axis": "y"}},
+            {"id": "gear", "kind": "gear", "recipe": {"axis": "z"}},
+            {"id": "tip", "kind": "lathe", "on": {"part": "body", "face": "-z"}},
+            {"id": "knob", "kind": "cyl", "rot": [90, 0, 0], "on": {"part": "body", "face": "+x"}},
+        ],
+        "motions": [
+            {"id": "roll", "part": "wheel", "type": "spin", "axis": "x"},
+            {"id": "turn", "part": "gear", "type": "spin", "axis": "y"},
+        ],
+    }
+    changes = films.orient(film)
+    parts = {p["id"]: p for p in film["parts"]}
+    # A spinning wheel group's tire turns about the spin axis; the author's own axis stays.
+    assert parts["tire"]["recipe"]["axis"] == "x" and parts["hub"]["recipe"]["axis"] == "y"
+    # A gear with a stated axis keeps it, and its spin follows the gear.
+    assert parts["gear"]["recipe"]["axis"] == "z" and film["motions"][1]["axis"] == "z"
+    # A long part on a side face runs out of that face; a rotated part is the author's choice.
+    assert parts["tip"]["recipe"]["axis"] == "-z" and "recipe" not in parts["knob"]
+    assert len(changes) == 3
+
+
+def test_bad_part_ids_are_renamed_everywhere_they_are_used():
+    film = film_example()
+    old = film["parts"][1]["id"]
+    for part in film["parts"]:
+        if part.get("parent") == old:
+            part["parent"] = "the casing"
+    film["parts"][1]["id"] = "the casing"
+    checked = films.check(film)
+    assert checked["parts"][1]["id"] == "the-casing"
+    assert any(p.get("parent") == "the-casing" for p in checked["parts"]) or not any(
+        p.get("parent") == "the casing" for p in checked["parts"]
+    )
+    assert films.rename_ids({"parts": [{"id": "9 lives"}, {"id": "ok"}]}) == {
+        "9 lives": "p-9-lives"
+    }
+
+
+def test_film_show_names_a_part_or_nothing_without_failing():
+    film = film_example()
+    film["chapters"][2]["show"] = ["fan", "combustor", "ghost", "compressor"]
+    checked = films.check(film)
+    # Part ids become their callouts; an id that matches nothing shows no callout.
+    assert checked["chapters"][2]["show"] == ["fan", "combustor", "compressor"]
+
+
+def test_film_parse_accepts_a_fence_and_rejects_non_json():
+    assert films.parse("```json\n" + generator.FILM_EXAMPLE + "\n```")["title"]
+    with pytest.raises(artifact.ArtifactError, match="not valid JSON"):
+        films.parse('{"title": "x",}')
+    with pytest.raises(artifact.ArtifactError, match="must not contain NaN"):
+        films.parse('{"title": NaN}')
+
+
+def test_browser_check_plays_the_example_film():
+    settings = Settings(environment="test")
+    page = films.page(films.check(film_example()))
+    result = asyncio.run(generator.render_check(artifact.validate(page), settings, "3d"))
+    assert result["ok"] and result["step_count"] == len(film_example()["chapters"])
+    assert result["observations"][0]["description"].startswith("Chapter 1 of")
+
+
+def test_generate_selects_the_3d_prompt_and_data_by_mode(monkeypatch):
+    provider = Provider([generator.FILM_EXAMPLE, HTML])
+
+    async def check(document, settings, mode="sketch"):
+        return dict(QA, mode=mode)
+
+    monkeypatch.setattr(generator, "render_check", check)
+
+    async def review(*args):
+        pass
+
+    monkeypatch.setattr(generator, "review", review)
+
+    async def run(mode):
+        return [
+            event
+            async for event in generator.generate(
+                provider,
+                Settings(environment="test"),
+                "Explain how a jet engine makes thrust",
+                "python",
+                "standard",
+                mode,
+            )
+        ]
+
+    events = asyncio.run(run("3d"))
+    assert provider.calls[0][0] == generator.SYSTEM_FILM
+    payload = events[-1]["document"]
+    assert payload["mode"] == "3d" and payload["prompt_version"] == "visual-3d-film-v1"
+    # The model wrote data; the host built the page that plays it.
+    assert payload["film"]["chapters"] and "Clicky3D.film" in payload["html"]
+
+    events = asyncio.run(run("sketch"))
+    assert "Sketch.mount" in provider.calls[1][0] and "Clicky3D" not in provider.calls[1][0]
+    payload = events[-1]["document"]
+    assert payload["mode"] == "sketch" and payload["prompt_version"] == "visual-sketch-v4"
+    assert "film" not in payload
+
+
+def test_a_broken_film_is_repaired_with_the_exact_problem(monkeypatch):
+    broken = generator.FILM_EXAMPLE.replace('"kind": "rotor"', '"kind": "propeller"', 1)
+    provider = Provider([broken, generator.FILM_EXAMPLE])
+
+    async def check(document, settings, mode="sketch"):
+        return dict(QA, mode=mode)
+
+    monkeypatch.setattr(generator, "render_check", check)
+
+    async def review(*args):
+        pass
+
+    monkeypatch.setattr(generator, "review", review)
+
+    async def run():
+        return [
+            event
+            async for event in generator.generate(
+                provider,
+                Settings(environment="test"),
+                "How does a jet engine work?",
+                "python",
+                "standard",
+                "3d",
+            )
+        ]
+
+    events = asyncio.run(run())
+    repair = provider.calls[1][1][-1].content
+    assert (
+        repair.startswith("Repair the complete film JSON.") and "'propeller' is unknown" in repair
+    )
+    assert events[-1]["document"]["film"]["title"]
+
+
+@pytest.mark.parametrize(
+    "routed, expected", [("3d", "3d"), (" 3D. ", "3d"), ("sketch", "sketch"), ("unsure", "sketch")]
+)
+def test_auto_mode_lets_the_prompt_pick_the_medium(monkeypatch, routed, expected):
+    provider = Provider([routed, generator.FILM_EXAMPLE if expected == "3d" else HTML])
+
+    async def check(document, settings, mode="sketch"):
+        return dict(QA, mode=mode)
+
+    monkeypatch.setattr(generator, "render_check", check)
+
+    async def review(*args):
+        pass
+
+    monkeypatch.setattr(generator, "review", review)
+
+    async def run():
+        return [
+            event
+            async for event in generator.generate(
+                provider,
+                Settings(environment="test"),
+                "How does a jet engine work?",
+                "python",
+                "standard",
+                "auto",
+            )
+        ]
+
+    events = asyncio.run(run())
+    assert provider.calls[0][0] == generator.ROUTER
+    assert events[0] == dict(event="progress", phase="generating", attempt=1, mode=expected)
+    assert (provider.calls[1][0] == generator.SYSTEM_FILM) == (expected == "3d")
+    assert events[-1]["document"]["mode"] == expected
+
+
+def test_3d_is_admin_only_while_it_is_tested(client, configured):  # noqa: F811
+    headers, provider = configured
+    settings = client.app.state.settings
+    settings.explainer_3d_admin_only = True
+    assert client.get("/api/v1/playground/artifacts").json()["three_d"] is False
+    # An explicit 3D request is refused, and nothing is queued or spent.
+    refused = client.post(
+        "/api/v1/playground/generate",
+        headers=headers,
+        json=dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="3d"),
+    )
+    assert (
+        refused.status_code == 403 and refused.json()["error"]["code"] == "playground_3d_restricted"
+    )
+    assert len(provider.calls) == 0
+    # Auto never picks 3D for them: no router call, a sketch.
+    job = generate(
+        client,
+        headers,
+        dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="auto"),
+    )
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "sketch"
+    assert all(call[0] != generator.ROUTER for call in provider.calls)
+    # An admin account gets the picker and 3D.
+    settings.admin_subjects = ["ada"]
+    assert client.get("/api/v1/playground/artifacts").json()["three_d"] is True
+    provider.responses = iter([generator.FILM_EXAMPLE] + [HTML] * 20)
+    job = generate(
+        client,
+        headers,
+        dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="3d"),
+    )
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "3d"
+    # Turning the restriction off opens 3D to everyone.
+    settings.admin_subjects = []
+    settings.explainer_3d_admin_only = False
+    assert client.get("/api/v1/playground/artifacts").json()["three_d"] is True
+
+
+def test_a_queued_3d_job_of_a_non_admin_still_runs_as_a_sketch(client, configured):  # noqa: F811
+    headers, provider = configured
+    payload = dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="3d")
+    queued = client.post("/api/v1/playground/generate", headers=headers, json=payload)
+    assert queued.status_code == 202  # accepted before the restriction existed
+    client.app.state.settings.explainer_3d_admin_only = True
+    work(client)
+    job = client.get("/api/v1/playground/jobs/" + queued.json()["id"]).json()
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "sketch"
+
+
+def test_playground_mode_end_to_end(client, configured):  # noqa: F811
+    headers, provider = configured
+    payload = dict(
+        prompt="Explain a camera aperture with a cutaway lens",
+        request_id=str(uuid.uuid4()),
+        mode="3d",
+    )
+    # 3D answers are films (JSON); the host turns them into the page.
+    provider.responses = iter([generator.FILM_EXAMPLE] + [HTML] * 20)
+    job = generate(client, headers, payload)
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "3d"
+    # The same identity replays; only the mode flipping conflicts.
+    assert (
+        client.post("/api/v1/playground/generate", headers=headers, json=payload).status_code == 202
+    )
+    assert (
+        client.post(
+            "/api/v1/playground/generate", headers=headers, json={**payload, "mode": "sketch"}
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            "/api/v1/playground/generate",
+            headers=headers,
+            json={**payload, "mode": "2d", "request_id": str(uuid.uuid4())},
+        ).status_code
+        == 422
+    )
+    # A sketch frame never injects the 3D kit.
+    sketch = generate(
+        client,
+        headers,
+        {**payload, "mode": "sketch", "request_id": str(uuid.uuid4())},
+    )
+    assert sketch["artifact"]["mode"] == "sketch"
+    frame_url = urlparse(sketch["artifact"]["frame_url"])
+    frame = client.get(frame_url.path + "?" + frame_url.query)
+    assert frame.status_code == 200 and "Clicky3D" not in frame.text
+    # The 3D artifact's frame carries the interactive stage.
+    frame_url = urlparse(job["artifact"]["frame_url"])
+    frame = client.get(frame_url.path + "?" + frame_url.query)
+    assert frame.status_code == 200 and "const Clicky3D" in frame.text

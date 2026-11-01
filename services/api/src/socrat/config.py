@@ -157,6 +157,16 @@ class Settings(DatabaseSettings):
     adaptive_quiz_enabled: bool = True
     pattern_planner_enabled: bool = True
     explainer_model: str = ""
+    # 3D films need far more spatial reasoning than sketches: an optional stronger model (and
+    # its prices, so usage is costed right) used only once a request is routed to 3D.
+    explainer_3d_model: str = ""
+    # 3D is still being tested: only admin accounts may request it (and Auto never picks it for
+    # anyone else). Set false to open 3D to every learner.
+    explainer_3d_admin_only: bool = True
+    explainer_3d_price_input_per_mtok: float = Field(default=0, ge=0, le=1000)
+    explainer_3d_price_output_per_mtok: float = Field(default=0, ge=0, le=1000)
+    # Large models think before their first token; the tutor's short timeout is too tight.
+    explainer_timeout_seconds: float = Field(default=180, ge=30, le=600)
     explainer_chat_template_kwargs: dict = Field(default_factory=dict)
     explainer_daily_messages: int = Field(default=20, ge=1, le=200)
     explainer_concurrent_limit: int = Field(default=4, ge=1, le=16)

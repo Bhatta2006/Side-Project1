@@ -40,7 +40,10 @@ const Sketch = (() => {
     };
     const text = (x, y, value, size, color, anchor) =>
       el(labels, 'text', { x: x.toFixed(1), y: y.toFixed(1), 'text-anchor': anchor || 'middle', style: `font-family:var(--hand);font-size:${size}px;fill:${color || INK}` }, value);
-    return { draw: scene => draw(scene, { svg, shapes, labels, measure, text }) };
+    // Text is measured in the hand font; if it was still loading, lay the last scene out again.
+    let last = null;
+    if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => { if (last) draw(last, { svg, shapes, labels, measure, text }); });
+    return { draw: scene => { last = scene; return draw(scene, { svg, shapes, labels, measure, text }); } };
   }
 
   const split = id => { const [row, rest] = String(id).split('.'); return [row, rest]; };

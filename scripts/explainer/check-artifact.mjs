@@ -106,9 +106,12 @@ export async function run(context, input) {
   // browser start made it time out and crash the checker with no output).
   const frameReady = page.waitForEvent('framenavigated', { predicate: f => f.url() === visual, timeout: 12000 });
   frameReady.catch(() => undefined);
-  await page.goto(host);
+  // Not waiting for the load event here: a 3D film builds its model and draws the first frame
+  // inside its load, which software WebGL (CI, containers) can take several seconds over.
+  await page.goto(host, { waitUntil: 'commit' });
   const frame = await frameReady;
   if (!frame) throw Error('Visual did not load');
+  await frame.waitForFunction(() => document.readyState === 'complete', null, { timeout: 25000 }).catch(() => undefined);
   try { await frame.waitForFunction(() => document.readyState === 'complete' && window.__explainer); }
   catch { throw Error(errors[0] || 'Initialize window.__explainer and a working initial visual immediately on load'); }
   // A script that threw while drawing is the real cause of any follow-on 'blank' or 'missing' finding.
@@ -143,8 +146,11 @@ export async function run(context, input) {
   const observe = () => frame.evaluate(() => ({ step:window.__explainer.currentStep, description:String(window.__explainer.describe()).slice(0,6000), visible_text:document.body.innerText.slice(0,4000) }));
   // The host's drawing kit audits the layout: overlapping or cut-off text in any observed state fails.
   const layout = async () => {
-    const problems = await frame.evaluate(() => (typeof Sketch === 'undefined' ? [] : Sketch.audit()));
-    if (problems.length) throw Error('Layout problem (shorten the text or use fewer items): ' + problems.slice(0, 3).join('; '));
+    const problems = await frame.evaluate(() => [
+      ...(typeof Sketch === 'undefined' ? [] : Sketch.audit()),
+      ...(typeof Clicky3D === 'undefined' ? [] : Clicky3D.audit()),
+    ]);
+    if (problems.length) throw Error('Layout problem: ' + problems.slice(0, 3).join('; ') + (problems.some(p => /overlaps|runs outside/.test(p)) ? '. Shorten the text or use fewer items' : ''));
   };
   const observations = [await observe()];
   await layout();
@@ -195,6 +201,6 @@ const CLOSE_GRACE_MS = 500;
 
 if (process.argv[1]?.endsWith('check-artifact.mjs')) {
   main()
-    .catch(error => { const infrastructure = String(error.message).includes('browserType.launch'); return { ok: false, infrastructure, reason: infrastructure ? 'Browser checker unavailable' : String(error.message).slice(0,300), ...(infrastructure ? { detail: String(error.message).slice(0,600) } : {}) }; })
+    .catch(error => { const infrastructure = String(error.message).includes('browserType.launch'); return { ok: false, infrastructure, reason: infrastructure ? 'Browser checker unavailable' : String(error.message).slice(0,1200), ...(infrastructure ? { detail: String(error.message).slice(0,600) } : {}) }; })
     .then(result => process.stdout.write(JSON.stringify(result), () => process.exit(result.ok ? 0 : 1)));
 }

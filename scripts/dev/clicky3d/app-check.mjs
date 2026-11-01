@@ -1,0 +1,32 @@
+// Drive the real local app: sign in, generate a 3D film from a prompt, explode it, open a part card.
+import { chromium } from 'playwright';
+
+const origin = 'http://localhost:3010';
+const out = process.argv[2];
+const browser = await chromium.launch({ channel: 'msedge', args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
+const page = await browser.newPage({ baseURL: origin, viewport: { width: 1360, height: 1000 } });
+page.on('pageerror', e => console.log('pageerror:', e.message));
+const subject = 'pgtest-' + Date.now();
+console.log('login', (await page.request.post('/api/v1/auth/dev-login', { headers: { Origin: origin }, data: { subject, display_name: 'Learner' } })).status());
+const profile = await (await page.request.get('/api/v1/me')).json();
+const headers = { Origin: origin, 'X-CSRF-Token': profile.csrf_token };
+await page.request.patch('/api/v1/me', { headers, data: { birth_year: 2000, timezone: 'Asia/Kolkata' } });
+await page.request.post('/api/v1/enrollments', { headers, data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4, 5, 6] } });
+await page.goto('/playground');
+await page.getByLabel('Your question', { exact: true }).fill('How does a bicycle disc brake work?');
+await page.getByRole('button', { name: 'Generate', exact: true }).click();
+const started = Date.now();
+const frame = page.frameLocator('iframe[title]').first();
+await frame.getByRole('button', { name: 'Explode into parts' }).waitFor({ timeout: 300000 });
+console.log('ready after', Math.round((Date.now() - started) / 1000), 's');
+await page.waitForTimeout(1500);
+await page.screenshot({ path: out + '-film.png' });
+await frame.getByRole('button', { name: 'Explode into parts' }).click();
+await page.waitForTimeout(2200);
+await page.screenshot({ path: out + '-apart.png' });
+const card = frame.getByRole('button', { name: /Show details/ }).first();
+console.log('first part:', await card.getAttribute('aria-label'));
+await card.click();
+await page.waitForTimeout(2000);
+await page.screenshot({ path: out + '-card.png' });
+await browser.close();

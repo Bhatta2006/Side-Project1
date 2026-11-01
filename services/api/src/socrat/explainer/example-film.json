@@ -1,0 +1,44 @@
+{
+  "title": "How a jet engine makes thrust",
+  "summary": "A turbofan pulls air in with a big fan. Most of it bypasses the core and pushes the plane forward; the rest is squeezed by the compressor, burned with fuel in the combustor, and expands through the turbine, which spins the shaft that drives the fan and compressor.",
+  "parts": [
+    { "id": "engine", "kind": "group", "at": [0, 1.1, 0] },
+    { "id": "nacelle", "parent": "engine", "kind": "lathe", "recipe": { "profile": [[1.0, -2.05], [1.08, -1.75], [1.1, -1.2], [1.06, -0.2], [0.92, 0.7], [0.8, 1.25]], "wall": 0.07, "bevel": 0.02, "axis": "x", "seg": 96 }, "mat": "alu", "color": "#B8C2CE", "cut": { "normal": [0, 0.55, 1] }, "explode": [0, 1.3, 0] },
+    { "id": "core", "parent": "engine", "kind": "lathe", "recipe": { "profile": [[0.56, -1.35], [0.6, -0.8], [0.62, 0.3], [0.52, 1.25], [0.42, 2.0]], "wall": 0.04, "axis": "x", "seg": 80 }, "mat": "steel", "color": "#9AA3AE", "cut": { "normal": [0, 0.55, 1] }, "explode": [0, -1.1, 0] },
+    { "id": "shaft", "parent": "engine", "kind": "cyl", "recipe": { "r": 0.075, "h": 3.7, "axis": "x", "bevel": 0.02 }, "at": [0.15, 0, 0], "mat": "steel", "explode": [0, 0, 0] },
+    { "id": "fan", "parent": "engine", "kind": "rotor", "recipe": { "r": 0.97, "hub": 0.26, "blades": 22, "chord": 0.36, "pitch": 52, "twist": 30, "thick": 0.08, "h": 0.32, "spinner": 0.42, "axis": "-x" }, "at": [-1.62, 0, 0], "mat": "titanium", "color": "#5E6672", "explode": [-1.1, 0, 0] },
+    { "id": "compressor", "parent": "engine", "kind": "rotor", "recipe": { "r": 0.54, "hub": 0.24, "blades": 26, "chord": 0.11, "pitch": 38, "twist": 14, "thick": 0.08, "h": 0.12, "axis": "x" }, "at": [-1.18, 0, 0], "copies": 6, "step": [0.16, 0, 0], "turn": [7, 0, 0], "mat": "steel", "color": "#8D97A3", "explode": [-0.5, 0, 0] },
+    { "id": "combustor", "parent": "engine", "kind": "tube", "recipe": { "r": 0.5, "inner": 0.24, "h": 0.62, "axis": "x", "bevel": 0.03 }, "at": [0.3, 0, 0], "mat": "copper", "color": "#E8823A", "cut": { "normal": [0, 0.55, 1] }, "explode": [0.15, 0, 0] },
+    { "id": "injector", "parent": "engine", "kind": "cyl", "recipe": { "r": 0.03, "h": 0.18, "axis": "x" }, "at": [-0.02, 0.37, 0], "around": { "axis": "x", "count": 12, "center": [-0.02, 0, 0] }, "mat": "brass", "explode": [0.15, 0, 0] },
+    { "id": "turbine", "parent": "engine", "kind": "rotor", "recipe": { "r": 0.5, "hub": 0.26, "blades": 30, "chord": 0.12, "pitch": 30, "twist": 10, "thick": 0.12, "h": 0.13, "axis": "x" }, "at": [0.86, 0, 0], "copies": 2, "step": [0.18, 0, 0], "mat": "iron", "color": "#7B6F66", "explode": [0.7, 0, 0] },
+    { "id": "cone", "parent": "engine", "kind": "lathe", "recipe": { "profile": [[0, 0.95], [0.12, 0.8], [0.25, 0.35], [0.27, 0]], "axis": "x" }, "at": [1.25, 0, 0], "mat": "steel", "color": "#A5ACB5", "explode": [1.2, 0, 0] }
+  ],
+  "labels": [
+    { "id": "fan", "text": "Fan", "note": "pulls in a huge mass of air", "detail": "The big front blades, often made of titanium or carbon composite. Turned by the low-pressure shaft, they push most of the air around the core through the bypass duct, which makes most of a modern airliner's thrust quietly and efficiently.", "part": "fan", "anchor": [0, 0.62, 0] },
+    { "id": "compressor", "text": "Compressor", "note": "squeezes the core air", "detail": "Rows of small blades that spin between fixed vanes. Each stage squeezes the core air a little more, raising its pressure up to about 40 times before it reaches the combustor, so the fuel can burn hot and efficiently.", "part": "compressor.3", "anchor": [0, 0.4, 0] },
+    { "id": "combustor", "text": "Combustor", "note": "fuel burns here", "detail": "A ring-shaped chamber where injectors spray fuel into the compressed air and it burns continuously at around 1,500 to 2,000 C. The hot gas expands hugely and rushes back toward the turbine.", "part": "combustor", "anchor": [0, 0.32, 0.18], "tone": "pen" },
+    { "id": "turbine", "text": "Turbine", "note": "hot gas spins it", "detail": "Blades that take energy back out of the hot gas, like a windmill in a gale. Made of nickel superalloys and cooled by air flowing through tiny holes, they spin the shaft that drives the compressor and the fan.", "part": "turbine.1", "anchor": [0, 0.38, 0] },
+    { "id": "shaft", "text": "Shaft", "note": "turbine drives the fan", "detail": "A long steel spindle down the engine's centre. It carries the turbine's power forward to the compressor and fan, so the engine keeps itself running once it has started.", "part": "shaft", "anchor": [0.6, 0.06, 0] },
+    { "id": "exhaust", "text": "Exhaust", "detail": "The tail cone and nozzle shape the hot gas leaving the turbine into a fast jet. Together with the bypass air from the fan, that rearward push is what moves the aircraft forward.", "part": "cone", "anchor": [0.5, 0, 0] }
+  ],
+  "motions": [
+    { "id": "fan-spin", "part": "fan", "type": "spin", "axis": "x", "speed": 0.55 },
+    { "id": "compressor-spin", "part": "compressor", "type": "spin", "axis": "x", "speed": 0.9 },
+    { "id": "turbine-spin", "part": "turbine", "type": "spin", "axis": "x", "speed": 0.9 },
+    { "id": "shaft-spin", "part": "shaft", "type": "spin", "axis": "x", "speed": 0.9 }
+  ],
+  "flows": [
+    { "id": "bypass", "parent": "engine", "path": [[-2.4, 0.62, 0.62], [-1.5, 0.6, 0.6], [0.2, 0.56, 0.56], [1.3, 0.52, 0.52], [2.3, 0.48, 0.48]], "count": 28, "period": 2.2, "r": 0.026, "colors": ["#8FB0FF", "#8FB0FF"] },
+    { "id": "core-air", "parent": "engine", "path": [[-2.4, 0.26, 0.26], [-1.4, 0.26, 0.26], [-0.25, 0.22, 0.22], [0.3, 0.26, 0.26], [0.95, 0.24, 0.24], [1.6, 0.16, 0.16], [2.5, 0.12, 0.12]], "count": 36, "period": 3, "r": 0.024, "colors": ["#8FB0FF", "#B6C8FF", "#FFB24A", "#FF6A2B", "#FFB08A"], "glow": 0.6 }
+  ],
+  "camera": { "yaw": -32, "tilt": 18, "distance": 1.05 },
+  "chapters": [
+    { "title": "The whole engine", "say": "A turbofan, closed up. Air enters at the fan on the left and leaves through the nozzle on the right.", "seconds": 5, "cut": 0, "show": [], "run": { "fan-spin": 0.4, "compressor-spin": 0.4, "turbine-spin": 0.4, "shaft-spin": 0.4, "bypass": 0, "core-air": 0 }, "camera": { "yaw": -48, "tilt": 14, "orbit": 3 } },
+    { "title": "Cut it open", "say": "Slice away a quarter of the casing to see the parts that do the work, all on one spinning shaft.", "seconds": 5, "cut": 1, "show": ["fan", "compressor", "combustor", "turbine", "exhaust"], "camera": { "yaw": -32, "tilt": 18 } },
+    { "title": "Fan pulls air in", "say": "The fan throws most of the air around the core. This cool bypass air makes most of the thrust.", "seconds": 6, "focus": ["fan", "nacelle"], "show": ["fan"], "run": { "fan-spin": 1, "bypass": 1 }, "camera": { "target": "fan", "yaw": -58, "tilt": 16, "distance": 1 } },
+    { "title": "Compressor squeezes", "say": "Six stages of smaller blades squeeze the core air into a fraction of its volume, which heats it.", "seconds": 6, "focus": ["compressor", "shaft"], "show": ["compressor"], "run": { "compressor-spin": 1, "shaft-spin": 1, "core-air": 1 }, "camera": { "target": "compressor", "yaw": -28, "tilt": 22, "distance": 1 } },
+    { "title": "Fuel burns", "say": "Injectors spray fuel into the hot, squeezed air. It burns continuously and the gas expands fast.", "seconds": 6, "focus": ["combustor", "injector"], "show": ["combustor"], "camera": { "target": "combustor", "yaw": -12, "tilt": 26, "distance": 1 } },
+    { "title": "Turbine spins the shaft", "say": "The hot gas spins the turbine on its way out. The shaft carries that power forward to the fan and compressor.", "seconds": 6, "focus": ["turbine", "shaft", "fan", "compressor"], "show": ["turbine", "shaft"], "run": { "turbine-spin": 1 }, "camera": { "target": "turbine", "yaw": 18, "tilt": 20, "distance": 1.1 } },
+    { "title": "Every part, apart", "say": "Pulled apart along the shaft: fan, compressor, combustor, turbine and nozzle, in the order the air meets them.", "seconds": 7, "focus": [], "explode": 1, "show": ["fan", "compressor", "combustor", "turbine", "exhaust"], "run": { "bypass": 0, "core-air": 0 }, "camera": { "target": null, "yaw": -30, "tilt": 20, "distance": 1.05, "orbit": 2 } }
+  ]
+}

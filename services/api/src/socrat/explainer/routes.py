@@ -40,6 +40,8 @@ class CreateInput(BaseModel):
         min_length=5, max_length=4000, validation_alias=AliasChoices("prompt", "confusion")
     )
     level: str = Field(default="standard", pattern=r"^(simple|standard|deep)$")
+    # auto lets the prompt alone decide; the worker resolves it to sketch or 3d before generating.
+    mode: str = Field(default="auto", pattern=r"^(auto|sketch|3d)$")
     request_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     concept: str | None = Field(
         default=None, pattern=r"^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$"
@@ -134,6 +136,7 @@ def view(db, job, settings):
         error=job.error or None,
         request=job.prompt,
         level=job.level,
+        mode=job.mode or "sketch",
         created_at=job.created_at,
     )
     if job.status == "ready":
@@ -148,7 +151,7 @@ def job_of(db, job_id, user_id):
     return job
 
 
-def enqueue(db, settings, user_id, language, prompt, level, job_id, shared=False):
+def enqueue(db, settings, user_id, language, prompt, level, job_id, shared=False, mode="sketch"):
     """Queue one generation for ``user_id``, after the checks every generation passes.
 
     A ``shared`` one fills the cache for every learner, so it skips that learner's own plan
@@ -198,6 +201,7 @@ def enqueue(db, settings, user_id, language, prompt, level, job_id, shared=False
         thread_id=thread.id,
         prompt=prompt,
         level=level,
+        mode=mode,
         language=language,
         status="queued",
         progress={},
@@ -222,16 +226,35 @@ def create(body: CreateInput, request: Request):
         guard_instruction(db, catalog(), user, body.concept)
         available(settings)
         user_id = user.id
+        allowed_3d = jobs.may_use_3d(settings, user)
+        if body.mode == "3d" and not allowed_3d:
+            raise HTTPException(403, "playground_3d_restricted")
+        # Auto never picks 3D for an account that may not use it.
+        mode = body.mode if allowed_3d or body.mode != "auto" else "sketch"
         # Bind the idempotency identity to the authenticated learner, never to a body user_id.
         job_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"visual:{user_id}:{body.request_id}"))
         previous = db.get(PlaygroundJob, job_id)
         if previous:
-            if previous.prompt != body.prompt or previous.level != body.level:
+            if (
+                previous.prompt != body.prompt
+                or previous.level != body.level
+                # An auto request matches whichever medium the router resolved it to.
+                or body.mode not in ("auto", previous.mode)
+            ):
                 raise HTTPException(409, "playground_idempotency_conflict")
             return view(db, previous, settings)
         return view(
             db,
-            enqueue(db, settings, user_id, enrollment.language, body.prompt, body.level, job_id),
+            enqueue(
+                db,
+                settings,
+                user_id,
+                enrollment.language,
+                body.prompt,
+                body.level,
+                job_id,
+                mode=mode,
+            ),
             settings,
         )
 
@@ -377,6 +400,8 @@ def history(request: Request):
             .limit(20)
         )
         return dict(
+            # Whether the mode picker (Auto, Sketch, 3D) is offered to this account.
+            three_d=jobs.may_use_3d(request.app.state.settings, user),
             items=[
                 dict(id=row.id, title=json.loads(row.content)["title"], created_at=row.created_at)
                 for row in rows
@@ -439,8 +464,14 @@ def frame(
             raise HTTPException(404, "not_found")
         guard_instruction(db, catalog(), user)
         row = owned(db, artifact_id, user.id)
+        content = json.loads(row.content)
+        # Older artifacts predate the mode field; they are always sketch documents.
         document, csp = compile_document(
-            json.loads(row.content)["html"], artifact_id, settings.public_origin, theme
+            content["html"],
+            artifact_id,
+            settings.public_origin,
+            theme,
+            mode=content.get("mode", "sketch"),
         )
     return HTMLResponse(
         document,

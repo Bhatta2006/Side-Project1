@@ -80,9 +80,9 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
       else if (data.type === 'state' && Number.isInteger(data.count) && data.count >= 1 && data.count <= 2000 && Number.isInteger(data.current) && data.current >= 0 && data.current < data.count && typeof data.description === 'string' && data.description.length <= 6000 && Number.isFinite(data.height)) {
         everReady.current = true;
         setReady(true);
-        const next = { count: data.count, current: data.current, description: data.description, height: Math.min(1600, Math.max(420, data.height)) };
+        const next = { count: data.count, current: data.current, description: data.description, height: Math.min(1600, Math.max(420, data.height)), timed: data.timed === true, playing: data.playing === true };
         latest.current = next;
-        setState(previous => previous.count === next.count && previous.current === next.current && previous.description === next.description && previous.height === next.height ? previous : next);
+        setState(previous => previous.count === next.count && previous.current === next.current && previous.description === next.description && previous.height === next.height && previous.timed === next.timed && previous.playing === next.playing ? previous : next);
       }
     }
     addEventListener('message', message);
@@ -100,7 +100,7 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
     if (themeAtLoad.current !== resolvedTheme) { setThemeNote(true); themeAtLoad.current = resolvedTheme; }
   }, [frameSource, resolvedTheme]);
   useEffect(() => {
-    if (!playing || reduced || !ready || failure) return;
+    if (!playing || reduced || !ready || failure || latest.current.timed) return;
     const timer = setInterval(() => {
       const current = latest.current;
       if (current.current >= current.count - 1) { setPlaying(false); return; }
@@ -144,11 +144,19 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
     }
   }
 
-  function seek(index: number) { setPlaying(false); send({ type: 'step', index }); }
+  // A film keeps playing across a chapter jump; a stepped visual pauses.
+  function seek(index: number) { if (!state.timed) setPlaying(false); send({ type: 'step', index }); }
+  const isPlaying = state.timed ? Boolean(state.playing) : playing;
+  function togglePlay() {
+    if (state.timed) { send({ type: isPlaying ? 'pause' : 'play' }); return; }
+    if (state.current === state.count - 1) seek(0);
+    setPlaying(value => !value);
+  }
+  function changeSpeed(value: string) { setSpeed(value); if (state.timed) send({ type: 'rate', value: Number(value) }); }
   function reload() { setFailure(''); setNonce(n => n + 1); }
   const steps = state.count > 1;
   const disabled = !ready || Boolean(failure);
-  const stepLabel = steps ? `Step ${state.current + 1} of ${state.count}` : 'Live experiment';
+  const stepLabel = steps ? `${state.timed ? 'Chapter' : 'Step'} ${state.current + 1} of ${state.count}` : 'Live experiment';
 
   return (
     <div className="grid gap-3">
@@ -221,8 +229,8 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
                   </TooltipTrigger>
                   <TooltipContent>Previous step</TooltipContent>
                 </Tooltip>
-                <Button className="min-w-28" disabled={disabled || reduced} onClick={() => { if (state.current === state.count - 1) seek(0); setPlaying(value => !value); }}>
-                  {playing ? <Pause /> : <Play />}{playing ? 'Pause' : 'Play'}
+                <Button className="min-w-28" disabled={disabled || reduced} onClick={togglePlay}>
+                  {isPlaying ? <Pause /> : <Play />}{isPlaying ? 'Pause' : 'Play'}
                 </Button>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -238,7 +246,7 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
               {steps ? (
                 <>
                   <label className="sr-only" htmlFor={`speed-${artifact.id}`}>Playback speed</label>
-                  <NativeSelect id={`speed-${artifact.id}`} size="sm" value={speed} onChange={event => setSpeed(event.target.value)} className="w-24">
+                  <NativeSelect id={`speed-${artifact.id}`} size="sm" value={speed} onChange={event => changeSpeed(event.target.value)} className="w-24">
                     <NativeSelectOption value="0.5">0.5×</NativeSelectOption>
                     <NativeSelectOption value="1">1×</NativeSelectOption>
                     <NativeSelectOption value="2">2×</NativeSelectOption>

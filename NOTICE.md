@@ -12,7 +12,7 @@ material that ships with Socrat or that Socrat depends on.
 |---|---|---|
 | JetBrains Mono | SIL Open Font License 1.1 | `apps/web/src/fonts/jetbrains-mono-latin-wght.woff2`, license text `apps/web/src/fonts/JetBrainsMono-OFL.txt` |
 | Delicious Handrawn (handwritten notes) | SIL Open Font License 1.1 | `apps/web/src/fonts/delicious-handrawn-latin-400.woff2`, license text `apps/web/src/fonts/DeliciousHandrawn-OFL.txt` |
-| Geist | SIL Open Font License 1.1 | npm package `geist`, license text `node_modules/geist/LICENSE.txt` |
+| Geist | SIL Open Font License 1.1 | npm package `geist`, license text `node_modules/geist/LICENSE.txt`; vendored copy for visual explainers `apps/web/src/fonts/geist-wght.woff2`, license text `apps/web/src/fonts/Geist-OFL.txt` |
 
 ## Software dependencies
 
