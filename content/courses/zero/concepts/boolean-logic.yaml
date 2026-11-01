@@ -157,10 +157,10 @@ quiz:
     kind: mcq
     prompt: "In `count != 0 and total / count > 2`, what happens when count is 0?"
     options:
-      - The division is skipped and the whole condition is false
-      - The program crashes dividing by zero
-      - The condition is true
-      - Both sides are evaluated anyway
+      - "The division is skipped and the whole condition is false"
+      - "The division runs first and the program stops with an error"
+      - "Python treats the division by zero as 0, so the condition is true"
+      - "Both sides are evaluated and the result is False either way"
     answer: 0
     explanation: Because the left side is false, and already knows the answer and never evaluates the right side.
     difficulty: 2

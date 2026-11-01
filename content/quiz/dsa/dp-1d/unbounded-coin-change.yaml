@@ -34,7 +34,7 @@ items:
     band: 1
     format: mcq
     prompt: "Coins 1, 3, 4 and amount 6. What does 'largest coin first' give, and what is best?"
-    options: ["Greedy 3 coins (4+1+1); best 2 (3+3)", "Both give 2", "Greedy 2; best 3", "Both give 3"]
+    options: ["Greedy 3 coins (4+1+1); best 2 (3+3)", "Both give 2 coins, using 3 + 3", "Greedy 2 coins (4+2); best 3", "Both give 3 coins, using 4 + 1 + 1"]
     answer: 0
     misconceptions: [null, greedy-coin-change, greedy-coin-change, dp-missing-plus-one]
     explanation: "Greedy grabs 4 and is left with 2 = 1 + 1; DP finds 3 + 3."
@@ -44,9 +44,9 @@ items:
     prompt: "Coins 4 and 6, amount 7. What should the program print, and why does the DP need a sentinel?"
     options:
       - "-1: odd amounts cannot be made, and INF marks amounts nobody reached"
-      - "2, using 4 + 3"
-      - "1, the closest coin"
-      - "0, since no coins are used"
+      - "2, using 4 + 3, since the DP rounds the leftover up to a coin"
+      - "1, because the coin closest to 7 is used once and the rest ignored"
+      - "0, since no coins are used when the amount cannot be paid exactly"
     answer: 0
     misconceptions: [null, dp-wrong-subproblem, greedy-coin-change, missing-unreachable-check]
     explanation: "4 and 6 are even, so 7 is unreachable; INF must turn into -1 at the end."
@@ -56,9 +56,9 @@ items:
     prompt: "Counting the WAYS to make change, why does the coin loop go outside the amount loop?"
     options:
       - "So each combination is counted once, not once per order"
-      - "It is faster"
-      - "So larger coins are tried first"
-      - "The order of loops never matters"
+      - "Because coins outside makes the loops run faster"
+      - "So that larger coins are always tried before small"
+      - "It doesn't; the order of the two loops never matters"
     answer: 0
     misconceptions: [null, dp-loop-order, greedy-coin-change, dp-loop-order]
     explanation: "Coins outside means each coin is added in a fixed order: combinations, not permutations."
@@ -68,9 +68,9 @@ items:
     prompt: "Fewest perfect squares that add up to n. Which pattern, and what are the coins?"
     options:
       - "Unbounded coin change with coins 1, 4, 9, … up to n"
-      - "Greedy: always take the largest square"
-      - "0/1 knapsack: each square used once"
-      - "Binary search on the count"
+      - "Greedy: always take the largest square that still fits"
+      - "0/1 knapsack: each square may be used at most once"
+      - "Binary search on the count of squares, checking each"
     answer: 0
     misconceptions: [null, greedy-coin-change, unbounded-vs-01, pattern-search-vs-scan]
     explanation: "Squares may repeat, so each square is a coin of unlimited supply."
@@ -80,9 +80,9 @@ items:
     prompt: "Pay for exactly n rides with 1-, 7- and 30-ride passes, unlimited of each, minimising cost. Pattern and cost?"
     options:
       - "Unbounded knapsack over rides: dp[r] = min(dp[r − k] + price_k), O(3n)"
-      - "Greedy by best price per ride"
-      - "Count the ways to buy passes"
-      - "Fixed window of 30 rides"
+      - "Greedy: always buy the pass with the best price per ride until done"
+      - "Count the number of ways to buy passes that add up to exactly n rides"
+      - "A fixed window of 30 rides, buying one 30-ride pass per window"
     answer: 0
     misconceptions: [null, greedy-coin-change, count-vs-min, pattern-fixed-vs-variable-window]
     explanation: "Each pass is a coin of size k with a cost; minimise the total like fewest coins."

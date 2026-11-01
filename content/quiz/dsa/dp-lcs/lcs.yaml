@@ -122,10 +122,10 @@ items:
   format: classify
   prompt: Why does matching each character of a with its first occurrence in b fail for LCS?
   options:
-  - An early match can skip characters of b that later matches needed
-  - Because b is shorter
-  - It only fails on palindromes
-  - It does not fail
+  - "An early match can skip characters of b that later matches needed"
+  - "Because b is shorter than a, so its first occurrences run out early"
+  - "It only fails on palindromes, where a and b read the same backwards"
+  - "It does not fail; first-occurrence matching always gives the LCS"
   answer: 0
   misconceptions:
   - null
@@ -138,10 +138,10 @@ items:
   format: bug_spot
   prompt: The table has n + 1 rows, but the code compares a[i] with b[j]. What goes wrong?
   options:
-  - It compares the wrong characters and reads past the end of the strings
-  - Nothing
-  - Only the first row is wrong
-  - It becomes the substring version
+  - "It compares the wrong characters and reads past the end of the strings"
+  - "Nothing; row 0 is unused, so shifting the indexes changes nothing"
+  - "Only the first row is wrong, and later rows correct themselves"
+  - "It quietly becomes the longest common substring version instead"
   answer: 0
   misconceptions:
   - null
@@ -203,10 +203,10 @@ items:
   prompt: Longest stretch of consecutive days with the same weather in two cities' logs. What changes from
     LCS?
   options:
-  - Reset to 0 on a mismatch and take the largest cell
-  - Nothing
-  - Use two pointers
-  - Use max(up, left) on a match
+  - "Reset to 0 on a mismatch and take the largest cell"
+  - "Nothing; the LCS table already answers this"
+  - "Use two pointers, one per city's weather log"
+  - "Use max(up, left) on a match instead of diagonal"
   answer: 0
   misconceptions:
   - null
@@ -219,10 +219,10 @@ items:
   format: classify
   prompt: Each matched character scores its own value instead of 1. What changes?
   options:
-  - The match step adds the value instead of 1
-  - The mismatch step adds the value
-  - The table becomes 1D
-  - Greedy now works
+  - "The match step adds the value instead of 1"
+  - "The mismatch step adds the value instead"
+  - "The table becomes 1D, indexed by value"
+  - "Greedy matching now gives the best score"
   answer: 0
   misconceptions:
   - null

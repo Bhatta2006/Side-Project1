@@ -121,10 +121,10 @@ items:
   format: bug_spot
   prompt: The swap is written a[j] = a[j + 1]. What goes wrong?
   options:
-  - The old a[j] is lost, so one value appears twice and another disappears
-  - Nothing
-  - It sorts in descending order
-  - It loops forever
+  - "The old a[j] is lost, so one value appears twice and another disappears"
+  - "Nothing; assigning one side is enough to swap the two values"
+  - "It sorts the list in descending order instead of ascending"
+  - "It loops forever, because the pair is never found in order"
   answer: 0
   misconceptions:
   - null
@@ -137,10 +137,10 @@ items:
   format: mcq
   prompt: Why may bubble sort stop after a pass with no swaps?
   options:
-  - Every neighbouring pair is in order, so the list is sorted
-  - It is a guess that is usually right
-  - Only the end of the list is sorted
-  - It may not stop early
+  - "Every neighbouring pair is in order, so the list is sorted"
+  - "It is a guess that is usually right for random lists"
+  - "Only the end of the list is sorted; the rest may not be"
+  - "It may not stop early; every pass must always run"
   answer: 0
   misconceptions:
   - null
@@ -169,10 +169,10 @@ items:
   format: bug_spot
   prompt: The inner loop runs j < n − 2 − p instead of j < n − 1 − p. What goes wrong?
   options:
-  - The last unsorted pair is never compared, so the list can stay unsorted
-  - Nothing; it is just faster
-  - An index error
-  - It sorts descending
+  - "The last unsorted pair is never compared, so the list can stay unsorted"
+  - "Nothing goes wrong; the loop is simply one comparison faster"
+  - "An index error, because j + 1 runs past the end of the list"
+  - "It sorts in descending order, since the bound is reversed"
   answer: 0
   misconceptions:
   - null
@@ -201,10 +201,10 @@ items:
   format: classify
   prompt: Which simple sort is fastest on a list that is already almost sorted?
   options:
-  - Insertion sort, because each value slides only a little
-  - Selection sort
-  - All are equally fast
-  - None; they all do n² / 2 comparisons
+  - "Insertion sort, because each value slides only a little"
+  - "Selection sort, because it scans for the minimum once"
+  - "All three are equally fast on any input at all"
+  - "None; they all do n² / 2 comparisons regardless"
   answer: 0
   misconceptions:
   - null

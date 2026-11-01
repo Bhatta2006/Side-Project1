@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: In the sliding window maximum deque, what is at the front?
   options:
-  - The index of the current window's maximum
-  - The newest index
-  - The oldest index in the window
-  - The smallest value
+  - "The index of the current window's maximum"
+  - "The newest index added to the window"
+  - "The oldest index still in the window"
+  - "The index of the window's smallest value"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: The code never removes expired indexes from the front. What goes wrong?
   options:
-  - A maximum that left the window keeps being reported
-  - Nothing
-  - The deque becomes increasing
-  - It crashes
+  - "A maximum that left the window keeps being reported"
+  - "Nothing; old indexes are popped from the back anyway"
+  - "The deque becomes increasing instead of decreasing"
+  - "It crashes once the deque holds more than k indexes"
   answer: 0
   misconceptions:
   - null

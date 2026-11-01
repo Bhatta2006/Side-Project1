@@ -157,17 +157,17 @@ quiz:
     kind: mcq
     prompt: How do you count occurrences of x in a sorted array with binary search?
     options:
-      - (first index with a[i] > x) − (first index with a[i] >= x)
-      - Find x once and return 1
-      - Scan the whole array
-      - (last index) − (first index)
+      - "(first index with a[i] > x) − (first index with a[i] >= x)"
+      - "Find x once with binary search and return 1 if it is present"
+      - "Scan the whole array once and count every element equal to x"
+      - "(last index of the array) − (first index with a[i] >= x)"
     answer: 0
     explanation: The two bounds bracket exactly the block of x values.
     difficulty: 2
   - id: answer-search
     kind: mcq
     prompt: Binary search on the answer requires feasibility to be...
-    options: ["Monotonic (false...false then true...true)", "Random", "Sorted by index", "Always true"]
+    options: ["Monotonic (false...false then true...true)", "Random, as long as some answer is feasible", "Sorted by index, like the input array itself", "Always true for every value in the range"]
     answer: 0
     explanation: Only a monotonic condition lets you discard half the candidates safely.
     difficulty: 2
@@ -182,10 +182,10 @@ quiz:
     kind: mcq
     prompt: "In a language with fixed-size integers (like C++ or Java), why write mid = lo + (hi - lo) / 2?"
     options:
-      - "lo + hi can overflow"
-      - "It rounds up"
-      - "It is required for negatives only"
-      - "It is faster"
+      - "Monotonic (false...false then true...true)"
+      - "Random, as long as some answer is feasible"
+      - "Sorted by index, like the input array itself"
+      - "Always true for every value in the range"
     answer: 0
     explanation: "lo + hi can exceed the int range for large bounds; lo + (hi - lo) / 2 stays in range."
     difficulty: 4
@@ -202,9 +202,9 @@ quiz:
                 hi = mid - 1
     options:
       - "When hi = lo + 1 and ok(lo), mid = lo and nothing changes"
-      - "ok must be monotone decreasing"
-      - "hi should start at n"
-      - "// should be /"
+      - "ok must be monotone decreasing, not increasing, for this loop"
+      - "hi should start at n instead of n − 1, so the range is wrong"
+      - "// should be /, because integer division loses the midpoint"
     answer: 0
     explanation: "Rounding down makes mid = lo; with lo = mid the interval never shrinks. Use mid = (lo + hi + 1) // 2."
     difficulty: 5

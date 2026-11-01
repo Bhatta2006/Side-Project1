@@ -926,10 +926,10 @@ quiz:
   kind: mcq
   prompt: Which operations does the classic edit distance allow?
   options:
-  - Insert, delete and replace one character
-  - Only insert and delete
-  - Swap two adjacent characters
-  - Delete a whole word
+  - "Insert, delete and replace one character"
+  - "Only inserting and deleting single characters"
+  - "Swapping any two adjacent characters only"
+  - "Deleting a whole word or inserting one"
   answer: 0
   explanation: Levenshtein distance uses insert, delete and replace.
   difficulty: 1
@@ -981,10 +981,10 @@ quiz:
   kind: mcq
   prompt: For wildcard matching, p[j−1] is *. What is match[i][j]?
   options:
-  - match[i][j−1] or match[i−1][j]
-  - match[i−1][j−1]
-  - match[i][j−2]
-  - Always true
+  - "match[i][j−1] or match[i−1][j]"
+  - "match[i−1][j−1] only, as for ?"
+  - "match[i][j−2] or match[i−1][j]"
+  - "Always true, as * matches anything"
   answer: 0
   explanation: The star matches nothing, or it also swallows s[i−1].
   difficulty: 4
@@ -992,10 +992,10 @@ quiz:
   kind: mcq
   prompt: Why do two pointers fail for interleaving strings?
   options:
-  - When both strings offer the same next character, the choice matters later
-  - Because s3 may be longer
-  - They never fail
-  - Because the strings are unsorted
+  - "When both strings offer the same next character, the choice matters later"
+  - "Because s3 may be longer than s1 and s2 together, so pointers run out"
+  - "They never fail; two pointers are enough whenever the lengths add up"
+  - "Because both strings must be sorted first for two pointers to work"
   answer: 0
   explanation: aabcc, dbbca, aadbbcbcac needs the b from s2 where greedy takes it from s1.
   difficulty: 5

@@ -158,7 +158,7 @@ quiz:
   - id: base-case
     kind: mcq
     prompt: What happens if a recursive function has no reachable base case?
-    options: ["Infinite recursion until a stack overflow", "It returns 0", "It runs once", "The compiler fixes it"]
+    options: ["Infinite recursion until a stack overflow", "It returns 0 once there is nothing left", "It runs once and then stops by itself", "The compiler adds a base case for you"]
     answer: 0
     explanation: Without a stopping point, calls pile up on the call stack until it overflows.
     difficulty: 1
@@ -215,10 +215,10 @@ quiz:
     kind: mcq
     prompt: Why is ways(n) = ways(n-1) + ways(n-2) slow without memoization?
     options:
-      - The same subproblems are recomputed an exponential number of times
-      - Addition is slow
-      - Recursion is always slow
-      - It uses too little memory
+      - "The same subproblems are recomputed an exponential number of times"
+      - "Adding two big numbers together is slow when n grows past about 30"
+      - "Every recursive call is slow, no matter what the function computes"
+      - "It uses too little memory, so the computer cannot cache the results"
     answer: 0
     explanation: ways(n-2) is computed inside ways(n-1) and again directly; repeats multiply at every level.
     difficulty: 3

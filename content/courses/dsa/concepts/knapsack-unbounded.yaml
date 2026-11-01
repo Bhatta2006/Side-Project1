@@ -795,10 +795,10 @@ quiz:
   kind: mcq
   prompt: Why does the one-row unbounded knapsack loop capacity from w up to W?
   options:
-  - So dp[c − w] may already include this item, allowing reuse
-  - Because it is faster than going down
-  - So each item is used at most once
-  - So the answer ends up in dp[0]
+  - "So dp[c − w] may already include this item, allowing reuse"
+  - "Because looping upwards is faster than looping downwards"
+  - "So each item is used at most once across the whole table"
+  - "So the final answer ends up stored in dp[0] at the end"
   answer: 0
   explanation: Forwards reads cells already updated for this item, so it can be taken again.
   difficulty: 3
@@ -841,10 +841,10 @@ quiz:
   kind: mcq
   prompt: In fewest coins, what should dp[a] start at for a > 0?
   options:
-  - Infinity, meaning not reachable yet
-  - '0'
-  - a
-  - '1'
+  - "Infinity, meaning not reachable yet"
+  - "0, meaning no coins are needed"
+  - "a, as if paid with coins of 1"
+  - "1, meaning one coin is enough"
   answer: 0
   explanation: Starting at 0 makes every minimum 0; infinity marks totals not yet reached.
   difficulty: 2
@@ -886,10 +886,10 @@ quiz:
   prompt: A ribbon of length 7 must be cut completely into pieces of length 5 or 2. What should dp[c] start
     at for c > 0, when maximising pieces?
   options:
-  - Minus infinity (unreachable)
-  - '0'
-  - c / 2
-  - '1'
+  - "Minus infinity (unreachable)"
+  - "0 pieces (nothing cut yet)"
+  - "c / 2 pieces (all of length 2)"
+  - "1 piece (the whole ribbon)"
   answer: 0
   explanation: Exactly 7 means leftover ribbon is not allowed; zeros would accept 2 + 2 + 2 with 1 left.
   difficulty: 5

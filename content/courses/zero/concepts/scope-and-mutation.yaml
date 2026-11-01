@@ -178,7 +178,7 @@ quiz:
   - id: list-param
     kind: mcq
     prompt: In Python or Java, a function sets nums[0] = 0 on the list/array it received. What happens to the caller's list?
-    options: ["Its first element becomes 0", "Nothing changes", "It is deleted", "It gets a new copy"]
+    options: ["Its first element becomes 0", "Nothing; only a copy changed", "The whole list is deleted", "The caller gets a new list"]
     answer: 0
     explanation: The function received a reference to the same list, so content changes are visible to the caller.
     difficulty: 2
@@ -186,10 +186,10 @@ quiz:
     kind: mcq
     prompt: In C++, what does the & in `void f(vector<int>& v)` mean?
     options:
-      - f works on the caller's vector, not a copy
-      - v is a pointer that must be deleted
-      - v is read-only
-      - v is copied twice
+      - "Its first element becomes 0"
+      - "Nothing; only a copy changed"
+      - "The whole list is deleted"
+      - "The caller gets a new list"
     answer: 0
     explanation: "The & declares a reference parameter. Add const if the function should not modify it."
     difficulty: 2

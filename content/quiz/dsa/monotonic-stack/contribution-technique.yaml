@@ -48,10 +48,10 @@ items:
   format: bug_spot
   prompt: Both sides stop at values that are smaller or equal. What does 1 1 give?
   options:
-  - 2, because [1, 1] is credited to neither copy
-  - '3'
-  - '4'
-  - '1'
+  - "2, because [1, 1] is credited to neither copy"
+  - "3, because each subarray is counted once"
+  - "4, because [1, 1] is credited to both copies"
+  - "1, because only the first copy is ever credited"
   answer: 0
   misconceptions:
   - null

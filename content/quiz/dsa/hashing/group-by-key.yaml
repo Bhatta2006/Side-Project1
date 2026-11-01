@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Group words that differ by exactly one letter. Why does a canonical key not work?
   options:
-  - The relation is not transitive, so it does not split words into groups
-  - The words are too long
-  - Hash maps cannot hold strings
-  - It works fine
+  - "The relation is not transitive, so it does not split words into groups"
+  - "The words are too long for a key built from every letter but one"
+  - "Hash maps cannot hold string keys that differ in a single letter"
+  - "It works fine; mask each position with * and group by that key"
   answer: 0
   misconceptions:
   - null

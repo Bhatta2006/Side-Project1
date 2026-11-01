@@ -798,10 +798,10 @@ quiz:
   kind: mcq
   prompt: In which order are the nodes filled?
   options:
-  - Children before parents, such as reverse BFS order
-  - Root first
-  - By value
-  - Any order
+  - "Children before parents, such as reverse BFS order"
+  - "Root first, then its children, as in BFS order"
+  - "By node value, smallest first, then the larger ones"
+  - "Any order, since each node is only visited once"
   answer: 0
   explanation: A node reads its children's states.
   difficulty: 2
@@ -821,10 +821,10 @@ quiz:
   prompt: A child cannot join its parent's path because of the label rule. What happens to the child's
     subtree?
   options:
-  - It is still solved; paths inside it still count
-  - It is skipped entirely
-  - Its labels are changed
-  - The answer becomes 0
+  - "It is still solved; paths inside it still count"
+  - "It is skipped entirely, with all of its paths"
+  - "Its labels are changed so it can join the path"
+  - "The whole answer becomes 0 from that point on"
   answer: 0
   explanation: The best path may lie wholly inside that subtree.
   difficulty: 3
@@ -832,10 +832,10 @@ quiz:
   kind: mcq
   prompt: Why does binary tree cameras need three states?
   options:
-  - A node can be covered by itself, by a child, or still need its parent
-  - Because each node has two children
-  - Two states always suffice
-  - To count leaves
+  - "A node can be covered by itself, by a child, or still need its parent"
+  - "Because each node has two children, and each child needs its own state"
+  - "Two states always suffice; the third only speeds up the recursion"
+  - "To count the leaves separately, since leaves can never hold a camera"
   answer: 0
   explanation: The third state lets the parent take responsibility.
   difficulty: 4
@@ -854,10 +854,10 @@ quiz:
   kind: mcq
   prompt: Which root states may form the answer for cameras?
   options:
-  - cam and cov only
-  - All three
-  - unc only
-  - cam only
+  - "cam and cov only"
+  - "All three states"
+  - "unc and cov only"
+  - "cam only, always"
   answer: 0
   explanation: The root has no parent to cover it.
   difficulty: 5

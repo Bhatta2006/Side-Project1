@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Why does each key's history never need sorting?
   options:
-  - Set times only increase, so appending keeps the list in order
-  - Python sorts lists automatically
-  - The values are sorted
-  - It does need sorting
+  - "Set times only increase, so appending keeps the list in order"
+  - "Python sorts lists automatically whenever a value is appended"
+  - "The values stored for each key are themselves always sorted"
+  - "It does need sorting, once before each binary search query"
   answer: 0
   misconceptions:
   - null

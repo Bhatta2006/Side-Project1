@@ -14,10 +14,10 @@ items:
   format: mcq
   prompt: Is 1 prime?
   options:
-  - No; a prime needs two different divisors
-  - Yes; nothing divides it
-  - Yes; it is odd
-  - Only in Python
+  - "No; a prime needs two different divisors"
+  - "Yes; no number other than 1 divides it"
+  - "Yes; it is odd and has no factors"
+  - "Only in Python, where 1 counts as prime"
   answer: 0
   misconceptions:
   - null
@@ -30,10 +30,10 @@ items:
   format: trace
   prompt: The loop tests i from 2 while i * i < n. What does it say about 49?
   options:
-  - Prime, which is wrong
-  - Not prime
-  - It loops forever
-  - It crashes
+  - "Prime, which is wrong"
+  - "Not prime, correctly"
+  - "It loops forever"
+  - "It crashes on 49"
   answer: 0
   misconceptions:
   - null

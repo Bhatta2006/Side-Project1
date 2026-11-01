@@ -61,10 +61,10 @@ items:
   format: mcq
   prompt: What does dp[i][j] store?
   options:
-  - The side of the largest all-ones square whose bottom-right corner is (i, j)
-  - The area of that square
-  - The number of ones above (i, j)
-  - The largest square seen anywhere so far
+  - "The side of the largest all-ones square whose bottom-right corner is (i, j)"
+  - "The area of the largest all-ones square whose bottom-right corner is (i, j)"
+  - "The number of consecutive ones directly above (i, j) in the same column"
+  - "The side of the largest all-ones square seen anywhere so far in the grid"
   answer: 0
   misconceptions:
   - null
@@ -109,10 +109,10 @@ items:
   format: classify
   prompt: Why is the up-left neighbour needed?
   options:
-  - It is the only one that checks the square's far corner region
-  - It makes the code faster
-  - Up and left already cover everything
-  - Only for the first row
+  - "It is the only one that checks the square's far corner region"
+  - "It makes the code faster by skipping cells that are zero"
+  - "Up and left already cover everything; it is a safety check"
+  - "It is only needed for the first row, where up is missing"
   answer: 0
   misconceptions:
   - null
@@ -142,10 +142,10 @@ items:
   prompt: In the one-row version, the code overwrites dp[j] and then uses it as the next cell's diagonal.
     What goes wrong?
   options:
-  - The diagonal is read from the current row instead of the previous one
-  - Nothing
-  - The left value is stale
-  - It uses too much memory
+  - "The diagonal is read from the current row instead of the previous one"
+  - "Nothing; the one-row version reads every neighbour from the old row"
+  - "The left value is stale, because it still holds the previous row"
+  - "It uses too much memory, since the row is copied for every cell"
   answer: 0
   misconceptions:
   - null
@@ -190,10 +190,10 @@ items:
   format: classify
   prompt: The question asks for the largest rectangle of ones. Does the square DP work?
   options:
-  - No; build a histogram per row and use the monotonic stack
-  - Yes, unchanged
-  - Yes, with max instead of min
-  - Only for square grids
+  - "No; build a histogram per row and use the monotonic stack"
+  - "Yes, unchanged; every largest rectangle is also a square"
+  - "Yes, if the min of the three neighbours becomes a max"
+  - "Only for square grids, where rectangles become squares"
   answer: 0
   misconceptions:
   - null
@@ -206,10 +206,10 @@ items:
   format: classify
   prompt: Only the border of the square must be ones. What do you store per cell instead?
   options:
-  - Consecutive ones going up and going left
-  - The same square side
-  - The number of ones in the row
-  - A histogram height only
+  - "Consecutive ones going up and going left"
+  - "The same largest square side as before"
+  - "The number of ones in the cell's whole row"
+  - "A histogram height per cell and nothing else"
   answer: 0
   misconceptions:
   - null
@@ -222,10 +222,10 @@ items:
   format: classify
   prompt: Largest square with no obstacle cells, grid 2000 × 2000. Which approach?
   options:
-  - The one-row square DP, treating obstacles as 0
-  - Try every square, O(n³)
-  - BFS from every cell
-  - Binary search alone
+  - "The one-row square DP, treating obstacles as 0"
+  - "Try every square at every corner, O(n³) steps"
+  - "BFS from every free cell to the nearest obstacle"
+  - "Binary search on the side length, with no check"
   answer: 0
   misconceptions:
   - null

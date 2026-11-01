@@ -219,10 +219,10 @@ quiz:
     kind: mcq
     prompt: You wrote `prnt("hi")` instead of `print("hi")` in Python. What happens?
     options:
-      - The program stops with an error because prnt is unknown
-      - Python guesses you meant print
-      - It prints hi anyway
-      - It prints nothing but continues
+      - "The program stops with an error because prnt is unknown"
+      - "Python guesses you meant print and runs it anyway"
+      - "It prints hi, since only the brackets really matter"
+      - "It prints nothing but carries on to the next line"
     answer: 0
     explanation: Computers do exactly what you write. An unknown name is an error, not a guess.
     difficulty: 2

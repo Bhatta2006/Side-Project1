@@ -147,10 +147,10 @@ quiz:
     kind: mcq
     prompt: Why does Dijkstra fail with negative edge weights?
     options:
-      - A settled node might later be reached more cheaply through a negative edge
-      - Heaps cannot store negative numbers
-      - It runs forever
-      - It only fails on undirected graphs
+      - "A settled node might later be reached more cheaply through a negative edge"
+      - "Binary heaps cannot store negative keys, so those entries are lost"
+      - "It runs forever, because each negative edge keeps lowering distances"
+      - "It only fails on undirected graphs, where edges are used both ways"
     answer: 0
     explanation: The "closest node is final" argument relies on detours never getting cheaper.
     difficulty: 3
@@ -164,7 +164,7 @@ quiz:
   - id: stale
     kind: mcq
     prompt: Popped (d, u) has d > dist[u]. What should happen?
-    options: ["Skip it — it's an outdated entry", "Update dist[u] = d", "Stop the algorithm", "Push it back"]
+    options: ["Skip it — it's an outdated entry", "Update dist[u] to d, then relax", "Stop the algorithm; u is done", "Push it back with distance dist[u]"]
     answer: 0
     explanation: A shorter distance for u was already found and processed.
     difficulty: 2

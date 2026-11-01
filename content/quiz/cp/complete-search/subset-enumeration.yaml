@@ -40,8 +40,8 @@ items:
     options:
       - "1: mask 0, the empty subset"
       - "0: no element is 0"
-      - "2^n"
-      - "n"
+      - "2^n: every mask counts"
+      - "n: one mask per element"
     answer: 0
     misconceptions: [null, skip-empty-subset, subsets-vs-elements, subsets-linear]
     explanation: "The empty subset sums to 0; skipping mask 0 would miss it."
@@ -51,9 +51,9 @@ items:
     prompt: "In the mask loop, where must total = 0 go?"
     options:
       - "Inside the mask loop, before the bit loop"
-      - "Before the mask loop"
-      - "Inside the bit loop"
-      - "After the comparison"
+      - "Once, before the mask loop starts"
+      - "Inside the bit loop, before each bit"
+      - "After the comparison with x, each mask"
     answer: 0
     misconceptions: [null, missing-reset, reset-inside-loop, missing-reset]
     explanation: "Each subset needs its own fresh total."
@@ -75,9 +75,9 @@ items:
     prompt: "Count subsets with sum x, but now n ≤ 40. What changes?"
     options:
       - "Enumerate each half (2^20 each) and combine the sums: meet in the middle"
-      - "Plain bitmask enumeration still works"
-      - "Use a sliding window"
-      - "Fast power on 2^40"
+      - "Nothing; plain bitmask enumeration over all 2^40 subsets still fits"
+      - "Use a sliding window over the sorted values to find sums equal to x"
+      - "Use fast power to compute 2^40 and divide by the number of sums"
     answer: 0
     misconceptions: [null, subsets-linear, pattern-fixed-vs-variable-window, power-as-multiply]
     explanation: "2^40 is too many; two halves of 2^20 are fine."

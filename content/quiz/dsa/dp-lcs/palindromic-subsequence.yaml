@@ -31,10 +31,10 @@ items:
   format: bug_spot
   prompt: The loop runs i from 0 up to n − 1. What goes wrong?
   options:
-  - dp[i + 1][…] is read before it is filled
-  - Nothing
-  - The diagonal is skipped
-  - It counts substrings instead
+  - "dp[i + 1][…] is read before it is filled"
+  - "Nothing; any row order fills the table"
+  - "The diagonal dp[i][i] cells are skipped"
+  - "It counts the substrings instead of subsequences"
   answer: 0
   misconceptions:
   - null
@@ -64,10 +64,10 @@ items:
   format: classify
   prompt: Find the longest palindromic substring (contiguous). Does the subsequence table answer it?
   options:
-  - No; the substring needs the inside to be a palindrome too, so use centres or a yes/no table
-  - Yes, the same table
-  - Yes, after reversing s
-  - Only for even lengths
+  - "No; the substring needs the inside to be a palindrome too, so use centres or a yes/no table"
+  - "Yes; the same table answers it, because every palindromic subsequence is contiguous too"
+  - "Yes, after reversing s and taking the longest common subsequence with the original"
+  - "Only for even lengths; odd-length substrings need their own table with a centre"
   answer: 0
   misconceptions:
   - null

@@ -14,10 +14,10 @@ items:
   format: trace
   prompt: Inside the loop, found = i on a match and found = -1 otherwise, with no break. What is printed for 4 2 7 2 9 and x = 2?
   options:
-  - '-1'
-  - '1'
-  - '3'
-  - '4'
+  - "-1"
+  - "1"
+  - "3"
+  - "1 3"
   answer: 0
   misconceptions:
   - null

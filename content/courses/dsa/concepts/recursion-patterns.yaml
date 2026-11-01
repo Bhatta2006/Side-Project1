@@ -827,10 +827,10 @@ quiz:
   kind: mcq
   prompt: How many leaves does the pick or not pick tree have for n = 10?
   options:
-  - '1024'
-  - '10'
-  - '100'
-  - '20'
+  - "1024"
+  - "512"
+  - "2047"
+  - "100"
   answer: 0
   explanation: 2¹⁰ choices.
   difficulty: 2
@@ -849,10 +849,10 @@ quiz:
   kind: mcq
   prompt: Generating balanced brackets, when may ")" be added?
   options:
-  - When fewer ")" than "(" are in the string so far
-  - When fewer than n ")" have been used
-  - Always
-  - Only at the end
+  - "When fewer \")\" than \"(\" are in the string so far"
+  - "Whenever fewer than n \")\" have been used so far"
+  - "Always, as long as the string is still short"
+  - "Only once every \"(\" has already been placed"
   answer: 0
   explanation: It must close something already open.
   difficulty: 2
@@ -871,10 +871,10 @@ quiz:
   kind: mcq
   prompt: Reversing a stack with recursion, where does the popped top go after the rest is reversed?
   options:
-  - To the bottom, through a second recursion
-  - Back on top
-  - Into a second stack
-  - It is discarded
+  - "To the bottom, through a second recursion"
+  - "Back on top, where it was popped from"
+  - "Into a second stack, then copied back"
+  - "Nowhere; it is discarded once read"
   answer: 0
   explanation: Pushing it back on top leaves the stack unchanged.
   difficulty: 3
@@ -893,10 +893,10 @@ quiz:
   kind: mcq
   prompt: power(b, p) returns power(b, p // 2) * power(b, p // 2) for even p. How many calls for p = 1024?
   options:
-  - About 2000, as many as multiplying p times
-  - About 11
-  - About 1024²
-  - '1'
+  - "About 2000, as many as multiplying p times"
+  - "About 11, one per halving of p down to 1"
+  - "About 1024², since each call splits in two"
+  - "Exactly 1, because the two calls are shared"
   answer: 0
   explanation: Each call makes two, so the tree has about 2p nodes.
   difficulty: 4
@@ -904,10 +904,10 @@ quiz:
   kind: mcq
   prompt: When does counting subsequences with sum k become a DP?
   options:
-  - When (i, total) repeats, because the sums are small; memoize it
-  - Never
-  - When n is above 30
-  - When the array is sorted
+  - "When (i, total) repeats, because the sums are small; memoize it"
+  - "Never; pick or not pick always needs all 2^n branches explored"
+  - "Only when n is above 30, since smaller inputs finish quickly"
+  - "When the array is sorted, so equal sums sit next to each other"
   answer: 0
   explanation: That is the subset-count table of the 0/1 knapsack lesson.
   difficulty: 5

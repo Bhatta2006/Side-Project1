@@ -135,7 +135,7 @@ quiz:
   - id: zero-index
     kind: mcq
     prompt: Why must Fenwick indexes start at 1?
-    options: ["0 & −0 = 0, so updates at 0 would loop forever", "Arrays start at 1", "It's faster", "Convention only"]
+    options: ["0 & −0 = 0, so updates at 0 would loop forever", "C++ arrays start at index 1, as the tree does", "Starting at 1 makes every query twice as fast", "It is only a convention; index 0 works the same"]
     answer: 0
     explanation: The step size i & −i must be positive.
     difficulty: 2

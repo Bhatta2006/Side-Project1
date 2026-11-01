@@ -16,10 +16,10 @@ items:
   pool: practice
   prompt: Before implementing a solution, what should be clear?
   options:
-  - What inputs are allowed and what output is required
-  - Which keyboard color to use
-  - How many comments every file needs
-  - The judge's internal server name
+  - "What inputs are allowed and what output is required"
+  - "Which colour scheme the code editor should use"
+  - "How many comments every file of the code needs"
+  - "The name of the server the judge runs on"
   answer: 0
   explanation: The input/output contract defines the problem the algorithm must solve.
 - id: foundation-2
@@ -27,10 +27,10 @@ items:
   pool: practice
   prompt: Why work through a small example by hand?
   options:
-  - To check the intended behavior and expose edge cases
-  - To replace testing all implementations
-  - To guarantee linear complexity
-  - To avoid reading the statement
+  - "To check the intended behavior and expose edge cases"
+  - "To replace testing every implementation on a computer"
+  - "To guarantee the final solution runs in linear time"
+  - "To avoid reading the whole problem statement carefully"
   answer: 0
   explanation: A hand-worked example tests understanding before implementation adds more detail.
 - id: foundation-3
@@ -49,10 +49,10 @@ items:
   pool: practice
   prompt: An algorithm works on the sample but fails on other valid inputs. What follows?
   options:
-  - The sample alone was insufficient evidence of correctness
-  - The other inputs must be invalid
-  - Every sample must be changed
-  - The language cannot solve the problem
+  - "The sample alone was insufficient evidence of correctness"
+  - "The other inputs must be invalid, since the sample passed"
+  - "Every sample in the statement must be changed to match"
+  - "The language chosen cannot solve this kind of problem"
   answer: 0
   explanation: Samples illustrate behavior; correctness must cover the full set of allowed inputs.
 provenance:

@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: Words cost zeros and ones, both limited. What does dp[z][o] mean?
   options:
-  - Most words within z zeros and o ones
-  - Words with exactly z zeros
-  - The z-th word
-  - Ones used by word o
+  - "Most words within z zeros and o ones"
+  - "Words using exactly z zeros in total"
+  - "The z-th word of the input list"
+  - "The ones used by word number o"
   answer: 0
   misconceptions:
   - null
@@ -31,10 +31,10 @@ items:
   format: bug_spot
   prompt: Only the zeros loop runs backwards; the ones loop runs forwards. What goes wrong?
   options:
-  - A word can be counted twice through the ones dimension
-  - Nothing
-  - It runs out of memory
-  - Zeros are ignored
+  - "A word can be counted twice through the ones dimension"
+  - "Nothing; only the outer dimension's direction matters"
+  - "It runs out of memory, since forwards needs two tables"
+  - "The zeros are ignored, because that loop runs last"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Each item can go in bag A, bag B or neither. Is this two capacities?
   options:
-  - 'No: it is a three-way choice with both fill levels as the state'
-  - Yes, the same
-  - 'No: it is greedy'
-  - Yes, with one loop
+  - "No: it is a three-way choice with both fill levels as the state"
+  - "Yes, the same as two capacities on one shared bag"
+  - "No: it is greedy, filling bag A first and then bag B"
+  - "Yes, with one capacity loop running over A + B"
   answer: 0
   misconceptions:
   - null

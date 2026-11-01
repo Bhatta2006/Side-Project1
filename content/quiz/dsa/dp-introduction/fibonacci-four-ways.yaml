@@ -45,10 +45,10 @@ items:
   format: mcq
   prompt: In the recursion tree of fib(6), what makes DP useful?
   options:
-  - The same calls, like fib(3), appear several times
-  - Every call is different
-  - The tree is sorted
-  - There are no base cases
+  - "The same calls, like fib(3), appear several times"
+  - "Every call is different, so each one is new work"
+  - "The tree is sorted, so calls can be binary searched"
+  - "There are no base cases, so it never really stops"
   answer: 0
   misconceptions:
   - null
@@ -61,10 +61,10 @@ items:
   format: mcq
   prompt: Climbing stairs with steps 1 or 2. What should ways[i] mean?
   options:
-  - The number of ways to stand exactly on stair i
-  - The number of steps taken so far
-  - The largest stair reachable
-  - Whether stair i is reachable
+  - "The number of ways to stand exactly on stair i"
+  - "The number of steps taken so far to reach stair i"
+  - "The largest stair reachable from the bottom so far"
+  - "Whether stair i can be reached by steps of 1 or 2"
   answer: 0
   misconceptions:
   - null
@@ -77,10 +77,10 @@ items:
   format: mcq
   prompt: 'Climbing stairs: ways(0) = 0 and ways(1) = 1. What goes wrong?'
   options:
-  - ways(2) becomes 1 instead of 2, and every later count is too small
-  - Nothing; the answer is the same
-  - The program crashes
-  - Only ways(1) is wrong
+  - "ways(2) becomes 1 instead of 2, and every later count is too small"
+  - "Nothing; the answer is the same, since ways(0) is never actually used"
+  - "The program crashes, because ways(0) = 0 makes a division by zero"
+  - "Only ways(1) is wrong; every count from ways(2) onwards is correct"
   answer: 0
   misconceptions:
   - null
@@ -162,10 +162,10 @@ items:
           return fib(n - 1) + fib(n - 2);
       }
   options:
-  - The last line returns without storing the result
-  - The base case
-  - The memo lookup
-  - The function name
+  - "The last line returns without storing the result"
+  - "The base case returns n instead of 1 for n < 2"
+  - "The memo lookup runs after the recursive calls"
+  - "The function name differs from the recursive call"
   answer: 0
   misconceptions:
   - null
@@ -178,10 +178,10 @@ items:
   format: bug_spot
   prompt: In Python, prev = cur; cur = prev + cur breaks the two-variable loop. Why?
   options:
-  - cur adds the new prev, not the old one
-  - It overflows
-  - It needs a list
-  - It starts from the wrong n
+  - "cur adds the new prev, not the old one"
+  - "It overflows for n above about 90"
+  - "It needs a list to hold earlier values"
+  - "It starts from the wrong value of n"
   answer: 0
   misconceptions:
   - null
@@ -194,10 +194,10 @@ items:
   format: complexity
   prompt: 'Plain recursive fib(n): how does the number of calls grow?'
   options:
-  - Exponentially, like the Fibonacci numbers
-  - Linearly
-  - Like n log n
-  - Quadratically
+  - "Exponentially, like the Fibonacci numbers"
+  - "Linearly, one call for each value of n"
+  - "Like n log n, as in merge sort's tree"
+  - "Quadratically, about n² calls in total"
   answer: 0
   misconceptions:
   - null
@@ -210,10 +210,10 @@ items:
   format: complexity
   prompt: With a memo, how many distinct fib(i) are computed for fib(n)?
   options:
-  - n + 1, each once
-  - 2^n
-  - n^2
-  - log n
+  - "n + 1, each once"
+  - "2^n, as before"
+  - "n², one per pair"
+  - "log n, by halving"
   answer: 0
   misconceptions:
   - null
@@ -242,10 +242,10 @@ items:
   format: classify
   prompt: T(n) = T(n − 1) + T(n − 2) + T(n − 3). What changes from the Fibonacci template?
   options:
-  - Keep three variables and three base cases
-  - Nothing
-  - Use a 2D table
-  - Sort the input first
+  - "Keep three variables and three base cases"
+  - "Nothing; the two-variable loop still works"
+  - "Use a 2D table indexed by n and the term"
+  - "Sort the input first, then use two variables"
   answer: 0
   misconceptions:
   - null

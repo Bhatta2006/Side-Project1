@@ -45,10 +45,10 @@ items:
   format: mcq
   prompt: Which question is the prefix state hash map pattern?
   options:
-  - The longest subarray whose sum is k, where numbers may be negative
-  - The largest element of the array
-  - The number of distinct values
-  - The longest increasing subsequence
+  - "The longest subarray whose sum is k, where numbers may be negative"
+  - "The largest element of the array, found in a single pass"
+  - "The number of distinct values in the array, using a set"
+  - "The longest increasing subsequence of the array's values"
   answer: 0
   misconceptions:
   - null
@@ -77,10 +77,10 @@ items:
   format: mcq
   prompt: What does the map hold before the scan starts?
   options:
-  - The empty prefix, sum 0 at index −1
-  - Nothing
-  - Sum 0 at index 0
-  - Sum k at index −1
+  - "The empty prefix, sum 0 at index −1"
+  - "Nothing; it starts completely empty"
+  - "Sum 0 at index 0, the first element"
+  - "Sum k at index −1, the target value"
   answer: 0
   misconceptions:
   - null
@@ -141,10 +141,10 @@ items:
   format: classify
   prompt: Why not a sliding window for this problem?
   options:
-  - With negative numbers, a sum that is too big can come back down
-  - Windows only work on sorted arrays
-  - A window would be O(n²)
-  - Windows cannot measure length
+  - "With negative numbers, a sum that is too big can come back down"
+  - "Sliding windows only work on arrays that are already sorted"
+  - "A window would need O(n²) time to move both of its ends"
+  - "A window cannot measure its own length, only its sum"
   answer: 0
   misconceptions:
   - null
@@ -173,10 +173,10 @@ items:
   format: classify
   prompt: You now need the number of subarrays with sum k. What does the map store?
   options:
-  - How many times each prefix sum appeared, starting with {0 → 1}
-  - The first index of each prefix sum
-  - The last index of each prefix sum
-  - The subarrays themselves
+  - "How many times each prefix sum appeared, starting with {0 → 1}"
+  - "The first index at which each prefix sum appeared, as before"
+  - "The last index at which each prefix sum appeared so far"
+  - "The subarrays themselves, grouped by their prefix sums"
   answer: 0
   misconceptions:
   - null
@@ -189,10 +189,10 @@ items:
   format: classify
   prompt: The longest subarray with equally many 0s and 1s. What transformation makes it this pattern?
   options:
-  - Replace 0 by −1, then find the longest subarray with sum 0
-  - Sort the array
-  - Count the 1s only
-  - Replace 1 by 0
+  - "Replace 0 by −1, then find the longest subarray with sum 0"
+  - "Sort the array so the 0s and 1s form two separate blocks"
+  - "Count the 1s only and compare with half the array length"
+  - "Replace 1 by 0, then find the longest run of equal values"
   answer: 0
   misconceptions:
   - null
@@ -221,10 +221,10 @@ items:
   format: classify
   prompt: You need the shortest subarray with sum k. What changes in the template?
   options:
-  - Overwrite the index every time, keeping the latest
-  - Keep the first index as before
-  - Seed the map at index 0
-  - Add 1 to every length found
+  - "Overwrite the index every time, keeping the latest"
+  - "Keep the first index of each sum, as for longest"
+  - "Seed the map with sum 0 at index 0 instead of −1"
+  - "Add 1 to every length found before comparing"
   answer: 0
   misconceptions:
   - null

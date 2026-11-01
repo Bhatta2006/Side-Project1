@@ -133,14 +133,14 @@ quiz:
   - id: multiset-erase
     kind: mcq
     prompt: In C++, how do you remove ONE copy of x from a multiset s?
-    options: ["s.erase(s.find(x))", "s.erase(x)", "s.remove(x)", "s.pop(x)"]
+    options: ["s.erase(s.find(x))", "s.erase(x)", "s.erase(s.count(x))", "s.remove(s.find(x))"]
     answer: 0
     explanation: erase(value) removes all copies; erase(iterator) removes exactly one.
     difficulty: 3
   - id: proof
     kind: mcq
     prompt: Your greedy passes the samples. Best way to gain confidence before submitting?
-    options: ["Stress-test against a brute force on random small cases", "Submit and see", "Add more comments", "Run the samples again"]
+    options: ["Stress-test against a brute force on random small cases", "Submit it and see whether the hidden tests pass", "Add comments explaining why each step is greedy", "Run the samples again with the optimiser enabled"]
     answer: 0
     explanation: Random small tests quickly expose wrong greedy orderings.
     difficulty: 1

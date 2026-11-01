@@ -1022,10 +1022,10 @@ quiz:
   kind: mcq
   prompt: What makes a problem 0/1 knapsack rather than unbounded?
   options:
-  - Each item can be used at most once
-  - Items can be reused
-  - Items can be split
-  - There is no capacity
+  - "Each item can be used at most once"
+  - "Each item can be reused any number of times"
+  - "Items can be split into fractional parts"
+  - "There is no capacity limit on the knapsack"
   answer: 0
   explanation: 0/1 means take once or skip; reuse is the unbounded family.
   difficulty: 1
@@ -1045,10 +1045,10 @@ quiz:
   kind: mcq
   prompt: Why does the one-row 0/1 knapsack loop capacity from W down?
   options:
-  - So dp[c − w] still holds the value from before this item
-  - Because it is faster
-  - To sort the items
-  - So the answer ends up in dp[0]
+  - "So dp[c − w] still holds the value from before this item"
+  - "Because looping downwards is faster than looping upwards"
+  - "To sort the items by weight while filling the table"
+  - "So the final answer ends up stored in dp[0] at the end"
   answer: 0
   explanation: Going down reads cells not yet updated for this item, so it is used once.
   difficulty: 3
@@ -1090,10 +1090,10 @@ quiz:
   kind: mcq
   prompt: In subset sum, what must can[0] be before any number is processed?
   options:
-  - true, because the empty subset sums to 0
-  - 'false'
-  - 1 only if 0 is in the input
-  - It does not matter
+  - "true, because the empty subset sums to 0"
+  - "false, because no number has been used yet"
+  - "true only when 0 appears in the input"
+  - "It does not matter; it is overwritten later"
   answer: 0
   explanation: Every reachable sum is built on top of the empty subset.
   difficulty: 2
@@ -1101,10 +1101,10 @@ quiz:
   kind: mcq
   prompt: Numbers 1 2 4 sum to 7. Can they be split into two equal-sum halves?
   options:
-  - 'No: an odd total can never split evenly'
-  - 'Yes: 1 + 2 + 4'
-  - 'Yes: {4} and {1, 2}'
-  - Only if sorted first
+  - "No: an odd total can never split evenly"
+  - "Yes: {1, 2, 4} on one side and nothing"
+  - "Yes: {4} on one side and {1, 2} on the other"
+  - "Only if the numbers are sorted first"
   answer: 0
   explanation: Equal halves need an even total; 7 is odd.
   difficulty: 2

@@ -58,10 +58,10 @@ items:
   format: mcq
   prompt: Why process nodes in reverse BFS order?
   options:
-  - Every child is handled before its parent, without recursion
-  - It visits leaves last
-  - It sorts the values
-  - It is faster than O(n)
+  - "Every child is handled before its parent, without recursion"
+  - "It visits the leaves last, after their parents are done"
+  - "It sorts the node values, so the best path comes first"
+  - "It is faster than O(n), since some nodes are skipped"
   answer: 0
   misconceptions:
   - null
@@ -106,10 +106,10 @@ items:
   format: classify
   prompt: Values 1 2 3 4 5 (1 has 2 and 3; 2 has 4 and 5). Why is 15 impossible?
   options:
-  - It would enter node 2 from three directions
-  - It uses node 1 twice
-  - 15 is larger than the total
-  - It is possible
+  - "It would enter node 2 from three directions"
+  - "It uses node 1 twice, once on each side"
+  - "15 is larger than the total of all values"
+  - "It is possible, by taking every node once"
   answer: 0
   misconceptions:
   - null
@@ -122,10 +122,10 @@ items:
   format: bug_spot
   prompt: best starts at 0 and every value is negative. What goes wrong?
   options:
-  - It prints 0, but a path must contain at least one node
-  - Nothing
-  - It crashes
-  - It prints the sum of all values
+  - "It prints 0, but a path must contain at least one node"
+  - "Nothing; 0 is right when every value is negative"
+  - "It crashes when max is taken over negative values"
+  - "It prints the sum of all values, the most negative"
   answer: 0
   misconceptions:
   - null
@@ -138,10 +138,10 @@ items:
   format: bug_spot
   prompt: The code records val + max(gl, gr) instead of val + gl + gr. Which paths are missed?
   options:
-  - Paths that bend at their highest node
-  - Single-node paths
-  - Paths through the root
-  - None
+  - "Paths that bend at their highest node"
+  - "Paths made of a single node only"
+  - "Paths that pass through the root"
+  - "None; every path is still counted"
   answer: 0
   misconceptions:
   - null
@@ -186,10 +186,10 @@ items:
   format: classify
   prompt: The tree is a chain of 10^5 nodes. What is the risk with plain recursion in Python or Java?
   options:
-  - Stack overflow; use an explicit order such as reverse BFS
-  - It becomes O(n²)
-  - Wrong answers on chains
-  - None
+  - "Stack overflow; use an explicit order such as reverse BFS"
+  - "It becomes O(n²), as each call rescans the chain below"
+  - "Wrong answers on chains, since one child is missing"
+  - "None; recursion depth never matters for 10^5 nodes"
   answer: 0
   misconceptions:
   - null
@@ -202,10 +202,10 @@ items:
   format: classify
   prompt: Check whether every node's subtrees differ in height by at most 1. What should a node return?
   options:
-  - Its height, or −1 once any subtree is unbalanced
-  - True or false only
-  - Its value
-  - The number of leaves
+  - "Its height, or −1 once any subtree is unbalanced"
+  - "True or false only, for its own subtree"
+  - "Its value, compared with its children"
+  - "The number of leaves in its subtree"
   answer: 0
   misconceptions:
   - null
@@ -218,10 +218,10 @@ items:
   format: classify
   prompt: Move coins so every node has one; one move shifts a coin along an edge. What does a node return?
   options:
-  - Its surplus (coins in subtree minus nodes in subtree)
-  - The number of coins it holds
-  - Its depth
-  - The moves made in its subtree only
+  - "Its surplus (coins in subtree minus nodes in subtree)"
+  - "The number of coins the node itself is holding"
+  - "Its depth below the root, counted in edges"
+  - "The moves made inside its own subtree only"
   answer: 0
   misconceptions:
   - null

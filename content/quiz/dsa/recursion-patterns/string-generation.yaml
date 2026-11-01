@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Why check the rule before each extension instead of filtering finished strings?
   options:
-  - Invalid prefixes are never extended, so the work follows the output size
-  - Filtering gives wrong answers
-  - Recursion cannot filter
-  - It changes the order of the output
+  - "Invalid prefixes are never extended, so the work follows the output size"
+  - "Filtering finished strings gives wrong answers for longer inputs"
+  - "Recursive functions cannot filter their results once they return"
+  - "Checking first changes the order the strings come out, as required"
   answer: 0
   misconceptions:
   - null

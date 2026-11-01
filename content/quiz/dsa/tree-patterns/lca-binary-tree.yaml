@@ -31,10 +31,10 @@ items:
   format: bug_spot
   prompt: The code lifts u and v together from depths 2 and 3. What goes wrong?
   options:
-  - They can pass each other and miss the LCA
-  - Nothing
-  - It is too slow
-  - It crashes on the root
+  - "They can pass each other and miss the LCA"
+  - "Nothing; lifting together finds it anyway"
+  - "It is too slow, lifting one level at a time"
+  - "It crashes when one of them reaches the root"
   answer: 0
   misconceptions:
   - null

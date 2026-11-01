@@ -684,10 +684,10 @@ quiz:
   kind: mcq
   prompt: Counting pairs that sum to k in one pass, why look up k − x before inserting x?
   options:
-  - So x never pairs with itself and each pair is counted once
-  - It is faster
-  - So the map stays sorted
-  - It makes no difference
+  - "So x never pairs with itself and each pair is counted once"
+  - "Because looking up first is faster than inserting first"
+  - "So the map stays sorted by key while the scan moves on"
+  - "It makes no difference; either order gives the same count"
   answer: 0
   explanation: Elements only meet partners to their left.
   difficulty: 1
@@ -750,10 +750,10 @@ quiz:
   kind: mcq
   prompt: Why does a sliding window fail for "longest subarray with sum k" when numbers can be negative?
   options:
-  - A sum that is too big now may come back down, so no shrink is safe
-  - Windows cannot hold negative numbers
-  - It is too slow
-  - It counts each subarray twice
+  - "A sum that is too big now may come back down, so no shrink is safe"
+  - "A window cannot store negative numbers, so they must be skipped"
+  - "Moving both ends makes the window O(n²) once negatives appear"
+  - "Negative numbers make the window count each subarray twice"
   answer: 0
   explanation: The window's shrink rule needs non-negative numbers.
   difficulty: 3
@@ -761,10 +761,10 @@ quiz:
   kind: mcq
   prompt: Counting subarrays whose sum is divisible by m, what is the key?
   options:
-  - The prefix sum modulo m, made non-negative
-  - The prefix sum itself
-  - The index modulo m
-  - The element modulo m
+  - "The prefix sum modulo m, made non-negative"
+  - "The prefix sum itself, with no modulo"
+  - "The current index modulo m, per element"
+  - "Each element's own value modulo m"
   answer: 0
   explanation: Two prefixes with the same remainder bound a divisible subarray.
   difficulty: 4

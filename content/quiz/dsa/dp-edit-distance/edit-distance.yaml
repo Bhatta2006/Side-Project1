@@ -42,10 +42,10 @@ items:
   format: mcq
   prompt: Which question is edit distance?
   options:
-  - Fewest single-character inserts, deletes or replaces to turn one word into another
-  - Longest block shared by two words
-  - Is one word a subsequence of the other?
-  - How many letters do two words have in common?
+  - "Fewest single-character inserts, deletes or replaces to turn one word into another"
+  - "The longest block of consecutive letters shared by two words at any position"
+  - "Whether one word can be made from the other by deleting some of its letters"
+  - "How many letters two words have in common, counting repeats only once each"
   answer: 0
   misconceptions:
   - null
@@ -122,10 +122,10 @@ items:
   format: classify
   prompt: Why does n + m − 2·LCS overcount when replace is allowed?
   options:
-  - It fixes a wrong character with a delete and an insert, 2 steps instead of 1
-  - It ignores equal characters
-  - It only works for equal lengths
-  - It does not overcount
+  - "It fixes a wrong character with a delete and an insert, 2 steps instead of 1"
+  - "It ignores characters that are equal, so matching letters cost a step each"
+  - "It only works when both words have equal length, and overcounts otherwise"
+  - "It does not overcount; n + m − 2·LCS is the edit distance with replace"
   answer: 0
   misconceptions:
   - null
@@ -138,10 +138,10 @@ items:
   format: bug_spot
   prompt: Someone counts the positions where abc and bc differ, plus the length difference. What is wrong?
   options:
-  - One deletion shifts every later character, so positions no longer line up
-  - Nothing; it gives 1
-  - It should ignore the length difference
-  - It should compare from the right
+  - "One deletion shifts every later character, so positions no longer line up"
+  - "Nothing is wrong; for abc and bc it gives 1, which is the right answer"
+  - "It should ignore the length difference and count the differences only"
+  - "It should compare from the right end, where the two words line up"
   answer: 0
   misconceptions:
   - null
@@ -186,10 +186,10 @@ items:
   format: bug_spot
   prompt: The mismatch line is 1 + min(dp[i−1][j], dp[i][j−1]). What does it compute?
   options:
-  - The edit distance without replace, n + m − 2·LCS
-  - The correct edit distance
-  - The LCS length
-  - Zero for every input
+  - "The edit distance without replace, n + m − 2·LCS"
+  - "The correct edit distance, since replace is never better"
+  - "The LCS length of the two strings, unchanged"
+  - "Zero for every input, because min never grows"
   answer: 0
   misconceptions:
   - null
@@ -202,10 +202,10 @@ items:
   format: classify
   prompt: Inserts cost 2, deletes 3 and replaces 4. What changes?
   options:
-  - Each neighbour adds its own cost, and the edges become 3i and 2j
-  - Nothing
-  - Use n + m − 2·LCS
-  - Only the base row changes
+  - "Each neighbour adds its own cost, and the edges become 3i and 2j"
+  - "Nothing; the minimum ignores what each operation costs"
+  - "Use n + m − 2·LCS, then multiply it by the average cost"
+  - "Only the base row changes; the inner cells stay the same"
   answer: 0
   misconceptions:
   - null
@@ -218,10 +218,10 @@ items:
   format: classify
   prompt: Count the ways t appears as a subsequence of s. What changes from edit distance?
   options:
-  - Add the skip and use counts instead of taking a minimum, with ways[i][0] = 1
-  - Nothing
-  - Take the maximum of the three neighbours
-  - Use two pointers
+  - "Add the skip and use counts instead of taking a minimum, with ways[i][0] = 1"
+  - "Nothing; edit distance already counts the subsequences when the strings match"
+  - "Take the maximum of the three neighbours instead of the minimum at each cell"
+  - "Use two pointers, advancing in t whenever the characters of s and t match"
   answer: 0
   misconceptions:
   - null

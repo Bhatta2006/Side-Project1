@@ -45,10 +45,10 @@ items:
   format: mcq
   prompt: Which question is pick or not pick?
   options:
-  - How many ways can some of the n items (each at most once) weigh exactly W?
-  - What is the largest item?
-  - How many contiguous runs sum to W?
-  - Sort the items by weight
+  - "How many ways can some of the n items (each at most once) weigh exactly W?"
+  - "What is the weight of the largest item among the n items on the list?"
+  - "How many contiguous runs of the items have a total weight of exactly W?"
+  - "In what order should the items be sorted from lightest to heaviest?"
   answer: 0
   misconceptions:
   - null
@@ -77,10 +77,10 @@ items:
   format: mcq
   prompt: What does the base case at i = n return?
   options:
-  - 1 if the total equals k, else 0
-  - Always 1
-  - The total
-  - Always 0
+  - "1 if the total equals k, else 0"
+  - "Always 1, one way per finished path"
+  - "The total reached along this path"
+  - "Always 0, since nothing is left to pick"
   answer: 0
   misconceptions:
   - null
@@ -173,10 +173,10 @@ items:
   format: classify
   prompt: The question changes to "how many contiguous subarrays sum to k?". What changes?
   options:
-  - It is no longer pick or not pick; use prefix sums with a hash map
-  - Nothing
-  - Add a third branch
-  - Start the recursion at index 1
+  - "It is no longer pick or not pick; use prefix sums with a hash map"
+  - "Nothing; pick or not pick already counts contiguous subarrays"
+  - "Add a third branch that stops the run at the current index"
+  - "Start the recursion at index 1 so empty runs are not counted"
   answer: 0
   misconceptions:
   - null
@@ -189,10 +189,10 @@ items:
   format: classify
   prompt: The numbers are at most 100 and n is 200. How can the recursion still work?
   options:
-  - Memoize ways(i, total); there are at most n · (sum + 1) states
-  - Use bitmasks instead
-  - Sort the array
-  - It cannot
+  - "Memoize ways(i, total); there are at most n · (sum + 1) states"
+  - "Use bitmasks over all 200 numbers instead of recursing"
+  - "Sort the array so equal totals sit next to each other"
+  - "It cannot; 2^200 branches are always explored"
   answer: 0
   misconceptions:
   - null
@@ -205,10 +205,10 @@ items:
   format: classify
   prompt: Put + or − before each number so the total is S. How does the template change?
   options:
-  - The two branches add or subtract a[i]
-  - It needs three branches
-  - The base case checks only i
-  - It becomes fast power
+  - "The two branches add or subtract a[i]"
+  - "It needs a third branch that skips a[i]"
+  - "The base case checks only the index i"
+  - "It becomes fast power over the signs"
   answer: 0
   misconceptions:
   - null
@@ -221,10 +221,10 @@ items:
   format: classify
   prompt: Each number may be used any number of times. What changes in the take branch?
   options:
-  - It stays at index i, so a[i] can be taken again
-  - It moves to i + 2
-  - It adds a[i] twice
-  - Nothing
+  - "It stays at index i, so a[i] can be taken again"
+  - "It moves to i + 2, skipping the next number"
+  - "It adds a[i] twice, then moves on to i + 1"
+  - "Nothing; the take branch already allows reuse"
   answer: 0
   misconceptions:
   - null

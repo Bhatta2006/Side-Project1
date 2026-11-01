@@ -121,10 +121,10 @@ quiz:
     kind: mcq
     prompt: Why may we binary search the time T in "factory machines"?
     options:
-      - If k items can be made in time T, they can be made in any T' > T
-      - Machines are sorted
-      - T is always a power of two
-      - Times are small
+      - "If k items can be made in time T, they can be made in any T' > T"
+      - "Machines are given sorted by speed, so the times are sorted too"
+      - "The answer T is always a power of two, so halving finds it fast"
+      - "The times are small enough to try every value of T directly"
     answer: 0
     explanation: More time never produces fewer items, so feasibility is monotonic.
     difficulty: 2
@@ -132,10 +132,10 @@ quiz:
     kind: mcq
     prompt: Searching the LAST x with ok(x) true, why use mid = (lo + hi + 1) / 2?
     options:
-      - With lo = mid on success, rounding down could loop forever
-      - It is faster
-      - To avoid overflow
-      - It finds the first true instead
+      - "With lo = mid on success, rounding down could loop forever"
+      - "Rounding up makes each step of the search run faster"
+      - "Adding 1 avoids integer overflow when lo + hi is large"
+      - "It finds the first true value instead of the last one"
     answer: 0
     explanation: When hi = lo + 1, rounding down gives mid = lo and lo = mid makes no progress.
     difficulty: 3

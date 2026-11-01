@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: The k-th smallest pair distance among n numbers. Why search on the distance instead of a split?
   options:
-  - There is no single array to split; counting pairs at most d is easy
-  - Distances are already sorted
-  - It is the only O(1) method
-  - Splits only work for k = 1
+  - "There is no single array to split; counting pairs at most d is easy"
+  - "Distances are already sorted, so a split would need no searching"
+  - "Searching on the distance is the only method with O(1) per step"
+  - "Splits only work for k = 1, so larger k needs a different search"
   answer: 0
   misconceptions:
   - null

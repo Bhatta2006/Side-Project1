@@ -159,24 +159,24 @@ quiz:
     kind: mcq
     prompt: Why is merge sort O(n log n)?
     options:
-      - log n levels of splitting, each doing O(n) merge work
-      - It compares every pair once
-      - It sorts n numbers in log n steps
-      - The merge step is O(log n)
+      - "log n levels of splitting, each doing O(n) merge work"
+      - "It compares every pair of elements exactly once overall"
+      - "It sorts n numbers in log n steps of constant work"
+      - "Each merge step costs O(log n), done once per element"
     answer: 0
     explanation: Halving gives log n levels; merging all subarrays at one level touches n elements.
     difficulty: 2
   - id: stable
     kind: mcq
     prompt: What does it mean for a sort to be stable?
-    options: ["Equal elements keep their original relative order", "It never crashes", "It uses O(1) space", "It is always O(n log n)"]
+    options: ["Equal elements keep their original relative order", "It never crashes, whatever input it is given", "It sorts in place using only O(1) extra space", "It always runs in O(n log n), even at worst"]
     answer: 0
     explanation: Stability matters when sorting by one key after another.
     difficulty: 2
   - id: quicksort-worst
     kind: mcq
     prompt: When does quicksort degrade to O(n²)?
-    options: ["When pivots are consistently the smallest or largest element", "On random data", "When n is even", "Never"]
+    options: ["When pivots are consistently the smallest or largest element", "On random data, where pivots land anywhere in the range", "When n is even, so the array cannot split exactly in half", "Never; quicksort is O(n log n) for every possible input"]
     answer: 0
     explanation: Unbalanced partitions make n levels of recursion; random pivots make this very unlikely.
     difficulty: 3

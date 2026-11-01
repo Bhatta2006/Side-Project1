@@ -192,10 +192,10 @@ quiz:
     kind: mcq
     prompt: For the digit-sum loop `while n > 0`, what happens when n starts at 0?
     options:
-      - The body never runs, and total stays 0 — still the right answer
-      - The loop runs once
-      - It crashes
-      - It runs forever
+      - "The body never runs, and total stays 0 — still the right answer"
+      - "The body runs once, adding 0, and then the loop stops normally"
+      - "It crashes, because 0 % 10 is a division by zero in the loop"
+      - "It runs forever, because 0 // 10 is still 0 and n never changes"
     answer: 0
     explanation: The condition is checked first. 0 > 0 is false, so the loop is skipped and 0 is printed.
     difficulty: 2
@@ -217,7 +217,7 @@ quiz:
         int n = 4, total = 0;
         while (n > 0) { total += n; n -= 1; }
         System.out.println(total);
-    options: ["10", "4", "6", "0"]
+    options: ["10", "4", "16", "6"]
     answer: 0
     explanation: total absorbs 4 + 3 + 2 + 1 = 10.
     difficulty: 2
@@ -233,10 +233,10 @@ quiz:
             count += 1
         print(count)
     options:
+      - "10"
+      - "4"
+      - "16"
       - "6"
-      - "7"
-      - "50"
-      - "5"
     answer: 0
     explanation: "100 → 50 → 25 → 12 → 6 → 3 → 1: six halvings before n > 1 fails."
     difficulty: 4
@@ -251,9 +251,9 @@ quiz:
             n -= 2
     options:
       - "n goes 10, 8, …, 2, 0, -2 and never equals 1"
-      - "print stops the loop"
-      - "n -= 2 does not change n"
-      - "while needs a counter"
+      - "print ends each pass early, so n never shrinks"
+      - "n -= 2 makes a new n and leaves the old one as is"
+      - "while needs a separate counter to know when to stop"
     answer: 0
     explanation: "Stepping by 2 from an even start skips 1. Use a condition like n > 0."
     difficulty: 5

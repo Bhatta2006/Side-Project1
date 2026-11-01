@@ -146,7 +146,7 @@ quiz:
   - id: rooms
     kind: mcq
     prompt: Which technique finds the minimum number of meeting rooms?
-    options: ["Sweep line over start/end events tracking the maximum concurrent count", "Binary search on the answer only", "Sorting by length", "Hashing start times"]
+    options: ["Sweep line over start/end events tracking the maximum concurrent count", "Binary search on the number of rooms, checking each guess greedily", "Sort the meetings by length and give the longest ones rooms first", "Hash the start times and count how many meetings share each start"]
     answer: 0
     explanation: The peak number of simultaneous meetings is the number of rooms needed.
     difficulty: 2

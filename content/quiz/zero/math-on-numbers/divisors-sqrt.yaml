@@ -121,10 +121,10 @@ items:
   format: trace
   prompt: The loop uses while i * i < n. What does it report for n = 49?
   options:
-  - 2, missing the 7
-  - '3'
-  - '4'
-  - '1'
+  - "2, missing the 7"
+  - "3, the right count"
+  - "4, counting 7 twice"
+  - "1, only the 1 itself"
   answer: 0
   misconceptions:
   - null
@@ -169,10 +169,10 @@ items:
   format: classify
   prompt: A perfect number equals the sum of its divisors other than itself. How do you test n?
   options:
-  - Sum the divisor pairs up to √n, subtract n, compare with n
-  - Check every number up to n
-  - Use Euclid's GCD
-  - Count the digits
+  - "Sum the divisor pairs up to √n, subtract n, compare with n"
+  - "Check every number from 1 up to n and add the divisors"
+  - "Use Euclid's GCD of n with every number below it"
+  - "Count the digits of n and compare with its divisors"
   answer: 0
   misconceptions:
   - null
@@ -185,10 +185,10 @@ items:
   format: classify
   prompt: Which numbers have exactly three divisors?
   options:
-  - Squares of primes, such as 4, 9 and 25
-  - All primes
-  - All squares
-  - Even numbers
+  - "Squares of primes, such as 4, 9 and 25"
+  - "All primes, such as 2, 3, 5 and 7"
+  - "All perfect squares, such as 4, 16 and 36"
+  - "Even numbers, such as 4, 6 and 8"
   answer: 0
   misconceptions:
   - null
@@ -201,10 +201,10 @@ items:
   format: classify
   prompt: The k-th smallest divisor of n in O(√n). In what order do the divisors come out?
   options:
-  - The small ones in increasing order, then their partners in the reverse order
-  - Already all sorted
-  - Largest first
-  - In random order
+  - "The small ones in increasing order, then their partners in the reverse order"
+  - "Already all sorted from smallest to largest, so the k-th can be read off"
+  - "Largest first, because each partner n / i is found before its small i"
+  - "In no particular order, so they must be sorted before picking the k-th"
   answer: 0
   misconceptions:
   - null
@@ -217,10 +217,10 @@ items:
   format: classify
   prompt: In C++, n is about 10^12 and i is an int. What goes wrong in i * i <= n?
   options:
-  - i * i overflows 32 bits once i passes about 46341
-  - Nothing
-  - The loop stops too early
-  - The modulo fails
+  - "i * i overflows 32 bits once i passes about 46341"
+  - "Nothing; i * i is computed in 64 bits since n is"
+  - "The loop stops too early, before i reaches √n"
+  - "The modulo n % i fails for values above 2^31"
   answer: 0
   misconceptions:
   - null

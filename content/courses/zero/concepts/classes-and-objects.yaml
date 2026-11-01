@@ -161,7 +161,7 @@ quiz:
   - id: constructor
     kind: mcq
     prompt: What is a constructor for?
-    options: ["Initialising a new object's data", "Deleting objects", "Printing objects", "Comparing two classes"]
+    options: ["Initialising a new object's data", "Freeing an object's memory when done", "Printing an object in a readable form", "Comparing two objects field by field"]
     answer: 0
     explanation: The constructor runs when an object is created and sets its starting state.
     difficulty: 1
@@ -169,10 +169,10 @@ quiz:
     kind: mcq
     prompt: Why route every balance change through a deposit method?
     options:
-      - So the rule "deposits must be positive" is enforced in one place
-      - Methods run faster than direct assignment
-      - Fields cannot be changed otherwise in any language
-      - It uses less memory
+      - "Initialising a new object's data"
+      - "Freeing an object's memory when done"
+      - "Printing an object in a readable form"
+      - "Comparing two objects field by field"
     answer: 0
     explanation: Encapsulation keeps the invariant in one place so no caller can break it.
     difficulty: 2

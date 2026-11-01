@@ -31,10 +31,10 @@ items:
   format: classify
   prompt: Why is matching each character of s at its earliest position in t safe?
   options:
-  - A later match would only leave less of t for the rest of s
-  - Because t is sorted
-  - It is not safe; use LCS
-  - Because s is short
+  - "A later match would only leave less of t for the rest of s"
+  - "Because t is sorted, so the earliest match is the smallest"
+  - "It is not safe; this check needs the full LCS table instead"
+  - "Because s is short, so a wrong early choice costs very little"
   answer: 0
   misconceptions:
   - null

@@ -612,10 +612,10 @@ quiz:
   kind: mcq
   prompt: Why is m = t // 60 wrong for the minutes part of t seconds?
   options:
-  - It also counts the minutes that are already inside the hours
-  - It rounds the wrong way
-  - It gives a decimal
-  - It is not wrong
+  - "It also counts the minutes that are already inside the hours"
+  - "It rounds the minutes down, so it should round them up instead"
+  - "It gives a decimal number of minutes rather than a whole one"
+  - "It is correct; t // 60 is exactly the minutes part of the time"
   answer: 0
   explanation: Take the minutes from what is left after the hours.
   difficulty: 2
@@ -690,10 +690,10 @@ quiz:
   kind: mcq
   prompt: Why can int(math.sqrt(n)) be wrong for n near 10^16?
   options:
-  - A decimal cannot store such a big n exactly, so it is rounded before the root is taken
-  - math.sqrt only works on small numbers
-  - int rounds up
-  - It is never wrong
+  - "A decimal cannot store such a big n exactly, so it is rounded before the root is taken"
+  - "math.sqrt only accepts numbers below about 10^9 and silently returns 0 beyond that"
+  - "int() always rounds a decimal up, so a root just below a whole number is pushed over"
+  - "It is never wrong, because math.sqrt returns an exact answer for any whole number"
   answer: 0
   explanation: Use math.isqrt, or correct a decimal guess with whole numbers.
   difficulty: 5

@@ -137,7 +137,7 @@ quiz:
   - id: divisor-count
     kind: mcq
     prompt: How many divisors does 72 = 2^3 · 3^2 have?
-    options: ["12", "6", "5", "9"]
+    options: ["12", "24", "6", "10"]
     answer: 0
     explanation: (3 + 1)(2 + 1) = 12.
     difficulty: 2
@@ -145,17 +145,17 @@ quiz:
     kind: mcq
     prompt: In the sieve, why start crossing out multiples of p at p²?
     options:
-      - Smaller multiples were already crossed out by smaller primes
-      - p² is always prime
-      - To avoid overflow
-      - It's required for correctness
+      - "Smaller multiples were already crossed out by smaller primes"
+      - "p² is always prime, so it is a safe place to start crossing"
+      - "Starting at p² avoids integer overflow for the largest primes"
+      - "Starting at 2p would cross out p itself and break correctness"
     answer: 0
     explanation: k·p with k < p has a prime factor smaller than p, so it's already marked.
     difficulty: 3
   - id: leftover
     kind: mcq
     prompt: After trial division up to √n, the remaining value is 1373 (> 1). What is it?
-    options: ["A prime factor of the original n", "Composite", "Always 1", "An error"]
+    options: ["A prime factor of the original n", "A composite factor still to split", "Always 1 once division has finished", "An error in the trial division loop"]
     answer: 0
     explanation: Any composite remainder would have a factor ≤ √n, which would have been divided out.
     difficulty: 2
@@ -172,8 +172,8 @@ quiz:
     options:
       - "O(N log log N)"
       - "O(N log N)"
+      - "O(N log² N)"
       - "O(N √N)"
-      - "O(N²)"
     answer: 0
     explanation: "Crossing out multiples of each prime p costs N/p; summing over primes gives N log log N."
     difficulty: 4
@@ -182,9 +182,9 @@ quiz:
     prompt: "Why compute lcm(a, b) as a // gcd(a, b) * b rather than a * b // gcd(a, b) in C++?"
     options:
       - "a * b can overflow even when the lcm fits"
-      - "Division is faster first"
-      - "gcd must be computed last"
-      - "They give different answers"
+      - "Dividing first is faster, but both are safe"
+      - "gcd must be computed last to be correct"
+      - "The two orders give different answers"
     answer: 0
     explanation: "Dividing first keeps the intermediate value no larger than the result."
     difficulty: 5

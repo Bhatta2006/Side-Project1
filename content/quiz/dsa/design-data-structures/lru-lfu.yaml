@@ -45,10 +45,10 @@ items:
   format: mcq
   prompt: Which requirement points to a hash map plus a doubly linked list?
   options:
-  - O(1) get and put, evicting the least recently used key when full
-  - Sorted iteration over the keys
-  - The k-th smallest key
-  - A random key in O(1)
+  - "O(1) get and put, evicting the least recently used key when full"
+  - "Iterating over the keys in sorted order after every insert"
+  - "Returning the k-th smallest key stored in the cache"
+  - "Returning a uniformly random key from the cache in O(1)"
   answer: 0
   misconceptions:
   - null
@@ -141,10 +141,10 @@ items:
   format: classify
   prompt: Why does a hash map plus a queue of arrivals fail?
   options:
-  - A get moves a key out of the middle, which a queue cannot do in O(1)
-  - Queues use too much memory
-  - Hash maps cannot be combined with queues
-  - It does not fail
+  - "A get moves a key out of the middle, which a queue cannot do in O(1)"
+  - "A queue of arrivals uses too much memory once the cache fills up"
+  - "Hash maps cannot store references to elements inside a queue"
+  - "It does not fail; evict from the front and re-push on every get"
   answer: 0
   misconceptions:
   - null
@@ -189,10 +189,10 @@ items:
   format: bug_spot
   prompt: The eviction unlinks the node before the tail but does not delete its key from the map. What goes wrong?
   options:
-  - A later get finds the stale node and returns a value that was evicted
-  - Nothing
-  - The list grows forever
-  - Every get returns −1
+  - "A later get finds the stale node and returns a value that was evicted"
+  - "Nothing goes wrong; the map entry is cleaned up by the next put"
+  - "The list grows forever, because the unlinked node is still counted"
+  - "Every later get returns −1, because the map is now inconsistent"
   answer: 0
   misconceptions:
   - null
@@ -205,10 +205,10 @@ items:
   format: classify
   prompt: Now evict the least frequently used key, ties by least recent. What changes?
   options:
-  - Keep one LRU list per frequency and the smallest frequency in use
-  - Nothing
-  - Sort the keys by frequency on every get
-  - Rebuild a heap of all keys on every get
+  - "Keep one LRU list per frequency and the smallest frequency in use"
+  - "Nothing; the LRU list already evicts the least used key first"
+  - "Sort all the keys by frequency on every get and evict the first"
+  - "Rebuild a heap of all keys by frequency on every get or put"
   answer: 0
   misconceptions:
   - null
@@ -221,10 +221,10 @@ items:
   format: classify
   prompt: Browser history with visit, back(k) and forward(k). Which structure gives O(1) operations?
   options:
-  - An array, a cursor and a bound for the newest reachable page
-  - An LRU cache
-  - A heap of pages
-  - A queue of pages
+  - "An array, a cursor and a bound for the newest reachable page"
+  - "An LRU cache keyed by page, evicting the oldest visit"
+  - "A heap of pages ordered by the time of their last visit"
+  - "A queue of pages, popping from the front on each back(k)"
   answer: 0
   misconceptions:
   - null

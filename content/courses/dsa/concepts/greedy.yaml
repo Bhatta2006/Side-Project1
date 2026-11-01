@@ -142,17 +142,17 @@ quiz:
     kind: mcq
     prompt: What is an exchange argument?
     options:
-      - Showing any optimal solution can be transformed into the greedy one without getting worse
-      - Swapping two array elements
-      - Trying all solutions
-      - Exchanging time for memory
+      - "Showing any optimal solution can be transformed into the greedy one without getting worse"
+      - "Swapping two adjacent array elements whenever they are out of order, as in bubble sort"
+      - "Trying every possible solution and exchanging the current best whenever one is better"
+      - "Trading extra memory for less running time by caching the answers of earlier choices"
     answer: 0
     explanation: It proves greedy is at least as good as any optimal solution.
     difficulty: 3
   - id: jump
     kind: mcq
     prompt: In Jump Game, what single value do you track while scanning?
-    options: ["The farthest index reachable so far", "The number of jumps", "The smallest element", "The sum of jumps"]
+    options: ["The farthest index reachable so far", "The number of jumps taken so far", "The smallest jump length seen so far", "The total of all jump lengths so far"]
     answer: 0
     explanation: If the current index exceeds the farthest reachable index, the end cannot be reached.
     difficulty: 2

@@ -124,17 +124,17 @@ quiz:
     kind: mcq
     prompt: You open a brand-new problem. What should you do first?
     options:
-      - Work through the given examples by hand to confirm you understand them
-      - Start typing the solution immediately
-      - Search for the answer online
-      - Pick the fastest algorithm you know
+      - "Work through the given examples by hand to confirm you understand them"
+      - "Start typing a solution straight away and let the examples catch mistakes"
+      - "Search online for the problem's name and read an accepted solution first"
+      - "Choose the fastest algorithm you know and adapt the problem to fit it"
     answer: 0
     explanation: If you cannot produce the example outputs by hand, any code you write is guesswork.
     difficulty: 1
   - id: constraints
     kind: mcq
     prompt: A problem has n up to 200,000. Which approach is most likely too slow?
-    options: ["Checking every pair with nested loops", "One pass with a map", "Sorting then scanning", "Reading input once"]
+    options: ["Checking every pair with nested loops", "One pass over the input with a map", "Sorting the input, then one scan", "Reading all the input once at the start"]
     answer: 0
     explanation: 200,000² is 4·10^10 operations — far too many. One pass or sorting is fine.
     difficulty: 2
@@ -142,10 +142,10 @@ quiz:
     kind: mcq
     prompt: You see a slow but simple correct solution and are unsure of a fast one. Good move?
     options:
-      - Write the simple one first, then look for repeated work to remove
-      - Give up
-      - Submit nothing until you know the optimal solution
-      - Skip testing to save time
+      - "Write the simple one first, then look for repeated work to remove"
+      - "Give up on the problem and come back once you know the trick"
+      - "Submit nothing until you are sure the solution is optimal"
+      - "Submit the slow one without testing to save time for the fast one"
     answer: 0
     explanation: A correct baseline gives progress, confidence, and a checker for faster versions.
     difficulty: 1
@@ -153,10 +153,10 @@ quiz:
     kind: mcq
     prompt: Why reflect after solving a problem?
     options:
-      - To extract the key insight so you recognise it in future problems
-      - To make the submission faster
-      - It is required by the judge
-      - To memorise the exact code
+      - "To extract the key insight so you recognise it in future problems"
+      - "To shave milliseconds off the accepted submission's running time"
+      - "Because the judge requires a written reflection before scoring"
+      - "To memorise the exact code so you can type it again from memory"
     answer: 0
     explanation: Patterns, not memorized code, transfer to new problems.
     difficulty: 1

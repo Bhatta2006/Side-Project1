@@ -201,10 +201,10 @@ quiz:
     kind: mcq
     prompt: Why may a primality check stop testing divisors once d * d > n?
     options:
-      - Any divisor above √n pairs with one below √n that was already tested
-      - Larger divisors never exist
-      - It is only an approximation
-      - Because n is always even
+      - "Any divisor above √n pairs with one below √n that was already tested"
+      - "No number has a divisor larger than its own square root, so none remain"
+      - "Testing past √n would also work but gives only an approximate answer"
+      - "Only even numbers can have divisors above √n, and those were ruled out"
     answer: 0
     explanation: Divisors come in pairs (d, n/d); one of each pair is at most √n.
     difficulty: 3

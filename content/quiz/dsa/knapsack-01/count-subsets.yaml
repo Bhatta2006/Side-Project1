@@ -31,10 +31,10 @@ items:
   format: bug_spot
   prompt: The inner loop runs s from K down to x + 1. Input 0 0 1, K = 1 prints 1. What is wrong?
   options:
-  - s must reach x, so each 0 doubles ways[0]
-  - ways[0] should be 0
-  - Loop forwards
-  - Sort first
+  - "s must reach x, so each 0 doubles ways[0]"
+  - "ways[0] should start at 0, not at 1"
+  - "The loop should run forwards from x to K"
+  - "The input should be sorted before the loop"
   answer: 0
   misconceptions:
   - null

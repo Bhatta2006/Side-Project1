@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: A node has a left child but no right child. Is it a leaf?
   options:
-  - No; only nodes with no children end a root-to-leaf path
-  - Yes, it has a missing child
-  - Only if it is on the last level
-  - Only if its value is 0
+  - "No; only nodes with no children end a root-to-leaf path"
+  - "Yes, because one of its two children is missing"
+  - "Only if it sits on the last level of the tree"
+  - "Only if its value is 0, so it adds nothing"
   answer: 0
   misconceptions:
   - null
@@ -32,10 +32,10 @@ items:
   prompt: Sum root to leaf numbers. A node with digit 4 receives 13 from its parent. What does it pass
     down?
   options:
-  - '134'
-  - '17'
-  - '13'
-  - '52'
+  - "134"
+  - "13+4"
+  - "13"
+  - "13·4"
   answer: 0
   misconceptions:
   - null

@@ -42,10 +42,10 @@ items:
   format: mcq
   prompt: Which question is a longest increasing subsequence problem?
   options:
-  - Fewest deletions so the remaining numbers strictly increase
-  - Longest run of consecutive rising days
-  - Sort the numbers
-  - Largest gap between neighbours
+  - "Fewest deletions so the remaining numbers strictly increase"
+  - "The longest run of consecutive days with rising prices"
+  - "Sort the numbers into increasing order in place"
+  - "The largest gap between two neighbouring numbers"
   answer: 0
   misconceptions:
   - null
@@ -122,10 +122,10 @@ items:
   format: bug_spot
   prompt: The comparison is a[j] <= a[i]. What does 4 4 4 print?
   options:
-  - 3, but a strictly increasing subsequence has length 1
-  - '1'
-  - '0'
-  - '4'
+  - "3, but a strictly increasing subsequence has length 1"
+  - "1, correct because equal values cannot follow"
+  - "0, since no element is larger than another"
+  - "4, one more than the number of elements"
   answer: 0
   misconceptions:
   - null
@@ -138,10 +138,10 @@ items:
   format: classify
   prompt: Why does taking every larger number after the first one fail?
   options:
-  - An early large number blocks smaller ones that start longer chains
-  - It counts equal numbers
-  - It is too slow
-  - It does not fail
+  - "An early large number blocks smaller ones that start longer chains"
+  - "It counts equal numbers as increasing, which overcounts runs"
+  - "It is too slow, since it compares every pair of numbers"
+  - "It does not fail; taking every larger number is the LIS"
   answer: 0
   misconceptions:
   - null
@@ -154,10 +154,10 @@ items:
   format: complexity
   prompt: The table version on n = 2·10^5 numbers. Is it fast enough?
   options:
-  - No; O(n²) is 4·10^10 steps, use patience sorting
-  - Yes; it is O(n)
-  - Yes; it is O(n log n)
-  - Only in C++
+  - "No; O(n²) is 4·10^10 steps, use patience sorting"
+  - "Yes; the table version is O(n), one cell each"
+  - "Yes; the table version is O(n log n) overall"
+  - "Only in C++, where 4·10^10 steps finish in time"
   answer: 0
   misconceptions:
   - null
@@ -186,10 +186,10 @@ items:
   format: classify
   prompt: Largest subset where every pair divides one another. What do you do first?
   options:
-  - Sort, then LIS with "a[j] divides a[i]" as the rule
-  - LIS on the input order
-  - Greedy by smallest number
-  - Count multiples of each number
+  - "Sort, then LIS with \"a[j] divides a[i]\" as the rule"
+  - "Run LIS on the input order with the divide rule"
+  - "Greedy: take numbers from the smallest upward"
+  - "Count the multiples of each number in the input"
   answer: 0
   misconceptions:
   - null
@@ -202,10 +202,10 @@ items:
   format: classify
   prompt: Envelopes sorted by width; equal widths sorted by height ascending. What goes wrong?
   options:
-  - Two envelopes of the same width can chain, which is not a strict fit
-  - Nothing
-  - The answer is always 1
-  - The sort is too slow
+  - "Two envelopes of the same width can chain, which is not a strict fit"
+  - "Nothing goes wrong; ascending heights are what the LIS needs anyway"
+  - "The answer is always 1, because equal widths block every chain"
+  - "The sort becomes too slow, since it now compares two keys each time"
   answer: 0
   misconceptions:
   - null
@@ -218,10 +218,10 @@ items:
   format: classify
   prompt: Should you sort the array before computing its LIS?
   options:
-  - No; the order is part of the problem and sorting makes everything increasing
-  - Yes, always
-  - Only if it has duplicates
-  - Only descending
+  - "No; the order is part of the problem and sorting makes everything increasing"
+  - "Yes, always; LIS assumes sorted input, as binary search over the tails does"
+  - "Only if the array has duplicates, which sorting groups together first"
+  - "Only in descending order, so the tails array starts from the largest value"
   answer: 0
   misconceptions:
   - null

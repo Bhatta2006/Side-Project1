@@ -36,9 +36,9 @@ items:
     prompt: "In a variable window over positive numbers, why can we shrink from the left when the sum is too big?"
     options:
       - "Removing a positive number can only lower the sum, so the window moves toward valid"
-      - "The left element is always the largest"
-      - "Shrinking keeps the window length fixed"
-      - "Every window that starts later is shorter"
+      - "The left element is always the largest one in the window, so dropping it helps most"
+      - "Shrinking keeps the window length fixed, so the sum is compared on equal terms"
+      - "Every window that starts later is shorter, so it can only have a smaller sum"
     answer: 0
     misconceptions: [null, confuse-index-value, pattern-fixed-vs-variable-window, window-length-off-by-one]
     explanation: "With positive numbers, dropping an element always lowers the sum, so shrinking repairs a broken rule."
@@ -48,9 +48,9 @@ items:
     prompt: "Why is the grow-and-shrink window O(n) even with a loop inside a loop?"
     options:
       - "Each index enters the window once and leaves it at most once"
-      - "The inner loop runs at most once per step"
-      - "The window never holds more than two elements"
-      - "Sorting first makes the inner loop constant"
+      - "The inner loop runs at most once for each outer step"
+      - "The window never holds more than two elements at once"
+      - "Sorting first makes each run of the inner loop constant"
     answer: 0
     misconceptions: [null, shrink-with-if, pattern-window-vs-two-pointers, pattern-brute-force-default]
     explanation: "left only moves forward, so all shrinking steps together are at most n."
@@ -60,9 +60,9 @@ items:
     prompt: "A longest-run loop shrinks with if instead of while. What happens to the answer?"
     options:
       - "It stays right: the window slides without ever dropping below the best length"
-      - "It reports a window that is too long"
-      - "It loops forever"
-      - "It reports 0 whenever a shrink happens"
+      - "It reports a window that is too long, because invalid windows are measured"
+      - "It loops forever, because left never catches up with right after a shrink"
+      - "It reports 0 whenever a shrink happens, resetting the best length found"
     answer: 0
     misconceptions: [null, shrink-with-if, shrink-too-far, reset-instead-of-shrink]
     explanation: "With if, the window keeps its best length and slides; it only grows when the new run is valid."
@@ -72,9 +72,9 @@ items:
     prompt: "To count every run with sum at most L, the loop adds right − left + 1 at each step. Why must it shrink with while?"
     options:
       - "With if, the window can still be too big, so invalid runs get counted"
-      - "if gives the same count, only slower"
-      - "while matters only for negative numbers"
-      - "Counting never needs a shrink step"
+      - "if gives exactly the same count; while only makes it run more slowly"
+      - "while matters only when the array contains negative numbers"
+      - "Counting runs never needs a shrink step, only the right pointer"
     answer: 0
     misconceptions: [null, shrink-with-if, window-with-negatives, reset-instead-of-shrink]
     explanation: "Counting adds every window ending at right, so that window must be valid first."
@@ -84,9 +84,9 @@ items:
     prompt: "Longest run of transactions whose total is at most 100, where refunds are negative. Which approach works?"
     options:
       - "Prefix sums with a sorted structure, because shrinking no longer always lowers the sum"
-      - "Grow-and-shrink window, as with positive numbers"
-      - "A fixed window of the average run length"
-      - "Sort the transactions, then take the smallest ones"
+      - "A grow-and-shrink window, exactly as with positive numbers, shrinking above 100"
+      - "A fixed window whose size is the average run length of the transactions"
+      - "Sort the transactions, then take the smallest ones until the total passes 100"
     answer: 0
     misconceptions: [null, window-with-negatives, pattern-fixed-vs-variable-window, pattern-sort-breaks-order]
     explanation: "With negative numbers, removing an element can raise the sum, so the shrink rule is no longer safe."
@@ -96,9 +96,9 @@ items:
     prompt: "Fewest consecutive trucks whose loads add up to at least T tonnes (loads are positive). Which approach fits?"
     options:
       - "Variable window: grow until the total reaches T, then shrink while it still does"
-      - "Binary search on the answer with a prefix sum check"
-      - "Greedy: always take the heaviest truck"
-      - "Fixed window of size T"
+      - "Binary search on the answer, checking each length with a prefix-sum scan"
+      - "Greedy: always take the heaviest truck next until the total reaches T"
+      - "A fixed window of size T, sliding one truck at a time along the row"
     answer: 0
     misconceptions: [null, pattern-search-vs-scan, pattern-sort-breaks-order, pattern-fixed-vs-variable-window]
     explanation: "Shortest valid window: record the length every time the window is valid, then shrink to try shorter."
@@ -108,9 +108,9 @@ items:
     prompt: "Longest playlist stretch with no song repeated. What does the window keep as its summary?"
     options:
       - "A count of each song inside the window, shrinking while one count exceeds 1"
-      - "The sum of song lengths"
-      - "Only the last song played"
-      - "The positions of all songs in the whole playlist, sorted"
+      - "The sum of song lengths inside the window, shrinking when it grows too big"
+      - "Only the last song played, compared with the next song as it arrives"
+      - "The positions of all songs in the whole playlist, sorted by song name"
     answer: 0
     misconceptions: [null, stale-window-summary, pattern-window-for-single-item, pattern-sort-breaks-order]
     explanation: "The summary must describe exactly what is inside the window: here, how often each song appears."

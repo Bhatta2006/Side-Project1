@@ -176,10 +176,10 @@ quiz:
     kind: mcq
     prompt: Which task suits a while loop better than a for loop?
     options:
-      - Keep asking for a password until it is correct
-      - Print the numbers 1 to 100
-      - Add up every value in a list
-      - Repeat a message 5 times
+      - "Keep asking for a password until it is correct"
+      - "Print every whole number from 1 up to 100"
+      - "Add up every value stored in a list of prices"
+      - "Repeat a greeting message exactly five times"
     answer: 0
     explanation: You cannot know in advance how many attempts it will take, so loop until the condition changes.
     difficulty: 1

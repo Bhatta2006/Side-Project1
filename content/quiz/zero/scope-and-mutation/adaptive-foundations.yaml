@@ -17,10 +17,10 @@ items:
   prompt: A variable is local to one function. Can a separate function defined outside that variable's
     lexical scope refer to it directly by that local name?
   options:
-  - No, it needs an appropriate input or shared reference
-  - Yes, all variable names are global
-  - Only after two calls
-  - Only when its name has one letter
+  - "No, it needs an appropriate input or shared reference"
+  - "Yes, every variable name in a program is global"
+  - "Only after the first function has been called twice"
+  - "Only when the variable's name is a single letter"
   answer: 0
   explanation: Local scope restricts where that binding can be accessed.
 - id: foundation-2
@@ -29,10 +29,10 @@ items:
   prompt: Two names refer to the same mutable list. One name appends an item. What does the other name
     refer to?
   options:
-  - The same list, now containing the appended item
-  - An automatically copied old list
-  - An empty list
-  - A number
+  - "The same list, now containing the appended item"
+  - "An automatic copy of the list from before"
+  - "A new empty list made for the second name"
+  - "A number counting the items in the list"
   answer: 0
   explanation: Aliases share one object, so a mutation is visible through either reference.
 - id: foundation-3
@@ -40,10 +40,10 @@ items:
   pool: practice
   prompt: What is the difference between rebinding a name and mutating an object?
   options:
-  - Rebinding changes which object a name denotes; mutation changes the state of an object
-  - Rebinding always changes every object in memory
-  - Mutation always creates a new local name
-  - The two operations always have identical effects
+  - "Rebinding changes which object a name denotes; mutation changes the state of an object"
+  - "Rebinding changes every object in memory that has the same value as the old one"
+  - "Mutation always creates a new local name, leaving the original object as it was"
+  - "The two always have identical effects; they are two names for one operation"
   answer: 0
   explanation: 'Names and objects are separate: redirecting a name does not itself change the old object,
     while mutation changes that object''s contents.'

@@ -15,10 +15,10 @@ items:
   format: classify
   prompt: Stair costs 1 2 100 3. Greedy steps to the cheaper next stair. Why can it fail?
   options:
-  - A cheap stair can lead to an expensive one; DP checks every way in
-  - Greedy is always optimal here
-  - The costs must be sorted first
-  - It needs recursion
+  - "A cheap stair can lead to an expensive one; DP checks every way in"
+  - "It cannot fail; greedy is always optimal for the stair costs here"
+  - "The costs must be sorted first, and greedy then picks the cheapest"
+  - "Greedy needs recursion to look ahead, which this version leaves out"
   answer: 0
   misconceptions:
   - null
@@ -64,10 +64,10 @@ items:
   format: classify
   prompt: 'Jump game: can you reach the last index? Is DP required?'
   options:
-  - 'No: tracking the farthest reach is provably enough'
-  - 'Yes: greedy always fails'
-  - 'Yes: it needs a 2D table'
-  - 'No: sorting solves it'
+  - "No: tracking the farthest reach is provably enough"
+  - "Yes: greedy always fails, so every index needs a DP cell"
+  - "Yes: it needs a 2D table of start and end indexes"
+  - "No: sorting the jump lengths first is enough to solve it"
   answer: 0
   misconceptions:
   - null

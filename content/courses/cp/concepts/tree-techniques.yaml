@@ -139,21 +139,21 @@ quiz:
   - id: reverse-order
     kind: mcq
     prompt: Why process nodes in reverse BFS order for subtree sums?
-    options: ["Children appear after parents in BFS order, so reversing handles children first", "It's faster", "BFS order is random", "To avoid cycles"]
+    options: ["Children appear after parents in BFS order, so reversing handles children first", "Reverse BFS order is faster because it visits the leaves with fewer cache misses", "BFS order is effectively random, so reversing it makes the order predictable", "Reversing the order avoids revisiting a node through a cycle in the tree"]
     answer: 0
     explanation: Bottom-up DP needs every child finished before its parent.
     difficulty: 2
   - id: euler
     kind: mcq
     prompt: With an Euler tour, the subtree of u corresponds to...
-    options: ["The contiguous range [tin[u], tout[u]]", "All nodes with larger labels", "The path from root to u", "A random set"]
+    options: ["The contiguous range [tin[u], tout[u]]", "All nodes with labels larger than u", "The path from the root down to u", "The range [0, tin[u]] of the tour"]
     answer: 0
     explanation: DFS visits an entire subtree before leaving it.
     difficulty: 2
   - id: reroot
     kind: mcq
     prompt: Rerooting from parent p to child c changes the sum of distances by...
-    options: ["−size[c] + (n − size[c])", "+size[c]", "+1", "Nothing"]
+    options: ["−size[c] + (n − size[c])", "+size[c] − (n − size[c])", "+1 for every node in c's subtree", "Nothing; the total stays the same"]
     answer: 0
     explanation: Nodes in c's subtree get 1 closer; all others get 1 farther.
     difficulty: 3

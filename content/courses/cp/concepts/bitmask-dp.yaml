@@ -128,21 +128,21 @@ quiz:
   - id: states
     kind: mcq
     prompt: TSP bitmask DP with n = 15 has how many (mask, last) states?
-    options: ["2^15 · 15 ≈ 4.9·10^5", "15! ≈ 1.3·10^12", "15²", "2^15"]
+    options: ["2^15 · 15 ≈ 4.9·10^5", "15! ≈ 1.3·10^12", "15² = 225 states", "2^15 ≈ 3.3·10^4"]
     answer: 0
     explanation: Every subset paired with every possible last city.
     difficulty: 2
   - id: order
     kind: mcq
     prompt: Why can masks be processed in increasing numeric order?
-    options: ["Transitions only add bits, so the next mask is always larger", "Masks are sorted by popcount", "It's arbitrary", "To save memory"]
+    options: ["Transitions only add bits, so the next mask is always larger", "Masks in numeric order are also sorted by their popcount", "The order is arbitrary; any order of masks gives the answer", "Increasing order lets the table reuse less of its memory"]
     answer: 0
     explanation: mask | (1 << u) > mask whenever u is not in mask.
     difficulty: 2
   - id: assignment
     kind: mcq
     prompt: In the assignment DP, which person is assigned next from state mask?
-    options: ["Person number popcount(mask)", "The last person", "Any person", "Person mask"]
+    options: ["Person number popcount(mask)", "The last person in the input", "Any person not yet assigned", "Person number mask itself"]
     answer: 0
     explanation: popcount(mask) people have already been assigned, in order.
     difficulty: 3

@@ -31,10 +31,10 @@ items:
   format: mcq
   prompt: What does insert_bottom(x) do with the top it pops?
   options:
-  - Holds it in the call and pushes it back after x is placed below
-  - Throws it away
-  - Pushes it under x
-  - Moves it to a second stack
+  - "Holds it in the call and pushes it back after x is placed below"
+  - "Throws it away, since only x needs to end up in the stack"
+  - "Pushes it under x straight away, before recursing further"
+  - "Moves it to a second stack and copies that back at the end"
   answer: 0
   misconceptions:
   - null

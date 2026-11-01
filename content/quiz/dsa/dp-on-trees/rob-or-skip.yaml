@@ -42,10 +42,10 @@ items:
   format: mcq
   prompt: Which question is rob-or-skip DP on a tree?
   options:
-  - Invite people to maximise fun, never a person together with their direct manager
-  - The deepest node in the tree
-  - The sum of all values
-  - The nodes on each level
+  - "Invite people to maximise fun, never a person together with their direct manager"
+  - "Find the deepest employee in the company tree, counted from the chief executive"
+  - "Add up the fun values of everyone in the company, from the root to the leaves"
+  - "List the employees on each level of the tree, from the top manager downwards"
   answer: 0
   misconceptions:
   - null
@@ -58,10 +58,10 @@ items:
   format: mcq
   prompt: Why does each node keep two numbers, take and skip?
   options:
-  - The parent's choice depends on whether the child was chosen
-  - To store the left and right subtrees
-  - To avoid recursion
-  - One for each level
+  - "The parent's choice depends on whether the child was chosen"
+  - "One number stores the left subtree and one the right subtree"
+  - "Two numbers let the code avoid recursion over the tree"
+  - "One number per level, for the odd and the even levels"
   answer: 0
   misconceptions:
   - null
@@ -106,10 +106,10 @@ items:
   format: classify
   prompt: Why is "take all odd levels or all even levels" not enough?
   options:
-  - The best set can mix parities, such as the first and fourth level of a chain
-  - Levels can be adjacent
-  - It is too slow
-  - It is always optimal
+  - "The best set can mix parities, such as the first and fourth level of a chain"
+  - "Two levels can be adjacent, so taking all odd levels breaks the rule"
+  - "Summing every level separately is too slow for large trees"
+  - "It is always optimal; one of the two parities is the best set"
   answer: 0
   misconceptions:
   - null
@@ -138,10 +138,10 @@ items:
   format: bug_spot
   prompt: take[x] adds take of the children. What does that allow?
   options:
-  - Robbing a house and its child together
-  - Skipping too many houses
-  - Nothing
-  - Robbing the root twice
+  - "Robbing a house and its child together"
+  - "Skipping too many houses in a row"
+  - "Nothing; it is the correct recurrence"
+  - "Robbing the root house twice over"
   answer: 0
   misconceptions:
   - null
@@ -170,10 +170,10 @@ items:
   format: classify
   prompt: The plain recursion reaches into grandchildren. Why is it slow without memoization?
   options:
-  - Each node is reached from both its parent and its grandparent, so calls multiply
-  - Recursion is always slow
-  - It visits the leaves twice only
-  - It is not slow
+  - "Each node is reached from both its parent and its grandparent, so calls multiply"
+  - "Recursion is always slow in Python, whatever the function computes"
+  - "It visits only the leaves twice, which is slow for very bushy trees"
+  - "It is not slow; each node is reached exactly once by the recursion"
   answer: 0
   misconceptions:
   - null
@@ -202,10 +202,10 @@ items:
   format: classify
   prompt: Every edge must have at least one guarded end; minimise guards. How does skip[x] change?
   options:
-  - A skipped node forces both children to be guarded (take)
-  - It stays max(take, skip) per child
-  - It becomes 0
-  - Nothing changes
+  - "A skipped node forces both children to be guarded (take)"
+  - "It stays the sum of max(take, skip) over the children"
+  - "It becomes 0, since a skipped node costs nothing"
+  - "Nothing changes from the rob-or-skip recurrence"
   answer: 0
   misconceptions:
   - null
@@ -218,10 +218,10 @@ items:
   format: classify
   prompt: A camera covers its node and its neighbours; minimise cameras. How many states per node?
   options:
-  - Three - camera, covered by a child, waiting for the parent
-  - Two
-  - One
-  - Four
+  - "Three - camera, covered by a child, waiting for the parent"
+  - "Two - take or skip, exactly as in rob-or-skip"
+  - "One - the fewest cameras in the subtree"
+  - "Four - one more for each of two children"
   answer: 0
   misconceptions:
   - null

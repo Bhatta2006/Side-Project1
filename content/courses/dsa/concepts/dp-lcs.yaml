@@ -915,10 +915,10 @@ quiz:
   kind: mcq
   prompt: In LCS, a[i−1] differs from b[j−1]. What is dp[i][j]?
   options:
-  - max(dp[i−1][j], dp[i][j−1])
-  - dp[i−1][j−1]
-  - dp[i−1][j−1] + 1
-  - '0'
+  - "max(dp[i−1][j], dp[i][j−1])"
+  - "dp[i−1][j−1], unchanged"
+  - "dp[i−1][j−1] + 1, as on a match"
+  - "0, since the run is broken"
   answer: 0
   explanation: Drop the last character of one string or the other and keep the better.
   difficulty: 2
@@ -1015,10 +1015,10 @@ quiz:
   kind: mcq
   prompt: Why is greedy earliest matching correct for "is s a subsequence of t" but not for LCS?
   options:
-  - All of s must be matched, so there is no choice of which characters to keep
-  - Because t is longer
-  - Greedy is never correct
-  - Because s is sorted
+  - "All of s must be matched, so there is no choice of which characters to keep"
+  - "Because t is always longer than s, so the pointer over t can never run out"
+  - "Greedy is never correct for either one; both questions need a full DP table"
+  - "Because s is sorted first, so the earliest match is always the best one"
   answer: 0
   explanation: LCS chooses what to drop from both strings; subsequence matching does not.
   difficulty: 5

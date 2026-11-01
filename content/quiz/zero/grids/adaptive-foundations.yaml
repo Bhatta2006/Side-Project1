@@ -16,10 +16,10 @@ items:
   pool: practice
   prompt: How many cells does a grid with 3 rows and 4 columns contain?
   options:
-  - '12'
-  - '7'
-  - '3'
-  - '4'
+  - "12"
+  - "7"
+  - "14"
+  - "4"
   answer: 0
   explanation: Each of the 3 rows contains 4 cells, so there are 3 times 4 cells.
 - id: foundation-2

@@ -52,10 +52,10 @@ items:
   format: mcq
   prompt: What does 17 % 5 give?
   options:
-  - 2, what is left after taking out three 5s
-  - 3, the number of whole 5s
-  - '3.4'
-  - '85'
+  - "2, what is left after taking out three 5s"
+  - "3, the number of whole 5s inside 17"
+  - "3.4, the exact result of dividing"
+  - "85, from multiplying 17 by 5 instead"
   answer: 0
   misconceptions:
   - null
@@ -116,10 +116,10 @@ items:
   format: trace
   prompt: In Python, what is 3725 / 3600?
   options:
-  - About 1.03, a decimal
-  - '1'
-  - '125'
-  - An error
+  - "About 1.03, a decimal"
+  - "1, the whole hours"
+  - "125, the leftover"
+  - "An error, mixed types"
   answer: 0
   misconceptions:
   - null
@@ -164,10 +164,10 @@ items:
   format: classify
   prompt: How do you get the tens digit of n = 4729?
   options:
-  - n // 10 % 10
-  - n % 10
-  - n // 10
-  - n % 100
+  - "n // 10 % 10"
+  - "n % 100 % 10"
+  - "n // 10"
+  - "n % 100"
   answer: 0
   misconceptions:
   - null

@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: Count records over P, A, L with fewer than 2 A's and no LLL. Which state is enough?
   options:
-  - (A's so far, L's at the end)
-  - A's so far
-  - The last letter
-  - The whole record
+  - "(A's so far, L's at the end)"
+  - "The number of A's so far"
+  - "The last letter written"
+  - "The whole record so far"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: The state keeps only the number of A's. What does it count for n = 3?
   options:
-  - 20, because LLL is allowed
-  - '19'
-  - '27'
-  - '8'
+  - "20, because LLL is allowed"
+  - "19, one per valid record"
+  - "27, every possible record"
+  - "8, records without any A"
   answer: 0
   misconceptions:
   - null
@@ -63,10 +63,10 @@ items:
   format: bug_spot
   prompt: The day's moves update ways in place instead of building a new table. What goes wrong?
   options:
-  - Some records get extended twice on the same day
-  - Nothing
-  - The modulus is skipped
-  - The answer is always 0
+  - "Some records get extended twice on the same day"
+  - "Nothing; in-place updates give the same table"
+  - "The modulus is skipped for the updated cells"
+  - "The answer is always 0 after the first day"
   answer: 0
   misconceptions:
   - null

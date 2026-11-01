@@ -24,9 +24,9 @@ items:
     prompt: "Which three parts does a traverse-and-filter loop need?"
     options:
       - "A starting result, a test per value, an update when it passes"
-      - "Only a loop and a print"
-      - "A sorted list and a binary search"
-      - "A result reset to 0 inside the loop"
+      - "Only a loop over the values and a print of each one"
+      - "A sorted list and a binary search for each passing value"
+      - "A result reset to 0 inside the loop, then a final print"
     answer: 0
     misconceptions: [null, filter-ignored, pattern-search-needs-sorted-input, reset-inside-loop]
     explanation: "Start the result once, test each value, and update only for values that pass."
@@ -36,9 +36,9 @@ items:
     prompt: "A loop sets total = 0 as its first line inside the loop. What will it print?"
     options:
       - "Only the last passing value (or 0)"
-      - "The correct total"
-      - "Twice the total"
-      - "Nothing: it crashes"
+      - "The correct total of passing values"
+      - "Twice the total of passing values"
+      - "Nothing: it crashes on the reset"
     answer: 0
     misconceptions: [null, reset-inside-loop, count-vs-sum, reset-inside-loop]
     explanation: "Each pass wipes what earlier passes added."
@@ -48,9 +48,9 @@ items:
     prompt: "The list is empty. What should 'total of values above 10' print, and does the loop need a special case?"
     options:
       - "0, and no special case: the loop body never runs"
-      - "Nothing; empty lists crash the loop"
-      - "10"
-      - "-1 to signal no values"
+      - "Nothing; an empty list crashes the loop at once"
+      - "10, the threshold, since no value is above it"
+      - "-1, to signal that no values were found at all"
     answer: 0
     misconceptions: [null, filter-empty-crash, bound-instead-of-variable, missing-unreachable-check]
     explanation: "The total starts at 0 and stays 0, which is the correct answer."
@@ -60,9 +60,9 @@ items:
     prompt: "Count values above the average of 1 2 3 4 10. Why can't one loop do it?"
     options:
       - "The average (4) is only known after a first pass, so a second pass filters"
-      - "One loop is enough if you sort first"
-      - "Averages cannot be compared with values"
-      - "It can: compare each value with the running average"
+      - "One loop is enough if the list is sorted first, then cut at the middle"
+      - "Averages are decimals, so they cannot be compared with whole values"
+      - "It can: compare each value with the running average as the loop goes"
     answer: 0
     misconceptions: [null, pattern-sort-breaks-order, confuse-index-value, filter-running-average]
     explanation: "First compute the total and average, then traverse again to filter: only 10 is above 4."
@@ -84,9 +84,9 @@ items:
     prompt: "From a list of temperatures, find both how many were below 0 and their total. What do you keep?"
     options:
       - "Two results, both starting at 0, updated under the same test"
-      - "One result for each temperature"
-      - "Only the total; the count can be guessed"
-      - "Sort the list first and use the middle value"
+      - "One result for each temperature, stored in a second list"
+      - "Only the total; the count can be worked out from it later"
+      - "Sort the list first and then use the middle value of it"
     answer: 0
     misconceptions: [null, filter-ignored, count-vs-sum, pattern-sort-breaks-order]
     explanation: "One traversal can update several results when the same test passes."

@@ -204,10 +204,10 @@ quiz:
     kind: mcq
     prompt: What does `total = total + price` do?
     options:
-      - Adds price to the current total and stores the result in total
-      - Checks whether total equals total plus price
-      - Causes an error because total appears twice
-      - Creates a second variable named total
+      - "Adds price to the current total and stores the result in total"
+      - "Checks whether total is equal to total plus price, giving True or False"
+      - "Causes an error because total appears on both sides of the equals sign"
+      - "Creates a second variable called total, leaving the first one unchanged"
     answer: 0
     explanation: The right side is evaluated using the old total, then the result replaces it.
     difficulty: 1

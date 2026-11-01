@@ -50,10 +50,10 @@ items:
   pool: practice
   prompt: An account method withdraws money. Why keep the balance update inside that method?
   options:
-  - To enforce the account's rules at the point where its state changes
-  - To guarantee unlimited funds
-  - To make the balance a global variable
-  - To remove the need for inputs
+  - "To enforce the account's rules at the point where its state changes"
+  - "To guarantee the account has unlimited funds for every withdrawal"
+  - "To make the balance a global variable that any code can change"
+  - "To remove the need for the method to take any inputs at all"
   answer: 0
   explanation: A method can validate a withdrawal and preserve invariants when it changes the object.
 provenance:

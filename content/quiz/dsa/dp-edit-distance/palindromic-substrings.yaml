@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Longest palindromic substring of abca. Can you use the subsequence table?
   options:
-  - No; the substring must be contiguous, so the answer is 1, not 3
-  - Yes, it gives 3
-  - Yes, after reversing
-  - Only for odd lengths
+  - "No; the substring must be contiguous, so the answer is 1, not 3"
+  - "Yes; the subsequence table gives 3, which is the substring answer"
+  - "Yes, after reversing the string and taking the LCS with itself"
+  - "Only for odd lengths; even-length substrings need another table"
   answer: 0
   misconceptions:
   - null

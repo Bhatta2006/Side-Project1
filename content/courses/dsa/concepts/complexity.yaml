@@ -168,7 +168,7 @@ quiz:
   - id: constraint-fit
     kind: mcq
     prompt: n can be 200,000. Which complexity is safe?
-    options: ["O(n log n)", "O(n²)", "O(n³)", "O(2^n)"]
+    options: ["O(n log n)", "O(n²)", "O(n² log n)", "O(2^n)"]
     answer: 0
     explanation: 200,000 × 18 ≈ 3.6·10^6 is fast; n² is 4·10^10.
     difficulty: 2
@@ -198,10 +198,10 @@ quiz:
                 work()
             i *= 2
     options:
-      - "O(n)"
       - "O(n log n)"
-      - "O(log n)"
       - "O(n²)"
+      - "O(n² log n)"
+      - "O(2^n)"
     answer: 0
     explanation: "The inner loop runs 1 + 2 + 4 + … < 2n times in total: a geometric series, so O(n)."
     difficulty: 4

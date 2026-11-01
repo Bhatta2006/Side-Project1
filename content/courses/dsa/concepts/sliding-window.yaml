@@ -177,7 +177,7 @@ quiz:
   - id: fixed-update
     kind: mcq
     prompt: A fixed window of size k moves one step right. How is its sum updated?
-    options: ["Add the new element, subtract the element that left", "Recompute the sum of k elements", "Multiply by k", "Add the new element only"]
+    options: ["Add the new element, subtract the element that left", "Recompute the sum of all k elements in the window", "Multiply the old sum by k and divide by k − 1", "Add the new element only; the old one stays in"]
     answer: 0
     explanation: Only two elements change, so the update is O(1).
     difficulty: 1
@@ -185,17 +185,17 @@ quiz:
     kind: mcq
     prompt: Why can't a sliding window find "longest subarray with sum exactly k" when values can be negative?
     options:
-      - Extending the window might decrease the sum, so you can't tell when to shrink
-      - Windows only work on strings
-      - Negative numbers overflow
-      - It works fine
+      - "Extending the window might decrease the sum, so you can't tell when to shrink"
+      - "Sliding windows only work on strings, not on arrays of numbers like these"
+      - "Negative numbers overflow the running sum once the window grows large"
+      - "It works fine; shrink whenever the sum goes above k, as for positives"
     answer: 0
     explanation: Validity must change monotonically with window size; negatives break that.
     difficulty: 3
   - id: complexity
     kind: mcq
     prompt: In the expand/shrink template, how many times can left move in total?
-    options: ["At most n times", "n² times", "log n times", "k times"]
+    options: ["At most n times", "Up to n² times", "About log n times", "Exactly k times"]
     answer: 0
     explanation: left only moves forward and never past n, so total work is O(n).
     difficulty: 2
@@ -211,9 +211,9 @@ quiz:
     prompt: "Why does the shrink-while-sum ≥ s window fail when values can be negative?"
     options:
       - "Removing an element can increase the sum, so shrinking is no longer safe"
-      - "Negative numbers overflow"
-      - "The window can be empty"
-      - "It doesn't fail"
+      - "Negative numbers overflow the running sum once the window grows long"
+      - "The window can become empty, so its minimum length is undefined"
+      - "It doesn't fail; negative values just make the window shrink faster"
     answer: 0
     explanation: "The window relies on sums growing when extended and falling when shrunk; negatives break that monotonicity. Use prefix sums with a structure instead."
     difficulty: 4

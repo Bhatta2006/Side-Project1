@@ -23,9 +23,9 @@ items:
     prompt: "For the longest run with at most k different values, what must the window remember?"
     options:
       - "How many times each value occurs inside the window"
-      - "The sum of the values inside"
-      - "Only the newest value"
-      - "The largest value seen so far"
+      - "The sum of all the values currently inside the window"
+      - "Only the newest value added on the right side"
+      - "The largest value seen so far, in or out of the window"
     answer: 0
     misconceptions: [null, window-sum-not-length, pattern-window-for-single-item, confuse-index-value]
     explanation: "Distinct values leave only when their count drops to zero, so the window needs a count per value."
@@ -35,9 +35,9 @@ items:
     prompt: "While shrinking, a value's count drops to 0. What must happen?"
     options:
       - "Remove the value from the map so it no longer counts as present"
-      - "Nothing: a zero count is harmless"
-      - "Move right back by one"
-      - "Reset the whole map"
+      - "Nothing: a zero count is harmless and the map size stays right"
+      - "Move right back by one so the value comes into the window again"
+      - "Reset the whole map and rebuild it from the new left edge"
     answer: 0
     misconceptions: [null, stale-zero-count, drop-wrong-end, reset-instead-of-shrink]
     explanation: "The number of distinct values is the size of the map; a stale zero entry keeps it too high."
@@ -83,9 +83,9 @@ items:
     prompt: "Count all subarrays with at most k different values. What do you add at each right end?"
     options:
       - "right − left + 1: every valid window ending at right"
-      - "1 when the window is valid"
-      - "The number of different values inside"
-      - "The length of the whole array"
+      - "1 whenever the window is valid, else nothing"
+      - "The number of different values inside the window"
+      - "The length of the whole array, once per step"
     answer: 0
     misconceptions: [null, window-length-off-by-one, distinct-count-not-length, pattern-brute-force-default]
     explanation: "If [left, right] is valid, every shorter window ending at right is valid too."

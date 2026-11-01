@@ -42,10 +42,10 @@ items:
   format: mcq
   prompt: Which problem is interval (partition) DP?
   options:
-  - Cheapest order to merge a row of piles, two neighbours at a time
-  - Fewest coins for an amount
-  - Longest increasing subsequence
-  - Count paths in a grid
+  - "Cheapest order to merge a row of piles, two neighbours at a time"
+  - "The fewest coins needed to pay an amount exactly"
+  - "The longest increasing subsequence of the piles"
+  - "The number of paths from corner to corner of a grid"
   answer: 0
   misconceptions:
   - null
@@ -122,10 +122,10 @@ items:
   format: bug_spot
   prompt: The table is filled row by row, i from 0 up. What goes wrong?
   options:
-  - dp[k+1][j] is read before its row is filled
-  - Nothing
-  - The answer is too large
-  - It runs forever
+  - "dp[k+1][j] is read before its row is filled"
+  - "Nothing; row order fills every range correctly"
+  - "The answer comes out too large by one merge"
+  - "It runs forever, revisiting the same ranges"
   answer: 0
   misconceptions:
   - null
@@ -138,10 +138,10 @@ items:
   format: classify
   prompt: Why does multiplying the cheapest neighbouring pair first fail?
   options:
-  - A cheap step can leave an expensive shape for later
-  - Pairs cannot be compared
-  - It counts multiplications twice
-  - It never fails
+  - "A cheap step can leave an expensive shape for later"
+  - "Neighbouring pairs cannot be compared on cost"
+  - "It counts the multiplications twice per merge"
+  - "It never fails; cheapest pair first is optimal"
   answer: 0
   misconceptions:
   - null
@@ -186,10 +186,10 @@ items:
   format: classify
   prompt: Cut a string into palindromes with the fewest cuts. Interval DP or a prefix DP?
   options:
-  - Prefix DP over the last piece, O(n²) with a palindrome table
-  - Interval DP over every range, O(n³)
-  - Greedy longest palindrome first
-  - Two pointers
+  - "Prefix DP over the last piece, O(n²) with a palindrome table"
+  - "Interval DP over every range, O(n³), like matrix chains"
+  - "Greedy: cut off the longest palindrome at the front first"
+  - "Two pointers from both ends, cutting at each mismatch"
   answer: 0
   misconceptions:
   - null
@@ -203,10 +203,10 @@ items:
   prompt: Bursting a balloon scores the product with its current neighbours. Which balloon defines the split
     of a range?
   options:
-  - The last one burst in the range
-  - The first one burst
-  - The largest one
-  - The middle one
+  - "The last one burst in the range"
+  - "The first one burst in the range"
+  - "The largest balloon in the range"
+  - "The middle balloon of the range"
   answer: 0
   misconceptions:
   - null
@@ -219,10 +219,10 @@ items:
   format: classify
   prompt: Merging two adjacent piles costs their total size. What is the join cost for range i..j?
   options:
-  - The sum of all piles in i..j, from a prefix sum
-  - The product of the end piles
-  - The size of pile k
-  - Zero
+  - "The sum of all piles in i..j, from a prefix sum"
+  - "The product of the two piles at the ends of i..j"
+  - "The size of the split pile k, added once"
+  - "Zero, since the two halves were already merged"
   answer: 0
   misconceptions:
   - null

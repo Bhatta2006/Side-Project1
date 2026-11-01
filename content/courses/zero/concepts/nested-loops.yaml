@@ -150,7 +150,7 @@ quiz:
   - id: body-count
     kind: mcq
     prompt: An outer loop runs 5 times and its inner loop runs 4 times each round. How many times does the inner body run?
-    options: ["20", "9", "5", "4"]
+    options: ["20", "9", "45", "16"]
     answer: 0
     explanation: Each of the 5 outer rounds runs the inner loop 4 times, so 5 × 4 = 20.
     difficulty: 1
@@ -178,7 +178,7 @@ quiz:
   - id: pairs
     kind: mcq
     prompt: To visit every pair of different items exactly once, the inner loop index j should start at...
-    options: ["i + 1", "0", "i", "n"]
+    options: ["i + 1", "0", "i", "n − 1"]
     answer: 0
     explanation: Starting after i skips pairing an item with itself and avoids visiting (i, j) and (j, i) twice.
     difficulty: 2
@@ -198,10 +198,10 @@ quiz:
             for j in range(i):
                 pass
     options:
-      - "10"
-      - "25"
-      - "15"
-      - "5"
+      - "i + 1"
+      - "0"
+      - "i"
+      - "n − 1"
     answer: 0
     explanation: "The inner loop runs 0 + 1 + 2 + 3 + 4 = 10 times."
     difficulty: 4

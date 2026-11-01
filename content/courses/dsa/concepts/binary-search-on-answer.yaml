@@ -648,10 +648,10 @@ quiz:
   kind: mcq
   prompt: Which problem is binary search on the answer?
   options:
-  - The smallest ship capacity that delivers every package within D days
-  - The position of 7 in a sorted array
-  - The sum of an array
-  - The longest increasing subsequence
+  - "The smallest ship capacity that delivers every package within D days"
+  - "The index of the value 7 in an array that is already sorted ascending"
+  - "The total sum of all the values in an array of package weights"
+  - "The length of the longest increasing subsequence of the weights"
   answer: 0
   explanation: Checking a capacity is easy and the check is monotone.
   difficulty: 1
@@ -681,10 +681,10 @@ quiz:
   kind: mcq
   prompt: Why is cutting near the average not enough?
   options:
-  - An early cut can leave too little room for the parts that come later
-  - The average is always the answer
-  - It is too slow
-  - It needs the array sorted
+  - "An early cut can leave too little room for the parts that come later"
+  - "The average is always the answer, so no search is needed at all"
+  - "Computing the average is too slow for arrays of 10^5 elements"
+  - "Cutting near the average only works when the array is sorted"
   answer: 0
   explanation: On 3 1 4 1 5 9 2 6 with k = 3 it gives 17 instead of 14.
   difficulty: 3
@@ -736,10 +736,10 @@ quiz:
   kind: mcq
   prompt: The k-th smallest number in an n × n multiplication table. What do you binary search over?
   options:
-  - The value x, counting the entries at most x
-  - The row index
-  - The positions in a merged list
-  - The column index
+  - "The value x, counting the entries at most x"
+  - "The row index, then binary search inside it"
+  - "The positions in the merged list of all rows"
+  - "The column index, counting rows below it"
   answer: 0
   explanation: The table is too big to list; counting entries at most x is O(n).
   difficulty: 5

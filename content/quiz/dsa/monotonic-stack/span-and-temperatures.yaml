@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: The temperatures stack stores temperatures, not indexes. What breaks?
   options:
-  - The waiting distance cannot be computed when a day is popped
-  - Nothing
-  - The order of pops
-  - It becomes O(n²)
+  - "The waiting distance cannot be computed when a day is popped"
+  - "Nothing; temperatures are enough to find each warmer day"
+  - "The order of pops changes, so days are answered too early"
+  - "It becomes O(n²), because values must be searched for"
   answer: 0
   misconceptions:
   - null

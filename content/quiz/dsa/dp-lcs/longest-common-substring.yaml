@@ -31,10 +31,10 @@ items:
   format: mcq
   prompt: Where is the answer to longest common substring?
   options:
-  - The largest cell anywhere in the table
-  - dp[n][m]
-  - dp[0][0]
-  - The last row only
+  - "The largest cell anywhere in the table"
+  - "dp[n][m], the bottom-right cell"
+  - "dp[0][0], the top-left base cell"
+  - "The largest cell in the last row"
   answer: 0
   misconceptions:
   - null

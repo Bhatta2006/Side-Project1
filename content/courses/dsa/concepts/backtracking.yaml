@@ -140,7 +140,7 @@ quiz:
   - id: template
     kind: mcq
     prompt: What is the backtracking template?
-    options: ["Choose, explore, un-choose", "Sort, scan, return", "Push, pop, peek", "Divide, sort, merge"]
+    options: ["Choose, explore, un-choose", "Sort, scan, then return", "Push, pop, then peek", "Divide, sort, then merge"]
     answer: 0
     explanation: Make a choice, recurse, then undo it before trying the next option.
     difficulty: 1
@@ -156,10 +156,10 @@ quiz:
     kind: mcq
     prompt: "In Python, result.append(current) instead of result.append(current[:]) causes..."
     options:
-      - Every saved subset to become the same (final) list
-      - A syntax error
-      - Faster execution
-      - Duplicate elements in each subset
+      - "Every saved subset to become the same (final) list"
+      - "A syntax error, since append needs a copied list"
+      - "Faster execution, because nothing is ever copied"
+      - "Duplicate elements appearing inside each subset"
     answer: 0
     explanation: All entries reference the one mutable list, which ends up empty.
     difficulty: 2

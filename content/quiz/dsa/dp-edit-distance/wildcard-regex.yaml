@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: Wildcard matching, p[j−1] is *. What is match[i][j]?
   options:
-  - match[i][j−1] or match[i−1][j]
-  - match[i−1][j−1]
-  - match[i][j−2]
-  - 'false'
+  - "match[i][j−1] or match[i−1][j]"
+  - "match[i−1][j−1] only, like ?"
+  - "match[i][j−2] or match[i−1][j]"
+  - "false unless i equals 0"
   answer: 0
   misconceptions:
   - null
@@ -31,10 +31,10 @@ items:
   format: mcq
   prompt: For which patterns is match[0][j] true?
   options:
-  - Only while p[:j] is all stars
-  - Every j
-  - Only j = 0
-  - Whenever p[j−1] is ?
+  - "Only while p[:j] is all stars"
+  - "For every j, since s is empty"
+  - "Only for j = 0, the empty pattern"
+  - "Whenever p[j−1] is a ? character"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: In regex matching, a* appears in the pattern. How is it skipped?
   options:
-  - Jump back two pattern positions (j − 2)
-  - Jump back one position
-  - It cannot be skipped
-  - Treat it like a wildcard star
+  - "Jump back two pattern positions (j − 2)"
+  - "Jump back one pattern position (j − 1)"
+  - "It cannot be skipped; a* must match once"
+  - "Treat it exactly like a wildcard * star"
   answer: 0
   misconceptions:
   - null

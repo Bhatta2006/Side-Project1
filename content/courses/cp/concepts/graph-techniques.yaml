@@ -146,7 +146,7 @@ quiz:
   - id: multisource
     kind: mcq
     prompt: Distance from every cell to the nearest of k exits — most efficient approach?
-    options: ["One BFS with all exits enqueued at distance 0", "k separate BFS runs", "Dijkstra from each cell", "Floyd–Warshall"]
+    options: ["One BFS with all exits enqueued at distance 0", "k separate BFS runs, one from each exit", "Dijkstra once from every cell of the grid", "Floyd–Warshall over all the grid's cells"]
     answer: 0
     explanation: Multi-source BFS solves it in a single O(V + E) pass.
     difficulty: 2
@@ -160,7 +160,7 @@ quiz:
   - id: negcycle
     kind: mcq
     prompt: Bellman–Ford detects a negative cycle when...
-    options: ["An edge still relaxes in the n-th round", "The graph is disconnected", "All distances are negative", "Dijkstra fails"]
+    options: ["An edge still relaxes in the n-th round", "The graph turns out to be disconnected", "Every final distance comes out negative", "Dijkstra gives a different answer on it"]
     answer: 0
     explanation: Without negative cycles, n − 1 rounds suffice; further improvement proves a cycle.
     difficulty: 3

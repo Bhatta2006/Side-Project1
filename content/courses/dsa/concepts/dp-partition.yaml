@@ -793,10 +793,10 @@ quiz:
   kind: mcq
   prompt: Which problem is partition (interval) DP?
   options:
-  - Multiply a chain of matrices in the cheapest bracket order
-  - Fewest coins for an amount
-  - Longest increasing subsequence
-  - Shortest path in a grid
+  - "Multiply a chain of matrices in the cheapest bracket order"
+  - "Pay an amount with the fewest coins of given denominations"
+  - "Find the longest increasing subsequence of a number array"
+  - "Find the shortest path from corner to corner in a grid"
   answer: 0
   explanation: Every bracketing ends with a final split of the range.
   difficulty: 1
@@ -848,10 +848,10 @@ quiz:
   kind: mcq
   prompt: Why think about the last balloon burst in a range, not the first?
   options:
-  - The last one sees only the fixed walls, so the two sides are independent
-  - It scores the most
-  - It is always the largest
-  - It does not matter
+  - "The last one sees only the fixed walls, so the two sides are independent"
+  - "The last balloon always scores the most points, so it should be chosen first"
+  - "The last balloon is always the largest one, so it bounds the whole answer"
+  - "It does not matter; thinking about the first balloon gives the same recurrence"
   answer: 0
   explanation: Bursting first changes neighbours on both sides.
   difficulty: 4
@@ -881,10 +881,10 @@ quiz:
   kind: mcq
   prompt: Why does boolean ways keep a false count as well?
   options:
-  - XOR and OR need the number of ways a part is false
-  - To print false answers
-  - It halves the work
-  - It is not needed
+  - "XOR and OR need the number of ways a part is false"
+  - "To print the bracketings that evaluate to false"
+  - "It halves the work by reusing the true counts"
+  - "It is not needed; false = total − true afterwards"
   answer: 0
   explanation: T ^ F counts left-true × right-false.
   difficulty: 5
