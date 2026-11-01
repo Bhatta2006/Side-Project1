@@ -178,7 +178,7 @@ quiz:
     answer: 0
     explanation: Together they bound the amortised cost by the inverse Ackermann function.
     difficulty: 2
-problems: [online-components]
+problems: [online-components, shared-cables]
 practice_links:
   - title: Redundant Connection
     url: https://leetcode.com/problems/redundant-connection/

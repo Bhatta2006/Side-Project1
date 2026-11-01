@@ -189,7 +189,7 @@ quiz:
     answer: 0
     explanation: Tries earn their memory cost through prefix operations.
     difficulty: 2
-problems: [prefix-counts]
+problems: [prefix-counts, vault-xor]
 practice_links:
   - title: Implement Trie (Prefix Tree)
     url: https://leetcode.com/problems/implement-trie-prefix-tree/

@@ -351,6 +351,10 @@ def test_concepts_link_curated_practice_and_company_lists(client):
     # A not-yet-started learner is offered easier problems first.
     assert practice[0]["difficulty"] == "easy"
     assert all(set(p) >= {"title", "url", "platform", "difficulty"} for p in practice)
+    # Two deliberately harder picks close the list, and it is not one site's problems only.
+    stretch = [p for p in practice if p.get("stretch")]
+    assert stretch and practice[-len(stretch) :] == stretch
+    assert len({p["platform"] for p in practice}) >= 2
     assert concept["handbook"][0]["url"].startswith("https://cses.fi/book/book.pdf#page=")
     assert all(
         i["url"].startswith("https://github.com/TheAlgorithms/") for i in concept["implementations"]

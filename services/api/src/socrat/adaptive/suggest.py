@@ -223,7 +223,12 @@ def stuck(catalog: Catalog, plan: Plan, s: Signals) -> list[Draft]:
     proposed: set[str] = set()
     for concept, signal in sorted(s.stuck.items()):
         weak = s.weak_prereqs.get(concept)
-        rung = next_rung(signal, set(s.tried.get(concept, ())), weak is not None)
+        rung = next_rung(
+            signal,
+            set(s.tried.get(concept, ())),
+            weak is not None,
+            bool(catalog.prerequisites.get(concept)),
+        )
         if rung is None or not rung[1]:
             continue
         name = _title(catalog, concept)

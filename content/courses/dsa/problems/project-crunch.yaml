@@ -1,0 +1,134 @@
+id: project-crunch
+title: Project crunch
+concepts: [topological-sort]
+difficulty: hard
+statement: |
+  A project has `n` tasks numbered `1..n`; task `i` takes `t[i]` days. Some pairs `a b` say
+  task `a` must be **finished** before task `b` can start. You have as many workers as you
+  like, so any number of tasks can run at the same time.
+
+  Print the fewest days needed to finish every task, or `-1` if the requirements contain a
+  cycle and the project can never finish.
+input_format: |
+  The first line contains n and m. The second line contains t[1..n].
+  Each of the next m lines contains a and b.
+output_format: The fewest days, or -1.
+constraints:
+  - 1 ≤ n ≤ 50000
+  - 0 ≤ m ≤ 100000
+  - 1 ≤ t[i] ≤ 10000
+  - 1 ≤ a, b ≤ n, a ≠ b (a pair may repeat)
+examples:
+  - input: "3 2\n3 2 5\n1 3\n2 3\n"
+    output: "8"
+    explanation: Tasks 1 and 2 run together; task 3 starts on day 3 and takes 5 days.
+  - input: "5 4\n1 2 3 4 5\n1 5\n2 5\n3 5\n4 5\n"
+    output: "9"
+  - input: "2 2\n1 1\n1 2\n2 1\n"
+    output: "-1"
+hints:
+  - When can a task start at the earliest? It depends only on its prerequisites.
+  - finish[b] = t[b] + the largest finish among b's prerequisites. You need those computed first, so process tasks in topological order.
+  - Kahn's algorithm gives the order and the cycle check at once. The answer is the largest finish time; if fewer than n tasks are processed, there is a cycle.
+approach: |
+  Run Kahn's algorithm. Keep start[v] = the latest finish among prerequisites seen so far.
+  When v is popped, finish[v] = start[v] + t[v], and each successor w gets
+  start[w] = max(start[w], finish[v]). The answer is max finish over all tasks. If the queue
+  empties before all n tasks are popped, some tasks wait on each other forever: print -1.
+  O(n + m). This is the longest path in a DAG with node weights (the critical path).
+reference: |
+  import sys
+  from collections import deque
+  data = sys.stdin.buffer.read().split()
+  n, m = int(data[0]), int(data[1])
+  t = [0] + [int(x) for x in data[2:2 + n]]
+  adj = [[] for _ in range(n + 1)]
+  indeg = [0] * (n + 1)
+  pos = 2 + n
+  for _ in range(m):
+      a, b = int(data[pos]), int(data[pos + 1])
+      pos += 2
+      adj[a].append(b)
+      indeg[b] += 1
+  start = [0] * (n + 1)
+  q = deque(v for v in range(1, n + 1) if indeg[v] == 0)
+  done = 0
+  best = 0
+  while q:
+      v = q.popleft()
+      done += 1
+      fin = start[v] + t[v]
+      if fin > best:
+          best = fin
+      for w in adj[v]:
+          if fin > start[w]:
+              start[w] = fin
+          indeg[w] -= 1
+          if indeg[w] == 0:
+              q.append(w)
+  print(best if done == n else -1)
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, m = int(data[0]), int(data[1])
+  t = [0] + [int(x) for x in data[2:2 + n]]
+  pairs = [(int(data[2 + n + 2 * i]), int(data[3 + n + 2 * i])) for i in range(m)]
+  finish = t[:]
+  changed = True
+  rounds = 0
+  while changed and rounds <= n + 1:
+      changed = False
+      rounds += 1
+      for a, b in pairs:
+          if finish[a] + t[b] > finish[b]:
+              finish[b] = finish[a] + t[b]
+              changed = True
+  print(-1 if changed else max(finish[1:]))
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          n = rng.randint(1, 6)
+          m = rng.randint(0, 8)
+          t = [rng.randint(1, 9) for _ in range(n)]
+          lines = [f"{n} {m}", " ".join(map(str, t))]
+          for _ in range(m):
+              if n == 1:
+                  lines[0] = f"{n} 0"
+                  break
+              a, b = rng.sample(range(1, n + 1), 2)
+              lines.append(f"{a} {b}")
+          yield "\n".join(lines)
+generator: |
+  def cases(rng):
+      yield "1 0\n7"
+      yield "4 3\n1 1 1 1\n1 2\n2 3\n3 4"
+      yield "3 3\n5 5 5\n1 2\n1 2\n2 3"
+      # A long chain: answer is the sum of every duration.
+      n = 50000
+      lines = [f"{n} {n - 1}", " ".join(["10000"] * n)]
+      lines += [f"{i} {i + 1}" for i in range(1, n)]
+      yield "\n".join(lines)
+      # A random DAG over a hidden order, then the same with one back edge (a cycle).
+      for cyclic in (False, True):
+          n, m = 50000, 100000
+          perm = list(range(1, n + 1))
+          rng.shuffle(perm)
+          lines = [f"{n} {m}", " ".join(str(rng.randint(1, 10000)) for _ in range(n))]
+          for _ in range(m - 1):
+              i, j = sorted(rng.sample(range(n), 2))
+              lines.append(f"{perm[i]} {perm[j]}")
+          lines.append(f"{perm[n - 1]} {perm[0]}" if cyclic else f"{perm[0]} {perm[n - 1]}")
+          yield "\n".join(lines)
+      for _ in range(5):
+          n = rng.randint(2, 9)
+          m = rng.randint(1, 12)
+          perm = list(range(1, n + 1))
+          rng.shuffle(perm)
+          lines = [f"{n} {m}", " ".join(str(rng.randint(1, 20)) for _ in range(n))]
+          for _ in range(m):
+              i, j = sorted(rng.sample(range(n), 2))
+              lines.append(f"{perm[i]} {perm[j]}")
+          yield "\n".join(lines)
+time_limit_ms: 3000
+provenance:
+  origin: original

@@ -211,7 +211,7 @@ quiz:
     answer: 0
     explanation: Marking on enqueue prevents the same node being queued multiple times.
     difficulty: 2
-problems: [count-islands, fewest-hops]
+problems: [count-islands, fewest-hops, wall-breaker]
 practice_links:
   - title: Number of Islands
     url: https://leetcode.com/problems/number-of-islands/

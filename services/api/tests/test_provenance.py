@@ -27,7 +27,11 @@ def test_every_existing_content_file_still_loads_without_provenance():
     assert sum(c.provenance is None for c in catalog.concepts.values()) == 61
     assert all(c.provenance.origin == "original" for c in catalog.concepts.values() if c.provenance)
     assert all(q.provenance is None for c in catalog.concepts.values() for q in c.quiz)
-    assert all(p.provenance is None for _, p in catalog.problems.values())
+    # Older problems load without provenance; newer ones record an original origin.
+    assert sum(p.provenance is not None for _, p in catalog.problems.values()) >= 10
+    assert all(
+        p.provenance.origin == "original" for _, p in catalog.problems.values() if p.provenance
+    )
     assert all(pack.provenance is None for pack in catalog.atom_packs.values())
 
 

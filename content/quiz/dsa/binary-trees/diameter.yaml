@@ -1,0 +1,109 @@
+id: quiz:dsa:binary-trees:diameter
+family: diameter
+concept: dsa:binary-trees
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: tree_diameter
+  params:
+    nodes:
+    - 5
+    - 9
+  reference: diameter(left, right)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: only the path through the root
+  misconception: tree-diameter-through-root
+- rule: nodes on the path instead of edges
+  misconception: path-nodes-vs-edges
+items:
+- id: traversal-orders
+  band: 2
+  format: mcq
+  prompt: Root A with left child B and right child C; B has a left child D. What is the post-order?
+  options:
+  - D B C A
+  - A B D C
+  - D B A C
+  - A B C D
+  answer: 0
+  misconceptions:
+  - null
+  - tree-pass-down-vs-return-up
+  - bst-insertion-position
+  - bfs-count-visited
+  explanation: 'Post-order visits left subtree, right subtree, then the node: D, B, then C, then A. A
+    B D C is pre-order, D B A C in-order, A B C D level order.'
+- id: same-tree-null
+  band: 3
+  format: mcq
+  prompt: A recursive height(node) returns 1 + max(height(left), height(right)). What must it return for
+    an empty child?
+  options:
+  - 0, so a leaf gets height 1
+  - 1, so every node counts at least once
+  - -1, so leaves get height 0, and that is the only correct choice
+  - 'Nothing: an empty child is never visited'
+  answer: 0
+  misconceptions:
+  - null
+  - path-nodes-vs-edges
+  - path-nodes-vs-edges
+  - tree-recursion-no-base
+  explanation: With nodes counted, null is 0. (Returning -1 also works if you count edges instead; it
+    is a convention, not the only answer.) Without a base case the recursion crashes on the first null
+    child.
+- id: edge-balanced
+  band: 5
+  format: mcq
+  prompt: Checking whether a tree is height-balanced by calling height() at every node costs O(n²) on
+    a chain. What makes it O(n)?
+  options:
+  - One post-order pass returning each subtree's height, or −1 once a subtree is unbalanced
+  - Compare only the root's left and right subtree heights, since imbalance shows at the top
+  - Count the nodes on each side of the root and require the counts to differ by at most one
+  - Walk level order and require every level except the last to be completely full
+  answer: 0
+  misconceptions:
+  - null
+  - tree-diameter-through-root
+  - tree-sum-all
+  - bfs-count-visited
+  explanation: Each node needs its children's heights, which the children already computed. Returning
+    height and the 'unbalanced' signal together avoids recomputation.
+- id: transfer-serialize
+  band: 7
+  format: classify
+  prompt: Serialize a binary tree to a string so it can be rebuilt exactly. What is enough?
+  options:
+  - Pre-order with an explicit marker for every empty child
+  - In-order alone, since it lists every value exactly once
+  - Pre-order alone, without markers for the empty children
+  - Level order of the values that exist, left to right
+  answer: 0
+  misconceptions:
+  - null
+  - bst-insertion-position
+  - tree-one-child-is-leaf
+  - bfs-count-visited
+  explanation: Null markers pin down the shape; with them, one pre-order walk rebuilds the tree. Without
+    markers you need two traversals (e.g. pre-order plus in-order with distinct values).
+hint_ladder:
+- For each node, how long is the longest path that bends at it?
+- That is the height of its left subtree plus the height of its right subtree, in edges.
+- The best bend can be below the root, so keep the maximum over every node.
+time_limit_s: 180
+provenance:
+  origin: original

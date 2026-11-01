@@ -157,7 +157,7 @@ quiz:
     answer: 0
     explanation: Sorting (by start, or by end for greedy selection) makes a linear sweep possible.
     difficulty: 1
-problems: [merge-intervals]
+problems: [merge-intervals, tightest-booking]
 practice_links:
   - title: Merge Intervals
     url: https://leetcode.com/problems/merge-intervals/

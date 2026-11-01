@@ -1,0 +1,110 @@
+id: quiz:dsa:sorting:partition
+family: partition
+concept: dsa:sorting
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: lomuto_partition
+  params:
+    n:
+    - 5
+    - 7
+    value:
+    - 1
+    - 30
+  reference: lomuto(a)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: one pass assumed to sort the array
+  misconception: sort-pass-equals-sorted
+- rule: partition assumed to keep the original order
+  misconception: partition-assumed-stable
+items:
+- id: stability
+  band: 3
+  format: mcq
+  prompt: You sort students by grade, then by class with a stable sort. What do you get?
+  options:
+  - Grouped by class, and within each class still ordered by grade
+  - Grouped by grade, with classes mixed
+  - Only ordered by class; the grade order is lost
+  - Ordered by grade only; the second sort is undone
+  answer: 0
+  misconceptions:
+  - null
+  - sort-stability-ignored
+  - sort-stability-ignored
+  - sort-stability-ignored
+  explanation: A stable sort keeps the earlier order among equal keys, so the grade order survives inside
+    each class. That's how multi-key sorts are built from the least significant key up.
+- id: quicksort-worst
+  band: 4
+  format: mcq
+  prompt: Quicksort always picks the last element as pivot. Which input is worst, and why?
+  options:
+  - 'An already sorted array: each partition peels off one value, O(n²)'
+  - A random array, because random order makes partitions unpredictable
+  - An array of distinct values, since every comparison then causes a swap
+  - 'None of them: quicksort''s partitioning keeps it O(n log n) on any input'
+  answer: 0
+  misconceptions:
+  - null
+  - quicksort-sorted-input-fast
+  - pattern-brute-force-default
+  - bst-assume-balanced
+  explanation: With a sorted input, the last element is the maximum, so each pass peels off one value.
+    A random pivot (or median of three) makes this unlikely.
+- id: edge-duplicates
+  band: 6
+  format: mcq
+  prompt: An array of 10⁶ copies of the same value. What happens to Lomuto quicksort, and what fixes it?
+  options:
+  - Every partition puts everything on one side, O(n²); three-way partitioning fixes it
+  - It finishes in O(n), because no value is smaller than the pivot so nothing moves
+  - It loops forever, because equal keys keep swapping with the pivot back and forth
+  - It is slow, but choosing the pivot at random instead of last fixes it completely
+  answer: 0
+  misconceptions:
+  - null
+  - quicksort-sorted-input-fast
+  - infinite-loop-condition
+  - partition-assumed-stable
+  explanation: With all keys equal, no value is < pivot, so the pivot lands at index 0 each time, whichever
+    pivot you pick. Dutch national flag partitioning groups the equal keys and skips them.
+- id: transfer-kth
+  band: 7
+  format: classify
+  prompt: Find the k-th smallest of n numbers without sorting all of them. What is the expected cost of
+    quickselect, and why?
+  options:
+  - 'O(n) expected: partition once, then continue only into the side holding position k'
+  - O(n log n), since it is quicksort with a different stopping point at the very end
+  - O(k log n), because it pops k values from a heap built over all of the n numbers
+  - O(log n), because each partition halves the array and only log n rounds are needed
+  answer: 0
+  misconceptions:
+  - null
+  - sort-pass-equals-sorted
+  - top-k-direction
+  - bst-assume-balanced
+  explanation: 'Each partition costs the current size and, with random pivots, the side you keep shrinks
+    geometrically: n + n/2 + … ≈ 2n. The pivot''s final index tells you which side holds k.'
+hint_ladder:
+- The pivot is the last value; which values are smaller than it?
+- Each smaller value swaps into slot i, then i moves right. What gets swapped out of slot i?
+- At the end the pivot swaps into slot i; the values after it are not sorted.
+time_limit_s: 180
+provenance:
+  origin: original

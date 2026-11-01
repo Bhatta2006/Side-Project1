@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CACHE = ROOT / ".cache" / "sources"
 OUT = ROOT / "content" / "practice"
 sys.path.insert(0, str(ROOT / "services" / "api" / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 REPOS = {
     "liquidslr": "https://github.com/liquidslr/leetcode-company-wise-problems",
@@ -467,6 +468,11 @@ def main() -> int:
     codeforces = load_codeforces()
     # Only keep problems Socrat can tie to a concept (drops JS-only and untagged items).
     problems = {k: v for k, v in {**leetcode, **cses, **codeforces}.items() if v["concepts"]}
+    # Narrow concepts (DP families, monotonic stack, …) by title and tag; see the module.
+    from practice_routing import route
+
+    for item in problems.values():
+        item["concepts"] = [c for c in route(item) if c in known]
     for item in problems.values():
         unknown = [c for c in item["concepts"] if c not in known]
         if unknown:

@@ -1,0 +1,114 @@
+id: quiz:dsa:intervals:merge
+family: merge
+concept: dsa:intervals
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: merge_intervals
+  params:
+    n:
+    - 4
+    - 6
+    span:
+    - 20
+    length:
+    - 5
+  reference: blocks(iv)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: merged without sorting first
+  misconception: intervals-unsorted
+- rule: touching intervals kept apart
+  misconception: intervals-touching-separate
+- rule: block end set to the last end, not the largest
+  misconception: intervals-end-not-max
+items:
+- id: max-disjoint
+  band: 4
+  format: mcq
+  prompt: Choose as many non-overlapping meetings as possible from a list. Sort by what, and keep which?
+  options:
+  - Sort by end time; keep each meeting that starts after the last kept one ends
+  - Sort by start time; keep each meeting that starts after the last kept one ends
+  - Sort by length; keep the shortest meetings first
+  - Sort by start time and merge overlapping meetings into blocks
+  answer: 0
+  misconceptions:
+  - null
+  - intervals-sort-by-start-for-max-disjoint
+  - greedy-partition
+  - intervals-end-not-max
+  explanation: Finishing earliest leaves the most room. By start, one long early meeting can block many
+    short ones; shortest-first fails on a short meeting overlapping two others.
+- id: rooms
+  band: 5
+  format: mcq
+  prompt: Meetings [0,30], [5,10], [15,20], [10,15] (end time free for the next start). How many rooms
+    are needed?
+  options:
+  - '2'
+  - '3'
+  - '1'
+  - '4'
+  answer: 0
+  misconceptions:
+  - null
+  - intervals-touching-separate
+  - intervals-unsorted
+  - intervals-count-input
+  explanation: '[0,30] needs its own room all along; the other three run back to back in a second room.
+    Sweep starts and ends sorted (ends before starts at the same time) and track the peak.'
+- id: edge-insert
+  band: 5
+  format: mcq
+  prompt: Insert [4, 8] into the sorted, disjoint list [1,2] [3,5] [6,7] [8,10] [12,16]. What is the result?
+  options:
+  - '[1,2] [3,10] [12,16]'
+  - '[1,2] [3,5] [4,8] [6,7] [8,10] [12,16]'
+  - '[1,2] [3,8] [8,10] [12,16]'
+  - '[1,2] [4,10] [12,16]'
+  answer: 0
+  misconceptions:
+  - null
+  - intervals-count-input
+  - intervals-touching-separate
+  - intervals-end-not-max
+  explanation: '[4,8] overlaps [3,5] and [6,7] and touches [8,10], so all four collapse into [3,10]. The
+    new block''s start is the smaller start (3), not 4.'
+- id: transfer-free-time
+  band: 7
+  format: classify
+  prompt: Each employee has a sorted list of busy intervals. Find the free time common to everyone. What
+    is the plan?
+  options:
+  - Merge every employee's busy intervals (sort or k-way heap), then report the gaps between blocks
+  - Intersect the free times of every pair of employees, then intersect all those results together
+  - Take the employee with the most meetings and report their gaps, since they're the bottleneck
+  - Count how many employees are busy at each minute of the day and report minutes with count 0
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - frequency-max-only
+  - pattern-brute-force-default
+  explanation: 'Time is commonly free exactly when nobody is busy, which is the gaps of the union of all
+    busy intervals: O(N log k) with a heap over k lists.'
+hint_ladder:
+- Sort by start. Does the next interval start before the current block ends?
+- 'Touching counts: an interval starting exactly at the block''s end joins it.'
+- When one joins, the block ends at the larger of the two ends, not the newest one.
+time_limit_s: 150
+provenance:
+  origin: original

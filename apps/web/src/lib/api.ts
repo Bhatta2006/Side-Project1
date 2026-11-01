@@ -113,7 +113,7 @@ const MESSAGES: Record<string, string> = {
   csrf_rejected: 'Your session token expired. Reload the page.',
   language_not_offered: 'That course is not offered in this language.',
   placement_in_progress: 'Finish the placement check first.',
-  already_enrolled: 'You already have a course. Continue it from Today.',
+  already_enrolled: 'Finish your current course first. Continue it from Today.',
   validation_failed: 'Some details are not valid. Check the form and try again.',
   authentication_required: 'Your session ended. Sign in again.',
   invalid_credentials: 'That email and password do not match. Check them, or use Forgot password.',

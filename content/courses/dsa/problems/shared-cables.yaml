@@ -1,0 +1,140 @@
+id: shared-cables
+title: Shared cables
+concepts: [union-find]
+difficulty: hard
+statement: |
+  Two companies, Red and Blue, share a campus of `n` buildings. There are `m` cables, each
+  joining two buildings and of one type: type 1 carries only Red's traffic, type 2 only
+  Blue's, and type 3 carries both.
+
+  The campus wants to remove as many cables as possible while Red can still reach every
+  building from every other using type 1 and 3 cables, and Blue can do the same with type 2
+  and 3 cables. Print the largest number of cables that can be removed, or `-1` if one of the
+  companies can't reach every building even with all cables kept.
+input_format: |
+  The first line contains n and m. Each of the next m lines contains type, u and v.
+output_format: The most cables that can be removed, or -1.
+constraints:
+  - 1 ≤ n ≤ 100000
+  - 1 ≤ m ≤ 100000
+  - 1 ≤ u, v ≤ n, u ≠ v (cables may repeat)
+examples:
+  - input: "4 6\n3 1 2\n3 2 3\n1 1 3\n1 2 4\n1 1 2\n2 3 4\n"
+    output: "2"
+    explanation: "Keep 3-1-2, 3-2-3, 1-2-4 and 2-3-4. The cables 1-1-3 and 1-1-2 are redundant."
+  - input: "4 4\n3 1 2\n3 2 3\n1 1 4\n2 1 4\n"
+    output: "0"
+  - input: "4 2\n3 2 3\n1 1 2\n"
+    output: "-1"
+hints:
+  - Every company needs a spanning tree of n − 1 cables. A shared cable can count for both trees at once. Which cables should you consider first?
+  - Use shared (type 3) cables first, adding one only when it joins two different groups. Why is that never worse than using a private cable in its place?
+  - "Two union-finds, one per company. Add every useful type-3 cable to both, then type-1 cables to Red's, then type-2 cables to Blue's. Count the kept cables; both structures must end with one group."
+approach: |
+  Each company needs a spanning tree; the fewest cables kept is n − 1 per company, minus
+  the shared cables that serve both. A type-3 cable that merges two groups is worth two
+  private cables, and a Kruskal-style exchange argument shows using all such cables first
+  never hurts. So: two disjoint-set structures. Pass 1: type 3, kept when it merges in either
+  structure (it merges in both, since both start equal). Pass 2: type 1 into Red's. Pass 3:
+  type 2 into Blue's. If either structure still has more than one group, print -1; else
+  m − kept. O(m α(n)).
+reference: |
+  import sys
+  data = sys.stdin.buffer.read().split()
+  n, m = int(data[0]), int(data[1])
+  edges = [(int(data[2 + 3 * i]), int(data[3 + 3 * i]), int(data[4 + 3 * i])) for i in range(m)]
+  def make():
+      return list(range(n + 1))
+  def find(parent, x):
+      root = x
+      while parent[root] != root:
+          root = parent[root]
+      while parent[x] != root:
+          parent[x], x = root, parent[x]
+      return root
+  red, blue = make(), make()
+  groups = [n, n]
+  kept = 0
+  for kind in (3, 1, 2):
+      for t, u, v in edges:
+          if t != kind:
+              continue
+          joined = False
+          for idx, parent in ((0, red), (1, blue)):
+              if (kind == 1 and idx == 1) or (kind == 2 and idx == 0):
+                  continue
+              a, b = find(parent, u), find(parent, v)
+              if a != b:
+                  parent[a] = b
+                  groups[idx] -= 1
+                  joined = True
+          if joined:
+              kept += 1
+  print(m - kept if groups == [1, 1] else -1)
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, m = int(data[0]), int(data[1])
+  edges = [(int(data[2 + 3 * i]), int(data[3 + 3 * i]), int(data[4 + 3 * i])) for i in range(m)]
+  def connected(chosen, allowed):
+      adj = {v: [] for v in range(1, n + 1)}
+      for t, u, v in chosen:
+          if t in allowed:
+              adj[u].append(v)
+              adj[v].append(u)
+      seen = {1}
+      todo = [1]
+      while todo:
+          for y in adj[todo.pop()]:
+              if y not in seen:
+                  seen.add(y)
+                  todo.append(y)
+      return len(seen) == n
+  best = -1
+  for mask in range(1 << m):
+      chosen = [edges[i] for i in range(m) if mask >> i & 1]
+      if connected(chosen, (1, 3)) and connected(chosen, (2, 3)):
+          best = max(best, m - len(chosen))
+  print(best)
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          n = rng.randint(1, 5)
+          m = rng.randint(1, 9)
+          lines = [f"{n} {m}"]
+          for _ in range(m):
+              if n == 1:
+                  u = v = 1
+              else:
+                  u, v = rng.sample(range(1, n + 1), 2)
+              lines.append(f"{rng.randint(1, 3)} {u} {v}")
+          if n == 1:
+              lines = ["2 1", "3 1 2"]
+          yield "\n".join(lines)
+generator: |
+  def cases(rng):
+      yield "2 1\n3 1 2"
+      yield "2 2\n1 1 2\n2 1 2"
+      yield "2 3\n1 1 2\n2 1 2\n3 1 2"
+      yield "3 2\n1 1 2\n2 2 3"
+      for n, m, mix in ((100000, 100000, (1, 2, 3)), (50000, 100000, (3,)), (40000, 100000, (1, 2, 2, 3))):
+          lines = [f"{n} {m}"]
+          for i in range(2, n + 1):
+              if len(lines) > m:
+                  break
+              lines.append(f"3 {rng.randint(1, i - 1)} {i}" if len(mix) == 1 else f"{rng.choice(mix)} {rng.randint(1, i - 1)} {i}")
+          while len(lines) <= m:
+              u, v = rng.sample(range(1, n + 1), 2)
+              lines.append(f"{rng.choice(mix)} {u} {v}")
+          yield "\n".join(lines)
+      for _ in range(5):
+          n = rng.randint(2, 8)
+          m = rng.randint(1, 16)
+          lines = [f"{n} {m}"]
+          for _ in range(m):
+              u, v = rng.sample(range(1, n + 1), 2)
+              lines.append(f"{rng.randint(1, 3)} {u} {v}")
+          yield "\n".join(lines)
+time_limit_ms: 3000
+provenance:
+  origin: original

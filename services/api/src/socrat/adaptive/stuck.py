@@ -104,12 +104,23 @@ def detect(profile: SkillProfile, now: int) -> Stuck | None:
     )
 
 
-def next_rung(stuck: Stuck, tried: set[str], has_weak_prereq: bool) -> tuple[str, bool] | None:
-    """The mildest untried rung that fits; ``tried`` holds rung names already used."""
+def next_rung(
+    stuck: Stuck, tried: set[str], has_weak_prereq: bool, has_prereqs: bool = True
+) -> tuple[str, bool] | None:
+    """The mildest untried rung that fits; ``tried`` holds rung names already used.
+
+    Every rung used without getting unstuck raises the effective severity, so a learner who
+    keeps missing after the gentle rungs reaches the tutor and then the option to move on,
+    instead of retaking the same check forever.
+    """
+    used = {r for r, _, _ in LADDER} & tried
+    severity_now = min(3, stuck.severity + (len(used) + 1) // 2)
     for rung, proposal, severity in LADDER:
         if rung in tried or (rung == "repair" and not has_weak_prereq):
             continue
-        if stuck.severity < severity:
+        if rung == "probe" and not has_prereqs:
+            continue  # nothing underneath to probe
+        if severity_now < severity:
             return None
         return rung, proposal
     return None

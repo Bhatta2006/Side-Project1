@@ -163,7 +163,7 @@ quiz:
     answer: 0
     explanation: Both keys live in the right subtree, so their split point is there too.
     difficulty: 2
-problems: [bst-validate]
+problems: [bst-validate, shorter-to-the-right]
 practice_links:
   - title: Validate Binary Search Tree
     url: https://leetcode.com/problems/validate-binary-search-tree/

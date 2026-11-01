@@ -177,7 +177,7 @@ quiz:
     answer: 0
     explanation: A node's size is 1 + left size + right size, so children must be done first.
     difficulty: 2
-problems: [tree-levels, tree-diameter]
+problems: [tree-levels, tree-diameter, village-sentries]
 practice_links:
   - title: Invert Binary Tree
     url: https://leetcode.com/problems/invert-binary-tree/

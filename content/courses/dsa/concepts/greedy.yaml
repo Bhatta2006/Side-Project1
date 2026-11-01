@@ -156,7 +156,7 @@ quiz:
     answer: 0
     explanation: If the current index exceeds the farthest reachable index, the end cannot be reached.
     difficulty: 2
-problems: [max-meetings, can-reach-end]
+problems: [max-meetings, can-reach-end, seed-fund]
 practice_links:
   - title: Jump Game
     url: https://leetcode.com/problems/jump-game/

@@ -270,6 +270,11 @@ def context(
     return ctx, items, modes.ceiling(track, pool, top, cfg)
 
 
+def item_reviewed(cat: Catalog, key: str, cfg: EngineConfig = DEFAULT) -> bool:
+    item = next((i for i in bank(cat, cfg) if i.key == key), None)
+    return bool(item and item.reviewed)
+
+
 def advance(
     db: Session,
     cat: Catalog,
@@ -295,8 +300,23 @@ def advance(
             user = db.get(User, enrollment.user_id)
             if user is None:
                 raise HTTPException(401, "authentication_required")
+            concept = session.concepts[0]
+            if done and not any(item_reviewed(cat, s.item, cfg) for s in done):
+                # No answer here counted per item (content not yet reviewed), yet the result
+                # still decides the plan: one session-level row lets support and stuck
+                # detection see a missed check without inflating mastery item by item.
+                learn.record_evidence(
+                    db,
+                    enrollment,
+                    concept,
+                    "quiz",
+                    score,
+                    f"adaptive:concept_check:{concept}",
+                    now,
+                    details={"engine_session": session.id, "unreviewed": True, "items": len(done)},
+                )
             state["passed"] = quizzes.settle_check(
-                db, user, enrollment, f"quiz:{session.concepts[0]}", score, now
+                db, user, enrollment, f"quiz:{concept}", score, now
             )
             state["score"] = round(score, 3)
         elif session.mode == "testout":

@@ -1,0 +1,134 @@
+id: quiz:dsa:shortest-paths:dijkstra
+family: dijkstra
+concept: dsa:shortest-paths
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: dijkstra_distance
+  params:
+    n:
+    - 5
+    - 7
+    extra:
+    - 2
+    - 4
+    weight:
+    - 1
+    - 9
+  reference: cheapest(adj, t)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: cheapest of the fewest-edge paths
+  misconception: dijkstra-fewest-edges
+- rule: distance fixed when first discovered
+  misconception: dijkstra-settle-on-push
+- rule: greedy walk along the cheapest edge
+  misconception: dijkstra-greedy-walk
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Roads have travel times (all positive). You need the quickest route from home to every town.
+    Which algorithm?
+  options:
+  - 'Dijkstra with a min-heap: O((V + E) log V)'
+  - BFS from home, counting roads
+  - DFS from home, keeping the first time each town is reached
+  - Sort the roads by time and add them in that order
+  answer: 0
+  misconceptions:
+  - null
+  - dijkstra-fewest-edges
+  - dfs-not-shortest
+  - pattern-sort-breaks-order
+  explanation: With unequal positive weights, fewest roads is not quickest. Dijkstra settles towns in
+    order of true distance.
+- id: stale-entries
+  band: 4
+  format: mcq
+  prompt: Why does the heap loop skip an entry when d > dist[x]?
+  options:
+  - 'It''s a stale copy: x was pushed again with a smaller distance and already handled'
+  - It signals a negative edge, so the entry is ignored to keep the distances correct
+  - It means x can't be reached from the start, so there is nothing to relax from it
+  - 'It saves memory: skipping entries shrinks the heap so it never exceeds V entries'
+  answer: 0
+  misconceptions:
+  - null
+  - dijkstra-negative-edges
+  - missing-unreachable-check
+  - heap-size-vs-input-size
+  explanation: 'Lazy deletion: instead of decreasing a key, push a new pair and skip outdated ones when
+    popped. Without the skip, results stay correct but work can blow up.'
+- id: edge-negative
+  band: 6
+  format: mcq
+  prompt: Edges 0→1 (2), 0→2 (5), 2→1 (−4). What does Dijkstra report for node 1, and what is the truth?
+  options:
+  - 'Reports 2, truth is 1: node 1 was settled before the negative edge was seen'
+  - 'Reports 1, which is right: Dijkstra handles a single negative edge'
+  - Reports −4, the weight of the last edge relaxed
+  - It loops forever because of the negative edge
+  answer: 0
+  misconceptions:
+  - null
+  - dijkstra-negative-edges
+  - dijkstra-edge-not-path
+  - infinite-loop-condition
+  explanation: Node 1 pops at distance 2 and is treated as final; the route 0→2→1 costs 1. With negative
+    edges use Bellman-Ford (or SPFA), which also detects negative cycles.
+- id: edge-01
+  band: 5
+  format: mcq
+  prompt: Every edge weighs 0 or 1. What is faster than Dijkstra?
+  options:
+  - '0-1 BFS: a deque with 0-edges pushed to the front and 1-edges to the back'
+  - Plain BFS that ignores the weights, since 0 and 1 are both small enough
+  - Floyd-Warshall, because with weights this small the triple loop is cheap
+  - DFS that always follows 0-edges first, so cheap paths are found earlier
+  answer: 0
+  misconceptions:
+  - null
+  - dijkstra-fewest-edges
+  - pattern-brute-force-default
+  - dfs-not-shortest
+  explanation: The deque keeps nodes in nondecreasing distance order without a heap. Plain BFS would count
+    0-edges as steps.
+- id: transfer-k-stops
+  band: 7
+  format: classify
+  prompt: Cheapest flight from A to B using at most k stops. Why does plain Dijkstra on cities fail, and
+    what works?
+  options:
+  - 'A cheaper route may use more stops: search (city, stops) or run k + 1 Bellman-Ford rounds'
+  - 'It doesn''t fail: Dijkstra''s cheapest route always uses the fewest stops between cities'
+  - It fails only with negative prices; with positive prices the cheapest route is legal
+  - Use BFS by number of stops and take the first route that reaches B as the answer
+  answer: 0
+  misconceptions:
+  - null
+  - dijkstra-fewest-edges
+  - dijkstra-negative-edges
+  - dfs-not-shortest
+  explanation: Settling a city at its cheapest price can discard a pricier route with fewer stops that
+    is the only legal one. Bounding rounds (Bellman-Ford with a copy per round) or adding stops to the
+    state fixes it.
+hint_ladder:
+- Which node does the heap hand out next, and with what distance?
+- A node is final when it is popped with its current distance; later entries for it are stale.
+- Relax each edge out of the popped node; a longer path in edges can still be cheaper.
+time_limit_s: 180
+provenance:
+  origin: original

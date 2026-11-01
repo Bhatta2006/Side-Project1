@@ -175,7 +175,7 @@ quiz:
     answer: 0
     explanation: Unit weights make BFS order equal to distance order — no heap needed.
     difficulty: 1
-problems: [cheapest-routes]
+problems: [cheapest-routes, deadline-tolls]
 practice_links:
   - title: Network Delay Time
     url: https://leetcode.com/problems/network-delay-time/

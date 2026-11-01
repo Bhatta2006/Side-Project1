@@ -128,6 +128,17 @@ def tried(db: Session, enrollment: Enrollment) -> dict[str, frozenset[str]]:
         concept = row.payload.get("for") or row.payload.get("concept")
         if concept:
             used[concept].add(RUNG_OF[row.kind])
+    # In-concept support the learner already went through counts as a used rung too, so
+    # proposals and the planner agree on where the ladder stands.
+    for activity in db.scalars(
+        select(ActivityRecord.activity_id).where(
+            ActivityRecord.enrollment_id == enrollment.id,
+            ActivityRecord.completed_at.is_not(None),
+        )
+    ):
+        kind, _, concept = activity.partition(":")
+        if kind in engine.SUPPORT_MINUTES and concept:
+            used[concept].add(kind)
     return {c: frozenset(v) for c, v in used.items()}
 
 

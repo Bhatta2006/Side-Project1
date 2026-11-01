@@ -1,0 +1,127 @@
+id: quiz:dsa:bst:search-path
+family: search-path
+concept: dsa:bst
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: bst_search_path
+  params:
+    n:
+    - 6
+    - 9
+    value:
+    - 10
+    - 60
+  reference: depth(vals, q)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: the depth a balanced tree would have
+  misconception: bst-assume-balanced
+- rule: the value's rank in sorted order
+  misconception: bst-rank-not-depth
+items:
+- id: validate
+  band: 4
+  format: mcq
+  prompt: A check walks the tree and verifies left.key < node.key < right.key at every node. Why is that
+    not enough to prove it is a BST?
+  options:
+  - A key deep in a left subtree can exceed an ancestor; each node needs the bounds from all ancestors
+  - 'It is enough: if every parent and child are in order, every pair in the tree is in order too'
+  - It only fails when keys repeat, because then left and right can both hold an equal key
+  - It only fails for trees deeper than two levels where some node is missing one of its children
+  answer: 0
+  misconceptions:
+  - null
+  - bst-local-check-only
+  - top-k-distinct-confusion
+  - bst-assume-balanced
+  explanation: 'Root 10, left child 5, and 5''s right child 12: every parent-child pair is fine, but 12
+    is in 10''s left subtree. Pass bounds down, or check that the in-order walk is strictly increasing.'
+- id: inorder
+  band: 2
+  format: mcq
+  prompt: What does an in-order traversal of a BST visit the keys in?
+  options:
+  - Increasing order
+  - Insertion order
+  - Level by level from the root
+  - Decreasing order
+  answer: 0
+  misconceptions:
+  - null
+  - bst-insertion-position
+  - bfs-count-visited
+  - bst-direction-swapped
+  explanation: 'Left subtree (all smaller), the node, then right subtree (all larger): sorted order. That''s
+    why the k-th smallest is the k-th node visited in order.'
+- id: edge-sorted-input
+  band: 5
+  format: mcq
+  prompt: You insert 1, 2, 3, …, n into an empty plain BST. What is the cost of searching for n afterwards?
+  options:
+  - 'O(n): the tree is one long right-leaning chain'
+  - 'O(log n): a BST always halves the search'
+  - 'O(1): the last key inserted sits at the root'
+  - 'O(n log n): each level must be scanned'
+  answer: 0
+  misconceptions:
+  - null
+  - bst-assume-balanced
+  - bst-insertion-position
+  - heap-size-vs-input-size
+  explanation: Each key is larger than all before it, so it hangs off the right of the previous one. Self-balancing
+    trees (red-black, AVL) or shuffling the input avoid this.
+- id: edge-delete-two-children
+  band: 6
+  format: mcq
+  prompt: 'Deleting a node with two children from a BST: what replaces its key?'
+  options:
+  - Its in-order successor (smallest key in the right subtree), then delete that node there
+  - Its left child's key, after which the left child is removed and its subtree moved up
+  - The larger of its two children's keys, so the right side keeps every key above it
+  - The root's key, after which the root is rebuilt so the tree stays balanced around it
+  answer: 0
+  misconceptions:
+  - null
+  - bst-local-check-only
+  - min-vs-max
+  - bst-compare-root-only
+  explanation: The successor is larger than everything on the left and smaller than the rest on the right,
+    so order holds. It has no left child, so removing it is the easy case (the predecessor works too).
+- id: transfer-lca
+  band: 7
+  format: classify
+  prompt: Lowest common ancestor of two keys p < q in a BST. What is the fastest walk?
+  options:
+  - From the root, go left while both are smaller, right while both larger; stop at the split
+  - Store both root-to-key paths in lists and compare them node by node until they differ
+  - Run the general binary-tree LCA recursion, which visits every node in the tree once
+  - Return whichever of the two keys sits closer to the root, since it must be the ancestor
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  - lca-not-self
+  explanation: The BST order tells you which side both keys are on, so the walk is O(height) with O(1)
+    space; the split point is the LCA (and may be p or q itself).
+hint_ladder:
+- Insert the values one by one; where does each go relative to the keys already there?
+- The first value is the root; the order of insertion, not sorted order, sets the shape.
+- Count the nodes on the path from the root down to the key you search for.
+time_limit_s: 180
+provenance:
+  origin: original

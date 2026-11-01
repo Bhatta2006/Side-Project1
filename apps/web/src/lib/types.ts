@@ -318,6 +318,17 @@ export interface Today {
   nudges: Nudge[];
   proposals: Proposal[];
   milestone: Milestone | null;
+  /** Set once every planned skill is learned: what the finished course leads to. */
+  finale?: Finale | null;
+}
+
+export interface Finale {
+  /** Every skill re-proven after a gap, not only learned. */
+  graduated: boolean;
+  to_master: number;
+  /** Hardest problems of the course not solved yet. */
+  challenges: { id: string; title: string; difficulty: 'easy' | 'medium' | 'hard' }[];
+  next_course: { id: string; title: string } | null;
 }
 
 export interface RoadmapItem {
@@ -457,6 +468,8 @@ export interface ExternalProblem {
 }
 
 export interface LibraryProblem extends ExternalProblem {
+  /** A deliberately harder pick above the learner's level. */
+  stretch?: boolean;
   status: PracticeStatus | null;
   bookmarked: boolean;
   concept: { id: string; title: string; band: Band } | null;

@@ -1,0 +1,110 @@
+id: quiz:dsa:tries:nodes
+family: nodes
+concept: dsa:tries
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: trie_nodes
+  params:
+    n:
+    - 4
+    - 6
+    letters:
+    - 3
+  reference: nodes(words)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: one node per letter typed
+  misconception: trie-node-per-letter
+- rule: the root counted as a node
+  misconception: trie-count-root
+items:
+- id: end-flag
+  band: 3
+  format: mcq
+  prompt: A trie holds "cart" only. search("car") walks c → a → r successfully. What stops it from wrongly
+    returning true?
+  options:
+  - Each node stores whether a word ends there; "r" has that flag off
+  - 'Nothing: in a trie every prefix of a stored word counts as stored'
+  - '"r" has a child, and nodes with children are never word ends'
+  - Comparing the length of "car" with the trie's height
+  answer: 0
+  misconceptions:
+  - null
+  - trie-missing-end-flag
+  - trie-missing-end-flag
+  - confuse-index-value
+  explanation: Without an end-of-word flag you can't tell "car" from a prefix of "cart". A node can be
+    a word end and still have children ("car" and "cart" both stored).
+- id: cost
+  band: 2
+  format: mcq
+  prompt: Looking up a word of length L in a trie holding n words costs what?
+  options:
+  - O(L)
+  - O(log n)
+  - O(n · L)
+  - O(n)
+  answer: 0
+  misconceptions:
+  - null
+  - bst-assume-balanced
+  - pattern-brute-force-default
+  - heap-size-vs-input-size
+  explanation: One step per letter, whatever n is. That's the trie's edge over a hash set when you also
+    need prefix queries.
+- id: edge-delete
+  band: 6
+  format: mcq
+  prompt: The trie holds "car" and "cart". You delete "car". What should change?
+  options:
+  - Only clear the end flag on "r"; "cart" still needs those nodes
+  - Remove the nodes c, a and r, since they spell the deleted word
+  - Remove node r and reattach its child t directly to the node a
+  - 'Nothing: tries can''t delete, so rebuild the trie without "car"'
+  answer: 0
+  misconceptions:
+  - null
+  - trie-node-per-word
+  - trie-restart-at-root
+  - missing-unreachable-check
+  explanation: Nodes are shared prefixes. Delete clears the flag, then prunes upward only nodes with no
+    children and no end flag.
+- id: transfer-word-search
+  band: 7
+  format: classify
+  prompt: Find every word from a list of 10,000 words that appears in a letter grid (adjacent cells).
+    What scales?
+  options:
+  - Words in a trie, one DFS per cell following trie edges, stopping when no word has that prefix
+  - For each of the 10,000 words, run a DFS from every cell of the grid looking for that word
+  - Words in a hash set; DFS every grid path up to the longest word's length and look each up
+  - Sort the words, then binary-search every path the grid can form against the sorted list
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  explanation: The trie prunes a path the moment no word starts with it and explores all words at once.
+    Per-word DFS repeats the grid walk 10,000 times; the hash set can't prune prefixes.
+hint_ladder:
+- Which prefixes of each word are already in the trie when it is inserted?
+- A node is created only for a letter that extends an existing prefix in a new way.
+- Count distinct prefixes across all words; the root is the empty prefix and isn't counted.
+time_limit_s: 150
+provenance:
+  origin: original

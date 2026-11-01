@@ -174,7 +174,7 @@ quiz:
     answer: 0
     explanation: Always choosing the smallest available node produces the smallest order; sorting afterwards breaks validity.
     difficulty: 3
-problems: [course-order]
+problems: [course-order, project-crunch]
 practice_links:
   - title: Course Schedule
     url: https://leetcode.com/problems/course-schedule/

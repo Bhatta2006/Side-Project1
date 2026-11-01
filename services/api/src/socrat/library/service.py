@@ -383,7 +383,12 @@ def concept_practice(
     now: int,
     curated: list[str] | None = None,
 ) -> list[dict]:
-    """Personalised "practice more" list for a lesson page; authored picks come first."""
+    """Personalised "practice more" list for a lesson page; authored picks come first.
+
+    Six problems sit at the learner's level and two are stretch problems above it (the
+    ones meant to be hard), drawn from every platform the library has for the concept so
+    the list is not one site's problems only.
+    """
     index = practice.default_index()
     learner = learner_for(db, catalog, user, enrollment, now)
     if concept not in (learner.ready_concepts or set()):
@@ -391,19 +396,48 @@ def concept_practice(
     marks = marks_for(db, user.id)
     authored = [p for p in (index.find_url(u) for u in curated or []) if p is not None]
     taken = {p["id"] for p in authored}
-    ranked = recommend.best_for(index, learner, concept, 8 + len(taken))
-    picks = authored + [p for p in ranked if p["id"] not in taken][: max(0, 8 - len(authored))]
-    if len(picks) < 8:  # widen beyond the ideal window rather than show nothing
+    level = mixed(recommend.best_for(index, learner, concept, 30, exclude=taken), LEVEL_PICKS)
+    taken |= {p["id"] for p in level}
+    stretch = mixed(
+        recommend.best_for(index, learner, concept, 20, stretch=True, exclude=taken), STRETCH_PICKS
+    )
+    picks = authored + level[: max(0, LEVEL_PICKS - len(authored))]
+    if len(picks) < LEVEL_PICKS:  # widen beyond the ideal window rather than show nothing
+        chosen = {p["id"] for p in picks} | {p["id"] for p in stretch}
         extra = sorted(
             (
                 index.problems[i]
                 for i in index.by_concept.get(concept, [])
-                if i not in {p["id"] for p in picks} and i not in learner.solved
+                if i not in chosen and i not in learner.solved
             ),
             key=lambda p: abs(practice.rating_of(p) - recommend.window(learner, concept)[0]),
         )
-        picks += extra[: 8 - len(picks)]
-    return [row(catalog, learner, p, marks) for p in picks if learner.can_practice(p)]
+        picks += extra[: LEVEL_PICKS - len(picks)]
+    rows = [row(catalog, learner, p, marks) for p in picks if learner.can_practice(p)]
+    rows += [
+        {**row(catalog, learner, p, marks), "stretch": True}
+        for p in stretch
+        if learner.can_practice(p)
+    ]
+    return rows
+
+
+LEVEL_PICKS = 6
+STRETCH_PICKS = 2
+
+
+def mixed(ranked: list[dict], limit: int) -> list[dict]:
+    """The best ``limit`` problems, taking platforms in turn so no one site fills the list."""
+    by_platform: dict[str, list[dict]] = {}
+    for problem in ranked:
+        by_platform.setdefault(problem["platform"], []).append(problem)
+    queues = sorted(by_platform.values(), key=lambda q: ranked.index(q[0]))
+    out: list[dict] = []
+    while len(out) < limit and any(queues):
+        for queue in queues:
+            if queue and len(out) < limit:
+                out.append(queue.pop(0))
+    return out
 
 
 # ---------------------------------------------------------------- solved board

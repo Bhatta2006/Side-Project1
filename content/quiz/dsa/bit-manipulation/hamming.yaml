@@ -1,0 +1,107 @@
+id: quiz:dsa:bit-manipulation:hamming
+family: hamming
+concept: dsa:bit-manipulation
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: hamming_kernighan
+  params:
+    value:
+    - 5
+    - 60
+  reference: hamming(a, b)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: bit counts of a and b added
+  misconception: bit-xor-as-sum
+- rule: bit length instead of set bits
+  misconception: bit-length-vs-count
+items:
+- id: single-number
+  band: 2
+  format: mcq
+  prompt: Every number in an array appears twice except one. Why does XOR-ing all of them give that one?
+  options:
+  - x ^ x = 0 and x ^ 0 = x, and XOR's order does not matter, so the pairs cancel
+  - XOR adds the numbers without carries, so the pairs double and drop out
+  - XOR keeps the largest number, which must be the single one
+  - It only works when the array is sorted
+  answer: 0
+  misconceptions:
+  - null
+  - bit-xor-as-sum
+  - min-vs-max
+  - pattern-sort-breaks-order
+  explanation: XOR is associative and commutative, every pair contributes x ^ x = 0, and 0 ^ single =
+    single. O(n) time, O(1) space.
+- id: power-of-two
+  band: 3
+  format: mcq
+  prompt: Which test is true exactly when a positive integer n is a power of two?
+  options:
+  - (n & (n - 1)) == 0
+  - (n & 1) == 0
+  - (n ^ (n - 1)) == 0
+  - (n | (n - 1)) == n
+  answer: 0
+  misconceptions:
+  - null
+  - bit-test-wrong
+  - bit-and-vs-xor
+  - bit-and-vs-xor
+  explanation: A power of two has a single 1 bit; n - 1 flips it and sets every bit below, so the AND
+    is 0. (n & 1) == 0 only says n is even.
+- id: edge-negative-shift
+  band: 6
+  format: mcq
+  prompt: 'Counting set bits with `while x != 0: count += x & 1; x >>= 1`. What happens for x = -1 in
+    C++ or Java (int)?'
+  options:
+  - The arithmetic shift keeps the sign bit, so x stays −1 and the loop never ends
+  - It counts 32, because every one of the 32 bits of −1 is set and each is visited
+  - It counts 1, because only the sign bit marks the number as negative and is set
+  - It counts 0, because the loop condition treats negative numbers as already done
+  answer: 0
+  misconceptions:
+  - null
+  - bit-shift-signed
+  - bit-length-vs-count
+  - bit-test-wrong
+  explanation: -1 >> 1 is -1 for signed ints. Use x &= x - 1 (which ends after 32 rounds for -1), an unsigned
+    type, or Java's >>>.
+- id: transfer-subsets
+  band: 5
+  format: classify
+  prompt: You need every subset of 15 items, each as a quick membership test. What representation fits?
+  options:
+  - Masks 0 … 2^15 − 1; item i is in mask m when (m >> i) & 1 is 1
+  - A list of lists built by recursion, then a hash set per subset
+  - The numbers 0 … 15, one per subset
+  - Strings of '0'/'1' compared character by character
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - subsets-vs-elements
+  - pattern-brute-force-default
+  explanation: 32,768 masks, each a single int; membership is one shift and AND. That's the backbone of
+    bitmask DP.
+hint_ladder:
+- Write both numbers in binary, one above the other.
+- XOR leaves a 1 exactly where the bits differ.
+- Each round of x &= x - 1 removes one 1 bit; count the rounds.
+time_limit_s: 120
+provenance:
+  origin: original

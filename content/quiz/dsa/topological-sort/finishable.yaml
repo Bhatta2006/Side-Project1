@@ -1,0 +1,113 @@
+id: quiz:dsa:topological-sort:finishable
+family: finishable
+concept: dsa:topological-sort
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: kahn_finishable
+  params:
+    n:
+    - 5
+    - 8
+    edges:
+    - 4
+    - 8
+    cycle:
+    - 0.75
+  reference: finishable(n, edges)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: 'the cycle ignored: every task finishes'
+  misconception: topo-ignore-cycle
+- rule: only the cycle's own tasks blocked
+  misconception: topo-cycle-blocks-only-itself
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Courses have prerequisites. You must say whether all of them can be taken. What do you run?
+  options:
+  - 'A topological sort: all courses can be taken exactly when it orders every course'
+  - BFS from course 0, checking that every course is reached
+  - Sort the courses by how many prerequisites they have
+  - Union-find over the prerequisite pairs, checking for one group
+  answer: 0
+  misconceptions:
+  - null
+  - bfs-count-visited
+  - pattern-sort-breaks-order
+  - uf-count-redundant-edge
+  explanation: A full topological order exists exactly when the prerequisite graph has no cycle. Reachability
+    and connectivity say nothing about cycles in a directed graph.
+- id: which-first
+  band: 2
+  format: mcq
+  prompt: In Kahn's algorithm, which tasks go into the queue at the start?
+  options:
+  - 'Every task with in-degree 0: nothing must come before it'
+  - 'Every task with out-degree 0: nothing depends on it'
+  - Only task 0
+  - The task with the most dependants
+  answer: 0
+  misconceptions:
+  - null
+  - topo-indegree-direction
+  - confuse-index-value
+  - pattern-sort-breaks-order
+  explanation: A task is ready when all its prerequisites are done; at the start that means no prerequisites
+    at all. Several may be ready at once.
+- id: edge-dfs-order
+  band: 5
+  format: mcq
+  prompt: A DFS-based topological sort appends a node after visiting all its children. What do you do
+    with that list?
+  options:
+  - 'Reverse it: a node finishes after everything that depends on it'
+  - 'Use it as is: nodes are appended in dependency order'
+  - Sort it by node number
+  - Drop the last node, which is always part of a cycle
+  answer: 0
+  misconceptions:
+  - null
+  - topo-postorder-not-reversed
+  - pattern-sort-breaks-order
+  - topo-ignore-cycle
+  explanation: Post-order puts each node after its dependants, so the reversed post-order is a valid topological
+    order.
+- id: transfer-alien
+  band: 7
+  format: classify
+  prompt: You are given words sorted in an unknown alphabet and must recover the letter order. What is
+    the core step?
+  options:
+  - Compare adjacent words; their first differing letters give one edge; then sort the letters topologically
+  - Count letter frequencies across all the words; letters that appear more often come earlier
+  - Take the first letter of each word in the given order and remove repeats to get the alphabet
+  - Compare every pair of words and add an edge for every position where their letters differ
+  answer: 0
+  misconceptions:
+  - null
+  - frequency-max-only
+  - first-char-only
+  - double-count
+  explanation: Only the first difference between adjacent words is evidence. A cycle, or a word followed
+    by its own prefix, means no valid order (LeetCode's Alien Dictionary).
+hint_ladder:
+- Which tasks have no prerequisites at all? Those start.
+- Finishing a task lowers the count of each dependant; a dependant starts at 0.
+- A task on a cycle never reaches 0, and neither does anything after it.
+time_limit_s: 150
+provenance:
+  origin: original
