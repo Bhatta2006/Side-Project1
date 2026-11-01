@@ -7,6 +7,7 @@ see one ``Catalog``; nothing downstream knows where a course came from.
 import hashlib
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import replace
 
 from sqlalchemy import Engine, select
@@ -16,7 +17,7 @@ from socrat.catalog.atoms import AtomPack
 from socrat.catalog.projects import Project
 from socrat.catalog.registry import Catalog, CatalogError, build
 from socrat.catalog.schema import Concept, Course, Problem
-from socrat.models import GeneratedConcept, GeneratedCourse, now
+from socrat.models import GeneratedConcept, GeneratedCourse, need, now
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def bind(engine: Engine) -> None:
     _cache.clear()
 
 
-def _assemble(payload: dict, concepts: list[dict], problems: list[dict] = ()) -> Course:
+def _assemble(payload: dict, concepts: list[dict], problems: Sequence[dict] = ()) -> Course:
     # Rows come back in key order; authoring (module) order breaks planner ties, so restore it.
     position = {
         cid: i for i, cid in enumerate(c for m in payload["modules"] for c in m["concepts"])
@@ -247,13 +248,13 @@ def store_concept(
     row.atoms = atoms.model_dump(mode="json") if atoms else None
     row.problems = [p.model_dump(mode="json") for p in problems] or None
     row.updated_at = now()
-    parent = db.get(GeneratedCourse, course_id)
+    parent = need(db.get(GeneratedCourse, course_id))
     parent.updated_at = max(now(), parent.updated_at + 1)  # refreshes the merged catalog
 
 
 def add_problem(db: Session, base: Catalog, course_id: str, concept_id: str, problem: Problem):
     """Release one more judged problem for a live concept. No commit."""
-    row = db.get(GeneratedConcept, (course_id, concept_id))
+    row = need(db.get(GeneratedConcept, (course_id, concept_id)))
     concept = Concept.model_validate(row.payload)
     listed = concept.model_copy(update={"problems": [*concept.problems, problem.id]})
     own = [Problem.model_validate(p) for p in row.problems or []]
@@ -266,7 +267,7 @@ def store_project(db: Session, base: Catalog, project: Project) -> None:
     row = db.get(GeneratedCourse, project.course)
     if row is None:
         raise CatalogError(f"unknown generated course {project.course}")
-    stored = course(db, project.course)
+    stored = need(course(db, project.course))
     known = {f"{stored.id}:{c.id}" for c in stored.concepts} | set(base.concepts)
     unknown = [c for c in project.concepts if c not in known]
     if unknown:

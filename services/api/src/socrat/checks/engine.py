@@ -149,7 +149,8 @@ def _real(x: complex) -> bool:
 def _values(a: sp.Expr, b: sp.Expr, rng: random.Random):
     """Pairs of (a, b) evaluated at random points where both are defined and finite."""
     symbols = sorted(a.free_symbols | b.free_symbols, key=str)
-    found, attempts = [], 0
+    found: list[tuple] = []
+    attempts = 0
     while len(found) < SAMPLES and attempts < SAMPLES * 6:
         attempts += 1
         point = {s: sp.Float(rng.uniform(-3.0, 3.0) + 0.0137, 15) for s in symbols}

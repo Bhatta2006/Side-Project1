@@ -6,6 +6,7 @@ compares. Adding an experiment is adding an entry here with a test against a kno
 """
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 
 G = 9.81
@@ -25,8 +26,9 @@ class Model:
     title: str
     params: dict[str, Param]
     outputs: dict[str, str]  # reported quantity -> unit
-    run: object  # (values) -> (outputs, trace)
-    valid: object = None  # (values) -> reasons these values cannot run, beyond the limits
+    run: Callable[[dict], tuple]  # (values) -> (outputs, trace)
+    # (values) -> reasons these values cannot run, beyond the limits
+    valid: Callable[[dict], list[str]] | None = None
 
 
 def _projectile(p: dict) -> tuple[dict, list]:

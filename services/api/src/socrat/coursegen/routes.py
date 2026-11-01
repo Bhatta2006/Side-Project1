@@ -13,7 +13,7 @@ from socrat.coursegen import jobs, quality
 from socrat.coursegen.outline import Brief
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine
-from socrat.models import GeneratedConcept, GeneratedCourse, GenerationJob
+from socrat.models import GeneratedConcept, GeneratedCourse, GenerationJob, need
 
 router = APIRouter(prefix="/api/v1/admin/courses")
 
@@ -63,8 +63,8 @@ def list_courses(request: Request):
             latest[job.course_id] = job
         items = []
         for course_id in sorted(set(rows) | set(latest)):
-            row, job = rows.get(course_id), latest.get(course_id)
-            brief = (row.brief if row else None) or job.input["brief"]
+            row, last = rows.get(course_id), latest.get(course_id)
+            brief = (row.brief if row else None) or need(last).input["brief"]
             items.append(
                 dict(
                     id=course_id,
@@ -75,7 +75,7 @@ def list_courses(request: Request):
                     if row is None
                     else sum(len(m["concepts"]) for m in row.payload["modules"]),
                     live=live.get(course_id, 0),
-                    job=job_view(job) if job else None,
+                    job=job_view(last) if last else None,
                     spent_usd=round(jobs.spent(db, course_id), 4),
                     budget_usd=brief["budget_usd"],
                 )
@@ -211,7 +211,7 @@ def generate_packages(course_id: str, body: Generate, request: Request):
         row = _course_row(db, course_id)
         if row.status != "published":
             raise HTTPException(409, "publish_outline_first")
-        stored = generated.course(db, course_id)
+        stored = need(generated.course(db, course_id))
         status = {c.id: c.status for c in stored.concepts}
         if any(status.get(cid) != "planned" for cid in body.concepts):
             raise HTTPException(422, "concept_not_planned")
@@ -245,7 +245,7 @@ def design_project(course_id: str, module_id: str, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = require_admin(request, db, write=True)
         row = _course_row(db, course_id)
-        stored = generated.course(db, course_id)
+        stored = need(generated.course(db, course_id))
         module = next((m for m in stored.modules if m.id == module_id), None)
         if row.status != "published" or module is None:
             raise HTTPException(404, "not_found")
@@ -294,7 +294,7 @@ def resume(course_id: str, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = require_admin(request, db, write=True)
         row = _course_row(db, course_id)
-        if jobs.spent(db, course_id) >= row.brief["budget_usd"]:
+        if jobs.spent(db, course_id) >= need(row.brief, "brief")["budget_usd"]:
             raise HTTPException(409, "budget_reached")
         row.paused = ""
         record_event(db, user.id, "coursegen.resumed", course_id)
@@ -306,7 +306,7 @@ def set_budget(course_id: str, body: Budget, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = require_admin(request, db, write=True)
         row = _course_row(db, course_id)
-        row.brief = {**row.brief, **body.model_dump()}  # a new dict, so the JSON is saved
+        row.brief = {**(row.brief or {}), **body.model_dump()}  # a new dict, so the JSON is saved
         record_event(db, user.id, "coursegen.budget_changed", course_id)
         return body.model_dump()
 

@@ -11,7 +11,7 @@ from socrat.learn import service as learn
 from socrat.learn.graded import attempts_today
 from socrat.learn.graded_routes import ATTEMPTS_PER_DAY, graded
 from socrat.learn.routes import active, catalog, engine, user_of
-from socrat.models import Enrollment, now
+from socrat.models import Enrollment, need, now
 from socrat.style import access
 from socrat.workbench.routes import CONCEPT
 
@@ -162,7 +162,7 @@ async def explain(body: Explanation, request: Request):
     with Session(engine(request)) as db, db.begin():
         learn.record_evidence(
             db,
-            db.get(Enrollment, enrollment_id),
+            need(db.get(Enrollment, enrollment_id)),
             body.concept,
             "explain",
             grade.score,

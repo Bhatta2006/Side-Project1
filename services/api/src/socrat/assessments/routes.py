@@ -75,8 +75,9 @@ async def start(body: StartInput, request: Request):
             user = user_of(request, db)
             enrollment = active(db, user)
             stamp = now()
-            attempt = assessments.this_week(db, enrollment, planned.week)
-            return assessments.view(db, cat, user, attempt, enrollment.language, stamp)
+            existing = assessments.this_week(db, enrollment, planned.week)
+            assert existing is not None  # the row that raised the conflict
+            return assessments.view(db, cat, user, existing, enrollment.language, stamp)
 
 
 @router.get("/{assessment_id}")

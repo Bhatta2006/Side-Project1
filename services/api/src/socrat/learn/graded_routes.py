@@ -18,7 +18,7 @@ from socrat.learn import service as learn
 from socrat.learn.graded import PASS, attempts_today, project_view
 from socrat.learn.routes import active, catalog, engine, guard_instruction, user_of
 from socrat.mastery import model as mastery
-from socrat.models import Enrollment, now
+from socrat.models import Enrollment, need, now
 
 router = APIRouter(prefix="/api/v1")
 ATTEMPTS_PER_DAY = 3  # per prompt or milestone: grading is not a slot machine
@@ -72,7 +72,7 @@ async def answer(qualified: str, body: Answer, request: Request):
     rubric = [c.model_dump() for c in prompt.rubric]
     grade = await graded(request, user_id, prompt.prompt, rubric, body.answer, prompt.model_answer)
     with Session(engine(request)) as db, db.begin():
-        enrollment = db.get(Enrollment, enrollment_id)
+        enrollment = need(db.get(Enrollment, enrollment_id))
         state = learn.record_evidence(
             db,
             enrollment,
@@ -159,7 +159,7 @@ async def submit_milestone(
     work = body.work + (f"\n\nLink: {body.link}" if body.link else "")
     grade = await graded(request, user_id, task, rubric, work)
     with Session(engine(request)) as db, db.begin():
-        enrollment = db.get(Enrollment, enrollment_id)
+        enrollment = need(db.get(Enrollment, enrollment_id))
         details = {"work": body.work, "link": body.link, "grade": grade.to_dict()}
         recorded = now()
         for concept in project_spec.concepts:

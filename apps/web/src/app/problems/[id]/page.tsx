@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { ArrowLeft, Check, ChevronDown, Cloud, CloudOff, Loader2, Minus, Play, Plus, RotateCcw, Settings2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Cloud, CloudOff, Loader2, Play, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { reportError } from '@/lib/report-error';
@@ -30,9 +30,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -40,6 +38,13 @@ import { Textarea } from '@/components/ui/textarea';
 // Only the 'Visual' tab needs it, so it loads when that tab is opened.
 const ConceptVisual = dynamic(() => import('@/components/socrat/concept-visual').then(m => m.ConceptVisual), { ssr: false });
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+// Per-test results appear only after a run, so they load then.
+// The editor settings popover opens rarely; a same-size placeholder holds its place until it loads.
+const EditorSettings = dynamic(() => import('@/components/editor-settings'), {
+  ssr: false,
+  loading: () => <span className="inline-block size-11" aria-hidden="true" />,
+});
+const CaseResults = dynamic(() => import('@/components/socrat/case-results'), { ssr: false });
 
 type Tone = 'success' | 'info' | 'error' | 'warning';
 const VERDICT: Record<string, { label: string; tone: Tone }> = {
@@ -71,73 +76,6 @@ function CaseMark({ ok }: { ok: boolean }) {
   return ok
     ? <span className="grid size-6 flex-none place-items-center rounded-full bg-cream text-cream-foreground"><Check className="size-3.5" strokeWidth={2.5} aria-hidden="true" /></span>
     : <AttentionIcon size={22} />;
-}
-const CASE_LABEL: Record<string, string> = {
-  passed: 'Passed', wrong_answer: 'Wrong answer', runtime_error: 'Runtime error', timeout: 'Too slow',
-  output_limit: 'Too much output', memory_limit: 'Too much memory', compile_error: 'Did not compile', executed: 'Ran', not_run: 'Not run',
-};
-
-function CaseDetail({ c, index }: { c: Case; index: number }) {
-  const ok = c.status === 'passed' || c.status === 'executed';
-  return (
-    <Collapsible defaultOpen={!ok && index < 3} className="rounded-[16px] border">
-      <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-[15px]">
-        <span className="flex items-center gap-2.5">
-          <CaseMark ok={ok} />
-          <span className={ok ? '' : 'font-semibold'}>{ok ? 'Passed' : CASE_LABEL[c.status] ?? c.status}</span>
-          <span className="text-muted-foreground">{c.expected === null ? 'Your custom input' : `Example ${index + 1}`}</span>
-        </span>
-        <span className="flex items-center gap-2 text-[13px] text-muted-foreground tabular-nums">
-          {c.wall_ms && c.status !== 'timeout' ? `${c.wall_ms} ms` : ''}
-          <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
-        </span>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="grid gap-2 border-t p-3 text-[13px]">
-          {c.input !== null ? <div><p className="mb-1 font-medium text-muted-foreground">Input</p><pre className="io-block">{c.input}</pre></div> : null}
-          {c.expected !== null ? <div><p className="mb-1 font-medium text-muted-foreground">Expected</p><pre className="io-block">{c.expected}</pre></div> : null}
-          {c.stdout !== null ? <div><p className="mb-1 font-medium text-muted-foreground">Your output</p><pre className="io-block">{c.stdout || '(no output)'}</pre></div> : null}
-          {c.stderr ? <div><p className="mb-1 font-medium text-muted-foreground">Errors</p><pre className="io-block">{c.stderr}</pre></div> : null}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function HiddenSummary({ cases }: { cases: Case[] }) {
-  const hidden = cases.map((c, index) => ({ c, index })).filter(({ c }) => !c.public);
-  if (!hidden.length) return null;
-  const failed = hidden.filter(({ c }) => c.status !== 'passed');
-  const slowest = Math.max(...hidden.map(({ c }) => c.wall_ms || 0));
-  return (
-    <Collapsible defaultOpen={failed.length > 0} className="rounded-[16px] border">
-      <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-[15px]">
-        <span className="flex items-center gap-2.5">
-          <CaseMark ok={!failed.length} />
-          Hidden tests
-        </span>
-        <span className="flex items-center gap-2 text-[13px] text-muted-foreground tabular-nums">
-          {hidden.length - failed.length} of {hidden.length} passed{slowest ? `, slowest ${slowest} ms` : ''}
-          <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
-        </span>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="grid gap-1 border-t p-3 text-[13px]">
-          {failed.length ? (
-            failed.map(({ c, index }) => (
-              <div key={index}>
-                <p className="flex justify-between gap-2"><span>Hidden test {index + 1}</span><span className="font-medium">{CASE_LABEL[c.status] ?? c.status}</span></p>
-                {c.stderr ? <pre className="io-block mt-1">{c.stderr}</pre> : null}
-              </div>
-            ))
-          ) : (
-            <p className="text-muted-foreground">All passed.</p>
-          )}
-          <p className="mt-1 text-muted-foreground">Hidden tests check edge cases and performance; their data stays private.</p>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
 }
 
 export default function Problem() {
@@ -452,29 +390,7 @@ export default function Problem() {
               {saved === 'saving' ? 'Saving' : saved === 'saved' ? 'Draft saved' : 'Unsaved changes'}
             </span>
             <div className="flex items-center gap-1">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Editor settings"><Settings2 /></Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="grid w-60 gap-4">
-                  <div className="grid gap-2">
-                    <p className="text-sm font-medium">Font size</p>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon-sm" aria-label="Smaller text" disabled={prefs.fontSize <= 12} onClick={() => setPrefs({ fontSize: prefs.fontSize - 1 })}><Minus /></Button>
-                      <span className="w-12 text-center text-sm tabular-nums" aria-live="polite">{prefs.fontSize} px</span>
-                      <Button variant="outline" size="icon-sm" aria-label="Larger text" disabled={prefs.fontSize >= 20} onClick={() => setPrefs({ fontSize: prefs.fontSize + 1 })}><Plus /></Button>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <p className="text-sm font-medium" id="indent-label">Indent</p>
-                    <div className="flex gap-2" role="radiogroup" aria-labelledby="indent-label">
-                      {([2, 4] as const).map(n => (
-                        <Button key={n} variant={prefs.tabSize === n ? 'default' : 'outline'} size="sm" role="radio" aria-checked={prefs.tabSize === n} onClick={() => setPrefs({ tabSize: n })}>{n} spaces</Button>
-                      ))}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <EditorSettings prefs={prefs} setPrefs={setPrefs} />
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label="Reset starter code"><RotateCcw /></Button>
@@ -571,8 +487,7 @@ export default function Problem() {
                   </div>
                 ) : null}
                 <div className="grid gap-2">
-                  {result.cases.map((c, i) => (c.public ? <CaseDetail key={i} c={c} index={i} /> : null))}
-                  <HiddenSummary cases={result.cases} />
+                  <CaseResults cases={result.cases} />
                 </div>
               </section>
             ) : null}

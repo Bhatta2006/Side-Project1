@@ -8,6 +8,7 @@ One worker serves one call at a time; put a pool here when load needs it.
 
 import multiprocessing
 import threading
+from typing import Any
 
 CONTEXT = multiprocessing.get_context("spawn")
 GRACE = 20.0  # the first call may need to start the process and import the libraries
@@ -35,8 +36,8 @@ def _serve(connection) -> None:
 class Worker:
     def __init__(self) -> None:
         self.lock = threading.Lock()
-        self.process = None
-        self.connection = None
+        self.process: Any = None  # a spawned multiprocessing.Process
+        self.connection: Any = None  # our end of its Pipe
         self.warm = False
 
     def _start(self) -> None:

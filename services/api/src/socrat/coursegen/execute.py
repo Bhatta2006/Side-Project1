@@ -121,6 +121,8 @@ class Broker:
                 await asyncio.sleep(self.poll)
                 with Session(self.engine) as db, db.begin():
                     job = db.get(Submission, job_id)
+                    if job is None:
+                        raise Unavailable(f"the {language} job disappeared")
                     if job.status == "done":
                         results += job.cases
                         break

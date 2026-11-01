@@ -16,7 +16,7 @@ from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Course, Provenance
 from socrat.coursegen import package as pkg
 from socrat.coursegen import roles
-from socrat.models import GeneratedCourse, GenerationJob
+from socrat.models import GeneratedCourse, GenerationJob, need
 
 DIMENSIONS = ("alignment", "scope", "gradable", "clarity")
 
@@ -113,11 +113,11 @@ async def run_project(engine, settings, base: Catalog, job_id: str, make) -> Non
     from socrat.coursegen.outline import Brief
 
     with Session(engine) as db:
-        job = db.get(GenerationJob, job_id)
+        job = need(db.get(GenerationJob, job_id))
         course_id, module_id = job.course_id, job.target
-        row = db.get(GeneratedCourse, course_id)
+        row = need(db.get(GeneratedCourse, course_id))
         brief = Brief.model_validate(row.brief)
-        course = generated.course(db, course_id)
+        course = need(generated.course(db, course_id))
         stored = row.projects or []
     module = next(m for m in course.modules if m.id == module_id)
     if any(course.concept(c).status != "live" for c in module.concepts):
@@ -125,7 +125,7 @@ async def run_project(engine, settings, base: Catalog, job_id: str, make) -> Non
     ctx = context(course, module_id, brief.model_dump())
     covers = {f"{course_id}:{c}" for c in module.concepts}
     version = 1 + sum(set(p["concepts"]) == covers for p in stored)
-    draft, notes = None, []
+    draft, notes = None, list[str]()
     for attempt in range(1, jobs.ROUNDS + 1):
         if jobs._over_budget(engine, course_id, brief.budget_usd):
             jobs.pause_for_budget(engine, course_id, job_id)

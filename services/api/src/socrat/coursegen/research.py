@@ -69,7 +69,8 @@ def _license(url: str) -> str:
 def candidates(data) -> list[dict]:
     """Well-formed, de-duplicated, capped; the URL check happens separately (network)."""
     raw = data.get("sources") if isinstance(data, dict) else None
-    seen, out = set(), []
+    seen: set[str] = set()
+    out: list[dict] = []
     for item in raw if isinstance(raw, list) else []:
         if not isinstance(item, dict):
             continue

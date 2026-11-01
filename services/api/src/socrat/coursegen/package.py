@@ -9,6 +9,7 @@ needs every gate, no incorrect claim, and the reviewer's rubric (correctness 5, 
 
 import json
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from pydantic import ValidationError
@@ -438,7 +439,7 @@ def build_concept(
     quiz: dict,
     version: int,
     attribution: str,
-    languages: list[str] = (),
+    languages: Sequence[str] = (),
     workbench: bool = False,
     lab: bool = False,
 ):
@@ -446,7 +447,8 @@ def build_concept(
     (and required in each of them), verified later by ``run_code``. Free-text prompts are
     required when the outline assesses by "explain"."""
     problems: dict[str, list[str]] = {"lesson": [], "quiz": []}
-    items = quiz.get("quiz") if isinstance(quiz.get("quiz"), list) else []
+    found = quiz.get("quiz")
+    items: list = found if isinstance(found, list) else []
     if not 4 <= len(items) <= 10:
         problems["quiz"].append(f"Write 5-8 items; got {len(items)}.")
     parsed = []
@@ -476,7 +478,8 @@ def build_concept(
             problems["quiz"].append(f"item {where}: {'; '.join(detail)}")
     if len({q.id for q in parsed}) != len(parsed):
         problems["quiz"].append("Quiz item ids must be unique.")
-    raw_prompts = quiz.get("prompts") if isinstance(quiz.get("prompts"), list) else []
+    found = quiz.get("prompts")
+    raw_prompts: list = found if isinstance(found, list) else []
     wants = concept.outline is not None and "explain" in concept.outline.assessment
     if wants and not 1 <= len(raw_prompts) <= 3:
         problems["quiz"].append(f"Write 1-3 free-text prompts; got {len(raw_prompts)}.")
@@ -526,17 +529,18 @@ def build_concept(
 
 
 def build_atoms(
-    course: Course, concept: Concept, atoms: dict, version: int, languages: list[str] = ()
+    course: Course, concept: Concept, atoms: dict, version: int, languages: Sequence[str] = ()
 ):
     """A draft pack, or (None, problems). ``languages``: code adapters allowed (and needed in
     each of them); their output is filled in by ``run_code``."""
-    raw = atoms.get("atoms") if isinstance(atoms.get("atoms"), list) else []
-    problems = []
+    found = atoms.get("atoms")
+    raw: list = found if isinstance(found, list) else []
+    problems: list[str] = []
     if not 3 <= len(raw) <= 8:
         problems.append(f"Write 4-8 atoms; got {len(raw)}.")
     kinds = {a.get("kind") for a in raw if isinstance(a, dict)}
     if kinds - ATOM_KINDS:
-        problems.append(f"Kinds {sorted(kinds - ATOM_KINDS)} are not allowed here.")
+        problems.append(f"Kinds {sorted(map(str, kinds - ATOM_KINDS))} are not allowed here.")
     for atom in raw:
         adapters = atom.get("adapters") if isinstance(atom, dict) else None
         if not adapters:

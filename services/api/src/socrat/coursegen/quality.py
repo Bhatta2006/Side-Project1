@@ -13,7 +13,7 @@ from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Concept
 from socrat.coursegen import jobs
-from socrat.models import ContentIssue, ErrorReport, GeneratedConcept, GeneratedCourse
+from socrat.models import ContentIssue, ErrorReport, GeneratedConcept, GeneratedCourse, need
 
 log = logging.getLogger(__name__)
 LESSON_ROUTE = re.compile(r"^/learn/([a-z][a-z0-9-]*)/([a-z][a-z0-9-]*)/?$")
@@ -41,7 +41,7 @@ def quarantine(
     db: Session, base: Catalog, course_id: str, concept_id: str, reason: str, notes: list[str]
 ) -> None:
     """Take a live concept back to planned and queue its rewrite. No commit."""
-    row = db.get(GeneratedConcept, (course_id, concept_id))
+    row = need(db.get(GeneratedConcept, (course_id, concept_id)))
     live = Concept.model_validate(row.payload)
     if live.status != "live":
         raise ValueError(f"{course_id}:{concept_id} is not live")

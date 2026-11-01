@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { notFound } from 'next/navigation';
 import { Activity, Gauge, MessageSquare, ThumbsUp, Users } from 'lucide-react';
 import { ApiError, api, explain } from '@/lib/api';
@@ -13,8 +14,10 @@ import { Button } from '@/components/ui/button';
 import { ReviewQueue } from '@/components/review-queue';
 import { AdminUsers } from '@/components/admin-users';
 import { useSession } from '@/lib/session';
-import { CourseBuilder } from '@/components/course-builder';
-import { StyleLab } from '@/components/style-lab';
+
+// Admin-only tools behind their own tabs: loaded when opened, not with the page.
+const CourseBuilder = dynamic(() => import('@/components/course-builder').then(m => m.CourseBuilder), { ssr: false });
+const StyleLab = dynamic(() => import('@/components/style-lab').then(m => m.StyleLab), { ssr: false });
 
 interface Overview {
   funnel: { step: string; learners: number; share: number }[];

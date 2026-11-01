@@ -19,7 +19,7 @@ import asyncio
 import json
 import logging
 
-from sqlalchemy import Engine, func, or_, select, update
+from sqlalchemy import CursorResult, Engine, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from socrat.assistant.gateway import ProviderError, make_provider
@@ -37,7 +37,7 @@ from socrat.coursegen.outline import (
     from_course,
     to_course,
 )
-from socrat.models import GeneratedCourse, GenerationJob, now
+from socrat.models import GeneratedCourse, GenerationJob, need, now
 from socrat.style import spec as styles
 
 log = logging.getLogger(__name__)
@@ -94,11 +94,12 @@ def claim(engine: Engine) -> str | None:
         ).all()
         for job_id in candidates:
             # The state condition again: another process may have taken it meanwhile.
-            taken = db.execute(
+            result = db.execute(
                 update(GenerationJob)
                 .where(GenerationJob.id == job_id, claimable)
                 .values(state="running", updated_at=stamp)
-            ).rowcount
+            )
+            taken = result.rowcount if isinstance(result, CursorResult) else 0
             if taken:
                 return job_id
     return None
@@ -106,7 +107,7 @@ def claim(engine: Engine) -> str | None:
 
 def _note(engine: Engine, job_id: str, entry: dict, cost: float = 0.0, **fields) -> None:
     with Session(engine) as db, db.begin():
-        job = db.get(GenerationJob, job_id)
+        job = need(db.get(GenerationJob, job_id))
         job.log = [*job.log, {**entry, "at": now()}]
         job.cost_usd += cost
         job.updated_at = now()
@@ -118,7 +119,7 @@ async def run_outline(
     engine: Engine, settings: Settings, base: Catalog, job_id: str, make=make_provider
 ) -> None:
     with Session(engine) as db:
-        job = db.get(GenerationJob, job_id)
+        job = need(db.get(GenerationJob, job_id))
         brief = Brief.model_validate(job.input["brief"])
         stored = generated.course(db, brief.id)
     if brief.style is None and brief.style_request.strip():
@@ -227,14 +228,14 @@ def pause_for_budget(engine: Engine, course_id: str, job_id: str) -> None:
     """Course budget reached: pause the course and put this job back in the queue, so it
     restarts when the owner raises the budget and resumes."""
     with Session(engine) as db, db.begin():
-        db.get(GeneratedCourse, course_id).paused = "budget"
+        need(db.get(GeneratedCourse, course_id)).paused = "budget"
     _note(engine, job_id, {"role": "system", "event": "budget_reached_paused"}, state="queued")
     log.error("course generation paused: %s reached its budget", course_id)
 
 
 def _job_cost(engine: Engine, job_id: str) -> float:
     with Session(engine) as db:
-        return db.get(GenerationJob, job_id).cost_usd
+        return need(db.get(GenerationJob, job_id)).cost_usd
 
 
 async def run_package(
@@ -247,10 +248,10 @@ async def run_package(
     executor=None,
 ) -> None:
     with Session(engine) as db:
-        job = db.get(GenerationJob, job_id)
+        job = need(db.get(GenerationJob, job_id))
         course_id, concept_id, data = job.course_id, job.target, job.input
-        brief = Brief.model_validate(db.get(GeneratedCourse, course_id).brief)
-        course = generated.course(db, course_id)
+        brief = Brief.model_validate(need(db.get(GeneratedCourse, course_id)).brief)
+        course = need(generated.course(db, course_id))
     concept = course.concept(concept_id)
     if concept.status != "planned":
         raise ValueError(f"{course_id}:{concept_id} is not planned")
@@ -316,9 +317,9 @@ async def run_package(
                 _note(engine, job_id, entry, reply.cost_usd)
                 continue
             lesson = reply.data
-            problems = pkg.check_lesson(concept, course, lesson, style)
-            problems += research.check(str(lesson.get("lesson", "")), cited)
-            problems += [
+            issues = pkg.check_lesson(concept, course, lesson, style)
+            issues += research.check(str(lesson.get("lesson", "")), cited)
+            issues += [
                 f"This resource link is unreachable or not public https; replace it: {url}"
                 for url in await pkg.broken_links(lesson, http)
             ]
@@ -326,15 +327,16 @@ async def run_package(
                 "role": "author",
                 "round": attempt,
                 "characters": len(str(lesson.get("lesson", ""))),
-                "issues": problems,
+                "issues": issues,
             }
             _note(engine, job_id, entry, reply.cost_usd, output={"lesson": lesson})
-            if problems:
-                notes["lesson"] = problems
+            if issues:
+                notes["lesson"] = issues
                 redo |= {"lesson"}
                 continue
             notes["lesson"] = []
             lesson = research.attach(lesson, cited)
+        assert lesson is not None  # written above, or kept from the previous round
         pending = {}
         if "quiz" in redo or quiz is None:
             example = pkg.quiz_example(reference)
@@ -367,6 +369,7 @@ async def run_package(
             entry = {"role": "system", "round": attempt, "event": "unparsable", "issues": issues}
             _note(engine, job_id, entry, cost)
             continue
+        assert quiz is not None and atoms is not None  # both parsed by now
         attribution = (
             f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
             "before release. Not reviewed by a person." + research.credit(cited)
@@ -458,7 +461,7 @@ def project_due(db: Session, course, released: str) -> bool:
     if not (wants and ready) or active(db, course.id, module.id) is not None:
         return False
     covers = {f"{course.id}:{c}" for c in module.concepts}
-    stored = db.get(GeneratedCourse, course.id).projects or []
+    stored = need(db.get(GeneratedCourse, course.id)).projects or []
     return not any(set(p["concepts"]) == covers for p in stored)
 
 
@@ -470,7 +473,7 @@ async def run_once(
         return False
     try:
         with Session(engine) as db:
-            kind = db.get(GenerationJob, job_id).kind
+            kind = need(db.get(GenerationJob, job_id)).kind
         if kind == "package":
             await run_package(engine, settings, base, job_id, make, http, executor)
         elif kind == "exercise":

@@ -8,6 +8,7 @@ from socrat.admin.routes import require_admin
 from socrat.database import record_event
 from socrat.learn import service as learn
 from socrat.learn.routes import engine
+from socrat.models import need
 from socrat.style import access
 from socrat.style import spec as styles
 
@@ -82,7 +83,7 @@ async def set_mine(body: SetStyle, request: Request):
             engine(request), request.app.state.settings, body.request, user_id=user_id
         )
     else:
-        spec = body.style
+        spec = need(body.style, "style")  # exactly one of the three was given
     with Session(engine(request)) as db, db.begin():
         user = access_user(request, db)
         enrollment = learn.active_enrollment(db, user.id)

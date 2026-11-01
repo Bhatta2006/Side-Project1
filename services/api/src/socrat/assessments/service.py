@@ -269,7 +269,7 @@ def _difficulty(catalog: Catalog, problem_id: str) -> int:
         return 0
     value = getattr(entry[1], "difficulty", 0)
     order = {"easy": 1, "medium": 2, "hard": 3}
-    return order.get(value, value) if isinstance(value, str) else int(value or 0)
+    return order.get(value, 0) if isinstance(value, str) else int(value or 0)
 
 
 def status(db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int) -> dict:

@@ -16,6 +16,14 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
+def need[T](value: T | None, what: str = "row") -> T:
+    """``value``, which the caller knows exists (a row it just queued, a course it owns).
+    Raises LookupError instead of failing later on ``None``."""
+    if value is None:
+        raise LookupError(f"{what} not found")
+    return value
+
+
 def identifier() -> str:
     return str(uuid.uuid4())
 

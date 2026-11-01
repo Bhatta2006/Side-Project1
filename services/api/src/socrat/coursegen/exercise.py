@@ -20,7 +20,7 @@ from socrat.catalog.schema import Course, Problem, Provenance
 from socrat.coursegen import execute, roles
 from socrat.coursegen import package as pkg
 from socrat.judge.service import normalized
-from socrat.models import GeneratedCourse, GenerationJob
+from socrat.models import GeneratedCourse, GenerationJob, need
 
 GENERATED = 14  # hidden tests from the generator, as for hand-authored problems
 SMALL = 10  # small inputs for the brute-force check
@@ -222,10 +222,10 @@ async def run_exercise(engine, settings, base: Catalog, job_id: str, make, execu
     from socrat.coursegen.outline import Brief
 
     with Session(engine) as db:
-        job = db.get(GenerationJob, job_id)
+        job = need(db.get(GenerationJob, job_id))
         course_id, concept_id = job.course_id, job.target
-        brief = Brief.model_validate(db.get(GeneratedCourse, course_id).brief)
-        course = generated.course(db, course_id)
+        brief = Brief.model_validate(need(db.get(GeneratedCourse, course_id)).brief)
+        course = need(generated.course(db, course_id))
     concept = course.concept(concept_id)
     if concept.status != "live":
         raise ValueError(f"{course_id}:{concept_id} is not live")
@@ -243,7 +243,7 @@ async def run_exercise(engine, settings, base: Catalog, job_id: str, make, execu
         return
     ctx = pkg.context(base, course, brief.model_dump(), concept)
     taken = set(base.problems) | {p.id for p in course.problems}
-    draft, notes = None, []
+    draft, notes = None, list[str]()
     for attempt in range(1, jobs.ROUNDS + 1):
         if jobs._over_budget(engine, course_id, brief.budget_usd):
             jobs.pause_for_budget(engine, course_id, job_id)
