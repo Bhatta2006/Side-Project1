@@ -503,7 +503,8 @@ async def render_check(document, settings: Settings, mode: str = "sketch") -> di
         )
         try:
             output, errors = await asyncio.wait_for(
-                process.communicate(json.dumps(payload).encode()), 18
+                process.communicate(json.dumps(payload).encode()),
+                45 if mode == "3d" else 18,
             )
             if not output.strip():
                 logging.getLogger("socrat.explainer").warning(

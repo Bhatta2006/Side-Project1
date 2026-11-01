@@ -40,6 +40,8 @@ def configured(client, monkeypatch):  # noqa: F811
     headers = login(client)
     onboard(client, headers)
     client.app.state.settings.ai_provider = "openai"
+    # The general tests exercise 3D itself; the restriction has its own test below.
+    client.app.state.settings.explainer_3d_admin_only = False
     provider = Provider([HTML] * 20)
     monkeypatch.setattr(jobs, "make_provider", lambda _, **kwargs: provider)
 
@@ -795,6 +797,56 @@ def test_auto_mode_lets_the_prompt_pick_the_medium(monkeypatch, routed, expected
     assert events[0] == dict(event="progress", phase="generating", attempt=1, mode=expected)
     assert (provider.calls[1][0] == generator.SYSTEM_FILM) == (expected == "3d")
     assert events[-1]["document"]["mode"] == expected
+
+
+def test_3d_is_admin_only_while_it_is_tested(client, configured):  # noqa: F811
+    headers, provider = configured
+    settings = client.app.state.settings
+    settings.explainer_3d_admin_only = True
+    assert client.get("/api/v1/playground/artifacts").json()["three_d"] is False
+    # An explicit 3D request is refused, and nothing is queued or spent.
+    refused = client.post(
+        "/api/v1/playground/generate",
+        headers=headers,
+        json=dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="3d"),
+    )
+    assert (
+        refused.status_code == 403 and refused.json()["error"]["code"] == "playground_3d_restricted"
+    )
+    assert len(provider.calls) == 0
+    # Auto never picks 3D for them: no router call, a sketch.
+    job = generate(
+        client,
+        headers,
+        dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="auto"),
+    )
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "sketch"
+    assert all(call[0] != generator.ROUTER for call in provider.calls)
+    # An admin account gets the picker and 3D.
+    settings.admin_subjects = ["ada"]
+    assert client.get("/api/v1/playground/artifacts").json()["three_d"] is True
+    provider.responses = iter([generator.FILM_EXAMPLE] + [HTML] * 20)
+    job = generate(
+        client,
+        headers,
+        dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="3d"),
+    )
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "3d"
+    # Turning the restriction off opens 3D to everyone.
+    settings.admin_subjects = []
+    settings.explainer_3d_admin_only = False
+    assert client.get("/api/v1/playground/artifacts").json()["three_d"] is True
+
+
+def test_a_queued_3d_job_of_a_non_admin_still_runs_as_a_sketch(client, configured):  # noqa: F811
+    headers, provider = configured
+    payload = dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="3d")
+    queued = client.post("/api/v1/playground/generate", headers=headers, json=payload)
+    assert queued.status_code == 202  # accepted before the restriction existed
+    client.app.state.settings.explainer_3d_admin_only = True
+    work(client)
+    job = client.get("/api/v1/playground/jobs/" + queued.json()["id"]).json()
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "sketch"
 
 
 def test_playground_mode_end_to_end(client, configured):  # noqa: F811

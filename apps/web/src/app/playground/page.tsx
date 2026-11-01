@@ -52,7 +52,7 @@ const FAILED: Record<string, string> = {
   checking: 'The last version did not work when we ran it',
 };
 // Errors where retrying cannot help right now.
-const NO_RETRY = new Set(['upgrade_required', 'playground_day_limit', 'playground_daily_limit', 'playground_unavailable', 'playground_sandbox_unavailable', 'playground_ai_budget_reached', 'playground_ai_disabled', 'assistant_daily_limit']);
+const NO_RETRY = new Set(['playground_3d_restricted', 'upgrade_required', 'playground_day_limit', 'playground_daily_limit', 'playground_unavailable', 'playground_sandbox_unavailable', 'playground_ai_budget_reached', 'playground_ai_disabled', 'assistant_daily_limit']);
 
 function savedDate(seconds: number) {
   return new Date(seconds * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -93,6 +93,8 @@ export default function PlaygroundPage() {
   const [prompt, setPrompt] = useState('');
   const [level, setLevel] = useState<Level>('standard');
   const [mode, setMode] = useState<Mode>('auto');
+  // 3D is being tested: the server offers the Auto/Sketch/3D picker to admin accounts only.
+  const [threeD, setThreeD] = useState(false);
   // The medium the current job is building in, once the server has chosen it.
   const [medium, setMedium] = useState<Medium | null>(null);
   const [artifact, setArtifact] = useState<VisualArtifact | null>(null);
@@ -183,11 +185,12 @@ export default function PlaygroundPage() {
     if (sample) setPrompt(p => p || sample.slice(0, 4000));
     Promise.all([
       api.get<{ suggestions: Suggestion[]; concepts?: { id: string; title: string }[] }>('/playground'),
-      api.get<{ items: Saved[]; pending: Job | null }>('/playground/artifacts'),
+      api.get<{ items: Saved[]; pending: Job | null; three_d?: boolean }>('/playground/artifacts'),
     ]).then(([overview, history]) => {
       if (!active) return;
       setSuggestions(overview.suggestions);
       setSaved(history.items);
+      setThreeD(history.three_d === true);
       if (history.pending) { void follow(history.pending); return; }
       // A lesson link passes its skill as a request topic only, never as a preset lesson.
       const title = concept ? overview.concepts?.find(c => c.id === concept)?.title : undefined;
@@ -323,7 +326,7 @@ export default function PlaygroundPage() {
     const { phase, attempt, failed, characters } = progress;
     const at = queued ? -1 : PHASES.findIndex(([id]) => id === phase);
     const repairing = attempt > 1;
-    const building = medium === '3d' ? 'Building the 3D model' : medium === 'sketch' ? 'Drawing the sketch' : 'Choosing sketch or 3D';
+    const building = medium === '3d' ? 'Building the 3D model' : medium === 'sketch' || !threeD ? 'Drawing the sketch' : 'Choosing sketch or 3D';
     const label = (id: string, text: string) => (id === 'generating' ? (repairing ? 'Fixing the visual' : building) : text);
     const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
     return (
@@ -412,13 +415,13 @@ export default function PlaygroundPage() {
             <p id="visual-request-help" className="text-[13px] text-muted-foreground tabular-nums">{prompt.length} of 4000 characters. Press {mac ? '⌘ + Enter' : 'Ctrl + Enter'} to generate.</p>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1" role="radiogroup" aria-label="Drawing style">
+                {threeD ? <div className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1" role="radiogroup" aria-label="Drawing style">
                   {MODES.map(([id, label, hint]) => (
                     <button key={id} type="button" role="radio" aria-checked={mode === id} onClick={() => setMode(id)} className={cn('inline-flex h-full min-h-10 items-center rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground', mode === id && 'border-border bg-card font-bold text-foreground')} title={hint}>
                       {label}
                     </button>
                   ))}
-                </div>
+                </div> : null}
                 <div className="inline-flex h-12 items-center gap-1 rounded-full bg-raised p-1" role="radiogroup" aria-label="Explanation depth">
                   {LEVELS.map(([id, label]) => (
                     <button key={id} type="button" role="radio" aria-checked={level === id} onClick={() => setLevel(id)} className={cn('inline-flex h-full min-h-10 items-center rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground', level === id && 'border-border bg-card font-bold text-foreground')}>

@@ -165,6 +165,7 @@ def check(film: dict) -> dict:
     if not isinstance(parts, list) or not 3 <= len(parts) <= MAX_PARTS:
         _fail(f"parts must list 3-{MAX_PARTS} parts")
     rename_ids(film)
+    parts = film["parts"]
     ids: set[str] = set()
     for k, part in enumerate(parts):
         where = f"parts[{k}]"
@@ -308,6 +309,7 @@ def check(film: dict) -> dict:
     chapters = film.get("chapters")
     if not isinstance(chapters, list) or not 2 <= len(chapters) <= MAX_CHAPTERS:
         _fail(f"chapters must list 2-{MAX_CHAPTERS} chapters")
+    chapters = film["chapters"]
     if "show" not in chapters[0]:
         _fail('chapters[0] must set "show": the callouts visible at the start ([] for none)')
     says: set[str] = set()
