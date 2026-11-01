@@ -106,9 +106,12 @@ export async function run(context, input) {
   // browser start made it time out and crash the checker with no output).
   const frameReady = page.waitForEvent('framenavigated', { predicate: f => f.url() === visual, timeout: 12000 });
   frameReady.catch(() => undefined);
-  await page.goto(host);
+  // Not waiting for the load event here: a 3D film builds its model and draws the first frame
+  // inside its load, which software WebGL (CI, containers) can take several seconds over.
+  await page.goto(host, { waitUntil: 'commit' });
   const frame = await frameReady;
   if (!frame) throw Error('Visual did not load');
+  await frame.waitForFunction(() => document.readyState === 'complete', null, { timeout: 25000 }).catch(() => undefined);
   try { await frame.waitForFunction(() => document.readyState === 'complete' && window.__explainer); }
   catch { throw Error(errors[0] || 'Initialize window.__explainer and a working initial visual immediately on load'); }
   // A script that threw while drawing is the real cause of any follow-on 'blank' or 'missing' finding.
