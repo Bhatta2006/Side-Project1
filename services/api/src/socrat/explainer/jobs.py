@@ -15,7 +15,6 @@ from socrat.database import record_event
 from socrat.explainer import generator
 from socrat.learn.routes import guard_instruction
 from socrat.models import AssistantMessage, PlaygroundJob, User, now
-from socrat.style import access as style_access
 
 # A large model writing a 3D film with a repair round can take several minutes.
 GENERATION_SECONDS = 600
@@ -38,7 +37,7 @@ def explainer_settings(settings: Settings) -> tuple[Settings, Settings | None]:
     base = settings.model_copy(update=update)
     if not settings.explainer_3d_model:
         return base, None
-    film = {key: settings.explainer_3d_model}
+    film: dict = {key: settings.explainer_3d_model}
     if settings.explainer_3d_price_input_per_mtok or settings.explainer_3d_price_output_per_mtok:
         film["ai_price_input_per_mtok"] = settings.explainer_3d_price_input_per_mtok
         film["ai_price_output_per_mtok"] = settings.explainer_3d_price_output_per_mtok
@@ -49,7 +48,14 @@ def may_use_3d(settings: Settings, user: User | None) -> bool:
     """3D films are admin-only while they are tested (explainer_3d_admin_only)."""
     if not settings.explainer_3d_admin_only:
         return True
-    return user is not None and style_access.is_admin(settings, user)
+    if user is None:
+        return False
+    emails = {e.lower() for e in settings.admin_emails}
+    return (
+        f"{user.issuer}|{user.subject}" in settings.admin_subjects
+        or user.subject in settings.admin_subjects
+        or (user.admin_email is not None and user.admin_email in emails)
+    )
 
 
 def playground_code(code: str) -> str:
