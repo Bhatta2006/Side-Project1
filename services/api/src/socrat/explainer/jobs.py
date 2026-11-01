@@ -15,6 +15,7 @@ from socrat.database import record_event
 from socrat.explainer import generator
 from socrat.learn.routes import guard_instruction
 from socrat.models import AssistantMessage, PlaygroundJob, User, now
+from socrat.style import access as style_access
 
 # A large model writing a 3D film with a repair round can take several minutes.
 GENERATION_SECONDS = 600
@@ -42,6 +43,13 @@ def explainer_settings(settings: Settings) -> tuple[Settings, Settings | None]:
         film["ai_price_input_per_mtok"] = settings.explainer_3d_price_input_per_mtok
         film["ai_price_output_per_mtok"] = settings.explainer_3d_price_output_per_mtok
     return base, base.model_copy(update=film)
+
+
+def may_use_3d(settings: Settings, user: User | None) -> bool:
+    """3D films are admin-only while they are tested (explainer_3d_admin_only)."""
+    if not settings.explainer_3d_admin_only:
+        return True
+    return user is not None and style_access.is_admin(settings, user)
 
 
 def playground_code(code: str) -> str:
@@ -93,6 +101,9 @@ async def run(engine: Engine, settings: Settings, job_id: str):
         assert job is not None
         user_id, thread_id = job.user_id, job.thread_id
         prompt, level, language, mode = job.prompt, job.level, job.language, job.mode or "sketch"
+        # A job queued before the restriction, or by an account that lost admin, still gets sketches.
+        if mode != "sketch" and not may_use_3d(settings, db.get(User, user_id)):
+            mode = "sketch"
     main = asyncio.current_task()
     assert main is not None
 

@@ -225,6 +225,11 @@ def create(body: CreateInput, request: Request):
         guard_instruction(db, catalog(), user, body.concept)
         available(settings)
         user_id = user.id
+        allowed_3d = jobs.may_use_3d(settings, user)
+        if body.mode == "3d" and not allowed_3d:
+            raise HTTPException(403, "playground_3d_restricted")
+        # Auto never picks 3D for an account that may not use it.
+        mode = body.mode if allowed_3d or body.mode != "auto" else "sketch"
         # Bind the idempotency identity to the authenticated learner, never to a body user_id.
         job_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"visual:{user_id}:{body.request_id}"))
         previous = db.get(PlaygroundJob, job_id)
@@ -287,7 +292,7 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
         row = SharedVisual(
             concept=body.concept,
             level=body.level,
-            mode=body.mode,
+            mode=mode,
             language=enrollment.language,
             reports=[],
             hits=0,
@@ -386,6 +391,8 @@ def history(request: Request):
             .limit(20)
         )
         return dict(
+            # Whether the mode picker (Auto, Sketch, 3D) is offered to this account.
+            three_d=jobs.may_use_3d(request.app.state.settings, user),
             items=[
                 dict(id=row.id, title=json.loads(row.content)["title"], created_at=row.created_at)
                 for row in rows
