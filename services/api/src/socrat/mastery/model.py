@@ -25,6 +25,8 @@ EvidenceKind = Literal[
     "explanation",
     "testout",
     "tutor",
+    "explain",  # a free-text answer graded by AI against a released rubric
+    "project",  # a project milestone graded by AI against the project rubric
     "transfer",
 ]
 WEIGHTS: dict[str, float] = {
@@ -44,9 +46,14 @@ WEIGHTS: dict[str, float] = {
     "testout": 8.0,
     # A tutor observation can only flag a gap (score <= 0.5), never manufacture mastery.
     "tutor": 0.15,
+    # AI-graded work counts, but less than judged work, moves the estimate in smaller steps,
+    # and can never master a concept on its own (``ConceptState.mastered``).
+    "explain": 0.4,
+    "project": 0.8,
     # Independent solve of a problem never seen before, after naming the technique unaided.
     "transfer": 1.2,
 }
+AI_GRADED = {"explain", "project"}
 # Socratic assistance level 0–5 → how much a success still counts.
 ASSISTANCE = (1.0, 0.85, 0.7, 0.5, 0.3, 0.1)
 REVIEW_DAYS = (1, 3, 7, 14, 30, 60)
@@ -55,6 +62,7 @@ MAX_STEP = 0.15
 FAST_STEP = 0.25
 TESTOUT_STEP = 0.5
 TUTOR_MAX_SCORE = 0.5
+GRADED_STEP = 0.08  # explain answers
 MASTERED = 0.8
 MIN_CONFIDENCE = 0.55
 PRIOR = 2.0  # alpha + beta of the default prior
@@ -72,6 +80,7 @@ class ConceptState:
     last_evidence_at: int = 0
     next_review_at: int = 0
     assumed: bool = False  # Placed as known; confirmed later by a light review.
+    graded: int = 0  # evidence graded by AI (explain, project)
 
     @property
     def mean(self) -> float:
@@ -90,7 +99,9 @@ class ConceptState:
         return self.mean * max(0.7, 1 - 0.01 * overdue_days)
 
     def mastered(self, now: int) -> bool:
-        return self.effective(now) >= MASTERED and self.confidence >= MIN_CONFIDENCE
+        # At least one judged or placed piece of evidence: AI grades alone never suffice.
+        judged = self.evidence_count > self.graded or self.assumed
+        return judged and self.effective(now) >= MASTERED and self.confidence >= MIN_CONFIDENCE
 
     def due(self, now: int) -> bool:
         return bool(self.next_review_at) and now >= self.next_review_at
@@ -158,12 +169,15 @@ def apply(
         last_evidence_at=now,
         next_review_at=review_at,
         assumed=state.assumed and success,
+        graded=state.graded + int(kind in AI_GRADED),
     )
 
 
 def step_cap(state: ConceptState, kind: str, score: float, assistance: int) -> float:
     if kind == "testout":
         return TESTOUT_STEP
+    if kind == "explain":
+        return GRADED_STEP
     clean = state.independent_successes >= 2 and state.failures == 0
     if clean and score >= 0.7 and assistance == 0:
         return FAST_STEP

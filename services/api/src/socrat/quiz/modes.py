@@ -50,9 +50,17 @@ def stop_reason(
     served = len(steps)
     if served >= mode.max_items:
         return "max_items"
+    done = answered(steps)
+    if mode.max_wrong is not None and sum(s.outcome == "wrong" for s in done) >= mode.max_wrong:
+        return "strikes"
     if not mode.stop_rules or served < mode.min_items:
         return None
-    done = answered(steps)
+    if mode.paced:
+        right = sum(s.outcome == "correct" for s in done)
+        hard = sum(1 for s in done if s.independent and s.band >= ceiling_band)
+        if hard >= cfg.testout_hard_needed and right / len(done) >= cfg.testout_pass:
+            return "ceiling"
+        return None
     tail = done[-2:]
     if len(tail) == 2 and all(s.independent and s.band >= ceiling_band for s in tail):
         return "ceiling"

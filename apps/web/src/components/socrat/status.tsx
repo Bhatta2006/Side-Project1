@@ -29,7 +29,8 @@ export function statusFromBand(band: Band, reviewDue = false): Status {
 /** Base state of a roadmap item; review due is shown separately as a badge beside it. */
 export function statusFromRoadmap(item: Pick<RoadmapItem, 'status' | 'lesson_done' | 'quiz_done'>): Status {
   switch (item.status) {
-    case 'locked': return 'locked';
+    case 'locked':
+    case 'preparing': return 'locked';
     case 'mastered': return 'mastered';
     case 'assumed': return 'assumed';
     case 'practiced': return 'learned';

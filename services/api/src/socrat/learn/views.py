@@ -6,9 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
-from socrat.catalog import practice
+from socrat.catalog import practice, shape
 from socrat.catalog.registry import Catalog
-from socrat.learn import achievements, resources
+from socrat.coursegen.package import AI_AUTHOR
+from socrat.learn import achievements, graded, resources
 from socrat.learn import service as learn
 from socrat.library import service as library
 from socrat.mastery.model import ConceptState, band
@@ -47,6 +48,8 @@ def course_card(catalog: Catalog, course_id: str) -> dict:
         tagline=course.tagline,
         description=course.description,
         languages=course.languages,
+        shape=shape.effective(course).model_dump(mode="json")
+        | {"name": shape.effective(course).name},
         levels=[dict(id=x.id, label=x.label, description=x.description) for x in course.levels],
         modules=[
             dict(id=m.id, title=m.title, summary=m.summary, concepts=len(m.concepts))
@@ -302,7 +305,13 @@ def concept_view(
         summary=concept.summary,
         module=catalog.module_of(qualified),
         lesson=concept.lesson,
+        # Generated lessons say so, with how they were checked (no human review).
+        ai_generated=bool(concept.provenance and concept.provenance.author == AI_AUTHOR),
+        attribution=concept.provenance.attribution_md if concept.provenance else "",
         exercises=resources.selected(qualified, language, "exercises"),
+        prompts=graded.prompt_views(db, enrollment, qualified, concept),
+        workbench=len(concept.exercises),
+        lab=len(concept.experiments),
         key_points=concept.key_points,
         pitfalls=concept.pitfalls,
         resources=resources.personalised(db, user.id, qualified, concept, language, current_band),

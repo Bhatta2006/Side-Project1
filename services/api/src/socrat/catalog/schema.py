@@ -11,6 +11,9 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
+from socrat.catalog import dialect
+from socrat.catalog.shape import CourseShape
+
 Slug = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
 Ref = Annotated[str, Field(pattern=r"^([a-z][a-z0-9-]{0,63}:)?[a-z][a-z0-9-]{0,63}$")]
 Language = Literal["python", "cpp", "java"]
@@ -122,7 +125,10 @@ class QuizItem(Model):
             named = {names[prefix]}
         if self.code and language not in self.code:
             return False  # its code exists only in other languages
-        return not named or language in named
+        if named:
+            return language in named
+        # No explicit tag: the prose itself must not be written in another language's syntax.
+        return not dialect.foreign(language, self.prompt, *self.options, self.explanation)
 
     def order(self, seed: str) -> list[int]:
         """Display position -> authored option index, fixed per (seed, item).
@@ -149,11 +155,87 @@ class QuizItem(Model):
         return self
 
 
+class Criterion(Model):
+    criterion: str = Field(min_length=2, max_length=120)
+    points: int = Field(ge=1, le=4)
+    look_for: str = Field(min_length=5, max_length=400)  # what earns the points
+
+
+class Prompt(Model):
+    """A free-text question answered in the learner's own words and graded against its
+    rubric (AI-graded evidence: ``explain``). The model answer is shown only after grading."""
+
+    id: Slug
+    prompt: str = Field(min_length=10, max_length=1000)
+    rubric: list[Criterion] = Field(min_length=2, max_length=6)
+    model_answer: str = Field(min_length=20, max_length=3000)
+    max_words: int = Field(default=250, ge=30, le=600)
+
+
 class PracticeLink(Model):
     title: str = Field(min_length=2, max_length=160)
     url: HttpUrl
     platform: str = Field(min_length=2, max_length=40)
     difficulty: Literal["easy", "medium", "hard"]
+
+
+class Outline(Model):
+    """What a generated concept must teach, set when the course outline is planned. The
+    authoring agents write the lesson from it; hand-authored concepts leave it empty."""
+
+    depth: Literal["overview", "practitioner", "mastery"] = "practitioner"
+    objectives: list[str] = Field(min_length=1, max_length=6)  # observable, start with a verb
+    misconceptions: list[str] = Field(default_factory=list, max_length=6)
+    assessment: list[Literal["quiz", "code", "explain", "project"]] = Field(
+        min_length=1, max_length=4
+    )
+
+
+class Exercise(Model):
+    """A worked-out problem a studio grades with the harness (never by a model)."""
+
+    id: Slug
+    prompt: str = Field(min_length=5, max_length=2000)
+    check: Literal["equivalent", "equation", "numeric", "steps"]
+    expected: str = Field(min_length=1, max_length=200)  # the reference answer, as text
+    unit: str = Field(default="", max_length=40)
+    hints: list[str] = Field(default_factory=list, max_length=3)
+    plot: list[str] = Field(default_factory=list, max_length=3)  # expressions in x to draw
+    points: list[tuple[float, float]] = Field(default_factory=list, max_length=12)  # data to fit
+    difficulty: int = Field(ge=1, le=5)
+    explanation: str = Field(min_length=5, max_length=2000)  # the worked solution, shown after
+
+    @model_validator(mode="after")
+    def hints_are_short(self):
+        if any(len(h) > 300 for h in self.hints) or any(len(p) > 120 for p in self.plot):
+            raise ValueError("hints are at most 300 characters and plots 120")
+        return self
+
+
+class Experiment(Model):
+    """A lab experiment: predict one result, run the vetted simulation, compare, explain.
+
+    The true answer is never stored: the harness computes it from ``model`` and ``params`` when
+    the learner commits a prediction, so it cannot be wrong or leak through the listing.
+    """
+
+    id: Slug
+    prompt: str = Field(min_length=5, max_length=1500)  # the scenario; asks for the prediction
+    model: str = Field(min_length=2, max_length=40)  # a model in harness.physics.MODELS
+    params: dict[str, float] = Field(max_length=8)
+    predict: str = Field(min_length=2, max_length=40)  # the reported quantity to predict
+    tolerance: float = Field(default=0.05, ge=0.005, le=0.25)  # relative; 0.05 is 5%
+    vary: str = ""  # a parameter the learner may change afterwards to see the effect
+    hints: list[str] = Field(default_factory=list, max_length=3)
+    difficulty: int = Field(ge=1, le=5)
+    explanation: str = Field(min_length=5, max_length=2000)  # why, in the model's terms
+    rubric: list[Criterion] = Field(default_factory=list, max_length=4)  # grades the written why
+
+    @model_validator(mode="after")
+    def hints_are_short(self):
+        if any(len(h) > 300 for h in self.hints):
+            raise ValueError("hints are at most 300 characters")
+        return self
 
 
 class Concept(Model):
@@ -163,20 +245,28 @@ class Concept(Model):
     module: Slug
     prerequisites: list[Ref] = Field(default_factory=list)
     difficulty: int = Field(ge=1, le=5)
-    estimated_minutes: int = Field(ge=10, le=600)
-    lesson: str = Field(min_length=1)
+    estimated_minutes: int = Field(ge=3, le=600)
+    lesson: str = ""  # empty only while planned
     key_points: list[str] = Field(default_factory=list, max_length=8)
     pitfalls: list[str] = Field(default_factory=list, max_length=8)
     resources: list[Resource] = Field(default_factory=list, max_length=8)
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
+    prompts: list[Prompt] = Field(default_factory=list, max_length=4)
+    exercises: list[Exercise] = Field(default_factory=list, max_length=10)
+    experiments: list[Experiment] = Field(default_factory=list, max_length=6)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     provenance: Provenance | None = None
+    outline: Outline | None = None
     # A draft is being authored: validated and kept in the graph, but never served.
-    status: Literal["draft", "live"] = "live"
+    # A planned concept is an outline entry whose content is not generated yet: it is in
+    # the graph and on the roadmap, but its lesson and activities are held.
+    status: Literal["draft", "live", "planned"] = "live"
 
     @model_validator(mode="after")
     def live_is_complete(self):
+        if self.status != "planned" and not self.lesson:
+            raise ValueError(f"concept {self.id} needs a lesson")
         if self.status == "live":
             missing = [
                 name
@@ -258,6 +348,8 @@ class Course(Model):
     modules: list[Module] = Field(min_length=1)
     concepts: list[Concept] = Field(default_factory=list)
     problems: list[Problem] = Field(default_factory=list)
+    # How this course is practised and evidenced; none means a programming course.
+    shape: CourseShape | None = None
 
     def concept(self, concept_id: str) -> Concept:
         return next(item for item in self.concepts if item.id == concept_id)

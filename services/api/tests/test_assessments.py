@@ -20,6 +20,12 @@ def strong() -> ConceptState:
     return ConceptState(alpha=19, beta=1, evidence_count=9, next_review_at=NOW + 5 * DAY)
 
 
+def bank():
+    from socrat.quiz import service as engine_service
+
+    return engine_service.bank(default_catalog())
+
+
 def test_composition_follows_study_and_fragility():
     catalog = default_catalog()
     states = {
@@ -28,50 +34,50 @@ def test_composition_follows_study_and_fragility():
         "zero:strings": ConceptState(alpha=4, beta=2, evidence_count=4, next_review_at=NOW - DAY),
     }
     exposure = Counter({"zero:conditionals": 4, "zero:for-loops": 2})
-    concepts, items, coding = assessments.compose(
-        catalog, states, exposure, set(), set(), set(), NOW, "seed"
-    )
+    args = (catalog, bank(), "python", states, exposure)
+    concepts, items, coding = assessments.compose(*args, set(), set(), set(), NOW, "seed")
     asked = Counter(c for c, _ in items)
-    assert len(items) <= assessments.QUESTIONS
+    assert len(items) == assessments.QUESTIONS
     assert asked["zero:conditionals"] > asked["zero:for-loops"] >= 1
     assert ["zero:strings", "review"] in concepts and asked["zero:strings"] == 1
     assert coding and all(p in catalog.problems for p in coding)
-    assert assessments.compose(catalog, states, exposure, set(), set(), set(), NOW, "seed") == (
-        concepts,
-        items,
-        coding,
-    )
+    assert assessments.compose(*args, set(), set(), set(), NOW, "seed") == (concepts, items, coding)
     # Locked topics and solved problems never appear.
     _, locked_items, _ = assessments.compose(
-        catalog, states, exposure, {"zero:for-loops"}, set(coding), set(), NOW, "seed"
+        *args, {"zero:for-loops"}, set(coding), set(), NOW, "seed"
     )
     assert "zero:for-loops" not in {c for c, _ in locked_items}
 
 
-def test_strong_topics_get_their_hardest_questions():
+def test_only_unseen_questions_hardest_first_in_the_learners_language():
     catalog = default_catalog()
-    strong_concept, shaky_concept = "zero:functions", "zero:conditionals"
-    _, items, _ = assessments.compose(
-        catalog,
-        {strong_concept: strong(), shaky_concept: shaky()},
-        Counter({strong_concept: 1, shaky_concept: 6}),
-        set(),
-        set(),
-        set(),
-        NOW,
-        "s",
+    items_by_key = {i.key: i for i in bank()}
+    concept = "zero:for-loops"
+    exposure = Counter({concept: 3, "zero:conditionals": 1})
+    _, first, _ = assessments.compose(
+        catalog, bank(), "cpp", {}, exposure, set(), set(), set(), NOW, "a"
     )
-    pool = sorted((q.difficulty for q in catalog.concept(strong_concept).quiz), reverse=True)
-    picked = sorted(
+    keys = [k for c, k in first if c == concept]
+    picked = [items_by_key[k] for k in keys]
+    assert all(not i.languages or "cpp" in i.languages for i in picked)
+    offered = sorted(
         (
-            next(q for q in catalog.concept(c).quiz if q.id == i).difficulty
-            for c, i in items
-            if c == strong_concept
+            i.band
+            for i in bank()
+            if i.concept == concept and (not i.languages or "cpp" in i.languages)
         ),
         reverse=True,
     )
-    assert picked and len(picked) < len(pool)
-    assert picked == pool[: len(picked)]  # the hardest available, not a random sample
+    # Hardest first (with one question per trick before repeats): never below the band that
+    # sits twice as deep in the ranked bank.
+    assert max(i.band for i in picked) == offered[0]
+    assert min(i.band for i in picked) >= offered[min(len(offered) - 1, 2 * len(picked))]
+    # Everything already seen is skipped: a second exam shares no question with the first.
+    seen = {k for _, k in first}
+    _, second, _ = assessments.compose(
+        catalog, bank(), "cpp", {}, exposure, set(), set(), seen, NOW, "b"
+    )
+    assert second and not seen & {k for _, k in second}
 
 
 def finish_lesson(client, headers, concept):  # noqa: F811
@@ -80,7 +86,8 @@ def finish_lesson(client, headers, concept):  # noqa: F811
     ]
 
 
-def test_weekly_assessment_journey(client):  # noqa: F811
+def test_weekly_assessment_journey(client, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(assessments, "exam_day", lambda user, now: False)
     headers = login(client)
     onboard(client, headers)
     overview = client.get("/api/v1/assessments").json()
@@ -90,10 +97,15 @@ def test_weekly_assessment_journey(client):  # noqa: F811
     for concept in ("zero:programs-and-output", "zero:variables-and-types"):
         finish_lesson(client, headers, concept)
     current = client.get("/api/v1/assessments").json()["current"]
+    assert current["state"] == "upcoming" and current["ready"] and current["opens_on"]
+    assert client.post("/api/v1/assessments/start", json={}, headers=headers).status_code == 409
+    monkeypatch.setattr(assessments, "exam_day", lambda user, now: True)
+    current = client.get("/api/v1/assessments").json()["current"]
     assert current["state"] == "available" and len(current["topics"]) == 2
 
     view = client.post("/api/v1/assessments/start", json={}, headers=headers).json()
-    assert view["questions"] and not view["finished"] and view["seconds_left"] is None
+    assert view["questions"] and not view["finished"]
+    assert view["timed"] and 0 < view["seconds_left"] <= assessments.TIME_LIMIT_SECONDS
     assert all("answer" not in q for q in view["questions"])  # graded only at the end
     assert {t["title"] for t in view["topics"]} >= {"Programs and output"}
     again = client.post("/api/v1/assessments/start", json={}, headers=headers).json()
@@ -106,12 +118,15 @@ def test_weekly_assessment_journey(client):  # noqa: F811
     )
     assert "weekly assessment is in progress" in reply.text and '"policy"' in reply.text
 
+    from socrat.quiz import service as engine_service
+
     catalog = default_catalog()
     for question in view["questions"]:
-        item = next(x for x in catalog.concept(question["concept"]).quiz if x.id == question["id"])
+        item = engine_service.item_by_key(catalog, question["id"])
+        shown = engine_service.render(catalog, item, view["id"], "python")
         view = client.post(
             f"/api/v1/assessments/{view['id']}/answer",
-            json={"item": question["id"], "choice": item.shown(view["id"])["answer"]},
+            json={"item": question["id"], "choice": shown["answer"]},
             headers=headers,
         ).json()
     done = client.post(f"/api/v1/assessments/{view['id']}/finish", headers=headers).json()
@@ -127,6 +142,7 @@ def test_weekly_assessment_journey(client):  # noqa: F811
 
 
 def test_timed_assessment_closes_at_the_deadline(client, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(assessments, "exam_day", lambda user, now: True)
     headers = login(client, subject="timed", name="Tim")
     onboard(client, headers)
     for concept in ("zero:programs-and-output", "zero:variables-and-types"):

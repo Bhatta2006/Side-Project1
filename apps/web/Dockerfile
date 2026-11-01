@@ -10,6 +10,8 @@ COPY apps/web/package.json apps/web/package.json
 ENV npm_config_fetch_retries=5     npm_config_fetch_retry_mintimeout=10000     npm_config_fetch_retry_maxtimeout=120000
 RUN npm ci
 COPY apps/web apps/web
+# The in-browser answer checker is the same Python file the API tests; copy-runtimes serves it.
+COPY services/api/src/socrat/checks/engine.py services/api/src/socrat/checks/engine.py
 RUN npm run build --workspace @socrat/web
 
 FROM node:24-alpine AS runtime

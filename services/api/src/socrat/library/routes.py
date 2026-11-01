@@ -85,6 +85,14 @@ def stats():
     }
 
 
+@router.get("/solved")
+def solved_board(request: Request):
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        enrollment = active(db, user)
+        return library.solved_board(db, catalog(), user, enrollment, now())
+
+
 @router.get("/meta")
 def library_meta(request: Request):
     with Session(engine(request)) as db:

@@ -2,6 +2,15 @@ export type Language = 'python' | 'cpp' | 'java';
 export type Band = 'not_started' | 'needs_practice' | 'developing' | 'likely_known' | 'strong';
 export type Pace = 'support' | 'steady' | 'fast';
 
+/** How a course is practised and evidenced; code is the default for programming courses. */
+export interface CourseShape {
+  studio: 'code' | 'workbench' | 'lab' | 'reading';
+  loop: string;
+  evidence: string[];
+  tools: string[];
+  name: string;
+}
+
 export interface Enrollment {
   id: string;
   course: string;
@@ -11,6 +20,8 @@ export interface Enrollment {
   weekdays: number[];
   goal: Record<string, string | number>;
   level: string;
+  /** Only sent for accounts the studios are enabled for; absent means a programming course. */
+  shape?: CourseShape | null;
 }
 
 export interface Profile {
@@ -124,9 +135,17 @@ export interface AdaptiveSession {
   served: number;
   max_items: number;
   finished: boolean;
-  stop_reason: 'max_items' | 'ceiling' | 'stable' | 'exhausted' | 'needs_lesson' | null;
+  stop_reason: 'max_items' | 'ceiling' | 'stable' | 'exhausted' | 'needs_lesson' | 'strikes' | null;
   score?: number | null;
   passed?: boolean | null;
+  /** Test-out: the hardest band on offer and unaided corrects there. */
+  hard_band?: number | null;
+  hard_correct?: number | null;
+  hard_needed?: number | null;
+  /** Test-out answered well but the bank was too small to prove it: a transfer check decides. */
+  needs_transfer?: boolean | null;
+  /** Once finished: each answer's band, result and seconds. */
+  results?: { band: number; correct: boolean; seconds: number }[] | null;
   current: {
     item: string;
     concept: string;
@@ -136,6 +155,8 @@ export interface AdaptiveSession {
     prompt: string;
     code: string | null;
     options: string[];
+    /** Why this difficulty was chosen (engine ladder rule). */
+    reason?: string | null;
     hints_used: number;
     hints_available: number;
     micro_lesson: { pattern: string; concept: string } | null;
@@ -143,8 +164,9 @@ export interface AdaptiveSession {
 }
 
 export interface AdaptiveAnswer {
-  outcome: 'correct' | 'wrong' | 'skipped';
-  answer: number;
+  /** 'recorded': a test-out, graded only at the end. */
+  outcome: 'correct' | 'wrong' | 'skipped' | 'recorded';
+  answer: number | null;
   explanation: string | null;
   misconception: string | null;
   session: AdaptiveSession;
@@ -318,6 +340,7 @@ export interface RoadmapItem {
     | 'in_progress'
     | 'upcoming'
     | 'locked'
+    | 'preparing'
     | 'optional'
     | 'skipped';
   locked_by?: string;
@@ -480,7 +503,49 @@ export interface CompanyProblem extends ExternalProblem {
   concept: { id: string; title: string; band: Band } | null;
 }
 
+/** A rubric grade from the AI grader: points per criterion, logged with the evidence. */
+export interface Grade {
+  score: number;
+  criteria: { criterion: string; points: number; max: number; note: string }[];
+  feedback: string;
+  model: string;
+  copied: boolean;
+}
+
+export interface WrittenPrompt {
+  id: string;
+  prompt: string;
+  max_words: number;
+  rubric: { criterion: string; points: number }[];
+  last: { answer: string; grade: Grade; model_answer: string } | null;
+}
+
+export interface ProjectMilestone {
+  id: string;
+  title: string;
+  checklist: string[];
+  done: boolean;
+  available: boolean;
+  last: { work: string; link: string; grade: Grade } | null;
+}
+
+export interface ProjectView {
+  id: string;
+  title: string;
+  summary: string;
+  skills: string[];
+  constraints: string[];
+  concepts: { id: string; title: string }[];
+  rubric: { criterion: string; weight: number; full_marks: string }[];
+  self_review: string[];
+  milestones: ProjectMilestone[];
+  preparing: boolean;
+  ai_generated: boolean;
+  attribution: string;
+}
+
 export interface ConceptView {
+  prompts?: WrittenPrompt[];
   exercises: { number: number; title: string; url: string; language: string; guidance: string }[];
   id: string;
   course: string;
@@ -488,6 +553,8 @@ export interface ConceptView {
   summary: string;
   module: string;
   lesson: string;
+  ai_generated: boolean;
+  attribution: string;
   key_points: string[];
   pitfalls: string[];
   resources: Resource[];
@@ -651,13 +718,17 @@ export interface ChatMessage {
 }
 
 export interface AssessmentStatus {
-  state: 'locked' | 'available' | 'in_progress' | 'done';
+  /** 'upcoming': enough study this week, and the exam opens on Sunday. */
+  state: 'locked' | 'upcoming' | 'available' | 'in_progress' | 'done';
   week: string;
   id: string | null;
   topics: string[];
   questions?: number;
   time_limit_minutes?: number;
   needed: number;
+  /** Local date (YYYY-MM-DD) of the next exam day. */
+  opens_on?: string;
+  ready?: boolean;
 }
 
 export interface AssessmentReport {
@@ -679,6 +750,8 @@ export interface AssessmentView {
   started_at: number;
   deadline: number | null;
   seconds_left: number | null;
+  /** Server clock at the response, so the countdown does not trust the device clock. */
+  server_now?: number;
   finished: boolean;
   score: number | null;
   topics: { id: string; title: string; reason: 'studied' | 'review' }[];

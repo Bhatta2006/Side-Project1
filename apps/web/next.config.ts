@@ -2,6 +2,8 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   output: 'standalone',
+  // A second dev server in the same folder needs its own build directory (NEXT_DIST_DIR=.next-lab).
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
   // The floating dev badge overlaps the sidebar and tutor button.
   devIndicators: false,

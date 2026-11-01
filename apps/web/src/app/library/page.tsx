@@ -9,6 +9,7 @@ import { NAME, conceptHref } from '@/lib/routes';
 import type { Contest, Level as PracticeLevel, LibraryProblem, Recommendations } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, PageHeader, Reveal } from '@/components/common';
+import { SolvedBoard } from '@/components/socrat/solved-board';
 import { Level, LevelCard, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
 import { PracticeNav } from '@/components/socrat/practice-nav';
 import { EmptyState } from '@/components/socrat/states';
@@ -264,6 +265,8 @@ export default function Library() {
           description={unlocked ? `${unlocked.toLocaleString()} external problems from LeetCode, CSES and Codeforces. They open on those sites and are not judged here. Socrat's own judged problems are on each skill's lesson page.` : 'Problems appear as you finish skills.'}
         />
       </Reveal>
+
+      <SolvedBoard className="mb-8" />
 
       {/* Hero: the personalised recommendations. */}
       {recs ? (

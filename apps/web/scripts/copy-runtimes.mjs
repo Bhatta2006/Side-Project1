@@ -2,6 +2,7 @@
 // node_modules into public/runtimes/<name>-<version>/ so they are served from our own origin,
 // cached as immutable files, and work under the strict CSP. Run before `next dev` and
 // `next build`; the copies are not committed (see .gitignore).
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -41,5 +42,22 @@ for (const [key, { pkg, dir, files }] of Object.entries(runtimes)) {
   }
   manifest[key] = `/runtimes/${name}`;
 }
+// The answer checker: SymPy (and mpmath) built by Pyodide, kept in vendor/ because they are not
+// in the npm package. Each wheel must match the hash in Pyodide's own lock file.
+const pyodideDir = join(out, manifest.pyodide.split('/').pop());
+const lock = JSON.parse(readFileSync(join(pyodideDir, 'pyodide-lock.json'), 'utf8')).packages;
+for (const name of ['sympy', 'mpmath']) {
+  const { file_name: file, sha256 } = lock[name];
+  const bytes = readFileSync(join(web, 'vendor', 'pyodide-wheels', file));
+  if (createHash('sha256').update(bytes).digest('hex') !== sha256) {
+    throw new Error(`vendor/pyodide-wheels/${file} does not match pyodide-lock.json; re-download it from the Pyodide CDN`);
+  }
+  writeFileSync(join(pyodideDir, file), bytes);
+}
+// The checker itself is plain Python shared with the API tests, so one file serves both.
+const checks = join(out, 'checks');
+mkdirSync(checks, { recursive: true });
+copyFileSync(join(web, '..', '..', 'services', 'api', 'src', 'socrat', 'checks', 'engine.py'), join(checks, 'engine.py'));
+manifest.checks = '/runtimes/checks';
 writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 console.log('runtimes ready:', Object.values(manifest).join(', '));

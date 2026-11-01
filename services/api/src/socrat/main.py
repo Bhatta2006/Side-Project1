@@ -24,20 +24,29 @@ from socrat.admin.routes import router as admin_router
 from socrat.assessments.routes import router as assessments_router
 from socrat.auth import COOKIE, establish_session, require_csrf, require_session
 from socrat.billing import router as billing_router
+from socrat.catalog import generated
+from socrat.catalog.registry import default_catalog
 from socrat.config import Settings
+from socrat.coursegen import jobs as coursegen_jobs
+from socrat.coursegen.routes import router as coursegen_router
 from socrat.database import make_engine, record_event
 from socrat.email_auth import router as email_auth_router
 from socrat.explainer.routes import router as explainer_router
+from socrat.lab.routes import router as lab_router
+from socrat.learn.graded_routes import router as graded_router
 from socrat.learn.routes import router as learner_router
 from socrat.learn.session_routes import router as session_router
 from socrat.library import autosync
 from socrat.library.routes import router as library_router
+from socrat.mentor.routes import router as mentor_router
 from socrat.models import User
 from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
 from socrat.schema_revision import SCHEMA_REVISION
+from socrat.style.routes import router as style_router
 from socrat.trial import router as trial_router
 from socrat.vitals import router as vitals_router
+from socrat.workbench.routes import router as workbench_router
 
 logger = logging.getLogger("socrat.requests")
 
@@ -71,6 +80,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background = None
         if settings.codeforces_autosync:
             background = asyncio.create_task(autosync.run_forever(engine))
+        generation = None
+        if settings.gen_runner:
+            generation = asyncio.create_task(
+                coursegen_jobs.run_forever(engine, settings, default_catalog)
+            )
         if settings.adaptive_quiz_enabled and settings.prewarm_content:
             await asyncio.to_thread(warm_quiz_bank)
         elif settings.adaptive_quiz_enabled and settings.environment != "test":
@@ -79,6 +93,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         if background is not None:
             background.cancel()
+        if generation is not None:
+            generation.cancel()
         engine.dispose()
 
     app = FastAPI(
@@ -89,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url=None if settings.secure else "/api/openapi.json",
     )
     app.state.engine = engine
+    generated.bind(engine)
     errors.install(engine, settings)
     app.state.settings = settings
     app.include_router(learner_router)
@@ -99,6 +116,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(library_router)
     app.include_router(assessments_router)
     app.include_router(admin_router)
+    app.include_router(coursegen_router)
+    app.include_router(style_router)
+    app.include_router(mentor_router)
+    app.include_router(workbench_router)
+    app.include_router(lab_router)
+    app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)
     app.include_router(trial_router)

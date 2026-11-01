@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { ArrowLeft, Check, ChevronDown, Cloud, CloudOff, Loader2, Minus, Play, Plus, RotateCcw, Settings2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Cloud, CloudOff, Loader2, Play, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { reportError } from '@/lib/report-error';
@@ -21,7 +21,7 @@ import { parseDiagnostics } from '@/components/code-editor/diagnostics';
 import Markdown from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { AttentionIcon, LockedState } from '@/components/socrat/states';
-import { Soc } from '@/components/socrat/illustration';
+import { useExamGuard, useSocMoment } from '@/components/socrat/soc-moment';
 import { StatusIcon } from '@/components/socrat/status';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -30,9 +30,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -40,6 +38,13 @@ import { Textarea } from '@/components/ui/textarea';
 // Only the 'Visual' tab needs it, so it loads when that tab is opened.
 const ConceptVisual = dynamic(() => import('@/components/socrat/concept-visual').then(m => m.ConceptVisual), { ssr: false });
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+// Per-test results appear only after a run, so they load then.
+// The editor settings popover opens rarely; a same-size placeholder holds its place until it loads.
+const EditorSettings = dynamic(() => import('@/components/editor-settings'), {
+  ssr: false,
+  loading: () => <span className="inline-block size-11" aria-hidden="true" />,
+});
+const CaseResults = dynamic(() => import('@/components/socrat/case-results'), { ssr: false });
 
 type Tone = 'success' | 'info' | 'error' | 'warning';
 const VERDICT: Record<string, { label: string; tone: Tone }> = {
@@ -72,73 +77,6 @@ function CaseMark({ ok }: { ok: boolean }) {
     ? <span className="grid size-6 flex-none place-items-center rounded-full bg-cream text-cream-foreground"><Check className="size-3.5" strokeWidth={2.5} aria-hidden="true" /></span>
     : <AttentionIcon size={22} />;
 }
-const CASE_LABEL: Record<string, string> = {
-  passed: 'Passed', wrong_answer: 'Wrong answer', runtime_error: 'Runtime error', timeout: 'Too slow',
-  output_limit: 'Too much output', memory_limit: 'Too much memory', compile_error: 'Did not compile', executed: 'Ran', not_run: 'Not run',
-};
-
-function CaseDetail({ c, index }: { c: Case; index: number }) {
-  const ok = c.status === 'passed' || c.status === 'executed';
-  return (
-    <Collapsible defaultOpen={!ok && index < 3} className="rounded-[16px] border">
-      <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-[15px]">
-        <span className="flex items-center gap-2.5">
-          <CaseMark ok={ok} />
-          <span className={ok ? '' : 'font-semibold'}>{ok ? 'Passed' : CASE_LABEL[c.status] ?? c.status}</span>
-          <span className="text-muted-foreground">{c.expected === null ? 'Your custom input' : `Example ${index + 1}`}</span>
-        </span>
-        <span className="flex items-center gap-2 text-[13px] text-muted-foreground tabular-nums">
-          {c.wall_ms && c.status !== 'timeout' ? `${c.wall_ms} ms` : ''}
-          <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
-        </span>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="grid gap-2 border-t p-3 text-[13px]">
-          {c.input !== null ? <div><p className="mb-1 font-medium text-muted-foreground">Input</p><pre className="io-block">{c.input}</pre></div> : null}
-          {c.expected !== null ? <div><p className="mb-1 font-medium text-muted-foreground">Expected</p><pre className="io-block">{c.expected}</pre></div> : null}
-          {c.stdout !== null ? <div><p className="mb-1 font-medium text-muted-foreground">Your output</p><pre className="io-block">{c.stdout || '(no output)'}</pre></div> : null}
-          {c.stderr ? <div><p className="mb-1 font-medium text-muted-foreground">Errors</p><pre className="io-block">{c.stderr}</pre></div> : null}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function HiddenSummary({ cases }: { cases: Case[] }) {
-  const hidden = cases.map((c, index) => ({ c, index })).filter(({ c }) => !c.public);
-  if (!hidden.length) return null;
-  const failed = hidden.filter(({ c }) => c.status !== 'passed');
-  const slowest = Math.max(...hidden.map(({ c }) => c.wall_ms || 0));
-  return (
-    <Collapsible defaultOpen={failed.length > 0} className="rounded-[16px] border">
-      <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-[15px]">
-        <span className="flex items-center gap-2.5">
-          <CaseMark ok={!failed.length} />
-          Hidden tests
-        </span>
-        <span className="flex items-center gap-2 text-[13px] text-muted-foreground tabular-nums">
-          {hidden.length - failed.length} of {hidden.length} passed{slowest ? `, slowest ${slowest} ms` : ''}
-          <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
-        </span>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="grid gap-1 border-t p-3 text-[13px]">
-          {failed.length ? (
-            failed.map(({ c, index }) => (
-              <div key={index}>
-                <p className="flex justify-between gap-2"><span>Hidden test {index + 1}</span><span className="font-medium">{CASE_LABEL[c.status] ?? c.status}</span></p>
-                {c.stderr ? <pre className="io-block mt-1">{c.stderr}</pre> : null}
-              </div>
-            ))
-          ) : (
-            <p className="text-muted-foreground">All passed.</p>
-          )}
-          <p className="mt-1 text-muted-foreground">Hidden tests check edge cases and performance; their data stays private.</p>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
 
 export default function Problem() {
   const allowed = useGuard('signed-in');
@@ -157,7 +95,21 @@ export default function Problem() {
   const [useCustom, setUseCustom] = useState(false);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [error, setError] = useState('');
-  const [hintSignal, setHintSignal] = useState(0);
+  // Opened from a weekly exam (?assessment=<id>): no tutor, no copy and paste, and the way
+  // back after a submission leads to the exam, not to Today.
+  const [examId, setExamId] = useState<string | null>(null);
+  // Opened from a transfer check (?check=/transfer/...): the same rules, and the way back is the check.
+  const [checkBack, setCheckBack] = useState<string | null>(null);
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const id = query.get('assessment');
+    setExamId(id && /^[A-Za-z0-9-]{8,64}$/.test(id) ? id : null);
+    const back = query.get('check');
+    setCheckBack(back && /^\/transfer\/[a-z0-9/-]{1,160}$/.test(back) ? back : null);
+  }, []);
+  const proving = Boolean(examId || checkBack);
+  const examGuard = useExamGuard(proving);
+  const soc = useSocMoment();
   const attempted = useRef(false);
   const canExecuteRef = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -273,7 +225,7 @@ export default function Problem() {
       if (job.status !== 'done') setError('The runner is taking longer than usual. Your submission is saved; check back in a moment.');
       if (mode === 'submit' && job.verdict === 'accepted') {
         setProblem(p => (p ? { ...p, solved: true } : p));
-        toast.success('Accepted. Every test passed.');
+        soc.show('celebrate');
       }
       if (job.status === 'done') {
         setProblem(p => p && { ...p, history: [{ id: job.id, mode: job.mode, verdict: job.verdict, status: job.status, passed: job.passed, total: job.total, at: job.created_at }, ...p.history].slice(0, 10) });
@@ -307,8 +259,16 @@ export default function Problem() {
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 pt-4 pb-40 sm:px-6 md:pb-10 lg:px-10">
+      {examGuard}
+      {soc.element}
+      {proving ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-border-strong px-4 py-2.5 text-[15px]">
+          <span className="font-semibold">{examId ? 'Weekly exam coding task' : 'Transfer check'}. No tutor, no copy and paste.</span>
+          <Button asChild size="sm" variant="outline"><Link href={examId ? '/assessments' : checkBack ?? '/plan'}>{examId ? 'Back to the exam' : 'Back to the check'}</Link></Button>
+        </div>
+      ) : null}
       <header className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-b pb-4">
-        <Link href={conceptHref(problem.concept.id)} transitionTypes={['nav-back']} aria-label={`Back to ${problem.concept.title}`} className="grid size-11 flex-none place-items-center rounded-full border border-border-strong transition-colors hover:bg-raised">
+        <Link href={examId ? '/assessments' : conceptHref(problem.concept.id)} transitionTypes={['nav-back']} aria-label={examId ? 'Back to the exam' : `Back to ${problem.concept.title}`} className="grid size-11 flex-none place-items-center rounded-full border border-border-strong transition-colors hover:bg-raised">
           <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
         </Link>
         <h1 id="problem-title" className="min-w-0 flex-1 basis-40 font-display sm:truncate text-2xl font-semibold tracking-[-0.03em]">{problem.title}</h1>
@@ -430,29 +390,7 @@ export default function Problem() {
               {saved === 'saving' ? 'Saving' : saved === 'saved' ? 'Draft saved' : 'Unsaved changes'}
             </span>
             <div className="flex items-center gap-1">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Editor settings"><Settings2 /></Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="grid w-60 gap-4">
-                  <div className="grid gap-2">
-                    <p className="text-sm font-medium">Font size</p>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon-sm" aria-label="Smaller text" disabled={prefs.fontSize <= 12} onClick={() => setPrefs({ fontSize: prefs.fontSize - 1 })}><Minus /></Button>
-                      <span className="w-12 text-center text-sm tabular-nums" aria-live="polite">{prefs.fontSize} px</span>
-                      <Button variant="outline" size="icon-sm" aria-label="Larger text" disabled={prefs.fontSize >= 20} onClick={() => setPrefs({ fontSize: prefs.fontSize + 1 })}><Plus /></Button>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <p className="text-sm font-medium" id="indent-label">Indent</p>
-                    <div className="flex gap-2" role="radiogroup" aria-labelledby="indent-label">
-                      {([2, 4] as const).map(n => (
-                        <Button key={n} variant={prefs.tabSize === n ? 'default' : 'outline'} size="sm" role="radio" aria-checked={prefs.tabSize === n} onClick={() => setPrefs({ tabSize: n })}>{n} spaces</Button>
-                      ))}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <EditorSettings prefs={prefs} setPrefs={setPrefs} />
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label="Reset starter code"><RotateCcw /></Button>
@@ -496,15 +434,13 @@ export default function Problem() {
               <Textarea className="font-mono text-sm" rows={4} value={customInput} onChange={e => setCustomInput(e.target.value)} maxLength={20000} aria-label="Custom input" />
             </div>
           </details>
-          <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-wrap items-center gap-2 border-t bg-background px-4 py-3 sm:mx-0 sm:rounded-[20px] sm:border md:bottom-4 lg:static lg:border-0 lg:bg-transparent lg:p-0">
-            <Button variant="run" className="flex-1 sm:flex-none" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'run'} onClick={() => execute('run')}>
+          <div className={cn('sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-wrap items-center gap-2 border-t bg-background px-4 py-3 sm:mx-0 sm:rounded-[20px] sm:border md:bottom-4 lg:static lg:border-0 lg:bg-transparent lg:p-0', !proving && 'pr-[84px] sm:pr-[84px] lg:pr-0')}>
+            {/* Desktop runs and submits from the header; these are the phone and tablet copies. */}
+            <Button variant="run" className="flex-1 sm:flex-none lg:hidden" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'run'} onClick={() => execute('run')}>
               {pending === 'run' ? <Loader2 className="animate-spin" /> : <Play />} Run tests
             </Button>
-            <Button className="flex-1 sm:flex-none" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'submit'} onClick={() => execute('submit')}>
+            <Button className="flex-1 sm:flex-none lg:hidden" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'submit'} onClick={() => execute('submit')}>
               Submit solution<ArrowCircle loading={pending === 'submit'} />
-            </Button>
-            <Button variant="outline" className="w-full pl-1.5 sm:ml-auto sm:w-auto" onClick={() => setHintSignal(n => n + 1)} aria-haspopup="dialog">
-              <Soc size={32} mood={pending ? 'thinking' : verdict?.tone === 'success' ? 'happy' : verdict?.tone === 'error' ? 'worried' : 'neutral'} /> Ask Soc
             </Button>
           </div>
           {problem.locked ? <p className="text-sm text-muted-foreground">Run and submit unlock after the {problem.locked.module} checkpoint.</p> : null}
@@ -545,12 +481,13 @@ export default function Problem() {
                     <p className="text-[15px]">
                       {result.assistance >= 5 ? 'Solved with the full walkthrough. Try writing it again from memory tomorrow.' : result.assistance ? 'Solved. Hints count for a little less, and that is fine while you are learning.' : 'Solved without help. Nice work.'}
                     </p>
-                    <Button asChild><Link href="/today">Continue to {NAME.today}</Link></Button>
+                    {proving
+                      ? <Button asChild><Link href={examId ? '/assessments' : checkBack ?? '/plan'}>{examId ? 'Back to the exam' : 'Back to the check'}<ArrowCircle /></Link></Button>
+                      : <Button asChild><Link href="/today">Continue to {NAME.today}</Link></Button>}
                   </div>
                 ) : null}
                 <div className="grid gap-2">
-                  {result.cases.map((c, i) => (c.public ? <CaseDetail key={i} c={c} index={i} /> : null))}
-                  <HiddenSummary cases={result.cases} />
+                  <CaseResults cases={result.cases} />
                 </div>
               </section>
             ) : null}
@@ -558,14 +495,13 @@ export default function Problem() {
           {error ? <ErrorNote message={error} /> : null}
         </section>
       </div>
-      <Assistant
+      {proving ? null : <Assistant
         scope={`problem:${problem.id}`}
         title="Ask Soc"
         language={lang}
-        openSignal={hintSignal}
         context={() => ({ code: latest.current.source, newAttempt: attempted.current })}
         onSent={() => { attempted.current = false; }}
-      />
+      />}
     </div>
   );
 }

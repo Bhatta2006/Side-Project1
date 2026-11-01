@@ -19,7 +19,8 @@ export type SocMood =
   | 'surprised'
   | 'confused'
   | 'sleepy'
-  | 'wink';
+  | 'wink'
+  | 'angry';
 
 type Look = { x: number; y: number };
 
@@ -61,6 +62,8 @@ const BROWS: Record<SocMood, [Brow, Brow]> = {
   confused: [[80, 50, 103, 55, -1], [127, 60, 150, 55, -1]],
   sleepy: [[80, 60, 103, 60, 0], [127, 60, 150, 60, 0]],
   wink: [[80, 55, 103, 53, -2], [127, 58, 150, 61, 1]],
+  // Both brows slammed down toward the nose.
+  angry: [[80, 50, 104, 60, 2], [126, 62, 150, 52, 2]],
 };
 
 function Brows({ mood }: { mood: SocMood }) {
@@ -136,6 +139,8 @@ function Mouth({ mood }: { mood: SocMood }) {
       return <ellipse cx="111" cy="119" rx="3.6" ry="2.6" fill={INK} />;
     case 'wink':
       return <path d="M101 116q11 9 21-1" fill="none" stroke={INK} strokeWidth="3.2" strokeLinecap="round" />;
+    case 'angry':
+      return <path d="M101 121q10-7 20 0" fill="none" stroke={INK} strokeWidth="3.4" strokeLinecap="round" />;
     default:
       return <path d="M101 116q10 7 20 0" fill="none" stroke={INK} strokeWidth="3.2" strokeLinecap="round" />;
   }
@@ -164,6 +169,14 @@ function Extras({ mood }: { mood: SocMood }) {
       <g fill="var(--pen)" style={{ fontFamily: 'var(--font-hand)' }}>
         <text x="184" y="56" fontSize="22">z</text>
         <text x="198" y="38" fontSize="30">z</text>
+      </g>
+    );
+  }
+  if (mood === 'angry') {
+    // A cartoon anger mark by the temple, in pen red.
+    return (
+      <g stroke="var(--pen)" strokeWidth="4" strokeLinecap="round" fill="none" transform="translate(186 30)">
+        <path d="M0 8q8 0 8-8" /><path d="M14 0q0 8 8 8" /><path d="M22 14q-8 0-8 8" /><path d="M8 22q0-8-8-8" />
       </g>
     );
   }

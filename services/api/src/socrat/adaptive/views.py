@@ -256,6 +256,22 @@ def nudges(
                 href="/plan#proposals",
             )
         )
+    ahead = [
+        r for r in plan.roadmap if r["status"] not in {"mastered", "assumed", "skipped", "optional"}
+    ][:3]
+    writing = next((r for r in ahead if r["status"] == "preparing"), None)
+    if writing is not None:
+        # Generated courses: the hold state. Say what is coming and keep the day useful.
+        out.append(
+            dict(
+                kind="preparing",
+                severity="low",
+                title=f"{writing['title']} is being written",
+                body="It joins your plan as soon as it passes its checks. "
+                "Meanwhile, your reviews and practice keep you moving.",
+                href="/plan",
+            )
+        )
     if weekly_ready(user, enrollment, now):
         out.append(
             dict(

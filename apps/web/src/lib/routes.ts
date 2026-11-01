@@ -51,11 +51,20 @@ export type NavKey = 'today' | 'skills' | 'practice' | 'playground' | 'evidence'
 export const NAV: { key: NavKey; href: string; label: string; owns: string[] }[] = [
   { key: 'today', href: '/today', label: NAME.today, owns: ['/today'] },
   { key: 'skills', href: '/plan', label: NAME.skills, owns: ['/plan', '/graph', '/learn', '/quiz', '/transfer'] },
-  { key: 'practice', href: '/library', label: NAME.practice, owns: ['/library', '/companies', '/company-sprint', '/sprint', '/problems'] },
+  { key: 'practice', href: '/library', label: NAME.practice, owns: ['/library', '/companies', '/company-sprint', '/sprint', '/problems', '/studio'] },
   { key: 'playground', href: '/playground', label: NAME.playground, owns: ['/playground'] },
   { key: 'evidence', href: '/progress', label: NAME.evidence, owns: ['/progress', '/assessments'] },
   { key: 'settings', href: '/settings', label: NAME.settings, owns: ['/settings'] },
 ];
+
+/**
+ * The six destinations for a course. The spine never changes; the Practice slot becomes the
+ * course's own studio (Workbench, Lab, Notebook) when its shape is not code.
+ */
+export function navItems(shape?: { studio: string; name: string } | null): typeof NAV {
+  if (!shape || shape.studio === 'code') return NAV;
+  return NAV.map(item => (item.key === 'practice' ? { ...item, href: '/studio', label: shape.name } : item));
+}
 
 /** Practice is one place with four views; each segment is a real route. */
 export const PRACTICE_SEGMENTS = [

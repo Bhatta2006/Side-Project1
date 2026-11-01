@@ -18,7 +18,13 @@ from socrat import entitlements
 from socrat.assessments import service as assessments
 from socrat.assistant import engine, socratic
 from socrat.assistant.gateway import Provider, ProviderError, ToolRunner, ToolSpec, Turn, complete
-from socrat.assistant.prompts import LESSON_STYLES, LESSON_SYSTEM, SYSTEM, render_context
+from socrat.assistant.prompts import (
+    GENERAL_SYSTEM,
+    LESSON_STYLES,
+    LESSON_SYSTEM,
+    SYSTEM,
+    render_context,
+)
 from socrat.assistant.tools import LABELS
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Problem
@@ -27,6 +33,7 @@ from socrat.learn import service as learn
 from socrat.library import recommend
 from socrat.library import service as library
 from socrat.mastery.model import band
+from socrat.mentor import service as mentor
 from socrat.models import (
     AssistantMessage,
     AssistantThread,
@@ -38,6 +45,8 @@ from socrat.models import (
 from socrat.models import (
     now as clock,
 )
+from socrat.style import access as style_access
+from socrat.style import spec as styles
 
 HISTORY_TURNS = 12
 PLANNING_MODE = (
@@ -67,6 +76,7 @@ class TurnPlan:
     reveal_blocked: str = ""
     paused: str = ""  # policy reply that replaces the model (e.g. during an assessment)
     move: engine.Move | None = None  # the teaching engine's decision for this reply
+    system: str = ""  # the tutor prompt to use; empty means the default
 
 
 def validate_scope(scope: str) -> str:
@@ -421,6 +431,14 @@ def prepare(
     )
     thread.ladder = {**thread.ladder, "engine": state.to_dict()}
     sections["teaching_move"] = engine.instruction(teaching)
+    style = personal_style(settings, user, enrollment)
+    if style is not None:
+        sections["learning_style"] = styles.tutor_block(style)
+    if enrollment is not None and style_access.enabled(settings, user):
+        mentor_note = mentor.tutor_note(enrollment, catalog, scope)
+        if mentor_note:
+            sections["mentor"] = mentor_note
+        sections["verified_tools"] = VERIFIED_TOOLS
     text = message.strip() or ("I'd like a hint." if intent == "hint" else "Can you help me?")
     if intent == "reveal_confirmed" and not reveal_blocked:
         text = "I've tried my best and I'm still stuck. Please walk me through the full solution."
@@ -439,8 +457,14 @@ def prepare(
             "question with you."
         )
     if enrollment is not None:
-        from socrat.learn import sessions
+        from socrat.learn import quizzes, sessions
 
+        if not paused and quizzes.open_test(db, enrollment, now):
+            paused = (
+                "You're in the middle of a check, so I'm staying quiet until you finish it. "
+                "It shows what you can do on your own. Submit it and I'll go through every "
+                "question with you."
+            )
         if sessions.instruction_blocked(db, enrollment, now):
             paused = "This is your independent challenge. Try your own approach and submit an attempt; we can review it together afterwards."
         gate = (
@@ -453,8 +477,33 @@ def prepare(
         elif gate is not None:
             paused = "This concept follows a locked prerequisite. Complete the checkpoint first, then we can work through it together."
     return TurnPlan(
-        thread.id, scope, allowed, problem, turns, fallback, reveal_blocked, paused, teaching
+        thread.id,
+        scope,
+        allowed,
+        problem,
+        turns,
+        fallback,
+        reveal_blocked,
+        paused,
+        teaching,
+        GENERAL_SYSTEM if style is not None else "",
     )
+
+
+VERIFIED_TOOLS = (
+    "You have verified tools. When a learner shows math working or an answer, check it with "
+    "math_check before saying it is right or wrong; never judge algebra or units from memory. "
+    "Report what the tool found in plain words."
+)
+STYLE_KEY = styles.STYLE_KEY
+
+
+def personal_style(settings: Settings, user: User, enrollment) -> styles.StyleSpec | None:
+    """The learning style this learner set for themselves. Admin accounts only while the
+    style engine is tested: anyone else gets the standard tutor even if a style is stored."""
+    if enrollment is None or not style_access.enabled(settings, user):
+        return None
+    return styles.parse((enrollment.adaptive or {}).get(STYLE_KEY))
 
 
 def _sse(event: str, data: dict) -> str:
@@ -502,7 +551,7 @@ async def stream_reply(
     try:
         paragraph = False
         async for event in provider.converse(
-            SYSTEM,
+            plan.system or SYSTEM,
             plan.turns,
             settings.ai_reply_tokens,
             tools if settings.ai_tools else None,

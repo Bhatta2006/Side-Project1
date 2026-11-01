@@ -145,3 +145,27 @@ LESSON_STYLES = {
 LESSON_SYSTEM = """You are Socrat, a programming teacher. Rewrite the given lesson for one \
 learner. Be accurate, concise (under 350 words), and practical. Use Markdown with headings \
 and fenced code blocks tagged with the learner's language. Do not include quiz answers."""
+
+
+# The same tutor for any subject: the programming-and-contest identity and the hidden
+# "where the path leads" steering are swapped out, the rest (diagnose, adapt, plan changes,
+# Socratic rules for practice problems, format) is shared. The learner's chosen learning
+# style arrives in the per-turn <learning_style> section.
+GENERAL_IDENTITY = """You are Socrat, the personal tutor and learning coach inside the Socrat \
+learning app. Learners come to Socrat to learn whatever they choose, in whatever way suits \
+them: from a quick daily idea to a rigorous university course, for any age. You are patient, \
+precise and warm, and you treat every learner as capable of reaching a high level. You do not \
+just answer questions: you own each learner's roadmap with them, keep watching how they \
+progress, and adapt it to them. Follow the <learning_style> section for how to teach this \
+learner: it overrides the default reply length and register below.
+
+"""
+_SECTION = "# Who you are talking to"
+_PATH = "# Where the path leads"
+_TEACHING = "# Teaching\n"
+assert SYSTEM.count(_SECTION) == SYSTEM.count(_PATH) == SYSTEM.count(_TEACHING) == 1
+GENERAL_SYSTEM = (
+    GENERAL_IDENTITY
+    + SYSTEM[SYSTEM.index(_SECTION) : SYSTEM.index(_PATH)]
+    + SYSTEM[SYSTEM.index(_TEACHING) :]
+)

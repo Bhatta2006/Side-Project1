@@ -1,14 +1,22 @@
-"""Weekly personalised assessments.
+"""Weekly personalised assessments: the hardest exam of the week, on Sundays.
 
-Once per (local) ISO week a learner who studied at least two topics in the last seven days
-gets an assessment built from exactly that study: questions weighted toward what they spent
-time on and what is still shaky, a few interleaved older topics that are due for review,
-and one or two coding tasks from Socrat's judge. Answers stay hidden until the end; the
-report shows per-topic results, mastery movement and what to focus on next.
+Each Sunday (learner's local day) a learner who studied at least two topics in the last
+seven days gets a 30-minute exam built from exactly that study: the hardest questions the
+item bank holds on those topics, weighted toward what they spent time on, a few older topics
+that are due, and one or two coding tasks from Socrat's judge.
+
+Every question is one the learner has never been shown: not in a concept check, a review, a
+checkpoint, a test-out or an earlier weekly. Once used here, a question is held back from
+every other quiz for ``QUARANTINE_DAYS``, so the next time it appears is long after.
+Answers stay hidden until the end; the report shows per-topic results, mastery movement and
+what to focus on next.
 """
 
+import os
 import random
 from collections import Counter
+from dataclasses import dataclass, field
+from datetime import timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -17,17 +25,21 @@ from sqlalchemy.orm import Session
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import QuizItem
 from socrat.learn import service as learn
-from socrat.learn.quizzes import recent_items
 from socrat.library import service as library
 from socrat.mastery.model import DAY, ConceptState, band
 from socrat.models import (
     ActivityRecord,
     Enrollment,
     Evidence,
+    QuizEngineSession,
+    QuizResponse,
+    QuizSession,
     Submission,
     User,
     WeeklyAssessment,
 )
+from socrat.quiz import service as engine_service
+from socrat.quiz.pools import Item
 
 WINDOW_SECONDS = 7 * DAY
 MIN_CONCEPTS = 2
@@ -37,6 +49,63 @@ MAX_CODING = 2
 TIME_LIMIT_SECONDS = 30 * 60
 ACTIVE_SECONDS = 3 * 60 * 60  # how long an unfinished attempt pauses the tutor
 STUDY_KINDS = ("quiz", "code", "checkpoint", "review", "external", "verified")
+EXAM_WEEKDAY = 6  # Sunday (date.weekday())
+QUARANTINE_DAYS = 180  # a weekly question is held back from every other quiz this long
+
+
+def exam_day(user: User, now: int) -> bool:
+    # Local demos only: SOCRAT_WEEKLY_ANY_DAY=1 opens the exam on any day for testing.
+    if os.environ.get("SOCRAT_WEEKLY_ANY_DAY") == "1" and os.environ.get(
+        "SOCRAT_ENVIRONMENT", "production"
+    ) in {"development", "test"}:
+        return True
+    return learn.local_day(user, now).weekday() == EXAM_WEEKDAY
+
+
+def next_exam_day(user: User, now: int) -> str:
+    today = learn.local_day(user, now)
+    return (today + timedelta(days=(EXAM_WEEKDAY - today.weekday()) % 7)).isoformat()
+
+
+def key_of(concept: str, stored: str) -> str:
+    """Bank key for a stored weekly item: new attempts store keys, old ones bare legacy ids."""
+    return stored if ":" in stored or stored.startswith("gen-") else f"{concept}:{stored}"
+
+
+def seen_keys(db: Session, enrollment: Enrollment) -> set[str]:
+    """Every bank key this learner has been shown anywhere, ever."""
+    seen = set(
+        db.scalars(select(QuizResponse.item_id).where(QuizResponse.enrollment_id == enrollment.id))
+    )
+    for session in db.scalars(
+        select(QuizSession).where(QuizSession.enrollment_id == enrollment.id)
+    ):
+        seen |= {f"{concept}:{item_id}" for concept, item_id in session.items}
+    for row in db.scalars(
+        select(QuizEngineSession).where(QuizEngineSession.enrollment_id == enrollment.id)
+    ):
+        pending = (row.state or {}).get("pending") or {}
+        if pending.get("item"):
+            seen.add(pending["item"])
+    for attempt in db.scalars(
+        select(WeeklyAssessment).where(WeeklyAssessment.enrollment_id == enrollment.id)
+    ):
+        seen |= {key_of(concept, stored) for concept, stored in attempt.items}
+    return seen
+
+
+def quarantined(db: Session, enrollment: Enrollment, now: int) -> set[str]:
+    """Bank keys used in this learner's weeklies recently: other quizzes must not serve them."""
+    since = now - QUARANTINE_DAYS * DAY
+    keys: set[str] = set()
+    for attempt in db.scalars(
+        select(WeeklyAssessment).where(
+            WeeklyAssessment.enrollment_id == enrollment.id,
+            WeeklyAssessment.started_at >= since,
+        )
+    ):
+        keys |= {key_of(concept, stored) for concept, stored in attempt.items}
+    return keys
 
 
 def iso_week(user: User, now: int) -> str:
@@ -92,35 +161,57 @@ def in_progress(db: Session, enrollment: Enrollment, now: int) -> WeeklyAssessme
     return attempt
 
 
-def _target(state: ConceptState, now: int) -> int:
-    """Difficulty to aim for: shaky topics get a fair check, strong ones get a stretch."""
-    label = band(state, now)
-    return {"not_started": 1, "needs_practice": 1, "developing": 2}.get(label, 5)
-
-
-def _pick(
-    pool: list[QuizItem], count: int, target: int, recent: set[str], rng: random.Random
-) -> list[QuizItem]:
-    ranked = sorted(pool, key=lambda q: (q.id in recent, abs(q.difficulty - target), rng.random()))
-    return ranked[:count]
+def _hardest(pool: list[Item], count: int, rng: random.Random) -> list[Item]:
+    """The hardest ``count`` items, never-practised (assessment pool) first within a band,
+    spread over patterns so one trick is not asked twice."""
+    ranked = sorted(pool, key=lambda i: (-i.band, i.pool != "assessment", rng.random()))
+    chosen: list[Item] = []
+    used_patterns: set[str] = set()
+    floor = ranked[0].band - 1 if ranked else 0
+    for item in ranked:  # first pass: one per pattern, among the top two bands only
+        if len(chosen) >= count or item.band < floor:
+            break
+        if item.pattern not in used_patterns or item.pattern == item.concept:
+            chosen.append(item)
+            used_patterns.add(item.pattern)
+    for item in ranked:  # then fill by difficulty
+        if len(chosen) >= count:
+            break
+        if item not in chosen:
+            chosen.append(item)
+    return sorted(chosen, key=lambda i: -i.band)
 
 
 def compose(
     catalog: Catalog,
+    bank: list[Item],
+    language: str,
     states: dict[str, ConceptState],
     exposure: Counter,
     locked: set[str],
     solved: set[str],
-    recent: set[str],
+    seen: set[str],
     now: int,
     seed: str,
 ) -> tuple[list[list[str]], list[list[str]], list[str]]:
-    """(concepts with reasons, [concept, item] pairs, coding problem ids). Pure."""
+    """(concepts with reasons, [concept, bank key] pairs, coding problem ids). Pure.
+
+    Only items the learner has never seen, in their language, from the concepts they
+    studied (plus a few due ones), hardest first.
+    """
     rng = random.Random(seed)
+    by_concept: dict[str, list[Item]] = {}
+    for item in bank:
+        if (
+            item.status != "retired"
+            and item.key not in seen
+            and (not item.languages or language in item.languages)
+        ):
+            by_concept.setdefault(item.concept, []).append(item)
     weights = {
         c: n * (1.5 - states.get(c, ConceptState()).effective(now))
         for c, n in exposure.items()
-        if c not in locked and catalog.concept(c).quiz
+        if c not in locked and by_concept.get(c)
     }
     due = sorted(
         (
@@ -131,7 +222,7 @@ def compose(
             and c in catalog.concepts
             and s.evidence_count
             and s.due(now)
-            and catalog.concept(c).quiz
+            and by_concept.get(c)
         ),
         key=lambda c: states[c].next_review_at,
     )[:REVIEW_SLOTS]
@@ -139,32 +230,46 @@ def compose(
     total = sum(weights.values()) or 1.0
     # Largest-remainder allocation, at least one question per studied topic.
     share = {c: max(1.0, budget * w / total) for c, w in weights.items()}
-    counts = {c: min(int(v), len(catalog.concept(c).quiz)) for c, v in share.items()}
+    counts = {c: min(int(v), len(by_concept[c])) for c, v in share.items()}
     for c, _ in sorted(share.items(), key=lambda x: x[1] - int(x[1]), reverse=True):
         if sum(counts.values()) >= budget:
             break
-        if counts[c] < len(catalog.concept(c).quiz):
+        if counts[c] < len(by_concept[c]):
             counts[c] += 1
+    # Topics with spare questions take the slots others could not fill.
+    while sum(counts.values()) < budget:
+        spare = [c for c in counts if counts[c] < len(by_concept[c])]
+        if not spare:
+            break
+        counts[max(spare, key=lambda c: weights[c])] += 1
     items: list[list[str]] = []
     for c, n in counts.items():
-        state = states.get(c, ConceptState())
-        items += [
-            [c, q.id] for q in _pick(catalog.concept(c).quiz, n, _target(state, now), recent, rng)
-        ]
+        items += [[c, i.key] for i in _hardest(by_concept[c], n, rng)]
     for c in due:
-        items += [[c, q.id] for q in _pick(catalog.concept(c).quiz, 1, 5, recent, rng)]
+        items += [[c, i.key] for i in _hardest(by_concept[c], 1, rng)]
     rng.shuffle(items)
     items = items[:QUESTIONS]
     coding: list[str] = []
     for c, _ in sorted(weights.items(), key=lambda x: -x[1]):
-        for problem_id in catalog.concept(c).problems:
-            if problem_id not in solved and problem_id not in coding:
-                coding.append(problem_id)
-                break
+        problems = sorted(
+            (p for p in catalog.concept(c).problems if p not in solved and p not in coding),
+            key=lambda p: -_difficulty(catalog, p),
+        )
+        if problems:
+            coding.append(problems[0])  # the hardest unsolved problem on the topic
         if len(coding) >= MAX_CODING:
             break
     concepts = [[c, "studied"] for c in weights] + [[c, "review"] for c in due]
     return concepts, items, coding
+
+
+def _difficulty(catalog: Catalog, problem_id: str) -> int:
+    entry = catalog.problems.get(problem_id)
+    if entry is None:
+        return 0
+    value = getattr(entry[1], "difficulty", 0)
+    order = {"easy": 1, "medium": 2, "hard": 3}
+    return order.get(value, 0) if isinstance(value, str) else int(value or 0)
 
 
 def status(db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int) -> dict:
@@ -175,6 +280,17 @@ def status(db: Session, catalog: Catalog, user: User, enrollment: Enrollment, no
     if existing is not None:
         state = "done" if existing.finished_at else "in_progress"
         return dict(state=state, week=week, id=existing.id, topics=titles, needed=MIN_CONCEPTS)
+    if not exam_day(user, now) and len(exposure) >= MIN_CONCEPTS:
+        return dict(
+            state="upcoming",
+            week=week,
+            id=None,
+            topics=titles,
+            needed=MIN_CONCEPTS,
+            opens_on=next_exam_day(user, now),
+            ready=len(exposure) >= MIN_CONCEPTS,
+            time_limit_minutes=TIME_LIMIT_SECONDS // 60,
+        )
     if len(exposure) >= MIN_CONCEPTS:
         return dict(
             state="available",
@@ -185,52 +301,166 @@ def status(db: Session, catalog: Catalog, user: User, enrollment: Enrollment, no
             time_limit_minutes=TIME_LIMIT_SECONDS // 60,
             needed=MIN_CONCEPTS,
         )
-    return dict(state="locked", week=week, id=None, topics=titles, needed=MIN_CONCEPTS)
+    return dict(
+        state="locked",
+        week=week,
+        id=None,
+        topics=titles,
+        needed=MIN_CONCEPTS,
+        opens_on=next_exam_day(user, now),
+    )
 
 
-def start(
-    db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int, timed: bool
-) -> WeeklyAssessment:
+@dataclass
+class Draft:
+    """A weekly exam planned from the bank, before its hard questions are generated."""
+
+    week: str
+    language: str
+    concepts: list[list[str]]
+    items: list[list[str]]  # [concept, bank key]
+    coding: list[str]
+    bands: dict[str, int] = field(default_factory=dict)  # bank key -> band
+
+    def wanted(self) -> dict[str, int]:
+        """How many generated questions to ask for, per topic: one per planned question."""
+        return dict(Counter(c for c, _ in self.items))
+
+
+def plan(
+    db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int
+) -> WeeklyAssessment | Draft:
+    """This week's attempt when it exists, else the bank plan for a new one."""
     week = iso_week(user, now)
     existing = this_week(db, enrollment, week)
     if existing is not None:
         if existing.finished_at:
             raise HTTPException(409, "assessment_done")
         return existing
+    if not exam_day(user, now):
+        raise HTTPException(409, "assessment_not_today")
     exposure = studied(db, catalog, enrollment, now)
     if len(exposure) < MIN_CONCEPTS:
         raise HTTPException(409, "assessment_unavailable")
+    bank = engine_service.items_for(db, catalog)
     concepts, items, coding = compose(
         catalog,
+        bank,
+        enrollment.language,
         learn.states_for(db, enrollment),
         exposure,
         set(learn.locked_concepts(db, catalog, enrollment, now)),
         library.native_solved(db, user.id),
-        recent_items(db, enrollment, now),
+        seen_keys(db, enrollment),
         now,
         f"{enrollment.id}:{week}",
     )
     if not items:
         raise HTTPException(409, "assessment_unavailable")
+    bands = {i.key: i.band for i in bank}
+    return Draft(
+        week, enrollment.language, concepts, items, coding, {k: bands.get(k, 0) for _, k in items}
+    )
+
+
+def merge(draft: Draft, generated: list[dict]) -> tuple[list[list[str]], dict[str, dict]]:
+    """Each topic keeps its question count; generated questions take the place of its
+    easiest bank questions."""
+    by_concept: dict[str, list[dict]] = {}
+    for g in generated:
+        by_concept.setdefault(g["concept"], []).append(g)
+    items: list[list[str]] = []
+    kept: dict[str, dict] = {}
+    for concept, n in draft.wanted().items():
+        fresh = by_concept.get(concept, [])[:n]
+        bank = sorted(
+            (k for c, k in draft.items if c == concept), key=lambda k: -draft.bands.get(k, 0)
+        )[: n - len(fresh)]
+        for g in fresh:
+            kept[g["key"]] = {
+                k: g[k] for k in ("prompt", "code", "options", "answer", "explanation", "edge")
+            }
+            items.append([concept, g["key"]])
+        items += [[concept, k] for k in bank]
+    # Hardest first is a tell; keep the planned order's shuffle instead.
+    random.Random(draft.week + str(len(kept))).shuffle(items)
+    return items, kept
+
+
+def create(
+    db: Session, enrollment: Enrollment, draft: Draft, generated: list[dict], now: int
+) -> WeeklyAssessment:
+    items, kept = merge(draft, generated)
     attempt = WeeklyAssessment(
         enrollment_id=enrollment.id,
-        iso_week=week,
-        concepts=concepts,
+        iso_week=draft.week,
+        concepts=draft.concepts,
         items=items,
-        coding=coding,
+        coding=draft.coding,
         answers={},
-        timed=timed,
+        timed=True,
         started_at=now,
-        deadline=now + TIME_LIMIT_SECONDS if timed else None,
+        deadline=now + TIME_LIMIT_SECONDS,
         report={},
+        generated=kept or None,
     )
     db.add(attempt)
     db.flush()
     return attempt
 
 
+def start(
+    db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int, timed: bool = True
+) -> WeeklyAssessment:
+    """Bank-only start (tests, and when generation is off). Every weekly is a 30-minute
+    exam; ``timed`` is kept for old clients and ignored."""
+    planned = plan(db, catalog, user, enrollment, now)
+    if isinstance(planned, WeeklyAssessment):
+        return planned
+    return create(db, enrollment, planned, [], now)
+
+
 def _item(catalog: Catalog, concept: str, item_id: str) -> QuizItem:
     return next(q for q in catalog.concept(concept).quiz if q.matches(item_id))
+
+
+def _shown(catalog: Catalog, attempt: WeeklyAssessment, concept: str, stored: str, language: str):
+    """(prompt, code, options, answer position, explanation, difficulty, kind) for one item."""
+    generated = (attempt.generated or {}).get(stored)
+    if generated is not None:
+        return dict(
+            prompt=generated["prompt"],
+            code=generated["code"],
+            options=generated["options"],
+            answer=generated["answer"],
+            explanation=generated["explanation"]
+            + (f" (Edge case: {generated['edge']}.)" if generated.get("edge") else ""),
+            difficulty=7,
+            kind="output",
+        )
+    if ":" not in stored:  # an attempt from before weeklies used the bank
+        q = _item(catalog, concept, stored)
+        shown = q.shown(attempt.id)
+        return dict(
+            prompt=q.prompt,
+            code=q.snippet(language),
+            options=shown["options"],
+            answer=shown["answer"],
+            explanation=q.explanation,
+            difficulty=q.difficulty,
+            kind=q.kind,
+        )
+    item = engine_service.item_by_key(catalog, stored)
+    shown = engine_service.render(catalog, item, attempt.id, language)
+    return dict(
+        prompt=shown["prompt"],
+        code=shown["code"],
+        options=shown["options"],
+        answer=shown["answer"],
+        explanation=shown["explanation"],
+        difficulty=item.band,
+        kind=item.format,
+    )
 
 
 def _coding_solved(db: Session, user_id: str, attempt: WeeklyAssessment) -> set[str]:
@@ -255,27 +485,26 @@ def view(
     finished = attempt.finished_at is not None
     questions = []
     for concept, item_id in attempt.items:
-        q = _item(catalog, concept, item_id)
-        shown = q.shown(attempt.id)
+        shown = _shown(catalog, attempt, concept, item_id, language)
         answer = attempt.answers.get(item_id)
         entry = dict(
-            id=q.id,
+            id=item_id,
             concept=concept,
             concept_title=catalog.concept(concept).title,
-            kind=q.kind,
-            prompt=q.prompt,
-            code=q.snippet(language),
+            kind=shown["kind"],
+            prompt=shown["prompt"],
+            code=shown["code"],
             options=shown["options"],
-            difficulty=q.difficulty,
+            difficulty=shown["difficulty"],
             answered=answer is not None,
             choice=answer["choice"] if answer else None,
         )
         if finished and answer is not None:
             entry.update(
-                correct=answer["correct"], answer=shown["answer"], explanation=q.explanation
+                correct=answer["correct"], answer=shown["answer"], explanation=shown["explanation"]
             )
         elif finished:
-            entry.update(correct=False, answer=shown["answer"], explanation=q.explanation)
+            entry.update(correct=False, answer=shown["answer"], explanation=shown["explanation"])
         questions.append(entry)
     solved = _coding_solved(db, user.id, attempt)
     coding = []
@@ -297,6 +526,7 @@ def view(
         started_at=attempt.started_at,
         deadline=attempt.deadline,
         seconds_left=max(0, attempt.deadline - now) if attempt.deadline and not finished else None,
+        server_now=now,
         finished=finished,
         score=attempt.score,
         topics=[
@@ -327,14 +557,14 @@ def answer(
     pair = next((p for p in attempt.items if p[1] == item_id), None)
     if pair is None:
         raise HTTPException(404, "not_found")
-    q = _item(catalog, pair[0], item_id)
-    if not 0 <= choice < len(q.options):
+    shown = _shown(catalog, attempt, pair[0], item_id, enrollment.language)
+    if not 0 <= choice < len(shown["options"]):
         raise HTTPException(422, "invalid_choice")
     if item_id in attempt.answers:
         raise HTTPException(409, "already_answered")
     attempt.answers = {
         **attempt.answers,
-        item_id: {"choice": choice, "correct": q.is_correct(attempt.id, choice)},
+        item_id: {"choice": choice, "correct": choice == shown["answer"]},
     }
 
 

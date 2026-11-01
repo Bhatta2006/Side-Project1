@@ -17,7 +17,7 @@ from socrat.assistant import service as assistant
 from socrat.assistant.gateway import make_provider
 from socrat.assistant.tools import Toolbox
 from socrat.auth import COOKIE, require_csrf, require_session
-from socrat.catalog import practice
+from socrat.catalog import generated, practice, shape
 from socrat.catalog.registry import Catalog, CatalogError, default_catalog
 from socrat.database import record_event
 from socrat.execution.protocol import ResultEnvelope
@@ -36,6 +36,7 @@ from socrat.models import (
     User,
     now,
 )
+from socrat.style import access as style_access
 
 router = APIRouter(prefix="/api/v1")
 MIN_AGE = 13
@@ -156,7 +157,7 @@ class Callback(BaseModel):
 
 def catalog() -> Catalog:
     try:
-        return default_catalog()
+        return generated.merged(default_catalog())
     except CatalogError as exc:
         raise HTTPException(503, "content_unavailable") from exc
 
@@ -183,17 +184,17 @@ def age_ok(birth_year: int | None, birthday_passed: bool, today: date) -> bool:
 
 
 def is_admin(request: Request, user: User) -> bool:
-    settings = request.app.state.settings
-    allowed = settings.admin_subjects
-    emails = {e.lower() for e in settings.admin_emails}
-    return (
-        f"{user.issuer}|{user.subject}" in allowed
-        or user.subject in allowed
-        or (user.admin_email is not None and user.admin_email in emails)
-    )
+    return style_access.is_admin(request.app.state.settings, user)
 
 
-def profile_view(db: Session, user: User, csrf: str, admin: bool = False) -> dict:
+def studios_for(request: Request, user: User) -> bool:
+    """Course studios (the dynamic Practice slot) are on for admin accounts only while tested."""
+    return style_access.enabled(request.app.state.settings, user)
+
+
+def profile_view(
+    db: Session, user: User, csrf: str, admin: bool = False, studios: bool = False
+) -> dict:
     enrollment = learn.active_enrollment(db, user.id)
     return dict(
         id=user.id,
@@ -215,8 +216,15 @@ def profile_view(db: Session, user: User, csrf: str, admin: bool = False) -> dic
             weekdays=enrollment.weekdays,
             goal=enrollment.goal,
             level=enrollment.level_id,
+            shape=shape_view(enrollment.course_id) if studios else None,
         ),
     )
+
+
+def shape_view(course_id: str) -> dict:
+    course = catalog().courses.get(course_id)
+    chosen = shape.effective(course) if course is not None else shape.CODE
+    return chosen.model_dump(mode="json") | {"name": chosen.name}
 
 
 # ---------------------------------------------------------------- account
@@ -231,7 +239,9 @@ def auth_status(request: Request):
             return {"profile": None}
         user = db.get(User, session.user_id)
         return {
-            "profile": profile_view(db, user, session.csrf_token, is_admin(request, user))
+            "profile": profile_view(
+                db, user, session.csrf_token, is_admin(request, user), studios_for(request, user)
+            )
             if user
             else None
         }
@@ -244,7 +254,9 @@ def me(request: Request):
         user = db.get(User, session.user_id)
         if user is None:
             raise HTTPException(401, "authentication_required")
-        return profile_view(db, user, session.csrf_token, is_admin(request, user))
+        return profile_view(
+            db, user, session.csrf_token, is_admin(request, user), studios_for(request, user)
+        )
 
 
 @router.get("/me/summary")
@@ -279,7 +291,9 @@ def update_me(body: ProfileUpdate, request: Request):
         if body.timezone is not None:
             user.timezone = body.timezone
         record_event(db, user.id, "profile.updated")
-        return profile_view(db, user, session.csrf_token, is_admin(request, user))
+        return profile_view(
+            db, user, session.csrf_token, is_admin(request, user), studios_for(request, user)
+        )
 
 
 @router.post("/me/tour", status_code=204)
@@ -457,7 +471,9 @@ def update_enrollment(body: ScheduleUpdate, request: Request):
             )
         record_event(db, user.id, "enrollment.updated", enrollment.id)
         session = require_session(request, db)
-        return profile_view(db, user, session.csrf_token, is_admin(request, user))
+        return profile_view(
+            db, user, session.csrf_token, is_admin(request, user), studios_for(request, user)
+        )
 
 
 @router.get("/placement")
@@ -1179,6 +1195,7 @@ async def assistant_message(body: MessageInput, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
         user_id = user.id
+        engine_tools = style_access.enabled(settings, user)
         turn = assistant.prepare(
             db,
             cat,
@@ -1195,7 +1212,7 @@ async def assistant_message(body: MessageInput, request: Request):
     provider = budget.Metered(
         make_provider(settings), bind, settings, user_id=user_id, feature="tutor"
     )
-    toolbox = Toolbox(bind, cat, user_id)
+    toolbox = Toolbox(bind, cat, user_id, engine_tools=engine_tools)
 
     async def events():
         async for event, data in assistant.stream_reply(

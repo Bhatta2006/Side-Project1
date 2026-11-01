@@ -106,8 +106,9 @@ class AtomPack(Model):
 
     @model_validator(mode="after")
     def publication(self):
+        # A person, or for generated packs the release gates (ADR-0008), signs the release.
         if self.status == "released" and self.review is None:
-            raise ValueError("release requires a human review record")
+            raise ValueError("release requires a review record")
         if self.status == "released" and any(
             adapter.expected is None for atom in self.atoms for adapter in atom.adapters.values()
         ):

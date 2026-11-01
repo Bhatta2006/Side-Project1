@@ -8,6 +8,7 @@ import { useGuard } from '@/lib/session';
 import { NAME, PACE_LABEL, conceptHref, formatDate, hours } from '@/lib/routes';
 import type { AssessmentStatus, ProgressView } from '@/lib/types';
 import { ErrorNote, Loading, Page, Ring, StatCard } from '@/components/common';
+import { SolvedBoard } from '@/components/socrat/solved-board';
 import { EmptyState } from '@/components/socrat/states';
 import { LearnerProfileCard } from '@/components/socrat/learner-profile';
 import { PassportSettingsCard } from '@/components/socrat/passport-settings';
@@ -17,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { SocFigure } from '@/components/socrat/soc';
 
-const KIND: Record<string, string> = { quiz: 'concept check', code: 'problem', checkpoint: 'checkpoint', review: 'review', placement: 'placement', external: 'practice', verified: 'Codeforces', guided: 'guided step', trace: 'trace', retrieval: 'recall', debug: 'debugging', explanation: 'explanation' };
+const KIND: Record<string, string> = { quiz: 'concept check', code: 'problem', checkpoint: 'checkpoint', review: 'review', placement: 'placement', external: 'practice', verified: 'Codeforces', guided: 'guided step', trace: 'trace', retrieval: 'recall', debug: 'debugging', explanation: 'explanation', explain: 'written answer (AI-graded)', project: 'project milestone (AI-graded)' };
 
 function level(minutes: number) {
   if (!minutes) return 0;
@@ -95,6 +96,8 @@ export default function ProgressPage() {
             <p className="mt-1 max-w-xl text-sm">Counts skills you have practised or mastered{data.progress.assumed ? `. ${data.progress.assumed} more are assumed from placement until a short review confirms them` : ''}.</p>
           </div>
         </section>
+
+        <SolvedBoard />
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
           <StatCard value={mastered} icon={<StatusIcon status="mastered" size={28} />} label="Skills mastered" hint="Evidence from checks, judged code and reviews passed the mastery threshold." />
