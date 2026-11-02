@@ -9,6 +9,7 @@ import logging
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
+from socrat import reminders
 from socrat.config import Settings
 from socrat.database import make_engine
 from socrat.explainer import jobs
@@ -38,9 +39,19 @@ def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):
         task.add_done_callback(running.discard)
 
 
+REMINDER_SWEEP_SECONDS = 15 * 60
+
+
 async def serve(settings: Settings, engine: Engine):
     running: set[asyncio.Task] = set()
+    next_reminders = 0.0
     while True:
+        if (clock := asyncio.get_running_loop().time()) >= next_reminders:
+            next_reminders = clock + REMINDER_SWEEP_SECONDS
+            try:
+                await asyncio.to_thread(reminders.sweep, engine, settings)
+            except Exception:
+                logging.exception("reminder_sweep_failed")
         try:
             drain_once(engine)
         except Exception:

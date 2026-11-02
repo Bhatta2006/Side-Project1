@@ -1,0 +1,68 @@
+id: capstone-contest-toolkit
+course: cp
+title: "Capstone: a contest toolkit with a stress tester"
+summary: >-
+  Build the toolkit you would bring to a contest: a fast-input template, a modular-arithmetic
+  and number-theory library, a segment tree and a stress tester that finds wrong answers by
+  comparing a fast solution with a brute force. Then use it to solve and defend one hard
+  problem end to end.
+skills:
+  - Write fast input and output
+  - Build and test reusable library code
+  - Use modular arithmetic and a range-query structure correctly
+  - Find bugs with a stress test
+concepts:
+  - cp:fast-io
+  - cp:modular-arithmetic
+  - cp:segment-tree
+  - cp:number-theory
+  - cp:complete-search
+constraints:
+  - Each library routine must come with a test that fails when the routine is wrong.
+  - "Time limits are real: state the complexity of each routine and the largest input it was tried on."
+  - The stress tester must work on any pair of programs that read stdin and write stdout.
+milestones:
+  - id: template
+    title: Template and number library
+    checklist:
+      - A fast input and output template and a note on what it changes in practice
+      - Modular power, inverse and combinations, each with a test against a slow version
+      - The overflow cases you checked (multiplying two values near the modulus)
+  - id: tree
+    title: Range-query structure
+    checklist:
+      - A segment tree (or Fenwick tree) with point update and range query, with its complexity
+      - A brute-force range query and a random test comparing the two
+      - One bug you hit while writing it and how the test caught it
+  - id: stress
+    title: The stress tester
+    checklist:
+      - A script that generates random small cases, runs two programs and stops at the first difference
+      - It prints the failing input so you can reproduce it
+      - You planted a bug in a solution on purpose and show the tester finding it
+  - id: solve
+    title: One hard problem, end to end
+    checklist:
+      - A problem of rating 1800 or higher, stated in your own words
+      - Your solution using the toolkit, with its complexity and why it fits the limits
+      - The stress test you ran on it and what it showed
+rubric:
+  - criterion: Library correctness
+    weight: 30
+    full_marks: Every routine passes a test against a slow version, including overflow and boundary cases.
+  - criterion: Stress testing
+    weight: 25
+    full_marks: The tester is general, prints reproducible failures, and is shown catching a planted bug.
+  - criterion: Complexity and limits
+    weight: 25
+    full_marks: Each routine's complexity is correct and tied to the contest limits it was checked against.
+  - criterion: Hard problem solution
+    weight: 20
+    full_marks: The chosen problem is genuinely hard, the solution is argued correct, and the stress result is reported honestly.
+self_review:
+  - Would your tester find the bug if it were off by one at the boundary?
+  - Which routine do you trust least, and what test would change that?
+  - Could you rebuild this toolkit in an hour from your notes?
+status: provisional
+provenance:
+  origin: original

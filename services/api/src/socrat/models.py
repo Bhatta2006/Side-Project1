@@ -55,6 +55,10 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
     # Share code for the referral link; made the first time the learner opens Invite friends.
     referral_code: Mapped[str | None] = mapped_column(String(12), nullable=True, unique=True)
+    # Opt-in study reminder emails; ``reminders_unanswered`` counts those sent with no study since.
+    reminders: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    reminder_sent_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reminders_unanswered: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class LoginSession(Base):
@@ -263,6 +267,8 @@ class Submission(Base):
     lease_until: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     finished_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # A native re-run of a browser-judged submit: the id of the browser submission it confirms.
+    recheck_of: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
 
 class JudgeWorker(Base):

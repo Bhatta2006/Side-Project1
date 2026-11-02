@@ -261,6 +261,15 @@ export default function TodayPage() {
                   {complete ? <Button asChild variant="outline" size="lg"><Link href="/assessments">{NAME.assessment}</Link></Button> : null}
                   {complete && today.finale?.next_course ? <Button asChild variant="outline" size="lg"><Link href={`/start?course=${today.finale.next_course.id}&next=1`}>Start {today.finale.next_course.title}</Link></Button> : null}
                 </div>
+                {complete && today.finale?.capstone ? (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium">Your capstone: {today.finale.capstone.title}</p>
+                    <p className="text-sm text-(--card-muted)">{today.finale.capstone.summary}</p>
+                    <Link href="/projects" className="text-sm underline underline-offset-4">
+                      {today.finale.capstone.done === 0 ? 'Start the capstone' : today.finale.capstone.done === today.finale.capstone.total ? 'Capstone complete: review it' : `Continue the capstone (${today.finale.capstone.done} of ${today.finale.capstone.total} milestones)`}
+                    </Link>
+                  </div>
+                ) : null}
                 {complete && today.finale?.challenges.length ? (
                   <div className="flex flex-col gap-2">
                     <p className="text-sm font-medium">Still unsolved: the hardest problems in this course</p>

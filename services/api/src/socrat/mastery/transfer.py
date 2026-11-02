@@ -16,6 +16,9 @@ from socrat.mastery.model import DAY, ConceptState
 from socrat.planner import gates
 
 COOLDOWN = DAY  # after a miss, a new problem opens this much later
+# A verified skill is proof for a season, not forever: after this long it has to be shown again
+# on a problem the learner has not met (the spaced reviews in between keep it fresh until then).
+REPROOF_AFTER = 90 * DAY
 CHOICES = 4  # one right technique and three distractors
 MAX_QUEUED = 2  # at most this many checks on the plan at once
 ASSISTED_SCORE = 0.3  # a solve that needed the tutor is a miss, but not a total one
@@ -89,6 +92,12 @@ def status(
     if outcome.get("state") == "failed" and now < int(outcome.get("at", 0)) + COOLDOWN:
         return "wait"  # even if the miss pulled mastery down: it cannot be dodged by failing
     return "due" if state.mastered(now) and available else None
+
+
+def expired(outcome: dict | None, now: int) -> bool:
+    """Is a verified check old enough that the skill must be proven again?"""
+    at = int((outcome or {}).get("at", 0))
+    return bool(at) and now - at >= REPROOF_AFTER
 
 
 def blocking_modules(

@@ -77,8 +77,9 @@ def current(
     seen: set[str] | None = None
     result: dict[str, str] = {}
     for concept in sorted((mastered | outcomes.keys()) & scope):
-        verified = transfer.activity_id(concept) in completed
         outcome = outcomes.get(concept)
+        # An old proof lapses: the concept is offered again on a fresh problem.
+        verified = transfer.activity_id(concept) in completed and not transfer.expired(outcome, now)
         available = False
         if not verified and concept in mastered and concept not in held_back:
             seen = seen_problems(db, enrollment) if seen is None else seen
@@ -169,6 +170,8 @@ def classify(
         raise HTTPException(422, "unknown_choice")
     aid = transfer.activity_id(concept)
     record = learn.start_activity(db, enrollment, aid, now)
+    if record.completed_at is not None:  # A lapsed proof: this attempt replaces it.
+        record.completed_at, record.started_at = None, now
     correct = choice == concept
     if correct:
         record.outcome = {"state": "pending", "problem": problem_id, "at": now}

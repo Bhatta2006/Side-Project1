@@ -93,28 +93,31 @@ def create(
     custom_input: str | None,
     assistance: int,
     now: int,
+    force_native: bool = False,
+    recheck_of: str | None = None,
 ) -> Submission:
-    browser = in_browser(settings, language)
+    browser = in_browser(settings, language) and not force_native
     if not browser:
         profile = profile_for(settings, language)
         if profile.image not in healthy_images(db, settings, now):
             raise HTTPException(503, "runtime_offline")
     if not source.strip():
         raise HTTPException(422, "empty_source")
-    today_count = db.scalar(
-        select(func.count())
-        .select_from(Submission)
-        .where(Submission.user_id == user_id, Submission.created_at >= now - 86400)
-    )
-    if (today_count or 0) >= settings.execution_daily_quota:
-        raise HTTPException(429, "daily_run_quota")
-    pending = db.scalar(
-        select(func.count())
-        .select_from(Submission)
-        .where(Submission.user_id == user_id, Submission.status.in_(["queued", "running"]))
-    )
-    if (pending or 0) >= settings.execution_queue_limit:
-        raise HTTPException(429, "too_many_pending_runs")
+    if recheck_of is None:  # A re-run is the server's own check, not the learner's run.
+        today_count = db.scalar(
+            select(func.count())
+            .select_from(Submission)
+            .where(Submission.user_id == user_id, Submission.created_at >= now - 86400)
+        )
+        if (today_count or 0) >= settings.execution_daily_quota:
+            raise HTTPException(429, "daily_run_quota")
+        pending = db.scalar(
+            select(func.count())
+            .select_from(Submission)
+            .where(Submission.user_id == user_id, Submission.status.in_(["queued", "running"]))
+        )
+        if (pending or 0) >= settings.execution_queue_limit:
+            raise HTTPException(429, "too_many_pending_runs")
     if mode == "run" and custom_input is not None:
         if len(custom_input) > CUSTOM_INPUT_LIMIT:
             raise HTTPException(422, "custom_input_too_large")
@@ -200,10 +203,93 @@ def create(
         signature=sign(manifest, settings.execution_signing_secret.get_secret_value()),
         tests=tests,
         created_at=now,
+        recheck_of=recheck_of,
     )
     db.add(submission)
     db.flush()
     return submission
+
+
+def native_ready(db: Session, settings: Settings, language: str, now: int) -> bool:
+    """Is there a fresh native worker that can run this language?"""
+    for raw in settings.execution_profiles:
+        profile = RuntimeProfile.model_validate(raw)
+        if profile.language == language:
+            return profile.image in healthy_images(db, settings, now)
+    return False
+
+
+def wants_recheck(db: Session, settings: Settings, job: Submission, now: int) -> bool:
+    """A browser report is only a claim. An accepted submit that would earn credit is re-run on
+    a native worker first when one is available; otherwise the browser result stands."""
+    return (
+        job.worker_id == BROWSER
+        and job.mode == "submit"
+        and job.verdict == "accepted"
+        and job.enrollment_id is not None
+        and native_ready(db, settings, job.language, now)
+    )
+
+
+def start_recheck(
+    db: Session, settings: Settings, job: Submission, problem: Problem, now: int
+) -> Submission:
+    """Queue the native re-run. It never earns credit itself (no enrollment); its verdict is
+    adopted by the browser submission through ``apply_recheck``."""
+    assert job.user_id is not None  # Only learners' submits are re-run.
+    check = create(
+        db,
+        settings,
+        job.user_id,
+        None,
+        problem,
+        job.language,
+        job.source,
+        "submit",
+        None,
+        job.assistance,
+        now,
+        force_native=True,
+        recheck_of=job.id,
+    )
+    # Until the re-run answers, the submission is in flight, not accepted: every query that
+    # counts accepted submits (solved, evidence, achievements) must not see it yet.
+    job.manifest = {**job.manifest, "recheck_job": check.id, "browser_verdict": job.verdict}
+    job.status, job.verdict = "running", ""
+    return check
+
+
+def apply_recheck(original: Submission, check: Submission, now: int) -> bool:
+    """Adopt the native verdict. True the first time it is applied, False afterwards.
+
+    A re-run that could not finish (worker error, never claimed) leaves the browser's result
+    standing: an outage must not punish a learner."""
+    if original.manifest.get("rechecked"):
+        return False
+    source = "browser"
+    original.verdict = original.manifest["browser_verdict"]
+    if check.status == "done":
+        original.cases, original.passed = check.cases, check.passed
+        original.verdict, source = check.verdict, "native"
+    original.manifest = {**original.manifest, "rechecked": source}
+    original.status, original.finished_at = "done", now
+    return True
+
+
+def recheck_due(db: Session, original: Submission, now: int) -> Submission | None:
+    """The finished (or abandoned) re-run of this browser submission, if it can be applied."""
+    check_id = original.manifest.get("recheck_job")
+    if not check_id or original.manifest.get("rechecked"):
+        return None
+    check = db.get(Submission, check_id, with_for_update=True)
+    if check is None:
+        return None
+    if check.status in {"done", "failed"}:
+        return check
+    if now > check.created_at + LEASE_SECONDS + WORKER_FRESH_SECONDS:
+        check.status, check.verdict, check.finished_at = "failed", "system_error", now
+        return check
+    return None
 
 
 def heartbeat(db: Session, settings: Settings, worker_id: str, images: list[str], now: int):
@@ -330,8 +416,8 @@ def settle(job: Submission, results: list[dict]):
 
 def browser_task(job: Submission) -> dict | None:
     """What the learner's browser needs to run a pending browser job: inputs, never outputs."""
-    if job.worker_id != BROWSER or job.status != "running":
-        return None
+    if job.worker_id != BROWSER or job.status != "running" or job.manifest.get("recheck_job"):
+        return None  # A report was already taken; a re-run is deciding it.
     return dict(
         token=job.manifest["nonce"],
         language=job.language,
@@ -347,7 +433,7 @@ def finalize_browser(job: Submission, token: str, results: list[dict], now: int)
         raise HTTPException(404, "not_found")
     if not secrets.compare_digest(token, job.manifest["nonce"]):
         raise HTTPException(409, "execution_token_invalid")
-    if job.status in {"done", "failed"}:
+    if job.status in {"done", "failed"} or job.manifest.get("recheck_job"):
         return False  # A retried report: idempotent.
     if job.lease_until is None or now > job.lease_until:
         raise HTTPException(409, "execution_lease_expired")
@@ -388,4 +474,12 @@ def view(job: Submission) -> dict:
         finished_at=job.finished_at,
         learning_feedback=submission_copy(job),
         browser=browser_task(job),
+        verification=verification(job),
     )
+
+
+def verification(job: Submission) -> str | None:
+    """pending: awaiting the native re-run; native or browser: whose verdict stands."""
+    if not job.manifest.get("recheck_job"):
+        return None
+    return job.manifest.get("rechecked") or "pending"

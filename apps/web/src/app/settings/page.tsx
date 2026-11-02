@@ -155,7 +155,7 @@ function ThemePreview({ id }: { id: 'light' | 'dark' | 'system' }) {
 function Appearance() {
   const { theme, setTheme } = useTheme();
   const motion = useReducedMotion();
-  const { profile } = useSession();
+  const { profile, refresh } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   return (
@@ -191,6 +191,23 @@ function Appearance() {
               </p>
             </div>
             <Switch id="reduce-motion" checked={motion.setting} onCheckedChange={motion.set} aria-describedby="reduce-motion-help" />
+          </div>
+          <div className="flex items-start justify-between gap-4 py-5">
+            <div>
+              <label htmlFor="reminders" className="font-semibold">Study reminders</label>
+              <p id="reminders-help" className="text-sm text-muted-foreground">
+                {profile?.can_remind === false
+                  ? 'Reminders are sent by email, and this account has no email address.'
+                  : 'One email in the early evening on a study day when you have not started yet. It stops after three you do not act on.'}
+              </p>
+            </div>
+            <Switch
+              id="reminders"
+              checked={!!profile?.reminders}
+              disabled={profile?.can_remind === false}
+              onCheckedChange={async on => { await api.patch('/me', { reminders: on }); await refresh(); }}
+              aria-describedby="reminders-help"
+            />
           </div>
           {profile?.enrollment?.status === 'active' ? (
             <div className="flex items-center justify-between gap-4 pt-5">

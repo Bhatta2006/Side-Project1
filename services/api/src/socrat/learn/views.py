@@ -192,6 +192,8 @@ def finale(
         key=lambda p: (rank.get(p.difficulty, 3), p.id),
     )
     following = NEXT_COURSE.get(course.id)
+    capstone = next((k for k in catalog.projects if k.startswith(f"{course.id}:capstone-")), None)
+    project = graded.project_view(db, catalog, enrollment, capstone) if capstone else None
     return dict(
         graduated=numbers["mastered"] == numbers["total"],
         to_master=numbers["total"] - numbers["mastered"],
@@ -199,6 +201,15 @@ def finale(
             dict(id=p.id, title=p.title, difficulty=p.difficulty)
             for p in open_problems[:FINALE_CHALLENGES]
         ],
+        capstone=None
+        if project is None
+        else dict(
+            id=project["id"],
+            title=project["title"],
+            summary=project["summary"],
+            done=sum(m["done"] for m in project["milestones"]),
+            total=len(project["milestones"]),
+        ),
         next_course=(
             dict(id=following, title=catalog.course(following).title)
             if following in catalog.courses
