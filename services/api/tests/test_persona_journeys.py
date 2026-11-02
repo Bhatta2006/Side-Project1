@@ -219,18 +219,20 @@ def test_placement_knowledge_counts_only_after_its_confirmation_check(client, cl
     assert summary["known_concepts"], "a strong placement skips lessons"
     today = client.get("/api/v1/today").json()
     assert today["progress"]["assumed"] > 0 and today["progress"]["finished"] == 0
-    # The first steps are confirmation checks, not lessons for what placement believes.
-    nxt = today["next"]
-    assert nxt["kind"] == "testout" and nxt["code"] == "assumed_confirm"
-    assert nxt["title"].startswith("Confirm:")
+    # Learning starts where placement found a gap: the first step is a lesson for something new,
+    # and the confirmation checks for what placement believes wait until the end.
+    assert today["next"]["kind"] == "lesson"
     cat = default_catalog()
+    plan = client.get("/api/v1/plan").json()
+    assumed = [c for m in plan["modules"] for c in m["concepts"] if c["status"] == "assumed"]
+    assert assumed
+    nxt = {"id": f"testout:{assumed[0]['concept']}", "concept": assumed[0]["concept"]}
     passed = take(client, headers, cat, nxt["id"], lambda q: True)
     assert passed["testout"]["passed"]
     after = client.get("/api/v1/today").json()["progress"]
     assert after["finished"] == 1 and after["assumed"] == today["progress"]["assumed"] - 1
     # Missing a confirmation puts the real lesson back on the path.
-    second = client.get("/api/v1/today").json()["next"]
-    assert second["code"] == "assumed_confirm"
+    second = {"id": f"testout:{assumed[1]['concept']}", "concept": assumed[1]["concept"]}
     take(client, headers, cat, second["id"], lambda q: False)
     plan = client.get("/api/v1/plan").json()
     queued = {i["id"] for d in plan["days"] for i in d["items"]}

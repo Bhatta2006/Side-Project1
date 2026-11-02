@@ -29,6 +29,8 @@ interface Props {
   openSignal?: number;
   /** Hide the floating launcher, or show it on phones only, when the page has its own "Ask Soc" control. */
   launcher?: boolean | 'phone';
+  /** The learner's code on this problem is accepted: offer a review, not hints. */
+  solved?: boolean;
 }
 
 interface ChatSummary { id: string; title: string; messages: number; updated_at: number; current: boolean }
@@ -58,7 +60,7 @@ const STARTERS: Record<string, string[]> = {
   concept: ['Explain this with a real example', 'When would I use this?', 'Give me a problem to practise this'],
 };
 
-export default function Assistant({ scope, title, language, context, onSent, openSignal = 0, launcher: showLauncher = true }: Props) {
+export default function Assistant({ scope, title, language, context, onSent, openSignal = 0, launcher: showLauncher = true, solved = false }: Props) {
   const problem = scope.startsWith('problem:');
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -100,6 +102,12 @@ export default function Assistant({ scope, title, language, context, onSent, ope
   }, [open]);
 
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
+  // On a problem the tutor docks on the right and the page makes room, so it never covers the statement or the editor.
+  useEffect(() => {
+    if (!open || !problem) return;
+    document.documentElement.dataset.tutorDocked = '';
+    return () => { delete document.documentElement.dataset.tutorDocked; };
+  }, [open, problem]);
   useEffect(() => { setLoaded(false); setMessages([]); setLadder({}); setView('chat'); setArchived(null); }, [scope]);
   const refreshReveal = useCallback(() => {
     if (!problem) return;
@@ -273,8 +281,9 @@ export default function Assistant({ scope, title, language, context, onSent, ope
     <section
       className={cn(
         'fixed inset-x-0 bottom-0 z-[60] flex h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-t-card border bg-card pb-[env(safe-area-inset-bottom)] text-card-foreground shadow-floating animate-in fade-in slide-in-from-bottom-2 sm:inset-x-auto sm:bottom-6 sm:h-[min(680px,calc(100dvh-6rem))] sm:w-[420px] sm:rounded-card sm:pb-0',
-        // On a problem the test results sit bottom-right, so the tutor opens over the statement instead.
-        problem ? 'sm:left-6 lg:left-[17rem]' : 'sm:right-6',
+        'sm:right-6',
+        // On a problem it becomes a full-height panel on the right edge of wide screens.
+        problem && 'lg:inset-y-0 lg:right-0 lg:h-dvh lg:w-[400px] lg:rounded-none lg:rounded-l-card lg:border-r-0',
       )}
       role="dialog"
       aria-label={title}
@@ -367,7 +376,9 @@ export default function Assistant({ scope, title, language, context, onSent, ope
               <Soc size={84} mood="curious" />
               <p className="font-hand pb-2 text-[22px] leading-tight text-pen">{problem ? 'show me what you tried.' : 'hi! ask me anything.'}</p>
             </div>
-            {problem
+            {problem && solved
+              ? 'You solved this one. Ask me for the complexity, a faster approach, or a cleaner way to write it.'
+              : problem
               ? 'Tell me what you tried and where it breaks. Hints get more specific as you keep working. Run your code or explain your thinking to unlock the next level.'
               : scope === 'general'
                 ? 'I know your plan, your progress and the whole practice library. Ask what to study, which problems to do next, or anything you are stuck on.'
@@ -439,7 +450,13 @@ export default function Assistant({ scope, title, language, context, onSent, ope
         ) : null}
       </div>
       {error ? <p role="alert" className="mx-4 mb-2 rounded-[16px] border border-attention px-3 py-2 text-sm">{error}</p> : null}
-      {problem ? (
+      {problem && solved ? (
+        <div className="flex flex-wrap items-center gap-2 border-t px-4 pt-3">
+          {['Is there a faster way?', 'What are the time and space complexity?', 'How would you write this more cleanly?'].map(q => (
+            <Button key={q} type="button" variant="outline" size="sm" className="h-auto min-h-9 whitespace-normal py-1.5 text-left" disabled={busy} onClick={() => send('chat', q)}>{q}</Button>
+          ))}
+        </div>
+      ) : problem ? (
         <div className="flex flex-wrap items-center gap-2 border-t px-4 pt-3">
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send('hint')}><Lightbulb data-icon="inline-start" /> Give me a hint</Button>
           {confirmReveal ? (
@@ -464,7 +481,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           rows={2}
           maxLength={4000}
           value={draft}
-          placeholder={problem ? 'What did you try? Where does it break?' : 'Ask a question…'}
+          placeholder={problem && solved ? 'Ask about complexity or a better approach' : problem ? 'What did you try? Where does it break?' : 'Ask a question…'}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send('chat'); } }}
         />

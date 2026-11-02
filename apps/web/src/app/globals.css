@@ -433,6 +433,11 @@ html.dark {
   .chat-bubble-user { @apply bg-ink text-ink-foreground; border-radius: 20px 20px 6px 20px; padding: 10px 14px; margin-left: auto; max-width: 85%; white-space: pre-wrap; font-size: 15px; }
   .chat-bubble-assistant { @apply bg-card; border: 1px solid var(--border); border-radius: 20px 20px 20px 6px; padding: 10px 14px; max-width: 94%; }
 
+  /* The tutor docks on the right of a problem page; the page makes room instead of sitting under it. */
+  @media (min-width: 1024px) {
+    html[data-tutor-docked] body { padding-right: 400px; }
+  }
+
   @media (max-width: 1023px) {
     .workspace { grid-template-columns: minmax(0, 1fr); }
     .code-editor-host { height: 400px; }

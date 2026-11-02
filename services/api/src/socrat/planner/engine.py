@@ -157,6 +157,11 @@ def concept_pace(
     return overall, ""
 
 
+def revision_minutes(difficulty: int) -> int:
+    """Easy ideas get a quick pass; hard ones get real time."""
+    return {1: 5, 2: 5, 3: 10, 4: 15}.get(difficulty, 20)
+
+
 def _minutes(value: float, pace: Pace, style: str = "balanced") -> int:
     return max(3, int(math.ceil(value * PACE_FACTOR[pace] * STYLE_FACTOR[style] / 5) * 5))
 
@@ -370,6 +375,7 @@ def build_plan(
     locked_minutes = 0
     roadmap: list[dict] = []
     queue: list[Activity] = []
+    revision: list[Activity] = []  # what placement believes you know: revised once the rest is done
     front: list[Activity] = []
     reasons: list[str] = []
     needs_repair: dict[str, str] = {}
@@ -467,15 +473,16 @@ def build_plan(
             status, why = "assumed", "Placement suggests you know this; a short check confirms it."
             skipped += 1
             if f"testout:{qualified}" not in completed:
-                queue.append(
+                revision.append(
                     Activity(
                         f"testout:{qualified}",
                         "testout",
                         qualified,
                         f"Confirm: {concept.title}",
-                        TESTOUT_MINUTES,
-                        reason="Placement suggests you know this. Pass a short check to skip "
-                        "the lesson; miss and you'll learn it properly.",
+                        revision_minutes(concept.difficulty),
+                        reason="Placement suggests you know this, so it waits until you finish "
+                        "what is new. Pass a short check to skip the lesson; miss and you'll "
+                        "learn it properly.",
                         code="assumed_confirm",
                     )
                 )
@@ -504,6 +511,12 @@ def build_plan(
                 support_reason = (
                     "Your check missed; a different explanation first, then a fresh check."
                 )
+            if support is not None and all(
+                a.id in completed
+                for a in concept_activities(catalog, qualified, state, c_pace, style)
+            ):
+                # Lesson, check and practice are all done: never send them back to re-read it.
+                support = None
             activities = concept_activities(
                 catalog, qualified, state, c_pace, style, support, support_reason, support_code
             )
@@ -631,7 +644,7 @@ def build_plan(
                 code="transfer",
             )
         )
-    queue = front + queue
+    queue = front + queue + revision
     if skipped:
         reasons.append(
             f"Placement suggests you know {skipped} concept(s); each gets a short confirmation "

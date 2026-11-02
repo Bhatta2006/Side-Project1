@@ -457,6 +457,7 @@ def finalize_browser(job: Submission, token: str, results: list[dict], now: int)
 
 
 def view(job: Submission) -> dict:
+    from socrat.judge import analysis
     from socrat.learn.feedback import submission_copy
 
     return dict(
@@ -473,6 +474,8 @@ def view(job: Submission) -> dict:
         created_at=job.created_at,
         finished_at=job.finished_at,
         learning_feedback=submission_copy(job),
+        diagnosis=analysis.diagnosis(job),
+        complexity=analysis.complexity(job),
         browser=browser_task(job),
         verification=verification(job),
     )

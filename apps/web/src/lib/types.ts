@@ -688,6 +688,10 @@ export interface Submission {
   assistance: number;
   created_at: number;
   finished_at: number | null;
+  /** A certain cause for failed hidden tests, such as 32-bit overflow. */
+  diagnosis?: string | null;
+  /** Estimated cost of an accepted solution, read from its loops and containers. */
+  complexity?: { time: string; space: string; basis: string } | null;
   /** Present while a browser-run job waits for this browser to run it. */
   browser?: BrowserTask | null;
 }

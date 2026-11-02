@@ -29,6 +29,7 @@ from socrat.assistant.tools import LABELS
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Problem
 from socrat.config import Settings
+from socrat.judge import analysis
 from socrat.learn import service as learn
 from socrat.library import recommend
 from socrat.library import service as library
@@ -269,18 +270,13 @@ def problem_sections(
     allowed: int,
     concept_title: str = "",
 ) -> dict[str, str]:
-    last = db.scalar(
-        select(Submission)
-        .where(
-            Submission.user_id == user_id,
-            Submission.problem_id == problem.id,
-            Submission.status == "done",
-        )
-        .order_by(Submission.created_at.desc())
-    )
+    last = latest_done(db, user_id, problem.id)
     result = "No runs yet."
     if last is not None:
         result = f"Last {last.mode}: {last.verdict}, {last.passed}/{last.total} tests passed."
+        cause = analysis.diagnosis(last)
+        if cause:
+            result += f"\nKnown cause of the hidden-test failure (state it plainly): {cause}"
         failing = next((c for c in last.cases if c["status"] != "passed" and c.get("public")), None)
         if failing:
             result += (
@@ -304,7 +300,33 @@ def problem_sections(
     }
     if allowed >= 5:
         sections["reference_solution_python"] = problem.reference
+    if is_solved(last):
+        found = analysis.complexity(last)
+        sections["solved_review"] = (
+            "The learner's latest submission was ACCEPTED on every test. Do not give hints and "
+            "do not ask them to debug. Say specifically what they did well, state the time and "
+            "space complexity of THEIR code and why, then offer one concrete way to improve it "
+            "(a faster or leaner approach, a cleaner structure, or an edge case worth knowing). "
+            "If their approach is already optimal, say so and suggest a harder related problem."
+            + (f"\nStatic estimate: time {found['time']}, space {found['space']}." if found else "")
+        )
     return sections
+
+
+def latest_done(db: Session, user_id: str, problem_id: str) -> Submission | None:
+    return db.scalar(
+        select(Submission)
+        .where(
+            Submission.user_id == user_id,
+            Submission.problem_id == problem_id,
+            Submission.status == "done",
+        )
+        .order_by(Submission.created_at.desc())
+    )
+
+
+def is_solved(last: Submission | None) -> bool:
+    return last is not None and last.mode == "submit" and last.verdict == "accepted"
 
 
 def offline_reply(
@@ -368,6 +390,7 @@ def prepare(
     thread = thread_for(db, user.id, scope)
     problem: Problem | None = None
     allowed = 5
+    solved = False
     reveal_blocked = ""
     sections = learner_sections(db, catalog, user, enrollment, now)
     if scope.startswith("problem:"):
@@ -398,7 +421,9 @@ def prepare(
                 reveal_blocked = why
             elif intent == "reveal_confirmed":
                 ladder = socratic.Ladder(ladder.ceiling, ladder.turns_at_ceiling, revealed=True)
-        allowed = 5 if ladder.revealed else ladder.ceiling
+        solved = is_solved(latest_done(db, user.id, problem_id))
+        # A solved problem has nothing left to spoil: talk freely about it.
+        allowed = 5 if ladder.revealed or solved else ladder.ceiling
         thread.ladder = {**thread.ladder, "state": ladder.to_dict(), "attempts_seen": attempts}
         course_id = catalog.problems[problem_id][0]
         title = catalog.concept(f"{course_id}:{problem.concepts[0]}").title
@@ -431,6 +456,11 @@ def prepare(
     )
     thread.ladder = {**thread.ladder, "engine": state.to_dict()}
     sections["teaching_move"] = engine.instruction(teaching)
+    if solved:
+        sections["teaching_move"] = (
+            "The learner just solved this problem. Appreciate it, review complexity and offer a "
+            "better way. Do not hint."
+        )
     style = personal_style(settings, user, enrollment)
     if style is not None:
         sections["learning_style"] = styles.tutor_block(style)

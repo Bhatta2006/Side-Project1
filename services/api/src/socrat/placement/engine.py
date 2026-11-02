@@ -4,6 +4,11 @@ The course path is topologically ordered, so "knows concept i" is treated as
 evidence for the concepts before it. Each probe asks one question; a probe that
 lands exactly on a boundary is confirmed with a second question so a single slip
 or lucky guess cannot misplace the learner by a whole module.
+
+The check is strict and adaptive: every claim of knowledge needs two correct answers on the
+concept (a split result counts as not known), and each correct answer makes the next question
+harder, so a learner who keeps getting them right is pushed toward the questions that separate
+"recognises it" from "can use it".
 """
 
 import random
@@ -12,8 +17,8 @@ from dataclasses import dataclass, field
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import QuizItem
 
-MAX_QUESTIONS = 12
-SKIP_CAP = 0.85  # most of the path placement may mark as assumed known
+MAX_QUESTIONS = 16
+SKIP_CAP = 0.8  # most of the path placement may mark as assumed known
 
 
 @dataclass
@@ -59,15 +64,24 @@ def start(
     return state
 
 
+def target_difficulty(state: PlacementState) -> int:
+    """Starts at 2 and rises by one for every two correct answers, up to 4."""
+    right = sum(1 for x in state.asked if x["correct"])
+    return min(4, 2 + right // 2)
+
+
 def _item(catalog: Catalog, state: PlacementState, concept: str) -> QuizItem:
     used = {x["item"] for x in state.asked}
+    target = target_difficulty(state)
+    confirming = any(x["concept"] == concept for x in state.asked)
     items = [
         q
         for q in catalog.concept(concept).quiz
         if q.id not in used and (state.language is None or q.fits(state.language))
     ]
     rng = random.Random(f"{state.seed}:{concept}:{len(state.asked)}")
-    items.sort(key=lambda q: (abs(q.difficulty - 2), q.id))
+    # A confirming question is one step harder than the first, so a guess does not carry through.
+    items.sort(key=lambda q: (abs(q.difficulty - (target + confirming)), q.id))
     return rng.choice(items[:2]) if items else catalog.concept(concept).quiz[0]
 
 
@@ -99,13 +113,14 @@ def answer(catalog: Catalog, state: PlacementState, choice: int) -> bool:
     index = probe["index"]
     state.asked.append({"concept": probe["concept"], "item": probe["item"], "correct": correct})
     same = [x for x in state.asked if x["concept"] == probe["concept"]]
-    if len(same) == 1 and (index == state.lo or index == state.hi - 1) and state.hi - state.lo > 1:
-        # Boundary probe: confirm with one more question before committing.
+    boundary = (index == state.lo or index == state.hi - 1) and state.hi - state.lo > 1
+    if len(same) == 1 and (correct or boundary):
+        # A right answer must be repeated before it counts; a wrong one at a boundary is rechecked.
         if len(state.asked) < MAX_QUESTIONS and len(catalog.concept(probe["concept"]).quiz) > 1:
             state.pending = _probe(catalog, state, index)
             return correct
     votes = sum(1 if x["correct"] else -1 for x in same)
-    if votes > 0 or (votes == 0 and correct):
+    if votes > 0:
         state.lo = max(state.lo, index + 1)
     else:
         state.hi = min(state.hi, index)

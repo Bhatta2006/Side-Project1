@@ -476,10 +476,27 @@ export default function Problem() {
                     <pre className="io-block min-w-0 flex-1 bg-transparent! p-0!">{result.cases.find(c => c.stderr)?.stderr || verdict.label}</pre>
                   </div>
                 ) : null}
+                {result.diagnosis ? (
+                  <div className="flex items-start gap-3 rounded-[16px] border border-attention p-3" role="note">
+                    <AttentionIcon />
+                    <div className="min-w-0 flex-1 text-[15px]">
+                      <p className="font-semibold">Why the hidden tests failed</p>
+                      <Markdown source={result.diagnosis} language={lang} className="prose-compact" />
+                    </div>
+                  </div>
+                ) : null}
+                {result.verdict === 'accepted' && result.complexity ? (
+                  <dl className="grid gap-x-6 gap-y-1 rounded-[16px] border border-border-strong p-3 text-[15px] sm:grid-cols-2" aria-label="Estimated complexity">
+                    <div className="flex items-baseline gap-2"><dt className="text-muted-foreground">Time</dt><dd className="font-mono font-semibold">{result.complexity.time}</dd></div>
+                    <div className="flex items-baseline gap-2"><dt className="text-muted-foreground">Space</dt><dd className="font-mono font-semibold">{result.complexity.space}</dd></div>
+                    <p className="text-[13px] text-muted-foreground sm:col-span-2">{result.complexity.basis}</p>
+                  </dl>
+                ) : null}
                 {result.mode === 'submit' && result.verdict === 'accepted' ? (
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-[15px]">
                       {result.assistance >= 5 ? 'Solved with the full walkthrough. Try writing it again from memory tomorrow.' : result.assistance ? 'Solved. Hints count for a little less, and that is fine while you are learning.' : 'Solved without help. Nice work.'}
+                      {' '}Ask Soc if there is a faster or cleaner way.
                     </p>
                     {proving
                       ? <Button asChild><Link href={examId ? '/assessments' : checkBack ?? '/plan'}>{examId ? 'Back to the exam' : 'Back to the check'}<ArrowCircle /></Link></Button>
@@ -499,6 +516,7 @@ export default function Problem() {
         scope={`problem:${problem.id}`}
         title="Ask Soc"
         language={lang}
+        solved={problem.solved}
         context={() => ({ code: latest.current.source, newAttempt: attempted.current })}
         onSent={() => { attempted.current = false; }}
       />}

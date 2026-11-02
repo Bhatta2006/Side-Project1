@@ -11,11 +11,15 @@ def submission_copy(job: Submission) -> str | None:
             return "Visible tests passed. Submit to check the hidden cases."
         if job.assistance == 0:
             return "Solved without hints. That counts as independent evidence."
-        return "Good progress. Try a fresh problem on your own next."
+        return "Accepted. Check the complexity below, then ask Soc whether there is a faster way."
     if job.verdict == "compile_error":
         return "Check the first compiler diagnostic and make one small syntax repair. This does not measure your understanding of the algorithm."
     if job.verdict == "wrong_answer":
-        return "A tested case did not match. Trace one small example and check the boundary where the result changes."
+        from socrat.judge.analysis import diagnosis
+
+        return diagnosis(job) or (
+            "A tested case did not match. Trace one small example and check the boundary where the result changes."
+        )
     if job.verdict in {"timeout", "time_limit"}:
         return "The program exceeded its time limit. Check termination first, then count the work as the input grows."
     if job.verdict == "system_error":
