@@ -1,0 +1,68 @@
+id: capstone-route-planner
+course: dsa
+title: "Capstone: a route planner with a data-structure design memo"
+summary: >-
+  Build a route planner for a small city map: fewest stops, cheapest trip and which areas are
+  connected at all. Then defend your choices in a short design memo that names the data
+  structure and the running time for each question. It brings together graphs, shortest paths,
+  hashing, heaps and union-find.
+skills:
+  - Model a problem as a graph
+  - Pick BFS, Dijkstra or union-find for the question being asked
+  - Choose data structures and justify them with running times
+  - Test against a brute force on small maps
+concepts:
+  - dsa:graph-traversal
+  - dsa:shortest-paths
+  - dsa:union-find
+  - dsa:heaps
+  - dsa:hashing
+constraints:
+  - Up to 100000 stops and 300000 road segments; a solution that is O(stops squared) is too slow.
+  - Roads have a travel time of 1 to 1000 minutes and can run both ways or one way.
+  - Provide a brute force for maps of at most 8 stops and compare the two on random maps.
+milestones:
+  - id: model
+    title: Model the map
+    checklist:
+      - How stops and roads are stored, and why that structure over the alternatives
+      - How you map stop names to numbers, and the cost of that lookup
+      - The three questions the planner answers, each stated as a graph problem
+  - id: solve
+    title: Answer the three questions
+    checklist:
+      - Fewest stops with BFS, with the proof it is shortest when every road counts as 1
+      - Cheapest trip with Dijkstra and a heap, with the running time written out
+      - Connected areas with union-find (or BFS), with the cost of each query
+  - id: verify
+    title: Prove it against a brute force
+    checklist:
+      - A brute force for tiny maps that does not share code with the fast version
+      - A random test loop that compares the two on at least 200 maps
+      - What you found when they disagreed, or why they never did
+  - id: memo
+    title: The design memo
+    checklist:
+      - Each question with its data structure and time complexity
+      - One change to the map that would make your approach fail (for example a negative road) and what you would do
+      - What you would measure first if it were too slow in practice
+rubric:
+  - criterion: Correct algorithm per question
+    weight: 30
+    full_marks: BFS, Dijkstra and union-find are each used where they apply, and edge cases (unreachable stops, ties) are handled.
+  - criterion: Complexity reasoning
+    weight: 25
+    full_marks: Running times are stated per question and match the code, including the heap and the name lookup.
+  - criterion: Verification
+    weight: 25
+    full_marks: A real brute force is compared on many random maps and the result is reported honestly.
+  - criterion: Design memo
+    weight: 20
+    full_marks: Choices are justified against alternatives, and the failing change is specific and correct.
+self_review:
+  - Does each complexity claim match a loop you can point to?
+  - What input would make your Dijkstra wrong, and have you handled it?
+  - Did the brute force really share no code with the fast one?
+status: provisional
+provenance:
+  origin: original

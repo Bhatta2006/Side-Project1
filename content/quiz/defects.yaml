@@ -330,3 +330,19 @@ defects:
     kind: wrong-update
     misconception: sort-overwrite-not-swap
     description: The swap copies a[j + 1] over a[j], losing a[j], so one value appears twice and another disappears.
+  - id: sieve-step
+    kind: wrong-update
+    misconception: sieve-step-by-one
+    description: The inner loop steps by 1, so every number is crossed out instead of the multiples of i.
+  - id: sieve-skip-composite
+    kind: wrong-comparison
+    misconception: sieve-cross-out-itself
+    description: Multiples are crossed out only for numbers that are already marked composite.
+  - id: fenwick-down-step
+    kind: wrong-update
+    misconception: fenwick-step-by-one
+    description: The query steps down by 1 instead of removing the lowest set bit, so it reads cells covering other ranges.
+  - id: fenwick-up-step
+    kind: wrong-update
+    misconception: fenwick-step-by-one
+    description: The update steps up by 1 instead of by the lowest set bit, so most covering cells are never updated.

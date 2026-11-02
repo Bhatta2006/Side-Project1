@@ -51,6 +51,7 @@ class ProfileUpdate(Strict):
     birth_year: int | None = Field(default=None, ge=1900, le=2100)
     birthday_passed: bool = True
     timezone: str | None = Field(default=None, max_length=64)
+    reminders: bool | None = None
 
     @field_validator("timezone")
     @classmethod
@@ -205,6 +206,8 @@ def profile_view(
         csrf_token=csrf,
         onboarded=enrollment is not None,
         tour_seen=user.tour_seen_at is not None,
+        reminders=user.reminders,
+        can_remind=bool(user.email),
         enrollment=None
         if enrollment is None
         else dict(
@@ -290,6 +293,11 @@ def update_me(body: ProfileUpdate, request: Request):
             user.display_name = body.display_name
         if body.timezone is not None:
             user.timezone = body.timezone
+        if body.reminders is not None:
+            if body.reminders and not user.email:
+                raise HTTPException(409, "reminders_need_email")
+            user.reminders = body.reminders
+            user.reminders_unanswered = 0
         record_event(db, user.id, "profile.updated")
         return profile_view(
             db, user, session.csrf_token, is_admin(request, user), studios_for(request, user)
@@ -978,11 +986,13 @@ def submit(problem_id: str, body: SourceInput, request: Request):
 
 @router.get("/submissions/{submission_id}")
 def submission(submission_id: str, request: Request):
-    with Session(engine(request)) as db:
+    cat = catalog()
+    with Session(engine(request)) as db, db.begin():
         user = user_of(request, db)
-        job = db.get(Submission, submission_id)
+        job = db.get(Submission, submission_id, with_for_update=True)
         if job is None or job.user_id != user.id:
             raise HTTPException(404, "not_found")
+        settle_recheck(db, cat, job, now())  # A re-run that finished (or was abandoned) counts.
         return judge.view(job)
 
 
@@ -1012,7 +1022,12 @@ def browser_result(submission_id: str, body: BrowserResult, request: Request):
         if job is None or job.user_id != user.id:
             raise HTTPException(404, "not_found")
         if judge.finalize_browser(job, body.token, [c.model_dump() for c in body.cases], now()):
-            on_submission(db, cat, job, now())
+            settings = request.app.state.settings
+            if judge.wants_recheck(db, settings, job, now()):
+                # The browser only claims a pass; a native re-run decides whether it counts.
+                judge.start_recheck(db, settings, job, cat.problems[job.problem_id][1], now())
+            else:
+                on_submission(db, cat, job, now())
         return judge.view(job)
 
 
@@ -1050,9 +1065,20 @@ def worker_result(body: Callback, request: Request):
         job, fresh = judge.finalize(
             db, request.app.state.settings, body.worker_id, body.envelope, now()
         )
-        if fresh:
+        if fresh and job.recheck_of:
+            original = db.get(Submission, job.recheck_of, with_for_update=True)
+            if original is not None:
+                settle_recheck(db, cat, original, now())
+        elif fresh:
             on_submission(db, cat, job, now())
         return judge.view(job)
+
+
+def settle_recheck(db: Session, cat: Catalog, original: Submission, stamp: int):
+    """Apply a finished native re-run to its browser submission, then award its evidence."""
+    check = judge.recheck_due(db, original, stamp)
+    if check is not None and judge.apply_recheck(original, check, stamp):
+        on_submission(db, cat, original, stamp)
 
 
 def on_submission(db: Session, cat: Catalog, job: Submission, stamp: int):

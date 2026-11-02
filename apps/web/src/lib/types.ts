@@ -33,6 +33,9 @@ export interface Profile {
   csrf_token: string;
   onboarded: boolean;
   tour_seen: boolean;
+  /** Opt-in study reminder emails. */
+  reminders?: boolean;
+  can_remind?: boolean;
   enrollment: Enrollment | null;
 }
 
@@ -328,6 +331,8 @@ export interface Finale {
   to_master: number;
   /** Hardest problems of the course not solved yet. */
   challenges: { id: string; title: string; difficulty: 'easy' | 'medium' | 'hard' }[];
+  /** The course-end project that ties the skills together; graded milestone by milestone. */
+  capstone?: { id: string; title: string; summary: string; done: number; total: number } | null;
   next_course: { id: string; title: string } | null;
 }
 

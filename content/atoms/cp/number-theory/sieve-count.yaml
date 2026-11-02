@@ -1,0 +1,100 @@
+concept: cp:number-theory
+pattern: cp:number-theory/sieve-count
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the sieve pattern pack.
+rollback: remove content/atoms/cp/number-theory/sieve-count.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+  - id: sieve-worked
+    kind: worked
+    title: "Worked: primes up to 30"
+    objective: Cross out multiples starting at each prime's square.
+    seconds: 100
+    body: >-
+      List 2 to 30. 2 is prime: cross out 4, 6, 8, … 30. 3 is prime: cross out 9, 12, 15, … 30
+      (6 is already gone). 4 is crossed out, so skip it. 5 is prime: cross out 25 (10, 15 and 20
+      are already gone). 6 is crossed out; 7 · 7 = 49 is above 30, so stop. What is left is 2, 3,
+      5, 7, 11, 13, 17, 19, 23, 29: ten primes.
+    why: A composite number has a prime factor of at most its square root, so crossing out from p · p is enough.
+  - id: sieve-faded
+    kind: faded
+    title: "Your turn: primes up to 20"
+    objective: Run the sieve on 2 to 20.
+    seconds: 90
+    body: Everything starts marked prime, except 0 and 1.
+    steps:
+      - state: "i = 2 is prime."
+        prompt: "Which numbers does it cross out?"
+        options: ["4, 6, 8, 10, 12, 14, 16, 18, 20", "2, 4, 6, 8, 10, 12, 14, 16, 18", "3, 5, 7, 9, 11, 13, 15, 17, 19"]
+        answer: 0
+        explanation: "The multiples of 2 from 2 · 2 upwards."
+      - state: "i = 3 is prime, and 3 · 3 = 9."
+        prompt: "What does it cross out that is not crossed out yet?"
+        options: ["9 and 15", "6, 9, 12 and 15", "3, 6, 9 and 12"]
+        answer: 0
+        explanation: "6, 12 and 18 are already gone; 9 and 15 are new."
+      - state: "i = 4 is crossed out, and 4 · 4 = 16 is below 20; then i = 5 and 5 · 5 = 25 is above 20."
+        prompt: "How many primes remain?"
+        options: ["8", "9", "10"]
+        answer: 0
+        explanation: "2, 3, 5, 7, 11, 13, 17, 19."
+  - id: sieve-visualizer
+    kind: visualizer
+    title: "Step through: which numbers get touched"
+    objective: Predict what each outer step crosses out for n = 25.
+    seconds: 90
+    body: The outer loop runs while i · i is at most 25.
+    steps:
+      - state: "i = 2."
+        prompt: "How many numbers does it newly cross out?"
+        options: ["11 (4 to 24, even)", "12", "10"]
+        answer: 0
+        explanation: "4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24."
+      - state: "i = 3."
+        prompt: "Newly crossed out?"
+        options: ["9, 15, 21", "9, 12, 15, 18, 21, 24", "3, 6, 9"]
+        answer: 0
+        explanation: "The even multiples of 3 are already gone."
+      - state: "i = 5 and 5 · 5 = 25."
+        prompt: "Newly crossed out?"
+        options: ["25 only", "10, 15, 20, 25", "None: 5 · 5 is above n"]
+        answer: 0
+        explanation: "25 is not above n = 25, so it is still crossed out."
+  - id: sieve-micro
+    kind: micro
+    title: "Pitfall: 0 and 1 are not prime"
+    objective: Mark 0 and 1 before starting.
+    seconds: 70
+    misconception: sieve-zero-one-prime
+    body: >-
+      The sieve only ever crosses out multiples, and no multiple loop touches 0 or 1, so both stay
+      marked prime unless you mark them yourself. That adds 2 to every count. Set is_prime[0] and
+      is_prime[1] to false first, and take care when n is 0 or 1 so the array is large enough.
+    why: The sieve crosses out composites; it does not by itself know that 0 and 1 are neither.
+  - id: sieve-classify
+    kind: classify
+    title: "Sieve or not?"
+    objective: Recognise when to precompute.
+    seconds: 90
+    body: For each problem, choose the best-fitting approach.
+    steps:
+      - state: "Print all primes up to 10^7."
+        prompt: "Which approach?"
+        options: ["A sieve", "Trial division of each number", "Binary search"]
+        answer: 0
+        explanation: "About n log log n work for the whole range."
+      - state: "Is one number near 10^12 prime?"
+        prompt: "Which approach?"
+        options: ["Trial division up to its square root", "A sieve up to 10^12", "A prefix sum"]
+        answer: 0
+        explanation: "A sieve to 10^12 does not fit in memory; 10^6 trial divisions do."
+      - state: "Factorise 10^5 different numbers up to 10^6."
+        prompt: "Which approach?"
+        options: ["Sieve of smallest prime factors, then divide", "Trial division for each number", "Sort the numbers"]
+        answer: 0
+        explanation: "One sieve, then each factorisation takes about log n steps."

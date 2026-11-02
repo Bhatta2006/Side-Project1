@@ -190,6 +190,12 @@ def test_a_strong_learner_finishes_every_course_with_every_skill_proven(client, 
     finale = today["finale"]
     assert finale and len(finale["challenges"]) <= 3
     assert (finale["next_course"] or {}).get("id") == following
+    # Every course ends in a graded capstone that ties its skills together.
+    capstone = finale["capstone"]
+    assert capstone["id"].startswith(f"{course}:capstone-")
+    assert capstone["done"] == 0 and capstone["total"] >= 3
+    listed = client.get("/api/v1/projects").json()["projects"]
+    assert capstone["id"] in {p["id"] for p in listed}
     if following:
         onward = client.post(
             "/api/v1/enrollments",

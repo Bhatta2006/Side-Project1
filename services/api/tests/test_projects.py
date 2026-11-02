@@ -57,7 +57,7 @@ def test_valid_project_loads_and_starts_provisional(tmp_path, catalog):
     write(tmp_path, VALID)
     project = projects.load(tmp_path, catalog)["zero:expense-tracker"]
     assert project.status == "provisional"
-    assert catalog.projects == {}
+    assert "zero:expense-tracker" not in catalog.projects  # a temp root is not the catalog
 
 
 def test_rubric_weights_must_total_100():

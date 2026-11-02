@@ -190,6 +190,120 @@ BEGINNER: list[tuple[str, set[str]]] = [
 ]
 
 
+# Concepts that platforms never tag, found by title instead: the habit each problem trains.
+# These are extra homes (added after the specific and broad ones, while there is room).
+EXTRA_HOMES: list[tuple[str, re.Pattern, set[str]]] = [
+    (
+        "zero:programs-and-output",
+        rx(
+            r"^fizz buzz$|defanging|goal parser|final value of variable|shuffle string|"
+            r"running sum of 1d|concatenation of array|build array from permutation|"
+            r"^weird algorithm$|^watermelon$|^way too long words$"
+        ),
+        {"LeetCode", "CSES", "Codeforces"},
+    ),
+    (
+        "zero:variables-and-types",
+        rx(
+            r"convert the temperature|subtract the product and sum|calculate delayed arrival|"
+            r"minimum sum of four digit|^add two integers$|number of days between|"
+            r"smallest even multiple|^beautiful year$|^team$"
+        ),
+        {"LeetCode", "Codeforces"},
+    ),
+    (
+        "zero:operators-and-expressions",
+        rx(
+            r"sum of two integers|number of steps to reduce|count odd numbers in an interval|"
+            r"calculate money in leetcode bank|sum of digits of a string|"
+            r"divisible by 3 and 5|^bit\+\+$|^stones on the table$"
+        ),
+        {"LeetCode", "Codeforces"},
+    ),
+    (
+        "zero:for-loops",
+        rx(
+            r"richest customer wealth|find the highest altitude|maximum population|"
+            r"sum of all odd length|count items matching a rule|maximum number of words found|"
+            r"find numbers with even number of digits|height checker|^increasing array$|^repetitions$"
+        ),
+        {"LeetCode", "CSES"},
+    ),
+    (
+        "zero:while-loops",
+        rx(
+            r"^add digits$|^happy number$|^reverse integer$|^palindrome number$|"
+            r"number of 1 bits|^power of (two|three|four)$|ugly number|"
+            r"count of matches in tournament|self dividing|sum of digits in base|"
+            r"^collatz|^weird algorithm$"
+        ),
+        {"LeetCode", "CSES"},
+    ),
+    (
+        "zero:functions",
+        rx(
+            r"^pow\(x|^sqrt\(x|valid perfect square|^fibonacci number$|n-th tribonacci|"
+            r"greatest common divisor|roman to integer|integer to roman|is subsequence|"
+            r"^climbing stairs$|^factorial"
+        ),
+        {"LeetCode"},
+    ),
+    (
+        "zero:scope-and-mutation",
+        rx(
+            r"^rotate array$|reverse words in a string|rotate image|^set matrix zeroes$|"
+            r"^reverse linked list$|^plus one$|^shuffle the array$|^sort the people$"
+        ),
+        {"LeetCode"},
+    ),
+    (
+        "zero:debugging",
+        rx(
+            r"string to integer|^valid number$|^plus one$|^add binary$|^add strings$|"
+            r"^reverse integer$|^palindrome number$|valid palindrome|^roman to integer$|"
+            r"implement strstr|find the index of the first occurrence"
+        ),
+        {"LeetCode"},
+    ),
+    (
+        "zero:problem-solving",
+        rx(
+            r"^two sum$|contains duplicate|valid anagram|^majority element$|^single number$|"
+            r"missing number|best time to buy and sell stock$|maximum subarray$|"
+            r"^find the difference$|first unique character|ransom note"
+        ),
+        {"LeetCode"},
+    ),
+    (
+        "dsa:complexity",
+        rx(
+            r"^two sum$|contains duplicate|valid anagram|^majority element$|^single number$|"
+            r"^missing number$|^maximum subarray$|intersection of two arrays|"
+            r"best time to buy and sell stock$|^climbing stairs$|first bad version|"
+            r"search insert position|^sqrt\(x|3sum$|^container with most water$|"
+            r"^product of array except self$|^two sum ii"
+        ),
+        {"LeetCode"},
+    ),
+    (
+        "cp:fast-io",
+        rx(
+            r"^distinct numbers$|^apartments$|^ferris wheel$|^concert tickets$|"
+            r"^restaurant customers$|^missing number$|^increasing array$|^repetitions$|"
+            r"^sum of two values$|^maximum subarray sum$|^playlist$|^towers$|^collecting numbers$"
+        ),
+        {"CSES"},
+    ),
+]
+
+# Easy LeetCode problems by tag, for foundations that platforms never name (no break: a problem
+# may train more than one). Thin on purpose: they only top up what the title rules found.
+FOUNDATION_TAGS: list[tuple[str, set[str]]] = [
+    ("zero:functions", {"Recursion", "Math", "Number Theory"}),
+    ("zero:problem-solving", {"Greedy", "Counting", "Simulation", "Enumeration"}),
+    ("dsa:complexity", {"Two Pointers", "Sorting", "Binary Search"}),
+]
+
 # Codeforces tags at interview-level ratings, as homes for the interview course's concepts.
 CF_INTERVIEW: list[tuple[str, str]] = [
     ("greedy", "dsa:greedy"),
@@ -237,8 +351,27 @@ def route(problem: dict) -> list[str]:
             if tag in tags and concept not in concepts:
                 concepts.insert(1, concept)
                 break
+    for concept, title_rx, platforms in EXTRA_HOMES:
+        if (
+            problem["platform"] in platforms
+            and title_rx.search(problem["title"])
+            and concept not in concepts
+            and len(concepts) < MAX_CONCEPTS
+        ):
+            # A problem is offered only when every concept on it is ready. A beginner warm-up
+            # belongs to the beginner course alone; elsewhere an extra home must not drag in
+            # another course's concept and hide the problem from its own learners.
+            if concept.startswith("zero:"):
+                if "dsa:two-pointers" in concepts:  # keep the course's easy picks intact
+                    continue
+                concepts[:] = [c for c in concepts if c.startswith("zero:")]
+            if all(c.split(":")[0] == concept.split(":")[0] for c in concepts):
+                concepts.append(concept)
     if problem["platform"] == "LeetCode" and problem["difficulty"] == "easy":
         tags = set(problem.get("tags", []))
+        for concept, needed in FOUNDATION_TAGS:
+            if tags & needed and concept not in concepts and len(concepts) < MAX_CONCEPTS:
+                concepts.append(concept)
         for concept, needed in BEGINNER:
             if tags & needed and concept not in concepts and len(concepts) < MAX_CONCEPTS:
                 concepts.append(concept)

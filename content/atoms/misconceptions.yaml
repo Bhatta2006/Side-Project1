@@ -399,3 +399,23 @@
 - backtrack-reuse-element
 - backtrack-skip-all-duplicates
 - backtrack-no-undo
+# Sieve of Eratosthenes (cp:number-theory)
+- sieve-zero-one-prime
+- sieve-count-composites
+- sieve-forget-two
+- sieve-one-prime
+- sieve-cross-out-itself
+- sieve-start-two
+- sieve-step-by-one
+- sieve-step-by-two
+- sieve-multiply-not-add
+- sieve-trial-everything
+# Fenwick tree (cp:fenwick-tree)
+- fenwick-sum-everything
+- fenwick-suffix-not-prefix
+- fenwick-read-one-cell
+- fenwick-step-by-one
+- fenwick-double-not-lowbit
+- fenwick-wrong-direction
+- fenwick-lowbit-typo
+- fenwick-array-scan

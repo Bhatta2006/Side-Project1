@@ -25,8 +25,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
     parser.add_argument("--only", help="run one scenario by name")
+    parser.add_argument(
+        "--require-provider",
+        action="store_true",
+        help="exit 2 when only the offline provider is configured (a scheduled run must not "
+        "pass by grading canned replies)",
+    )
     args = parser.parse_args()
     settings = Settings()
+    if args.require_provider and settings.ai_provider == "offline":
+        print("No AI provider configured (SOCRAT_AI_PROVIDER=offline); nothing to evaluate.")
+        return 2
     scenarios = [s for s in evals.SCENARIOS if not args.only or s.name == args.only]
     report = asyncio.run(evals.run(default_catalog(), settings, make_provider(settings), scenarios))
     if args.json:

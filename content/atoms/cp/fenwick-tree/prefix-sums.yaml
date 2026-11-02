@@ -1,0 +1,100 @@
+concept: cp:fenwick-tree
+pattern: cp:fenwick-tree/prefix-sums
+concept_version: 1.0.0
+version: 0.1.0
+owner: Socrat learning content
+rights: Socrat original, all rights reserved
+changelog: First draft of the Fenwick tree pattern pack.
+rollback: remove content/atoms/cp/fenwick-tree/prefix-sums.yaml
+status: draft
+provenance:
+  origin: original
+atoms:
+  - id: fenwick-worked
+    kind: worked
+    title: "Worked: add 5 at position 3, then read the sum of 1 to 6"
+    objective: Follow the update path up and the query path down.
+    seconds: 100
+    body: >-
+      n = 8. Update position 3: tree[3] += 5, then 3 + 1 = 4, tree[4] += 5, then 4 + 4 = 8,
+      tree[8] += 5, then 8 + 8 = 16 is above n: stop. Query the sum of 1 to 6: 6 is 110 in
+      binary. Add tree[6]; 6 minus its lowest bit (2) is 4; add tree[4]; 4 minus 4 is 0: stop.
+      tree[4] holds the 5, and tree[6] covers positions 5 and 6 only, so the answer is 5.
+    why: tree[i] covers the block of lowbit(i) positions ending at i, so the query cells tile 1..q exactly once.
+  - id: fenwick-faded
+    kind: faded
+    title: "Your turn: which cells does position 5 update?"
+    objective: Walk up with i += i & -i for n = 8.
+    seconds: 90
+    body: 5 is 101 in binary.
+    steps:
+      - state: "i = 5, lowest set bit is 1."
+        prompt: "What is the next cell?"
+        options: ["6", "10", "4"]
+        answer: 0
+        explanation: "5 + 1 = 6."
+      - state: "i = 6 (110), lowest set bit is 2."
+        prompt: "Next?"
+        options: ["8", "7", "12"]
+        answer: 0
+        explanation: "6 + 2 = 8."
+      - state: "i = 8, lowest set bit is 8."
+        prompt: "What happens?"
+        options: ["Update tree[8], then 16 is above n: stop", "Update tree[8], then continue to 9", "Stop before updating tree[8]"]
+        answer: 0
+        explanation: "The path is 5, 6, 8."
+  - id: fenwick-visualizer
+    kind: visualizer
+    title: "Step through: the query path of 13"
+    objective: Predict each cell a prefix query for 13 reads.
+    seconds: 90
+    body: 13 is 1101 in binary.
+    steps:
+      - state: "i = 13."
+        prompt: "Which cell is read, and what comes next?"
+        options: ["tree[13]; next is 12", "tree[13]; next is 14", "tree[12]; next is 11"]
+        answer: 0
+        explanation: "13 minus its lowest bit (1) is 12."
+      - state: "i = 12 (1100)."
+        prompt: "Next?"
+        options: ["8", "11", "6"]
+        answer: 0
+        explanation: "12 minus 4 is 8."
+      - state: "i = 8, then 0."
+        prompt: "How many cells were read in total?"
+        options: ["3 (13, 12 and 8)", "4", "13"]
+        answer: 0
+        explanation: "At most one cell per set bit of the index."
+  - id: fenwick-micro
+    kind: micro
+    title: "Pitfall: indexes start at 1"
+    objective: Shift positions so the lowest index is 1.
+    seconds: 70
+    misconception: fenwick-step-by-one
+    body: >-
+      The lowest set bit of 0 is 0, so an update at index 0 would add 0 and loop forever. Number
+      the positions 1 to n, shifting by one when the input is 0-indexed. Use 64-bit cells when
+      the sums can pass 2^31.
+    why: The i & -i step only moves forward for positive i.
+  - id: fenwick-classify
+    kind: classify
+    title: "Fenwick tree or not?"
+    objective: Recognise changing-sum problems.
+    seconds: 90
+    body: For each problem, choose the best-fitting approach.
+    steps:
+      - state: "Values never change; answer 10^5 range sums."
+        prompt: "Which approach?"
+        options: ["A prefix-sum array", "A Fenwick tree", "Sort the values"]
+        answer: 0
+        explanation: "Nothing changes, so the simple array is faster and shorter."
+      - state: "Values change and range sums are asked in between."
+        prompt: "Which approach?"
+        options: ["A Fenwick tree", "Rebuild the prefix array each time", "Binary search"]
+        answer: 0
+        explanation: "Both update and query cost about log n."
+      - state: "Count how many earlier numbers are larger than each new one."
+        prompt: "Which approach?"
+        options: ["A Fenwick tree over the values", "Two nested loops", "A difference array"]
+        answer: 0
+        explanation: "Add each value as you go and query the count above it."

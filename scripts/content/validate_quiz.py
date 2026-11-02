@@ -44,6 +44,9 @@ def check_defects(root: Path, families, taxonomy: set[str]) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--check", action="store_true", help="do not write; fail when stale")
+    parser.add_argument(
+        "--only", help="verify only families whose id contains this text; merge into the manifest"
+    )
     args = parser.parse_args(argv)
 
     catalog = load(CONTENT_ROOT, tests_root=None)
@@ -51,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
     assert root is not None
     taxonomy = atoms.load_taxonomy(CONTENT_ROOT.parent / "atoms")
     families = [f for f in catalog.quiz_families.values() if f.generator is not None]
+    if args.only:
+        families = [f for f in families if args.only in f.id]
     tools = toolchains()
     needed = {lang for f in families for lang in f.languages}
     missing = sorted(needed - set(tools))
@@ -59,7 +64,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     problems = check_defects(root, families, taxonomy)
     runner = Runner(tools)
-    manifest = {}
+    manifest: dict = {}
+    if args.only and (root / framework.MANIFEST).exists():
+        manifest = json.loads((root / framework.MANIFEST).read_text(encoding="utf-8"))
     report = []
     started = time.monotonic()
     for family in sorted(families, key=lambda f: f.id):

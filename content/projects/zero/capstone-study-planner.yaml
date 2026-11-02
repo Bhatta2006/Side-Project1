@@ -1,0 +1,70 @@
+id: capstone-study-planner
+course: zero
+title: "Capstone: a study planner you will actually use"
+summary: >-
+  Build a small command-line program that keeps a list of study tasks and prints a plan for
+  today that fits the minutes you have. It uses what this course taught: input and output,
+  variables, decisions, loops, lists, maps, functions and handling bad input on purpose.
+skills:
+  - Break a program into small functions
+  - Store data in lists and maps
+  - Check input before using it
+  - Test with your own examples
+concepts:
+  - zero:functions
+  - zero:lists
+  - zero:maps
+  - zero:strings
+  - zero:conditionals
+constraints:
+  - Use only the standard library of your language.
+  - Every function does one job and has a name that says which.
+  - The program must not crash on an empty list, an empty name or a negative number of minutes.
+milestones:
+  - id: plan
+    title: Plan before you code
+    checklist:
+      - A list of the commands the program understands (add, done, list, today)
+      - What one task looks like as data (name, minutes, done) and why
+      - Three example runs written out by hand with the exact expected output
+  - id: core
+    title: Add, list and finish tasks
+    checklist:
+      - Tasks live in a list of maps, not in loose variables
+      - Add, list and mark-done each live in their own function
+      - Your three example runs from the plan produce the expected output
+  - id: input
+    title: Refuse bad input politely
+    checklist:
+      - An empty list, an empty name and a negative number of minutes each get a clear message
+      - Words typed in capitals or with extra spaces are treated as the same command
+      - A task number that does not exist is refused without a crash
+  - id: today
+    title: The plan for today
+    checklist:
+      - A today command picks tasks that fit a time budget the user types in
+      - You explain in two sentences why you chose that rule for what fits
+      - You list two inputs you tested that you did not think of at first
+rubric:
+  - criterion: Correctness
+    weight: 35
+    full_marks: Every example run matches, including the empty list and bad input.
+  - criterion: Structure
+    weight: 25
+    full_marks: Small single-purpose functions with clear names; no repeated blocks that should be one function.
+  - criterion: Data choices
+    weight: 15
+    full_marks: Tasks are stored in a fitting structure and the choice is explained.
+  - criterion: Testing
+    weight: 15
+    full_marks: Written test inputs cover normal, empty and surprising cases, and the learner says what each showed.
+  - criterion: Explanation
+    weight: 10
+    full_marks: The write-up says what was hard, what was changed after a bug, and what to do next.
+self_review:
+  - Could a friend read each function name and know what it does?
+  - Did you try to break it before saying it works?
+  - Is anything copied three times that could be a function?
+status: provisional
+provenance:
+  origin: original

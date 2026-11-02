@@ -1,0 +1,87 @@
+id: quiz:cp:number-theory:sieve-count
+family: sieve-count
+concept: cp:number-theory
+pattern: cp:number-theory/sieve-count
+format: output_prediction  # generated items set their own format (predict, fill, fix)
+tracks: [competitive, interview]
+languages: [python, cpp, java]
+generator:
+  template: sieve_count
+  params: {n: [12, 60]}
+  reference: "len(primes_up_to(n))"
+  seeds:
+    practice: {start: 0, stop: 42}
+    assessment: {start: 42, stop: 60}
+distractors:
+  - {rule: "count 0 and 1 as prime", misconception: sieve-zero-one-prime}
+  - {rule: "count the composites", misconception: sieve-count-composites}
+  - {rule: "stop one short of n", misconception: off-by-one-output}
+  - {rule: "forget that 2 is prime", misconception: sieve-forget-two}
+items:
+  - id: recognise-why-sieve
+    band: 1
+    format: mcq
+    prompt: "You need every prime up to 10^7. Which approach fits a one-second limit?"
+    options:
+      - "Cross out the multiples of each prime, so each number is touched a few times"
+      - "Test each number by dividing it by every smaller number, one by one"
+      - "Sort the numbers up to 10^7 and keep the odd ones, which are prime"
+      - "Binary search the primes, because they are spread out evenly"
+    answer: 0
+    misconceptions: [null, sieve-trial-everything, pattern-sort-breaks-order, pattern-search-vs-scan]
+    explanation: "The sieve does about n log log n work; trial division by everything is about n²."
+  - id: recognise-start
+    band: 2
+    format: mcq
+    prompt: "While crossing out multiples of a prime p, where can the inner loop start?"
+    options:
+      - "At p·p, since smaller multiples were crossed out by smaller primes"
+      - "At p, so that p is crossed out along with its multiples"
+      - "At 2·p, because 1·p is the prime and 2·p is the first multiple"
+      - "At p + 1, since the next number is the next candidate"
+    answer: 0
+    misconceptions: [null, sieve-cross-out-itself, sieve-start-two, sieve-step-by-one]
+    explanation: "A multiple k·p with k < p has a smaller prime factor, so it is already gone."
+  - id: edge-outer-bound
+    band: 5
+    format: mcq
+    prompt: "Why can the outer loop stop when i·i exceeds n?"
+    options:
+      - "Every composite up to n has a prime factor no larger than its root"
+      - "Numbers above the square root of n are never prime, so none are left"
+      - "The inner loop would start beyond n and the array would overflow"
+      - "Primes above the square root repeat the pattern of the smaller ones"
+    answer: 0
+    misconceptions: [null, div-sqrt-bound-strict, loop-bound-off-by-one, pattern-root-vs-all]
+    explanation: "A composite n = a·b has a factor at most the square root; that prime already crossed it out."
+  - id: edge-memory
+    band: 5
+    format: mcq
+    prompt: "n = 10^9. A byte array sieve needs about 1 GB. What is the usual way out?"
+    options:
+      - "Sieve segments of the range, reusing the primes up to the square root"
+      - "Use a hash set to hold only the primes found so far, no array at all"
+      - "Sieve only the odd numbers up to n, which halves the memory used"
+      - "Use recursion so the array never exists in memory all at once"
+    answer: 0
+    misconceptions: [null, pattern-brute-force-default, accumulator-init-one, trace-step-slip]
+    explanation: "A segmented sieve needs the primes up to sqrt(n) (about 31623) and one block at a time."
+  - id: transfer-factorise
+    band: 6
+    format: classify
+    prompt: "Factorise 10^5 different numbers up to 10^6, each in a few steps. Which preparation?"
+    options:
+      - "A sieve storing each number's smallest prime factor, then divide repeatedly"
+      - "Trial division of each number by every integer up to the number itself"
+      - "A binary search for each factor in a sorted list of the numbers"
+      - "A prefix sum of the numbers, then differences for their factors"
+    answer: 0
+    misconceptions: [null, sieve-trial-everything, pattern-search-vs-scan, pattern-brute-force-default]
+    explanation: "Store the smallest prime factor per number once; each factorisation is then O(log n)."
+hint_ladder:
+  - Cross out what is not prime; you only need to keep the survivors.
+  - Start with every number marked prime, and handle 0 and 1 first.
+  - For each i that is still marked, cross out i·i, i·i + i, … up to n.
+time_limit_s: 150
+provenance:
+  origin: original

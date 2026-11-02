@@ -176,6 +176,50 @@ def test_a_full_check_verifies_the_concept(client):
     assert [(r.score, r.details["stage"], r.details["ok"]) for r in rows] == [(1.0, "solve", True)]
 
 
+def age_proof(client, days):
+    """Pretend the concept was verified ``days`` ago."""
+    with Session(client.app.state.engine) as db, db.begin():
+        record = db.scalar(
+            select(ActivityRecord).where(ActivityRecord.activity_id == f"transfer:{CONCEPT}")
+        )
+        record.outcome = {**record.outcome, "at": now() - days * DAY}
+
+
+def test_old_proof_lapses_and_is_shown_again_on_a_problem_the_learner_has_not_met(client):
+    assert transfer.expired({"state": "verified", "at": 1}, 1 + transfer.REPROOF_AFTER)
+    assert not transfer.expired({"state": "verified", "at": 1}, transfer.REPROOF_AFTER)
+    assert not transfer.expired({"state": "verified"}, 10**9), "legacy records keep their proof"
+
+    headers = learner(client)
+    view = check(client)
+    classify(client, headers, view, CONCEPT)
+    first = view["problem"]["id"]
+    accept(client, headers, first)
+    assert check(client)["state"] == "verified"
+
+    age_proof(client, 89)
+    assert check(client)["state"] == "verified", "still fresh"
+
+    age_proof(client, 91)
+    again = check(client)
+    assert again["state"] == "classify", "a season later it has to be proven again"
+    assert again["problem"]["id"] != first, "never the problem they already solved"
+    row = next(
+        c
+        for m in client.get("/api/v1/plan").json()["modules"]
+        for c in m["concepts"]
+        if c["concept"] == CONCEPT
+    )
+    assert row["transfer"] == "due"
+
+    assert classify(client, headers, again, CONCEPT).json()["state"] == "solve"
+    accept(client, headers, again["problem"]["id"])
+    assert check(client)["state"] == "verified"
+    with Session(client.app.state.engine) as db:
+        rows = list(db.scalars(select(Evidence).where(Evidence.kind == "transfer")))
+    assert [r.details["ok"] for r in rows] == [True, True]
+
+
 def test_naming_the_wrong_technique_ends_the_attempt_and_the_problem_is_not_reused(client):
     headers = learner(client)
     view = check(client)

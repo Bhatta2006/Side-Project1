@@ -1,0 +1,107 @@
+id: cp:fenwick-tree/prefix-sums
+concept: cp:fenwick-tree
+title: Fenwick tree (point update, prefix sum)
+tracks: [competitive, interview]
+recognise:
+  - Values change over time and you need sums of ranges between changes
+  - Counting inversions or counting how many earlier values are smaller
+  - A prefix-sum array that would have to be rebuilt after each update
+state: "tree[i] holds the sum of the block of positions that ends at i, of length lowbit(i)"
+transition: "update: add at i, then i += i & -i; query: add tree[i], then i -= i & -i"
+base_cases: ["tree starts at all zeros", "positions are 1-indexed"]
+complexity: {time: "O(log n) per update and per query", space: "O(n)"}
+template:
+  python: |
+    import sys
+
+    data = sys.stdin.read().split()
+    n, q = int(data[0]), int(data[1])
+    tree = [0] * (n + 1)
+
+    def update(i, v):
+        while i <= n:
+            tree[i] += v
+            i += i & -i  # the next block that contains position i
+
+    def query(i):
+        total = 0
+        while i > 0:
+            total += tree[i]
+            i -= i & -i  # drop the lowest set bit: the next block to the left
+        return total
+
+    for k in range(1, n + 1):
+        update(k, k)
+    print(query(q))
+  cpp: |
+    #include <bits/stdc++.h>
+    using namespace std;
+
+    int n;
+    vector<long long> tree;
+
+    void update(int i, long long v) {
+        for (; i <= n; i += i & -i) tree[i] += v;
+    }
+
+    long long query(int i) {
+        long long total = 0;
+        for (; i > 0; i -= i & -i) total += tree[i];
+        return total;
+    }
+
+    int main() {
+        int q;
+        cin >> n >> q;
+        tree.assign(n + 1, 0);
+        for (int k = 1; k <= n; k++) update(k, k);
+        cout << query(q) << "\n";
+    }
+  java: |
+    import java.util.*;
+
+    public class Solution {
+        static int n;
+        static long[] tree;
+
+        static void update(int i, long v) {
+            for (; i <= n; i += i & -i) tree[i] += v;
+        }
+
+        static long query(int i) {
+            long total = 0;
+            for (; i > 0; i -= i & -i) total += tree[i];
+            return total;
+        }
+
+        public static void main(String[] args) {
+            Scanner in = new Scanner(System.in);
+            n = in.nextInt();
+            int q = in.nextInt();
+            tree = new long[n + 1];
+            for (int k = 1; k <= n; k++) update(k, k);
+            System.out.println(query(q));
+        }
+    }
+template_io: {stdin: "10 7\n", expected: "28"}
+variants:
+  - {id: dynamic-range-sum, band: 3, title: "Dynamic range sum queries", problem: "cses:1648"}
+  - {id: range-sum-mutable, band: 3, title: "Range sum with updates", problem: "leetcode:range-sum-query-mutable"}
+  - {id: list-removals, band: 5, title: "Find the k-th remaining element", problem: "cses:1749"}
+  - {id: inversions, band: 6, title: "Count smaller numbers after self", problem: "leetcode:count-of-smaller-numbers-after-self"}
+  - {id: range-sum-count, band: 6, title: "Count range sums", problem: "leetcode:count-of-range-sum"}
+pitfalls: [fenwick-step-by-one, fenwick-sum-everything, fenwick-suffix-not-prefix]
+atoms: [fenwick-worked, fenwick-faded, fenwick-visualizer, fenwick-micro, fenwick-classify]
+quiz_family: quiz:cp:fenwick-tree:prefix-sums
+problems:
+  native: []
+  external:
+    - "cses:1648"
+    - "leetcode:range-sum-query-mutable"
+    - "cses:1749"
+    - "leetcode:count-of-smaller-numbers-after-self"
+    - "leetcode:count-of-range-sum"
+showcase:
+  - "Pattern note: the lowest set bit decides which blocks an index belongs to"
+provenance:
+  origin: original
