@@ -102,9 +102,8 @@ Gotchas:
    root `node_modules`) before writing Next code. `cookies()` is async and using it in the root
    layout makes every page dynamic; that is why the locale is applied client-side (see 4.6).
 8. Repo rule: use `npx ctx7@latest` for library or API documentation questions (not used so far).
-9. Untracked directories (`.agents/`, `.kiro/`, `.windsurf/`, `qa-report/`, `apps/web/.next-*`,
-   ) are not part of
-   this work; stage specific paths, never `git add -A` at the root.
+9. Untracked directories (`.agents/`, `.kiro/`, `.windsurf/`, `qa-report/`, `apps/web/.next-*`)
+   are not part of this work; stage specific paths, never `git add -A` at the root.
 
 ---
 
