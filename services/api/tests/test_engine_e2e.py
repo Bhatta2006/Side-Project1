@@ -25,7 +25,7 @@ from socrat.coursegen import intent as intents
 from socrat.coursegen import package as pkg
 from socrat.coursegen import requests as request_routes
 from socrat.engine import design
-from socrat.models import Enrollment, User
+from socrat.models import Enrollment, GeneratedConcept, GenerationJob, User
 
 REQUEST = "Teach me how electric circuits work, starting with Ohm's law"
 
@@ -507,6 +507,16 @@ def test_a_teenager_asks_for_circuits_and_gets_a_working_course(on, monkeypatch,
         jobs.run_once(state.engine, state.settings, default_catalog(), model.make, http)
     )
     assert {"author", "quiz", "atoms", "facts", "reviewer", "experience"} <= set(model.asked)
+    # Provenance: the released concept names its job, and that job records every model call
+    # with the exact prompt version that produced it.
+    with Session(state.engine) as db:
+        row = db.get(GeneratedConcept, (course_id, "ohms-law"))
+        job = db.get(GenerationJob, row.job_id)
+        released = job.log[-1]
+        assert released["event"] == "released" and job.state == "done"
+        roles_called = {c["role"] for c in released["calls"]}
+        assert {"author", "facts", "reviewer"} <= roles_called
+        assert all(len(c["prompt"]) == 12 and c["ms"] >= 0 for c in released["calls"])
     view = on.get("/api/v1/courses").json()
     assert course_id in {c["id"] for c in view["items"]}
     with Session(state.engine) as db:

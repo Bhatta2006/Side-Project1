@@ -752,6 +752,8 @@ class GeneratedConcept(Base):
     atoms: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # an ``AtomPack``
     problems: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Problem``s
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+    # The job that released this version; its log holds models, prompt versions and sources.
+    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
 class GenerationJob(Base):
@@ -769,6 +771,9 @@ class GenerationJob(Base):
     log: Mapped[list] = mapped_column(JSON, default=list)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     error: Mapped[str] = mapped_column(String(500), default="")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)  # transient failures so far
+    not_before: Mapped[int] = mapped_column(Integer, default=0)  # retry backoff
+    stage: Mapped[str] = mapped_column(String(16), default="")  # generating | validating
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)

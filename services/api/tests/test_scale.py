@@ -134,3 +134,22 @@ def test_cold_catalog_is_loaded_once_when_many_requests_arrive_together():
     assert results == ["catalog"] * 12 and len(calls) == 1
     slow.cache_clear()  # type: ignore[attr-defined]
     assert slow() == "catalog" and len(calls) == 2
+
+
+def test_engine_report_shows_reliability_latency_and_time_to_first_lesson(client):
+    client.app.state.settings.admin_subjects = ["boss"]
+    admin = login(client, subject="boss", name="Boss")
+    with Session(client.app.state.engine) as db, db.begin():
+        db.add(GeneratedCourse(id="c", payload={"title": "C"}, created_at=1_000))
+        calls = [{"role": "author", "ms": 900}, {"role": "reviewer", "ms": 300}]
+        released = {"event": "released", "at": 1_600, "calls": calls}
+        db.add(GenerationJob(kind="package", course_id="c", input={}, state="done", log=[released]))
+        db.add(GenerationJob(kind="package", course_id="c", input={}, state="dead", attempts=3))
+        db.add(GenerationJob(kind="package", course_id="c", input={}, state="queued", attempts=1))
+        db.add(GenerationJob(kind="outline", course_id="c", input={}, state="done"))
+    got = client.get("/api/v1/admin/engine-costs", headers=admin).json()["reliability"]
+    assert got["jobs"]["package"] == {"done": 1, "dead": 1, "queued": 1}
+    assert got["success_rate"] == {"package": 0.5, "outline": 1.0}
+    assert got["retried_jobs"] == 2 and got["dead_jobs"] == 1
+    assert got["latency_ms"]["author"] == {"calls": 1, "p50": 900, "p95": 900}
+    assert got["first_lesson_seconds"] == {"courses": 1, "p50": 600, "p95": 600}

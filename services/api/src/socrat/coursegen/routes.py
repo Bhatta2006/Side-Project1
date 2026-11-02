@@ -9,7 +9,7 @@ from socrat.admin.routes import require_admin
 from socrat.catalog import generated
 from socrat.catalog.registry import CatalogError, default_catalog
 from socrat.catalog.schema import Course, Slug
-from socrat.coursegen import jobs, quality
+from socrat.coursegen import jobs, prefetch, quality
 from socrat.coursegen.outline import Brief
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine
@@ -200,6 +200,11 @@ def publish(course_id: str, request: Request):
         except (ValueError, CatalogError) as exc:
             raise HTTPException(422, "outline_invalid") from exc
         record_event(db, user.id, "coursegen.published", course_id)
+        if request.app.state.settings.gen_initial_on_publish:
+            return {
+                "published": True,
+                "queued": [j.target for j in prefetch.initial(db, course_id)],
+            }
         return {"published": True}
 
 

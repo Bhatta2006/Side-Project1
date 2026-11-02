@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from socrat.catalog import generated
 from socrat.catalog.registry import CatalogError, default_catalog
-from socrat.coursegen import community, jobs
+from socrat.coursegen import community, jobs, prefetch
 from socrat.coursegen import intent as intents
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, user_of
@@ -95,6 +95,13 @@ def view(db: Session, row: LearningRequest) -> dict:
             )
         if stored is not None:
             by_id = {c.id: c for c in stored.concepts}
+            latest: dict[str, GenerationJob] = {}
+            for j in db.scalars(
+                select(GenerationJob)
+                .where(GenerationJob.course_id == row.course_id, GenerationJob.kind == "package")
+                .order_by(GenerationJob.created_at)
+            ):
+                latest[j.target] = j  # the newest job per concept wins
             out["blueprint"] = dict(
                 title=stored.title,
                 tagline=stored.tagline,
@@ -108,6 +115,11 @@ def view(db: Session, row: LearningRequest) -> dict:
                                 title=by_id[cid].title,
                                 prerequisites=list(by_id[cid].prerequisites),
                                 status=by_id[cid].status,
+                                # Honest progress: planned, queued, generating, validating,
+                                # published, failed, blocked (gave up after retries), cancelled.
+                                generation=jobs.lifecycle(
+                                    latest.get(cid.split(":", 1)[-1]), by_id[cid].status
+                                ),
                                 objectives=outline.objectives
                                 if (outline := by_id[cid].outline)
                                 else [],
@@ -270,6 +282,16 @@ def publish(request_id: str, request: Request):
                 generated.publish(db, default_catalog(), row.course_id)
             except (ValueError, CatalogError) as exc:
                 raise HTTPException(422, "outline_invalid") from exc
+            # The first lessons start now, so they are ready (or nearly) by the time the
+            # learner enrols, instead of waiting for their first visit.
+            check = db.scalar(select(Diagnostic).where(Diagnostic.request_id == row.id))
+            level = check.result["level"] if check and check.result else None
+            stored = generated.course(db, row.course_id)
+            start = next(
+                (lv.start_concept for lv in (stored.levels if stored else []) if lv.id == level),
+                None,
+            )
+            prefetch.initial(db, row.course_id, start)
             record_event(db, user.id, "learning_request.published", row.id)
         db.flush()
         return view(db, row)
@@ -330,3 +352,57 @@ def unshare(request_id: str, request: Request):
         record_event(db, user.id, "learning_request.unshared", row.id)
         db.flush()
         return view(db, row)
+
+
+def _owned_course(db: Session, request: Request, request_id: str):
+    user = user_of(request, db, write=True)
+    row = db.get(LearningRequest, request_id)
+    if row is None or row.user_id != user.id or not row.course_id:
+        raise HTTPException(404, "not_found")
+    meta = db.get(GeneratedCourse, row.course_id)
+    if meta is None or meta.owner_id != user.id:
+        raise HTTPException(404, "not_found")
+    if meta.status != "published":
+        raise HTTPException(409, "outline_not_published")
+    return user, row
+
+
+@router.post("/{request_id}/concepts/{concept_id}/regenerate")
+def regenerate(request_id: str, concept_id: str, request: Request):
+    """The owner asks for one planned lesson again after it failed, gave up or was cancelled.
+    A lesson that is queued, being written or already released is left alone (409)."""
+    _enabled(request)
+    with Session(engine(request)) as db, db.begin():
+        user, row = _owned_course(db, request, request_id)
+        stored = generated.course(db, row.course_id)
+        local = concept_id.split(":", 1)[-1]
+        if stored is None or local not in {c.id for c in stored.concepts}:
+            raise HTTPException(404, "not_found")
+        if stored.concept(local).status != "planned":
+            raise HTTPException(409, "already_written")
+        if jobs.active(db, row.course_id, local) is not None:
+            raise HTTPException(409, "generation_in_progress")
+        job = jobs.enqueue(db, "package", row.course_id, {"trigger": "owner"}, user.id, local)
+        record_event(db, user.id, "learning_request.regenerate", f"{row.id}:{local}")
+        db.flush()
+        return view(db, row) | {"queued": job.id}
+
+
+@router.post("/{request_id}/cancel")
+def cancel(request_id: str, request: Request):
+    """Stop lessons that have not started. A lesson being written finishes its current run (it
+    cannot be interrupted safely mid-call) and is then released or not as usual."""
+    _enabled(request)
+    with Session(engine(request)) as db, db.begin():
+        user, row = _owned_course(db, request, request_id)
+        waiting = db.scalars(
+            select(GenerationJob).where(
+                GenerationJob.course_id == row.course_id, GenerationJob.state == "queued"
+            )
+        ).all()
+        for job in waiting:
+            job.state, job.updated_at = "cancelled", now()
+            job.log = [*job.log, {"role": "owner", "event": "cancelled", "at": now()}]
+        record_event(db, user.id, "learning_request.cancel", row.id)
+        db.flush()
+        return view(db, row) | {"cancelled": len(waiting)}

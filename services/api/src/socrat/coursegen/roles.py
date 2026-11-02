@@ -5,8 +5,10 @@ so the reply is parsed and schema-checked here, and a malformed reply becomes fe
 the next round instead of a crash.
 """
 
+import hashlib
 import json
 import re
+import time
 from dataclasses import dataclass
 
 from sqlalchemy import Engine
@@ -82,6 +84,8 @@ class Reply:
     problem: str  # why parsing failed, for the next round
     cost_usd: float
     model: str = ""
+    prompt_version: str = ""  # see ``prompt_version``
+    ms: int = 0  # wall time of the call
 
 
 def parse_json(text: str) -> tuple[dict | None, str]:
@@ -101,6 +105,12 @@ def parse_json(text: str) -> tuple[dict | None, str]:
     return value, ""
 
 
+def prompt_version(system: str) -> str:
+    """A short, stable id of a role's instructions: any edit to the prompt changes it, so every
+    artifact records exactly which wording produced it."""
+    return hashlib.sha256(system.encode()).hexdigest()[:12]
+
+
 async def ask(
     engine: Engine,
     settings: Settings,
@@ -113,6 +123,7 @@ async def ask(
 ) -> Reply:
     """One metered call, charged to ``user_id`` when a learner caused it. Raises ProviderError
     when the provider, the global budget or that learner's budget refuses."""
+    started = time.monotonic()
     tuned = role_settings(settings, role)
     provider: Provider = make(tuned)
     if provider.name != "offline":
@@ -136,4 +147,7 @@ async def ask(
                     stamp=now(),
                 )
     data, problem = parse_json(text)
-    return Reply(data, problem, cost, budget.model_name(tuned, provider))
+    ms = int((time.monotonic() - started) * 1000)
+    return Reply(
+        data, problem, cost, budget.model_name(tuned, provider), prompt_version(system), ms
+    )

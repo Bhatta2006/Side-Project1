@@ -11,7 +11,22 @@ import { Input } from '@/components/ui/input';
 
 type Group = { id: string; single: boolean; choices: { id: string; label: string }[] };
 type Options = { subjects: { id: string; label: string; group: string }[]; groups: Group[] };
-type Concept = { id: string; title: string; prerequisites: string[]; status: string; objectives: string[] };
+type Concept = { id: string; title: string; prerequisites: string[]; status: string; generation?: string; objectives: string[] };
+
+// What the engine is doing with each lesson, in plain words. Nothing reads as ready until it is.
+const STAGE: Record<string, string> = {
+  planned: 'Planned',
+  queued: 'Waiting to be written',
+  generating: 'Being written',
+  validating: 'Being checked',
+  published: 'Ready',
+  failed: 'Did not pass its checks',
+  blocked: 'Stopped after several tries',
+  cancelled: 'Stopped by you',
+  superseded: 'Withdrawn, being rewritten',
+};
+const RETRYABLE = new Set(['failed', 'blocked', 'cancelled']);
+const MOVING = new Set(['queued', 'generating', 'validating']);
 type Intent = {
   subject: string;
   goal: string;
@@ -95,13 +110,15 @@ export default function NewCourse() {
 
   // While the plan is being written, ask again every few seconds until it is ready or failed.
   const waiting = req?.status === 'confirmed' && !req.blueprint && req.job?.state !== 'failed';
+  // Lessons being written in the background: keep the stages fresh until they settle.
+  const writing = !!req?.blueprint?.modules.some((m) => m.concepts.some((c) => MOVING.has(c.generation ?? '')));
   useEffect(() => {
-    if (!waiting || !req) return;
+    if (!(waiting || writing) || !req) return;
     const timer = setInterval(() => {
       api.get<LearningRequest>(`/learning-requests/${req.id}`).then(setReq).catch(() => {});
     }, 4000);
     return () => clearInterval(timer);
-  }, [waiting, req]);
+  }, [waiting, writing, req]);
 
   function toggle(group: Group, id: string) {
     setPicks((current) => {
@@ -123,6 +140,12 @@ export default function NewCourse() {
     }
   }
 
+  const regenerate = (concept: string) => {
+    if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/concepts/${concept}/regenerate`, {}), setReq);
+  };
+  const stopWriting = () => {
+    if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/cancel`, {}), setReq);
+  };
   const make = () => run(() => api.post<LearningRequest>('/learning-requests', { text, choices: picks }), setReq);
   const confirm = () => {
     if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/confirm`, {}), setReq);
@@ -295,19 +318,35 @@ export default function NewCourse() {
               <h2 className="type-display-l">{req.blueprint.title}</h2>
               <p className="mt-1 text-muted-foreground">{req.blueprint.tagline}</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {req.ready} of {req.total} lessons are ready. The rest are written just before you reach them, and
-                nothing is shown as ready until it is. Courses made by AI are labelled as such.
+                {req.ready} of {req.total} lessons are ready. The first lessons are written as soon as you start, the
+                rest just before you reach them, and nothing is shown as ready until it is. Courses made by AI are
+                labelled as such.
               </p>
+              {req.published && writing ? (
+                <Button className="mt-3" variant="outline" size="sm" onClick={stopWriting} disabled={busy}>
+                  Stop lessons that have not started
+                </Button>
+              ) : null}
               {req.blueprint.modules.map((m) => (
                 <div key={m.id} className="mt-5">
                   <h3 className="font-semibold">{m.title}</h3>
                   <ol className="mt-2 space-y-2">
                     {m.concepts.map((c) => (
                       <li key={c.id} className="rounded-xl border bg-card px-4 py-3">
-                        <p className="font-medium">{c.title}</p>
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <p className="font-medium">{c.title}</p>
+                          {req.published && c.generation ? (
+                            <span className="text-[13px] text-muted-foreground">{STAGE[c.generation] ?? c.generation}</span>
+                          ) : null}
+                        </div>
                         {c.objectives[0] ? <p className="text-sm text-muted-foreground">{c.objectives[0]}</p> : null}
                         {c.prerequisites.length ? (
                           <p className="text-[13px] text-muted-foreground">After: {c.prerequisites.join(', ')}</p>
+                        ) : null}
+                        {req.published && RETRYABLE.has(c.generation ?? '') ? (
+                          <Button className="mt-2" variant="outline" size="sm" onClick={() => regenerate(c.id)} disabled={busy}>
+                            Try writing it again
+                          </Button>
                         ) : null}
                       </li>
                     ))}

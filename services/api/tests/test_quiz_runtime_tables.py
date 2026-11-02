@@ -35,7 +35,7 @@ def migrated(tmp_path, revision="head"):
 
 def test_upgrade_creates_the_tables_and_downgrade_removes_only_them(tmp_path):
     config, engine = migrated(tmp_path)
-    assert SCHEMA_REVISION == "0039_course_maintenance"
+    assert SCHEMA_REVISION == "0040_generation_recovery"
     before = set(sa.inspect(engine).get_table_names())
     assert TABLES <= before
     command.downgrade(config, "0008_product_tour")

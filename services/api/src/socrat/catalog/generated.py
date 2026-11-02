@@ -226,6 +226,7 @@ def store_concept(
     atoms: AtomPack | None,
     problems: list[Problem] | None = None,
     reason: str = "update",
+    job_id: str | None = None,
 ) -> None:
     """Replace one concept of a generated course (a release, a new problem, or a quarantine
     back to planned); checked against the whole catalog first. ``problems`` None keeps the
@@ -249,6 +250,8 @@ def store_concept(
     keep_version(db, row, reason)
     row.payload = concept.model_dump(mode="json")
     row.atoms = atoms.model_dump(mode="json") if atoms else None
+    if job_id is not None:
+        row.job_id = job_id
     row.problems = [p.model_dump(mode="json") for p in problems] or None
     row.updated_at = now()
     parent = need(db.get(GeneratedCourse, course_id))

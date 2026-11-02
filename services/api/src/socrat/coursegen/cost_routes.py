@@ -23,4 +23,5 @@ def report(request: Request):
             queue=costs.queue(db, stamp),
             courses=costs.by_course(db),
             roles=costs.by_role(db, since_day=month),
+            reliability=costs.reliability(db),
         )

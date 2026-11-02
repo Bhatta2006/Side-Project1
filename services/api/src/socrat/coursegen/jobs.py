@@ -13,6 +13,13 @@ concept whose outline asks for code queues one.
 
 A ``project`` job designs a module's project (see ``project``); releasing the last concept of
 a module whose outline asks for a project queues one.
+
+States (``GenerationJob.state``): ``queued`` -> ``running`` -> ``done``. A run that ends in a
+transient failure (provider unreachable or rate limited, a crash, the execution service down) goes
+back to ``queued`` with a backoff, up to ``MAX_ATTEMPTS``; after that it is ``dead`` (the
+dead-letter state, kept for the owner). Content that does not pass its gates is ``failed``: retrying
+the same thing would not help, it needs a revision. ``cancelled`` is a stop asked for by the owner.
+``lifecycle`` maps a job and its concept to the stages the learner and owner see.
 """
 
 import asyncio
@@ -45,6 +52,36 @@ log = logging.getLogger(__name__)
 ROUNDS = 3  # architect attempts per job; the critic sees every valid one
 STALE_SECONDS = 3600  # a running job this old was orphaned by a crash or restart
 POLL_SECONDS = 5
+MAX_ATTEMPTS = 3  # transient failures before a job is dead
+BACKOFF_SECONDS = (60, 300, 900)  # wait before the next try, by attempt
+# Provider errors that a later try can fix. Anything else (offline, disabled, budget, a refusal,
+# a 4xx) fails at once: retrying would only spend money or time on the same answer.
+TRANSIENT = {"provider_unreachable", "provider_rate_limited", "ai_rate_limited"}
+OPEN = ("queued", "running")
+CLOSED = ("done", "failed", "dead", "cancelled")
+
+
+def transient(error: ProviderError) -> bool:
+    code = str(error)
+    return code in TRANSIENT or code.startswith("provider_http_5")
+
+
+def lifecycle(job: GenerationJob | None, concept_status: str | None = None) -> str:
+    """The generation stage in the master prompt's terms, for one concept (or an outline):
+    planned, queued, generating, validating, published, failed, blocked, cancelled, superseded."""
+    if concept_status == "live":
+        return "published"
+    if job is None:
+        return "planned"
+    if job.state == "queued":
+        return "queued"
+    if job.state == "running":
+        return "validating" if job.stage == "validating" else "generating"
+    if job.state == "done":
+        return "published" if concept_status is None else "superseded"
+    if job.state == "dead":
+        return "blocked"
+    return job.state  # failed | cancelled
 
 
 def spent(db: Session, course_id: str) -> float:
@@ -62,7 +99,7 @@ def active(db: Session, course_id: str, target: str | None = None) -> Generation
     """A queued or running job for the course (``target`` narrows it to one concept)."""
     query = select(GenerationJob).where(
         GenerationJob.course_id == course_id,
-        GenerationJob.state.in_(["queued", "running"]),
+        GenerationJob.state.in_(OPEN),
     )
     if target is not None:
         query = query.where(GenerationJob.target == target)
@@ -85,7 +122,7 @@ def claim(engine: Engine) -> str | None:
     stamp = now()
     paused = select(GeneratedCourse.id).where(GeneratedCourse.paused != "")
     claimable = or_(
-        GenerationJob.state == "queued",
+        (GenerationJob.state == "queued") & (GenerationJob.not_before <= stamp),
         (GenerationJob.state == "running") & (GenerationJob.updated_at < stamp - STALE_SECONDS),
     ) & GenerationJob.course_id.not_in(paused)
     with Session(engine) as db, db.begin():
@@ -97,7 +134,7 @@ def claim(engine: Engine) -> str | None:
             result = db.execute(
                 update(GenerationJob)
                 .where(GenerationJob.id == job_id, claimable)
-                .values(state="running", updated_at=stamp)
+                .values(state="running", stage="generating", updated_at=stamp)
             )
             taken = result.rowcount if isinstance(result, CursorResult) else 0
             if taken:
@@ -236,6 +273,26 @@ def pause_for_budget(engine: Engine, course_id: str, job_id: str) -> None:
     log.error("course generation paused: %s reached its budget", course_id)
 
 
+def retry_or_bury(engine: Engine, job_id: str, event: str, error: str) -> str:
+    """A transient failure: queue the job again after a backoff, or move it to ``dead`` once it
+    has failed ``MAX_ATTEMPTS`` times. Returns the new state."""
+    with Session(engine) as db, db.begin():
+        job = need(db.get(GenerationJob, job_id))
+        job.attempts += 1
+        dead = job.attempts >= MAX_ATTEMPTS
+        wait = BACKOFF_SECONDS[min(job.attempts, len(BACKOFF_SECONDS)) - 1]
+        job.state = "dead" if dead else "queued"
+        job.not_before = 0 if dead else now() + wait
+        job.stage, job.error, job.updated_at = "", error[:500], now()
+        entry = {"role": "system", "event": event, "attempt": job.attempts, "at": now()}
+        job.log = [*job.log, entry if dead else {**entry, "retry_in": wait}]
+        if dead:
+            log.error(
+                "generation job %s is dead after %s attempts: %s", job_id, job.attempts, error
+            )
+        return job.state
+
+
 def _job_cost(engine: Engine, job_id: str) -> float:
     with Session(engine) as db:
         return need(db.get(GenerationJob, job_id)).cost_usd
@@ -283,10 +340,20 @@ async def run_package(
         notes["quiz"] = list(reported)
     redo = {"lesson", "quiz", "atoms"}
     models: dict[str, str] = {}
+    calls: list[dict] = []  # every model call: role, model, prompt version, time, cost
 
     async def ask(role, system, prompt, tokens):
         reply = await roles.ask(engine, settings, role, system, prompt, tokens, make)
         models[role] = reply.model
+        calls.append(
+            {
+                "role": role,
+                "model": reply.model,
+                "prompt": reply.prompt_version,
+                "ms": reply.ms,
+                "cost_usd": round(reply.cost_usd, 6),
+            }
+        )
         return reply
 
     if brief.research and not data.get("previous"):
@@ -373,6 +440,8 @@ async def run_package(
             _note(engine, job_id, entry, cost)
             continue
         assert quiz is not None and atoms is not None  # both parsed by now
+        entry = {"role": "system", "round": attempt, "event": "validating"}
+        _note(engine, job_id, entry, stage="validating")
         attribution = (
             f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
             "before release. Not reviewed by a person." + research.credit(cited)
@@ -440,21 +509,23 @@ async def run_package(
             needed = sorted({"python", *course.languages})
             exercise = wants and executor.available(needed) == needed
             with Session(engine) as db, db.begin():
-                generated.store_concept(db, base, course_id, live, pack)
+                generated.store_concept(db, base, course_id, live, pack, job_id=job_id)
                 if exercise:
                     enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
                 if project_due(db, course, concept_id):
                     enqueue(db, "project", course_id, {"trigger": "release"}, None, concept.module)
-            event = {"role": "system", "event": "released"}
+            event = {"role": "system", "event": "released", "calls": calls}
             if wants and not exercise:
                 event["exercise"] = "waiting for the execution service"
             _note(engine, job_id, event, state="done")
             return
         redo = {k for k, v in notes.items() if v} or {"lesson"}
+        entry = {"role": "system", "round": attempt, "event": "revising"}
+        _note(engine, job_id, entry, stage="generating")
     _note(
         engine,
         job_id,
-        {"role": "system", "event": "not_released"},
+        {"role": "system", "event": "not_released", "calls": calls},
         state="failed",
         error="The package did not pass every gate; the concept stays planned. See the log.",
     )
@@ -518,30 +589,27 @@ async def run_once(
         else:
             raise ValueError(f"unknown job kind {kind}")
     except execute.Unavailable as exc:
-        _note(
+        retry_or_bury(
             engine,
             job_id,
-            {"role": "system", "event": "execution_unavailable"},
-            state="failed",
-            error=f"The execution service could not run the code: {exc}",
+            "execution_unavailable",
+            f"The execution service could not run the code: {exc}",
         )
     except ProviderError as exc:
-        _note(
-            engine,
-            job_id,
-            {"role": "system", "event": "provider_error"},
-            state="failed",
-            error=f"AI provider refused: {exc}",
-        )
+        if transient(exc):
+            retry_or_bury(engine, job_id, "provider_error", f"AI provider failed: {exc}")
+        else:
+            _note(
+                engine,
+                job_id,
+                {"role": "system", "event": "provider_error"},
+                state="failed",
+                stage="",
+                error=f"AI provider refused: {exc}",
+            )
     except Exception as exc:  # a failed job must never stop the loop
         log.exception("generation job %s failed", job_id)
-        _note(
-            engine,
-            job_id,
-            {"role": "system", "event": "crashed"},
-            state="failed",
-            error=f"{type(exc).__name__}: {exc}"[:500],
-        )
+        retry_or_bury(engine, job_id, "crashed", f"{type(exc).__name__}: {exc}")
     return True
 
 
