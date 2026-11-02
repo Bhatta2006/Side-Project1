@@ -33,6 +33,14 @@ export const en = {
   'new.current': 'Current',
   'new.resume': 'Resume',
   'new.unavailable': 'This is not open to your account yet.',
+  'lite.title': 'Data use',
+  'lite.help': 'Lite loads code runners, plots and simulations only when you ask for them. Auto turns lite on when your browser asks to save data or the connection is very slow. Saved on this device.',
+  'lite.auto': 'Auto',
+  'lite.lite': 'Lite',
+  'lite.full': 'Full',
+  'lite.active': 'Lite mode is on right now.',
+  'lite.visual.held': 'Lite mode: showing the text version of this visual.',
+  'lite.visual.load': 'Load the interactive visual',
 } as const;
 
 export type MessageKey = keyof typeof en;

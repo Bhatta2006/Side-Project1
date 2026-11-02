@@ -27,6 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { useInstall } from '@/lib/pwa';
 import { CommunityButton, useCommunityUrl } from '@/components/community-link';
 import { LanguagePicker } from '@/components/language-picker';
+import { DataUsePicker } from '@/components/data-use';
 import { InstallAppButton } from '@/components/install-app';
 import { Soc } from '@/components/socrat/illustration';
 
@@ -194,6 +195,7 @@ function Appearance() {
             </div>
             <Switch id="reduce-motion" checked={motion.setting} onCheckedChange={motion.set} aria-describedby="reduce-motion-help" />
           </div>
+          <DataUsePicker />
           <div className="flex items-start justify-between gap-4 py-5">
             <div>
               <label htmlFor="reminders" className="font-semibold">Study reminders</label>

@@ -130,7 +130,7 @@ The plan's phase table (section G of the plan doc) and what is actually done:
 | 3 Multilingual tutor and pipeline | **Partial** | Tutor reply-language directive; admin-triggered translation through the gateway role `translator` | No language detection; **Sarvam backend not wired (needs the owner's key)**; no batch translation job on the worker; no per-language tutor eval for the help ladder and leak guard |
 | 4 Learner-typed courses | Done, with gaps | Intent parser (model, rules fallback), fixed choices, learning requests API, diagnostic, private courses, community sharing with consent and credit, moderation, creator perks, pause and resume | "Reuse of cached identical intents across learners" not done; plan-based quotas beyond the per-learner budget and open-request cap not done |
 | 5 Adapters and renderers | Done, with gaps | 6 adapters, 8 renderer manifests with typed params, Experience Designer, host in web with `markdown`, `function-plot`, `concept-map`, `self-check`, `simulation`, `timeline`, `code-studio` | `concept-playground` (sandboxed iframe) not served; visuals write **no evidence** yet |
-| 6 Access and low bandwidth | **Barely started** | System-font fallbacks for Indic and Arabic | TTS and STT, lite mode, offline lesson cache, Noto subsets, WCAG audit per locale, throttled-3G test |
+| 6 Access and low bandwidth | **Started** (10a) | System-font fallbacks for Indic and Arabic; lite mode (flag `lite_mode_enabled`, Settings "Data use"); lazy UI catalogs and lesson visuals host | TTS and STT, offline lesson cache (owner chose: opt-in, signed-in only, lesson reads only, cleared on sign-out), Noto subsets, WCAG audit per locale, throttled-3G test |
 | 7 Scale | **Partial** (9a) | Per-learner limits (per process), public cache headers on catalogue lists, per-course cost report, load tool with recorded results, cold-start stall fixed, worker can run generation with heartbeat health check and queue depth | Real-stack exercise of the worker split, CDN rules for course reads, shared Redis limits, per-tenant budgets, staging load test |
 | 8 Region and compliance | Not started | | Region policy matrix, per-country consent and minors rules, data residency, regional runbook |
 | 9 Payments and launch | Not started | | Currency and tax expansion, local methods, staged rollout, rollback drill |
@@ -391,6 +391,14 @@ Remaining:
    (enrol, quiz answers, submissions). Add the result to `load-test-results.md`.
 
 ### Slice 10: access and low bandwidth (Phase 6)
+**10a done (lite mode):** `apps/web/src/lib/lite.ts` (`useLite`, per-device `socrat:data-use`, Auto
+follows `navigator.connection.saveData` or 2G), `components/data-use.tsx` in Settings, warm-up of
+Pyodide skipped in lite mode (`problems/[id]`, `landing/try-tutor`), `HEAVY` renderers
+(`function-plot`, `simulation`) held behind a button in `visualization-host.tsx`. The e2e server sets
+`SOCRAT_LITE_MODE_ENABLED=true`. Budget finding: before 10a, 5 routes on this branch were over the
+250 KB CI budget; after it, only `/today` (250.4 KB). CI's budget step will still fail until that is fixed.
+**Next (10b), decided by the owner:** offline lesson cache, opt-in (flag plus a setting), signed-in
+only, lesson reads only (never quiz answers, chat or progress), cleared on sign-out; then Noto subsets.
 Text-to-speech and speech-to-text behind flags (**KEY: Sarvam key for Indic**; the owner's session
 has Sarvam MCP tools available, but the product code needs a key in its own environment), lite mode
 (no WASM until needed), offline lesson cache, Noto font subsets instead of relying on system fonts,

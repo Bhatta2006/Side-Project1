@@ -27,9 +27,10 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { VisualizationHost } from '@/components/visualization-host';
 
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+// Most lessons have no visuals, so their renderers load only with a lesson that does.
+const VisualizationHost = dynamic(() => import('@/components/visualization-host').then(m => m.VisualizationHost), { ssr: false });
 
 const STYLES = [
   ['simpler', 'More simply'],

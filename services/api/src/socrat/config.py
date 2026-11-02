@@ -198,6 +198,8 @@ class Settings(DatabaseSettings):
     simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
     diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)
     gen_visuals: bool = False  # Experience Designer adds typed visuals to generated lessons
+    # Lite mode on slow or metered connections: heavy web parts load only when asked for.
+    lite_mode_enabled: bool = False
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)

@@ -3,13 +3,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSession } from '@/lib/session';
 import { en, type MessageKey } from './messages/en';
-import { hi } from './messages/hi';
 
 /**
  * Languages the interface itself is translated into. Lessons and the tutor support more (see the
  * API's /locales); a locale with no catalog here shows English menus around translated lessons.
  */
-const CATALOGS: Record<string, Partial<Record<MessageKey, string>>> = { en, hi };
+type Catalog = Partial<Record<MessageKey, string>>;
+// Loaded only when chosen, so English pages never download other languages' strings.
+const LOADERS: Record<string, () => Promise<Catalog>> = {
+  hi: () => import('./messages/hi').then(m => m.hi),
+};
+const loaded: Record<string, Catalog> = { en };
 const RTL = new Set(['ar']);
 const STORAGE_KEY = 'socrat_locale';
 
@@ -45,6 +49,7 @@ export function fill(text: string, values?: Record<string, string | number>): st
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { profile } = useSession();
   const [chosen, setChosen] = useState('en');
+  const [ready, setReady] = useState(0);
   // Signed in: the account's language. Otherwise whatever this browser remembered.
   useEffect(() => { setChosen(profile?.locale ?? remembered()); }, [profile?.locale]);
 
@@ -54,20 +59,29 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.dir = RTL.has(chosen) ? 'rtl' : 'ltr';
   }, [chosen]);
 
+  // Until a catalog arrives, missing keys show English (the same fallback as any untranslated key).
+  useEffect(() => {
+    const load = LOADERS[chosen];
+    if (!load || loaded[chosen]) return;
+    let live = true;
+    load().then(catalog => { loaded[chosen] = catalog; if (live) setReady(n => n + 1); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [chosen]);
+
   const setLocale = useCallback((tag: string) => {
     setChosen(tag);
     try { localStorage.setItem(STORAGE_KEY, tag); } catch { /* storage unavailable */ }
   }, []);
 
   const value = useMemo<I18n>(() => {
-    const catalog = CATALOGS[chosen] ?? {};
+    const catalog = loaded[chosen] ?? {};
     return {
       locale: chosen,
       setLocale,
       t: (key, values) => fill(catalog[key] ?? en[key], values),
       tx: (key, fallback) => (catalog as Record<string, string>)[key] ?? fallback,
     };
-  }, [chosen, setLocale]);
+  }, [chosen, ready, setLocale]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

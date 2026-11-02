@@ -66,6 +66,8 @@ export interface Features {
   adaptive_quiz?: boolean;
   /** Learners may build their own course at /new. */
   learning_requests?: boolean;
+  /** Learners may choose lite mode (heavy parts load on request). */
+  lite_mode?: boolean;
 }
 
 export interface Course {

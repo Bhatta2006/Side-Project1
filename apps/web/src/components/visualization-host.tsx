@@ -1,11 +1,14 @@
 'use client';
 
-import { Component, type ReactNode } from 'react';
+import { Component, useState, type ReactNode } from 'react';
 import Markdown from '@/components/markdown';
 import { Graph } from '@/components/studio/graph';
 import { CodeTask } from '@/components/visuals/code-task';
 import { Simulation } from '@/components/visuals/simulation';
 import { Timeline } from '@/components/visuals/timeline';
+import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n';
+import { useLite } from '@/lib/lite';
 
 /**
  * Renders a lesson's typed VisualizationSpec through approved components only. The spec is data:
@@ -66,6 +69,9 @@ const RENDERERS: Record<string, Renderer> = {
   ),
 };
 
+/** Renderers that download a library or call the server on every change; lite mode holds them. */
+const HEAVY = new Set(['function-plot', 'simulation']);
+
 function Fallback({ spec, why }: { spec: VisualizationSpec; why?: string }) {
   return (
     <div role="group" aria-label={spec.alt_text} className="rounded-xl border bg-card p-4 text-sm">
@@ -86,8 +92,22 @@ class Guard extends Component<{ spec: VisualizationSpec; children: ReactNode }, 
 }
 
 export function VisualizationHost({ spec }: { spec: VisualizationSpec }) {
+  const { lite } = useLite();
+  const { t } = useI18n();
+  const [requested, setRequested] = useState(false);
   const render = RENDERERS[spec.renderer];
   if (!render) return <Fallback spec={spec} />;
+  if (lite && !requested && HEAVY.has(spec.renderer)) {
+    return (
+      <figure className="my-4">
+        <Fallback spec={spec} why={t('lite.visual.held')} />
+        <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setRequested(true)}>
+          {t('lite.visual.load')}
+        </Button>
+        <figcaption className="mt-1 text-[13px] text-muted-foreground">{spec.purpose}</figcaption>
+      </figure>
+    );
+  }
   return (
     <figure className="my-4">
       <Guard spec={spec}>
