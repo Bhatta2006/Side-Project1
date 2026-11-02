@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode } from 'react';
 import Markdown from '@/components/markdown';
+import { Graph } from '@/components/studio/graph';
 
 /**
  * Renders a lesson's typed VisualizationSpec through approved components only. The spec is data:
@@ -23,6 +24,9 @@ type Renderer = (props: { params: Record<string, any>; spec: VisualizationSpec }
 /** Renderers available in the browser. Add a component here when a manifest is registered on the server. */
 const RENDERERS: Record<string, Renderer> = {
   markdown: ({ params }) => <Markdown source={String(params.body ?? '')} />,
+  'function-plot': ({ params, spec }) => (
+    <Graph expressions={(params.expressions as string[]) ?? []} label={spec.alt_text} />
+  ),
   'concept-map': ({ params }) => {
     const nodes: string[] = params.nodes ?? [];
     const edges: [string, string][] = params.edges ?? [];

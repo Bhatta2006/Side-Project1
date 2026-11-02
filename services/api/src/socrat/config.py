@@ -194,6 +194,7 @@ class Settings(DatabaseSettings):
     # Learner-typed courses ("teach me X"): off until the owner turns it on.
     learning_requests_enabled: bool = False
     learning_requests_max_open: int = Field(default=3, ge=1, le=50)
+    gen_visuals: bool = False  # Experience Designer adds typed visuals to generated lessons
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)

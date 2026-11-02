@@ -190,6 +190,9 @@ Score 1-5 each: correctness, depth (worked example traced, why it works, edge ca
 self-checks), continuity (builds on prerequisites, no overlap with siblings),
 misconceptions (each confronted), assessment_alignment (quiz and atoms test the
 objectives), clarity, accessibility (plain language, terms defined, no reliance on colour).
+If "visuals" are present, each must serve a stated objective, its params must make sense for the
+idea, and its fallback_text must teach the same thing without the visual; list any that do not
+under "lesson". Decorative visuals count against clarity.
 
 Reply with one JSON object only:
 {"scores": {"correctness": 1, "depth": 1, "continuity": 1, "misconceptions": 1,

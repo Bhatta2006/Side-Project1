@@ -375,6 +375,7 @@ def concept_view(
         workbench=len(concept.exercises),
         lab=len(concept.experiments),
         key_points=concept.key_points,
+        visuals=[v.model_dump(mode="json") for v in concept.visuals],
         pitfalls=concept.pitfalls,
         resources=resources.personalised(db, user.id, qualified, concept, language, current_band),
         # Authored links that are in the library become library rows (with status);

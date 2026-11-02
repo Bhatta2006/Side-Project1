@@ -394,6 +394,10 @@ async def run_package(
             entry = {"role": "system", "round": attempt, "event": "gates_failed", "issues": issues}
             _note(engine, job_id, entry, cost, output=output)
             continue
+        if settings.gen_visuals:
+            live = await add_visuals(
+                ask, live, course, str(lesson.get("lesson", "")), engine, job_id, attempt
+            )
         shown = {k: lesson.get(k) for k in ("lesson", "key_points", "pitfalls")}
         # The checkers see the code's real output (adapters' expected), not the author's claim.
         bundle = json.dumps(
@@ -403,6 +407,7 @@ async def run_package(
                 "prompts": [x.model_dump(mode="json") for x in live.prompts],
                 "exercises": [x.model_dump(mode="json") for x in live.exercises],
                 "experiments": [x.model_dump(mode="json") for x in live.experiments],
+                "visuals": [x.model_dump(mode="json") for x in live.visuals],
                 "atoms": [a.model_dump(mode="json", exclude_none=True) for a in pack.atoms],
             },
             indent=1,
@@ -453,6 +458,26 @@ async def run_package(
         state="failed",
         error="The package did not pass every gate; the concept stays planned. See the log.",
     )
+
+
+async def add_visuals(ask, live, course, lesson_text: str, engine, job_id: str, attempt: int):
+    """The Experience Designer step. Visuals only enrich a lesson, so a refusal, a bad reply or
+    specs that fail the registry leave the lesson as written (and say so in the log)."""
+    from socrat.engine import design
+
+    if not design.allowed(course):
+        return live
+    try:
+        reply = await ask(
+            "experience", design.SYSTEM, design.prompt(course, live, lesson_text), 3000
+        )
+    except ProviderError:
+        _note(engine, job_id, {"role": "experience", "round": attempt, "event": "unavailable"})
+        return live
+    kept, dropped = design.check((reply.data or {}).get("visuals", []), course)
+    entry = {"role": "experience", "round": attempt, "visuals": len(kept), "dropped": dropped[:5]}
+    _note(engine, job_id, entry, reply.cost_usd)
+    return live.model_copy(update={"visuals": kept}) if kept else live
 
 
 def project_due(db: Session, course, released: str) -> bool:

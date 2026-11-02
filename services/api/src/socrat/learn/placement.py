@@ -51,6 +51,14 @@ def enroll(
         if catalog.concept(c).status != "planned"
     ]
     start = f"{course_id}:{level.start_concept}" if level.start_concept else None
+    if start is not None and start not in path:
+        # The level starts at a concept whose lesson is not written yet (a generated course).
+        # Everything before it counts as already known, so the plan begins there, and there is
+        # nothing to probe: placement ends at once.
+        order = catalog.closure(catalog.course_concepts(course_id))
+        for earlier in order[: order.index(start)] if start in order else []:
+            learn.set_state(db, enrollment, earlier, placed(True, now), now)
+        start = None
     state = placement.start(
         catalog, path, start, seed=int(enrollment.id.replace("-", "")[:8], 16), language=language
     )

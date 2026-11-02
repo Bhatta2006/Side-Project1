@@ -128,3 +128,16 @@ def test_catalogue_endpoints(tmp_path):
         assert any(
             r["id"] == "code-studio" for r in c.get("/api/v1/engine/renderers").json()["items"]
         )
+
+
+def test_function_plot_accepts_only_math_characters():
+    spec = dict(
+        renderer="function-plot",
+        params=dict(expressions=["alert(1); document.cookie"]),
+        purpose="Show a curve",
+        fallback_text="A table of values for the curve.",
+        alt_text="A curve on axes.",
+    )
+    assert any("math characters" in p for p in renderers.validate_spec(spec))
+    ok = {**spec, "params": dict(expressions=["a*sin(b*x)+c"])}
+    assert renderers.validate_spec(ok) == []

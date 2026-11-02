@@ -31,6 +31,7 @@ ROLES = {
     "stylist",  # a free-text learning wish -> a style spec
     "researcher",  # finds open, public sources for a concept
     "diagnostic",  # a short placement quiz for a learner's own course
+    "experience",  # picks registered visuals/labs for a lesson (never writes code)
     "intent",  # a learner's free-text request -> a structured intent
     "weekly",  # hard, execution-verified weekly exam questions
 }
@@ -45,7 +46,13 @@ KEYS = {
 }
 DEFAULT_EFFORT = "high"  # outlines and reviews are worth the extra thinking
 # Finding and screening sources is retrieval, not reasoning: low effort keeps the cost down.
-ROLE_EFFORT = {"researcher": "low", "stylist": "low", "intent": "low", "diagnostic": "low"}
+ROLE_EFFORT = {
+    "researcher": "low",
+    "stylist": "low",
+    "intent": "low",
+    "diagnostic": "low",
+    "experience": "low",
+}
 
 
 def check_roles(roles: dict) -> None:

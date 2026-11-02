@@ -10,11 +10,12 @@ Adding a renderer: define a params model, add a ``Manifest`` with ``register``, 
 component to the web registry. Nothing in the course compiler changes.
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 Evidence = Literal["none", "exposure", "application", "performance"]  # what it may contribute
 
@@ -82,6 +83,15 @@ class FunctionPlot(Params):
     x_range: tuple[float, float] = (-10, 10)
     y_range: tuple[float, float] | None = None
     sliders: list[str] = Field(default_factory=list, max_length=4)  # parameter names
+
+    @field_validator("expressions")
+    @classmethod
+    def math_only(cls, value: list[str]) -> list[str]:
+        # Plotted by a formula parser, never evaluated as code; still allow only math characters.
+        for e in value:
+            if len(e) > 120 or not re.fullmatch(r"[a-zA-Z0-9+\-*/^().,\s]+", e):
+                raise ValueError("expressions may only contain math characters")
+        return value
 
 
 class CodeTask(Params):

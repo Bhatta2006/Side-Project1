@@ -576,6 +576,8 @@ export interface ConceptView {
   ai_generated: boolean;
   attribution: string;
   key_points: string[];
+  /** Registered interactive elements; each renders through the visualization host with a text fallback. */
+  visuals?: { renderer: string; version: string; params: Record<string, unknown>; purpose: string; fallback_text: string; alt_text: string }[];
   pitfalls: string[];
   resources: Resource[];
   practice_links: { title: string; url: string; platform: string; difficulty: 'easy' | 'medium' | 'hard' }[];

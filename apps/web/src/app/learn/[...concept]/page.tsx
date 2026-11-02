@@ -26,6 +26,7 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { VisualizationHost } from '@/components/visualization-host';
 
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
@@ -308,6 +309,7 @@ export default function Lesson() {
             </p>
           ) : null}
           <Markdown source={concept.lesson} language={concept.language} rich />
+          {(concept.visuals ?? []).map((v, i) => <VisualizationHost key={`${v.renderer}-${i}`} spec={v} />)}
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
 

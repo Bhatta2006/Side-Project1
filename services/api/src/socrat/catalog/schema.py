@@ -238,6 +238,27 @@ class Experiment(Model):
         return self
 
 
+class Visual(Model):
+    """A typed, interactive element of a lesson: a registered renderer plus validated params.
+    Never code. Checked against ``socrat.engine.renderers`` when the concept loads."""
+
+    renderer: str
+    version: str = "1.0"
+    params: dict = Field(default_factory=dict)
+    purpose: str = Field(min_length=5, max_length=300)
+    fallback_text: str = Field(min_length=10, max_length=4000)
+    alt_text: str = Field(min_length=5, max_length=600)
+
+    @model_validator(mode="after")
+    def registered(self):
+        from socrat.engine import renderers
+
+        problems = renderers.validate_spec(self.model_dump())
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+
 class Concept(Model):
     id: Slug
     title: str = Field(min_length=2, max_length=100)
@@ -253,6 +274,7 @@ class Concept(Model):
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
     prompts: list[Prompt] = Field(default_factory=list, max_length=4)
     exercises: list[Exercise] = Field(default_factory=list, max_length=10)
+    visuals: list[Visual] = Field(default_factory=list, max_length=4)
     experiments: list[Experiment] = Field(default_factory=list, max_length=6)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
