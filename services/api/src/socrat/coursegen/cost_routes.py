@@ -20,6 +20,7 @@ def report(request: Request):
         month = budget.day_of(stamp)[:8] + "01"
         return dict(
             month_from=month,
+            queue=costs.queue(db, stamp),
             courses=costs.by_course(db),
             roles=costs.by_role(db, since_day=month),
         )

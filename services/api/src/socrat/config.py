@@ -202,6 +202,12 @@ class Settings(DatabaseSettings):
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)
     gen_runner: bool = True  # run queued generation jobs in the API process (off in tests)
+    # Split deployment: API with SOCRAT_GEN_RUNNER=false, worker with SOCRAT_WORKER_RUNS_GENERATION=true.
+    # Claims are atomic, so running both is safe too (a job is taken by exactly one process).
+    worker_runs_generation: bool = False
+    worker_generation_concurrency: int = Field(default=1, ge=1, le=16)
+    # The worker touches this file every loop; `python -m socrat.worker --check` fails when stale.
+    worker_heartbeat_file: str = ""
     gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
     # Course Maintainer: scheduled link checks and repairs of released generated courses.
     maintainer_enabled: bool = False

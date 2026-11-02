@@ -50,6 +50,24 @@ def by_course(db: Session, *, limit: int = 50) -> list[dict]:
     return rows[:limit]
 
 
+def queue(db: Session, stamp: int) -> dict:
+    """Generation jobs waiting or running, and how long the oldest has waited: the signal that
+    the worker is down or too small. Paused courses are excluded (their jobs are meant to wait)."""
+    paused = select(GeneratedCourse.id).where(GeneratedCourse.paused != "")
+    waiting = GenerationJob.course_id.not_in(paused)
+    queued, oldest = db.execute(
+        select(func.count(), func.min(GenerationJob.created_at)).where(
+            GenerationJob.state == "queued", waiting
+        )
+    ).one()
+    running = db.scalar(select(func.count()).where(GenerationJob.state == "running"))
+    return dict(
+        queued=queued or 0,
+        running=running or 0,
+        oldest_queued_seconds=max(0, stamp - oldest) if oldest is not None else None,
+    )
+
+
 def by_role(db: Session, *, since_day: str) -> dict[str, dict]:
     """Per generation role (intent, architect, author, translator...) from the call ledger."""
     return {

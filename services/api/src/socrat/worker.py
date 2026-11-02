@@ -5,6 +5,9 @@ External consumers need their own idempotency.
 
 import asyncio
 import logging
+import sys
+import time
+from pathlib import Path
 
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
@@ -54,15 +57,59 @@ def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):
         task.add_done_callback(running.discard)
 
 
+# A maintenance pass (link checks) can take minutes, so this is generous; a hung loop still shows.
+HEARTBEAT_MAX_AGE = 300.0
+
+
+def beat(path: str) -> None:
+    """Record that the loop is alive. A hung loop stops beating, which a plain "process is up"
+    check cannot see."""
+    if path:
+        try:
+            Path(path).write_text(str(time.time()))
+        except OSError:
+            logging.warning("worker_heartbeat_unwritable")
+
+
+def healthy(path: str, max_age: float = HEARTBEAT_MAX_AGE, at: float | None = None) -> bool:
+    try:
+        beat_at = float(Path(path).read_text())
+    except (OSError, ValueError):
+        return False
+    return (time.time() if at is None else at) - beat_at <= max_age
+
+
+async def generation_loop(engine: Engine, settings: Settings) -> None:
+    """Course-generation jobs (outline, lesson packages, exercises). One of these per slot of
+    ``worker_generation_concurrency``; ``jobs.claim`` makes it safe next to the API's runner."""
+    from socrat.catalog.registry import default_catalog
+    from socrat.coursegen import jobs as coursegen_jobs
+
+    await coursegen_jobs.run_forever(engine, settings, default_catalog)
+
+
 REMINDER_SWEEP_SECONDS = 15 * 60
 MAINTENANCE_SECONDS = 6 * 3600  # a batch of link checks four times a day
 
 
 async def serve(settings: Settings, engine: Engine):
     running: set[asyncio.Task] = set()
+    generation: list[asyncio.Task] = []
+    if settings.worker_runs_generation:
+        from socrat.catalog import generated
+
+        generated.bind(engine)
+        generation = [
+            asyncio.create_task(generation_loop(engine, settings))
+            for _ in range(settings.worker_generation_concurrency)
+        ]
     next_reminders = 0.0
     next_maintenance = 0.0
     while True:
+        for task in generation:
+            if task.done():  # run_forever only ends on cancellation or a crash: fail loudly
+                raise RuntimeError("generation loop stopped") from task.exception()
+        beat(settings.worker_heartbeat_file)
         if (clock := asyncio.get_running_loop().time()) >= next_reminders:
             next_reminders = clock + REMINDER_SWEEP_SECONDS
             try:
@@ -80,6 +127,7 @@ async def serve(settings: Settings, engine: Engine):
             next_maintenance = clock + MAINTENANCE_SECONDS
             try:
                 await maintain_courses(engine, settings)
+                beat(settings.worker_heartbeat_file)
             except Exception:
                 logging.exception("course_maintenance_failed")
         try:
@@ -96,6 +144,8 @@ async def serve(settings: Settings, engine: Engine):
 
 def main():
     settings = Settings()
+    if "--check" in sys.argv[1:]:  # container health check
+        sys.exit(0 if healthy(settings.worker_heartbeat_file) else 1)
     engine = make_engine(settings.database_url_value)
     try:
         asyncio.run(serve(settings, engine))

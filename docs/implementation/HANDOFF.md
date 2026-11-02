@@ -120,7 +120,7 @@ The plan's phase table (section G of the plan doc) and what is actually done:
 | 4 Learner-typed courses | Done, with gaps | Intent parser (model, rules fallback), fixed choices, learning requests API, diagnostic, private courses, community sharing with consent and credit, moderation, creator perks, pause and resume | "Reuse of cached identical intents across learners" not done; plan-based quotas beyond the per-learner budget and open-request cap not done |
 | 5 Adapters and renderers | Done, with gaps | 6 adapters, 8 renderer manifests with typed params, Experience Designer, host in web with `markdown`, `function-plot`, `concept-map`, `self-check`, `simulation`, `timeline`, `code-studio` | `concept-playground` (sandboxed iframe) not served; visuals write **no evidence** yet |
 | 6 Access and low bandwidth | **Barely started** | System-font fallbacks for Indic and Arabic | TTS and STT, lite mode, offline lesson cache, Noto subsets, WCAG audit per locale, throttled-3G test |
-| 7 Scale | **Partial** (9a) | Per-learner limits (per process), public cache headers on catalogue lists, per-course cost report, load tool with recorded results, cold-start stall fixed | Worker split, CDN rules for course reads, shared Redis limits, per-tenant budgets, staging load test |
+| 7 Scale | **Partial** (9a) | Per-learner limits (per process), public cache headers on catalogue lists, per-course cost report, load tool with recorded results, cold-start stall fixed, worker can run generation with heartbeat health check and queue depth | Real-stack exercise of the worker split, CDN rules for course reads, shared Redis limits, per-tenant budgets, staging load test |
 | 8 Region and compliance | Not started | | Region policy matrix, per-country consent and minors rules, data residency, regional runbook |
 | 9 Payments and launch | Not started | | Currency and tax expansion, local methods, staged rollout, rollback drill |
 | 10 Research loop | Not started | | Outcome experiments per locale, calibration, benchmark and regression harness of representative courses |
@@ -333,9 +333,10 @@ budgets (`assistant/budget.py`, `GET /admin/ai-costs`), multi-process-safe `jobs
 Remaining:
 1. **Shared rate limits.** Swap `limits.LIMITER` for a Redis-backed class with the same `allow`
    signature once Redis is provisioned (it is not in `compose.yaml`). Until then N processes allow N times the limit.
-2. **Worker split:** generation runs in the API process (`gen_runner`, `coursegen_jobs.run_forever`)
-   and in `worker.py`; make the API deployment set `gen_runner=False`, document the worker
-   deployment, add a worker health or heartbeat check.
+2. **Worker split (9b, code and runbook done, not yet exercised on a real stack):** the worker can
+   run generation (`SOCRAT_WORKER_RUNS_GENERATION`), has a heartbeat health check, and the queue
+   depth is in `/admin/engine-costs`. Follow `docs/operations/api-worker-split.md` on staging
+   (needs AI settings added to the staging worker), then production. Defaults keep today's behaviour.
 3. **CDN rules** for released course reads (`/courses`, concept GETs). They vary by user (private
    courses, locale overlay), so they need `Vary` or a public/private split before any cache header.
 4. **Per-tenant or per-plan budgets** and quota for learner-typed courses; cached reuse of identical intents.
