@@ -725,10 +725,10 @@ quiz:
   kind: mcq
   prompt: Why can't one number per cell describe the largest rectangle ending there?
   options:
-  - A rectangle has two free sides, and the best pair can change for later cells
-  - Rectangles are always squares
-  - It can; use the same three neighbours
-  - Because of overflow
+  - "A rectangle has two free sides, and the best pair can change for later cells"
+  - "Every rectangle is a square, so one side length per cell would be enough"
+  - "It can; take the minimum of the same three neighbours, as for squares"
+  - "Storing areas per cell overflows 32-bit integers for large grids"
   answer: 0
   explanation: Use row histograms and the monotonic stack instead.
   difficulty: 5

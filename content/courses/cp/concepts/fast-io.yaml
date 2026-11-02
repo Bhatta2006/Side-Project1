@@ -140,10 +140,10 @@ quiz:
     kind: mcq
     prompt: In C++, int a = 100000, b = 100000; long long c = a * b; — what goes wrong?
     options:
-      - a * b overflows as int before being stored in c
-      - Nothing, c is long long
-      - It is a compile error
-      - c becomes 10^10 exactly
+      - "a * b overflows as int before being stored in c"
+      - "Nothing; c is long long, so the product fits there"
+      - "It is a compile error to store int * int in a long long"
+      - "c becomes exactly 10^10, as expected from the maths"
     answer: 0
     explanation: The multiplication happens in int; write 1LL * a * b.
     difficulty: 2
@@ -164,7 +164,7 @@ quiz:
   - id: endl
     kind: mcq
     prompt: Why avoid endl in C++ when printing many lines?
-    options: ["It flushes the output buffer every time", "It is not portable", "It adds two newlines", "It is a compile error"]
+    options: ["It flushes the output buffer every time", "It is not portable across operating systems", "It writes two newline characters per line", "It is a compile error in modern C++ versions"]
     answer: 0
     explanation: Flushing on every line turns buffered output into many slow system calls.
     difficulty: 1
@@ -173,9 +173,9 @@ quiz:
     prompt: "In C++, what does ios::sync_with_stdio(false); cin.tie(nullptr); change?"
     options:
       - "Streams stop syncing with C stdio and cin no longer flushes cout first"
-      - "cin reads faster numbers only"
-      - "Output becomes unbuffered"
-      - "It enables multithreading"
+      - "cin reads numbers faster, but strings and characters are unaffected"
+      - "Output becomes unbuffered, so each character is written immediately"
+      - "It enables multithreaded reading, splitting the input across cores"
     answer: 0
     explanation: "Both remove per-operation overhead; afterwards don't mix printf/scanf with cin/cout."
     difficulty: 4
@@ -184,9 +184,9 @@ quiz:
     prompt: "Why is printing 10^6 lines with std::endl much slower than with \\n?"
     options:
       - "endl flushes the buffer every line"
-      - "endl writes two characters"
-      - "\\n is optimised away"
-      - "endl allocates memory"
+      - "endl writes two characters per line"
+      - "\\n is optimised away by the compiler"
+      - "endl allocates memory on every call"
     answer: 0
     explanation: "Each flush forces a system call; \\n just adds to the buffer."
     difficulty: 5

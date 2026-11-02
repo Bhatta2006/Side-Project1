@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: Why does the distance-K search add parent edges?
   options:
-  - Some nodes at distance K are reached by going up first
-  - To sort the answer
-  - To find the depth
-  - It is not needed
+  - "Some nodes at distance K are reached by going up first"
+  - "To sort the answer by depth before it is returned"
+  - "To find each node's depth from the root quickly"
+  - "It is not needed; a DFS down from the target is enough"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: The BFS over child and parent edges has no visited marks. What happens?
   options:
-  - It walks back and forth between parent and child forever
-  - It is merely slower
-  - It finds fewer nodes
-  - Nothing
+  - "It walks back and forth between parent and child forever"
+  - "It is merely slower, visiting each node a few extra times"
+  - "It finds fewer nodes, since parents are skipped"
+  - "Nothing; a tree has no cycles, so no marks are needed"
   answer: 0
   misconceptions:
   - null

@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: The loop keeps lo = mid when the gap fits. lo = 3, hi = 4 and mid = (lo + hi) // 2. What happens?
   options:
-  - mid is 3 again and the loop never ends
-  - The loop ends with 4
-  - The loop ends with 3
-  - It crashes
+  - "mid is 3 again and the loop never ends"
+  - "The loop ends with lo = 4, the answer"
+  - "The loop ends with lo = 3, the answer"
+  - "It crashes with an index out of range"
   answer: 0
   misconceptions:
   - null
@@ -31,10 +31,10 @@ items:
   format: trace
   prompt: Positions 1 2 4 8 9 and m = 3. Does gap 4 fit?
   options:
-  - No; greedily only 1 and 8 can be taken
-  - Yes; 1, 4, 8
-  - Yes; 1, 8, 9
-  - Yes; 2, 8, 9
+  - "No; greedily only 1 and 8 can be taken"
+  - "Yes; take 1, 4 and 8, each 4 apart"
+  - "Yes; take 1, 8 and 9 from the ends"
+  - "Yes; take 2, 8 and 9 with gaps of 4"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Why must the positions be sorted before the greedy check?
   options:
-  - The greedy pass takes each next position that is far enough from the last one taken
-  - Binary search needs a sorted answer range
-  - To remove duplicates
-  - It does not matter
+  - "The greedy pass takes each next position that is far enough from the last one taken"
+  - "Binary search needs the answer range to be sorted, and positions define the range"
+  - "Sorting removes duplicate positions, which would otherwise break the greedy count"
+  - "It does not matter; the greedy check gives the same count in any input order"
   answer: 0
   misconceptions:
   - null

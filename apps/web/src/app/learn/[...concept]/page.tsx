@@ -404,7 +404,7 @@ export default function Lesson() {
 
             {practice.length ? (
               <Section id="more-practice-heading" title="External practice" collapsible>
-                <p className="mb-3 text-sm text-muted-foreground">Picked for your current level. External problems open on the original site. <Link href={`/library?concept=${concept.id}`} className="font-semibold underline underline-offset-4">All problems</Link></p>
+                <p className="mb-3 text-sm text-muted-foreground">Picked for your current level from LeetCode, Codeforces, CSES and more, plus two challenges above it. External problems open on the original site. <Link href={`/library?concept=${concept.id}`} className="font-semibold underline underline-offset-4">All problems</Link></p>
                 <ul className="grid divide-y">
                   {practice.map(p => (
                     <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-[15px]">
@@ -412,6 +412,7 @@ export default function Lesson() {
                         <ProblemName problem={p} />
                         <PlatformTag platform={p.platform} />
                         {p.striver ? <Badge variant="secondary">A2Z sheet</Badge> : null}
+                        {'stretch' in p && p.stretch ? <Badge variant="outline">Challenge</Badge> : null}
                       </span>
                       <span className="flex items-center gap-2">
                         <Level problem={p} />

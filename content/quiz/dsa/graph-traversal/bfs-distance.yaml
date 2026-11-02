@@ -1,0 +1,111 @@
+id: quiz:dsa:graph-traversal:bfs-distance
+family: bfs-distance
+concept: dsa:graph-traversal
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: bfs_distance
+  params:
+    n:
+    - 6
+    - 9
+    extra:
+    - 1
+    - 4
+  reference: shortest(adj, t)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: length of the first path a DFS finds
+  misconception: dfs-not-shortest
+- rule: nodes on the path instead of edges
+  misconception: path-nodes-vs-edges
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Fewest moves for a knight from one square to another on an empty board. Which search?
+  options:
+  - 'BFS from the start square: the first time it reaches the target is the fewest moves'
+  - DFS from the start square, stopping at the first time it reaches the target
+  - Dijkstra's algorithm with a min-heap keyed by move count
+  - Try every sequence of moves up to length 64 and keep the shortest
+  answer: 0
+  misconceptions:
+  - null
+  - dfs-not-shortest
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  explanation: Every move costs the same, so BFS order is distance order. Dijkstra also works but its
+    heap is wasted when all edges weigh 1; DFS finds a path, not the shortest.
+- id: mark-on-enqueue
+  band: 4
+  format: mcq
+  prompt: A BFS marks a node visited when it is popped, not when it is pushed. What goes wrong on a dense
+    graph?
+  options:
+  - A node can sit in the queue many times, so the queue and work can grow far past O(V + E)
+  - 'Distances become wrong: a node popped from a later copy keeps the longer distance it got'
+  - 'Nothing changes: popping marks each node once, so the result and the cost are the same'
+  - The search never ends, because nodes already popped keep being pushed back in forever
+  answer: 0
+  misconceptions:
+  - null
+  - dfs-not-shortest
+  - bfs-no-visited
+  - infinite-loop-condition
+  explanation: 'Distances stay right (the first pop still wins) and it terminates, but duplicates pile
+    up. Marking on push guarantees each node is queued once: O(V + E).'
+- id: edge-multi-source
+  band: 5
+  format: mcq
+  prompt: A grid has several rotten oranges; each minute rot spreads to neighbours. How do you get the
+    minute the last orange rots?
+  options:
+  - One BFS that starts with every rotten orange in the queue at distance 0
+  - A separate BFS from each rotten orange, keeping the largest distance found
+  - A separate BFS from each fresh orange to its farthest rotten one
+  - DFS from the first rotten orange, counting how deep it goes
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - min-vs-max
+  - dfs-not-shortest
+  explanation: Multi-source BFS gives every cell its distance to the nearest source in one O(cells) pass;
+    the answer is the largest such distance (or -1 if a fresh orange is never reached).
+- id: transfer-state
+  band: 7
+  format: classify
+  prompt: Shortest path in a grid where you may knock down at most k walls. What do you search over?
+  options:
+  - BFS over states (row, col, walls used so far), each state visited once
+  - BFS over cells only, allowing a cell to be re-entered when you have walls left
+  - Dijkstra over cells, with knocking a wall costing k
+  - DFS that tries knocking each wall, keeping the shortest result
+  answer: 0
+  misconceptions:
+  - null
+  - bfs-no-visited
+  - dp-wrong-subproblem
+  - pattern-brute-force-default
+  explanation: Reaching the same cell with fewer walls used is a different, better state. Folding walls-used
+    into the state keeps BFS exact in O(rows · cols · k).
+hint_ladder:
+- In what order does the queue hand out nodes, by distance from 0?
+- A node's distance is fixed the first time it is reached; later routes are never shorter.
+- Follow the queue level by level until the target gets its distance.
+time_limit_s: 150
+provenance:
+  origin: original

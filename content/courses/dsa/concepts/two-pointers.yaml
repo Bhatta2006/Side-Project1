@@ -152,10 +152,10 @@ quiz:
     kind: mcq
     prompt: Why is it safe to discard a[i] when a[i] + a[j] < target (sorted array, i < j)?
     options:
-      - Every partner of a[i] at or before j is ≤ a[j], so all its sums are too small
-      - Because a[i] is negative
-      - Because i is the smaller index
-      - It isn't safe; it's a heuristic
+      - "Every partner of a[i] at or before j is ≤ a[j], so all its sums are too small"
+      - "Because a[i] must be negative whenever the sum is below the target value"
+      - "Because i is the smaller index, so moving it is cheaper than moving j"
+      - "It isn't strictly safe; it is a heuristic that works on most inputs"
     answer: 0
     explanation: a[j] is the largest remaining partner; if even it is too small, a[i] has no valid partner.
     difficulty: 3
@@ -178,9 +178,9 @@ quiz:
     prompt: "Removing duplicates from a sorted array in place with a slow pointer w and a fast pointer r, when do you write a[r] to a[w]?"
     options:
       - "When a[r] differs from a[w - 1] (the last kept value)"
-      - "When a[r] differs from a[r + 1]"
-      - "Every step"
-      - "When r is even"
+      - "When a[r] differs from the next value a[r + 1]"
+      - "On every step, then shrink the array at the end"
+      - "Only when r is even, skipping each second copy"
     answer: 0
     explanation: "Keep a value only if it differs from the last value already kept; both pointers move forward, so O(n)."
     difficulty: 4
@@ -189,9 +189,9 @@ quiz:
     prompt: "Pair sum on a sorted array: which invariant justifies the two-pointer scan?"
     options:
       - "No valid pair uses an index outside [i, j]"
-      - "a[i] + a[j] only increases"
-      - "i and j always move together"
-      - "The array has no duplicates"
+      - "a[i] + a[j] only ever increases as they move"
+      - "i and j always move together, one step each"
+      - "The array has no duplicate values to skip"
     answer: 0
     explanation: "Each move discards an index that provably has no partner left, so a solution, if any, stays inside [i, j]."
     difficulty: 5

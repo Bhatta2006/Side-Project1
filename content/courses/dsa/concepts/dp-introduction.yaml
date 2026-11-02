@@ -776,10 +776,10 @@ quiz:
   kind: mcq
   prompt: Plain recursive fib(n) makes 2·F(n+1) − 1 calls. Roughly how many is that for n = 50?
   options:
-  - About 4 × 10^10
-  - About 100
-  - About 2,500
-  - About 10^6
+  - "About 4 × 10^10"
+  - "About 100 calls"
+  - "About 2,500 calls"
+  - "About 10^6 calls"
   answer: 0
   explanation: F(51) is about 2 × 10^10, so the call count is about 4 × 10^10.
   difficulty: 2
@@ -869,10 +869,10 @@ quiz:
   kind: mcq
   prompt: When is it safe to replace the dp table with two variables?
   options:
-  - Each cell reads only the previous two and no path is printed
-  - Whenever the table is longer than 1000
-  - Only for counting problems
-  - Only when the input is sorted
+  - "Each cell reads only the previous two and no path is printed"
+  - "Whenever the table grows longer than about 1000 entries"
+  - "Only for counting problems, never for min or max problems"
+  - "Only when the input array has been sorted before the loop"
   answer: 0
   explanation: Old cells can be dropped only if nothing reads them again.
   difficulty: 4

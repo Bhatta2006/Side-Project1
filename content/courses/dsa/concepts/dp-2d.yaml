@@ -175,7 +175,7 @@ quiz:
     answer: 0
     explanation: 2 rights and 2 downs in any order — C(4, 2) = 6.
     difficulty: 2
-problems: [lcs-length, grid-paths]
+problems: [lcs-length, grid-paths, crypt-descent]
 practice_links:
   - title: Unique Paths
     url: https://leetcode.com/problems/unique-paths/

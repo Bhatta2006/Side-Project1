@@ -39,10 +39,10 @@ items:
   pool: practice
   prompt: A loop should stop when a counter reaches 5. Which change can prevent termination?
   options:
-  - Removing the counter update while its condition stays true
-  - Checking the condition before each iteration
-  - Starting the counter below 5
-  - Increasing the counter toward 5
+  - "Removing the counter update while its condition stays true"
+  - "Checking the loop condition before every single iteration"
+  - "Starting the counter at some value that is below 5"
+  - "Increasing the counter by one each time toward 5"
   answer: 0
   explanation: Without an update or another exit, a true condition can remain true forever.
 - id: foundation-4

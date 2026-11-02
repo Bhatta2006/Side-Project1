@@ -163,18 +163,18 @@ quiz:
   - id: cycle-detect
     kind: mcq
     prompt: Kahn's algorithm outputs 7 of 10 nodes and the queue empties. What does that mean?
-    options: ["The remaining 3 nodes involve a cycle", "The graph is disconnected", "There is a bug", "Three nodes have no edges"]
+    options: ["The remaining 3 nodes involve a cycle", "The graph is split into two components", "There is a bug in the queue handling", "Three nodes have no edges at all"]
     answer: 0
     explanation: Nodes on (or behind) a cycle never reach in-degree 0.
     difficulty: 2
   - id: lexi
     kind: mcq
     prompt: How do you get the lexicographically smallest topological order?
-    options: ["Use a min-heap instead of a FIFO queue", "Sort the final order", "Use DFS", "Reverse the edges"]
+    options: ["Use a min-heap instead of a FIFO queue", "Sort the final order after Kahn's finishes", "Use DFS and take nodes in finishing order", "Reverse every edge, then run Kahn's again"]
     answer: 0
     explanation: Always choosing the smallest available node produces the smallest order; sorting afterwards breaks validity.
     difficulty: 3
-problems: [course-order]
+problems: [course-order, project-crunch]
 practice_links:
   - title: Course Schedule
     url: https://leetcode.com/problems/course-schedule/

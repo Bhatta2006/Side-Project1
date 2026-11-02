@@ -1,0 +1,112 @@
+id: quiz:dsa:greedy:jump-windows
+family: jump-windows
+concept: dsa:greedy
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: jump_game_min
+  params:
+    n:
+    - 6
+    - 10
+    jump:
+    - 4
+  reference: fewest(nums)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: always take the longest jump from where you stand
+  misconception: greedy-max-step
+- rule: one index per jump
+  misconception: greedy-one-step
+items:
+- id: prove-it
+  band: 3
+  format: mcq
+  prompt: What makes a greedy choice trustworthy?
+  options:
+  - 'An exchange argument: an optimal answer can be changed to use the greedy choice, no worse'
+  - Passing the sample tests and a few hand-made cases, since greedy bugs show up quickly
+  - Picking the locally largest or smallest option at each step, which is optimal by design
+  - Running in O(n log n) after sorting, because sorted input makes local choices global
+  answer: 0
+  misconceptions:
+  - null
+  - greedy-no-exchange-argument
+  - dp-greedy-local-choice
+  - greedy-no-exchange-argument
+  explanation: Greedy is correct only with a proof that the local choice is safe. Samples rarely contain
+    the case that breaks it; coin change with coins {1, 3, 4} and amount 6 is the classic counterexample.
+- id: gas-station
+  band: 5
+  format: mcq
+  prompt: 'Gas station circuit: when the running tank drops below 0 after station i, why can you skip
+    every start from the old start up to i?'
+  options:
+  - Each of those starts reaches i with no more fuel than this run had, so they also fail at i
+  - They are all further from the end of the circuit, so each needs more fuel than is left
+  - Only the station holding the most gas can start the circuit, and none of those is it
+  - Because the total gas is below the total cost, so no start in that stretch can work
+  answer: 0
+  misconceptions:
+  - null
+  - confuse-index-value
+  - frequency-max-only
+  - missing-unreachable-check
+  explanation: Starting later in that stretch drops a prefix whose running sum was non-negative, so it
+    can only arrive at i with less. That gives an O(n) single pass; a full circuit exists iff total gas
+    ≥ total cost.
+- id: edge-coins
+  band: 6
+  format: mcq
+  prompt: Coins {1, 3, 4}, amount 6. What does 'take the biggest coin that fits' give, and what is optimal?
+  options:
+  - 'Greedy: 3 coins (4 + 1 + 1); optimal: 2 coins (3 + 3)'
+  - Both give 2 coins (4 + 1 + 1 is never chosen here)
+  - 'Greedy: 2 coins (3 + 3); optimal: 3 coins (4 + 1 + 1)'
+  - 'Greedy gets stuck with 2 left; optimal: 2 coins (3 + 3)'
+  answer: 0
+  misconceptions:
+  - null
+  - greedy-coin-change
+  - dp-greedy-local-choice
+  - missing-unreachable-check
+  explanation: Biggest-first is only safe for canonical systems like {1, 5, 10, 25}. In general, coin
+    change needs DP.
+- id: transfer-candy
+  band: 7
+  format: classify
+  prompt: 'Children in a row get candy: each at least 1, and more than a neighbour with a higher rating.
+    Fewest candies?'
+  options:
+  - Two passes, left-to-right then right-to-left, taking the max of both at each child
+  - One left-to-right pass giving one more than the left neighbour whenever rated higher
+  - Sort children by rating and hand out 1, 2, 3, … candies in that sorted order
+  - Give each child one plus the number of children in the row rated lower than them
+  answer: 0
+  misconceptions:
+  - null
+  - greedy-max-step
+  - pattern-sort-breaks-order
+  - count-all-not-each
+  explanation: One pass misses decreasing runs; sorting breaks the neighbour structure. Each pass enforces
+    one side, and the max satisfies both in O(n).
+hint_ladder:
+- Which indices can you reach with exactly one jump? With two?
+- Each group of indices reachable with j jumps is a window; the next window ends at the farthest jump
+  from inside it.
+- Count how many windows you pass before the last index.
+time_limit_s: 150
+provenance:
+  origin: original

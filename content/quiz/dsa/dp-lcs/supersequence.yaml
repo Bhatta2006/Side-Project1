@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: The walk stops when i or j reaches 0 and prints what it has. What is missing?
   options:
-  - The remaining prefix of the other string
-  - Nothing
-  - The LCS characters
-  - The first character of a
+  - "The remaining prefix of the other string"
+  - "Nothing; the walk has printed everything"
+  - "The LCS characters, printed a second time"
+  - "Only the first character of the string a"
   answer: 0
   misconceptions:
   - null
@@ -63,10 +63,10 @@ items:
   format: classify
   prompt: You must print the supersequence, not just its length. Can you keep only two rows?
   options:
-  - No; walking back needs the whole table or a record of choices
-  - Yes, always
-  - Yes, if the strings are short
-  - Only with greedy matching
+  - "No; walking back needs the whole table or a record of choices"
+  - "Yes, always; two rows are enough to rebuild any supersequence"
+  - "Yes, but only if both strings are short enough to fit in memory"
+  - "Only with greedy matching of the two strings from the front"
   answer: 0
   misconceptions:
   - null

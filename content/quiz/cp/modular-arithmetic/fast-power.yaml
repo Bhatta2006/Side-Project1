@@ -21,7 +21,7 @@ items:
     band: 1
     format: mcq
     prompt: "How many multiplications does repeated squaring need for base^e?"
-    options: ["About 2·log2(e)", "e − 1", "e²", "Always 64"]
+    options: ["About 2·log2(e)", "e − 1, one per factor", "About e², for big e", "Always 64, one per bit"]
     answer: 0
     misconceptions: [null, power-as-repeat, power-as-repeat, fast-power-step]
     explanation: "One squaring per bit, plus one multiply per 1 bit."
@@ -39,9 +39,9 @@ items:
     prompt: "mod is about 10^9 and values are stored in 32-bit ints. Where does fast power break?"
     options:
       - "result * b can reach 10^18 and overflow; use 64-bit before reducing"
-      - "Nowhere: % mod keeps every value small"
-      - "Only when exp is 0"
-      - "The loop never ends"
+      - "Nowhere: taking % mod after each step keeps every value small enough"
+      - "Only when exp is 0, because the loop body never runs at all then"
+      - "The loop never ends, because exp stops shrinking once it gets to 1"
     answer: 0
     misconceptions: [null, mod-only-at-end, fast-power-parity, fast-power-step]
     explanation: "Each factor is below mod, but their product before % can be mod² ≈ 10^18."
@@ -51,9 +51,9 @@ items:
     prompt: "What should fast power return for exp = 0, and does the loop handle it?"
     options:
       - "1, and yes: the loop never runs and result stays 1"
-      - "0, because nothing is multiplied"
-      - "base"
-      - "It needs a special case"
+      - "0, because nothing is multiplied into the result"
+      - "base, since one factor is always taken first"
+      - "It needs a special case before the loop starts"
     answer: 0
     misconceptions: [null, product-init-zero, power-as-multiply, filter-empty-crash]
     explanation: "Any base to the power 0 is 1, the starting value of result."
@@ -61,7 +61,7 @@ items:
     band: 6
     format: classify
     prompt: "How many bit strings of length n exist, mod 10^9 + 7, for n up to 10^6? Which tool?"
-    options: ["2^n with fast power (or a loop of doublings)", "Generate all strings", "Binary search on n", "Sort the strings"]
+    options: ["2^n with fast power (or a loop of doublings)", "Generate every string and count them one by one", "Binary search on n for the matching count", "Sort the strings and count the distinct ones"]
     answer: 0
     misconceptions: [null, pattern-brute-force-default, pattern-search-vs-scan, pattern-sort-breaks-order]
     explanation: "Each position has 2 choices: 2^n, reduced mod 10^9 + 7."
@@ -70,10 +70,10 @@ items:
     format: classify
     prompt: "Divide by b modulo a prime p (binomial coefficients). How do you compute 1/b mod p?"
     options:
-      - "b^(p − 2) mod p with fast power (Fermat's little theorem)"
-      - "Integer division b / p"
-      - "Floating-point 1.0 / b"
-      - "Try every x until b·x = 1, for any p"
+      - "2^n with fast power (or a loop of doublings)"
+      - "Generate every string and count them one by one"
+      - "Binary search on n for the matching count"
+      - "Sort the strings and count the distinct ones"
     answer: 0
     misconceptions: [null, mod-division, mod-division, pattern-brute-force-default]
     explanation: "For prime p, b^(p−1) ≡ 1, so b^(p−2) is the inverse of b."

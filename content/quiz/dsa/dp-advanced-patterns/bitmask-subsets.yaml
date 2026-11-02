@@ -106,10 +106,10 @@ items:
   format: mcq
   prompt: Why is increasing numeric order a valid fill order for the masks?
   options:
-  - Every transition adds a bit, which makes the number larger
-  - Masks with more bits are always smaller
-  - Order does not matter
-  - Because popcount is monotone in the number
+  - "Every transition adds a bit, which makes the number larger"
+  - "Masks with more bits set are always numerically smaller"
+  - "Order does not matter; any fill order gives the same table"
+  - "Because popcount always increases with the number itself"
   answer: 0
   misconceptions:
   - null
@@ -122,10 +122,10 @@ items:
   format: classify
   prompt: Costs 9 2 7 / 6 4 3 / 5 8 1. Why does the cheapest free job per worker fail?
   options:
-  - Worker 1 takes job 2, which worker 2 needed for its cost of 1
-  - Worker 0 takes too much
-  - Greedy never fails
-  - The matrix is not square
+  - "Worker 1 takes job 2, which worker 2 needed for its cost of 1"
+  - "Worker 0 takes too much, because it always picks its cheapest job"
+  - "Greedy never fails here, since each worker picks a distinct job"
+  - "The matrix is not square, so some worker is left without a job"
   answer: 0
   misconceptions:
   - null
@@ -154,10 +154,10 @@ items:
   format: complexity
   prompt: n = 20 workers. Roughly how many steps does the template take?
   options:
-  - About 2·10^7 (2^20 masks × 20 jobs)
-  - About 20! ≈ 2·10^18
-  - About 400
-  - About 10^6 × 10^6
+  - "About 2·10^7 (2^20 masks × 20 jobs)"
+  - "About 20! ≈ 2·10^18 (every ordering)"
+  - "About 400 (20 workers × 20 jobs)"
+  - "About 10^12 (10^6 masks × 10^6 masks)"
   answer: 0
   misconceptions:
   - null
@@ -170,10 +170,10 @@ items:
   format: bug_spot
   prompt: Every dp[mask] starts at 0. What does the program print?
   options:
-  - 0, because every minimum stays 0
-  - The right answer
-  - The largest cost
-  - It crashes
+  - "0, because every minimum stays 0"
+  - "The right answer, as usual"
+  - "The largest cost in the matrix"
+  - "It crashes on the first mask"
   answer: 0
   misconceptions:
   - null
@@ -202,10 +202,10 @@ items:
   format: classify
   prompt: n = 40 items, and you must know which ones are used. Is plain bitmask DP feasible?
   options:
-  - No; 2^40 states is too many, so look for structure or meet in the middle
-  - Yes, always
-  - Yes, with long long masks
-  - Only in C++
+  - "No; 2^40 states is too many, so look for structure or meet in the middle"
+  - "Yes, always; bitmask DP handles any n as long as the masks fit in memory"
+  - "Yes, as long as the masks are stored in long long instead of int"
+  - "Only in C++, where 2^40 simple steps finish within the time limit"
   answer: 0
   misconceptions:
   - null

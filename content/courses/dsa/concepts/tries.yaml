@@ -164,10 +164,10 @@ quiz:
     kind: mcq
     prompt: You insert "apple" only. Why does a search for the word "app" need an end marker?
     options:
-      - The path for "app" exists, but no word ends there
-      - Because "app" is shorter
-      - Tries cannot store short words
-      - To make search O(1)
+      - "The path for \"app\" exists, but no word ends there"
+      - "Because \"app\" is shorter than the stored word"
+      - "Tries cannot store words shorter than four letters"
+      - "To make the search run in O(1) instead of O(L)"
     answer: 0
     explanation: Without end markers, every prefix of a stored word would look like a stored word.
     difficulty: 2
@@ -175,21 +175,21 @@ quiz:
     kind: mcq
     prompt: How do you count words starting with a prefix in O(length)?
     options:
-      - Keep a counter on each node of how many words pass through it
-      - Traverse the whole subtree each time
-      - Store the words in a list
-      - Hash every prefix
+      - "Keep a counter on each node of how many words pass through it"
+      - "Traverse the whole subtree below the prefix on every query"
+      - "Store every word in a list and scan it for the prefix"
+      - "Hash every prefix of every word into one big hash set"
     answer: 0
     explanation: Increment counts during insertion; the count at the prefix's node is the answer.
     difficulty: 2
   - id: when-not
     kind: mcq
     prompt: When is a hash set a better choice than a trie?
-    options: ["When you only need exact-word lookups", "When you need prefix counts", "For autocomplete", "For Word Search II"]
+    options: ["When you only need exact-word lookups", "When you need counts of words by prefix", "For autocomplete of a typed prefix", "For Word Search II over a letter grid"]
     answer: 0
     explanation: Tries earn their memory cost through prefix operations.
     difficulty: 2
-problems: [prefix-counts]
+problems: [prefix-counts, vault-xor]
 practice_links:
   - title: Implement Trie (Prefix Tree)
     url: https://leetcode.com/problems/implement-trie-prefix-tree/

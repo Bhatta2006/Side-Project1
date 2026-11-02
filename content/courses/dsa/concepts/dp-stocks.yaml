@@ -527,10 +527,10 @@ quiz:
   kind: mcq
   prompt: What does the stock state machine need to know at the end of each day, for at most k trades?
   options:
-  - Whether you hold a share, and how many buys you have used
-  - Every price so far
-  - The day of the last sale only
-  - The total number of rises
+  - "Whether you hold a share, and how many buys you have used"
+  - "Every price seen so far, so you can pick the best buy day"
+  - "Only the day of the last sale, since profits add up after it"
+  - "The total number of days the price rose, counted from day one"
   answer: 0
   explanation: The future depends only on what you hold and how many trades are left.
   difficulty: 1
@@ -560,10 +560,10 @@ quiz:
   kind: mcq
   prompt: Why does a buy read cash[t − 1] and not cash[t]?
   options:
-  - A buy starts a new transaction, so it comes from a state with one fewer used
-  - Because t − 1 is smaller
-  - To avoid an index error
-  - It makes no difference
+  - "A buy starts a new transaction, so it comes from a state with one fewer used"
+  - "Because t − 1 is a smaller index, so the table is filled in increasing order"
+  - "To avoid an index error when t is the largest transaction count allowed"
+  - "It makes no difference; cash[t] and cash[t − 1] hold the same value then"
   answer: 0
   explanation: Reading cash[t] would let you buy without using up a transaction.
   difficulty: 3
@@ -583,10 +583,10 @@ quiz:
   kind: mcq
   prompt: With a transaction fee, where is it subtracted?
   options:
-  - Once per trade, for example when selling
-  - On every day you hold
-  - On both the buy and the sell
-  - Only on the last trade
+  - "Once per trade, for example when selling"
+  - "Once on every day that you hold a share"
+  - "Twice per trade, on the buy and the sell"
+  - "Only once, on the very last trade made"
   answer: 0
   explanation: Each completed trade pays the fee once.
   difficulty: 3

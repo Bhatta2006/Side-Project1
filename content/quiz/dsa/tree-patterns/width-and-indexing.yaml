@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: A chain going right 70 levels deep. What goes wrong with raw positions in C++ or Java?
   options:
-  - Positions pass 2^63 and overflow; renumber each level from 0
-  - Nothing
-  - The width becomes 0
-  - The BFS loops forever
+  - "Positions pass 2^63 and overflow; renumber each level from 0"
+  - "Nothing; 70 levels of positions fit in a 64-bit integer"
+  - "The width becomes 0, since each level has a single node"
+  - "The BFS loops forever on a chain of right children"
   answer: 0
   misconceptions:
   - null

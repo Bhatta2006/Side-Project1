@@ -75,6 +75,9 @@ class Spec:
     fixes: list[Fix] = field(default_factory=list)
     decoys: list[Decoy] = field(default_factory=list)
     tries: int = 200
+    # Bands of the three item kinds. Tracing a long algorithm by hand (Dijkstra, union-find
+    # with path compression) is harder than the default predict/fill/fix ladder suggests.
+    bands: tuple[int, int, int] = (2, 3, 4)
 
     @property
     def defects(self) -> dict[str, Fix]:
@@ -128,7 +131,7 @@ def predict(spec: Spec, values: dict, code: Code, answer: str) -> Draft | None:
         options=options,
         answer=0,
         explanation=spec.explain(values, answer),
-        band=2,
+        band=spec.bands[0],
         format="output_prediction",
         values=values,
     )
@@ -156,7 +159,7 @@ def fill(spec: Spec, rng, values: dict, code: Code, answer: str, blank: Blank) -
         options=[right, *wrong[:3]],
         answer=0,
         explanation=spec.explain(values, answer),
-        band=3,
+        band=spec.bands[1],
         format="fill_blank",
         values=values,
     )
@@ -192,7 +195,7 @@ def fix(spec: Spec, rng, values: dict, code: Code, answer: str, chosen: Fix) -> 
         options=[right, *decoys[:3]],
         answer=0,
         explanation=f"{chosen.why} {spec.explain(values, answer)}",
-        band=4,
+        band=spec.bands[2],
         format="bug_spot",
         values=values,
     )

@@ -168,7 +168,7 @@ quiz:
   - id: insert-order
     kind: mcq
     prompt: To insert node x after node p, which assignment must come first?
-    options: ["x.next = p.next", "p.next = x", "p = x", "x = p.next"]
+    options: ["x.next = p.next", "p.next = x", "p.next.next = x", "x = p.next"]
     answer: 0
     explanation: If you set p.next = x first, the reference to the rest of the list is lost.
     difficulty: 2
@@ -183,10 +183,10 @@ quiz:
     kind: mcq
     prompt: How do fast and slow pointers detect a cycle?
     options:
-      - If a cycle exists, the fast pointer eventually meets the slow pointer
-      - The slow pointer reaches null first
-      - Both reach the middle at the same time
-      - They count the nodes
+      - "If a cycle exists, the fast pointer eventually meets the slow pointer"
+      - "The slow pointer reaches null first, which proves there is a cycle"
+      - "Both pointers reach the middle node at the same time in a cycle"
+      - "They count the nodes and compare the count with the list's length"
     answer: 0
     explanation: Inside a cycle the gap shrinks by one each step, so they must meet.
     difficulty: 2
@@ -194,10 +194,10 @@ quiz:
     kind: mcq
     prompt: Why use a dummy head node?
     options:
-      - So operations at the front of the list need no special case
-      - To make the list faster
-      - To store the length
-      - It is required in Java
+      - "So operations at the front of the list need no special case"
+      - "To make every traversal of the list run in fewer steps"
+      - "To store the length of the list in its value field"
+      - "Because Java requires every list to start with one"
     answer: 0
     explanation: Every real node then has a predecessor, so insert/delete logic is uniform.
     difficulty: 2

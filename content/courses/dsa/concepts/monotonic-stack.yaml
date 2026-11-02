@@ -813,10 +813,10 @@ quiz:
   kind: mcq
   prompt: For daily temperatures (days to wait), what goes on the stack?
   options:
-  - Indexes, so the distance can be computed when popped
-  - Temperatures
-  - Distances
-  - Nothing; use two pointers
+  - "Indexes, so the distance can be computed when popped"
+  - "Temperatures, so each can be compared when popped"
+  - "Distances, filled in as each day is pushed"
+  - "Nothing; two pointers find each next warmer day"
   answer: 0
   explanation: The answer is j − i, which needs positions.
   difficulty: 2
@@ -835,10 +835,10 @@ quiz:
   kind: mcq
   prompt: Why add a bar of height 0 at the end of the histogram?
   options:
-  - So every bar left on the stack gets popped and measured
-  - To avoid an empty stack
-  - It makes the heights increase
-  - It is not needed
+  - "So every bar left on the stack gets popped and measured"
+  - "To avoid popping from an empty stack at the last bar"
+  - "So the heights are increasing for the final comparison"
+  - "It is not needed; the loop already measures every bar"
   answer: 0
   explanation: Bars still on the stack would otherwise never be measured.
   difficulty: 3
@@ -857,10 +857,10 @@ quiz:
   kind: mcq
   prompt: Why does sliding window maximum need a deque rather than a stack?
   options:
-  - Old indexes also leave because they expire, from the front
-  - Deques are faster
-  - To keep values sorted ascending
-  - A stack would work as well
+  - "Old indexes also leave because they expire, from the front"
+  - "Deques are faster than stacks for every push and pop"
+  - "To keep the values sorted ascending from front to back"
+  - "A stack would work as well; the deque is only a style"
   answer: 0
   explanation: Beaten values leave from the back, expired ones from the front.
   difficulty: 4

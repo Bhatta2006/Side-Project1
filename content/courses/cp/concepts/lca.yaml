@@ -141,7 +141,7 @@ quiz:
   - id: jumps
     kind: mcq
     prompt: To jump 13 levels up with binary lifting, which jumps do you take?
-    options: ["2^3, 2^2 and 2^0 (8 + 4 + 1)", "13 single steps", "2^4 then back", "2^3 and 2^2"]
+    options: ["2^3, 2^2 and 2^0 (8 + 4 + 1)", "2^4 (16), then 3 single steps back", "2^3 and 2^2 (8 + 4 = 12)", "13 jumps of 2^0, one level each"]
     answer: 0
     explanation: 13 is 1101 in binary.
     difficulty: 2

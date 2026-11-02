@@ -131,7 +131,7 @@ def test_only_verified_items_reach_the_bank(catalog, tmp_path):
     assert all(not i.reviewed and i.status == "provisional" for i in served)
     by_family = {f: [i for i in served if i.family == f] for f in PROOF}
     assert {f: len(v) for f, v in by_family.items()} == {f: 100 for f in PROOF}
-    assert {i.band for i in served} == {2, 3, 4}
+    assert {2, 3, 4} <= {i.band for i in served} <= {2, 3, 4, 5, 6}  # Spec.bands lifts hard traces
 
     # A copy of the quiz root with one tampered digest and one stale family.
     root = tmp_path / "quiz"

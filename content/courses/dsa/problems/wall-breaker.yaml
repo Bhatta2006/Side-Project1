@@ -1,0 +1,137 @@
+id: wall-breaker
+title: Wall breaker
+concepts: [graph-traversal]
+difficulty: hard
+statement: |
+  A maze is an `R × C` grid of open cells `.` and walls `#`. You start in the top-left cell
+  and want to reach the bottom-right cell, moving one step up, down, left or right at a time.
+  You carry a hammer that can knock down **at most `k` walls** in total; a knocked-down wall
+  becomes an open cell you can step into (it costs one step like any other move).
+
+  Print the fewest steps to reach the bottom-right cell, or `-1` if it is impossible.
+  The start and end cells are always open.
+input_format: |
+  The first line contains R, C and k. The next R lines each contain C characters (`.` or `#`).
+output_format: The fewest steps, or -1.
+constraints:
+  - "1 ≤ R, C, and the number of cells R · C ≤ 10^4"
+  - 0 ≤ k ≤ 30
+examples:
+  - input: "3 3 1\n.#.\n##.\n...\n"
+    output: "4"
+    explanation: Knock down the wall right of the start, then go right, down, down.
+  - input: "3 3 0\n.##\n###\n##.\n"
+    output: "-1"
+  - input: "2 3 2\n.#.\n.#.\n"
+    output: "3"
+    explanation: Going around is impossible, but one wall is enough; the second hammer use is not needed.
+hints:
+  - A plain BFS over cells is not enough. Two visits to the same cell can differ in something that matters later. What?
+  - Make the number of walls already broken part of the state. A state is (row, column, walls used).
+  - BFS over (r, c, used) with at most R·C·(k + 1) states. Stepping into a wall moves to used + 1, allowed only while used < k.
+approach: |
+  BFS over states (r, c, used): reaching the same cell having broken fewer walls is a
+  genuinely better state, so cells alone cannot be marked visited. Each move costs 1, so
+  BFS order is distance order and the first time any state at the target is popped gives the
+  answer. A useful prune: with k ≥ R + C − 2 the Manhattan path is always possible.
+  O(R · C · k) states, four moves each.
+reference: |
+  import sys
+  from collections import deque
+  data = sys.stdin.read().split()
+  R, C, k = int(data[0]), int(data[1]), int(data[2])
+  g = data[3:3 + R]
+  if R == 1 and C == 1:
+      print(0)
+      sys.exit()
+  seen = [[[False] * (k + 1) for _ in range(C)] for _ in range(R)]
+  seen[0][0][0] = True
+  q = deque([(0, 0, 0, 0)])
+  answer = -1
+  while q:
+      r, c, used, d = q.popleft()
+      for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+          nr, nc = r + dr, c + dc
+          if 0 <= nr < R and 0 <= nc < C:
+              nu = used + (g[nr][nc] == "#")
+              if nu <= k and not seen[nr][nc][nu]:
+                  if nr == R - 1 and nc == C - 1:
+                      answer = d + 1
+                      q.clear()
+                      break
+                  seen[nr][nc][nu] = True
+                  q.append((nr, nc, nu, d + 1))
+  print(answer)
+brute: |
+  import sys
+  from itertools import combinations
+  from collections import deque
+  data = sys.stdin.read().split()
+  R, C, k = int(data[0]), int(data[1]), int(data[2])
+  g = data[3:3 + R]
+  walls = [(r, c) for r in range(R) for c in range(C) if g[r][c] == "#"]
+  best = -1
+  for size in range(0, min(k, len(walls)) + 1):
+      for broken in combinations(walls, size):
+          open_ = set(broken)
+          dist = {(0, 0): 0}
+          q = deque([(0, 0)])
+          while q:
+              r, c = q.popleft()
+              for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                  nr, nc = r + dr, c + dc
+                  if 0 <= nr < R and 0 <= nc < C and (nr, nc) not in dist:
+                      if g[nr][nc] == "." or (nr, nc) in open_:
+                          dist[(nr, nc)] = dist[(r, c)] + 1
+                          q.append((nr, nc))
+          d = dist.get((R - 1, C - 1))
+          if d is not None and (best == -1 or d < best):
+              best = d
+  print(best)
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          R, C = rng.randint(1, 4), rng.randint(1, 4)
+          k = rng.randint(0, 3)
+          rows = []
+          for r in range(R):
+              rows.append("".join("#" if rng.random() < 0.45 else "." for _ in range(C)))
+          rows[0] = "." + rows[0][1:]
+          rows[-1] = rows[-1][:-1] + "."
+          yield f"{R} {C} {k}\n" + "\n".join(rows)
+generator: |
+  def cases(rng):
+      yield "1 1 0\n."
+      yield "1 5 0\n.....\n"
+      yield "1 5 2\n.###.\n"
+      yield "1 5 3\n.###.\n"
+      for density, k in ((0.3, 0), (0.45, 2), (0.6, 5), (0.75, 30), (0.5, 1)):
+          R, C = 40, 40
+          rows = ["".join("#" if rng.random() < density else "." for _ in range(C)) for _ in range(R)]
+          rows[0] = "." + rows[0][1:]
+          rows[-1] = rows[-1][:-1] + "."
+          yield f"{R} {C} {k}\n" + "\n".join(rows)
+      # A long snake corridor: going around is far longer than breaking through.
+      rows = []
+      for r in range(39):
+          if r % 2 == 0:
+              rows.append("." * 40)
+          else:
+              rows.append(("#" * 39 + ".") if r % 4 == 1 else ("." + "#" * 39))
+      rows.append("." * 40)
+      for k in (0, 3, 30):
+          yield f"40 40 {k}\n" + "\n".join(rows)
+      for density, k in ((0.35, 30), (0.5, 8)):
+          rows = ["".join("#" if rng.random() < density else "." for _ in range(100)) for _ in range(100)]
+          rows[0] = "." + rows[0][1:]
+          rows[-1] = rows[-1][:-1] + "."
+          yield f"100 100 {k}\n" + "\n".join(rows)
+      for _ in range(6):
+          R, C = rng.randint(2, 8), rng.randint(2, 8)
+          rows = ["".join("#" if rng.random() < 0.5 else "." for _ in range(C)) for _ in range(R)]
+          rows[0] = "." + rows[0][1:]
+          rows[-1] = rows[-1][:-1] + "."
+          yield f"{R} {C} {rng.randint(0, 4)}\n" + "\n".join(rows)
+time_limit_ms: 4000
+provenance:
+  origin: original

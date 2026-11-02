@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Why keep an array at all, when the map already has every value?
   options:
-  - A random pick needs an index below n; a hash map has no indexes
-  - Arrays use less memory
-  - To keep the values sorted
-  - To detect duplicates
+  - "A random pick needs an index below n; a hash map has no indexes"
+  - "Arrays use less memory than a hash map holding the same values"
+  - "The array keeps the values sorted, which the random pick needs"
+  - "The array detects duplicate inserts before the map is updated"
   answer: 0
   misconceptions:
   - null

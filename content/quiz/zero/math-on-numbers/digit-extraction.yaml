@@ -30,10 +30,10 @@ items:
   format: mcq
   prompt: How many digits does the while n > 0 loop count for n = 0?
   options:
-  - 0, so 0 needs a special case
-  - '1'
-  - It loops forever
-  - It crashes
+  - "0, so 0 needs a special case"
+  - "1, since 0 is one digit"
+  - "It loops forever on n = 0"
+  - "It crashes, since 0 % 10 fails"
   answer: 0
   misconceptions:
   - null

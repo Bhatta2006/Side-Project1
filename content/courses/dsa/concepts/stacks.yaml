@@ -189,10 +189,10 @@ quiz:
     kind: mcq
     prompt: Why is the monotonic-stack "next greater element" O(n) despite a nested while loop?
     options:
-      - Each index is pushed once and popped at most once overall
-      - The while loop runs at most once per step
-      - The array is sorted
-      - It isn't — it's O(n²)
+      - "Each index is pushed once and popped at most once overall"
+      - "The inner while loop runs at most once per outer step"
+      - "The array is sorted first, so each pop is constant time"
+      - "It isn't — the nested loop makes it O(n²) in the worst case"
     answer: 0
     explanation: Total pops can't exceed total pushes (n), so the combined work is linear.
     difficulty: 3
@@ -219,9 +219,9 @@ quiz:
     prompt: "In the largest-rectangle-in-a-histogram stack method, when a bar is popped, its rectangle extends"
     options:
       - "from just after the new stack top to just before the current index"
-      - "from index 0 to the current index"
-      - "only over the bar itself"
-      - "to the end of the array"
+      - "from index 0 up to just before the current index being scanned"
+      - "only over the popped bar itself, one unit wide at its height"
+      - "from the popped bar to the end of the array, past the current"
     answer: 0
     explanation: "The new top is the previous smaller bar and the current index is the next smaller bar; the popped bar is the minimum between them."
     difficulty: 5

@@ -43,9 +43,9 @@ items:
     prompt: "The stream has only 2 values so far and k = 3. What is the 3rd largest?"
     options:
       - "Not defined yet: the heap holds fewer than k values"
-      - "The smaller of the two"
-      - "0"
-      - "The larger of the two"
+      - "The smaller of the two values seen so far"
+      - "0, the default value for a missing element"
+      - "The larger of the two values seen so far"
     answer: 0
     misconceptions: [null, heap-size-off-by-one, missing-unreachable-check, top-k-returns-max]
     explanation: "Until k values have arrived, report that there is no k-th largest (or follow the problem's rule)."
@@ -75,9 +75,9 @@ items:
     prompt: "The k points closest to the origin among a million points. What do you keep?"
     options:
       - "A max-heap of size k by distance: evict the farthest of the current k"
-      - "A min-heap of all points by distance"
-      - "The single closest point"
-      - "A sliding window over the points"
+      - "A min-heap of all million points by distance, popped k times"
+      - "The single closest point, updated whenever a closer one appears"
+      - "A sliding window of k points over the input in reading order"
     answer: 0
     misconceptions: [null, heap-size-vs-input-size, top-k-returns-max, pattern-fixed-vs-variable-window]
     explanation: "For the k smallest distances, the one to evict is the largest, so it goes on top."

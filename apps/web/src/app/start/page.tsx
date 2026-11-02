@@ -116,8 +116,9 @@ export default function Start() {
   }, []);
   useEffect(() => {
     if (!profile) return;
-    // One course per learner for now: an enrolled learner never re-onboards.
-    if (profile.enrollment) { router.replace(profile.enrollment.status === 'placement' ? '/placement' : '/today'); return; }
+    // A finished course may start the next one (the API refuses unless the course is done).
+    const moving = new URLSearchParams(window.location.search).get('next') === '1';
+    if (profile.enrollment && !moving) { router.replace(profile.enrollment.status === 'placement' ? '/placement' : '/today'); return; }
     setName(n => n || profile.display_name || '');
     if (profile.birth_year) setStep(s => (s === 'about' ? 'course' : s));
   }, [profile, router]);

@@ -195,10 +195,10 @@ quiz:
     kind: mcq
     prompt: When does the `else` block run?
     options:
-      - When none of the conditions above it were true
-      - Always, after the if block
-      - Only when the if condition is true
-      - Never, it is optional decoration
+      - "When none of the conditions above it were true"
+      - "Always, right after the if block has finished"
+      - "Only when the if condition above it is true"
+      - "Whenever the last elif condition alone is false"
     answer: 0
     explanation: else is the fallback that catches every case the earlier conditions did not.
     difficulty: 1

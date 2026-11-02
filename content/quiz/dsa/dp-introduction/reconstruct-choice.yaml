@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: The walk-back collects 3, then 1. The program prints 3 1. What is missing?
   options:
-  - Reversing the collected path
-  - A larger table
-  - A memo
-  - Sorting the costs
+  - "Reversing the collected path"
+  - "A larger table with n + 2 rows"
+  - "A memo for the walk-back calls"
+  - "Sorting the costs before the walk"
   answer: 0
   misconceptions:
   - null

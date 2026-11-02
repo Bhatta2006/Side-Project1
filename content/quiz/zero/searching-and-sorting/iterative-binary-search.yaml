@@ -30,10 +30,10 @@ items:
   format: trace
   prompt: Binary search for 2 in the unsorted list 5 1 4 2 8. What happens?
   options:
-  - It reports −1, because it throws away the half that holds 2
-  - It finds index 3
-  - It crashes
-  - It sorts the list first
+  - "It reports −1, because it throws away the half that holds 2"
+  - "It finds index 3, since binary search checks every element"
+  - "It crashes, because the halves are not in sorted order"
+  - "It sorts the list first, then finds 2 at index 1"
   answer: 0
   misconceptions:
   - null

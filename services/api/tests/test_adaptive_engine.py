@@ -138,7 +138,20 @@ def test_intervention_ladder_escalates_one_rung_at_a_time():
         True,
     )
     mild = replace(signal, severity=1)
-    assert stuck.next_rung(mild, {"example", "explain", "probe", "repair"}, True) is None
+    assert stuck.next_rung(mild, set(), True) == ("example", False)
+    # Rungs that did not help escalate: a mild case still reaches the tutor, then moving on,
+    # instead of retaking the same check forever.
+    assert stuck.next_rung(mild, {"example", "explain", "probe", "repair"}, True) == (
+        "checkin",
+        False,
+    )
+    tried = {"example", "explain", "probe", "repair", "checkin"}
+    assert stuck.next_rung(mild, tried, True) == ("defer", True)
+    # Nothing underneath to probe: straight past the probe rung.
+    assert stuck.next_rung(mild, {"example", "explain"}, False, has_prereqs=False) == (
+        "checkin",
+        False,
+    )
 
 
 # ---------------------------------------------------------------- planner

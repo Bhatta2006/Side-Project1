@@ -1,0 +1,115 @@
+id: quiz:dsa:dp-2d:grid-path
+family: grid-path
+concept: dsa:dp-2d
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: grid_min_path
+  params:
+    rows:
+    - 3
+    - 4
+    cols:
+    - 3
+    - 4
+    value:
+    - 1
+    - 9
+  reference: cheapest(grid)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: step to the cheaper neighbour each time
+  misconception: dp-greedy-local-choice
+- rule: start cell left out
+  misconception: dp-wrong-base-case
+items:
+- id: state
+  band: 2
+  format: mcq
+  prompt: Unique paths in a grid moving right or down. What does dp[r][c] mean, and how is it filled?
+  options:
+  - Paths from the start to (r, c); dp[r][c] = dp[r-1][c] + dp[r][c-1]
+  - Paths from (r, c) to the start; dp[r][c] = dp[r-1][c] · dp[r][c-1]
+  - The cell's distance from the start; dp[r][c] = r + c
+  - Paths through (r, c); dp[r][c] = max(dp[r-1][c], dp[r][c-1]) + 1
+  answer: 0
+  misconceptions:
+  - null
+  - product-not-sum
+  - dp-vague-state
+  - min-vs-max
+  explanation: Every path into (r, c) arrives from above or from the left, and those two sets don't overlap,
+    so you add them.
+- id: space
+  band: 4
+  format: mcq
+  prompt: The grid DP only reads the row above and the current row. How far can memory shrink, and what
+    must you watch?
+  options:
+  - 'One row of length C, updated left to right: old dp[c] is above, new dp[c-1] is left'
+  - Two numbers only, the cell above and the cell to the left, reused for every cell
+  - 'It can''t: every cell must stay in memory, or the answer can''t be computed at all'
+  - One row of length C, but it must be updated right to left so nothing is overwritten
+  answer: 0
+  misconceptions:
+  - null
+  - dp-compressed-loses-path
+  - dp-compressed-loses-path
+  - dp-rolling-update-order
+  explanation: Before you overwrite dp[c] it still holds the row above; dp[c-1] was already updated for
+    this row. Left to right keeps both right. (You lose the path itself, only the value survives.)
+- id: edge-obstacles
+  band: 5
+  format: mcq
+  prompt: 'Unique paths with obstacles: the first row is [0, 0, 1, 0] (1 = wall). What are dp[0][0..3]?'
+  options:
+  - 1, 1, 0, 0
+  - 1, 1, 0, 1
+  - 1, 2, 0, 0
+  - 0, 0, 0, 0
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-base-case
+  - dp-wrong-subproblem
+  - dp-wrong-base-case
+  explanation: In the first row each cell is reachable only from the left. Once a wall blocks it, every
+    cell after it in that row is 0, not 1.
+- id: transfer-dungeon
+  band: 7
+  format: classify
+  prompt: A knight walks right/down through a grid of health changes and must never drop to 0. Find the
+    smallest starting health. Which direction should the DP run?
+  options:
+  - 'Bottom-right backwards: need[r][c] = max(1, min(need below, need right) − cell)'
+  - Top-left forwards, keeping the minimum running health sum seen along the best path
+  - Top-left forwards, tracking the largest health reached and subtracting the worst cell
+  - 'Either direction works: the minimum start depends only on the sum of the best path'
+  answer: 0
+  misconceptions:
+  - null
+  - dp-wrong-subproblem
+  - min-vs-max
+  - dp-loop-order
+  explanation: Going forward you have to trade off current health against the lowest point so far, and
+    one number per cell can't hold both. Backwards, 'health needed from here' is a single, well-defined
+    state.
+hint_ladder:
+- How many ways can you arrive at a cell? From where?
+- The first row and column have only one way in, so they just accumulate.
+- Every other cell takes the cheaper of above and left, plus its own cost.
+time_limit_s: 150
+provenance:
+  origin: original

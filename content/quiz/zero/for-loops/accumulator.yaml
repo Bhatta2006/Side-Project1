@@ -36,9 +36,9 @@ items:
     prompt: "A loop adds every number to total. Why must total start at 0?"
     options:
       - "Adding 0 changes nothing, so the first number is counted exactly once"
-      - "Every variable must start at 0"
-      - "So the loop runs one extra time"
-      - "It could start anywhere; the result is the same"
+      - "Every variable in a program must start at 0 before it is used"
+      - "Starting at 0 makes the loop run one extra time at the end"
+      - "It could start anywhere; the final result is always the same"
     answer: 0
     misconceptions: [null, accumulator-init-one, loop-bound-off-by-one, accumulator-starts-at-first]
     explanation: "0 is the neutral start for a sum; for a product it would be 1."
@@ -48,9 +48,9 @@ items:
     prompt: "The same loop should multiply 1 × 2 × … × n. What must change?"
     options:
       - "Start at 1 and use *= instead of +="
-      - "Only change += to *="
-      - "Only start at 1"
-      - "Nothing"
+      - "Only change += to *=, keeping 0"
+      - "Only start the result at 1 with +="
+      - "Nothing; += already multiplies"
     answer: 0
     misconceptions: [null, product-not-sum, accumulator-init-one, product-not-sum]
     explanation: "With *= and a start of 0, everything stays 0; the neutral start for a product is 1."
@@ -60,9 +60,9 @@ items:
     prompt: "The loop sums the numbers from 5 up to n, but n is 3. What should it print?"
     options:
       - "0: the loop body never runs"
-      - "5"
-      - "3"
-      - "An error"
+      - "5: the start value is printed"
+      - "3: the loop counts down to n"
+      - "An error: the range is empty"
     answer: 0
     misconceptions: [null, accumulator-starts-at-first, accumulator-starts-at-bound, filter-empty-crash]
     explanation: "range(5, 4) is empty, so total keeps its starting value 0."
@@ -84,9 +84,9 @@ items:
     prompt: "Save 1 euro on day 1, 2 on day 2, and so on. How much after 30 days? Which loop?"
     options:
       - "total = 0, then for day in 1..30: total += day"
-      - "for day in 1..30: total = day"
-      - "total = 30"
-      - "for day in 1..29: total += day"
+      - "for day in 1..30: total = day, then print total"
+      - "total = 30, since there are thirty days to save"
+      - "total = 0, then for day in 1..29: total += day"
     answer: 0
     misconceptions: [null, overwrite-not-accumulate, accumulator-starts-at-bound, loop-bound-off-by-one]
     explanation: "An accumulator adds each day's amount; the loop must include day 30."

@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: What does tails[L] hold?
   options:
-  - The smallest last element of any increasing subsequence of length L + 1 so far
-  - The L-th element of the LIS
-  - The largest element seen so far
-  - The number of chains of length L
+  - "The smallest last element of any increasing subsequence of length L + 1 so far"
+  - "The L-th element of the longest increasing subsequence found so far, in order"
+  - "The largest element seen so far among the first L + 1 elements of the input"
+  - "The number of increasing chains of length L that end at the current element"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: After 3 4 1, tails is 1 4. Someone prints it as the LIS. What is wrong?
   options:
-  - 1 comes after 4 in the input, so 1 4 is not a subsequence
-  - Nothing
-  - The length is wrong
-  - tails should be sorted descending
+  - "1 comes after 4 in the input, so 1 4 is not a subsequence"
+  - "Nothing; tails always holds a valid increasing subsequence"
+  - "The length is wrong; the LIS of 3 4 1 has length 3"
+  - "tails should be kept sorted descending, not ascending"
   answer: 0
   misconceptions:
   - null

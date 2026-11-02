@@ -153,10 +153,10 @@ quiz:
     kind: mcq
     prompt: "When counting subarrays with sum k using a prefix-sum map, why start the map with {0: 1}?"
     options:
-      - To count subarrays that start at index 0
-      - To avoid division by zero
-      - Because maps cannot be empty
-      - To handle negative numbers
+      - "To count subarrays that start at index 0"
+      - "To avoid a division by zero in the loop"
+      - "Because a hash map is not allowed to be empty"
+      - "To handle negative numbers in the array"
     answer: 0
     explanation: A subarray starting at 0 has sum equal to the current prefix, matching an earlier prefix of 0.
     difficulty: 3
@@ -171,10 +171,10 @@ quiz:
     kind: mcq
     prompt: Why does "count subarrays with sum k" use prefix sums + hashing rather than a sliding window?
     options:
-      - Negative numbers break the sliding window's monotonic behaviour
-      - Sliding windows are always slower
-      - Hash maps use less memory
-      - Prefix sums sort the array
+      - "Negative numbers break the sliding window's monotonic behaviour"
+      - "Sliding windows are always slower than prefix sums with hashing"
+      - "Hash maps use less memory than the window's two pointer indices"
+      - "Prefix sums sort the array, which the sliding window then needs"
     answer: 0
     explanation: With negatives, extending a window can decrease the sum, so you cannot decide when to shrink.
     difficulty: 3
@@ -183,9 +183,9 @@ quiz:
     prompt: "Counting subarrays with sum exactly k, why must the map start with {0: 1}?"
     options:
       - "Subarrays that start at index 0 need the empty prefix"
-      - "To avoid a KeyError"
-      - "Because k may be 0"
-      - "It is only needed for negative numbers"
+      - "To avoid a KeyError on the very first lookup"
+      - "Because k may be 0, which needs a special entry"
+      - "It is only needed when the array has negatives"
     answer: 0
     explanation: "A subarray a[0..r] has sum P[r+1] - P[0]; the empty prefix P[0] = 0 must already be counted once."
     difficulty: 5

@@ -128,10 +128,10 @@ quiz:
     kind: mcq
     prompt: Your solution fails on a hidden test. What is the most useful next step?
     options:
-      - Construct the smallest input you can find that also fails
-      - Rewrite the whole program
-      - Submit again
-      - Add more comments
+      - "Construct the smallest input you can find that also fails"
+      - "Rewrite the whole program from scratch using a new idea"
+      - "Resubmit the same code in case the judge was flaky"
+      - "Add comments to every line until the bug becomes obvious"
     answer: 0
     explanation: A tiny failing case is easy to trace by hand and usually reveals the bug directly.
     difficulty: 1

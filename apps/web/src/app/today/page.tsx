@@ -249,7 +249,9 @@ export default function TodayPage() {
                 <h2 id="next-heading" className="type-display-m">{complete ? `${today.course.title} complete` : today.study_day ? 'Done for today' : 'Rest day'}</h2>
                 <p className="max-w-md text-(--card-muted)">
                   {complete
-                    ? `All ${today.progress.total} skills learned, each proven by a check. ${mastered} already mastered; spaced reviews prove the rest over the coming weeks.`
+                    ? today.finale?.graduated
+                      ? `All ${today.progress.total} skills mastered: learned, then proven again after time away.`
+                      : `All ${today.progress.total} skills learned, each proven by a check. ${mastered} mastered so far; reviews over the coming weeks prove the other ${today.finale?.to_master ?? today.progress.total - mastered}.`
                     : today.study_day
                       ? 'Everything planned for today is complete. You can keep going from your plan.'
                       : 'Today is not one of your study days. You can work ahead from your plan.'}
@@ -257,7 +259,18 @@ export default function TodayPage() {
                 <div className="flex flex-wrap gap-3">
                   {complete ? <Button asChild variant="ink" size="lg"><Link href="/progress">See your evidence<ArrowCircle /></Link></Button> : <Button asChild variant="ink" size="lg"><Link href="/plan">Open {NAME.skills}<ArrowCircle /></Link></Button>}
                   {complete ? <Button asChild variant="outline" size="lg"><Link href="/assessments">{NAME.assessment}</Link></Button> : null}
+                  {complete && today.finale?.next_course ? <Button asChild variant="outline" size="lg"><Link href={`/start?course=${today.finale.next_course.id}&next=1`}>Start {today.finale.next_course.title}</Link></Button> : null}
                 </div>
+                {complete && today.finale?.challenges.length ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-medium">Still unsolved: the hardest problems in this course</p>
+                    <ul className="flex flex-col gap-1">
+                      {today.finale.challenges.map(p => (
+                        <li key={p.id}><Link href={`/problems/${p.id}`} className="text-sm underline underline-offset-4">{p.title}</Link> <span className="text-xs text-(--card-muted)">{p.difficulty}</span></li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             </Card>
           )}

@@ -169,7 +169,7 @@ quiz:
   - id: overlap
     kind: mcq
     prompt: What makes a problem a good fit for DP rather than plain recursion?
-    options: ["Overlapping subproblems", "Sorted input", "A small alphabet", "Negative numbers"]
+    options: ["Overlapping subproblems", "Input that is sorted", "A small input alphabet", "Many negative numbers"]
     answer: 0
     explanation: DP pays off when the same subproblems would otherwise be solved repeatedly.
     difficulty: 2

@@ -159,7 +159,7 @@ quiz:
   - id: cycle
     kind: mcq
     prompt: Processing undirected edges with DSU, union(u, v) returns false. What does that mean?
-    options: ["Edge (u, v) closes a cycle", "u and v are isolated", "The DSU is broken", "u equals v always"]
+    options: ["Edge (u, v) closes a cycle", "u and v are both isolated", "The DSU's parents are broken", "u and v are the same node"]
     answer: 0
     explanation: u and v were already connected, so adding the edge creates a cycle.
     difficulty: 2
@@ -174,11 +174,11 @@ quiz:
   - id: optimisations
     kind: mcq
     prompt: Which pair of optimisations makes DSU nearly constant time?
-    options: ["Path compression and union by size/rank", "Sorting and hashing", "Recursion and memoization", "Binary search and heaps"]
+    options: ["Path compression and union by size/rank", "Sorting the edges and hashing the nodes", "Recursion on find with memoized parents", "Binary search over a heap of root sizes"]
     answer: 0
     explanation: Together they bound the amortised cost by the inverse Ackermann function.
     difficulty: 2
-problems: [online-components]
+problems: [online-components, shared-cables]
 practice_links:
   - title: Redundant Connection
     url: https://leetcode.com/problems/redundant-connection/

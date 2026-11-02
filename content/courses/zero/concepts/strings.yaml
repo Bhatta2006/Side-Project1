@@ -208,9 +208,9 @@ quiz:
     prompt: "s = \"cat\". What happens on s[0] = \"b\"?"
     options:
       - "A TypeError: strings cannot be changed in place"
-      - "s becomes \"bat\""
-      - "s becomes \"b\""
-      - "Nothing happens"
+      - "s becomes \"bat\", with only the first letter changed"
+      - "s becomes \"b\", replacing the whole string at once"
+      - "Nothing happens, and s silently stays as \"cat\""
     answer: 0
     explanation: "Strings are immutable. Build a new one instead: s = \"b\" + s[1:]."
     difficulty: 4

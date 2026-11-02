@@ -170,7 +170,7 @@ quiz:
     languages: [python]
     kind: mcq
     prompt: "In Python, `x = input()` and the user types 5. What is `x + x`?"
-    options: ['"55" — text joined together', "10", "An error", "25"]
+    options: ["\"55\" — text joined together", "10 — the two numbers added", "An error — text cannot be added", "25 — the number multiplied by itself"]
     answer: 0
     explanation: input() returns text. Adding two strings joins them. Use int(input()) to get a number.
     difficulty: 2
@@ -185,10 +185,10 @@ quiz:
     kind: mcq
     prompt: "A program reads two numbers with a = input() and b = input() and prints a + b. The user types 2 and 3. What is printed?"
     options:
-      - "23"
-      - "5"
-      - "An error"
-      - "2 3"
+      - "\"55\" — text joined together"
+      - "10 — the two numbers added"
+      - "An error — text cannot be added"
+      - "25 — the number multiplied by itself"
     answer: 0
     explanation: "input() returns text, and + joins texts. Convert with int() before adding."
     difficulty: 4

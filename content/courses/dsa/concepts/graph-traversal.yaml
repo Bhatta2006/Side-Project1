@@ -179,10 +179,10 @@ quiz:
     kind: mcq
     prompt: Why does BFS find shortest paths in an unweighted graph?
     options:
-      - It visits nodes in order of increasing distance from the start
-      - It explores the deepest path first
-      - It sorts edges by weight
-      - It visits every path
+      - "It visits nodes in order of increasing distance from the start"
+      - "It explores the deepest path first, then backs up to shorter ones"
+      - "It sorts the edges by weight before visiting any neighbour"
+      - "It visits every possible path and keeps the shortest one found"
     answer: 0
     explanation: The queue processes all distance-d nodes before any distance-(d+1) node.
     difficulty: 2
@@ -197,10 +197,10 @@ quiz:
     kind: mcq
     prompt: How do you count connected components?
     options:
-      - Start a new BFS/DFS from each unvisited node and count the starts
-      - Count the edges
-      - Run BFS once from node 1
-      - Count nodes with no neighbours
+      - "Start a new BFS/DFS from each unvisited node and count the starts"
+      - "Count the edges, since each edge joins two components into one"
+      - "Run one BFS from node 1 and count the nodes it fails to reach"
+      - "Count the nodes with no neighbours, since each starts a component"
     answer: 0
     explanation: Each fresh start discovers exactly one new component.
     difficulty: 1
@@ -211,7 +211,7 @@ quiz:
     answer: 0
     explanation: Marking on enqueue prevents the same node being queued multiple times.
     difficulty: 2
-problems: [count-islands, fewest-hops]
+problems: [count-islands, fewest-hops, wall-breaker]
 practice_links:
   - title: Number of Islands
     url: https://leetcode.com/problems/number-of-islands/

@@ -159,10 +159,61 @@ def today_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment
         nudges=adaptive_views.nudges(db, catalog, user, enrollment, plan, now),
         proposals=[adaptive_proposals.view(p) for p in adaptive_proposals.pending(db, enrollment)],
         milestone=plan.milestones[0] if plan.milestones else None,
+        finale=finale(db, catalog, user, enrollment, plan),
     )
 
 
 OPEN = {"assumed", "upcoming", "in_progress", "locked"}
+NEXT_COURSE = {"zero": "dsa", "dsa": "cp"}
+FINALE_CHALLENGES = 3
+
+
+def finale(
+    db: Session, catalog: Catalog, user: User, enrollment: Enrollment, plan: Plan
+) -> dict | None:
+    """What a finished course leads to: mastery still to prove, the hardest problems not yet
+    solved, and the next course. None until every planned skill is learned."""
+    numbers = progress_numbers(plan)
+    if not numbers["complete"]:
+        return None
+    course = catalog.course(enrollment.course_id)
+    solved = set(
+        db.scalars(
+            select(Submission.problem_id).where(
+                Submission.user_id == user.id,
+                Submission.mode == "submit",
+                Submission.verdict == "accepted",
+            )
+        )
+    )
+    rank = {"hard": 0, "medium": 1, "easy": 2}
+    open_problems = sorted(
+        (p for p in course.problems if p.id not in solved),
+        key=lambda p: (rank.get(p.difficulty, 3), p.id),
+    )
+    following = NEXT_COURSE.get(course.id)
+    return dict(
+        graduated=numbers["mastered"] == numbers["total"],
+        to_master=numbers["total"] - numbers["mastered"],
+        challenges=[
+            dict(id=p.id, title=p.title, difficulty=p.difficulty)
+            for p in open_problems[:FINALE_CHALLENGES]
+        ],
+        next_course=(
+            dict(id=following, title=catalog.course(following).title)
+            if following in catalog.courses
+            else None
+        ),
+    )
+
+
+def course_finished(db: Session, catalog: Catalog, user: User, enrollment: Enrollment) -> bool:
+    if enrollment.course_id not in catalog.courses:
+        return True  # a retired course never holds a learner back
+    if enrollment.status != "active":
+        return False
+    plan = learn.plan_for(db, catalog, user, enrollment, now_seconds())
+    return bool(progress_numbers(plan)["complete"])
 
 
 def progress_numbers(plan: Plan) -> dict:

@@ -31,10 +31,10 @@ items:
   format: trace
   prompt: Reachable sums are 0 3 4 7. Number 5 arrives. Which sums are reachable now, up to 9?
   options:
-  - 0 3 4 5 7 8 9
-  - 0 3 4 7 12
-  - 5 8 9
-  - 0 3 4 5 7
+  - "0 3 4 5 7 8 9"
+  - "0 3 4 7 12"
+  - "0 3 4 5 7 8 9 12"
+  - "0 3 4 5 7"
   answer: 0
   misconceptions:
   - null
@@ -63,10 +63,10 @@ items:
   format: classify
   prompt: Is there a contiguous run summing to T, with positive numbers? Which tool?
   options:
-  - Sliding window or prefix sums
-  - Subset-sum table
-  - Two capacities
-  - Count subsets
+  - "Sliding window or prefix sums"
+  - "A subset-sum table up to T"
+  - "A two-capacity knapsack table"
+  - "Counting the subsets that hit T"
   answer: 0
   misconceptions:
   - null

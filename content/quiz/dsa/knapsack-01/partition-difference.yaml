@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Smashing stones until one is left, minimise it. Which known problem is this?
   options:
-  - Minimum difference partition
-  - Unbounded knapsack
-  - Sorting
-  - Sliding window
+  - "Minimum difference partition"
+  - "Unbounded knapsack on weights"
+  - "Sorting and smashing the two largest"
+  - "Sliding window over the stones"
   answer: 0
   misconceptions:
   - null

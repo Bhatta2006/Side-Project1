@@ -1,0 +1,100 @@
+id: seed-fund
+title: Seed fund
+concepts: [greedy]
+difficulty: hard
+statement: |
+  A small studio starts with capital `w` and may take on **at most `k`** of `n` projects, one
+  after another. Project `i` can only be started when the studio's current capital is at least
+  `need[i]`; finishing it adds `gain[i]` to the capital (the needed capital is not spent).
+  Each project can be done once. Print the largest capital the studio can end with.
+input_format: |
+  The first line contains n, k and w. The second line contains gain[1..n].
+  The third line contains need[1..n].
+output_format: The largest final capital.
+constraints:
+  - 1 ≤ n, k ≤ 100000
+  - 0 ≤ w, need[i] ≤ 10^9
+  - 0 ≤ gain[i] ≤ 10^4
+examples:
+  - input: "3 2 0\n1 2 3\n0 1 1\n"
+    output: "4"
+    explanation: "Only project 1 is affordable at first (+1). Then projects 2 and 3 open; take 3 (+3)."
+  - input: "3 3 0\n1 2 3\n0 1 2\n"
+    output: "6"
+  - input: "2 2 1\n5 9\n2 3\n"
+    output: "1"
+    explanation: Nothing is affordable, so the capital stays 1.
+hints:
+  - Among the projects you can afford right now, which one should you take first? Can taking it ever hurt later choices?
+  - Capital never goes down, so a project you can afford now stays affordable. Taking the biggest gain first opens the most doors and loses nothing.
+  - Sort projects by need. Keep a max-heap of gains of everything affordable; k times, push newly affordable projects, then pop the biggest gain (stop early if the heap is empty).
+approach: |
+  Exchange argument: capital only grows, so the set of affordable projects only grows. If an
+  optimal plan takes some affordable project before the largest affordable gain g, swapping
+  in g first leaves capital at least as high at every later step. So repeat k times: add all
+  projects with need ≤ capital to a max-heap of gains (projects sorted by need, pointer moves
+  forward), pop the largest gain, add it. Stop when nothing is affordable. O(n log n).
+reference: |
+  import sys, heapq
+  data = sys.stdin.buffer.read().split()
+  n, k, w = int(data[0]), int(data[1]), int(data[2])
+  gain = [int(x) for x in data[3:3 + n]]
+  need = [int(x) for x in data[3 + n:3 + 2 * n]]
+  order = sorted(range(n), key=lambda i: need[i])
+  heap = []
+  j = 0
+  for _ in range(k):
+      while j < n and need[order[j]] <= w:
+          heapq.heappush(heap, -gain[order[j]])
+          j += 1
+      if not heap:
+          break
+      w -= heapq.heappop(heap)
+  print(w)
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, k, w = int(data[0]), int(data[1]), int(data[2])
+  gain = [int(x) for x in data[3:3 + n]]
+  need = [int(x) for x in data[3 + n:3 + 2 * n]]
+  best = [w]
+  def go(cap, used, left):
+      best[0] = max(best[0], cap)
+      if left == 0:
+          return
+      for i in range(n):
+          if not used >> i & 1 and need[i] <= cap:
+              go(cap + gain[i], used | 1 << i, left - 1)
+  go(w, 0, k)
+  print(best[0])
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          n = rng.randint(1, 6)
+          k = rng.randint(1, n + 1)
+          lines = [f"{n} {k} {rng.randint(0, 3)}"]
+          lines.append(" ".join(str(rng.randint(0, 5)) for _ in range(n)))
+          lines.append(" ".join(str(rng.randint(0, 8)) for _ in range(n)))
+          yield "\n".join(lines)
+generator: |
+  def cases(rng):
+      yield "1 1 0\n5\n0"
+      yield "1 1 0\n5\n1"
+      yield "3 5 0\n0 0 1\n0 0 0"
+      for n, k, spread in ((100000, 100000, 10**9), (100000, 50000, 10**6), (100000, 10, 10**4)):
+          lines = [f"{n} {k} {rng.randint(0, 100)}"]
+          lines.append(" ".join(str(rng.randint(0, 10**4)) for _ in range(n)))
+          lines.append(" ".join(str(rng.randint(0, spread)) for _ in range(n)))
+          yield "\n".join(lines)
+      # A ladder: each project unlocks exactly the next.
+      n = 100000
+      yield f"{n} {n} 0\n" + " ".join(["1"] * n) + "\n" + " ".join(str(i) for i in range(n))
+      for _ in range(5):
+          n = rng.randint(2, 10)
+          lines = [f"{n} {rng.randint(1, n)} {rng.randint(0, 5)}"]
+          lines.append(" ".join(str(rng.randint(0, 9)) for _ in range(n)))
+          lines.append(" ".join(str(rng.randint(0, 15)) for _ in range(n)))
+          yield "\n".join(lines)
+time_limit_ms: 3000
+provenance:
+  origin: original

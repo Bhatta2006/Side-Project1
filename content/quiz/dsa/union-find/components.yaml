@@ -1,0 +1,129 @@
+id: quiz:dsa:union-find:components
+family: components
+concept: dsa:union-find
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: union_find_components
+  params:
+    n:
+    - 5
+    - 9
+    edges:
+    - 3
+    - 7
+  reference: components(n, edges)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: every edge counted as a merge
+  misconception: uf-count-redundant-edge
+- rule: distinct entries of the parent array read as groups
+  misconception: uf-parent-is-root
+items:
+- id: recognise
+  band: 1
+  format: mcq
+  prompt: Edges arrive one at a time and after each you must say whether two given cities are already
+    connected. What fits?
+  options:
+  - 'Union-find: merge on each edge, compare roots for each question'
+  - A fresh BFS from one city for every question after every edge
+  - Sort the edges by weight, then answer every question at the end
+  - A min-heap of edges keyed by the smaller city number
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  - confuse-index-value
+  explanation: Union-find answers connectivity online in near-constant time per edge and per question;
+    a BFS per question costs O(V + E) every time.
+- id: why-compress
+  band: 3
+  format: mcq
+  prompt: Without path compression or union by size, what can a single find cost after n unions?
+  options:
+  - 'O(n): the parent links can form one long chain'
+  - 'O(1): every node points straight at its root'
+  - O(log n) always, whatever order the unions come in
+  - 'O(n²): find revisits each node once per earlier union'
+  answer: 0
+  misconceptions:
+  - null
+  - uf-parent-is-root
+  - heap-size-vs-input-size
+  - double-count
+  explanation: Linking 0→1, 1→2, 2→3… builds a chain, and a find from the bottom walks all of it. Union
+    by size keeps depth O(log n); adding path compression makes it nearly O(1) amortised.
+- id: edge-redundant
+  band: 5
+  format: mcq
+  prompt: 6 nodes, edges (0,1) (1,2) (2,0) (3,4). How many groups, and which edge merged nothing?
+  options:
+  - 3 groups; (2,0) joined two nodes already in the same group
+  - 2 groups; every edge merged two groups
+  - 3 groups; (3,4) merged nothing because it comes last
+  - 4 groups; (2,0) split a group back into two
+  answer: 0
+  misconceptions:
+  - null
+  - uf-count-redundant-edge
+  - confuse-index-value
+  - uf-link-wrong-node
+  explanation: '{0,1,2}, {3,4} and {5}: three groups. When (2,0) arrives, 2 and 0 share a root, so it
+    is the redundant edge (the one LeetCode''s Redundant Connection asks for).'
+- id: transfer-cycle
+  band: 6
+  format: classify
+  prompt: An undirected graph arrives as an edge list. You must report the first edge that closes a cycle.
+    Which method, and what cost?
+  options:
+  - 'Union-find: the first edge whose ends already share a root, about O(E α(V))'
+  - 'DFS from every node after each edge: O(E·(V + E))'
+  - Topological sort, which fails exactly at the cycle edge
+  - 'Count edges: a cycle exists once there are V edges, so it is edge number V'
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - uf-link-wrong-node
+  - uf-count-redundant-edge
+  explanation: An edge closes a cycle exactly when its ends are already connected. Topological sort is
+    for directed graphs, and V edges only proves some cycle exists, not which edge closed it first.
+- id: transfer-accounts
+  band: 7
+  format: classify
+  prompt: Accounts list emails. Two accounts belong to one person when they share any email. How do you
+    merge them efficiently?
+  options:
+  - Map each email to the first account listing it, union the accounts, then group by root
+  - Compare every pair of accounts' email sets and merge the pairs that share any email
+  - Sort all emails and merge only accounts whose emails sit next to each other in order
+  - Union accounts that have the same owner name, since one person uses a single name
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-sort-breaks-order
+  - hash-key-collision
+  explanation: A map from email to its first account turns 'shares an email' into union operations, about
+    O(total emails · α). Names can collide between different people.
+hint_ladder:
+- Before merging, where do both ends of the edge lead when you keep following parent links?
+- If both ends reach the same root, they are already in one group, so the edge changes nothing.
+- Groups start at n and drop by one only on a merge of two different roots.
+time_limit_s: 150
+provenance:
+  origin: original

@@ -31,10 +31,10 @@ items:
   format: classify
   prompt: Why is power(b, p // 2) * power(b, p // 2) slow?
   options:
-  - Each call makes two calls, so there are about p calls in total
-  - Multiplication is slow
-  - It overflows
-  - It is not slow
+  - "Each call makes two calls, so there are about p calls in total"
+  - "Multiplying two large powers is slow, whatever the call count"
+  - "It overflows long before p is large enough to be slow"
+  - "It is not slow; halving p makes it O(log p) as usual"
   answer: 0
   misconceptions:
   - null

@@ -122,14 +122,14 @@ quiz:
   - id: formula
     kind: mcq
     prompt: With prefix hashes h and powers pw, the hash of s[l:r] is...
-    options: ["(h[r] − h[l]·pw[r − l]) mod M", "h[r] − h[l]", "h[r]·pw[l]", "(h[r] + h[l]) mod M"]
+    options: ["(h[r] − h[l]·pw[r − l]) mod M", "(h[r] − h[l]·pw[l]) mod M", "(h[r] − h[l]) · pw[r − l] mod M", "(h[r] + h[l]·pw[r − l]) mod M"]
     answer: 0
     explanation: Shift h[l] up by r − l positions before subtracting it from h[r].
     difficulty: 2
   - id: collisions
     kind: mcq
     prompt: Why use two moduli (or 2^61 − 1)?
-    options: ["To make accidental and adversarial collisions negligible", "To make hashing faster", "To support uppercase letters", "Because one modulus is incorrect"]
+    options: ["To make accidental and adversarial collisions negligible", "To make each hash computation run roughly twice as fast", "To support uppercase letters as well as lowercase ones", "Because a single modulus gives incorrect hashes for long strings"]
     answer: 0
     explanation: Many comparisons with a ~10^9 modulus make a false match likely (birthday paradox).
     difficulty: 2

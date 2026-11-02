@@ -702,10 +702,10 @@ quiz:
   kind: mcq
   prompt: The loop `while n > 0` counts digits. What must you add for n = 0?
   options:
-  - A special case, because 0 has one digit but the loop never runs
-  - Nothing
-  - Start the count at 1 for every n
-  - Use while n >= 0
+  - "A special case, because 0 has one digit but the loop never runs"
+  - "Nothing, because the loop already counts one digit for zero"
+  - "Start the count at 1 for every n, not only when n is zero"
+  - "Change the condition to while n >= 0 so the loop runs for zero"
   answer: 0
   explanation: Starting at 1 would overcount every other number, and n >= 0 never stops.
   difficulty: 1
@@ -746,10 +746,10 @@ quiz:
   kind: mcq
   prompt: The root loop always adds 2 per divisor found. What does it report for 36?
   options:
-  - 10 divisors, one too many
-  - 9 divisors
-  - 18 divisors
-  - 6 divisors
+  - "10 divisors, one too many"
+  - "9 divisors, exactly right"
+  - "18 divisors, doubled twice"
+  - "6 divisors, missing the root"
   answer: 0
   explanation: It counts 6 twice.
   difficulty: 3
@@ -768,10 +768,10 @@ quiz:
   kind: mcq
   prompt: Why does a primality test need a special check for n < 2?
   options:
-  - 0 and 1 are not prime, but the loop never runs for them
-  - The loop crashes for them
-  - They are prime
-  - It does not need one
+  - "0 and 1 are not prime, but the loop never runs for them"
+  - "The loop crashes with a division by zero when n is 0 or 1"
+  - "0 and 1 are prime, and the loop would wrongly reject them"
+  - "It does not need one; the divisor loop already rejects them"
   answer: 0
   explanation: A prime needs exactly two different divisors.
   difficulty: 3
@@ -790,10 +790,10 @@ quiz:
   kind: mcq
   prompt: Why compute the LCM as a // g * b instead of a * b // g in C++?
   options:
-  - a * b can overflow 64 bits even when the LCM fits
-  - Division is faster
-  - They give different answers in maths
-  - The compiler requires it
+  - "a * b can overflow 64 bits even when the LCM fits"
+  - "Dividing first is faster, but both orders are always safe"
+  - "The two orders give different answers in exact maths"
+  - "The compiler rejects a * b // g as an invalid expression"
   answer: 0
   explanation: Dividing first keeps the intermediate value small.
   difficulty: 4

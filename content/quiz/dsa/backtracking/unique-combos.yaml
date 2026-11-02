@@ -1,0 +1,112 @@
+id: quiz:dsa:backtracking:unique-combos
+family: unique-combos
+concept: dsa:backtracking
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: combination_sum_unique
+  params:
+    n:
+    - 5
+    - 7
+    value:
+    - 5
+    target:
+    - 6
+    - 10
+  reference: distinct_combos(nums, target)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: copies of equal numbers counted as different combinations
+  misconception: backtrack-duplicate-combos
+- rule: numbers reused
+  misconception: backtrack-reuse-element
+items:
+- id: undo
+  band: 3
+  format: mcq
+  prompt: A recursive permutation builder appends x to path, recurses, and then…?
+  options:
+  - Removes x from path (and marks x unused) before trying the next choice
+  - Nothing; each recursive call already copies path, so siblings start clean
+  - Clears the whole path so the next branch starts from an empty list
+  - Returns at once, because the first full permutation found is the answer
+  answer: 0
+  misconceptions:
+  - null
+  - backtrack-no-undo
+  - missing-reset
+  - stop-after-first
+  explanation: One path list is shared by every call. Undoing the choice restores the state for the sibling
+    branch; forgetting it leaks x into every later permutation.
+- id: count-subsets
+  band: 2
+  format: mcq
+  prompt: How many leaves does the include/exclude tree for all subsets of n items have?
+  options:
+  - 2ⁿ
+  - n!
+  - n²
+  - n
+  answer: 0
+  misconceptions:
+  - null
+  - order-matters-assumption
+  - subsets-linear
+  - subsets-vs-elements
+  explanation: 'Each item is in or out: two branches per level, n levels. Permutations give n! leaves
+    instead.'
+- id: edge-prune
+  band: 6
+  format: mcq
+  prompt: In Combination Sum with sorted candidates, why may the loop `break` (not `continue`) once nums[i]
+    > remaining?
+  options:
+  - Every later number is at least as large, so none of them can fit either
+  - Because each number may be used only once
+  - To skip duplicate combinations
+  - 'It can''t: break misses solutions that use larger numbers'
+  answer: 0
+  misconceptions:
+  - null
+  - backtrack-reuse-element
+  - backtrack-duplicate-combos
+  - pattern-sort-breaks-order
+  explanation: Sorting turns 'this one is too big' into 'all the rest are too big', which prunes the whole
+    remaining level.
+- id: transfer-queens
+  band: 7
+  format: classify
+  prompt: 'N-Queens: placing one queen per row, how do you test a square in O(1)?'
+  options:
+  - Keep sets (or arrays) of used columns, used r − c diagonals and used r + c anti-diagonals
+  - Scan the whole board for queens in the same row, column or diagonal
+  - Only check the column; rows and diagonals can't clash when you go row by row
+  - Check the square's eight neighbours
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - filter-ignored
+  - confuse-index-value
+  explanation: Every diagonal has a constant r − c and every anti-diagonal a constant r + c. Rows can't
+    clash by construction, but diagonals can.
+hint_ladder:
+- Which combinations add up to the target if each number is used once?
+- Two combinations with the same values are the same, even if they used different copies.
+- At each level, start a combination with a given value only once; deeper levels may use the next copy.
+time_limit_s: 180
+provenance:
+  origin: original

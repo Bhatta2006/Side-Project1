@@ -24,9 +24,9 @@ items:
     prompt: "When does a difference array beat updating every position directly?"
     options:
       - "Many range additions first, and the values are read only at the end"
-      - "One addition to a single position"
-      - "Each update must be read back before the next one"
-      - "The array is sorted"
+      - "A single addition to one position, read straight afterwards"
+      - "Each update must be read back before the next one is applied"
+      - "The array is sorted, so ranges can be found by binary search"
     answer: 0
     misconceptions: [null, pattern-brute-force-default, diff-online-queries, pattern-search-needs-sorted-input]
     explanation: "Each update costs O(1); one prefix pass at the end builds all values."
@@ -76,9 +76,9 @@ items:
     prompt: "Recipes recommend temperature ranges; count, for many questions, how many degrees in [a, b] are recommended by at least k recipes. Which tools?"
     options:
       - "Difference array for coverage, then a prefix sum of 'good' degrees per question"
-      - "Check every recipe for every question"
-      - "Binary search on k"
-      - "Sliding window of size k"
+      - "Check every recipe against every question, counting the degrees one at a time"
+      - "Binary search on k for each question over the sorted list of recipe ranges"
+      - "A sliding window of size k over the recipes, sorted by their lowest degree"
     answer: 0
     misconceptions: [null, pattern-brute-force-default, pattern-search-vs-scan, pattern-fixed-vs-variable-window]
     explanation: "Coverage is range additions; answering ranges fast is a second prefix sum."

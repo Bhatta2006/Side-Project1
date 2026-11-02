@@ -31,10 +31,10 @@ items:
   format: bug_spot
   prompt: The code skips the whole subtree of a child whose label equals its parent's. What is missed?
   options:
-  - Valid paths lying entirely inside that subtree
-  - Nothing
-  - Only single nodes
-  - Paths through the root
+  - "Valid paths lying entirely inside that subtree"
+  - "Nothing; such a subtree has no valid paths"
+  - "Only the single-node paths in that subtree"
+  - "Only the paths that pass through the root"
   answer: 0
   misconceptions:
   - null

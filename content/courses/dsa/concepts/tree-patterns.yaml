@@ -1125,10 +1125,10 @@ quiz:
   kind: mcq
   prompt: Why does distance K need parent pointers?
   options:
-  - Some nodes at distance K are reached by going up through ancestors
-  - To sort the answer
-  - To find the leaves
-  - It does not
+  - "Some nodes at distance K are reached by going up through ancestors"
+  - "To sort the answer by depth before returning it to the caller"
+  - "To find the leaves quickly, since leaves are always at distance K"
+  - "It does not; a DFS down from the target already reaches them all"
   answer: 0
   explanation: Child pointers only lead down.
   difficulty: 4

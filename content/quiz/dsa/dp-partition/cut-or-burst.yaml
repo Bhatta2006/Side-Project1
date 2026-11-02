@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: Before the cut-a-stick table, what do you do with the cut positions?
   options:
-  - Sort them and add 0 and L at the ends
-  - Nothing
-  - Sort them only
-  - Remove duplicates only
+  - "Sort them and add 0 and L at the ends"
+  - "Nothing; the table uses them as given"
+  - "Sort them only, with no extra ends"
+  - "Remove duplicate cut positions only"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Why does burst balloons choose the last balloon in a range?
   options:
-  - Its neighbours at that moment are the fixed walls, so both sides are independent
-  - It is the largest
-  - The first balloon would be cheaper
-  - It is required by the problem
+  - "Its neighbours at that moment are the fixed walls, so both sides are independent"
+  - "The last balloon is always the largest one, so it gives the most coins"
+  - "Choosing the first balloon would be cheaper, but the problem forbids it"
+  - "The problem statement requires the last balloon to be chosen explicitly"
   answer: 0
   misconceptions:
   - null

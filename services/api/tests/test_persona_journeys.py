@@ -185,6 +185,24 @@ def test_a_strong_learner_finishes_every_course_with_every_skill_proven(client, 
     )
     assert again.status_code == 409 and again.json()["error"]["code"] == "already_enrolled"
     assert {s["code"] for s in log} >= {"path", "checkpoint"}
+    # The finished course points onward: the next course, and hard problems still open.
+    following = {"zero": "dsa", "dsa": "cp", "cp": None}[course]
+    finale = today["finale"]
+    assert finale and len(finale["challenges"]) <= 3
+    assert (finale["next_course"] or {}).get("id") == following
+    if following:
+        onward = client.post(
+            "/api/v1/enrollments",
+            json=dict(
+                course=following,
+                language="python",
+                level={"dsa": "new-to-programming", "cp": "knows-dsa-basics"}[following],
+                minutes_per_day=30,
+                weekdays=[0, 1, 2, 3, 4],
+            ),
+            headers=headers,
+        )
+        assert onward.status_code == 200, onward.text
 
 
 def test_placement_knowledge_counts_only_after_its_confirmation_check(client, clock):  # noqa: F811

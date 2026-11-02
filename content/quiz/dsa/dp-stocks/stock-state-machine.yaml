@@ -93,10 +93,10 @@ items:
   format: bug_spot
   prompt: hold starts at 0. Prices 5 1, k = 1. What does the buggy machine print?
   options:
-  - 5, as if a share were free
-  - '0'
-  - '4'
-  - '−4'
+  - "5, as if a share were free"
+  - "0, as if no trade is made"
+  - "4, the drop from 5 to 1"
+  - "−4, buying high, selling low"
   answer: 0
   misconceptions:
   - null
@@ -125,10 +125,10 @@ items:
   format: mcq
   prompt: Why does a buy read cash[t − 1]?
   options:
-  - The buy is the t-th transaction, so it starts from at most t − 1 used
-  - To avoid an index error
-  - Because buying is cheaper
-  - It should read cash[t]
+  - "The buy is the t-th transaction, so it starts from at most t − 1 used"
+  - "To avoid an index error when t is the largest transaction count"
+  - "Because buying is cheaper when fewer transactions have been used"
+  - "It shouldn't; a buy must read cash[t], the same transaction count"
   answer: 0
   misconceptions:
   - null
@@ -141,10 +141,10 @@ items:
   format: classify
   prompt: Why does keeping the k biggest rising runs fail?
   options:
-  - Two runs separated by a small dip can be worth more as one trade
-  - Runs are hard to find
-  - It overcounts every rise
-  - It never fails
+  - "Two runs separated by a small dip can be worth more as one trade"
+  - "Rising runs are hard to find, since each needs a separate scan"
+  - "It overcounts every rise, adding each one to two different runs"
+  - "It never fails; the k biggest runs are always the best k trades"
   answer: 0
   misconceptions:
   - null
@@ -157,10 +157,10 @@ items:
   format: mcq
   prompt: Unlimited trades with a fee. Where does the fee go?
   options:
-  - Subtract it once per trade, for example on the sell
-  - Subtract it on the buy and the sell
-  - Subtract it every day you hold
-  - Ignore it unless the profit is negative
+  - "Subtract it once per trade, for example on the sell"
+  - "Subtract it on the buy and again on the sell"
+  - "Subtract it on every day that you hold a share"
+  - "Ignore it unless the trade's profit is negative"
   answer: 0
   misconceptions:
   - null
@@ -205,10 +205,10 @@ items:
   format: classify
   prompt: k = 1000 and there are 1500 days. What is the fastest correct approach?
   options:
-  - Treat it as unlimited, since k ≥ n / 2, and sum every rise
-  - The full k-transaction table
-  - Keep the 1000 biggest runs
-  - Brute force
+  - "Treat it as unlimited, since k ≥ n / 2, and sum every rise"
+  - "Fill the full k-transaction table, 1000 × 1500 cells"
+  - "Keep the 1000 biggest rising runs and add them up"
+  - "Brute force over every set of buy and sell days"
   answer: 0
   misconceptions:
   - null
@@ -221,10 +221,10 @@ items:
   format: classify
   prompt: You may hold up to 3 shares at once, unlimited trades, one action per day. What changes?
   options:
-  - The state becomes the number of shares held, 0 to 3
-  - Nothing
-  - Sum every rise three times
-  - Use k = 3 transactions
+  - "The state becomes the number of shares held, 0 to 3"
+  - "Nothing; the two-state machine already allows this"
+  - "Sum every rise three times, once for each share"
+  - "Use the k = 3 transaction table instead"
   answer: 0
   misconceptions:
   - null

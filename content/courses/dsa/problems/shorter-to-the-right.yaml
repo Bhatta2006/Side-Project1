@@ -1,0 +1,75 @@
+id: shorter-to-the-right
+title: Shorter to the right
+concepts: [bst]
+difficulty: hard
+statement: |
+  `n` people stand in a line with heights `h[1..n]`. For every person, count how many people
+  **to their right** are strictly shorter than them. Print the `n` counts.
+input_format: |
+  The first line contains n. The second line contains the n heights.
+output_format: The n counts, separated by spaces.
+constraints:
+  - 1 ≤ n ≤ 100000
+  - -10^9 ≤ h[i] ≤ 10^9
+examples:
+  - input: "4\n5 2 6 1\n"
+    output: "2 1 1 0"
+    explanation: "5 sees 2 and 1; 2 sees 1; 6 sees 1; nobody is right of 1."
+  - input: "3\n2 2 2\n"
+    output: "0 0 0"
+hints:
+  - Checking every pair is O(n²), far too slow for 100,000 people. Walk from the right instead. What do you need to ask about the people already passed?
+  - "You need: how many of the heights seen so far are smaller than this one? An ordered structure that counts by rank answers that."
+  - "Compress heights to ranks 1..k, then walk right to left with a Fenwick tree (or an order-statistics BST): query the count of ranks below h[i], then add h[i]. Equal heights are not shorter."
+approach: |
+  Walk from the right, keeping every height seen in a structure that answers "how many are
+  smaller than x?". A balanced BST with subtree sizes does it, as does a Fenwick tree over
+  compressed ranks: rank the distinct heights, and for each person (right to left) the answer
+  is prefix_sum(rank − 1), then add 1 at their rank. Strictly shorter means equal heights don't
+  count, hence rank − 1. O(n log n). A merge sort that counts, per element, how many from the
+  right half jump ahead of it also works.
+reference: |
+  import sys
+  data = sys.stdin.buffer.read().split()
+  n = int(data[0])
+  h = [int(x) for x in data[1:1 + n]]
+  rank = {v: i + 1 for i, v in enumerate(sorted(set(h)))}
+  k = len(rank)
+  tree = [0] * (k + 1)
+  out = [0] * n
+  for i in range(n - 1, -1, -1):
+      r = rank[h[i]] - 1
+      s = 0
+      while r > 0:
+          s += tree[r]
+          r -= r & -r
+      out[i] = s
+      r = rank[h[i]]
+      while r <= k:
+          tree[r] += 1
+          r += r & -r
+  print(" ".join(map(str, out)))
+brute: |
+  n = int(input())
+  h = list(map(int, input().split()))
+  print(" ".join(str(sum(1 for j in range(i + 1, n) if h[j] < h[i])) for i in range(n)))
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          n = rng.randint(1, 8)
+          yield f"{n}\n" + " ".join(str(rng.randint(-3, 3)) for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "1\n7"
+      yield "5\n1 2 3 4 5"
+      yield "5\n5 4 3 2 1"
+      n = 100000
+      yield f"{n}\n" + " ".join(str(n - i) for i in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(-10**9, 10**9)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, 5)) for _ in range(n))
+      for _ in range(5):
+          n = rng.randint(2, 12)
+          yield f"{n}\n" + " ".join(str(rng.randint(0, 6)) for _ in range(n))
+time_limit_ms: 3000
+provenance:
+  origin: original

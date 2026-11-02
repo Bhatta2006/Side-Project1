@@ -216,8 +216,10 @@ def concept_activities(
             reason=support_reason,
             code=support_code,
         )
-        # After a missed check, re-teach before the retake; other support follows the check.
-        items.insert(1 if support_code == "failed_check_refresh" else len(items), step)
+        # After a missed check, re-teach before the retake (the retake is pointless without
+        # it); support for a concept not yet checked follows the check.
+        retake = support_code == "failed_check_refresh" or state.failures > 0
+        items.insert(1 if retake else len(items), step)
     share = est * 0.55 / max(1, len(problems))
     items += [
         Activity(
@@ -486,7 +488,9 @@ def build_plan(
                 tried = set(adaptive.tried.get(qualified, ())) | {
                     k for k in SUPPORT_MINUTES if f"{k}:{qualified}" in completed
                 }
-                rung = next_rung(stuck, tried, weak is not None)
+                rung = next_rung(
+                    stuck, tried, weak is not None, bool(catalog.prerequisites.get(qualified))
+                )
                 if rung and not rung[1]:
                     support, support_reason = rung[0], stuck.summary
             support_code = "stuck_support"

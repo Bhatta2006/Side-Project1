@@ -124,7 +124,7 @@ quiz:
   - id: twod
     kind: mcq
     prompt: Which term is added back in the 2D rectangle query?
-    options: ["P[r1−1][c1−1]", "P[r2][c2]", "P[r1][c1]", "None"]
+    options: ["P[r1−1][c1−1]", "P[r2][c1−1]", "P[r1−1][c2]", "P[r1][c1]"]
     answer: 0
     explanation: The top-left corner region is subtracted twice, so it's added back once.
     difficulty: 3

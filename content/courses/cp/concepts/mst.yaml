@@ -136,14 +136,14 @@ quiz:
   - id: kruskal-skip
     kind: mcq
     prompt: In Kruskal, when is an edge skipped?
-    options: ["When both ends are already in the same component", "When it is the most expensive", "When it touches a leaf", "Never"]
+    options: ["When both ends are already in the same component", "When it is the most expensive edge left in the list", "When one of its ends is a leaf of the current tree", "Never; Kruskal adds every edge once it is sorted"]
     answer: 0
     explanation: Adding it would create a cycle without connecting anything new.
     difficulty: 1
   - id: maximum
     kind: mcq
     prompt: How do you get a maximum spanning tree with Kruskal?
-    options: ["Sort edges in descending order", "Negate the node numbers", "Use BFS", "It's impossible"]
+    options: ["Sort edges in descending order", "Negate the node numbers first", "Use BFS from the heaviest edge", "It's impossible with Kruskal"]
     answer: 0
     explanation: The same greedy with the opposite order maximises the total.
     difficulty: 2

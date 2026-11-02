@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: In palindrome partitioning II, what does cuts[i] mean?
   options:
-  - The fewest cuts so that s[0..i] is all palindromes
-  - Whether s[0..i] is a palindrome
-  - The longest palindrome ending at i
-  - The cuts needed for s[i..n−1]
+  - "The fewest cuts so that s[0..i] is all palindromes"
+  - "Whether the prefix s[0..i] is itself a palindrome"
+  - "The length of the longest palindrome ending at i"
+  - "The cuts needed for the suffix s[i..n−1] instead"
   answer: 0
   misconceptions:
   - null
@@ -48,10 +48,10 @@ items:
   format: complexity
   prompt: Checking each piece for being a palindrome by scanning it inside the double loop costs what?
   options:
-  - O(n³); precompute a palindrome table for O(n²)
-  - O(n²)
-  - O(n)
-  - O(n log n)
+  - "O(n³); precompute a palindrome table for O(n²)"
+  - "O(n²), the same as the double loop alone"
+  - "O(n), since each check stops at a mismatch"
+  - "O(n log n), from halving each piece checked"
   answer: 0
   misconceptions:
   - null

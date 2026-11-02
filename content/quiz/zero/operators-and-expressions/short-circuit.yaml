@@ -30,10 +30,10 @@ items:
   format: trace
   prompt: x = 5. In x > 3 or y > 10, is y > 10 evaluated?
   options:
-  - No; the left side is already true
-  - Yes, always
-  - Only if y exists
-  - It raises an error
+  - "No; the left side is already true"
+  - "Yes, both sides always are"
+  - "Only if y has been defined"
+  - "No; it raises an error first"
   answer: 0
   misconceptions:
   - null
@@ -46,10 +46,10 @@ items:
   format: classify
   prompt: In Java, why is (d != 0 & n % d == 0) unsafe for d = 0?
   options:
-  - '& evaluates both sides, so n % 0 still runs'
-  - '& is not allowed on booleans'
-  - It is safe
-  - '& only checks the right side'
+  - "& evaluates both sides, so n % 0 still runs"
+  - "& is not allowed between two booleans"
+  - "It is safe; & stops once d != 0 is false"
+  - "& only checks the right side of the two"
   answer: 0
   misconceptions:
   - null

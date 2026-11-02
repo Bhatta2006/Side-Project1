@@ -15,10 +15,10 @@ items:
   format: mcq
   prompt: Why keep both T[i][j] and F[i][j]?
   options:
-  - XOR and OR need the number of ways a part is false
-  - To print both answers
-  - It is faster
-  - Only for AND
+  - "XOR and OR need the number of ways a part is false"
+  - "To print both the true and the false answers"
+  - "Keeping both tables makes the loops faster"
+  - "Only AND needs the false counts, not XOR"
   answer: 0
   misconceptions:
   - null

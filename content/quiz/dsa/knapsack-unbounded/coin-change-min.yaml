@@ -64,10 +64,10 @@ items:
   prompt: In Java, INF = Integer.MAX_VALUE and the update is dp[a] = min(dp[a], dp[a − c] + 1). What goes
     wrong?
   options:
-  - dp[a − c] + 1 overflows to a negative number when dp[a − c] is INF
-  - Nothing
-  - The loop never ends
-  - It prints -1 too often
+  - "dp[a − c] + 1 overflows to a negative number when dp[a − c] is INF"
+  - "Nothing goes wrong; Java's min handles Integer.MAX_VALUE safely"
+  - "The loop never ends, because dp[a] keeps changing on every pass"
+  - "It prints −1 too often, because INF is never replaced by a count"
   answer: 0
   misconceptions:
   - null

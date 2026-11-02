@@ -811,10 +811,10 @@ quiz:
   kind: mcq
   prompt: Assignment of n workers to n jobs with bitmask DP. How many states are there?
   options:
-  - 2^n
-  - n!
-  - n²
-  - 2n
+  - "2^n"
+  - "n!"
+  - "n²"
+  - "n·2"
   answer: 0
   explanation: One state per set of taken jobs; the worker is popcount(mask).
   difficulty: 1
@@ -867,10 +867,10 @@ quiz:
   kind: mcq
   prompt: Counting records with fewer than 2 A's and no 3 L's in a row. What is the state?
   options:
-  - (A's so far, L's at the end)
-  - A's so far only
-  - The whole record
-  - The last letter only
+  - "(A's so far, L's at the end)"
+  - "The number of A's so far only"
+  - "The whole record written so far"
+  - "The last letter of the record only"
   answer: 0
   explanation: Those are exactly what the two rules look back at.
   difficulty: 3
@@ -889,10 +889,10 @@ quiz:
   kind: mcq
   prompt: In digit DP, what does the tight flag mean?
   options:
-  - The digits so far equal N's prefix, so the next digit is limited by N
-  - The digit sum is already too large
-  - The number has no leading zeros
-  - The current digit is 9
+  - "The digits so far equal N's prefix, so the next digit is limited by N"
+  - "The digit sum chosen so far is already larger than the allowed total"
+  - "The number built so far has no leading zeros, so it is a real number"
+  - "The digit at the current position is 9, so the next one must carry"
   answer: 0
   explanation: Without it, the count includes numbers larger than N.
   difficulty: 4

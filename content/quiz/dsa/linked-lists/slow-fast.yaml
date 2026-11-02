@@ -1,0 +1,128 @@
+id: quiz:dsa:linked-lists:slow-fast
+family: slow-fast
+concept: dsa:linked-lists
+format: output_prediction
+tracks:
+- interview
+- competitive
+languages:
+- python
+- cpp
+- java
+generator:
+  template: slow_fast_middle
+  params:
+    n:
+    - 4
+    - 9
+    value:
+    - 10
+    - 99
+  reference: middle(val, nxt, head)
+  seeds:
+    practice:
+      start: 0
+      stop: 40
+    assessment:
+      start: 40
+      stop: 60
+distractors:
+- rule: first middle on an even length
+  misconception: ll-even-first-middle
+- rule: middle of the arrays, not of the list
+  misconception: ll-memory-order
+items:
+- id: reverse-order
+  band: 2
+  format: mcq
+  prompt: 'Reversing a list in place with prev, cur and nxt pointers: which step must come first inside
+    the loop?'
+  options:
+  - Save nxt = cur.next before pointing cur.next at prev
+  - Point cur.next at prev, then save nxt = cur.next
+  - Move prev to cur, then cur to cur.next
+  - Set cur.next to null so the list ends here
+  answer: 0
+  misconceptions:
+  - null
+  - ll-lose-next-pointer
+  - ll-lose-next-pointer
+  - ll-lose-next-pointer
+  explanation: Once cur.next points back at prev, the rest of the list is unreachable unless you saved
+    it first.
+- id: cycle-why-meet
+  band: 4
+  format: mcq
+  prompt: Why must fast and slow meet if the list has a cycle?
+  options:
+  - Inside the cycle the gap between them shrinks by one each step, so it reaches 0
+  - Fast laps slow on every step of the loop, so they are always at the same node
+  - They only meet when the cycle length is even; an odd cycle lets fast skip slow
+  - They meet at the head, where the cycle starts, once both have gone around once
+  answer: 0
+  misconceptions:
+  - null
+  - ll-fast-pointer-value
+  - ll-even-first-middle
+  - ll-cycle-check-confusion
+  explanation: Each step fast gains one node on slow; a gap that drops by one can't jump over 0. The meeting
+    point is generally not the cycle start.
+- id: edge-cycle-start
+  band: 6
+  format: mcq
+  prompt: After slow and fast meet inside a cycle, how do you find the node where the cycle begins?
+  options:
+  - Move one pointer back to head; step both one node at a time; they meet at the start
+  - The meeting node itself is the cycle start, because slow entered the cycle there
+  - Keep fast moving two steps and slow one until they meet a second time; that's it
+  - Count the cycle length; the start is exactly that many nodes after head in the list
+  answer: 0
+  misconceptions:
+  - null
+  - ll-cycle-check-confusion
+  - ll-fast-pointer-value
+  - confuse-index-value
+  explanation: If the tail before the cycle has length a, the meeting point is a steps (mod cycle length)
+    before the start, so both pointers arrive together after a steps. O(n) time, O(1) space.
+- id: edge-remove-nth
+  band: 5
+  format: mcq
+  prompt: Remove the n-th node from the end in one pass. The list may have exactly n nodes. What makes
+    that case safe?
+  options:
+  - A dummy node before head, so the node before the one removed always exists
+  - Checking that n is smaller than the length first
+  - Moving fast n - 1 steps ahead instead of n
+  - Removing head is impossible, so return the list unchanged
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - loop-bound-off-by-one
+  - missing-unreachable-check
+  explanation: With a dummy, fast starts n + 1 ahead of slow at dummy; when fast hits null, slow is just
+    before the target, even when the target is head.
+- id: transfer-palindrome
+  band: 7
+  format: classify
+  prompt: Check whether a singly linked list is a palindrome in O(n) time and O(1) extra space.
+  options:
+  - Find the middle with slow/fast, reverse the second half, compare, then restore it
+  - Copy the values into an array and compare the two ends moving toward the middle
+  - Recurse to the end of the list and compare each node on the way back to the head
+  - Compare head with the last node, delete both, and repeat until one or none is left
+  answer: 0
+  misconceptions:
+  - null
+  - pattern-brute-force-default
+  - pattern-brute-force-default
+  - design-shift-delete
+  explanation: The array and recursion both use O(n) space; repeatedly finding the last node is O(n²).
+    Reversing half in place keeps O(1) space.
+hint_ladder:
+- Write out the list in the order nxt gives, starting from head.
+- Fast moves twice per step of slow; when can fast no longer move twice?
+- With an even length, slow ends on the second of the two middle nodes.
+time_limit_s: 150
+provenance:
+  origin: original

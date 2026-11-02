@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: There is no 0-height bar at the end. Which input gives a wrong answer?
   options:
-  - 1 2 3, because no bar is ever popped
-  - 3 2 1
-  - 3 1 3
-  - 6 5 2
+  - "1 2 3, because no bar is ever popped"
+  - "3 2 1, because the heights only decrease"
+  - "3 1 3, because the two 3s are never joined"
+  - "6 5 2, because the tallest bar is measured last"
   answer: 0
   misconceptions:
   - null

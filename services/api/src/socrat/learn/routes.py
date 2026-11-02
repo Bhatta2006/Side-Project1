@@ -403,8 +403,12 @@ def enroll(body: EnrollInput, request: Request):
         user = user_of(request, db, write=True)
         if user.birth_year is None:
             raise HTTPException(409, "profile_incomplete")
-        # Course switching is off for now: one course per learner.
-        if learn.active_enrollment(db, user.id) is not None:
+        # One course at a time: a learner moves on once the current course is finished.
+        active = learn.active_enrollment(db, user.id)
+        if active is not None and not views.course_finished(db, cat, user, active):
+            raise HTTPException(409, "already_enrolled")
+        # Moving on means the next course in the sequence, never back or sideways.
+        if active is not None and views.NEXT_COURSE.get(active.course_id) != body.course:
             raise HTTPException(409, "already_enrolled")
         goal = {
             k: v

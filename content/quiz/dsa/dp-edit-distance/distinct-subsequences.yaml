@@ -47,10 +47,10 @@ items:
   format: bug_spot
   prompt: The one-row loop runs j forwards. What goes wrong?
   options:
-  - One character of s can fill two positions of t
-  - Nothing
-  - It counts too few
-  - It only fails when t is empty
+  - "One character of s can fill two positions of t"
+  - "Nothing; forwards and backwards give the same count"
+  - "It counts too few, missing the matches at the end"
+  - "It only fails when t is empty and nothing matches"
   answer: 0
   misconceptions:
   - null

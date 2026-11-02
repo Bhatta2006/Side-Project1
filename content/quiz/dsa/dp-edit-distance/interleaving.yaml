@@ -31,10 +31,10 @@ items:
   format: mcq
   prompt: Which character of s3 does cell ok[i][j] look at?
   options:
-  - s3[i + j − 1]
-  - s3[i − 1]
-  - s3[j − 1]
-  - s3[i + j]
+  - "s3[i + j − 1]"
+  - "s3[i − 1], ignoring j"
+  - "s3[j − 1], ignoring i"
+  - "s3[i + j], one further"
   answer: 0
   misconceptions:
   - null
@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Both s1 and s2 offer the next character of s3. What should the solution do?
   options:
-  - Keep both possibilities (the table does this)
-  - Always take it from s1
-  - Always take it from s2
-  - Give up
+  - "Keep both possibilities (the table does this)"
+  - "Always take the character from s1 first"
+  - "Always take the character from s2 first"
+  - "Give up; the strings cannot interleave"
   answer: 0
   misconceptions:
   - null

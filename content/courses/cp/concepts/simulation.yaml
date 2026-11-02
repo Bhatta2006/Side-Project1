@@ -117,10 +117,10 @@ quiz:
     kind: mcq
     prompt: In Game of Life–style updates, why use a second grid?
     options:
-      - All cells must update from the same previous state
-      - It is faster
-      - To save memory
-      - The judge requires it
+      - "All cells must update from the same previous state"
+      - "A second grid makes each step run noticeably faster"
+      - "Two grids use less memory than one grid with flags"
+      - "The judge requires the input grid to stay unchanged"
     answer: 0
     explanation: Updating in place would let early cells' new values affect later cells in the same step.
     difficulty: 2
@@ -128,10 +128,10 @@ quiz:
     kind: mcq
     prompt: A deterministic process has at most 1000 possible states. You need its state after 10^18 steps. Approach?
     options:
-      - Detect the cycle (it must repeat within 1001 steps) and use modulo
-      - Simulate all 10^18 steps
-      - Binary search on the step
-      - It is impossible
+      - "Detect the cycle (it must repeat within 1001 steps) and use modulo"
+      - "Simulate all 10^18 steps with a tight loop and fast input/output"
+      - "Binary search on the step number at which the state stops changing"
+      - "It is impossible, since 10^18 steps can never be computed in time"
     answer: 0
     explanation: By the pigeonhole principle a state repeats quickly; the rest is periodic.
     difficulty: 3
@@ -140,9 +140,9 @@ quiz:
     prompt: "A simulation runs for up to 10^18 steps but the state repeats with a short cycle. The usual technique is"
     options:
       - "detect the cycle and skip whole cycles"
-      - "simulate step by step faster"
-      - "use floating point"
-      - "binary search on steps"
+      - "simulate step by step, but much faster"
+      - "use floating point to jump ahead in time"
+      - "binary search on the number of steps"
     answer: 0
     explanation: "Record when each state was first seen; once a state repeats, jump ahead by multiples of the cycle length."
     difficulty: 4
@@ -151,9 +151,9 @@ quiz:
     prompt: "Updating a grid in place for a Game-of-Life step gives wrong results because"
     options:
       - "later cells read neighbours that were already updated this step"
-      - "the grid is too large"
-      - "integers overflow"
-      - "the edges wrap"
+      - "the grid is too large to update in a single pass of the loops"
+      - "the neighbour counts overflow the integers used to store them"
+      - "the edges of the grid wrap around and count cells on both sides"
     answer: 0
     explanation: "Every cell must see the previous generation; write into a second grid (or encode old and new states)."
     difficulty: 5

@@ -731,10 +731,10 @@ quiz:
   kind: mcq
   prompt: Envelopes are sorted by width. Why sort equal widths by height descending?
   options:
-  - So two envelopes of the same width can never both be in the chain
-  - To make the LIS longer
-  - Because heights must decrease
-  - It does not matter
+  - "So two envelopes of the same width can never both be in the chain"
+  - "To make the longest increasing subsequence of heights longer"
+  - "Because heights must decrease along any valid envelope chain"
+  - "It does not matter how equal widths are ordered by height"
   answer: 0
   explanation: Descending heights within a width cannot form an increasing pair.
   difficulty: 4

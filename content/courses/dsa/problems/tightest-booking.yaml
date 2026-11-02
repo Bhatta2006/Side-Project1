@@ -1,0 +1,96 @@
+id: tightest-booking
+title: Tightest booking
+concepts: [intervals]
+difficulty: hard
+statement: |
+  A hall has `n` bookings; booking `i` covers the whole minutes `l..r` (both ends included),
+  so its length is `r − l + 1`. Then come `q` questions: for minute `x`, what is the length of
+  the **shortest** booking that covers `x`? Print `-1` when no booking covers it.
+input_format: |
+  The first line contains n and q. Each of the next n lines contains l and r.
+  The last line contains the q minutes.
+output_format: One answer per question, separated by spaces, in the order asked.
+constraints:
+  - 1 ≤ n, q ≤ 100000
+  - 1 ≤ l ≤ r ≤ 10^9
+  - 1 ≤ x ≤ 10^9
+examples:
+  - input: "4 4\n1 4\n2 4\n3 6\n4 4\n2 3 4 5\n"
+    output: "3 3 1 4"
+    explanation: "Minute 4 is covered by [4,4] (length 1). Minute 5 only by [3,6] (length 4)."
+  - input: "2 3\n2 3\n10 10\n1 10 11\n"
+    output: "-1 1 -1"
+hints:
+  - Testing every booking for every question is O(n · q). Could you answer the questions in a better order?
+  - Sort the questions by minute and the bookings by start. As x grows, which bookings become possible, and which stop being useful?
+  - "Sweep x upward: push every booking with l ≤ x into a min-heap keyed by length (storing r too). Pop from the top while its r < x (it ended and never comes back). The top is the answer."
+approach: |
+  Answer offline. Sort bookings by l and questions by x (remember original positions). Sweep
+  the questions in increasing x: add each booking with l ≤ x to a min-heap of (length, r).
+  Then discard from the top any booking with r < x; it has ended and can't cover any later
+  (larger) x either, so lazy removal is safe. The heap top is the shortest booking covering
+  x, or -1 when the heap is empty. O((n + q) log n).
+reference: |
+  import sys, heapq
+  data = sys.stdin.buffer.read().split()
+  n, q = int(data[0]), int(data[1])
+  books = sorted((int(data[2 + 2 * i]), int(data[3 + 2 * i])) for i in range(n))
+  xs = [int(v) for v in data[2 + 2 * n:2 + 2 * n + q]]
+  order = sorted(range(q), key=lambda i: xs[i])
+  heap = []
+  out = [0] * q
+  j = 0
+  for i in order:
+      x = xs[i]
+      while j < n and books[j][0] <= x:
+          l, r = books[j]
+          heapq.heappush(heap, (r - l + 1, r))
+          j += 1
+      while heap and heap[0][1] < x:
+          heapq.heappop(heap)
+      out[i] = heap[0][0] if heap else -1
+  print(" ".join(map(str, out)))
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, q = int(data[0]), int(data[1])
+  books = [(int(data[2 + 2 * i]), int(data[3 + 2 * i])) for i in range(n)]
+  xs = [int(v) for v in data[2 + 2 * n:2 + 2 * n + q]]
+  out = []
+  for x in xs:
+      fit = [r - l + 1 for l, r in books if l <= x <= r]
+      out.append(min(fit) if fit else -1)
+  print(" ".join(map(str, out)))
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          n, q = rng.randint(1, 5), rng.randint(1, 5)
+          lines = [f"{n} {q}"]
+          for _ in range(n):
+              l = rng.randint(1, 10)
+              lines.append(f"{l} {rng.randint(l, 12)}")
+          lines.append(" ".join(str(rng.randint(1, 13)) for _ in range(q)))
+          yield "\n".join(lines)
+generator: |
+  def cases(rng):
+      yield "1 1\n1 1\n1"
+      yield "1 2\n1 1000000000\n1 1000000000"
+      yield "3 3\n5 5\n5 5\n1 9\n5 4 6"
+      for n, q, top, span in ((50000, 50000, 10**9, 10**9), (100000, 100000, 1000, 50), (50000, 50000, 10**9, 10)):
+          lines = [f"{n} {q}"]
+          for _ in range(n):
+              l = rng.randint(1, top)
+              lines.append(f"{l} {min(10**9, l + rng.randint(0, span))}")
+          lines.append(" ".join(str(rng.randint(1, top)) for _ in range(q)))
+          yield "\n".join(lines)
+      for _ in range(5):
+          n, q = rng.randint(1, 10), rng.randint(1, 10)
+          lines = [f"{n} {q}"]
+          for _ in range(n):
+              l = rng.randint(1, 30)
+              lines.append(f"{l} {rng.randint(l, 35)}")
+          lines.append(" ".join(str(rng.randint(1, 36)) for _ in range(q)))
+          yield "\n".join(lines)
+time_limit_ms: 3000
+provenance:
+  origin: original

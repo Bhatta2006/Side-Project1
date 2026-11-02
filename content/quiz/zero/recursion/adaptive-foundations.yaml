@@ -16,10 +16,10 @@ items:
   pool: practice
   prompt: What is a base case in a recursive function?
   options:
-  - A case that returns without making another recursive call
-  - The first variable assigned
-  - A call with the largest possible input
-  - A loop that never ends
+  - "A case that returns without making another recursive call"
+  - "The first variable assigned inside the recursive function"
+  - "A call made with the largest input the function accepts"
+  - "A loop inside the function that never reaches its end"
   answer: 0
   explanation: A base case supplies an answer directly so that recursive calls can stop.
 - id: foundation-2

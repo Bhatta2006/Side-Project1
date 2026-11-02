@@ -14,10 +14,10 @@ items:
   format: mcq
   prompt: For an Armstrong check of n, which power is each digit raised to?
   options:
-  - The number of digits of n
-  - Always 3
-  - The digit itself
-  - Always 2
+  - "The number of digits of n"
+  - "Always 3, as for cubes"
+  - "The value of the digit itself"
+  - "Always 2, as for squares"
   answer: 0
   misconceptions:
   - null
@@ -46,10 +46,10 @@ items:
   format: classify
   prompt: Is 102 a self-dividing number (every digit divides it)?
   options:
-  - No; it has a 0 digit, which cannot divide anything
-  - 'Yes'
-  - Only the 1 matters
-  - It crashes the check
+  - "No; it has a 0 digit, which cannot divide anything"
+  - "Yes; 1, 0 and 2 each divide 102 with no remainder"
+  - "Yes; only the digits 1 and 2 matter for the check"
+  - "It crashes the check, so the answer is undefined"
   answer: 0
   misconceptions:
   - null

@@ -114,7 +114,7 @@ quiz:
   - id: perm-feasible
     kind: mcq
     prompt: For n ≤ 10, is trying all permutations (with O(n) work each) feasible in C++?
-    options: ["Yes — about 3.6·10^7 operations", "No — 10^10 operations", "Only for n ≤ 5", "Only in Python"]
+    options: ["Yes — about 3.6·10^7 operations", "No — about 10^10 operations", "Only for n ≤ 5, about 600 steps", "Only in Python, using itertools"]
     answer: 0
     explanation: 10! ≈ 3.6·10^6 permutations × 10 ≈ 3.6·10^7.
     difficulty: 2
@@ -128,7 +128,7 @@ quiz:
   - id: mitm
     kind: mcq
     prompt: Meet in the middle improves subset enumeration from O(2^n) to roughly...
-    options: ["O(2^(n/2) · n)", "O(n²)", "O(n log n)", "O(2^n / n)"]
+    options: ["O(2^(n/2) · n)", "O(n · 2^(n/4))", "O(n² log n)", "O(2^n / n)"]
     answer: 0
     explanation: Two halves of 2^(n/2) sums each, combined after sorting.
     difficulty: 3
@@ -136,10 +136,10 @@ quiz:
     kind: mcq
     prompt: Your fast solution gets Wrong Answer on a hidden test. What's the most effective next step?
     options:
-      - Compare it with a brute force on many random small inputs
-      - Resubmit unchanged
-      - Rewrite in another language
-      - Increase array sizes
+      - "Compare it with a brute force on many random small inputs"
+      - "Resubmit it unchanged in case the judge was having trouble"
+      - "Rewrite the whole solution in another programming language"
+      - "Test it on bigger arrays, since the bug must be in large cases"
     answer: 0
     explanation: Stress testing finds a tiny counterexample you can trace by hand.
     difficulty: 2

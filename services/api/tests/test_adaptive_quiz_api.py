@@ -150,13 +150,14 @@ def test_concept_check_round_trip_writes_ratings_responses_and_evidence(on):
             db.get(ItemRating, k).d_current < service.item_by_key(cat, k).d_prior for k in keys
         )
 
-    # Seen items are never served again: a new session has nothing new to ask.
+    # A retake with nothing unseen left still asks real questions (earlier items) instead of
+    # finishing empty and failing with no answers.
     again = client.post(
         "/api/v1/adaptive-quiz/sessions",
         json={"mode": "concept_check", "concepts": [CONCEPT]},
         headers=headers,
     ).json()
-    assert again["finished"] and again["stop_reason"] == "exhausted"
+    assert not again["finished"] and again["current"]["item"] in keys
 
 
 def test_wrong_skip_and_guard_rails(on):

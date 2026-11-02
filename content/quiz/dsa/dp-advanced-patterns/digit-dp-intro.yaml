@@ -63,10 +63,10 @@ items:
   format: classify
   prompt: Count numbers up to 10^18 with no two equal neighbouring digits. Loop or digit DP?
   options:
-  - Digit DP over at most 19 positions
-  - Loop over every number
-  - Greedy
-  - Bitmask over the digits
+  - "Digit DP over at most 19 positions"
+  - "A loop over every number up to N"
+  - "Greedy, choosing each digit in turn"
+  - "Bitmask DP over the ten digits"
   answer: 0
   misconceptions:
   - null

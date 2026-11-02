@@ -64,10 +64,10 @@ items:
   format: mcq
   prompt: In the one-row version, what does dp[c] mean?
   options:
-  - The best value within capacity c using the items so far
-  - The value of item c
-  - Whether item c was taken
-  - The weight left after c items
+  - "The best value within capacity c using the items so far"
+  - "The value of item number c in the input list"
+  - "Whether item number c was taken in the best answer"
+  - "The weight left over after the first c items are packed"
   answer: 0
   misconceptions:
   - null
@@ -112,10 +112,10 @@ items:
   format: classify
   prompt: Weights 1 3 4 5, values 1 4 5 7, capacity 7. Why does greedy by value per weight fail?
   options:
-  - The best ratio item leaves space that only a poor item fits
-  - Ratios cannot be compared
-  - Greedy needs sorted weights
-  - It does not fail
+  - "The best ratio item leaves space that only a poor item fits"
+  - "Value-per-weight ratios cannot be compared as fractions"
+  - "Greedy needs the weights sorted, and these are not sorted"
+  - "It does not fail; the best ratio first is optimal here"
   answer: 0
   misconceptions:
   - null
@@ -144,10 +144,10 @@ items:
   format: bug_spot
   prompt: The capacity loop runs while c > w[i]. Which case is missed?
   options:
-  - An item that exactly fills the capacity
-  - Items heavier than W
-  - The first item
-  - Nothing
+  - "An item that exactly fills the capacity"
+  - "Items heavier than the whole capacity W"
+  - "The first item, which is never processed"
+  - "Nothing; every capacity is still covered"
   answer: 0
   misconceptions:
   - null
@@ -160,10 +160,10 @@ items:
   format: classify
   prompt: n = 100, W = 10^9, every value ≤ 1000. What changes?
   options:
-  - 'Index by total value: least weight for each value'
-  - Nothing; use dp over W
-  - Use greedy
-  - Sort by weight
+  - "Index by total value: least weight for each value"
+  - "Nothing; keep the dp over capacities up to W"
+  - "Use greedy by value per weight instead of DP"
+  - "Sort the items by weight and stop when full"
   answer: 0
   misconceptions:
   - null
@@ -208,10 +208,10 @@ items:
   format: classify
   prompt: Rods can be cut into any number of pieces of each length. Which loop direction?
   options:
-  - 'Capacity forwards: reuse is allowed'
-  - Capacity backwards
-  - Either
-  - Greedy by price per length
+  - "Capacity forwards: reuse is allowed"
+  - "Capacity backwards, as for 0/1"
+  - "Either direction gives the same"
+  - "Greedy by price per unit length"
   answer: 0
   misconceptions:
   - null
@@ -224,10 +224,10 @@ items:
   format: classify
   prompt: Each word costs some zeros and some ones; both are limited. What is the state?
   options:
-  - dp[z][o], both budgets backwards
-  - dp[z] only
-  - dp over word index only
-  - A greedy by length
+  - "dp[z][o], both budgets backwards"
+  - "dp[z] only, ignoring the ones"
+  - "dp over the word index only"
+  - "A greedy by word length instead"
   answer: 0
   misconceptions:
   - null

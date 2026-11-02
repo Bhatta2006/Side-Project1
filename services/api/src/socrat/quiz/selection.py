@@ -186,6 +186,31 @@ def varied(pool: list[Item], steps: list[Step], ctx: Context, cfg: EngineConfig 
     return pool
 
 
+def topup(items: list[Item], steps: list[Step], ctx: Context) -> list[Item]:
+    """Below a mode's minimum, relax in order: any band, then items seen in earlier sessions.
+    The assessment pool stays reserved for exams, and exam modes never relax."""
+    if ctx.mode.calibrated_only or ctx.mode.paced:
+        return []
+    served = {s.item for s in steps}
+    scope = set(ctx.patterns)
+    live = [
+        i
+        for i in items
+        if i.status != "retired"
+        and i.pattern in scope
+        and i.key not in served
+        and (not i.languages or ctx.language in i.languages)
+    ]
+    for keep in (
+        lambda i: i.pool == ctx.mode.pool and i.key not in ctx.seen,
+        lambda i: i.pool == ctx.mode.pool,
+    ):
+        pool = [i for i in live if keep(i)]
+        if pool:
+            return pool
+    return []
+
+
 def distance(band: int, span: tuple[int, int]) -> int:
     return max(span[0] - band, 0, band - span[1])
 
@@ -205,7 +230,14 @@ def select(
         # Out of questions after repeated misses: teach first instead of serving harder ones.
         if done and done[-1].outcome == "wrong" and wrongs >= 2:
             return Choice(None, "needs_lesson")
-        return Choice(None, "exhausted")
+        if len(steps) >= ctx.mode.min_items:
+            return Choice(None, "exhausted")
+        # Too few questions to mean anything: never stop short of the floor while the bank
+        # has anything left for this learner.
+        pool = topup(items, steps, ctx)
+        if not pool:
+            return Choice(None, "exhausted")
+        rule = Ladder(rule.hard, rule.preferred, "floor")
     # The ladder overrides variety: choose the band first, then vary within it.
     gap = min(distance(i.band, rule.preferred) for i in pool)
     pool = [i for i in pool if distance(i.band, rule.preferred) == gap]

@@ -184,7 +184,7 @@ quiz:
   - id: associative
     kind: mcq
     prompt: Which operation can a plain segment tree NOT combine directly?
-    options: ["The median of a range", "gcd", "min", "XOR"]
+    options: ["The median of a range", "The gcd of a range", "The minimum of a range", "The XOR of a range"]
     answer: 0
     explanation: Median isn't computable from two children's medians — it's not a simple associative merge.
     difficulty: 3

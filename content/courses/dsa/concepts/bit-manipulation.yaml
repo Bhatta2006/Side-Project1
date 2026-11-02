@@ -140,14 +140,14 @@ quiz:
   - id: power-two
     kind: mcq
     prompt: For x > 0, what does (x & (x − 1)) == 0 test?
-    options: ["x is a power of two", "x is even", "x is odd", "x is prime"]
+    options: ["x is a power of two", "x is an even number", "x is an odd number", "x is a prime number"]
     answer: 0
     explanation: Powers of two have a single set bit, which x − 1 clears entirely.
     difficulty: 2
   - id: subsets
     kind: mcq
     prompt: Looping mask from 0 to 2^n − 1 visits...
-    options: ["Every subset of n items exactly once", "Every permutation", "Only subsets of size n", "n subsets"]
+    options: ["Every subset of n items exactly once", "Every ordering of the n items once", "Only the subsets that have size n", "Exactly n subsets, one per item"]
     answer: 0
     explanation: Each n-bit pattern corresponds to exactly one subset.
     difficulty: 2

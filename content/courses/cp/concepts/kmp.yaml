@@ -142,7 +142,7 @@ quiz:
   - id: separator
     kind: mcq
     prompt: Why insert a separator between pattern and text in KMP?
-    options: ["So borders can never extend across the boundary", "To speed it up", "To handle uppercase", "It is optional and never matters"]
+    options: ["So borders can never extend across the boundary", "To speed up the prefix function by half", "To handle uppercase and lowercase letters", "It is optional and never changes the result"]
     answer: 0
     explanation: Without it, π could exceed the pattern length and report false matches.
     difficulty: 3

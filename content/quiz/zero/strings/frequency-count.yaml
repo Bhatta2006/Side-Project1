@@ -43,9 +43,9 @@ items:
     prompt: "The text 'Banana' has a capital B. What goes wrong with counts[ch − 'a'] and how do you fix it?"
     options:
       - "'B' − 'a' is negative; lower-case each letter first"
-      - "Nothing; capitals count as lower case"
-      - "B lands in counts[1], which is fine"
-      - "The loop skips capitals"
+      - "Nothing; capitals count as lower case automatically"
+      - "B lands in counts[1], which is the right slot anyway"
+      - "The loop skips capitals, so B is simply not counted"
     answer: 0
     misconceptions: [null, case-insensitive-assumption, case-insensitive-assumption, first-char-only]
     explanation: "Capital letters come before lower case in character codes, so the index is out of range."
@@ -63,9 +63,9 @@ items:
     prompt: "Are two words anagrams of each other? Which approach fits?"
     options:
       - "Count letters in both and compare the 26 counters"
-      - "Compare the words letter by letter"
-      - "Compare their lengths only"
-      - "Count only the first letter of each"
+      - "Compare the two words letter by letter in order"
+      - "Compare only the lengths of the two words"
+      - "Count only the first letter of each word"
     answer: 0
     misconceptions: [null, order-matters-assumption, count-all-not-each, first-char-only]
     explanation: "Anagrams have the same count for every letter, in any order."

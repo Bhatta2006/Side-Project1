@@ -32,10 +32,10 @@ items:
   format: classify
   prompt: Why does running the histogram stack on every row find the largest rectangle?
   options:
-  - Every rectangle of ones has its bottom edge on some row, where it fits under that row's bars
-  - Rectangles are always at the bottom
-  - The stack finds squares only
-  - It does not; you also need the square DP
+  - "Every rectangle of ones has its bottom edge on some row, where it fits under that row's bars"
+  - "Rectangles of ones always touch the bottom row, so only the last row's histogram matters"
+  - "The stack finds the largest square under each row, and every rectangle contains one"
+  - "It does not on its own; you also need the square DP to cover rectangles that are tall"
   answer: 0
   misconceptions:
   - null

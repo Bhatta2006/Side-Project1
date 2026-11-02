@@ -49,10 +49,10 @@ items:
   pool: practice
   prompt: Why split a repeated calculation into a function?
   options:
-  - To keep one named implementation that callers can reuse
-  - To guarantee constant running time
-  - To remove all edge cases
-  - To make every variable global
+  - "To keep one named implementation that callers can reuse"
+  - "To guarantee the calculation runs in constant time"
+  - "To remove every edge case from the calculation"
+  - "To make every variable inside it global and shared"
   answer: 0
   explanation: Reuse centralizes the calculation and gives it a clear interface; it does not change its
     inherent complexity.

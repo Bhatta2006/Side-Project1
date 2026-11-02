@@ -48,10 +48,10 @@ items:
   format: mcq
   prompt: For a mountain (rise, then fall) through index i, which values combine?
   options:
-  - LIS ending at i from the left plus LIS ending at i from the right, minus 1
-  - The LIS of the whole array
-  - Two separate LIS added
-  - The longest run around i
+  - "LIS ending at i from the left plus LIS ending at i from the right, minus 1"
+  - "The LIS of the whole array, since the peak is always at its last element"
+  - "Two separate LIS of the left and right halves added, without subtracting"
+  - "The longest run of strictly increasing then decreasing values around i"
   answer: 0
   misconceptions:
   - null
@@ -64,10 +64,10 @@ items:
   format: bug_spot
   prompt: To count LIS, count[i] adds count[j] for every smaller earlier a[j]. What is wrong?
   options:
-  - Only j whose dp[j] + 1 equals the best dp[i] should add
-  - Nothing
-  - count should be multiplied
-  - count[i] should start at 0
+  - "Only j whose dp[j] + 1 equals the best dp[i] should add"
+  - "Nothing; adding every smaller earlier count is right"
+  - "count should be multiplied by count[j], not added"
+  - "count[i] should start at 0 instead of starting at 1"
   answer: 0
   misconceptions:
   - null

@@ -1,0 +1,101 @@
+id: village-sentries
+title: Village sentries
+concepts: [binary-trees]
+difficulty: hard
+statement: |
+  A kingdom's `n` villages form a tree rooted at village 1: every other village `i` has a
+  parent `p[i]`. A sentry posted in a village watches that village, its parent and all of
+  its children. Print the fewest sentries needed so that every village is watched.
+input_format: |
+  The first line contains n. The second line contains p[2..n] (empty when n = 1).
+output_format: The fewest sentries.
+constraints:
+  - 1 ≤ n ≤ 100000
+  - 1 ≤ p[i] < i
+examples:
+  - input: "5\n1 2 2 2\n"
+    output: "1"
+    explanation: One sentry in village 2 watches 1, 2, 3, 4 and 5.
+  - input: "6\n1 2 3 4 5\n"
+    output: "2"
+    explanation: "A path 1-2-3-4-5-6: sentries in 2 and 5."
+  - input: "1\n\n"
+    output: "1"
+hints:
+  - Look at a leaf. Is a sentry ever better in the leaf itself than in its parent?
+  - "Moving a leaf's sentry up to its parent watches everything the leaf's sentry did and more. So work bottom-up: each village reports one of three states to its parent."
+  - "States: NEED (not watched yet, asks the parent to post one), SENTRY, or OK (watched by a child's sentry). Post a sentry if any child reports NEED. A village with a sentry child reports OK; otherwise NEED. If the root ends in NEED, add one more."
+approach: |
+  Greedy from the leaves up (a post-order, or since p[i] < i, simply i = n down to 1). A
+  leaf should never hold a sentry: its parent covers a superset. Each village gets a state:
+  NEED (unwatched, asks its parent), SENTRY, or OK (watched by a child's sentry). If any child
+  is NEED, the village must post one (only it can still cover that child). Else if any child
+  has a sentry: OK. Else: NEED. Finally the root in state NEED needs its own sentry. O(n).
+  A three-state tree DP gives the same answer and also handles different costs per village.
+reference: |
+  import sys
+  data = sys.stdin.buffer.read().split()
+  n = int(data[0])
+  parent = [0, 0] + [int(x) for x in data[1:n]]
+  NEED, SENTRY, OK = 0, 1, 2
+  any_need = [False] * (n + 1)
+  any_sentry = [False] * (n + 1)
+  count = 0
+  state = [NEED] * (n + 1)
+  for v in range(n, 0, -1):
+      if any_need[v]:
+          state[v] = SENTRY
+          count += 1
+      elif any_sentry[v]:
+          state[v] = OK
+      else:
+          state[v] = NEED
+      p = parent[v]
+      if p:
+          if state[v] == NEED:
+              any_need[p] = True
+          elif state[v] == SENTRY:
+              any_sentry[p] = True
+  if state[1] == NEED:
+      count += 1
+  print(count)
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  parent = [0, 0] + [int(x) for x in data[1:n]]
+  near = [{v} for v in range(n + 1)]
+  for v in range(2, n + 1):
+      near[v].add(parent[v])
+      near[parent[v]].add(v)
+  best = n
+  for mask in range(1, 1 << n):
+      seen = set()
+      for v in range(1, n + 1):
+          if mask >> (v - 1) & 1:
+              seen |= near[v]
+      if len(seen) == n:
+          best = min(best, bin(mask).count("1"))
+  print(best)
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          n = rng.randint(1, 10)
+          yield f"{n}\n" + " ".join(str(rng.randint(1, i - 1)) for i in range(2, n + 1))
+generator: |
+  def cases(rng):
+      yield "2\n1"
+      yield "3\n1 1"
+      yield "4\n1 2 3"
+      n = 100000
+      yield f"{n}\n" + " ".join(str(i - 1) for i in range(2, n + 1))
+      yield f"{n}\n" + " ".join("1" for _ in range(2, n + 1))
+      yield f"{n}\n" + " ".join(str(rng.randint(1, i - 1)) for i in range(2, n + 1))
+      yield f"{n}\n" + " ".join(str(i // 2) for i in range(2, n + 1))
+      yield f"{n}\n" + " ".join(str(rng.randint(max(1, i - 3), i - 1)) for i in range(2, n + 1))
+      for _ in range(5):
+          n = rng.randint(2, 15)
+          yield f"{n}\n" + " ".join(str(rng.randint(1, i - 1)) for i in range(2, n + 1))
+time_limit_ms: 3000
+provenance:
+  origin: original

@@ -64,10 +64,10 @@ items:
   format: mcq
   prompt: In the one-row unbounded version, what does dp[c] mean?
   options:
-  - The best value within capacity c, copies allowed
-  - The value of item c
-  - How many copies of item c were taken
-  - The capacity left after c items
+  - "The best value within capacity c, copies allowed"
+  - "The value of the item numbered c in the list"
+  - "How many copies of item c were taken so far"
+  - "The capacity left over after the first c items"
   answer: 0
   misconceptions:
   - null
@@ -96,10 +96,10 @@ items:
   format: trace
   prompt: 'Forwards, piece (len 2, price 5). Already dp[2] = 5 and dp[4] = 4. What is the new dp[4]?'
   options:
-  - '10'
-  - '9'
-  - '5'
-  - '4'
+  - "10"
+  - "15"
+  - "9"
+  - "5"
   answer: 0
   misconceptions:
   - null
@@ -129,10 +129,10 @@ items:
   prompt: Pieces of length 1 2 3 4 sell for 1 5 8 9, rod length 4. Why does greedy by price per length
     fail?
   options:
-  - The best-ratio piece leaves a remainder only a poor piece fills
-  - Ratios cannot be compared
-  - Greedy needs the pieces sorted by length
-  - It does not fail
+  - "The best-ratio piece leaves a remainder only a poor piece fills"
+  - "Price-per-length ratios cannot be compared as fractions"
+  - "Greedy needs the pieces sorted by length, and these are not"
+  - "It does not fail; the best ratio first is optimal here"
   answer: 0
   misconceptions:
   - null
@@ -161,10 +161,10 @@ items:
   format: mcq
   prompt: The length must be used exactly and you maximise pieces. What should dp[c] start at for c > 0?
   options:
-  - Minus infinity, meaning unreachable
-  - '0'
-  - c
-  - '1'
+  - "Minus infinity, meaning unreachable"
+  - "0, meaning zero pieces cut so far"
+  - "c, one piece for each unit of length"
+  - "1, the whole length as one piece"
   answer: 0
   misconceptions:
   - null
@@ -193,10 +193,10 @@ items:
   format: bug_spot
   prompt: The capacity loop starts at c = w[i] + 1. Which case is missed?
   options:
-  - Capacity equal to the item's weight, so the first copy is never taken
-  - Items heavier than W
-  - The last item
-  - Nothing
+  - "Capacity equal to the item's weight, so the first copy is never taken"
+  - "Items heavier than the whole capacity W, which should be skipped"
+  - "The last item in the list, because its loop never starts at all"
+  - "Nothing; starting one higher only skips a capacity that adds no value"
   answer: 0
   misconceptions:
   - null
@@ -209,10 +209,10 @@ items:
   format: classify
   prompt: Each gift in a shop exists once; maximise joy within a budget. Which loop direction?
   options:
-  - 'Capacity backwards: each item once'
-  - Capacity forwards
-  - Either
-  - Greedy by joy per cost
+  - "Capacity backwards: each item once"
+  - "Capacity forwards, as for unbounded"
+  - "Either direction gives the same"
+  - "Greedy by joy per unit of cost"
   answer: 0
   misconceptions:
   - null
@@ -225,10 +225,10 @@ items:
   format: classify
   prompt: Fewest coins to make exactly 23 from coins 4 and 6. What does the DP report?
   options:
-  - '-1: no combination makes exactly 23'
-  - '4'
-  - '5'
-  - '0'
+  - "-1: no combination makes exactly 23"
+  - "4: rounding down to make 22 instead"
+  - "5: the greedy count, largest coin first"
+  - "0: no coins are used at all"
   answer: 0
   misconceptions:
   - null

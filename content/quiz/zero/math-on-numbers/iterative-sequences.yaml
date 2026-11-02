@@ -30,10 +30,10 @@ items:
   format: mcq
   prompt: Why does a, b = b, a + b work in Python?
   options:
-  - Both right-hand values are computed from the old pair before anything changes
-  - Python runs it from right to left
-  - It does not work
-  - It sorts the values
+  - "Both right-hand values are computed from the old pair before anything changes"
+  - "Python runs the assignment from right to left, so b is updated first"
+  - "It does not work; b ends up equal to 2 × b after the assignment"
+  - "It sorts the two values so the smaller one always ends up in a"
   answer: 0
   misconceptions:
   - null

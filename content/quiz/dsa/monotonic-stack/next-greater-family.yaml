@@ -58,10 +58,10 @@ items:
   format: mcq
   prompt: What does the stack hold during the scan?
   options:
-  - Indexes still waiting for their answer
-  - Every value seen so far
-  - The answers found so far
-  - The largest value only
+  - "Indexes still waiting for their answer"
+  - "Every value seen so far, in order"
+  - "The answers found so far, in order"
+  - "Only the largest value seen so far"
   answer: 0
   misconceptions:
   - null
@@ -106,10 +106,10 @@ items:
   format: classify
   prompt: Why is "the largest value to the right" the wrong answer for next greater?
   options:
-  - Next greater is the nearest bigger value, not the biggest
-  - It is too slow
-  - It ignores the last element
-  - It is the same thing
+  - "Next greater is the nearest bigger value, not the biggest"
+  - "Finding the largest value to the right is too slow"
+  - "It ignores the last element, which has nothing after it"
+  - "It is the same thing, just computed from the other end"
   answer: 0
   misconceptions:
   - null
@@ -122,10 +122,10 @@ items:
   format: bug_spot
   prompt: The pop test is a[top] <= a[i]. What does 2 2 3 print?
   options:
-  - 2 3 −1, so the first 2 is "answered" by an equal value
-  - 3 3 −1
-  - −1 −1 −1
-  - 2 2 3
+  - "2 3 −1, so the first 2 is \"answered\" by an equal value"
+  - "3 3 −1, since the equal 2 is popped as usual"
+  - "−1 −1 −1, since no value is ever popped here"
+  - "2 2 3, each value copying the one after it"
   answer: 0
   misconceptions:
   - null
@@ -138,10 +138,10 @@ items:
   format: complexity
   prompt: Total time of the stack pass on n elements?
   options:
-  - O(n), since each index is pushed and popped at most once
-  - O(n²), because of the nested loop
-  - O(n log n)
-  - O(1)
+  - "O(n), since each index is pushed and popped at most once"
+  - "O(n²), because of the nested while loop inside the for"
+  - "O(n log n), like sorting the values before the scan"
+  - "O(1) per element, so O(1) for the whole pass"
   answer: 0
   misconceptions:
   - null
@@ -154,10 +154,10 @@ items:
   format: mcq
   prompt: For the previous smaller element, when do you read the answer for index i?
   options:
-  - After popping larger values, before pushing i
-  - After pushing i
-  - When i is popped
-  - At the very end
+  - "After popping larger values, before pushing i"
+  - "After pushing i onto the top of the stack"
+  - "When i itself is popped by a later index"
+  - "At the very end, from what is left on the stack"
   answer: 0
   misconceptions:
   - null
@@ -170,10 +170,10 @@ items:
   format: classify
   prompt: The array is circular. How do you find the next greater element?
   options:
-  - Scan the indexes twice, using i mod n
-  - Sort the array first
-  - Reverse the array
-  - Use a running maximum
+  - "Scan the indexes twice, using i mod n"
+  - "Sort the array first, then scan once"
+  - "Reverse the array, then scan it once"
+  - "Keep a running maximum from the right"
   answer: 0
   misconceptions:
   - null
@@ -186,10 +186,10 @@ items:
   format: mcq
   prompt: When the scan ends, some indexes are still on the stack. What are their answers?
   options:
-  - −1, nothing greater came after them
-  - The top of the stack
-  - The last element
-  - Their own value
+  - "−1, nothing greater came after them"
+  - "The value on the top of the stack"
+  - "The last element of the whole array"
+  - "Their own value, as nothing beat it"
   answer: 0
   misconceptions:
   - null
@@ -202,10 +202,10 @@ items:
   format: classify
   prompt: For each day, how many days until a warmer day? What must the stack store?
   options:
-  - Indexes, to compute the distance when popped
-  - Temperatures
-  - Distances
-  - The warmest day so far
+  - "Indexes, to compute the distance when popped"
+  - "Temperatures, compared when each is popped"
+  - "Distances, filled in as each day is pushed"
+  - "The warmest day so far, updated each step"
   answer: 0
   misconceptions:
   - null
@@ -218,10 +218,10 @@ items:
   format: classify
   prompt: The maximum of every window of size k. Stack or deque?
   options:
-  - A deque, because old indexes also expire from the front
-  - A stack
-  - A running maximum
-  - A heap with no removals
+  - "A deque, because old indexes also expire from the front"
+  - "A stack, popping smaller values as each one arrives"
+  - "A running maximum, reset at the start of each window"
+  - "A heap of the window's values, with no removals"
   answer: 0
   misconceptions:
   - null

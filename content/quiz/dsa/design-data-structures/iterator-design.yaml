@@ -47,10 +47,10 @@ items:
   format: classify
   prompt: Why not copy every value into one list in the constructor?
   options:
-  - It costs O(total) memory up front and fails for huge or endless inputs
-  - It gives wrong answers
-  - Lists cannot hold integers
-  - It is always better
+  - "It costs O(total) memory up front and fails for huge or endless inputs"
+  - "It gives wrong answers, because values are copied in the wrong order"
+  - "Lists cannot hold integers from nested lists without converting them"
+  - "It is always better, because next() becomes a single list access"
   answer: 0
   misconceptions:
   - null

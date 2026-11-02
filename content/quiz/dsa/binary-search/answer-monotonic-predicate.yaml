@@ -24,9 +24,9 @@ items:
     prompt: "Why can we binary search on the eating speed?"
     options:
       - "If a speed finishes in time, every faster speed does too"
-      - "The piles are sorted"
-      - "The answer is always the middle pile"
-      - "Speeds are whole numbers"
+      - "The piles are sorted, so the speeds come out sorted too"
+      - "The answer is always the middle pile, found by halving"
+      - "Speeds are whole numbers, so there are finitely many"
     answer: 0
     misconceptions: [null, pattern-search-needs-sorted-input, confuse-index-value, predicate-not-monotone]
     explanation: "The rule 'finishes in time' flips once from false to true as the speed grows."
@@ -36,9 +36,9 @@ items:
     prompt: "Which phrase in a problem hints at binary search on the answer?"
     options:
       - "Minimum capacity such that the work fits in D days"
-      - "Number of pairs that sum to K"
-      - "Longest run without repeats"
-      - "Shortest path in a grid"
+      - "The number of pairs in the array that sum to K"
+      - "The longest run of characters without repeats"
+      - "The shortest path between two cells in a grid"
     answer: 0
     misconceptions: [null, pattern-brute-force-default, pattern-fixed-vs-variable-window, pattern-search-vs-scan]
     explanation: "Minimise a value subject to a feasibility check that gets easier as the value grows."
@@ -48,9 +48,9 @@ items:
     prompt: "Speeds are searched in [1, max(piles)]. If hours equals the number of piles, what is the answer?"
     options:
       - "max(piles): every pile must take exactly one hour"
-      - "1"
-      - "The average pile"
-      - "There is no answer"
+      - "1, the slowest speed the search range allows"
+      - "The average pile size, rounded up to an integer"
+      - "There is no answer, so the search returns −1"
     answer: 0
     misconceptions: [null, answer-max-not-min, predicate-average-shortcut, search-range-confusion]
     explanation: "One hour per pile means the speed must cover the largest pile."
@@ -72,9 +72,9 @@ items:
     prompt: "Ship packages in order within D days; find the smallest ship capacity. Approach and cost?"
     options:
       - "Binary search capacity in [max weight, total]; each check is O(n), so O(n log total)"
-      - "Sort the packages and pack greedily, O(n log n)"
-      - "Try every capacity from 1 up, O(n · total), fine for any input"
-      - "Sliding window over the weights"
+      - "Sort the packages by weight and pack them greedily into days, O(n log n) overall"
+      - "Try every capacity from 1 up, O(n · total), which is fine for any input size"
+      - "A sliding window over the weights, growing until the window's total fits D days"
     answer: 0
     misconceptions: [null, pattern-sort-breaks-order, pattern-brute-force-default, pattern-fixed-vs-variable-window]
     explanation: "Larger capacities never need more days: a monotone check over a numeric range."

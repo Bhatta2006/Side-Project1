@@ -46,10 +46,10 @@ items:
   format: classify
   prompt: Why use x % y rather than subtracting y from x repeatedly?
   options:
-  - The remainder does all the subtractions at once, so huge inputs stay fast
-  - Subtraction gives a different GCD
-  - Remainders avoid negative numbers
-  - There is no difference
+  - "The remainder does all the subtractions at once, so huge inputs stay fast"
+  - "Repeated subtraction gives a different GCD for some pairs of inputs"
+  - "Remainders avoid negative numbers, which subtraction can produce"
+  - "There is no difference; both take the same number of steps"
   answer: 0
   misconceptions:
   - null

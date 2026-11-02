@@ -1035,10 +1035,10 @@ quiz:
   kind: mcq
   prompt: Which pair of structures gives an LRU cache O(1) get and put?
   options:
-  - A hash map and a doubly linked list
-  - A hash map and a queue
-  - Two stacks
-  - A sorted array
+  - "A hash map and a doubly linked list"
+  - "A hash map and a FIFO queue"
+  - "Two stacks used as a queue"
+  - "A sorted array of timestamps"
   answer: 0
   explanation: The map finds the node; the list moves it in O(1).
   difficulty: 1
@@ -1068,10 +1068,10 @@ quiz:
   kind: mcq
   prompt: Why is a queue of arrivals not enough for LRU?
   options:
-  - A get must move a key from the middle to the front, which a queue cannot do in O(1)
-  - Queues are slower than lists
-  - Queues cannot hold integers
-  - It is enough
+  - "A get must move a key from the middle to the front, which a queue cannot do in O(1)"
+  - "Queues are always slower than linked lists, so every operation becomes O(log n)"
+  - "A queue cannot store integer keys, so each key would need converting to a string"
+  - "It is enough: evict the front of the queue and push every get to the back"
   answer: 0
   explanation: Queues only remove from their ends.
   difficulty: 3
@@ -1079,10 +1079,10 @@ quiz:
   kind: mcq
   prompt: What do the head and tail sentinel nodes buy?
   options:
-  - No special cases for an empty list or for the first and last node
-  - Faster hashing
-  - Less memory
-  - Sorted order
+  - "No special cases for an empty list or for the first and last node"
+  - "Faster hashing, because the head and tail keys are precomputed"
+  - "Less memory, because nodes no longer need a prev pointer each"
+  - "Sorted order, because the sentinels keep keys in ascending order"
   answer: 0
   explanation: Every real node always has a prev and a next.
   difficulty: 3
