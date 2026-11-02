@@ -30,6 +30,7 @@ ROLES = {
     "grader",  # learners' free-text answers and project milestones
     "stylist",  # a free-text learning wish -> a style spec
     "researcher",  # finds open, public sources for a concept
+    "intent",  # a learner's free-text request -> a structured intent
     "weekly",  # hard, execution-verified weekly exam questions
 }
 # Override key -> Settings field(s) it replaces for that role.
@@ -43,7 +44,7 @@ KEYS = {
 }
 DEFAULT_EFFORT = "high"  # outlines and reviews are worth the extra thinking
 # Finding and screening sources is retrieval, not reasoning: low effort keeps the cost down.
-ROLE_EFFORT = {"researcher": "low", "stylist": "low"}
+ROLE_EFFORT = {"researcher": "low", "stylist": "low", "intent": "low"}
 
 
 def check_roles(roles: dict) -> None:

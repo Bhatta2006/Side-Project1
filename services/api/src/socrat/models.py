@@ -763,3 +763,22 @@ class GenerationJob(Base):
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class LearningRequest(Base):
+    """A learner's "teach me X": raw text, the parsed (and learner-editable) intent, and the
+    course it became. Unique per learner and text, so a retry never creates a second one."""
+
+    __tablename__ = "learning_requests"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_learning_request_user_key"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    key: Mapped[str] = mapped_column(String(64))
+    text: Mapped[str] = mapped_column(String(2000))
+    intent: Mapped[dict] = mapped_column(JSON)
+    source: Mapped[str] = mapped_column(String(16), default="model")  # model | rules
+    # parsed | needs_clarification | blocked | confirmed
+    status: Mapped[str] = mapped_column(String(24), default="parsed")
+    course_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
