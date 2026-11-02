@@ -16,7 +16,7 @@ depends_on = None
 def upgrade():
     with op.batch_alter_table("users") as batch:
         batch.add_column(
-            sa.Column("reminders", sa.Boolean(), nullable=False, server_default=sa.text("0"))
+            sa.Column("reminders", sa.Boolean(), nullable=False, server_default=sa.false())
         )
         batch.add_column(sa.Column("reminder_sent_at", sa.Integer(), nullable=True))
         batch.add_column(

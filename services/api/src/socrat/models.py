@@ -56,7 +56,7 @@ class User(Base):
     # Share code for the referral link; made the first time the learner opens Invite friends.
     referral_code: Mapped[str | None] = mapped_column(String(12), nullable=True, unique=True)
     # Opt-in study reminder emails; ``reminders_unanswered`` counts those sent with no study since.
-    reminders: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    reminders: Mapped[bool] = mapped_column(Boolean, default=False)
     reminder_sent_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reminders_unanswered: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
