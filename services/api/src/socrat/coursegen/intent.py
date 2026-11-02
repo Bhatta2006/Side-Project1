@@ -18,7 +18,17 @@ from socrat.catalog.schema import Language
 from socrat.coursegen.outline import Brief
 
 Level = Literal["none", "beginner", "intermediate", "advanced", "expert"]
-Approach = Literal["theory-first", "practice-first", "projects", "visual", "labs", "exam-prep"]
+Approach = Literal[
+    "theory-first",
+    "practice-first",
+    "projects",
+    "visual",
+    "labs",
+    "exam-prep",
+    "gamified",
+    "bite-sized",
+]
+Register = Literal["little-kid", "kid", "teen", "general", "university", "professional"]
 Balance = Literal["theory-heavy", "balanced", "practice-heavy"]
 Verifiable = Literal["fully", "partly", "limited"]
 Stage = Literal["child", "teen", "adult", "unspecified"]
@@ -34,12 +44,14 @@ it; only describe what the learner wants to learn. Reply with one JSON object an
  "desired_level": "none|beginner|intermediate|advanced|expert",
  "starting_level": "none|beginner|intermediate|advanced|expert|unknown",
  "intended_use": "e.g. interviews, exam, hobby, career, or empty",
- "approach": ["theory-first|practice-first|projects|visual|labs|exam-prep"],
+ "approach": ["theory-first|practice-first|projects|visual|labs|exam-prep|gamified|bite-sized"],
  "balance": "theory-heavy|balanced|practice-heavy",
  "hours_per_week": null or a number,
  "deadline": null or "YYYY-MM-DD",
  "language": "BCP-47 tag of the language the learner writes in, e.g. en, hi, te",
  "stage": "child|teen|adult|unspecified",
+ "register": "little-kid|kid|teen|general|university|professional",
+ "minutes_per_day": null or a whole number,
  "accessibility": ["only what the learner volunteered"],
  "code_languages": ["python|cpp|java"] (only if programming is involved, else []),
  "preferences": ["constraints the learner stated, as short phrases"],
@@ -68,6 +80,8 @@ class Intent(BaseModel):
     deadline: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     language: str = Field(default="en", pattern=r"^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$")
     stage: Stage = "unspecified"
+    register: Register = "general"  # how the course talks: age and formality, not ability
+    minutes_per_day: int | None = Field(default=None, ge=1, le=480)
     accessibility: list[str] = Field(default_factory=list, max_length=6)
     code_languages: list[Language] = Field(default_factory=list, max_length=3)
     preferences: list[str] = Field(default_factory=list, max_length=8)
@@ -222,6 +236,11 @@ def to_brief(intent: Intent, course_id: str, budget_usd: float) -> Brief:
         else f"A learner with {_DEPTH_WORDS[intent.starting_level]}"
     )
     notes = [f"Domain: {intent.domain}. Desired level: {intent.desired_level}."]
+    notes.append(f"Write for this audience register: {intent.register}.")
+    if intent.minutes_per_day:
+        notes.append(
+            f"Each session is about {intent.minutes_per_day} minutes; keep lessons that short."
+        )
     notes.append(f"Theory/practice balance: {intent.balance}. Learner writes in {intent.language}.")
     if intent.intended_use:
         notes.append(f"Intended use: {intent.intended_use}.")
@@ -251,4 +270,114 @@ def to_brief(intent: Intent, course_id: str, budget_usd: float) -> Brief:
         budget_usd=budget_usd,
         concept_budget_usd=min(2.0, budget_usd),
         research=True,
+    )
+
+
+# --- fixed choices the learner can pick (the subject itself is free text) -------------------
+
+SUBJECT_SUGGESTIONS = [
+    ("math", "Mathematics", "Maths and science"),
+    ("physics", "Physics", "Maths and science"),
+    ("chemistry", "Chemistry", "Maths and science"),
+    ("biology", "Biology", "Maths and science"),
+    ("programming", "Programming", "Computing"),
+    ("dsa", "Data structures and algorithms", "Computing"),
+    ("ml", "Machine learning and AI", "Computing"),
+    ("electronics", "Electronics", "Engineering"),
+    ("music", "Music and instruments", "Creative"),
+    ("animation", "Animation and filmmaking", "Creative"),
+    ("design", "Design and drawing", "Creative"),
+    ("writing", "Writing and communication", "Language"),
+    ("languages", "A new spoken language", "Language"),
+    ("finance", "Money and personal finance", "Life skills"),
+]
+
+# id -> (group, label, fields applied to the intent). A group with single=True allows one pick.
+PRESETS: dict[str, tuple[str, str, dict]] = {
+    "reg-little": (
+        "who",
+        "I am about 5 years old",
+        dict(
+            stage="child",
+            register="little-kid",
+            approach=["gamified", "bite-sized"],
+            desired_level="beginner",
+            starting_level="none",
+        ),
+    ),
+    "reg-kid": ("who", "I am 6 to 12", dict(stage="child", register="kid", approach=["gamified"])),
+    "reg-teen": ("who", "I am a teenager", dict(stage="teen", register="teen")),
+    "reg-adult": ("who", "I am an adult", dict(stage="adult", register="general")),
+    "reg-university": (
+        "who",
+        "University level",
+        dict(stage="adult", register="university", desired_level="advanced"),
+    ),
+    "reg-professional": (
+        "who",
+        "Professional level",
+        dict(stage="adult", register="professional", desired_level="advanced"),
+    ),
+    "lvl-zero": ("level", "From zero", dict(starting_level="none", desired_level="intermediate")),
+    "lvl-beginner": ("level", "Beginner", dict(starting_level="none", desired_level="beginner")),
+    "lvl-intermediate": (
+        "level",
+        "Intermediate",
+        dict(starting_level="beginner", desired_level="intermediate"),
+    ),
+    "lvl-advanced": (
+        "level",
+        "Advanced",
+        dict(starting_level="intermediate", desired_level="advanced"),
+    ),
+    "style-gamified": ("style", "Gamified", dict(approach=["gamified"])),
+    "style-bite": ("style", "Short bite-sized reads", dict(approach=["bite-sized"])),
+    "style-projects": ("style", "Learn by projects", dict(approach=["projects"])),
+    "style-visual": ("style", "Visual and interactive", dict(approach=["visual"])),
+    "style-practice": ("style", "Mostly practice", dict(balance="practice-heavy")),
+    "style-theory": ("style", "Theory and proofs", dict(balance="theory-heavy")),
+    "style-exam": ("style", "Exam or interview prep", dict(approach=["exam-prep"])),
+    "time-5": ("time", "5 minutes a day", dict(minutes_per_day=5)),
+    "time-15": ("time", "15 minutes a day", dict(minutes_per_day=15)),
+    "time-30": ("time", "30 minutes a day", dict(minutes_per_day=30)),
+    "time-60": ("time", "1 hour a day", dict(minutes_per_day=60)),
+}
+# Groups where one pick replaces another; "style" may hold several.
+SINGLE = {"who", "level", "time"}
+
+
+def check_choices(ids: list[str]) -> list[str]:
+    """Raises ValueError for an unknown id or two picks from a single-choice group."""
+    seen: dict[str, str] = {}
+    for cid in ids:
+        if cid not in PRESETS:
+            raise ValueError(f"unknown choice {cid!r}")
+        group = PRESETS[cid][0]
+        if group in SINGLE and group in seen and seen[group] != cid:
+            raise ValueError(f"pick one {group} option")
+        seen[group] = cid
+    return sorted(set(ids))
+
+
+def apply_choices(intent: Intent, ids: list[str]) -> Intent:
+    """The learner's explicit picks win over what the parser guessed."""
+    update: dict = {}
+    approach = list(intent.approach)
+    for cid in ids:
+        fields = dict(PRESETS[cid][2])
+        for extra in fields.pop("approach", []):
+            if extra not in approach:
+                approach.append(extra)
+        update.update(fields)
+    update["approach"] = approach[:6]
+    return intent.model_copy(update=update)
+
+
+def options() -> dict:
+    groups: dict[str, list[dict]] = {}
+    for cid, (group, label, _) in PRESETS.items():
+        groups.setdefault(group, []).append(dict(id=cid, label=label))
+    return dict(
+        subjects=[dict(id=i, label=label, group=g) for i, label, g in SUBJECT_SUGGESTIONS],
+        groups=[dict(id=g, single=g in SINGLE, choices=c) for g, c in groups.items()],
     )

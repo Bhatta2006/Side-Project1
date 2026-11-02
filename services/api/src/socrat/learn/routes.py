@@ -31,6 +31,7 @@ from socrat.models import (
     DeliveredEvent,
     Draft,
     Enrollment,
+    GeneratedCourse,
     OutboxEvent,
     Submission,
     User,
@@ -387,18 +388,33 @@ def attribution():
     }
 
 
+def private_courses(db: Session) -> dict[str, str]:
+    """Courses a learner asked for, by id -> owner. Only that learner may see or join them."""
+    rows = db.execute(
+        select(GeneratedCourse.id, GeneratedCourse.owner_id).where(
+            GeneratedCourse.owner_id.is_not(None)
+        )
+    )
+    return {cid: owner for cid, owner in rows if owner}
+
+
+def viewer_id(request: Request, db: Session) -> str | None:
+    try:
+        return user_of(request, db).id
+    except HTTPException:
+        return None
+
+
 @router.get("/courses")
-def courses():
+def courses(request: Request):
     cat = catalog()
+    with Session(engine(request)) as db:
+        private = private_courses(db)
+        me = viewer_id(request, db) if private else None
+    shown = [cid for cid in sorted(cat.courses) if private.get(cid, me) == me]
     return {
-        "items": [
-            views.course_card(cat, cid) for cid in ("zero", "dsa", "cp") if cid in cat.courses
-        ]
-        + [
-            views.course_card(cat, cid)
-            for cid in sorted(cat.courses)
-            if cid not in {"zero", "dsa", "cp"}
-        ]
+        "items": [views.course_card(cat, cid) for cid in ("zero", "dsa", "cp") if cid in shown]
+        + [views.course_card(cat, cid) for cid in shown if cid not in {"zero", "dsa", "cp"}]
     }
 
 
@@ -409,6 +425,8 @@ def enroll(body: EnrollInput, request: Request):
         raise HTTPException(404, "unknown_course")
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
+        if private_courses(db).get(body.course, user.id) != user.id:
+            raise HTTPException(404, "unknown_course")
         if user.birth_year is None:
             raise HTTPException(409, "profile_incomplete")
         # One course at a time: a learner moves on once the current course is finished.

@@ -121,6 +121,7 @@ async def run_outline(
     with Session(engine) as db:
         job = need(db.get(GenerationJob, job_id))
         brief = Brief.model_validate(job.input["brief"])
+        owner = job.created_by if job.input.get("learning_request") else None
         stored = generated.course(db, brief.id)
     if brief.style is None and brief.style_request.strip():
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
@@ -216,6 +217,8 @@ async def run_outline(
         return
     with Session(engine) as db, db.begin():
         generated.save_course(db, base, best, status="review", brief=brief.model_dump(mode="json"))
+        if owner is not None:
+            need(db.get(GeneratedCourse, brief.id)).owner_id = owner
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
 
 

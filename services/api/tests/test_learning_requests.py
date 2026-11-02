@@ -152,3 +152,71 @@ def test_invalid_edited_intent_is_rejected(on):
     made = on.post(URL, json={"text": "teach me algebra"}, headers=ada).json()
     bad = on.post(f"{URL}/{made['id']}/confirm", json={"intent": {"subject": "x"}}, headers=ada)
     assert bad.status_code == 422
+
+
+def test_options_are_fixed_and_choices_win_over_the_parser(on):
+    ada = login(on)
+    listed = on.get(f"{URL}/options").json()
+    assert {g["id"] for g in listed["groups"]} == {"who", "level", "style", "time"}
+    assert any(s["id"] == "physics" for s in listed["subjects"])
+    ids = {c["id"] for g in listed["groups"] for c in g["choices"]}
+    assert {"reg-little", "style-gamified", "time-5", "reg-university", "lvl-intermediate"} <= ids
+
+    made = on.post(
+        URL,
+        json={
+            "text": "teach me astronomy",
+            "choices": ["reg-little", "style-gamified", "time-5", "lvl-beginner"],
+        },
+        headers=ada,
+    ).json()
+    got = made["intent"]
+    assert got["register"] == "little-kid" and got["stage"] == "child"
+    assert got["minutes_per_day"] == 5 and set(got["approach"]) >= {"gamified", "bite-sized"}
+    brief = intents.to_brief(intents.Intent.model_validate(got), "astro-aaaaaa", 3.0)
+    assert "little-kid" in brief.notes and "5 minutes" in brief.notes
+
+    for bad in (["nope"], ["reg-kid", "reg-teen"], ["time-5", "time-15"]):
+        r = on.post(URL, json={"text": "teach me chess", "choices": bad}, headers=ada)
+        assert r.status_code == 422
+    # Different picks are a different request.
+    other = on.post(
+        URL, json={"text": "teach me astronomy", "choices": ["reg-adult"]}, headers=ada
+    ).json()
+    assert other["id"] != made["id"]
+
+
+def test_own_course_is_private_until_published_and_then_only_theirs(on):
+    from test_coursegen import OUTLINE, Scripted, run
+
+    on.app.state.settings.learning_requests_max_open = 5
+    ada = login(on, subject="ada")
+    made = on.post(
+        URL, json={"text": "Teach me algebra from zero", "choices": ["reg-adult"]}, headers=ada
+    ).json()
+    done = on.post(f"{URL}/{made['id']}/confirm", json={}, headers=ada).json()
+    course_id = done["course_id"]
+    # The scripted architect answers with a fixed outline; the course id is the request's.
+    script = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "ok", "issues": []})],
+    )
+    assert run(on, script)
+
+    view_ = on.get(f"{URL}/{made['id']}").json()
+    assert view_["published"] is False and view_["blueprint"]["modules"][0]["concepts"]
+    assert course_id not in {c["id"] for c in on.get("/api/v1/courses").json()["items"]}
+
+    assert on.post(f"{URL}/{made['id']}/publish", headers=ada).json()["published"] is True
+    assert on.post(f"{URL}/{made['id']}/publish", headers=ada).json()["published"] is True
+    mine = on.get(f"{URL}/{made['id']}").json()
+    assert mine["enroll"]["course"] == course_id
+    assert course_id in {c["id"] for c in on.get("/api/v1/courses").json()["items"]}
+    body = mine["enroll"]
+    assert body["minutes_per_day"] == 30
+    assert on.post("/api/v1/enrollments", json=body, headers=ada).status_code not in (404, 422)
+
+    bob = login(on, subject="bob", name="Bob")
+    assert course_id not in {c["id"] for c in on.get("/api/v1/courses").json()["items"]}
+    assert on.post("/api/v1/enrollments", json=body, headers=bob).status_code == 404
+    assert on.post(f"{URL}/{made['id']}/publish", headers=bob).status_code == 404

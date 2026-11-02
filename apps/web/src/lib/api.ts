@@ -95,6 +95,10 @@ export async function* stream(path: string, body: unknown, signal?: AbortSignal)
 }
 
 const MESSAGES: Record<string, string> = {
+  too_many_open_requests: 'You already have a few plans waiting. Start or finish one first.',
+  request_blocked: "Socrat can't help with that request.",
+  invalid_choice: 'One of those choices is not valid. Pick one option per group.',
+  outline_not_ready: 'Your plan is still being prepared.',
   minimum_age: 'Socrat is for learners aged 13 and over.',
   profile_incomplete: 'Finish your profile first.',
   content_unavailable: 'Course content is not built yet. Run python scripts/content/build.py.',

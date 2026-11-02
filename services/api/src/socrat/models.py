@@ -726,6 +726,8 @@ class GeneratedCourse(Base):
     # everything already released either way.
     paused: Mapped[str] = mapped_column(String(24), default="")
     projects: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Project``s
+    # Set for a course a learner asked for: private to them. Empty for the owner's courses.
+    owner_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)

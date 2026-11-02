@@ -11,19 +11,22 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from socrat.catalog import generated
+from socrat.catalog.registry import CatalogError, default_catalog
 from socrat.coursegen import intent as intents
 from socrat.coursegen import jobs
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, user_of
-from socrat.models import GenerationJob, LearningRequest, now
+from socrat.models import GeneratedCourse, GenerationJob, LearningRequest, now
 
 router = APIRouter(prefix="/api/v1/learning-requests")
 OPEN = ("parsed", "needs_clarification")
+ENROLL_MINUTES = (15, 20, 30, 45, 60, 90, 120)  # what POST /enrollments accepts
 
 
 class Create(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    text: str = Field(min_length=3, max_length=2000)
+    text: str = Field(min_length=3, max_length=2000)  # any subject, in the learner's words
+    choices: list[str] = Field(default_factory=list, max_length=12)  # fixed picks: intent.PRESETS
 
 
 class Confirm(BaseModel):
@@ -47,9 +50,25 @@ def view(db: Session, row: LearningRequest) -> dict:
         created_at=row.created_at,
         blueprint=None,
         job=None,
+        published=False,
+        enroll=None,
     )
     if row.course_id:
         stored = generated.course(db, row.course_id)
+        meta = db.get(GeneratedCourse, row.course_id)
+        out["published"] = bool(meta and meta.status == "published")
+        if out["published"] and stored is not None:
+            out["enroll"] = dict(  # what to send to POST /api/v1/enrollments
+                course=row.course_id,
+                language=stored.languages[0],
+                level=stored.levels[0].id,
+                # The planner's budgets start at 15; a 5-minute lesson length stays in the brief.
+                minutes_per_day=next(
+                    (m for m in ENROLL_MINUTES if m >= (row.intent.get("minutes_per_day") or 30)),
+                    120,
+                ),
+                weekdays=list(range(7)),
+            )
         if stored is not None:
             by_id = {c.id: c for c in stored.concepts}
             out["blueprint"] = dict(
@@ -85,11 +104,22 @@ def view(db: Session, row: LearningRequest) -> dict:
     return out
 
 
+@router.get("/options")
+def options(request: Request):
+    """Suggested subjects (free text is always allowed) and the fixed choices."""
+    _enabled(request)
+    return intents.options()
+
+
 @router.post("")
 async def create(body: Create, request: Request):
     _enabled(request)
     settings, eng = request.app.state.settings, engine(request)
-    key = intents.request_key(body.text)
+    try:
+        picks = intents.check_choices(body.choices)
+    except ValueError as exc:
+        raise HTTPException(422, "invalid_choice") from exc
+    key = intents.request_key(intents.normalise(body.text) + "|" + ",".join(picks))
     with Session(eng) as db:
         user = user_of(request, db, write=True)
         user_id = user.id
@@ -108,6 +138,7 @@ async def create(body: Create, request: Request):
         if (open_count or 0) >= settings.learning_requests_max_open:
             raise HTTPException(429, "too_many_open_requests")
     parsed, source = await intents.parse(eng, settings, body.text, user_id)
+    parsed = intents.apply_choices(parsed, picks)
     status = (
         "blocked"
         if parsed.blocked
@@ -190,5 +221,30 @@ def confirm(request_id: str, body: Confirm, request: Request):
         row.intent = parsed.model_dump(mode="json")
         row.course_id, row.status, row.updated_at = course_id, "confirmed", now()
         record_event(db, user.id, "learning_request.confirmed", row.id)
+        db.flush()
+        return view(db, row)
+
+
+@router.post("/{request_id}/publish")
+def publish(request_id: str, request: Request):
+    """Release the learner's own outline (after they have inspected it) so they can enrol.
+    The course stays private to them. Idempotent."""
+    _enabled(request)
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        row = db.get(LearningRequest, request_id)
+        if row is None or row.user_id != user.id or not row.course_id:
+            raise HTTPException(404, "not_found")
+        course = db.get(GeneratedCourse, row.course_id)
+        if course is None:
+            raise HTTPException(409, "outline_not_ready")
+        if course.owner_id != user.id:
+            raise HTTPException(404, "not_found")
+        if course.status == "review":
+            try:
+                generated.publish(db, default_catalog(), row.course_id)
+            except (ValueError, CatalogError) as exc:
+                raise HTTPException(422, "outline_invalid") from exc
+            record_event(db, user.id, "learning_request.published", row.id)
         db.flush()
         return view(db, row)

@@ -139,4 +139,5 @@ API suite on 2026-11-02 (branch `feat/engine-hardening-2`): **711 passed, 24 ski
 | Date | Slice | Status |
 |---|---|---|
 | 2026-11-02 | Engine slice 1: **Intent Parser** (`coursegen/intent.py`), `learning_requests` table (migration 0034), learner API `/api/v1/learning-requests` (create, list, get, confirm), flag `learning_requests_enabled` default off, rules fallback when no model, quota and idempotency | Done, 8 new tests, ruff/mypy clean |
-| next | Slice 2: learner-owned generated courses (owner on `GeneratedCourse`, learner publish of own outline, first modules via existing lazy pipeline), learner diagnostic, web UI "What do you want to learn?" | Planned |
+| 2026-11-02 | Engine slice 2: fixed learner choices (who/register incl. age 5, level, style incl. gamified, daily time; subject stays free text with suggestions), learner-owned private courses (migration 0035 `owner_id`), `/publish`, private listing and enroll guard, web page `/new` | Done; 10 request tests + 78 related tests pass, web typecheck clean |
+| next | Slice 3: short learner diagnostic from the course's prerequisite graph, multiple active courses (today the one-course-at-a-time rule blocks starting a custom course mid-DSA), nav entry for `/new`, first-modules-ready notification | Planned |
