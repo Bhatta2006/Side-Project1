@@ -38,7 +38,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 20s
+      start_period: 60s
     deploy:
       resources:
         limits: { cpus: "1.00", memory: 2G }
@@ -158,7 +158,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 20s
+      start_period: 60s
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
@@ -219,7 +219,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 20s
+      start_period: 60s
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid

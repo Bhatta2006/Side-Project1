@@ -32,7 +32,14 @@ sys.path.insert(0, str(ROOT / "services" / "api" / "src"))
 from socrat.catalog.registry import CONTENT_ROOT, load  # noqa: E402
 
 USER_AGENT = "SocratLinkHealth/1.0 (+https://github.com/Bhatta2006/Socrat)"
-BOT_PROTECTED = {"leetcode.com", "codeforces.com", "realpython.com", "www.geeksforgeeks.org"}
+BOT_PROTECTED = {
+    "leetcode.com",
+    "codeforces.com",
+    "realpython.com",
+    "www.geeksforgeeks.org",
+    "en.cppreference.com",
+    "cppreference.com",
+}
 HEAD_REFUSED = {400, 403, 405, 501}
 FIELDS = ["url", "host", "kinds", "concepts", "status", "http_status", "method", "final_url"]
 

@@ -71,14 +71,20 @@ def test_bot_protected_hosts_are_unverifiable_and_other_errors_are_broken():
     def handler(request):
         if request.url.path == "/robots.txt":
             return httpx.Response(404)
-        if request.url.host == "leetcode.com":
+        if request.url.host in {"leetcode.com", "en.cppreference.com"}:
             return httpx.Response(403)
         return httpx.Response(404)
 
     results, _ = run(
-        handler, ["https://leetcode.com/problems/two-sum/", "https://gone.example.org/x"]
+        handler,
+        [
+            "https://leetcode.com/problems/two-sum/",
+            "https://en.cppreference.com/w/cpp/container/vector",
+            "https://gone.example.org/x",
+        ],
     )
     assert results["https://leetcode.com/problems/two-sum/"].status == "unverifiable"
+    assert results["https://en.cppreference.com/w/cpp/container/vector"].status == "unverifiable"
     assert results["https://gone.example.org/x"].status == "http 404"
     assert results["https://gone.example.org/x"].broken
 

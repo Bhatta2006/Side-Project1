@@ -163,9 +163,16 @@ jobs:
         if: steps.infra.outputs.changed == 'true'
         with:
           terraform_version: "1.16.4"
+      - uses: ./.github/actions/python-env
+        if: steps.infra.outputs.changed == 'true'
       - name: Start the CI database
         if: steps.infra.outputs.changed == 'true'
         run: docker compose up --detach --wait postgres
+      - name: Migrate the CI database
+        if: steps.infra.outputs.changed == 'true'
+        run: uv run alembic upgrade head
+        env:
+          SOCRAT_DATABASE_URL: postgresql+psycopg://socrat:ci-only-password@127.0.0.1:5432/socrat
       - name: Exercise PostgreSQL backup and restore
         if: steps.infra.outputs.changed == 'true'
         shell: bash
