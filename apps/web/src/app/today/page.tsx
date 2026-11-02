@@ -12,7 +12,6 @@ import type { Activity, AssessmentStatus, PlanView, Recommendations, Today } fro
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal, Ring } from '@/components/common';
 import { Level, PlatformTag, ProblemName } from '@/components/practice';
-import { AdaptingCard } from '@/components/socrat/adapting';
 import { ReasonChip } from '@/components/socrat/reason-chip';
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { SocFigure } from '@/components/socrat/soc';
@@ -29,6 +28,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
 // otherwise sits in Today's first load. An early openSignal still opens it once it arrives.
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+// "What Socrat noticed" sits below the fold and brings the Markdown renderer with it. It loads
+// while Today's data is fetched (see the effect in TodayPage), so it is ready when the page shows.
+const loadAdapting = () => import('@/components/socrat/adapting').then(m => m.AdaptingCard);
+const AdaptingCard = dynamic(loadAdapting, { ssr: false });
 
 const VERB: Record<string, string> = {
   lesson: 'Start lesson',
@@ -117,6 +120,7 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 export default function TodayPage() {
   const allowed = useGuard('active');
+  useEffect(() => { void loadAdapting(); }, []);
   const planLocked = usePlanLocks();
   const { profile, features } = useSession();
   const { t } = useI18n();

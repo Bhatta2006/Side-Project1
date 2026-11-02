@@ -396,7 +396,9 @@ follows `navigator.connection.saveData` or 2G), `components/data-use.tsx` in Set
 Pyodide skipped in lite mode (`problems/[id]`, `landing/try-tutor`), `HEAVY` renderers
 (`function-plot`, `simulation`) held behind a button in `visualization-host.tsx`. The e2e server sets
 `SOCRAT_LITE_MODE_ENABLED=true`. Budget finding: before 10a, 5 routes on this branch were over the
-250 KB CI budget; after it, only `/today` (250.4 KB). CI's budget step will still fail until that is fixed.
+250 KB CI budget; after it, only `/today` (250.4 KB), fixed in the next commit by loading the
+"How Socrat is adapting to you" card on demand (`/today` 246.1 KB; every route now within budget,
+covered by `tests/e2e/today.spec.ts`).
 **Next (10b), decided by the owner:** offline lesson cache, opt-in (flag plus a setting), signed-in
 only, lesson reads only (never quiz answers, chat or progress), cleared on sign-out; then Noto subsets.
 Text-to-speech and speech-to-text behind flags (**KEY: Sarvam key for Indic**; the owner's session
