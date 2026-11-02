@@ -70,6 +70,7 @@ class Intent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     subject: str = Field(min_length=2, max_length=120)
     domain: str = Field(default="general", max_length=60)
+    adapter: str = Field(default="general", max_length=32)  # engine.domains id
     goal: str = Field(min_length=5, max_length=400)
     desired_level: Level = "intermediate"
     starting_level: Level | Literal["unknown"] = "unknown"
@@ -91,6 +92,30 @@ class Intent(BaseModel):
     safety_notes: list[str] = Field(default_factory=list, max_length=5)
     clarifications: list[str] = Field(default_factory=list, max_length=2)
     blocked: str = Field(default="", max_length=200)
+
+
+def apply_adapter(intent: Intent, text: str) -> Intent:
+    """Let the domain adapter state what the engine can and cannot verify and what is unsafe.
+    It only ever makes the intent more cautious than the parser's guess."""
+    from socrat.engine import domains
+
+    adapter = domains.classify(f"{intent.subject} {text}", intent.domain)
+    verifiable = min(
+        (intent.verifiable, adapter.verifiable), key=lambda v: domains.VERIFIABLE_RANK[v]
+    )
+    safety = list(intent.safety_notes)
+    safety += [n for n in adapter.safety if n not in safety]
+    return intent.model_copy(
+        update=dict(
+            adapter=adapter.id,
+            needs_physical_practice=intent.needs_physical_practice
+            or adapter.needs_physical_practice,
+            needs_external_evaluator=intent.needs_external_evaluator
+            or adapter.needs_external_evaluator,
+            verifiable=verifiable,
+            safety_notes=safety[:5],
+        )
+    )
 
 
 def normalise(text: str) -> str:
@@ -255,6 +280,15 @@ def to_brief(intent: Intent, course_id: str, budget_usd: float) -> Brief:
             "Performance cannot be judged by text alone; mark such outcomes as self- or "
             "expert-evaluated, never as verified."
         )
+    from socrat.engine import domains
+
+    adapter = domains.ADAPTERS.get(intent.adapter, domains.ADAPTERS["general"])
+    notes.append(
+        f"Subject type: {adapter.name}. Suited teaching methods: {', '.join(adapter.methods)}. "
+        f"Suited activities: {', '.join(adapter.activities)}. Assessment: "
+        f"{', '.join(adapter.assessments)}. The engine can verify this subject: "
+        f"{adapter.verifiable}."
+    )
     notes.extend(f"Safety: {n}" for n in intent.safety_notes)
     notes.extend(f"Accessibility: {a}" for a in intent.accessibility)
     wish = "; ".join([*intent.approach, *intent.preferences])[:600]

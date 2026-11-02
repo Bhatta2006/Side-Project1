@@ -156,6 +156,7 @@ async def create(body: Create, request: Request):
         if (open_count or 0) >= settings.learning_requests_max_open:
             raise HTTPException(429, "too_many_open_requests")
     parsed, source = await intents.parse(eng, settings, body.text, user_id)
+    parsed = intents.apply_adapter(parsed, body.text)
     parsed = intents.apply_choices(parsed, picks)
     status = (
         "blocked"
