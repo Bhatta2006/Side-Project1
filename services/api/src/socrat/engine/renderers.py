@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 Evidence = Literal["none", "exposure", "application", "performance"]  # what it may contribute
 
@@ -121,6 +121,21 @@ class Simulation(Params):
         "heating",
     ]
     inputs: dict[str, float] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def inputs_in_range(self):
+        # Starting values must be ones the vetted model accepts; the learner may then change them
+        # only within the same ranges (the server enforces it again on every run).
+        from socrat.harness import physics
+
+        found = physics.MODELS[self.model]
+        for name, value in self.inputs.items():
+            spec = found.params.get(name)
+            if spec is None:
+                raise ValueError(f"{name} is not a parameter of {self.model}")
+            if not spec.low <= value <= spec.high:
+                raise ValueError(f"{name} must be {spec.low:g} to {spec.high:g} {spec.unit}")
+        return self
 
 
 class Timeline(Params):

@@ -1,6 +1,8 @@
 """Domain adapters and the renderer registry: typed, validated, honest about limits."""
 
+# ruff: noqa: F811
 import pytest
+from test_learner_api import client, login  # noqa: F401
 
 from socrat.coursegen import intent as intents
 from socrat.engine import domains, renderers
@@ -141,3 +143,79 @@ def test_function_plot_accepts_only_math_characters():
     assert any("math characters" in p for p in renderers.validate_spec(spec))
     ok = {**spec, "params": dict(expressions=["a*sin(b*x)+c"])}
     assert renderers.validate_spec(ok) == []
+
+
+def test_code_judge_is_a_real_capability_that_judges_finished_runs():
+    from socrat import harness
+
+    assert "code.judge" in harness.capabilities()
+    got = harness.call(
+        "code.judge",
+        dict(
+            cases=[
+                dict(expected="3\n", stdout="3  \r\n"),  # trailing spaces and CRLF are not errors
+                dict(expected="3", stdout="4"),
+                dict(expected="x", stdout="", exit_code=1),
+                dict(expected="x", stdout="x", timed_out=True),
+            ]
+        ),
+    )
+    assert got.ok, got.error
+    assert [v["verdict"] for v in got.output["verdicts"]] == [
+        "accepted",
+        "wrong_answer",
+        "runtime_error",
+        "time_limit",
+    ]
+    assert got.output["passed"] == 1 and got.output["score"] == 0.25
+    assert got.output["first_failure"] == 1
+    assert not harness.capabilities()["code.judge"].tutor  # nothing for the tutor to judge
+    assert not harness.call("code.judge", dict(cases=[])).ok  # at least one case
+    from socrat.engine import domains
+
+    assert domains.check_adapter_renderers() == []
+
+
+def test_simulation_inputs_in_a_lesson_must_be_in_the_vetted_range():
+    from socrat.engine import renderers
+
+    def spec(inputs):
+        return dict(
+            renderer="simulation",
+            params=dict(model="circuit", inputs=inputs),
+            purpose="See current change with resistance",
+            fallback_text="Ohm's law: current = voltage divided by resistance.",
+            alt_text="A circuit with one resistor.",
+        )
+
+    assert renderers.validate_spec(spec(dict(voltage=10, resistance=5))) == []
+    assert renderers.validate_spec(spec({})) == []
+    assert renderers.validate_spec(spec(dict(voltage=10_000_000)))  # out of range
+    assert renderers.validate_spec(spec(dict(banana=1)))  # not a parameter
+
+
+def test_simulations_are_listed_and_run_on_the_server(client):
+    listed = client.get("/api/v1/engine/simulations").json()["items"]
+    circuit = next(m for m in listed if m["id"] == "circuit")
+    assert {p["name"] for p in circuit["params"]} == {"voltage", "resistance"}
+    assert all({"unit", "low", "high", "default"} <= set(p) for p in circuit["params"])
+
+    url = "/api/v1/engine/simulate"
+    assert client.post(url, json={"model": "circuit"}).status_code in (401, 403)  # signed in only
+    headers = login(client)
+    ran = client.post(
+        url, json={"model": "circuit", "inputs": {"voltage": 10, "resistance": 5}}, headers=headers
+    )
+    assert ran.status_code == 200
+    assert ran.json()["outputs"]["current"]["value"] == 2.0  # 10 V / 5 ohm, computed by the harness
+    default = client.post(url, json={"model": "circuit"}, headers=headers)
+    assert default.status_code == 200  # missing inputs take the defaults
+    too_big = client.post(
+        url, json={"model": "circuit", "inputs": {"voltage": 1e12}}, headers=headers
+    )
+    assert too_big.status_code == 422
+    assert client.post(url, json={"model": "nope"}, headers=headers).status_code == 404
+    assert (
+        client.post(url, json={"model": "circuit", "inputs": {"x": 1}}, headers=headers).status_code
+        == 422
+    )

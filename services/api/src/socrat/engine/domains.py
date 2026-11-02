@@ -299,7 +299,7 @@ def check_adapter_renderers() -> list[str]:
     from socrat.harness import registry as harness
 
     known = renderers.all_manifests()
-    caps = set(harness.capabilities()) | {"code.judge"}  # the judge is wired in, see harness doc
+    caps = set(harness.capabilities())
     problems = []
     for a in ADAPTERS.values():
         problems += [f"{a.id}: unknown renderer {r}" for r in a.renderers if r not in known]

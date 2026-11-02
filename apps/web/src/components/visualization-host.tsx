@@ -3,6 +3,9 @@
 import { Component, type ReactNode } from 'react';
 import Markdown from '@/components/markdown';
 import { Graph } from '@/components/studio/graph';
+import { CodeTask } from '@/components/visuals/code-task';
+import { Simulation } from '@/components/visuals/simulation';
+import { Timeline } from '@/components/visuals/timeline';
 
 /**
  * Renders a lesson's typed VisualizationSpec through approved components only. The spec is data:
@@ -46,6 +49,9 @@ const RENDERERS: Record<string, Renderer> = {
       </ul>
     );
   },
+  simulation: ({ params }) => <Simulation params={params as { model: string; inputs?: Record<string, number> }} />,
+  timeline: ({ params }) => <Timeline params={params as { unit: string; length: number; tracks: string[] }} />,
+  'code-studio': ({ params }) => <CodeTask params={params as { language: string; starter?: string; problem_id?: string | null }} />,
   'self-check': ({ params }) => (
     <ul className="space-y-2">
       {(params.criteria as string[]).map((c) => (
@@ -85,7 +91,7 @@ export function VisualizationHost({ spec }: { spec: VisualizationSpec }) {
   return (
     <figure className="my-4">
       <Guard spec={spec}>
-        <div aria-label={spec.alt_text}>{render({ params: spec.params, spec })}</div>
+        <div role="group" aria-label={spec.alt_text}>{render({ params: spec.params, spec })}</div>
       </Guard>
       <figcaption className="mt-1 text-[13px] text-muted-foreground">{spec.purpose}</figcaption>
     </figure>

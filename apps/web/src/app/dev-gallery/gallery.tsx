@@ -13,6 +13,7 @@ import { STATUS_LABEL, StatusIcon, StatusLabel, StatusLegend, type Status } from
 import { WeekStrip } from '@/components/socrat/week-strip';
 import { Mark, Wordmark } from '@/components/socrat/wordmark';
 import { SocFigure, type SocMood } from '@/components/socrat/soc';
+import { VisualizationHost } from '@/components/visualization-host';
 import { Badge } from '@/components/ui/badge';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -133,6 +134,14 @@ export default function Gallery() {
 
       <Block title="Code">
         <CopyCodeBlock lang="python" code={'def find_pair(numbers, target):\n    left, right = 0, len(numbers) - 1'} />
+      </Block>
+
+      <Block title="Lesson visuals">
+        <div className="grid gap-6" data-testid="lesson-visuals">
+          <VisualizationHost spec={{ renderer: 'simulation', version: '1.0', params: { model: 'circuit', inputs: { voltage: 10, resistance: 5 } }, purpose: 'See current change with resistance', fallback_text: 'Ohm law: current is voltage divided by resistance, so 10 V across 5 ohm gives 2 A.', alt_text: 'A circuit with one resistor.' }} />
+          <VisualizationHost spec={{ renderer: 'timeline', version: '1.0', params: { unit: 'beat', length: 8, tracks: ['Kick', 'Snare'] }, purpose: 'Place beats on a bar', fallback_text: 'Eight beats: kick on 1 and 5, snare on 3 and 7.', alt_text: 'Two tracks of eight beats.' }} />
+          <VisualizationHost spec={{ renderer: 'code-studio', version: '1.0', params: { language: 'python', starter: 'def solve(x):\n    return x' }, purpose: 'Try a starter', fallback_text: 'Write solve(x) so it returns x doubled.', alt_text: 'A Python starter function.' }} />
+        </div>
       </Block>
 
       <Block title="Illustrations">
