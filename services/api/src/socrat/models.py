@@ -732,6 +732,8 @@ class GeneratedCourse(Base):
     visibility: Mapped[str] = mapped_column(String(8), default="private")
     shared_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     credit_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # ok | held (hidden after reports, awaiting an admin) | removed (the owner may not re-share)
+    moderation: Mapped[str] = mapped_column(String(8), default="ok")
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
@@ -803,3 +805,33 @@ class CreatorPerk(Base):
     kind: Mapped[str] = mapped_column(String(16))  # badge | plus
     earned_at: Mapped[int] = mapped_column(Integer, default=now)
     expires_at: Mapped[int | None] = mapped_column(Integer, nullable=True)  # plus access end
+
+
+class CourseReport(Base):
+    """A learner's report on a shared course; one per learner and course."""
+
+    __tablename__ = "course_reports"
+    course_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    reason: Mapped[str] = mapped_column(String(16))  # unsafe | wrong | offensive | copied | other
+    note: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class Diagnostic(Base):
+    """A short starting-level check for a learner-requested course. ``items`` holds the
+    questions with their answer key; learners only ever receive the stems and options."""
+
+    __tablename__ = "diagnostics"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    request_id: Mapped[str] = mapped_column(
+        ForeignKey("learning_requests.id", ondelete="CASCADE"), unique=True
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    items: Mapped[list] = mapped_column(JSON)
+    answers: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    model: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)

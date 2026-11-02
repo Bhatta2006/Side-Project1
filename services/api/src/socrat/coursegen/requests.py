@@ -283,6 +283,23 @@ def share(request_id: str, body: Share, request: Request):
             raise HTTPException(404, "not_found")
         if course.status != "published":
             raise HTTPException(409, "publish_first")
+        if course.moderation != "ok":
+            raise HTTPException(403, "sharing_not_allowed")
+        stored = generated.course(db, course.id)
+        if stored is None or not any(c.status == "live" for c in stored.concepts):
+            # Only courses with at least one released (quality-checked) lesson can be shared.
+            raise HTTPException(409, "nothing_ready_to_share")
+        shared = db.scalar(
+            select(func.count())
+            .select_from(GeneratedCourse)
+            .where(
+                GeneratedCourse.owner_id == user.id,
+                GeneratedCourse.visibility == "public",
+                GeneratedCourse.id != course.id,
+            )
+        )
+        if (shared or 0) >= request.app.state.settings.community_max_shared:
+            raise HTTPException(429, "too_many_shared_courses")
         course.visibility = "public"
         course.shared_at = course.shared_at or now()
         course.credit_name = user.display_name[:80] if body.credit == "name" else None

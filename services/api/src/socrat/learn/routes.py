@@ -393,7 +393,8 @@ def private_courses(db: Session) -> dict[str, str]:
     see or join them; shared (public) community courses are open to everyone."""
     rows = db.execute(
         select(GeneratedCourse.id, GeneratedCourse.owner_id).where(
-            GeneratedCourse.owner_id.is_not(None), GeneratedCourse.visibility != "public"
+            GeneratedCourse.owner_id.is_not(None),
+            (GeneratedCourse.visibility != "public") | (GeneratedCourse.moderation != "ok"),
         )
     )
     return {cid: owner for cid, owner in rows if owner}

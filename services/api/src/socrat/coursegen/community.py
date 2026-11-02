@@ -11,9 +11,10 @@ from dataclasses import dataclass
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
-from socrat.models import ConceptState, CreatorPerk, Enrollment, GeneratedCourse
+from socrat.models import ConceptState, CreatorPerk, Enrollment, GeneratedCourse, User, now
 
 DAY = 86400
+MIN_ACCOUNT_AGE = DAY  # a learner's account must be this old to count towards perks
 
 
 @dataclass(frozen=True)
@@ -32,14 +33,21 @@ TIERS = (
 )
 
 
-def active_learners(db: Session, course_id: str, owner_id: str) -> int:
-    """Other learners who enrolled and have at least one concept with recorded progress."""
+def active_learners(db: Session, course_id: str, owner_id: str, stamp: int | None = None) -> int:
+    """Other learners with an account at least a day old who enrolled and have at least one
+    concept with recorded progress."""
+    at = stamp if stamp is not None else now()
     return (
         db.scalar(
             select(func.count(distinct(Enrollment.user_id)))
             .select_from(Enrollment)
             .join(ConceptState, ConceptState.enrollment_id == Enrollment.id)
-            .where(Enrollment.course_id == course_id, Enrollment.user_id != owner_id)
+            .join(User, User.id == Enrollment.user_id)
+            .where(
+                Enrollment.course_id == course_id,
+                Enrollment.user_id != owner_id,
+                User.created_at <= at - MIN_ACCOUNT_AGE,
+            )
         )
         or 0
     )
@@ -48,7 +56,9 @@ def active_learners(db: Session, course_id: str, owner_id: str) -> int:
 def sweep(db: Session, stamp: int, course_id: str | None = None) -> list[CreatorPerk]:
     """Award every tier a shared course has reached. No commit; returns the new rows."""
     query = select(GeneratedCourse).where(
-        GeneratedCourse.visibility == "public", GeneratedCourse.owner_id.is_not(None)
+        GeneratedCourse.visibility == "public",
+        GeneratedCourse.moderation == "ok",
+        GeneratedCourse.owner_id.is_not(None),
     )
     if course_id:
         query = query.where(GeneratedCourse.id == course_id)
@@ -56,7 +66,7 @@ def sweep(db: Session, stamp: int, course_id: str | None = None) -> list[Creator
     for course in db.scalars(query):
         owner = course.owner_id
         assert owner is not None
-        count = active_learners(db, course.id, owner)
+        count = active_learners(db, course.id, owner, stamp)
         for tier in TIERS:
             if count < tier.learners or db.scalar(
                 select(CreatorPerk).where(

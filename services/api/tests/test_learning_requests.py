@@ -233,7 +233,21 @@ def _published_course(on, ada, text="Teach me algebra from zero"):
     )
     assert run(on, script)
     assert on.post(f"{URL}/{made['id']}/publish", headers=ada).json()["published"]
+    release_first_lesson(on, course_id)
     return made["id"], course_id
+
+
+def release_first_lesson(on, course_id):
+    """Stand in for the package pipeline: make the first concept a released (live) one."""
+    from test_generated_courses import concept as live_concept
+
+    from socrat.models import GeneratedConcept, GeneratedCourse
+
+    with Session(on.app.state.engine) as db, db.begin():
+        row = db.get(GeneratedConcept, (course_id, "what-is-ml"))
+        row.payload = live_concept("what-is-ml", "ideas", "live", ["zero:programs-and-output"])
+        course = db.get(GeneratedCourse, course_id)
+        course.updated_at += 1
 
 
 def test_sharing_needs_consent_and_opens_the_course_to_everyone(on):
@@ -271,7 +285,7 @@ def test_perks_count_only_other_learners_with_progress_and_award_once(on):
 
     from socrat import entitlements
     from socrat.coursegen import community
-    from socrat.models import ConceptState, CreatorPerk, Enrollment, User
+    from socrat.models import ConceptState, CreatorPerk, Enrollment, User, now
 
     ada = login(on, subject="ada")
     rid, course_id = _published_course(on, ada)
@@ -300,20 +314,22 @@ def test_perks_count_only_other_learners_with_progress_and_award_once(on):
             if i < 12:  # only these did anything
                 db.add(ConceptState(enrollment_id=enrollment.id, concept="x", state={}))
         db.flush()
-        assert community.active_learners(db, course_id, owner.id) == 12
-        first = community.sweep(db, 1_000)
+        later = now() + 10 * community.DAY
+        assert community.active_learners(db, course_id, owner.id, later) == 12
+        assert community.active_learners(db, course_id, owner.id) == 0  # accounts too new
+        first = community.sweep(db, later)
         assert [p.tier for p in first] == ["creator"] and first[0].expires_at is None
-        assert community.sweep(db, 2_000) == []  # idempotent
+        assert community.sweep(db, later + 1) == []  # idempotent
         for i in range(12, 52):
             e = db.scalars(select(Enrollment).where(Enrollment.course_id == course_id)).all()[i]
             db.add(ConceptState(enrollment_id=e.id, concept="x", state={}))
         db.flush()
-        second = community.sweep(db, 3_000)
+        second = community.sweep(db, later + 2)
         assert [p.tier for p in second] == ["plus-30"]
-        assert second[0].expires_at == 3_000 + 30 * community.DAY
+        assert second[0].expires_at == later + 2 + 30 * community.DAY
         assert db.scalar(select(CreatorPerk).where(CreatorPerk.tier == "plus-30"))
-        assert entitlements.plan_of(db, owner.id, 4_000) == "plus"
-        assert entitlements.plan_of(db, owner.id, 3_000 + 31 * community.DAY) == "free"
+        assert entitlements.plan_of(db, owner.id, later + 3) == "plus"
+        assert entitlements.plan_of(db, owner.id, later + 2 + 31 * community.DAY) == "free"
 
 
 def test_a_learner_can_pause_one_course_and_come_back_to_it(on):
@@ -367,3 +383,61 @@ def test_a_learner_can_pause_one_course_and_come_back_to_it(on):
         on.post("/api/v1/enrollments/switch", json={"enrollment": "nope"}, headers=ada).status_code
         == 404
     )
+
+
+def test_sharing_needs_a_released_lesson_and_is_capped(on):
+    from test_coursegen import OUTLINE, Scripted, run
+
+    ada = login(on, subject="ada")
+    made = on.post(URL, json={"text": "Teach me algebra from zero"}, headers=ada).json()
+    course_id = on.post(f"{URL}/{made['id']}/confirm", json={}, headers=ada).json()["course_id"]
+    script = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "ok", "issues": []})],
+    )
+    assert run(on, script)
+    on.post(f"{URL}/{made['id']}/publish", headers=ada)
+    body = {"consent": True}
+    assert on.post(f"{URL}/{made['id']}/share", json=body, headers=ada).status_code == 409
+    release_first_lesson(on, course_id)
+    on.app.state.settings.community_max_shared = 1
+    assert on.post(f"{URL}/{made['id']}/share", json=body, headers=ada).status_code == 200
+
+
+def test_reports_hold_a_shared_course_and_an_admin_decides(on):
+    on.app.state.settings.admin_subjects = ["boss"]
+    on.app.state.settings.community_report_hold = 3
+    ada = login(on, subject="ada")
+    rid, course_id = _published_course(on, ada)
+    on.post(f"{URL}/{rid}/share", json={"consent": True}, headers=ada)
+    report = f"/api/v1/community/courses/{course_id}/report"
+    assert on.post(report, json={"reason": "wrong"}, headers=ada).status_code == 422  # own
+
+    def listed():
+        return course_id in {c["id"] for c in on.get("/api/v1/courses").json()["items"]}
+
+    for name in ("bob", "cy"):
+        h = login(on, subject=name, name=name)
+        assert on.post(report, json={"reason": "wrong"}, headers=h).json()["reported"]
+        assert on.post(report, json={"reason": "wrong"}, headers=h).json()["reported"]  # idempotent
+    assert listed()  # two reports of 'wrong' are below the hold line
+    dee = login(on, subject="dee", name="dee")
+    on.post(report, json={"reason": "offensive", "note": "rude"}, headers=dee)
+    assert not listed()  # held
+
+    boss = login(on, subject="boss", name="Boss")
+    queue = on.get("/api/v1/admin/community/courses").json()["items"]
+    assert queue[0]["id"] == course_id and len(queue[0]["reports"]) == 3
+    assert (
+        on.post(
+            f"/api/v1/admin/community/courses/{course_id}", json={"action": "restore"}, headers=boss
+        ).json()["moderation"]
+        == "ok"
+    )
+    assert listed()
+    done = on.post(
+        f"/api/v1/admin/community/courses/{course_id}", json={"action": "remove"}, headers=boss
+    )
+    assert done.json()["moderation"] == "removed" and not listed()
+    ada = login(on, subject="ada")
+    assert on.post(f"{URL}/{rid}/share", json={"consent": True}, headers=ada).status_code == 403
