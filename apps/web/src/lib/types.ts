@@ -62,6 +62,8 @@ export interface Features {
   community_url?: string | null;
   try_tutor?: boolean;
   adaptive_quiz?: boolean;
+  /** Learners may build their own course at /new. */
+  learning_requests?: boolean;
 }
 
 export interface Course {

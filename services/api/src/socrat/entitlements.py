@@ -15,6 +15,7 @@ from socrat.catalog.registry import Catalog
 from socrat.models import (
     AssistantMessage,
     AssistantThread,
+    CreatorPerk,
     PlaygroundJob,
     Subscription,
     User,
@@ -40,10 +41,18 @@ PLANS = {
 
 def plan_of(db: Session, user_id: str, stamp: int | None = None) -> str:
     """Paid access lasts until the end of the period that was paid for, cancelled or not."""
+    at = stamp or now()
     sub = db.get(Subscription, user_id)
-    if sub and sub.plan in PLANS and sub.current_end > (stamp or now()):
-        return sub.plan
-    return "free"
+    paid = sub.plan if sub and sub.plan in PLANS and sub.current_end > at else "free"
+    # Creator perks (community courses) grant Plus for a while; a paid plan above it still wins.
+    perk = db.scalar(
+        select(func.max(CreatorPerk.expires_at)).where(
+            CreatorPerk.user_id == user_id, CreatorPerk.kind == "plus"
+        )
+    )
+    if perk and perk > at and RANK[paid] < RANK["plus"]:
+        return "plus"
+    return paid
 
 
 def free_concepts(catalog: Catalog) -> set[str]:

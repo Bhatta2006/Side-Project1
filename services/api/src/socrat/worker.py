@@ -32,6 +32,13 @@ def drain_once(engine: Engine) -> int:
         return len(events)
 
 
+def award_perks(engine: Engine) -> int:
+    from socrat.coursegen import community
+
+    with Session(engine) as db, db.begin():
+        return len(community.sweep(db, now()))
+
+
 def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):
     while len(running) < settings.explainer_concurrent_limit and (job_id := jobs.claim(engine)):
         task = asyncio.create_task(jobs.run(engine, settings, job_id))
@@ -52,6 +59,10 @@ async def serve(settings: Settings, engine: Engine):
                 await asyncio.to_thread(reminders.sweep, engine, settings)
             except Exception:
                 logging.exception("reminder_sweep_failed")
+            try:
+                await asyncio.to_thread(award_perks, engine)
+            except Exception:
+                logging.exception("creator_perk_sweep_failed")
         try:
             drain_once(engine)
         except Exception:

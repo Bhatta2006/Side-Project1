@@ -117,7 +117,7 @@ function Pill({ children }: { children: React.ReactNode }) {
 export default function TodayPage() {
   const allowed = useGuard('active');
   const planLocked = usePlanLocks();
-  const { profile } = useSession();
+  const { profile, features } = useSession();
   const [today, setToday] = useState<Today | null>(null);
   const [error, setError] = useState('');
   const [recs, setRecs] = useState<Recommendations | null>(null);
@@ -493,6 +493,18 @@ export default function TodayPage() {
           </Tabs>
         </Reveal>
       </div>
+      {features?.learning_requests ? (
+        <Link
+          href="/new"
+          className="mt-6 flex min-h-14 items-center justify-between gap-4 rounded-[20px] border bg-card px-5 py-4 transition-colors hover:bg-raised"
+        >
+          <span>
+            <span className="block font-semibold">Build your own course</span>
+            <span className="block text-sm text-muted-foreground">Pick any subject and how you like to learn it.</span>
+          </span>
+          <span aria-hidden="true">→</span>
+        </Link>
+      ) : null}
       <CommunityCard className="mt-6" />
       <Assistant scope="general" title="Ask Soc" openSignal={askSoc} />
     </Page>

@@ -34,7 +34,16 @@ type LearningRequest = {
   job: { state: string; error: string } | null;
   blueprint: { title: string; tagline: string; modules: { id: string; title: string; concepts: Concept[] }[] } | null;
   enroll: Record<string, unknown> | null;
+  ready: number;
+  total: number;
+  community: {
+    shared: boolean;
+    credit: string | null;
+    learners: number;
+    tiers: { id: string; learners: number; label: string; earned: boolean }[];
+  } | null;
 };
+type Enrolled = { id: string; course: string; title: string; active: boolean };
 
 const GROUP_TITLE: Record<string, string> = {
   who: 'Who is learning?',
@@ -52,6 +61,13 @@ export default function NewCourse() {
   const [req, setReq] = useState<LearningRequest | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [credit, setCredit] = useState<'anonymous' | 'name'>('anonymous');
+  const [mine, setMine] = useState<Enrolled[]>([]);
+
+  useEffect(() => {
+    api.get<{ items: Enrolled[] }>('/enrollments').then((r) => setMine(r.items)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     api
@@ -108,6 +124,15 @@ export default function NewCourse() {
     );
   };
 
+  const share = () => {
+    if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/share`, { consent, credit }), setReq);
+  };
+  const unshare = () => {
+    if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/unshare`, {}), setReq);
+  };
+  const resume = (id: string) =>
+    run(() => api.post('/enrollments/switch', { enrollment: id }), () => router.push('/today'));
+
   if (unavailable) {
     return (
       <Page narrow>
@@ -133,6 +158,26 @@ export default function NewCourse() {
         title="What do you want to learn?"
         description="Type anything, or start from a suggestion. Then tell Socrat who is learning and how."
       />
+
+      {!req && mine.length > 1 ? (
+        <section className="mb-8" aria-label="Your courses">
+          <h2 className="mb-2 font-semibold">Your courses</h2>
+          <ul className="space-y-2">
+            {mine.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
+                <span>{e.title}</span>
+                {e.active ? (
+                  <span className="text-sm text-muted-foreground">Current</span>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => resume(e.id)} disabled={busy}>
+                    Resume
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {!req ? (
         <div className="space-y-8">
@@ -216,8 +261,8 @@ export default function NewCourse() {
               <h2 className="type-display-l">{req.blueprint.title}</h2>
               <p className="mt-1 text-muted-foreground">{req.blueprint.tagline}</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Lessons are written just before you reach them. You can see what comes later, and nothing is shown as
-                ready until it is.
+                {req.ready} of {req.total} lessons are ready. The rest are written just before you reach them, and
+                nothing is shown as ready until it is. Courses made by AI are labelled as such.
               </p>
               {req.blueprint.modules.map((m) => (
                 <div key={m.id} className="mt-5">
@@ -235,6 +280,51 @@ export default function NewCourse() {
                   </ol>
                 </div>
               ))}
+            </section>
+          ) : null}
+
+          {req.published && req.community ? (
+            <section className="rounded-[20px] border bg-card p-5" aria-label="Share with the community">
+              <h2 className="font-semibold">Share this course</h2>
+              {req.community.shared ? (
+                <>
+                  <p className="mt-2 text-sm">
+                    Shared{req.community.credit ? ` as ${req.community.credit}` : ' anonymously'}.{' '}
+                    {req.community.learners} other learner{req.community.learners === 1 ? '' : 's'} active so far.
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {req.community.tiers.map((t) => (
+                      <li key={t.id}>
+                        {t.earned ? 'Earned' : `At ${t.learners} learners`}: {t.label}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button variant="outline" className="mt-3" onClick={unshare} disabled={busy}>
+                    Stop sharing
+                  </Button>
+                  <p className="mt-2 text-[13px] text-muted-foreground">
+                    Learners who already started keep their progress. Rewards you earned stay yours.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Let other learners take this course. When enough of them really use it you earn rewards:{' '}
+                    {req.community.tiers.map((t) => `${t.label} at ${t.learners} learners`).join(', ')}.
+                  </p>
+                  <label className="mt-3 flex items-start gap-2 text-sm">
+                    <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />
+                    I agree to share this course with all Socrat learners. I can stop sharing at any time.
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="How to be credited">
+                    <Pill pressed={credit === 'anonymous'} onClick={() => setCredit('anonymous')}>Anonymous</Pill>
+                    <Pill pressed={credit === 'name'} onClick={() => setCredit('name')}>Show my name</Pill>
+                  </div>
+                  <Button className="mt-3" onClick={share} disabled={busy || !consent}>
+                    Share with everyone
+                  </Button>
+                </>
+              )}
             </section>
           ) : null}
 

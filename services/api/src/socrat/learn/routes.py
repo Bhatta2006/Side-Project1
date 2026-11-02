@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -389,10 +389,11 @@ def attribution():
 
 
 def private_courses(db: Session) -> dict[str, str]:
-    """Courses a learner asked for, by id -> owner. Only that learner may see or join them."""
+    """Courses a learner asked for and has not shared, by id -> owner. Only that learner may
+    see or join them; shared (public) community courses are open to everyone."""
     rows = db.execute(
         select(GeneratedCourse.id, GeneratedCourse.owner_id).where(
-            GeneratedCourse.owner_id.is_not(None)
+            GeneratedCourse.owner_id.is_not(None), GeneratedCourse.visibility != "public"
         )
     )
     return {cid: owner for cid, owner in rows if owner}
@@ -411,10 +412,28 @@ def courses(request: Request):
     with Session(engine(request)) as db:
         private = private_courses(db)
         me = viewer_id(request, db) if private else None
+        shared = {
+            r.id: r
+            for r in db.scalars(
+                select(GeneratedCourse).where(GeneratedCourse.owner_id.is_not(None))
+            )
+        }
     shown = [cid for cid in sorted(cat.courses) if private.get(cid, me) == me]
+
+    def card(cid: str) -> dict:
+        item = views.course_card(cat, cid)
+        if (row := shared.get(cid)) is not None:  # made by a learner, not the Socrat team
+            item["community"] = dict(
+                by=row.credit_name if row.visibility == "public" else None,
+                mine=row.owner_id == me,
+                shared=row.visibility == "public",
+                ai_generated=True,
+            )
+        return item
+
     return {
-        "items": [views.course_card(cat, cid) for cid in ("zero", "dsa", "cp") if cid in shown]
-        + [views.course_card(cat, cid) for cid in shown if cid not in {"zero", "dsa", "cp"}]
+        "items": [card(cid) for cid in ("zero", "dsa", "cp") if cid in shown]
+        + [card(cid) for cid in shown if cid not in {"zero", "dsa", "cp"}]
     }
 
 
@@ -429,13 +448,29 @@ def enroll(body: EnrollInput, request: Request):
             raise HTTPException(404, "unknown_course")
         if user.birth_year is None:
             raise HTTPException(409, "profile_incomplete")
-        # One course at a time: a learner moves on once the current course is finished.
+        community = db.get(GeneratedCourse, body.course)
         active = learn.active_enrollment(db, user.id)
-        if active is not None and not views.course_finished(db, cat, user, active):
-            raise HTTPException(409, "already_enrolled")
-        # Moving on means the next course in the sequence, never back or sideways.
-        if active is not None and views.NEXT_COURSE.get(active.course_id) != body.course:
-            raise HTTPException(409, "already_enrolled")
+        if community is not None and community.owner_id is not None:
+            # Learner-made courses can be started any time; the current course is paused with
+            # its progress kept, and coming back resumes it (see /enrollments/switch).
+            earlier = db.scalar(
+                select(Enrollment)
+                .where(Enrollment.user_id == user.id, Enrollment.course_id == body.course)
+                .order_by(Enrollment.created_at.desc())
+            )
+            if earlier is not None:
+                db.execute(
+                    update(Enrollment).where(Enrollment.user_id == user.id).values(active=False)
+                )
+                earlier.active = True
+                return dict(id=earlier.id, status=earlier.status)
+        else:
+            # One course at a time: a learner moves on once the current course is finished.
+            if active is not None and not views.course_finished(db, cat, user, active):
+                raise HTTPException(409, "already_enrolled")
+            # Moving on means the next course in the sequence, never back or sideways.
+            if active is not None and views.NEXT_COURSE.get(active.course_id) != body.course:
+                raise HTTPException(409, "already_enrolled")
         goal = {
             k: v
             for k, v in dict(
@@ -460,6 +495,54 @@ def enroll(body: EnrollInput, request: Request):
         )
         record_event(db, user.id, "enrollment.created", enrollment.id)
         return dict(id=enrollment.id, status=enrollment.status)
+
+
+@router.get("/enrollments")
+def my_enrollments(request: Request):
+    """Every course the learner has started, newest first; one is active."""
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        rows = db.scalars(
+            select(Enrollment)
+            .where(Enrollment.user_id == user.id)
+            .order_by(Enrollment.created_at.desc())
+        ).all()
+        cat = catalog()
+        return {
+            "items": [
+                dict(
+                    id=e.id,
+                    course=e.course_id,
+                    title=cat.course(e.course_id).title
+                    if e.course_id in cat.courses
+                    else e.course_id,
+                    active=e.active,
+                    status=e.status,
+                )
+                for e in rows
+            ]
+        }
+
+
+class SwitchInput(Strict):
+    enrollment: str
+
+
+@router.post("/enrollments/switch")
+def switch_enrollment(body: SwitchInput, request: Request):
+    """Pause the current course and resume another one the learner started. Nothing is lost:
+    each enrollment keeps its own mastery and plan."""
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        target = db.get(Enrollment, body.enrollment)
+        if target is None or target.user_id != user.id:
+            raise HTTPException(404, "no_active_enrollment")
+        if target.course_id not in catalog().courses:
+            raise HTTPException(404, "unknown_course")
+        db.execute(update(Enrollment).where(Enrollment.user_id == user.id).values(active=False))
+        target.active = True
+        record_event(db, user.id, "enrollment.switched", target.id)
+        return dict(id=target.id, status=target.status)
 
 
 @router.patch("/enrollments/current")

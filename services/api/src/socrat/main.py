@@ -264,6 +264,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "pattern_planner": settings.pattern_planner_enabled,
             "community_url": settings.community_whatsapp_url or None,
             "try_tutor": settings.try_tutor_enabled,
+            "learning_requests": settings.learning_requests_enabled,
         }
 
     @app.post("/api/v1/auth/dev-login")

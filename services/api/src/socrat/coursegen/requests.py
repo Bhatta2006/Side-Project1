@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 
 from socrat.catalog import generated
 from socrat.catalog.registry import CatalogError, default_catalog
+from socrat.coursegen import community, jobs
 from socrat.coursegen import intent as intents
-from socrat.coursegen import jobs
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, user_of
 from socrat.models import GeneratedCourse, GenerationJob, LearningRequest, now
@@ -27,6 +27,12 @@ class Create(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(min_length=3, max_length=2000)  # any subject, in the learner's words
     choices: list[str] = Field(default_factory=list, max_length=12)  # fixed picks: intent.PRESETS
+
+
+class Share(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    consent: bool  # must be true: the learner agrees to share this course with everyone
+    credit: str = Field(default="anonymous", pattern=r"^(anonymous|name)$")
 
 
 class Confirm(BaseModel):
@@ -52,11 +58,23 @@ def view(db: Session, row: LearningRequest) -> dict:
         job=None,
         published=False,
         enroll=None,
+        ready=0,
+        total=0,
+        community=None,
     )
     if row.course_id:
         stored = generated.course(db, row.course_id)
         meta = db.get(GeneratedCourse, row.course_id)
         out["published"] = bool(meta and meta.status == "published")
+        if stored is not None:
+            out["total"] = len(stored.concepts)
+            out["ready"] = sum(c.status != "planned" for c in stored.concepts)
+        if meta is not None and meta.owner_id == row.user_id and out["published"]:
+            out["community"] = dict(
+                shared=meta.visibility == "public",
+                credit=meta.credit_name,
+                **community.standing(db, meta),
+            )
         if out["published"] and stored is not None:
             out["enroll"] = dict(  # what to send to POST /api/v1/enrollments
                 course=row.course_id,
@@ -246,5 +264,45 @@ def publish(request_id: str, request: Request):
             except (ValueError, CatalogError) as exc:
                 raise HTTPException(422, "outline_invalid") from exc
             record_event(db, user.id, "learning_request.published", row.id)
+        db.flush()
+        return view(db, row)
+
+
+@router.post("/{request_id}/share")
+def share(request_id: str, body: Share, request: Request):
+    """Offer the learner's published course to every learner, if they agree. They may be
+    credited by name or stay anonymous, and may stop sharing later. Perks: see ``community``."""
+    _enabled(request)
+    if not body.consent:
+        raise HTTPException(422, "consent_required")
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        row = db.get(LearningRequest, request_id)
+        course = db.get(GeneratedCourse, row.course_id) if row and row.course_id else None
+        if row is None or row.user_id != user.id or course is None or course.owner_id != user.id:
+            raise HTTPException(404, "not_found")
+        if course.status != "published":
+            raise HTTPException(409, "publish_first")
+        course.visibility = "public"
+        course.shared_at = course.shared_at or now()
+        course.credit_name = user.display_name[:80] if body.credit == "name" else None
+        course.updated_at = max(now(), course.updated_at + 1)  # refresh the catalog cache
+        record_event(db, user.id, "learning_request.shared", row.id)
+        db.flush()
+        return view(db, row)
+
+
+@router.post("/{request_id}/unshare")
+def unshare(request_id: str, request: Request):
+    """Stop sharing. Learners who already started it keep their access and progress."""
+    _enabled(request)
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        row = db.get(LearningRequest, request_id)
+        course = db.get(GeneratedCourse, row.course_id) if row and row.course_id else None
+        if row is None or row.user_id != user.id or course is None or course.owner_id != user.id:
+            raise HTTPException(404, "not_found")
+        course.visibility = "private"
+        record_event(db, user.id, "learning_request.unshared", row.id)
         db.flush()
         return view(db, row)

@@ -728,6 +728,10 @@ class GeneratedCourse(Base):
     projects: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Project``s
     # Set for a course a learner asked for: private to them. Empty for the owner's courses.
     owner_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    # private: only the owner. public: the owner agreed to share it with every learner.
+    visibility: Mapped[str] = mapped_column(String(8), default="private")
+    shared_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    credit_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
@@ -784,3 +788,18 @@ class LearningRequest(Base):
     course_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class CreatorPerk(Base):
+    """A reward a course creator earned when enough other learners used their shared course.
+    One row per user, course and tier, so the sweep that awards them can run any time."""
+
+    __tablename__ = "creator_perks"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    course_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    tier: Mapped[str] = mapped_column(String(24), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16))  # badge | plus
+    earned_at: Mapped[int] = mapped_column(Integer, default=now)
+    expires_at: Mapped[int | None] = mapped_column(Integer, nullable=True)  # plus access end
