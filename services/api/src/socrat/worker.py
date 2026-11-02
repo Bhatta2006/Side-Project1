@@ -10,6 +10,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from socrat import reminders
+from socrat.assistant.gateway import make_provider
 from socrat.config import Settings
 from socrat.database import make_engine
 from socrat.explainer import jobs
@@ -43,7 +44,7 @@ async def maintain_courses(engine: Engine, settings: Settings) -> dict:
     from socrat.catalog.registry import default_catalog
     from socrat.coursegen import maintain
 
-    return await maintain.sweep(engine, settings, default_catalog(), now())
+    return await maintain.sweep(engine, settings, default_catalog(), now(), make=make_provider)
 
 
 def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):

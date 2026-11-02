@@ -349,7 +349,11 @@ def gates_title(catalog: Catalog, module_key: str) -> str:
 
 
 def session_view(
-    catalog: Catalog, session: QuizSession, language: str, db: Session | None = None
+    catalog: Catalog,
+    session: QuizSession,
+    language: str,
+    db: Session | None = None,
+    locale: str = "en",
 ) -> dict:
     kind = session.activity_id.partition(":")[0]
     checkpoint = kind == "checkpoint"
@@ -357,6 +361,10 @@ def session_view(
     questions = []
     for concept, item_id in session.items:
         q = item(catalog, concept, item_id)
+        if db is not None and locale != "en":
+            from socrat.localize import service as localized
+
+            q = localized.quiz_item(db, concept, catalog.concept(concept), locale, q)
         answer = session.answers.get(item_id)
         shown = q.shown(session.id)
         entry = dict(

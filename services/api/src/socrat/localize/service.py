@@ -8,7 +8,7 @@ text, and the admin queue lists it as stale. English is never replaced in storag
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from socrat.catalog.schema import Concept
+from socrat.catalog.schema import Concept, QuizItem
 from socrat.localize import glossary, locales, translate
 from socrat.models import ContentTranslation, now
 
@@ -71,6 +71,24 @@ def overlay(db: Session, qualified: str, concept: Concept, tag: str, view: dict)
         rtl=loc.rtl,
     )
     return out
+
+
+def quiz_item(db: Session, qualified: str, concept: Concept, tag: str, item: QuizItem) -> QuizItem:
+    """``item`` with its text translated when a current translation exists. Only prompt, options
+    and explanation change: the id, the answer index and the option order (which depends on the
+    id and the count) are the authored ones, so grading and shuffling are exactly as in English."""
+    row = current(db, qualified, tag, concept)
+    if row is None:
+        return item
+    u = row.units
+    base = f"quiz.{item.id}"
+    return item.model_copy(
+        update=dict(
+            prompt=u.get(f"{base}.prompt", item.prompt),
+            options=[u.get(f"{base}.option.{i}", o) for i, o in enumerate(item.options)],
+            explanation=u.get(f"{base}.explanation", item.explanation),
+        )
+    )
 
 
 def stale(db: Session, catalog) -> list[dict]:

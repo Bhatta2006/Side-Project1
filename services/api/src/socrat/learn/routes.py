@@ -835,7 +835,7 @@ def quiz(activity_id: str, request: Request):
         guard_instruction(db, cat, user)
         enrollment = active(db, user)
         session = quizzes.open_session(db, cat, enrollment, valid_activity(cat, activity_id), now())
-        return quizzes.session_view(cat, session, enrollment.language, db)
+        return quizzes.session_view(cat, session, enrollment.language, db, user.locale)
 
 
 @router.post("/quiz/{activity_id}/answer")
@@ -846,7 +846,7 @@ def quiz_answer(activity_id: str, body: QuizAnswer, request: Request):
         enrollment = active(db, user)
         session = quizzes.open_session(db, cat, enrollment, valid_activity(cat, activity_id), now())
         quizzes.answer(db, cat, user, enrollment, session, body.item, body.choice, now())
-        return quizzes.session_view(cat, session, enrollment.language, db)
+        return quizzes.session_view(cat, session, enrollment.language, db, user.locale)
 
 
 # ---------------------------------------------------------------- transfer checks

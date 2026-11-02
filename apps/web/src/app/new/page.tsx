@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ApiError, api, explain } from '@/lib/api';
 import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
+import { useI18n } from '@/lib/i18n';
 import { Pill } from '@/components/choice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,7 @@ const GROUP_TITLE: Record<string, string> = {
 };
 
 export default function NewCourse() {
+  const { t, tx } = useI18n();
   const router = useRouter();
   const [options, setOptions] = useState<Options | null>(null);
   const [unavailable, setUnavailable] = useState(false);
@@ -168,7 +170,7 @@ export default function NewCourse() {
   if (unavailable) {
     return (
       <Page narrow>
-        <PageHeader title="Build your own course" description="This is not open to your account yet." />
+        <PageHeader title={t('today.build.title')} description={t('new.unavailable')} />
       </Page>
     );
   }
@@ -186,23 +188,23 @@ export default function NewCourse() {
   return (
     <Page narrow>
       <PageHeader
-        eyebrow="your course"
-        title="What do you want to learn?"
-        description="Type anything, or start from a suggestion. Then tell Socrat who is learning and how."
+        eyebrow={t('new.eyebrow')}
+        title={t('new.title')}
+        description={t('new.description')}
       />
 
       {!req && mine.length > 1 ? (
         <section className="mb-8" aria-label="Your courses">
-          <h2 className="mb-2 font-semibold">Your courses</h2>
+          <h2 className="mb-2 font-semibold">{t('new.mine')}</h2>
           <ul className="space-y-2">
             {mine.map((e) => (
               <li key={e.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
                 <span>{e.title}</span>
                 {e.active ? (
-                  <span className="text-sm text-muted-foreground">Current</span>
+                  <span className="text-sm text-muted-foreground">{t('new.current')}</span>
                 ) : (
                   <Button size="sm" variant="outline" onClick={() => resume(e.id)} disabled={busy}>
-                    Resume
+                    {t('new.resume')}
                   </Button>
                 )}
               </li>
@@ -215,14 +217,14 @@ export default function NewCourse() {
         <div className="space-y-8">
           <div>
             <label htmlFor="subject" className="mb-2 block font-semibold">
-              Your subject
+              {t('new.subject')}
             </label>
             <Input
               id="subject"
               value={text}
               maxLength={500}
               onChange={(e) => setText(e.target.value)}
-              placeholder="For example: how black holes work, Carnatic music, circuits"
+              placeholder={t('new.placeholder')}
             />
             <ul className="mt-3 flex flex-wrap gap-2" aria-label="Suggested subjects">
               {options.subjects.map((s) => (
@@ -236,7 +238,7 @@ export default function NewCourse() {
           </div>
           {options.groups.map((group) => (
             <fieldset key={group.id}>
-              <legend className="mb-2 font-semibold">{GROUP_TITLE[group.id] ?? group.id}</legend>
+              <legend className="mb-2 font-semibold">{tx(`new.group.${group.id}`, GROUP_TITLE[group.id] ?? group.id)}</legend>
               <div className="flex flex-wrap gap-2">
                 {group.choices.map((c) => (
                   <Pill key={c.id} pressed={picks.includes(c.id)} onClick={() => toggle(group, c.id)}>
@@ -248,7 +250,7 @@ export default function NewCourse() {
           ))}
           {error ? <ErrorNote message={error} /> : null}
           <Button onClick={make} disabled={busy || text.trim().length < 3}>
-            {busy ? 'Reading your request…' : 'Make my plan'}
+            {busy ? t('new.making') : t('new.make')}
           </Button>
         </div>
       ) : (

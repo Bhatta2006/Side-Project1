@@ -20,12 +20,14 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.catalog import generated
 from socrat.catalog.atoms import AtomPack
 from socrat.catalog.registry import Catalog
-from socrat.catalog.schema import Concept
+from socrat.catalog.schema import Concept, Resource
 from socrat.config import Settings
-from socrat.coursegen import jobs, links
+from socrat.coursegen import jobs, links, research, roles
+from socrat.coursegen import package as pkg
 from socrat.learn import resources
 from socrat.models import ConceptVersion, GeneratedConcept, GeneratedCourse, ResourceHealth, need
 
@@ -217,16 +219,107 @@ def rollback(db: Session, base: Catalog, course_id: str, concept_id: str, versio
     )
 
 
+# ---------------------------------------------------------------- replacements
+
+
+async def find_replacements(
+    engine, settings: Settings, base: Catalog, make=make_provider, http=None, limit: int = 3
+) -> list[dict]:
+    """For concepts left with fewer than two good links, ask the researcher for public sources,
+    keep only those whose links are public, reachable and new to the concept, and store them as
+    a new version. The model proposes; the link check decides. A reading time cannot be known,
+    so a nominal 10 minutes is recorded, and the version reason says the link was found by
+    search, not reviewed by a person. An offline model or an empty search leaves the queue as is."""
+    with Session(engine) as db:
+        dead = dead_links(db)
+        todo = []
+        for row, concept, _ in _live(db):
+            key = _key(row)
+            good = [r for r in concept.resources if str(r.url) not in dead.get(key, set())]
+            if key in dead and len(good) < MIN_RESOURCES:
+                todo.append((row.course_id, concept, good))
+    changed = []
+    for course_id, concept, good in todo[:limit]:
+        with Session(engine) as db:
+            course = generated.course(db, course_id)
+            parent = db.get(GeneratedCourse, course_id)
+        if course is None or parent is None or parent.brief is None:
+            continue
+        key = f"{course_id}:{concept.id}"
+        have = {str(r.url) for r in concept.resources}
+        ctx = pkg.context(base, course, parent.brief, concept)
+        ctx += "\nAlready used (do not suggest again): " + ", ".join(sorted(have))
+        try:
+            found = await roles.ask(
+                engine,
+                settings,
+                "researcher",
+                research.RESEARCHER,
+                research.prompt(ctx),
+                2000,
+                make,
+            )
+            sources = await research.screen(found.data, http)
+        except ProviderError:
+            continue
+        fresh = [s for s in sources if s["url"] not in have]
+        missing = MIN_RESOURCES - len(good)
+        if len(fresh) < missing:
+            continue
+        added = [
+            Resource.model_validate(
+                dict(
+                    title=s["title"],
+                    url=s["url"],
+                    kind=research.ROLE_KIND[s.get("role", "explain")],
+                    source=(research._host(s["url"]) or "web")[:80],
+                    minutes=10,
+                )
+            )
+            for s in fresh[:missing]
+        ]
+        with Session(engine) as db, db.begin():
+            row = need(db.get(GeneratedConcept, (course_id, concept.id)))
+            live = Concept.model_validate(row.payload)
+            dead_now = dead_links(db).get(key, set())
+            kept = [r for r in live.resources if str(r.url) not in dead_now]
+            provenance = live.provenance
+            bumped = (
+                provenance.model_copy(update={"version": provenance.version + 1})
+                if provenance
+                else None
+            )
+            fixed = live.model_copy(update={"resources": [*kept, *added][:8], "provenance": bumped})
+            pack = AtomPack.model_validate(row.atoms) if row.atoms else None
+            generated.store_concept(db, base, course_id, fixed, pack, reason="replacement")
+            for url in dead_now:
+                health = db.get(ResourceHealth, (key, url))
+                if health is not None:
+                    db.delete(health)
+        changed.append(dict(concept=key, added=[str(r.url) for r in added]))
+    return changed
+
+
 # ---------------------------------------------------------------- the sweep
 
 
 async def sweep(
-    engine, settings: Settings, base: Catalog, now: int, http: httpx.AsyncClient | None = None
+    engine,
+    settings: Settings,
+    base: Catalog,
+    now: int,
+    http: httpx.AsyncClient | None = None,
+    make=None,
 ) -> dict:
-    """One maintenance pass: check a batch of links, then repair what is certain."""
+    """One maintenance pass: check a batch of links, repair what is certain, and (when a model
+    provider is given) look for replacement sources where too few good links are left."""
     checked = await check_links(engine, now, settings.maintainer_batch, http)
     with Session(engine) as db, db.begin():
         changed = repair(db, base)
+    if make is not None:
+        checked["replaced"] = await find_replacements(
+            engine, settings, base, make, http, settings.maintainer_replacements
+        )
     for item in changed:
         log.warning("maintainer removed dead links from %s: %s", item["concept"], item["removed"])
     return {**checked, "repaired": changed}

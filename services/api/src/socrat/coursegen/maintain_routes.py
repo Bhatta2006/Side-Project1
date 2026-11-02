@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from socrat.admin.routes import require_admin
+from socrat.assistant.gateway import make_provider
 from socrat.catalog.registry import default_catalog
 from socrat.coursegen import maintain
 from socrat.database import record_event
@@ -13,6 +14,7 @@ from socrat.models import now
 
 router = APIRouter(prefix="/api/v1/admin/maintenance")
 http = None  # replaced in tests; None uses a real client
+make = make_provider  # replaced in tests
 
 
 class Rollback(BaseModel):
@@ -38,7 +40,7 @@ async def run(request: Request):
         user = require_admin(request, db, write=True)
         user_id = user.id
     result = await maintain.sweep(
-        engine(request), request.app.state.settings, default_catalog(), now(), http
+        engine(request), request.app.state.settings, default_catalog(), now(), http, make
     )
     with Session(engine(request)) as db, db.begin():
         record_event(db, user_id, "maintenance.run", str(result["checked"]))

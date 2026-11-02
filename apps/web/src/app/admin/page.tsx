@@ -17,6 +17,7 @@ import { useSession } from '@/lib/session';
 
 // Admin-only tools behind their own tabs: loaded when opened, not with the page.
 const CourseBuilder = dynamic(() => import('@/components/course-builder').then(m => m.CourseBuilder), { ssr: false });
+const EngineUpkeep = dynamic(() => import('@/components/engine-upkeep').then(m => m.EngineUpkeep), { ssr: false });
 const StyleLab = dynamic(() => import('@/components/style-lab').then(m => m.StyleLab), { ssr: false });
 
 interface Overview {
@@ -213,11 +214,13 @@ export default function Admin() {
           <TabsTrigger value="review">Review queue</TabsTrigger>
           <TabsTrigger value="courses">Courses</TabsTrigger>
           <TabsTrigger value="styles">Learning styles</TabsTrigger>
+          <TabsTrigger value="upkeep">Upkeep</TabsTrigger>
         </TabsList>
         <TabsContent value="users"><AdminUsers /></TabsContent>
         <TabsContent value="review"><ReviewQueue /></TabsContent>
         <TabsContent value="courses"><CourseBuilder /></TabsContent>
         <TabsContent value="styles"><StyleLab /></TabsContent>
+        <TabsContent value="upkeep"><EngineUpkeep /></TabsContent>
         <TabsContent value="metrics">
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

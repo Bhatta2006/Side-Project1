@@ -338,3 +338,59 @@ def test_the_tutor_is_told_the_language_without_loosening_the_rules():
     hindi = localize.tutor_directive("hi")
     assert "Hindi" in hindi and "help ladder" in hindi and "stack" in hindi
     assert "do not reveal more" in hindi
+
+
+def test_quiz_text_is_translated_but_grading_and_shuffling_are_not(client):
+    headers = login(client)
+    onboard(client, headers)
+    qualified = "zero:programs-and-output"
+    concept = default_catalog().concept(qualified)
+    first = concept.quiz[0]
+    # What a translator would return, in a form that shows which authored option each is.
+    units = {
+        f"quiz.{first.id}.prompt": "अनुवादित प्रश्न",
+        f"quiz.{first.id}.explanation": "अनुवादित व्याख्या",
+    } | {f"quiz.{first.id}.option.{i}": f"विकल्प {i}" for i in range(len(first.options))}
+    store(client, qualified, units)
+
+    url = f"/api/v1/quiz/quiz:{qualified}"
+    english = client.get(url).json()
+    shown = next(q for q in english["questions"] if q["id"] == first.id)
+    assert shown["prompt"] == first.prompt
+    client.patch("/api/v1/me", json={"locale": "hi"}, headers=headers)
+    hindi = client.get(url).json()
+    assert hindi["id"] == english["id"]  # the same session
+    got = next(q for q in hindi["questions"] if q["id"] == first.id)
+    assert got["prompt"] == "अनुवादित प्रश्न"
+    # Same shuffle: each displayed position holds the translation of the same authored option.
+    assert got["options"] == [f"विकल्प {first.options.index(o)}" for o in shown["options"]]
+    # Grading is the authored answer, whatever the language.
+    right = shown["options"].index(first.options[first.answer])
+    result = client.post(
+        f"{url}/answer", json={"item": first.id, "choice": right}, headers=headers
+    ).json()
+    answered = next(q for q in result["questions"] if q["id"] == first.id)
+    assert answered["correct"] is True and answered["explanation"] == "अनुवादित व्याख्या"
+    # Other questions of that quiz had no translation: they stay in English.
+    others = [q for q in result["questions"] if q["id"] != first.id]
+    assert all(
+        q["prompt"] == next(c for c in concept.quiz if c.id == q["id"]).prompt for q in others
+    )
+
+
+def test_latin_script_targets_are_checked_for_text_left_in_english():
+    spanish = locales.get("es")
+    source = (
+        "A stack removes the item added last, so the newest item leaves first. "
+        "Push adds one item and pop removes one item from the top."
+    )
+    masked, spans = translate.protect(source)
+    good = (
+        "Un stack quita el elemento que se agregó al final, así que el más nuevo sale primero. "
+        "Push agrega un elemento y pop quita un elemento de la cima."
+    )
+    assert translate.check_unit("summary", masked, spans, good, spanish) == []
+    left = translate.check_unit("summary", masked, spans, source, spanish)
+    assert any("still reads as English" in p for p in left)
+    # The check is for Latin-script targets only; English itself is not a target.
+    assert translate.check_unit("summary", masked, spans, source, locales.get("hi"))

@@ -19,6 +19,12 @@ from socrat.coursegen import roles
 from socrat.localize import glossary, locales
 
 GLOSSARY_VERSION = glossary.VERSION
+# Function words that are English and not Spanish, Portuguese or Indonesian (so "a", "in" and "no"
+# are left out). English prose is roughly a quarter of these; a real translation almost none.
+ENGLISH_WORDS = frozenset(
+    "the and of is are that with this for to you it be on as at by was were from your can will "
+    "which when what how not have has".split()
+)
 ROUNDS = 2
 
 SYSTEM = """You translate learning material for Socrat into {language} ({tag}) for a learner.
@@ -116,6 +122,11 @@ def check_unit(
         share = locales.script_share(plain_out, locale.script)
         if share < 0.5:
             problems.append(f"{key}: not written in {locale.name} (left in English?)")
+    elif locale.script == "latin" and locale.tag != locales.DEFAULT and len(letters) > 60:
+        # Latin-script targets cannot be told apart by script, so look for English function words.
+        words = re.findall(r"[A-Za-z']+", plain_out.lower())
+        if words and sum(w in ENGLISH_WORDS for w in words) / len(words) > 0.15:
+            problems.append(f"{key}: still reads as English, not {locale.name}")
     for term in glossary.must_keep(plain_source):
         if (
             re.search(rf"(?<![A-Za-z]){re.escape(term)}(?![A-Za-z])", plain_out, re.IGNORECASE)

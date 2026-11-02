@@ -3,6 +3,7 @@ rollback works, and learners keep their place throughout."""
 
 # ruff: noqa: F811
 import asyncio
+import json
 import time
 
 import httpx
@@ -22,6 +23,7 @@ from test_coursegen_package import (  # noqa: F401
 )
 from test_learner_api import client, login, onboard  # noqa: F401
 
+from socrat.assistant.gateway import Event, ProviderError, usage_event
 from socrat.catalog import generated
 from socrat.catalog.registry import default_catalog
 from socrat.coursegen import links, maintain
@@ -241,5 +243,99 @@ def test_maintenance_is_admin_only_and_the_run_endpoint_reports(client, released
     boss = login(client, subject="boss", name="Boss")
     routes.http = site.client()
     got = client.post("/api/v1/admin/maintenance/run", headers=boss).json()
-    assert got == {"checked": 4, "failed": 0, "repaired": []}
+    assert got == {"checked": 4, "failed": 0, "repaired": [], "replaced": []}
     assert client.get("/api/v1/admin/maintenance", headers=boss).json()["enabled"] is False
+
+
+NEW_GOOD = "https://docs.example.org/ml/what-is-a-model"
+NEW_DEAD = "https://invented.example.com/ml/page-that-does-not-exist"
+
+
+class Researcher:
+    """The researcher role, played by hand: a good source, an invented one, one already used."""
+
+    def __init__(self, fail=False):
+        self.fail, self.prompts = fail, []
+
+    def make(self, settings):
+        script = self
+
+        class Provider:
+            name = "anthropic"
+
+            async def converse(self, system, turns, max_tokens, *args, **kwargs):
+                script.prompts.append(turns[0].content)
+                if script.fail:
+                    raise ProviderError("provider_offline")
+                sources = [
+                    dict(
+                        title="What is a model",
+                        url=NEW_GOOD,
+                        role="explain",
+                        supports="Defines a model.",
+                        fit=5,
+                    ),
+                    dict(
+                        title="A page I made up",
+                        url=NEW_DEAD,
+                        role="explain",
+                        supports="Looks plausible.",
+                        fit=5,
+                    ),
+                    dict(
+                        title="Same as before",
+                        url=GOOD[0],
+                        role="explain",
+                        supports="Already used.",
+                        fit=4,
+                    ),
+                ]
+                yield Event("text", text=json.dumps({"sources": sources}))
+                yield usage_event(500, 800)
+
+        return Provider()
+
+
+def strand(client, site):
+    """Kill three of four links so only one good link remains, and let them become dead."""
+    for url in (FOURTH, THIRD, GOOD[1]):
+        site.alive.discard(url)
+    for step in range(4):
+        sweep(client, site, T0 + step * DAY)
+
+
+def replace(client, site, researcher):
+    state = client.app.state
+    return asyncio.run(
+        maintain.find_replacements(
+            state.engine, state.settings, default_catalog(), researcher.make, site.client()
+        )
+    )
+
+
+def test_replacements_are_searched_checked_and_stored_as_a_new_version(client, released, site):
+    strand(client, site)
+    site.alive.add(NEW_GOOD)  # the invented page does not exist
+    researcher = Researcher()
+    done = replace(client, site, researcher)
+    assert done == [dict(concept=KEY, added=[NEW_GOOD])]
+    now_urls = urls(client)
+    assert NEW_GOOD in now_urls and NEW_DEAD not in now_urls
+    assert GOOD[0] in now_urls and THIRD not in now_urls and len(now_urls) == 2
+    assert "Already used" in researcher.prompts[0] and GOOD[0] in researcher.prompts[0]
+    with Session(client.app.state.engine) as db:
+        reasons = [v.reason for v in db.query(ConceptVersion).all()]
+        assert reasons == ["replacement"]
+        assert db.query(ResourceHealth).filter(ResourceHealth.status == "dead").count() == 0
+    # Nothing is left to do, so a second pass asks nobody.
+    assert replace(client, site, researcher) == [] and len(researcher.prompts) == 1
+
+
+def test_a_failed_or_empty_search_leaves_the_queue_for_a_person(client, released, site):
+    strand(client, site)
+    assert replace(client, site, Researcher(fail=True)) == []  # model unavailable
+    assert replace(client, site, Researcher()) == []  # nothing new survived the link check
+    boss = login(client, subject="boss", name="Boss")
+    queue = client.get("/api/v1/admin/maintenance", headers=boss).json()
+    assert [s["concept"] for s in queue["dead_without_replacement"]] == [KEY]
+    assert len(urls(client)) == 4  # untouched

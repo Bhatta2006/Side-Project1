@@ -25,6 +25,8 @@ interface I18n {
   locale: string;
   /** Looks a string up; English when this language lacks it. `{name}` style values are filled in. */
   t(key: MessageKey, values?: Record<string, string | number>): string;
+  /** For labels whose key is built at run time: the translation if there is one, else `fallback`. */
+  tx(key: string, fallback: string): string;
   /** Switches the interface at once and remembers it for signed-out visits. */
   setLocale(tag: string): void;
 }
@@ -59,7 +61,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<I18n>(() => {
     const catalog = CATALOGS[chosen] ?? {};
-    return { locale: chosen, setLocale, t: (key, values) => fill(catalog[key] ?? en[key], values) };
+    return {
+      locale: chosen,
+      setLocale,
+      t: (key, values) => fill(catalog[key] ?? en[key], values),
+      tx: (key, fallback) => (catalog as Record<string, string>)[key] ?? fallback,
+    };
   }, [chosen, setLocale]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

@@ -204,6 +204,7 @@ class Settings(DatabaseSettings):
     maintainer_enabled: bool = False
     maintainer_batch: int = Field(default=200, ge=1, le=5000)  # links checked per pass
     maintainer_review_days: int = Field(default=365, ge=30, le=3650)
+    maintainer_replacements: int = Field(default=3, ge=0, le=50)  # researcher calls per pass
     gen_quarantine_reports: int = Field(default=3, ge=1, le=100)  # distinct learners
     ai_tool_rounds: int = Field(default=4, ge=1, le=8)
 
