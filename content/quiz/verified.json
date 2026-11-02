@@ -131,7 +131,7 @@
    "9": "99545f30f91e4debf341553d805484df236b016738f7d97bfb80cdae2fabf6e1"
   },
   "rejected": {},
-  "source": "c00d4cd5f1bf86bf8aaba9e541188aefbcb410e7c0ad0d86ec39bd82dbd0f3af"
+  "source": "13d26ee078229f9df2175de2cffea6996655bdf67b50353adbb97416f0886ccb"
  },
  "quiz:cp:modular-arithmetic:fast-power": {
   "duplicates": {},
@@ -266,7 +266,7 @@
    "9": "373b7ddcf43da93146bce1592ac85f4822486040f952c322c9a6e5bfbc9ae6f3"
   },
   "rejected": {},
-  "source": "52577291f4572b89ec7aac08ad1482b742d6e9fc6e7a07c204d744ef8c76eec5"
+  "source": "e9eb3bd5e8567b6768446e78db0947c9ad740eed91a27673209c49a05f607a70"
  },
  "quiz:cp:prefix-difference:difference-array": {
   "duplicates": {},

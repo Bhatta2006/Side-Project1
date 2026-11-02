@@ -47,7 +47,7 @@ items:
     format: mcq
     prompt: "Why do Fenwick trees use positions 1..n rather than 0..n−1?"
     options:
-      - "i & -i is 0 for i = 0, so the loops would never move away from position 0"
+      - "i & -i is 0 for i = 0, so the loops never leave position 0"
       - "Position 0 is reserved for the total of every value in the array"
       - "Arrays that start at 0 cannot hold sums larger than 2^31 safely"
       - "Binary numbers are written without a leading zero by convention"

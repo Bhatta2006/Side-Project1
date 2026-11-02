@@ -47,7 +47,7 @@ items:
     format: mcq
     prompt: "Why can the outer loop stop when i·i exceeds n?"
     options:
-      - "Every composite up to n has a prime factor of at most the square root of n"
+      - "Every composite up to n has a prime factor no larger than its root"
       - "Numbers above the square root of n are never prime, so none are left"
       - "The inner loop would start beyond n and the array would overflow"
       - "Primes above the square root repeat the pattern of the smaller ones"

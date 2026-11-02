@@ -66,7 +66,10 @@ template_io: {stdin: "30\n", expected: "10"}
 variants:
   - {id: count-primes, band: 2, title: "Count primes below n", problem: "leetcode:count-primes"}
   - {id: prime-gap, band: 3, title: "Primes in a range", problem: "cf:26A"}
+  - {id: t-primes, band: 3, title: "Squares of primes", problem: "cf:230B"}
+  - {id: prime-matrix, band: 4, title: "Next prime for each cell", problem: "cf:271B"}
   - {id: smallest-factor, band: 5, title: "Factorise many numbers", problem: "cses:1713"}
+  - {id: closest-primes, band: 6, title: "Closest primes in a range", problem: "leetcode:closest-prime-numbers-in-range"}
 pitfalls: [sieve-zero-one-prime, sieve-cross-out-itself, sieve-step-by-one]
 atoms: [sieve-worked, sieve-faded, sieve-visualizer, sieve-micro, sieve-classify]
 quiz_family: quiz:cp:number-theory:sieve-count
@@ -75,7 +78,10 @@ problems:
   external:
     - "leetcode:count-primes"
     - "cf:26A"
+    - "cf:230B"
+    - "cf:271B"
     - "cses:1713"
+    - "leetcode:closest-prime-numbers-in-range"
 showcase:
   - "Pattern note: cross out multiples, starting at the square"
 provenance:

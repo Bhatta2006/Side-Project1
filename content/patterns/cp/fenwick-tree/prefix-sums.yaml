@@ -87,8 +87,10 @@ template_io: {stdin: "10 7\n", expected: "28"}
 variants:
   - {id: dynamic-range-sum, band: 3, title: "Dynamic range sum queries", problem: "cses:1648"}
   - {id: range-sum-mutable, band: 3, title: "Range sum with updates", problem: "leetcode:range-sum-query-mutable"}
+  - {id: list-removals, band: 5, title: "Find the k-th remaining element", problem: "cses:1749"}
   - {id: inversions, band: 6, title: "Count smaller numbers after self", problem: "leetcode:count-of-smaller-numbers-after-self"}
-pitfalls: [fenwick-sum-everything, fenwick-step-by-one, fenwick-suffix-not-prefix]
+  - {id: range-sum-count, band: 6, title: "Count range sums", problem: "leetcode:count-of-range-sum"}
+pitfalls: [fenwick-step-by-one, fenwick-sum-everything, fenwick-suffix-not-prefix]
 atoms: [fenwick-worked, fenwick-faded, fenwick-visualizer, fenwick-micro, fenwick-classify]
 quiz_family: quiz:cp:fenwick-tree:prefix-sums
 problems:
@@ -96,7 +98,9 @@ problems:
   external:
     - "cses:1648"
     - "leetcode:range-sum-query-mutable"
+    - "cses:1749"
     - "leetcode:count-of-smaller-numbers-after-self"
+    - "leetcode:count-of-range-sum"
 showcase:
   - "Pattern note: the lowest set bit decides which blocks an index belongs to"
 provenance:
