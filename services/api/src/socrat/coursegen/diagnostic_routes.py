@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from socrat import limits
 from socrat.assistant.gateway import ProviderError
 from socrat.catalog import generated
 from socrat.catalog.schema import Course
@@ -58,6 +59,7 @@ async def start(request_id: str, request: Request):
         if existing is not None:
             return _view(existing)
         user_id, claimed = row.user_id, str(row.intent.get("starting_level", "unknown"))
+    limits.enforce("diagnostic", user_id, settings.diagnostic_per_hour, 3600)
     try:
         items, model = await diagnostic.generate(
             eng,

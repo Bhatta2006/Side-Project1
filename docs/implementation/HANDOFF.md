@@ -7,7 +7,7 @@ honest status report; the plan is the strategy.
 
 Branch: `feat/universal-engine` (pushed to `origin/feat/universal-engine`, 11 commits on top of
 `main`, no pull request opened). `main` is one commit ahead (#60, a CI fix) at the time of
-writing. Last full API run on this branch: **791 passed, 24 skipped** (19 min). Ruff, mypy and web
+writing. Last full API run before slice 9a: **791 passed, 24 skipped** (19 min); slice 9a: **798 passed, 24 skipped** (7 new tests). Ruff, mypy and web
 typecheck clean, web production build clean, browser test `tests/e2e/visuals.spec.ts` passes on
 desktop and mobile.
 
@@ -120,7 +120,7 @@ The plan's phase table (section G of the plan doc) and what is actually done:
 | 4 Learner-typed courses | Done, with gaps | Intent parser (model, rules fallback), fixed choices, learning requests API, diagnostic, private courses, community sharing with consent and credit, moderation, creator perks, pause and resume | "Reuse of cached identical intents across learners" not done; plan-based quotas beyond the per-learner budget and open-request cap not done |
 | 5 Adapters and renderers | Done, with gaps | 6 adapters, 8 renderer manifests with typed params, Experience Designer, host in web with `markdown`, `function-plot`, `concept-map`, `self-check`, `simulation`, `timeline`, `code-studio` | `concept-playground` (sandboxed iframe) not served; visuals write **no evidence** yet |
 | 6 Access and low bandwidth | **Barely started** | System-font fallbacks for Indic and Arabic | TTS and STT, lite mode, offline lesson cache, Noto subsets, WCAG audit per locale, throttled-3G test |
-| 7 Scale | Not started | | Worker split, CDN and cache headers, Redis rate limits, cost ledger, per-tenant budgets, load tests |
+| 7 Scale | **Partial** (9a) | Per-learner limits (per process), public cache headers on catalogue lists, per-course cost report, load tool with recorded results, cold-start stall fixed | Worker split, CDN rules for course reads, shared Redis limits, per-tenant budgets, staging load test |
 | 8 Region and compliance | Not started | | Region policy matrix, per-country consent and minors rules, data residency, regional runbook |
 | 9 Payments and launch | Not started | | Currency and tax expansion, local methods, staged rollout, rollback drill |
 | 10 Research loop | Not started | | Outcome experiments per locale, calibration, benchmark and regression harness of representative courses |
@@ -320,23 +320,27 @@ latency and translation quality are therefore **unmeasured**. This is the bigges
 
 Items marked KEY need something from the owner.
 
-### Slice 9: scale (Phase 7). Start here.
-1. **Per-user rate limits** for `POST /api/v1/engine/simulate` and the other cheap-but-open
-   endpoints (diagnostic, translations are admin-only). The current in-memory per-visitor limiter
-   is not shared across processes; move to Redis (check `services/api/src/socrat` for the existing
-   limiter and `compose.yaml` for whether Redis is provisioned).
-2. **Cost ledger** per learner and per course: `budget.record` already meters each model call
-   (`coursegen/roles.ask`); aggregate it, expose it in the admin overview, and add a per-tenant
-   budget. There is an existing per-learner daily budget (`user_daily_budget_usd`) to build on.
-3. **Worker split:** generation jobs run in the API process (`gen_runner`) and in
-   `worker.py`; separate the API from the worker deployment, make claims safe for multiple
-   workers (`jobs.claim`), and add a health endpoint for the worker.
-4. **Cache and CDN:** immutable course reads (`/courses`, concept GETs for released concepts)
-   with ETag or cache headers; remember private and shared courses and locale overlays vary by user.
-5. **Load tests** with recorded p95 latency and cost per active learner at a target concurrency,
-   committed to the repo (exit test of Phase 7).
-6. Quota by plan for learner-typed courses; cached reuse of identical intents across learners
-   (open item from Phase 4).
+### Slice 9: scale (Phase 7). Started (9a done, 2026-11-02), remainder below
+Done in 9a: per-learner sliding-window limits on `POST /engine/simulate` and diagnostic creation
+(`limits.py`, settings `simulate_per_minute`, `diagnostic_per_hour`; **per process**, 0 turns off);
+ETag and `public` cache headers on `/engine/domains|renderers|simulations` (`httpcache.py`; every
+other route stays `no-store`); `GET /api/v1/admin/engine-costs` (generation spend per course, cost
+per released concept, per role); load test tool `scripts/dev/loadtest.py` with recorded results in
+`docs/implementation/load-test-results.md`; **fixed a cold-start stall** (catalog parsed once per
+concurrent request; now `catalog.registry.single_flight` plus a load at API start).
+Already existed (do not rebuild): `ai_usage` ledger with per-learner and global daily and monthly
+budgets (`assistant/budget.py`, `GET /admin/ai-costs`), multi-process-safe `jobs.claim`.
+Remaining:
+1. **Shared rate limits.** Swap `limits.LIMITER` for a Redis-backed class with the same `allow`
+   signature once Redis is provisioned (it is not in `compose.yaml`). Until then N processes allow N times the limit.
+2. **Worker split:** generation runs in the API process (`gen_runner`, `coursegen_jobs.run_forever`)
+   and in `worker.py`; make the API deployment set `gen_runner=False`, document the worker
+   deployment, add a worker health or heartbeat check.
+3. **CDN rules** for released course reads (`/courses`, concept GETs). They vary by user (private
+   courses, locale overlay), so they need `Vary` or a public/private split before any cache header.
+4. **Per-tenant or per-plan budgets** and quota for learner-typed courses; cached reuse of identical intents.
+5. **Load test against the staging stack** (Postgres, several processes), including write paths
+   (enrol, quiz answers, submissions). Add the result to `load-test-results.md`.
 
 ### Slice 10: access and low bandwidth (Phase 6)
 Text-to-speech and speech-to-text behind flags (**KEY: Sarvam key for Indic**; the owner's session

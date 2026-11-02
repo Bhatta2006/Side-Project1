@@ -28,6 +28,7 @@ from socrat.catalog import generated
 from socrat.catalog.registry import default_catalog
 from socrat.config import Settings
 from socrat.coursegen import jobs as coursegen_jobs
+from socrat.coursegen.cost_routes import router as engine_costs_router
 from socrat.coursegen.diagnostic_routes import router as diagnostic_router
 from socrat.coursegen.maintain_routes import router as maintenance_router
 from socrat.coursegen.moderation import admin as moderation_admin
@@ -93,6 +94,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             generation = asyncio.create_task(
                 coursegen_jobs.run_forever(engine, settings, default_catalog)
             )
+        # Parsing the catalog takes seconds; do it at start so the first learner does not pay for
+        # it (requests that arrive meanwhile wait for this one load, see single_flight).
+        if settings.prewarm_content:
+            await asyncio.to_thread(default_catalog)
+        elif settings.environment != "test":
+            threading.Thread(target=default_catalog, daemon=True).start()
         if settings.adaptive_quiz_enabled and settings.prewarm_content:
             await asyncio.to_thread(warm_quiz_bank)
         elif settings.adaptive_quiz_enabled and settings.environment != "test":
@@ -129,6 +136,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(engine_router)
     app.include_router(diagnostic_router)
     app.include_router(maintenance_router)
+    app.include_router(engine_costs_router)
     app.include_router(locale_public)
     app.include_router(locale_admin)
     app.include_router(moderation_learner)
@@ -202,10 +210,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers.update(
             {
                 "X-Request-ID": request_id,
-                "Cache-Control": "no-store",
                 "X-Content-Type-Options": "nosniff",
             }
         )
+        # Private by default; a route that serves the same bytes to everyone opts in to caching.
+        response.headers.setdefault("Cache-Control", "no-store")
         response.headers.setdefault("Referrer-Policy", "same-origin")
         if settings.secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
