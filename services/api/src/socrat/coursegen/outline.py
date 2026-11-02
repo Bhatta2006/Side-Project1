@@ -58,6 +58,11 @@ def to_course(brief: Brief, outline: dict) -> Course:
                     "objectives": c["objectives"],
                     "misconceptions": c.get("misconceptions", []),
                     "assessment": c["assessment"],
+                    **{
+                        k: c[k]
+                        for k in ("category", "related", "evidence", "expected", "practice")
+                        if k in c
+                    },
                 },
             }
             for m in modules
@@ -175,9 +180,16 @@ SHAPE = """{
        "depth": "overview | practitioner | mastery",
        "objectives": ["1-6 observable outcomes, each starting with a verb"],
        "misconceptions": ["up to 6 concrete wrong beliefs learners hold"],
-       "assessment": ["quiz", "code", "explain", "project"]}
+       "assessment": ["quiz", "code", "explain", "project"],
+       "category": "knowledge | skill | both",
+       "related": ["concept ids that connect without being required first (0-6)"],
+       "evidence": ["recognition | recall | application | transfer | explanation | performance"],
+       "expected": "the observable performance that shows the concept is learned",
+       "practice": ["retrieval | worked-example | problem-set | lab | project | performance | reflection | discussion"]}
     ]}
-  ]
+  ],
+  "assumptions": ["what you assumed about the learner or subject that the brief did not say"],
+  "unresolved": ["prerequisite questions you could not settle; empty when none"]
 }"""
 
 ARCHITECT = f"""You are the Course Architect for Socrat, an adaptive learning platform whose
@@ -201,6 +213,15 @@ Rules:
   "understand". Misconceptions are specific wrong beliefs, not topics.
 - Assessment: "quiz" always fits; "code" only when the course languages apply; "explain"
   for reasoning; "project" for module capstones.
+- The outline is a competency graph, not a list. For each concept say whether it is
+  knowledge, a skill, or both; which other concepts it relates to without needing them first;
+  what evidence shows it is learned (recognising a right answer is weaker than recalling it,
+  applying it, transferring it to an unfamiliar case, explaining it, or performing it); the
+  observable performance expected; and the practice that builds it. A skill needs application
+  or performance evidence, not only recognition. A subject learned by doing (music, movement,
+  hands-on electronics) needs performance evidence and says that a person must judge it.
+- List your assumptions about the learner and any prerequisite questions you could not settle,
+  so the learner and the critic can see them. Do not hide uncertainty.
 - Levels: 2-4 self-reported starting points. The first has start_concept null.
 - Shape: how this subject is practised and proven. Choose the studio from what learners
   actually do. code: programming (editor, tests). workbench: math (graphs, symbolic
@@ -272,3 +293,30 @@ def critic_prompt(brief: Brief, outline: dict) -> str:
         + "\n\nOutline to review:\n"
         + json.dumps(outline, indent=1)
     )
+
+
+def graph_issues(course: Course, adapter=None) -> list[str]:
+    """Problems with the competency graph that code can see. Fields the architect left empty are
+    not judged (older outlines have none); what it did fill in must be consistent."""
+    issues = []
+    for c in course.concepts:
+        o = c.outline
+        if o is None:
+            continue
+        if o.category in ("skill", "both") and o.evidence and set(o.evidence) <= {"recognition"}:
+            issues.append(
+                f"{c.id}: a {o.category} concept needs application or performance evidence, "
+                "not only recognition."
+            )
+        if c.id in o.related:
+            issues.append(f"{c.id}: a concept cannot be related to itself.")
+        if overlap := sorted(set(o.related) & set(c.prerequisites)):
+            issues.append(f"{c.id}: {', '.join(overlap)} is already a prerequisite, not related.")
+    filled = [c.outline for c in course.concepts if c.outline and c.outline.evidence]
+    if adapter is not None and adapter.needs_physical_practice and filled:
+        if not any("performance" in o.evidence for o in filled):
+            issues.append(
+                f"{adapter.name} is learned by doing: at least one concept needs performance "
+                "evidence judged by a person."
+            )
+    return issues

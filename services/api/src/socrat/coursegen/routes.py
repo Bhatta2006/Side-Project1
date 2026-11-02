@@ -276,8 +276,15 @@ def package_detail(course_id: str, concept_id: str, request: Request):
             .where(GenerationJob.course_id == course_id, GenerationJob.target == concept_id)
             .order_by(GenerationJob.created_at.desc())
         )
+        from socrat.catalog.schema import Concept
+        from socrat.engine import assessments
+
         return dict(
             concept=row.payload,
+            # What each assessment measures and how it is scored, derived from its type.
+            assessments=assessments.describe(
+                Concept.model_validate(row.payload), f"{course_id}:{concept_id}"
+            ),
             atoms=row.atoms,
             problems=row.problems or [],
             jobs=[{**job_view(j), "output": j.output} for j in runs],

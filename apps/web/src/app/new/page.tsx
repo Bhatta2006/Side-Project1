@@ -11,7 +11,28 @@ import { Input } from '@/components/ui/input';
 
 type Group = { id: string; single: boolean; choices: { id: string; label: string }[] };
 type Options = { subjects: { id: string; label: string; group: string }[]; groups: Group[] };
-type Concept = { id: string; title: string; prerequisites: string[]; status: string; generation?: string; objectives: string[] };
+type Concept = {
+  id: string;
+  title: string;
+  prerequisites: string[];
+  status: string;
+  generation?: string;
+  objectives: string[];
+  minutes?: number;
+  category?: 'knowledge' | 'skill' | 'both' | null;
+  evidence?: string[];
+  expected?: string;
+};
+
+// How you will show you have learned it, in plain words (the competency's required evidence).
+const EVIDENCE: Record<string, string> = {
+  recognition: 'pick the right answer',
+  recall: 'remember it unaided',
+  application: 'use it on a task',
+  transfer: 'use it somewhere new',
+  explanation: 'explain why',
+  performance: 'do it, judged by a person',
+};
 
 // What the engine is doing with each lesson, in plain words. Nothing reads as ready until it is.
 const STAGE: Record<string, string> = {
@@ -48,7 +69,13 @@ type LearningRequest = {
   course_id: string | null;
   published: boolean;
   job: { state: string; error: string } | null;
-  blueprint: { title: string; tagline: string; modules: { id: string; title: string; concepts: Concept[] }[] } | null;
+  blueprint: {
+    title: string;
+    tagline: string;
+    modules: { id: string; title: string; concepts: Concept[] }[];
+    assumptions?: string[];
+    unresolved?: string[];
+  } | null;
   enroll: Record<string, unknown> | null;
   diagnostic: 'none' | 'ready' | 'done';
   ready: number;
@@ -327,6 +354,15 @@ export default function NewCourse() {
                   Stop lessons that have not started
                 </Button>
               ) : null}
+              {req.blueprint.assumptions?.length || req.blueprint.unresolved?.length ? (
+                <div className="mt-4 rounded-xl border px-4 py-3 text-sm">
+                  <p className="font-medium">What the plan assumes</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                    {(req.blueprint.assumptions ?? []).map((a) => <li key={a}>{a}</li>)}
+                    {(req.blueprint.unresolved ?? []).map((u) => <li key={u}>Not settled yet: {u}</li>)}
+                  </ul>
+                </div>
+              ) : null}
               {req.blueprint.modules.map((m) => (
                 <div key={m.id} className="mt-5">
                   <h3 className="font-semibold">{m.title}</h3>
@@ -339,7 +375,17 @@ export default function NewCourse() {
                             <span className="text-[13px] text-muted-foreground">{STAGE[c.generation] ?? c.generation}</span>
                           ) : null}
                         </div>
-                        {c.objectives[0] ? <p className="text-sm text-muted-foreground">{c.objectives[0]}</p> : null}
+                        {c.objectives.length ? (
+                          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+                            {c.objectives.map((o) => <li key={o}>{o}</li>)}
+                          </ul>
+                        ) : null}
+                        {c.evidence?.length || c.minutes ? (
+                          <p className="mt-1 text-[13px] text-muted-foreground">
+                            {c.minutes ? `About ${c.minutes} min.` : null}
+                            {c.evidence?.length ? ` You will ${c.evidence.map((e) => EVIDENCE[e] ?? e).join(', ')}.` : null}
+                          </p>
+                        ) : null}
                         {c.prerequisites.length ? (
                           <p className="text-[13px] text-muted-foreground">After: {c.prerequisites.join(', ')}</p>
                         ) : null}

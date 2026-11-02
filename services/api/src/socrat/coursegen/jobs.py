@@ -165,6 +165,10 @@ async def run_outline(
         brief = brief.model_copy(update={"style": spec})
         _note(engine, job_id, {"role": "stylist", "style": spec.name, "source": source})
     previous = from_course(stored) if stored is not None and job.input.get("revise") else None
+    from socrat.coursegen.outline import graph_issues
+    from socrat.engine import domains
+
+    adapter = domains.ADAPTERS.get(brief.adapter)
     issues = [job.input["notes"]] if job.input.get("notes") else []
     best = None
     for attempt in range(1, ROUNDS + 1):
@@ -198,6 +202,8 @@ async def run_outline(
                 generated.extend(
                     base, [*(c for c in generated.courses(db) if c.id != brief.id), course]
                 )
+            if found_graph := graph_issues(course, adapter):
+                raise ValueError("; ".join(found_graph))
         except (ValueError, CatalogError) as exc:
             issues = [f"The outline failed validation: {exc}"]
             _note(
@@ -216,6 +222,9 @@ async def run_outline(
                 "round": attempt,
                 "concepts": len(course.concepts),
                 "modules": len(course.modules),
+                # The prerequisite analysis the learner can inspect (master prompt 7.3).
+                "assumptions": [str(a)[:300] for a in reply.data.get("assumptions", [])][:10],
+                "unresolved": [str(u)[:300] for u in reply.data.get("unresolved", [])][:10],
             },
             reply.cost_usd,
         )

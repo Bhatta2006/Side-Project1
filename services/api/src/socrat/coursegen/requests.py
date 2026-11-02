@@ -123,6 +123,11 @@ def view(db: Session, row: LearningRequest) -> dict:
                                 objectives=outline.objectives
                                 if (outline := by_id[cid].outline)
                                 else [],
+                                minutes=by_id[cid].estimated_minutes,
+                                category=outline.category if outline else None,
+                                evidence=list(outline.evidence) if outline else [],
+                                expected=outline.expected if outline else "",
+                                related=list(outline.related) if outline else [],
                             )
                             for cid in m.concepts
                         ],
@@ -137,6 +142,12 @@ def view(db: Session, row: LearningRequest) -> dict:
         ).first()
         if job is not None:
             out["job"] = dict(state=job.state, error=job.error)
+            # What the architect assumed and could not settle, so the learner can check it.
+            planned = [e for e in job.log if e.get("role") == "architect" and "concepts" in e]
+            blueprint = out["blueprint"]
+            if planned and isinstance(blueprint, dict):
+                blueprint["assumptions"] = planned[-1].get("assumptions", [])
+                blueprint["unresolved"] = planned[-1].get("unresolved", [])
     return out
 
 

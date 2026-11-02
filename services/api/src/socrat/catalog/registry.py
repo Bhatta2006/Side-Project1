@@ -171,6 +171,10 @@ def build(courses: list[Course]) -> Catalog:
         for prerequisite in prerequisites:
             if prerequisite not in catalog.concepts:
                 raise CatalogError(f"{key}: unknown prerequisite {prerequisite}")
+        outline = catalog.concepts[key].outline
+        for related in outline.related if outline else []:
+            if qualify(catalog.owner[key], related) not in catalog.concepts:
+                raise CatalogError(f"{key}: unknown related concept {related}")
     for course in courses:
         for concept in course.concepts:
             for problem_id in concept.problems:

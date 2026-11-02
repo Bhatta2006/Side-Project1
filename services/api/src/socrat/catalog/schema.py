@@ -16,6 +16,20 @@ from socrat.catalog.shape import CourseShape
 
 Slug = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
 Ref = Annotated[str, Field(pattern=r"^([a-z][a-z0-9-]{0,63}:)?[a-z][a-z0-9-]{0,63}$")]
+# Evidence a competency asks for, in the master prompt's terms (9.2), beyond mere exposure.
+EvidenceType = Literal[
+    "recognition", "recall", "application", "transfer", "explanation", "performance"
+]
+PracticeType = Literal[
+    "retrieval",
+    "worked-example",
+    "problem-set",
+    "lab",
+    "project",
+    "performance",
+    "reflection",
+    "discussion",
+]
 Language = Literal["python", "cpp", "java"]
 LANGUAGES: tuple[Language, ...] = ("python", "cpp", "java")
 
@@ -189,6 +203,15 @@ class Outline(Model):
     assessment: list[Literal["quiz", "code", "explain", "project"]] = Field(
         min_length=1, max_length=4
     )
+    # The competency graph (master prompt 3.3). All optional so older outlines stay valid.
+    # knowledge: facts and ideas; skill: something done; both: an idea you must also apply.
+    category: Literal["knowledge", "skill", "both"] = "knowledge"
+    # Concepts that connect without being required first (contrasts, same idea elsewhere).
+    related: list[Ref] = Field(default_factory=list, max_length=6)
+    # What a learner must show before this counts as demonstrated (prompt 9.2).
+    evidence: list[EvidenceType] = Field(default_factory=list, max_length=5)
+    expected: str = Field(default="", max_length=300)  # the performance that shows it, observable
+    practice: list[PracticeType] = Field(default_factory=list, max_length=5)
 
 
 class Exercise(Model):
