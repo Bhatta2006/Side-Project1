@@ -13,6 +13,7 @@ import { WebVitals } from '@/components/web-vitals';
 import { ErrorReporter } from '@/components/error-reporter';
 import { PwaSetup } from '@/components/install-app';
 import { LEGAL } from '@/lib/legal';
+import { I18nProvider } from '@/lib/i18n';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-F12E455TW1';
 
@@ -84,8 +85,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider delayDuration={200}>
             <SessionProvider>
-              <Shell>{children}</Shell>
-              <PaywallHost />
+              <I18nProvider>
+                <Shell>{children}</Shell>
+                <PaywallHost />
+              </I18nProvider>
             </SessionProvider>
             <Toaster closeButton position="bottom-right" />
           </TooltipProvider>

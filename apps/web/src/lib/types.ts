@@ -30,6 +30,8 @@ export interface Profile {
   display_name: string | null;
   birth_year: number | null;
   timezone: string | null;
+  /** Language tag the learner chose (en, hi, ...). */
+  locale?: string;
   csrf_token: string;
   onboarded: boolean;
   tour_seen: boolean;
@@ -575,6 +577,8 @@ export interface ConceptView {
   lesson: string;
   ai_generated: boolean;
   attribution: string;
+  /** Set when the text shown is a translation; null for the English original. */
+  translation?: { locale: string; status: 'machine' | 'reviewed'; reviewer: string | null; preview: boolean; rtl: boolean } | null;
   key_points: string[];
   /** Registered interactive elements; each renders through the visualization host with a text fallback. */
   visuals?: { renderer: string; version: string; params: Record<string, unknown>; purpose: string; fallback_text: string; alt_text: string }[];

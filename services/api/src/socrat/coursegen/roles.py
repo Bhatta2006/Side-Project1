@@ -33,6 +33,7 @@ ROLES = {
     "diagnostic",  # a short placement quiz for a learner's own course
     "experience",  # picks registered visuals/labs for a lesson (never writes code)
     "intent",  # a learner's free-text request -> a structured intent
+    "translator",  # lesson text -> another language, under placeholder and glossary checks
     "weekly",  # hard, execution-verified weekly exam questions
 }
 # Override key -> Settings field(s) it replaces for that role.

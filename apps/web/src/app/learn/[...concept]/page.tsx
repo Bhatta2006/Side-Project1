@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp,
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
+import { useI18n } from '@/lib/i18n';
 import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@/lib/routes';
 import type { ConceptView, Resource } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -148,6 +149,8 @@ function Section({ id, title, children, collapsible = false }: { id: string; tit
 export default function Lesson() {
   const allowed = useGuard('signed-in');
   const { profile } = useSession();
+  const { t } = useI18n();
+  const [original, setOriginal] = useState(false);
   const params = useParams<{ concept: string[] }>();
   const qualified = joinSegments(params.concept);
   const [concept, setConcept] = useState<ConceptView | null>(null);
@@ -165,16 +168,17 @@ export default function Lesson() {
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get('step') ?? '';
     setStep(SUPPORT_STEPS.includes(value) ? value : '');
+    setOriginal(false);
   }, [qualified]);
 
   const load = useCallback(() => {
     setError('');
-    api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(e => {
+    api.get<ConceptView>(`/concepts/${qualified}${original ? '?locale=en' : ''}`).then(setConcept).catch(e => {
       setUpgrade(e instanceof ApiError && e.code === 'upgrade_required');
       setLocked(e instanceof ApiError && e.code === 'concept_locked' ? 'gate' : e instanceof ApiError && e.code === 'concept_preparing' ? 'preparing' : '');
       setError(explain(e));
     });
-  }, [qualified]);
+  }, [qualified, original]);
   useEffect(() => {
     if (!allowed) return;
     load();
@@ -299,6 +303,14 @@ export default function Lesson() {
             <SupportStep step={step} concept={qualified} language={concept.language} onAsk={() => setAskSoc(n => n + 1)} />
           ) : null}
 
+          {concept.translation ? (
+            <p className="mb-4 rounded-[16px] border border-border-strong px-4 py-3 text-sm text-muted-foreground" dir={concept.translation.rtl ? 'rtl' : undefined}>
+              {concept.translation.status === 'reviewed' && concept.translation.reviewer
+                ? t('translation.reviewed', { name: concept.translation.reviewer })
+                : t('translation.machine')}{' '}
+              <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={() => setOriginal(true)}>{t('translation.english')}</button>
+            </p>
+          ) : null}
           {concept.ai_generated ? (
             <p className="mb-6 flex items-start gap-2 rounded-[16px] border border-border-strong px-4 py-3 text-sm text-muted-foreground">
               <TriangleAlert className="mt-0.5 size-4 flex-none" aria-hidden />

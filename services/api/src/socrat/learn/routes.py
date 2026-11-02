@@ -53,6 +53,16 @@ class ProfileUpdate(Strict):
     birthday_passed: bool = True
     timezone: str | None = Field(default=None, max_length=64)
     reminders: bool | None = None
+    locale: str | None = Field(default=None, max_length=16)
+
+    @field_validator("locale")
+    @classmethod
+    def known_locale(cls, value):
+        from socrat.localize import locales
+
+        if value is not None and not locales.supported(value):
+            raise ValueError("Choose a supported language")
+        return value
 
     @field_validator("timezone")
     @classmethod
@@ -204,6 +214,7 @@ def profile_view(
         display_name=user.display_name,
         birth_year=user.birth_year,
         timezone=user.timezone,
+        locale=user.locale,
         csrf_token=csrf,
         onboarded=enrollment is not None,
         tour_seen=user.tour_seen_at is not None,
@@ -294,6 +305,8 @@ def update_me(body: ProfileUpdate, request: Request):
             user.display_name = body.display_name
         if body.timezone is not None:
             user.timezone = body.timezone
+        if body.locale is not None:
+            user.locale = body.locale
         if body.reminders is not None:
             if body.reminders and not user.email:
                 raise HTTPException(409, "reminders_need_email")
@@ -656,16 +669,21 @@ def playground_overview(request: Request):
 
 
 @router.get("/concepts/{qualified}")
-def concept(qualified: str, request: Request):
+def concept(qualified: str, request: Request, locale: str | None = None):
     cat = catalog()
     if qualified not in cat.concepts:
         raise HTTPException(404, "not_found")
     with Session(engine(request)) as db:
         user = user_of(request, db)
         guard_instruction(db, cat, user, qualified)
-        return views.concept_view(
+        view = views.concept_view(
             db, cat, user, learn.active_enrollment(db, user.id), qualified, now()
         )
+        from socrat.localize import service as localized
+
+        # ?locale=en shows the original for this view only; the account's language is unchanged.
+        tag = locale if locale and localized.locales.supported(locale) else user.locale
+        return localized.overlay(db, qualified, cat.concept(qualified), tag, view)
 
 
 @router.post("/concepts/{qualified}/explain")

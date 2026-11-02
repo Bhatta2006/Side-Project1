@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from socrat import entitlements
+from socrat import entitlements, localize
 from socrat.assessments import service as assessments
 from socrat.assistant import engine, socratic
 from socrat.assistant.gateway import Provider, ProviderError, ToolRunner, ToolSpec, Turn, complete
@@ -434,6 +434,9 @@ def prepare(
     style = personal_style(settings, user, enrollment)
     if style is not None:
         sections["learning_style"] = styles.tutor_block(style)
+    reply_language = localize.tutor_directive(user.locale)
+    if reply_language:
+        sections["reply_language"] = reply_language
     if enrollment is not None and style_access.enabled(settings, user):
         mentor_note = mentor.tutor_note(enrollment, catalog, scope)
         if mentor_note:

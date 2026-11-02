@@ -26,6 +26,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Switch } from '@/components/ui/switch';
 import { useInstall } from '@/lib/pwa';
 import { CommunityButton, useCommunityUrl } from '@/components/community-link';
+import { LanguagePicker } from '@/components/language-picker';
 import { InstallAppButton } from '@/components/install-app';
 import { Soc } from '@/components/socrat/illustration';
 
@@ -183,7 +184,8 @@ function Appearance() {
           })}
         </div>
         <div className="grid content-start divide-y">
-          <div className="flex items-start justify-between gap-4 pb-5">
+          <LanguagePicker />
+          <div className="flex items-start justify-between gap-4 py-5">
             <div>
               <label htmlFor="reduce-motion" className="font-semibold">Reduce motion</label>
               <p id="reduce-motion-help" className="text-sm text-muted-foreground">

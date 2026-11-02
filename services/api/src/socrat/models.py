@@ -57,6 +57,7 @@ class User(Base):
     referral_code: Mapped[str | None] = mapped_column(String(12), nullable=True, unique=True)
     # Opt-in study reminder emails; ``reminders_unanswered`` counts those sent with no study since.
     reminders: Mapped[bool] = mapped_column(Boolean, default=False)
+    locale: Mapped[str] = mapped_column(String(16), default="en")  # BCP-47, see socrat.localize
     reminder_sent_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reminders_unanswered: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
@@ -835,3 +836,21 @@ class Diagnostic(Base):
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     model: Mapped[str] = mapped_column(String(64), default="")
     created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class ContentTranslation(Base):
+    """One concept translated into one locale. ``units`` are the translated text pieces (code,
+    numbers and answer keys never pass through a model); ``source_hash`` ties it to the exact
+    English it came from, so an edited lesson makes it stale instead of silently wrong."""
+
+    __tablename__ = "content_translations"
+    concept: Mapped[str] = mapped_column(String(160), primary_key=True)
+    locale: Mapped[str] = mapped_column(String(16), primary_key=True)
+    source_hash: Mapped[str] = mapped_column(String(64))
+    units: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(12), default="machine")  # machine | reviewed
+    model: Mapped[str] = mapped_column(String(64), default="")
+    glossary_version: Mapped[str] = mapped_column(String(16), default="")
+    reviewer: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
