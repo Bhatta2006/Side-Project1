@@ -34,6 +34,7 @@ type LearningRequest = {
   job: { state: string; error: string } | null;
   blueprint: { title: string; tagline: string; modules: { id: string; title: string; concepts: Concept[] }[] } | null;
   enroll: Record<string, unknown> | null;
+  diagnostic: 'none' | 'ready' | 'done';
   ready: number;
   total: number;
   community: {
@@ -42,6 +43,17 @@ type LearningRequest = {
     learners: number;
     tiers: { id: string; learners: number; label: string; earned: boolean }[];
   } | null;
+};
+type Check = {
+  questions: { concept: string; stem: string; options: string[] }[];
+  done: boolean;
+  note: string;
+  result: null | {
+    correct: number;
+    total: number;
+    level_label: string;
+    review: { concept: string; correct: boolean; answer: number; why: string }[];
+  };
 };
 type Enrolled = { id: string; course: string; title: string; active: boolean };
 
@@ -124,6 +136,26 @@ export default function NewCourse() {
     );
   };
 
+  const [check, setCheck] = useState<Check | null>(null);
+  const [picked, setPicked] = useState<(number | null)[]>([]);
+  const startCheck = () => {
+    if (!req) return;
+    run(() => api.post<Check>(`/learning-requests/${req.id}/diagnostic`, {}), (c) => {
+      setCheck(c);
+      setPicked(c.questions.map(() => null));
+    });
+  };
+  const submitCheck = () => {
+    if (!req) return;
+    run(
+      async () => {
+        const done = await api.post<Check>(`/learning-requests/${req.id}/diagnostic/answer`, { answers: picked });
+        setReq(await api.get<LearningRequest>(`/learning-requests/${req.id}`));
+        return done;
+      },
+      setCheck,
+    );
+  };
   const share = () => {
     if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/share`, { consent, credit }), setReq);
   };
@@ -280,6 +312,64 @@ export default function NewCourse() {
                   </ol>
                 </div>
               ))}
+            </section>
+          ) : null}
+
+          {req.blueprint && !req.published ? (
+            <section className="rounded-[20px] border bg-card p-5" aria-label="Where to start">
+              <h2 className="font-semibold">Where should you start?</h2>
+              {!check ? (
+                <>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Answer a few questions so Socrat can pick a starting point. It does not count as mastery, and you
+                    can skip it and start from the beginning.
+                  </p>
+                  <Button className="mt-3" variant="outline" onClick={startCheck} disabled={busy}>
+                    {req.diagnostic === 'none' ? 'Check where to start' : 'Open my check'}
+                  </Button>
+                </>
+              ) : check.done && check.result ? (
+                <div className="mt-2 text-sm">
+                  <p>
+                    You got {check.result.correct} of {check.result.total}. Suggested start: {check.result.level_label}.
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {check.result.review.map((r) => (
+                      <li key={r.concept}>
+                        {r.correct ? 'Got it' : 'To learn'}: {r.concept.replace(/-/g, ' ')}
+                        {r.correct ? '' : `. ${r.why}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-5">
+                  {check.questions.map((q, qi) => (
+                    <fieldset key={q.concept}>
+                      <legend className="font-medium">
+                        {qi + 1}. {q.stem}
+                      </legend>
+                      <div className="mt-2 flex flex-col gap-2">
+                        {q.options.map((o, oi) => (
+                          <label key={o} className="flex items-start gap-2 text-sm">
+                            <input
+                              type="radio"
+                              name={`q${qi}`}
+                              checked={picked[qi] === oi}
+                              onChange={() => setPicked((p) => p.map((v, i) => (i === qi ? oi : v)))}
+                            />
+                            {o}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ))}
+                  <p className="text-[13px] text-muted-foreground">{check.note}</p>
+                  <Button onClick={submitCheck} disabled={busy}>
+                    See my starting point
+                  </Button>
+                </div>
+              )}
             </section>
           ) : null}
 

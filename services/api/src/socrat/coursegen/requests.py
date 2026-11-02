@@ -16,7 +16,7 @@ from socrat.coursegen import community, jobs
 from socrat.coursegen import intent as intents
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, user_of
-from socrat.models import GeneratedCourse, GenerationJob, LearningRequest, now
+from socrat.models import Diagnostic, GeneratedCourse, GenerationJob, LearningRequest, now
 
 router = APIRouter(prefix="/api/v1/learning-requests")
 OPEN = ("parsed", "needs_clarification")
@@ -57,6 +57,7 @@ def view(db: Session, row: LearningRequest) -> dict:
         blueprint=None,
         job=None,
         published=False,
+        diagnostic="none",
         enroll=None,
         ready=0,
         total=0,
@@ -65,6 +66,11 @@ def view(db: Session, row: LearningRequest) -> dict:
     if row.course_id:
         stored = generated.course(db, row.course_id)
         meta = db.get(GeneratedCourse, row.course_id)
+        check = db.scalar(select(Diagnostic).where(Diagnostic.request_id == row.id))
+        diagnosed = check.result["level"] if check and check.result else None
+        out["diagnostic"] = (
+            "none" if check is None else "done" if check.result is not None else "ready"
+        )
         out["published"] = bool(meta and meta.status == "published")
         if stored is not None:
             out["total"] = len(stored.concepts)
@@ -79,7 +85,7 @@ def view(db: Session, row: LearningRequest) -> dict:
             out["enroll"] = dict(  # what to send to POST /api/v1/enrollments
                 course=row.course_id,
                 language=stored.languages[0],
-                level=stored.levels[0].id,
+                level=diagnosed or stored.levels[0].id,
                 # The planner's budgets start at 15; a 5-minute lesson length stays in the brief.
                 minutes_per_day=next(
                     (m for m in ENROLL_MINUTES if m >= (row.intent.get("minutes_per_day") or 30)),
