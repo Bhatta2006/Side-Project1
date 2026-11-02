@@ -1,14 +1,14 @@
 {
   "policy": "Metadata and links only. No problem statements, editorials or solution code are stored.",
   "snapshots": {
-    "liquidslr": "03850eb5d16892514491cf1381c32ec0330a2719",
+    "liquidslr": "2b71796266751b4736a7ef180efb6847879166ee",
     "companywise": "e095c259cfd036e3ddb6886e84d7075c2faac477",
     "striver": "c42ee6ecac700e1171e99d2d3e2b0cb27c2f597d",
     "thealgorithms-cpp": "fdcc29b0ac2848e9d1a8d926e171cc5b39f97759",
-    "thealgorithms-python": "215c1f0710f610aaf5ebaeab04edacec3f5308cd",
-    "thealgorithms-java": "5eb9d6634cfe84b1d53daf83187f8d11eca0bbb8"
+    "thealgorithms-python": "6e03a48579ca212a08b36be00378f887dc41a003",
+    "thealgorithms-java": "8b49bc5046c6df87441f85aabb1f110fc8c03be6"
   },
-  "codeforces_problems": 10485,
+  "codeforces_problems": 10526,
   "excluded": {
     "takeuforward.org": "terms of service prohibit automated access"
   }
