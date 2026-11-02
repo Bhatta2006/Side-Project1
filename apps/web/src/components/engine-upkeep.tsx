@@ -171,7 +171,63 @@ function Translations() {
   );
 }
 
+type Awaiting = { course_id: string; concept_id: string; label: string; findings: { source: string; problem: string }[] };
+
+/** Released lessons that automated checks could not vouch for; a named person confirms each. */
+function Validation() {
+  const [items, setItems] = useState<Awaiting[] | null>(null);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const load = useCallback(() => {
+    api.get<{ items: Awaiting[] }>('/admin/maintenance/validation').then(r => setItems(r.items)).catch(e => toast.error(explain(e)));
+  }, []);
+  useEffect(load, [load]);
+
+  async function confirm(a: Awaiting) {
+    const key = `${a.course_id}/${a.concept_id}`;
+    try {
+      await api.post(`/admin/maintenance/validation/${a.course_id}/${a.concept_id}/confirm`, { reviewer: (names[key] ?? '').trim() });
+      toast.success('Confirmed.');
+      load();
+    } catch (e) { toast.error(explain(e)); }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Needs a person</CardTitle>
+        <CardDescription>
+          Generated lessons whose subject automated checks cannot vouch for (limited verification, hands-on skills,
+          safety notes). Learners see them labelled until a named person confirms them.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2">
+        {!items ? <Empty>Loading…</Empty> : items.length === 0 ? <Empty>Nothing waiting for review.</Empty> : items.map(a => {
+          const key = `${a.course_id}/${a.concept_id}`;
+          return (
+            <div key={key} className="grid gap-2 rounded-md border p-3 text-sm">
+              <span className="font-medium">{key}</span>
+              <ul className="list-disc pl-5 text-muted-foreground">
+                {a.findings.slice(0, 4).map((f, i) => <li key={i}>{f.problem}</li>)}
+              </ul>
+              <span className="flex flex-wrap items-center gap-2">
+                <Input
+                  aria-label={`Reviewer's full name for ${key}`}
+                  className="h-9 w-48"
+                  placeholder="Reviewer's full name"
+                  value={names[key] ?? ''}
+                  onChange={e => setNames(n => ({ ...n, [key]: e.target.value }))}
+                />
+                <Button size="sm" disabled={(names[key] ?? '').trim().split(/\s+/).length < 2} onClick={() => confirm(a)}>Confirm</Button>
+              </span>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Admin-only: keep released courses healthy and translations honest. */
 export function EngineUpkeep() {
-  return <div className="grid gap-6"><Maintenance /><Translations /></div>;
+  return <div className="grid gap-6"><Validation /><Maintenance /><Translations /></div>;
 }

@@ -756,6 +756,23 @@ class GeneratedConcept(Base):
     job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
+class ValidationReport(Base):
+    """One validation round of a generated lesson: a state and its findings
+    (see ``coursegen.validation``). Append-only; the newest row per concept counts."""
+
+    __tablename__ = "validation_reports"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    concept_id: Mapped[str] = mapped_column(String(80))
+    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    round: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(24), index=True)
+    findings: Mapped[list] = mapped_column(JSON, default=list)
+    reviewer: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    seq: Mapped[int] = mapped_column(BigInteger, default=time.time_ns)
+
+
 class GenerationJob(Base):
     """One run of the course-generation agents (e.g. brief → outline). The worker claims
     queued jobs; ``log`` keeps each agent round (verdicts, issues, cost) for the admin."""

@@ -304,6 +304,8 @@ def to_brief(intent: Intent, course_id: str, budget_usd: float) -> Brief:
         budget_usd=budget_usd,
         concept_budget_usd=min(2.0, budget_usd),
         research=True,
+        adapter=adapter.id,
+        safety=[n[:300] for n in intent.safety_notes][:10],
     )
 
 

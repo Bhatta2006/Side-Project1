@@ -1,13 +1,13 @@
 """Owner view of course maintenance: what needs a person, version history, rollback, run now."""
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from socrat.admin.routes import require_admin
 from socrat.assistant.gateway import make_provider
 from socrat.catalog.registry import default_catalog
-from socrat.coursegen import maintain
+from socrat.coursegen import maintain, validation
 from socrat.database import record_event
 from socrat.learn.routes import engine
 from socrat.models import now
@@ -20,6 +20,34 @@ make = make_provider  # replaced in tests
 class Rollback(BaseModel):
     model_config = ConfigDict(extra="forbid")
     version: str
+
+
+class Confirm(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reviewer: str = Field(min_length=3, max_length=120)  # a person's full name
+    note: str = Field(default="", max_length=500)
+
+
+@router.get("/validation")
+def awaiting_review(request: Request):
+    """Released lessons that automated checks could not vouch for (see coursegen.validation)."""
+    with Session(engine(request)) as db:
+        require_admin(request, db)
+        return dict(items=validation.awaiting_person(db))
+
+
+@router.post("/validation/{course_id}/{concept_id}/confirm")
+def confirm_review(course_id: str, concept_id: str, body: Confirm, request: Request):
+    with Session(engine(request)) as db, db.begin():
+        user = require_admin(request, db, write=True)
+        if len(body.reviewer.split()) < 2:
+            raise HTTPException(422, "reviewer_full_name_required")
+        try:
+            row = validation.confirm(db, course_id, concept_id, body.reviewer, body.note)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        record_event(db, user.id, "validation.confirmed", f"{course_id}:{concept_id}")
+        return validation.view(row)
 
 
 @router.get("")

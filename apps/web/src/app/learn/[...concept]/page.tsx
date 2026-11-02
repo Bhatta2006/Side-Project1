@@ -317,6 +317,7 @@ export default function Lesson() {
               <TriangleAlert className="mt-0.5 size-4 flex-none" aria-hidden />
               <span>
                 {concept.attribution || 'Written by Socrat AI and checked by AI models.'}{' '}
+                {concept.validation ? <>{concept.validation.reviewer ? `Confirmed by ${concept.validation.reviewer}.` : concept.validation.label}{' '}</> : null}
                 <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={() => openReportProblem()}>Report a problem</button> if something looks wrong.
               </span>
             </p>

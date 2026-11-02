@@ -343,6 +343,17 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
     )
 
 
+def _validation(db: Session, qualified: str, concept) -> dict | None:
+    if not (concept.provenance and concept.provenance.author == AI_AUTHOR):
+        return None
+    from socrat.coursegen import validation
+
+    course_id, local = qualified.split(":", 1)
+    row = validation.view(validation.latest(db, course_id, local))
+    # Learners see the state and its plain label, not the checkers' internal findings.
+    return None if row is None else {k: row[k] for k in ("status", "label", "reviewer")}
+
+
 def concept_view(
     db: Session,
     catalog: Catalog,
@@ -369,6 +380,8 @@ def concept_view(
         lesson=concept.lesson,
         # Generated lessons say so, with how they were checked (no human review).
         ai_generated=bool(concept.provenance and concept.provenance.author == AI_AUTHOR),
+        # How the generated lesson was checked: pass, with warnings, or still needs a person.
+        validation=_validation(db, qualified, concept),
         attribution=concept.provenance.attribution_md if concept.provenance else "",
         exercises=resources.selected(qualified, language, "exercises"),
         prompts=graded.prompt_views(db, enrollment, qualified, concept),

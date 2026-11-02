@@ -578,6 +578,8 @@ export interface ConceptView {
   module: string;
   lesson: string;
   ai_generated: boolean;
+  /** How a generated lesson was checked; null for hand-written lessons. */
+  validation?: { status: 'pass' | 'pass_with_warnings' | 'human_review_required'; label: string; reviewer: string | null } | null;
   attribution: string;
   /** Set when the text shown is a translation; null for the English original. */
   translation?: { locale: string; status: 'machine' | 'reviewed'; reviewer: string | null; preview: boolean; rtl: boolean } | null;

@@ -536,6 +536,11 @@ def test_a_teenager_asks_for_circuits_and_gets_a_working_course(on, monkeypatch,
     )
     assert [v["renderer"] for v in lesson_view["visuals"]] == ["simulation"]
     assert "2 A" in lesson_view["visuals"][0]["fallback_text"]
+    # Electronics is only partly machine-verifiable and needs hands-on practice, so the passed
+    # lesson is released but labelled as needing a person; findings stay out of the learner view.
+    assert lesson_view["validation"]["status"] == "human_review_required"
+    assert "not as verified" in lesson_view["validation"]["label"]
+    assert set(lesson_view["validation"]) == {"status", "label", "reviewer"}
     assert lesson_view["lesson"].count("## ") >= 3
     # Planned lessons stay held, never shown as ready.
     assert (

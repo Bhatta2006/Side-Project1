@@ -33,6 +33,10 @@ class Brief(BaseModel):
     concept_budget_usd: float = Field(default=2.0, gt=0, le=100)
     # A researcher finds public sources first; lessons cite them and credit them.
     research: bool = True
+    # The domain adapter the intent parser chose (engine.domains); empty = classify the title.
+    adapter: str = Field(default="", max_length=40)
+    # Safety notes from the request; a lesson in such a course needs a person to confirm it.
+    safety: list[str] = Field(default_factory=list, max_length=10)
 
 
 def to_course(brief: Brief, outline: dict) -> Course:

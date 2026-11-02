@@ -33,7 +33,7 @@ from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.config import Settings
-from socrat.coursegen import execute, research, roles
+from socrat.coursegen import execute, research, roles, validation
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -315,6 +315,18 @@ async def run_package(
     concept = course.concept(concept_id)
     if concept.status != "planned":
         raise ValueError(f"{course_id}:{concept_id} is not planned")
+    from socrat.engine import design
+
+    adapter = design.adapter_for(course, brief.adapter)
+    bar = {d: (5 if d == "correctness" else 4) for d in pkg.DIMENSIONS}
+    if brief.style is not None:
+        bar[pkg.STYLE_DIMENSION] = 4
+    findings: list[validation.Finding] = []
+
+    def report(round_: int, status: str, found: list[validation.Finding]) -> None:
+        with Session(engine) as db, db.begin():
+            validation.record(db, course_id, concept_id, job_id, round_, status, found)
+
     executor = executor or execute.Broker(engine, settings)
     # Code in quiz items and atoms only when every course language can be run to check it.
     runnable = executor.available(course.languages)
@@ -401,6 +413,8 @@ async def run_package(
             }
             _note(engine, job_id, entry, reply.cost_usd, output={"lesson": lesson})
             if issues:
+                status, findings = validation.assess(issues, None, None, {}, bar, adapter, [])
+                report(attempt, status, findings)
                 notes["lesson"] = issues
                 redo |= {"lesson"}
                 continue
@@ -462,10 +476,19 @@ async def run_package(
             issues = [f"{k}: {x}" for k, v in notes.items() for x in v]
             entry = {"role": "system", "round": attempt, "event": "gates_failed", "issues": issues}
             _note(engine, job_id, entry, cost, output=output)
+            status, findings = validation.assess(issues, None, None, {}, bar, adapter, [])
+            report(attempt, status, findings)
             continue
         if settings.gen_visuals:
             live = await add_visuals(
-                ask, live, course, str(lesson.get("lesson", "")), engine, job_id, attempt
+                ask,
+                live,
+                course,
+                str(lesson.get("lesson", "")),
+                engine,
+                job_id,
+                attempt,
+                brief.adapter,
             )
         shown = {k: lesson.get(k) for k in ("lesson", "key_points", "pitfalls")}
         # The checkers see the code's real output (adapters' expected), not the author's claim.
@@ -492,6 +515,12 @@ async def run_package(
             ),
         )
         passed, notes, scores = pkg.verdict(facts.data, review.data, style is not None)
+        status, findings = validation.assess(
+            [], facts.data, review.data, scores, bar, adapter, brief.safety
+        )
+        if passed != (status in validation.RELEASED):  # the two must agree; the gate wins
+            status = "needs_revision" if not passed else status
+        report(attempt, status, findings)
         summary = str((review.data or {}).get("summary", review.problem))[:1000]
         entry = {
             "role": "reviewer",
@@ -522,6 +551,7 @@ async def run_package(
         redo = {k for k, v in notes.items() if v} or {"lesson"}
         entry = {"role": "system", "round": attempt, "event": "revising"}
         _note(engine, job_id, entry, stage="generating")
+    report(ROUNDS, "rejected", findings)
     _note(
         engine,
         job_id,
@@ -531,21 +561,23 @@ async def run_package(
     )
 
 
-async def add_visuals(ask, live, course, lesson_text: str, engine, job_id: str, attempt: int):
+async def add_visuals(
+    ask, live, course, lesson_text: str, engine, job_id: str, attempt: int, chosen: str = ""
+):
     """The Experience Designer step. Visuals only enrich a lesson, so a refusal, a bad reply or
     specs that fail the registry leave the lesson as written (and say so in the log)."""
     from socrat.engine import design
 
-    if not design.allowed(course):
+    if not design.allowed(course, chosen):
         return live
     try:
         reply = await ask(
-            "experience", design.SYSTEM, design.prompt(course, live, lesson_text), 3000
+            "experience", design.SYSTEM, design.prompt(course, live, lesson_text, chosen), 3000
         )
     except ProviderError:
         _note(engine, job_id, {"role": "experience", "round": attempt, "event": "unavailable"})
         return live
-    kept, dropped = design.check((reply.data or {}).get("visuals", []), course)
+    kept, dropped = design.check((reply.data or {}).get("visuals", []), course, chosen)
     entry = {"role": "experience", "round": attempt, "visuals": len(kept), "dropped": dropped[:5]}
     _note(engine, job_id, entry, reply.cost_usd)
     return live.model_copy(update={"visuals": kept}) if kept else live

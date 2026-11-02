@@ -30,14 +30,18 @@ Reply with one JSON object only: {"visuals": [{"renderer": "...", "version": "1.
 "params": {...}, "purpose": "...", "fallback_text": "...", "alt_text": "..."}]}"""
 
 
-def adapter_for(course: Course) -> domains.Adapter:
+def adapter_for(course: Course, chosen: str = "") -> domains.Adapter:
+    """The adapter the intent parser chose for this course when known (stored on the brief),
+    else the best keyword match for its title and description."""
+    if chosen in domains.ADAPTERS:
+        return domains.ADAPTERS[chosen]
     return domains.classify(f"{course.title} {course.description}")
 
 
-def allowed(course: Course) -> list[renderers.Manifest]:
+def allowed(course: Course, chosen: str = "") -> list[renderers.Manifest]:
     """Renderers this course may use: its adapter's, minus the sandboxed ones, minus the code
     studio unless the course teaches code (practice, not a lesson visual)."""
-    adapter = adapter_for(course)
+    adapter = adapter_for(course, chosen)
     known = renderers.all_manifests()
     out = []
     for rid in adapter.renderers:
@@ -48,7 +52,7 @@ def allowed(course: Course) -> list[renderers.Manifest]:
     return out
 
 
-def prompt(course: Course, concept: Concept, lesson: str) -> str:
+def prompt(course: Course, concept: Concept, lesson: str, chosen: str = "") -> str:
     catalogue = [
         dict(
             id=m.id,
@@ -56,7 +60,7 @@ def prompt(course: Course, concept: Concept, lesson: str) -> str:
             supports=list(m.supports),
             params=m.params.model_json_schema(),
         )
-        for m in allowed(course)
+        for m in allowed(course, chosen)
     ]
     goals = "; ".join(concept.outline.objectives) if concept.outline else concept.summary
     return (
@@ -66,11 +70,11 @@ def prompt(course: Course, concept: Concept, lesson: str) -> str:
     )
 
 
-def check(raw: object, course: Course) -> tuple[list[Visual], list[str]]:
+def check(raw: object, course: Course, chosen: str = "") -> tuple[list[Visual], list[str]]:
     """(valid visuals, reasons the rest were dropped)."""
     if not isinstance(raw, list):
         return [], ["visuals must be a list"]
-    ok_ids = {m.id for m in allowed(course)}
+    ok_ids = {m.id for m in allowed(course, chosen)}
     kept: list[Visual] = []
     dropped: list[str] = []
     for entry in raw[:8]:
