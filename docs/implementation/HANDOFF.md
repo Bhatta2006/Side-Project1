@@ -1,15 +1,26 @@
 # Socrat Universal Learning Engine: handoff
 
-Written 2026-11-02 at the end of slice 8, for any person or agent who continues this work.
+Written 2026-11-02 and refreshed at the end of slice 9b, for any person or agent (any coding agent,
+not only Claude Code) who continues this work. A root `AGENTS.md` and `CLAUDE.md` point here.
 Read this file first, then `docs/implementation/universal-engine-plan.md` (the audit, the target
 architecture, the phase table and the progress log). This file is the operating manual and the
 honest status report; the plan is the strategy.
 
-Branch: `feat/universal-engine` (pushed to `origin/feat/universal-engine`, 11 commits on top of
-`main`, no pull request opened). `main` is one commit ahead (#60, a CI fix) at the time of
-writing. Last full API run before slice 9a: **791 passed, 24 skipped** (19 min); slice 9a: **798 passed, 24 skipped** (7 new tests). Ruff, mypy and web
-typecheck clean, web production build clean, browser test `tests/e2e/visuals.spec.ts` passes on
-desktop and mobile.
+Branch: `feat/universal-engine` (pushed to `origin/feat/universal-engine`, 17 commits on top of
+`main`, **no pull request opened**). `main` is one commit ahead (`039573e`, #60, a CI fix) and has no
+new migrations. Slices 1 to 8, 9a and 9b are done. Last full API run: **798 passed, 24 skipped**
+(21 min, after slice 9a; slice 9b added 5 tests and was verified with the related subsets only).
+Ruff, mypy (187 files) and web typecheck clean, web production build clean at slice 8,
+`tests/e2e/visuals.spec.ts` passes on desktop and mobile. **Never run on this branch:** CI, the older
+Playwright suites, the visual-regression suite, any live model (see 5.1 and 5.4).
+
+Commits on the branch, oldest first: `17b3c06` slice 1, `1481a78` 2, `afd1559` 3, `b0ebe0f` 4a,
+`4d8a37d` 4b, `dfdcc53` 4c, `b2609ef` 5, `d57ae46` 6, `9f70ac8` 7, `4e6ff72` fix-ups, `48fc9d0` 8,
+`688d13d` and `6098527` this document, `c235e33` slice 9a, `0a72e4d` slice 9b.
+
+**Do this first (15 minutes):** read sections 1, 2 and 9 (rules, environment, git), run
+`git log --oneline origin/main..HEAD` to confirm the state above, run the related test subset for
+the area you will touch, then pick work from section 6.
 
 ---
 
@@ -257,6 +268,38 @@ downgrades; the downgrade test is `tests/test_quiz_runtime_tables.py` (add new t
 
 ---
 
+### 4.9 Slice 9a: scale guards (`c235e33`)
+- `limits.py`: sliding-window limiter (`LIMITER`, `enforce(scope, user_id, limit, window)`),
+  **per process** (no Redis provisioned; stated in the module). Applied to `POST /engine/simulate`
+  (`simulate_per_minute`, default 60) and diagnostic creation (`diagnostic_per_hour`, default 10);
+  0 turns a limit off. Model calls were already limited by `assistant/budget.py` (database-backed).
+- `httpcache.py`: ETag and `public, max-age=300` with 304 for `/engine/domains`, `/renderers`,
+  `/simulations`. `main.boundary` now uses `setdefault` so everything else stays `no-store`.
+  `/locales` is deliberately not cached (it varies with `Accept-Language`).
+- `coursegen/costs.py`, `cost_routes.py`: `GET /api/v1/admin/engine-costs` (per course: jobs, cost,
+  released concepts, cost per released concept; per role this month from `ai_usage`).
+- `scripts/dev/loadtest.py` and `docs/implementation/load-test-results.md`: 25 learners p95 85 ms,
+  100 learners p95 295 ms, zero errors, on one laptop process with SQLite (not production capacity).
+- **Bug found by the load test and fixed:** `default_catalog()` used `functools.cache`, which lets
+  every concurrent caller compute on a miss, so 25 learners on a cold server each parsed the catalog
+  (about 6 s CPU apiece) and `/courses` timed out for all of them. Now `catalog.registry.single_flight`
+  plus a catalog load at API start (awaited when `SOCRAT_PREWARM_CONTENT=true`, background thread
+  otherwise, skipped in tests). Regression test in `tests/test_scale.py`.
+
+### 4.10 Slice 9b: API/worker split (`0a72e4d`)
+- The worker (`worker.py`) did not run course-generation jobs; only the API did (`gen_runner`).
+  Turning the API runner off would have stopped generation. Now the worker can run them
+  (`worker_runs_generation`, `worker_generation_concurrency`); `jobs.claim` is atomic so both running
+  is safe; a dead generation loop raises and stops the worker.
+- Heartbeat: `worker.beat/healthy`, setting `worker_heartbeat_file`, `python -m socrat.worker --check`
+  (stale after 300 s), wired as the worker healthcheck in `infra/runtime/production/compose.yaml`
+  and `staging/compose.yaml`. Compose defaults keep today's behaviour.
+- `costs.queue` adds queued, running and oldest-queued seconds (paused courses excluded) to
+  `/admin/engine-costs`.
+- Runbook `docs/operations/api-worker-split.md` (switch order, rollback, what to watch). The staging
+  worker has no AI settings, so do not enable generation there without adding them.
+- Tests: `tests/test_worker_split.py` (5). **Not exercised on a real Compose stack.**
+
 ## 5. Reports
 
 ### 5.1 Test and tooling results
@@ -264,13 +307,17 @@ downgrades; the downgrade test is `tests/test_quiz_runtime_tables.py` (add new t
 |---|---|
 | Start of work (main after #59) | 711 passed, 24 skipped (16m43s) |
 | After slice 7 | 784 passed, 24 skipped (19m28s) |
-| After slice 8 and fix-ups | **791 passed, 24 skipped (19m02s)**; ruff, mypy (183 files), web typecheck, `next build` clean |
+| After slice 8 and fix-ups | 791 passed, 24 skipped (19m02s); ruff, mypy (183 files), web typecheck, `next build` clean |
+| After slice 9a | **798 passed, 24 skipped (21m34s)**; ruff, mypy (187 files) clean |
+| After slice 9b | `test_worker_split`, `test_production_runtime`, `test_staging_contract`, `test_foundation` (18 + 15 tests) pass; full suite not re-run |
+| Load test (9a) | 25 learners p95 85 ms; 100 learners p95 295 ms; 0 errors; single laptop process, SQLite |
 | Browser | `tests/e2e/visuals.spec.ts` passes on desktop and mobile Chromium |
 
 Tests added on this branch: `test_learning_requests.py` (slices 1 to 3, community, perks, pause and
 resume), `test_diagnostic.py`, `test_engine_registry.py` (adapters, renderers, `code.judge`,
 simulations), `test_engine_experience.py`, `test_engine_e2e.py`, `test_localize.py` (17 test functions),
-`test_maintainer.py` (10), `test_engine_coach.py` (4), `tests/e2e/visuals.spec.ts`. Modified:
+`test_maintainer.py` (10), `test_engine_coach.py` (4), `test_scale.py` (7), `test_worker_split.py` (5),
+`tests/e2e/visuals.spec.ts`. Modified:
 `test_link_health.py`, `test_quiz_runtime_tables.py`.
 
 **Not run after the web changes:** the existing Playwright suites (`learner-journey`, `layout`,
@@ -432,3 +479,102 @@ auto-fill `provenance.review`; the first-load JS budget is 250 KB.
    to `main`; do not commit keys.
 6. Ask the owner when a key, a reviewer, a legal decision or a product trade-off is needed. Do not
    ask for things you can verify in the code.
+
+---
+
+## 9. Git, pushing and the remote (read before you commit)
+
+- Remote: `origin` = `https://github.com/Bhatta2006/Socrat.git`. Work branch: `feat/universal-engine`.
+  GitHub owner: `Bhatta2006`; git user on this machine: "Ramakrishna".
+- Pushing needs the owner's GitHub credentials, which live in this machine's git credential manager
+  (nothing in the repo). From the repo root: `git push origin feat/universal-engine`. If it asks to
+  authenticate, the owner must complete it; do not look for or write tokens anywhere in the repo.
+- **Never** force-push, never push to `main`, never merge `main` into this branch (owner's standing
+  rule). `main` is one commit ahead (#60); the owner decides when and how to reconcile. If `main` gains
+  migrations, renumber ours at merge time (`down_revision` in `services/api/migrations/versions/` and
+  `schema_revision.py`).
+- Commit only files you changed (`git add <paths>`, never `git add -A` from the root: many untracked
+  tool folders live there, and `apps/web/next-env.d.ts` is rewritten by every Next build and must not
+  be committed). CRLF warnings on commit are expected.
+- Commit message style on this branch: `Engine slice N: what changed`, a body that says why, and a
+  trailer naming the assistant that wrote it (earlier commits use
+  `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`; use your own tool's attribution).
+- Before each push: ruff check and format, mypy, the tests for what you touched, and for anything wide
+  the full API suite (about 21 minutes). Update the progress log in the plan doc and this file.
+- Pull request: none opened yet and the owner has not asked for one. Open it only when told, as a draft
+  first so CI runs.
+- Scratch files outside git that may be stale on your machine: `socrat.e2e.db*`, `socrat.local.db`,
+  `temp/`, `test-results/`. They are not part of the work.
+
+---
+
+## 10. The owner's standing notes (copied here because another agent cannot read Claude's memory folder)
+
+**Brand and design (confirmed 2026-10-31).** The "notebook" direction is the brand: ruled paper, red
+margin line, red pen (`--pen`), yellow highlighter (`.hl`, `--highlight`); Soc is a stone bust on a
+stack of primary-colour books; type is Geist Sans for everything, Delicious Handrawn for pen notes,
+JetBrains Mono for code; accent is book blue `--primary`, used only for the main action and selected
+items, no glow. Unslop rules: highlighter only on the hero headline and on passed tests; landing
+headings weight 500; nothing lifts on hover; no glass pill nav; Log in is a text link; landing
+overrides are scoped to `.landing` in `globals.css`. The earlier "Scholar / Midnight Lab / Fraunces /
+violet" plan is superseded; do not steer back. Show an audit and direction before editing a new page
+and keep changes scoped per page; the owner is serious about UI quality.
+
+**Course generation architecture (approved 2026-10-24).** Shared canonical course generated lazily
+per batch when the first learner approaches, cached for all; auto-release after deterministic checks
+plus a separate reviewer agent, labelled AI-generated, learner reports, batch quarantine; assessment
+via code exercises (existing judge), auto-graded quizzes, AI-rubric free text and projects; in-product
+background worker, one agent per role, output in the database (versioned, status, provenance); repo
+YAML stays as gold packs and the reviewer's quality bar (DSA, CP, Zero stay hand-authored); depth from
+the enrolment goal (overview, practitioner, mastery); researcher agent with sources cited, never copied;
+provider-agnostic, model per role; prefetch about 2 concepts ahead; configurable per-course and
+per-batch budget caps that pause and alert; outline up front, lesson content lazy; languages declared
+per course. Branch rule from that time: keep changes merge-friendly, no merging main into the branch.
+
+**Engine is the harness (2026-10-28).** The owner wants Socrat built like Claude Code: a strong core
+engine with an LLM plugged in. New subject abilities (math check, units, simulations, CAD constraints,
+music theory) are registered as capabilities in `socrat/harness/` (typed input, sandboxed run with a
+timeout, uniform Result). Tutor tools, builder gates and studio grading all call the same registry.
+Models only explain and word; rules and capabilities decide and verify. Code execution
+(`coursegen/execute.py` Broker) is not yet a harness capability; `code.judge` (slice 8) judges
+finished runs only.
+
+**Engine hardening (2026-11-01).** Unreviewed family quiz items do not write per-item mastery evidence
+(human review gate kept); a finished check with zero reviewed items writes ONE session-level `quiz`
+evidence row (`details.unreviewed=True`). The stuck ladder escalates (example, explain, check-in,
+defer proposal); concept checks top up from any band then previously seen practice, never from the
+assessment pool; the next course opens only when the current one is complete (zero to dsa to cp).
+`services/api/tests/test_content_quality.py` is a hard rule (no authored or family MCQ answer 1.3x
+longer than the longest distractor). Keep new content execution-verified and never auto-fill
+`provenance.review`. Check `git ls-files` before adding problems (`watchtowers` already exists).
+
+**Playground 3D (2026-10-31).** Declarative scene plus timeline JSON spec played by a host-owned player
+(not model-written HTML); keep and fix the hand-ported WebGL2 renderer
+(`services/api/src/socrat/explainer/clicky3d-*.js`); absorb Labs into Playground tools then delete
+Labs. Phases: P1 look, P2 timeline (shipped), P3 picking, isolate, explode, section, P4 Labs into
+Playground sim tools. HeyClicky is a quality bar, not a look to copy (Socrat fonts and tokens);
+every visualization must be reachable from the prompt alone (Auto mode, no required pickers); the
+engine must generate any model from a prompt, nothing is a preset. A visual-review loop with a
+vision model is **not** to be implemented until the owner says so.
+
+**Video editing (unrelated to the engine).** The owner keeps a `ue-video-editing` skill for Remotion
+reels; not part of this repository's work.
+
+---
+
+## 11. Checklist for the first hour of the next agent
+
+1. `git fetch origin && git status && git log --oneline origin/main..HEAD`: confirm you are on
+   `feat/universal-engine` with 17 commits ahead and a clean tree apart from untracked tool folders and
+   `apps/web/next-env.d.ts`.
+2. Read `docs/implementation/universal-engine-plan.md` (section G and the progress log), then section 6
+   here. Read `docs/implementation/load-test-results.md` and `docs/operations/api-worker-split.md` if
+   you touch scale or deployment.
+3. Run `uv run --project services/api pytest services/api/tests/test_scale.py services/api/tests/test_worker_split.py -q`
+   (with `--basetemp` somewhere you own) to prove your environment works before changing anything.
+4. Ask the owner for what only they can give: an API key for a live-model pass (not ChatGPT 5.5), the
+   Sarvam key, native reviewers per language, legal review for regions, Razorpay live keys. Do not
+   guess or invent any of these.
+5. Pick the next item from section 6 (recommended: the live-model pass if a key arrives, otherwise
+   slice 10 access and low bandwidth, which needs no keys), work in small commits, update the plan's
+   progress log and this file, run the checks in section 9, push.
