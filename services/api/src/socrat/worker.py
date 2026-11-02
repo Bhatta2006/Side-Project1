@@ -39,6 +39,13 @@ def award_perks(engine: Engine) -> int:
         return len(community.sweep(db, now()))
 
 
+async def maintain_courses(engine: Engine, settings: Settings) -> dict:
+    from socrat.catalog.registry import default_catalog
+    from socrat.coursegen import maintain
+
+    return await maintain.sweep(engine, settings, default_catalog(), now())
+
+
 def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):
     while len(running) < settings.explainer_concurrent_limit and (job_id := jobs.claim(engine)):
         task = asyncio.create_task(jobs.run(engine, settings, job_id))
@@ -47,11 +54,13 @@ def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):
 
 
 REMINDER_SWEEP_SECONDS = 15 * 60
+MAINTENANCE_SECONDS = 6 * 3600  # a batch of link checks four times a day
 
 
 async def serve(settings: Settings, engine: Engine):
     running: set[asyncio.Task] = set()
     next_reminders = 0.0
+    next_maintenance = 0.0
     while True:
         if (clock := asyncio.get_running_loop().time()) >= next_reminders:
             next_reminders = clock + REMINDER_SWEEP_SECONDS
@@ -63,6 +72,15 @@ async def serve(settings: Settings, engine: Engine):
                 await asyncio.to_thread(award_perks, engine)
             except Exception:
                 logging.exception("creator_perk_sweep_failed")
+        if (
+            settings.maintainer_enabled
+            and (clock := asyncio.get_running_loop().time()) >= next_maintenance
+        ):
+            next_maintenance = clock + MAINTENANCE_SECONDS
+            try:
+                await maintain_courses(engine, settings)
+            except Exception:
+                logging.exception("course_maintenance_failed")
         try:
             drain_once(engine)
         except Exception:

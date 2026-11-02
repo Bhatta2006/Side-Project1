@@ -200,6 +200,10 @@ class Settings(DatabaseSettings):
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)
     gen_runner: bool = True  # run queued generation jobs in the API process (off in tests)
     gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
+    # Course Maintainer: scheduled link checks and repairs of released generated courses.
+    maintainer_enabled: bool = False
+    maintainer_batch: int = Field(default=200, ge=1, le=5000)  # links checked per pass
+    maintainer_review_days: int = Field(default=365, ge=30, le=3650)
     gen_quarantine_reports: int = Field(default=3, ge=1, le=100)  # distinct learners
     ai_tool_rounds: int = Field(default=4, ge=1, le=8)
 

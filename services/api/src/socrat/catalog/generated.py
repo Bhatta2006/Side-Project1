@@ -17,7 +17,7 @@ from socrat.catalog.atoms import AtomPack
 from socrat.catalog.projects import Project
 from socrat.catalog.registry import Catalog, CatalogError, build
 from socrat.catalog.schema import Concept, Course, Problem
-from socrat.models import GeneratedConcept, GeneratedCourse, need, now
+from socrat.models import ConceptVersion, GeneratedConcept, GeneratedCourse, need, now
 
 log = logging.getLogger(__name__)
 
@@ -225,10 +225,12 @@ def store_concept(
     concept: Concept,
     atoms: AtomPack | None,
     problems: list[Problem] | None = None,
+    reason: str = "update",
 ) -> None:
     """Replace one concept of a generated course (a release, a new problem, or a quarantine
     back to planned); checked against the whole catalog first. ``problems`` None keeps the
-    concept's problems. No commit; the caller owns it."""
+    concept's problems. The version being replaced is kept in ``concept_versions`` first.
+    No commit; the caller owns it."""
     stored = course(db, course_id)
     row = db.get(GeneratedConcept, (course_id, concept.id))
     if stored is None or row is None:
@@ -244,12 +246,45 @@ def store_concept(
     )
     others = [c for c in courses(db) if c.id != course_id]
     extend(base, [*others, updated])
+    keep_version(db, row, reason)
     row.payload = concept.model_dump(mode="json")
     row.atoms = atoms.model_dump(mode="json") if atoms else None
     row.problems = [p.model_dump(mode="json") for p in problems] or None
     row.updated_at = now()
     parent = need(db.get(GeneratedCourse, course_id))
     parent.updated_at = max(now(), parent.updated_at + 1)  # refreshes the merged catalog
+
+
+def keep_version(db: Session, row: GeneratedConcept, reason: str) -> None:
+    """Snapshot a released concept before it is replaced. Planned concepts have no content to
+    keep, and an identical snapshot is not stored twice. No commit."""
+    if row.payload.get("status") != "live":
+        return
+    digest = hashlib.sha256(
+        json.dumps([row.payload, row.atoms, row.problems], sort_keys=True).encode()
+    ).hexdigest()
+    known = db.scalars(
+        select(ConceptVersion.id).where(
+            ConceptVersion.course_id == row.course_id,
+            ConceptVersion.concept_id == row.concept_id,
+            ConceptVersion.digest == digest,
+        )
+    ).first()
+    if known is not None:
+        return
+    provenance = row.payload.get("provenance") or {}
+    db.add(
+        ConceptVersion(
+            course_id=row.course_id,
+            concept_id=row.concept_id,
+            version=int(provenance.get("version", 1)),
+            digest=digest,
+            payload=row.payload,
+            atoms=row.atoms,
+            problems=row.problems,
+            reason=reason[:40],
+        )
+    )
 
 
 def add_problem(db: Session, base: Catalog, course_id: str, concept_id: str, problem: Problem):

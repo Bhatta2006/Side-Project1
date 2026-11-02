@@ -854,3 +854,35 @@ class ContentTranslation(Base):
     reviewer: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class ConceptVersion(Base):
+    """A released version of a generated concept, kept before it is replaced (a rewrite after
+    reports, a link repair, a rollback). Learner progress is keyed by concept id, so none is
+    lost; ``digest`` stops identical snapshots piling up."""
+
+    __tablename__ = "concept_versions"
+    __table_args__ = (Index("ix_concept_versions_concept", "course_id", "concept_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    concept_id: Mapped[str] = mapped_column(String(80))
+    version: Mapped[int] = mapped_column(Integer)
+    digest: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict] = mapped_column(JSON)
+    atoms: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    problems: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    reason: Mapped[str] = mapped_column(String(40), default="update")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class ResourceHealth(Base):
+    """The latest link checks for one resource of one concept (``course:concept``)."""
+
+    __tablename__ = "resource_health"
+    concept: Mapped[str] = mapped_column(String(160), primary_key=True)
+    url: Mapped[str] = mapped_column(String(512), primary_key=True)
+    failures: Mapped[int] = mapped_column(Integer, default=0)  # consecutive failed checks
+    first_failed_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_ok_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_checked_at: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(8), default="ok")  # ok | failing | dead

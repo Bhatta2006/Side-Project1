@@ -60,7 +60,7 @@ def quarantine(
     )
     pack = AtomPack.model_validate({**row.atoms, "status": "quarantined"}) if row.atoms else None
     previous = {"concept": row.payload, "atoms": row.atoms, "problems": row.problems}
-    generated.store_concept(db, base, course_id, planned, pack, problems=[])
+    generated.store_concept(db, base, course_id, planned, pack, problems=[], reason="quarantine")
     jobs.enqueue(
         db,
         "package",
