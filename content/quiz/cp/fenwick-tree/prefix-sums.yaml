@@ -1,0 +1,87 @@
+id: quiz:cp:fenwick-tree:prefix-sums
+family: prefix-sums
+concept: cp:fenwick-tree
+pattern: cp:fenwick-tree/prefix-sums
+format: output_prediction  # generated items set their own format (predict, fill, fix)
+tracks: [competitive, interview]
+languages: [python, cpp, java]
+generator:
+  template: fenwick_prefix
+  params: {n: [8, 12], updates: [3, 4], value: [1, 9]}
+  reference: "prefix_sum(updates, q)"
+  seeds:
+    practice: {start: 0, stop: 42}
+    assessment: {start: 42, stop: 60}
+distractors:
+  - {rule: "sum every update", misconception: fenwick-sum-everything}
+  - {rule: "stop before position q", misconception: off-by-one-output}
+  - {rule: "sum from q onwards", misconception: fenwick-suffix-not-prefix}
+  - {rule: "count the updates", misconception: count-not-sum}
+items:
+  - id: recognise-when
+    band: 1
+    format: mcq
+    prompt: "1 000 000 values change one at a time, mixed with 1 000 000 prefix-sum questions. What fits?"
+    options:
+      - "A Fenwick tree, so each update and each question costs about log n steps"
+      - "A prefix-sum array rebuilt after every update, costing n steps each"
+      - "Re-adding the values from position 1 for every question, as n steps each"
+      - "A sorted copy of the values, searched with binary search for each query"
+    answer: 0
+    misconceptions: [null, fenwick-array-scan, fenwick-array-scan, pattern-search-vs-scan]
+    explanation: "A static prefix array is fast to read but slow to update; the Fenwick tree makes both log n."
+  - id: recognise-lowbit
+    band: 2
+    format: mcq
+    prompt: "In a Fenwick tree, which cell is next after 12 (binary 1100) when reading a prefix sum?"
+    options:
+      - "8, because 12 minus its lowest set bit (4) is 8"
+      - "11, because the next cell below 12 comes next"
+      - "6, because the index is halved on each step"
+      - "4, because only the lowest set bit remains"
+    answer: 0
+    misconceptions: [null, fenwick-step-by-one, fenwick-double-not-lowbit, fenwick-lowbit-typo]
+    explanation: "i & -i isolates the lowest set bit; removing it moves to the next block: 12 → 8 → 0."
+  - id: edge-one-indexed
+    band: 5
+    format: mcq
+    prompt: "Why do Fenwick trees use positions 1..n rather than 0..n−1?"
+    options:
+      - "i & -i is 0 for i = 0, so the loops would never move away from position 0"
+      - "Position 0 is reserved for the total of every value in the array"
+      - "Arrays that start at 0 cannot hold sums larger than 2^31 safely"
+      - "Binary numbers are written without a leading zero by convention"
+    answer: 0
+    misconceptions: [null, fenwick-sum-everything, trace-step-slip, accumulator-init-one]
+    explanation: "With i = 0 the update step adds 0 and the loop never ends; shift to 1-indexed or add one."
+  - id: edge-overflow
+    band: 5
+    format: mcq
+    prompt: "n = 2·10^5 values up to 10^9 are summed in a Fenwick tree. What type must the cells have?"
+    options:
+      - "64-bit: a sum can reach 2·10^14, far beyond a 32-bit int"
+      - "32-bit is enough, since each single value fits in an int"
+      - "Floating point, so that large sums are never truncated"
+      - "Any type, because the tree only stores differences between cells"
+    answer: 0
+    misconceptions: [null, mod-only-at-end, fenwick-lowbit-typo, fenwick-array-scan]
+    explanation: "Each value fits in 32 bits, but their sum does not."
+  - id: transfer-inversions
+    band: 6
+    format: classify
+    prompt: "Count the pairs i < j with a[i] > a[j] in an array of 2·10^5 values. Which tool?"
+    options:
+      - "A Fenwick tree over values, counting the larger ones already added"
+      - "Compare every pair of elements with two nested loops over the array"
+      - "Sort the array and read off how far each element moved from its place"
+      - "A difference array applied once for every pair of positions"
+    answer: 0
+    misconceptions: [null, pattern-brute-force-default, pattern-sort-breaks-order, fenwick-array-scan]
+    explanation: "Scan left to right; before inserting a[j], query how many earlier values exceed it: O(n log n)."
+hint_ladder:
+  - Which cells does an update change, and which does a prefix query read?
+  - i & -i is the lowest set bit of i. Updates go up by it, queries go down by it.
+  - "Update: add at i, then i += i & -i while i <= n. Query: add tree[i], then i -= i & -i while i > 0."
+time_limit_s: 150
+provenance:
+  origin: original
