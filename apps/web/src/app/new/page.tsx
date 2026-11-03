@@ -128,6 +128,12 @@ export default function NewCourse() {
   const [credit, setCredit] = useState<'anonymous' | 'name'>('anonymous');
   const [mine, setMine] = useState<Enrolled[]>([]);
 
+  // The start page hands over what the learner typed.
+  useEffect(() => {
+    const given = new URLSearchParams(window.location.search).get('subject');
+    if (given) setText(given.slice(0, 500));
+  }, []);
+
   useEffect(() => {
     api.get<{ items: Enrolled[] }>('/enrollments').then((r) => setMine(r.items)).catch(() => {});
   }, []);

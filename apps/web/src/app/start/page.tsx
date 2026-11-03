@@ -109,6 +109,13 @@ export default function Start() {
   const [motivation, setMotivation] = useState('');
 
   const [runtimes, setRuntimes] = useState<Record<string, boolean>>({});
+  // Any subject goes to the generation engine; the ready-made courses below stay as defaults.
+  const [subject, setSubject] = useState('');
+  const [suggestions, setSuggestions] = useState<{ id: string; label: string }[]>([]);
+  useEffect(() => {
+    if (!features?.learning_requests) return;
+    api.get<{ subjects: { id: string; label: string }[] }>('/learning-requests/options').then(r => setSuggestions(r.subjects)).catch(() => undefined);
+  }, [features?.learning_requests]);
 
   useEffect(() => {
     api.get<{ items: Course[] }>('/courses').then(r => setCourses(r.items)).catch(e => setError(explain(e)));
@@ -285,7 +292,23 @@ export default function Start() {
 
         {step === 'course' ? (
           <div className="grid gap-6">
-            <Heading title="What do you want to learn?" body="You can switch later. Foundations from other courses are added when you need them." />
+            <Heading title="What do you want to learn?" body="Type anything, or start from a suggestion or a ready-made course. You can switch later." />
+            {features?.learning_requests ? (
+              <form
+                className="grid gap-3"
+                onSubmit={e => { e.preventDefault(); if (subject.trim().length >= 3) router.push(`/new?subject=${encodeURIComponent(subject.trim())}`); }}
+              >
+                <FieldLabel htmlFor="subject">Your subject</FieldLabel>
+                <Input id="subject" value={subject} maxLength={500} onChange={e => setSubject(e.target.value)} placeholder="For example: how black holes work, Carnatic music, circuits" />
+                <ul className="flex flex-wrap gap-2" aria-label="Suggested subjects">
+                  {suggestions.map(s => (
+                    <li key={s.id}><Pill pressed={subject === s.label} onClick={() => setSubject(s.label)}>{s.label}</Pill></li>
+                  ))}
+                </ul>
+                {subject.trim().length >= 3 ? <Button type="submit">Build my course</Button> : null}
+                <p className="mt-2 text-sm font-semibold text-muted-foreground">Or start a ready-made course</p>
+              </form>
+            ) : null}
             <div className="grid gap-3">
               {courses.map(c => {
                 const Icon = COURSE_ICON[c.id] ?? Code2;
