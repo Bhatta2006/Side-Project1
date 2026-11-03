@@ -30,6 +30,13 @@ class Create(BaseModel):
     choices: list[str] = Field(default_factory=list, max_length=12)  # fixed picks: intent.PRESETS
 
 
+class Clarify(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # One answer per question Socrat asked, in order; a blank answer skips that question.
+    answers: list[str] = Field(min_length=1, max_length=2)
+    choices: list[str] = Field(default_factory=list, max_length=12)  # the picks, kept
+
+
 class Share(BaseModel):
     model_config = ConfigDict(extra="forbid")
     consent: bool  # must be true: the learner agrees to share this course with everyone
@@ -207,6 +214,45 @@ async def create(body: Create, request: Request):
         )
         db.add(row)
         record_event(db, user_id, "learning_request.created", row.id)
+        db.flush()
+        return view(db, row)
+
+
+@router.post("/{request_id}/clarify")
+async def clarify(request_id: str, body: Clarify, request: Request):
+    """Answer the questions Socrat asked and read the request again with the answers. Only one
+    round of questions: the result is always confirmable (or blocked), so the learner can never
+    be left without a way forward; they can still change the request itself."""
+    _enabled(request)
+    settings, eng = request.app.state.settings, engine(request)
+    try:
+        picks = intents.check_choices(body.choices)
+    except ValueError as exc:
+        raise HTTPException(422, "invalid_choice") from exc
+    answers = [intents.normalise(a)[:500] for a in body.answers]
+    with Session(eng) as db:
+        user = user_of(request, db, write=True)
+        user_id = user.id
+        row = db.get(LearningRequest, request_id)
+        if row is None or row.user_id != user_id:
+            raise HTTPException(404, "not_found")
+        if row.status != "needs_clarification":
+            return view(db, row)  # already answered (a double submit) or never asked
+        questions = list(row.intent.get("clarifications") or [])
+        text = row.text
+    said = [f"Q: {q} A: {a}" for q, a in zip(questions, answers, strict=False) if a]
+    combined = (f"{text} (The learner's answers: {' '.join(said)})" if said else text)[:2000]
+    parsed, source = await intents.parse(eng, settings, combined, user_id)
+    parsed = intents.apply_adapter(parsed, combined)
+    parsed = intents.apply_choices(parsed, picks).model_copy(update={"clarifications": []})
+    with Session(eng) as db, db.begin():
+        row = db.get(LearningRequest, request_id)
+        if row is None or row.status != "needs_clarification":
+            raise HTTPException(409, "request_changed")
+        row.text, row.intent, row.source = combined, parsed.model_dump(mode="json"), source
+        row.status = "blocked" if parsed.blocked else "parsed"
+        row.updated_at = now()
+        record_event(db, user_id, "learning_request.clarified", row.id)
         db.flush()
         return view(db, row)
 

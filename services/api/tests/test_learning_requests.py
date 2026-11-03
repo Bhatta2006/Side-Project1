@@ -147,6 +147,46 @@ def test_blocked_and_clarification_states(on):
             assert refused.status_code == 422
 
 
+def test_answering_the_questions_always_leads_to_a_confirmable_request(on, monkeypatch):
+    """Found in a live run: a request that needed clarification showed its questions with no
+    way to answer them, and resubmitting the same text returned the same request."""
+    ada = login(on)
+    from socrat.coursegen import requests as module
+
+    replies = [
+        dict(MODEL_INTENT, clarifications=["Which language?", "How much time a week?"]),
+        dict(MODEL_INTENT, subject="Spoken Spanish", clarifications=["Anything else?"]),
+    ]
+    seen: list[str] = []
+
+    async def fake(engine, settings, text, user_id=None):
+        seen.append(text)
+        return intents.Intent.model_validate(replies.pop(0)), "model"
+
+    monkeypatch.setattr(module.intents, "parse", fake)
+    row = on.post(URL, json={"text": "a new spoken language"}, headers=ada).json()
+    assert row["status"] == "needs_clarification"
+    done = on.post(
+        f"{URL}/{row['id']}/clarify",
+        json={"answers": ["Spanish", ""], "choices": ["reg-teen"]},
+        headers=ada,
+    ).json()
+    # The answer reached the reader; a skipped question is left out; no second round.
+    assert "Q: Which language? A: Spanish" in seen[1] and "How much time" not in seen[1]
+    assert done["status"] == "parsed" and done["intent"]["clarifications"] == []
+    assert done["intent"]["subject"] == "Spoken Spanish" and done["intent"]["register"] == "teen"
+    again = on.post(f"{URL}/{row['id']}/clarify", json={"answers": ["x"]}, headers=ada)
+    assert again.json()["status"] == "parsed" and not replies  # a repeat is not read again
+    assert (
+        on.post(f"{URL}/{row['id']}/confirm", json={}, headers=ada).json()["status"] == "confirmed"
+    )
+    other = login(on, subject="bob", name="Bob")
+    assert (
+        on.post(f"{URL}/{row['id']}/clarify", json={"answers": ["x"]}, headers=other).status_code
+        == 404
+    )
+
+
 def test_invalid_edited_intent_is_rejected(on):
     ada = login(on)
     made = on.post(URL, json={"text": "teach me algebra"}, headers=ada).json()

@@ -187,6 +187,19 @@ export default function NewCourse() {
     if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/cancel`, {}), setReq);
   };
   const make = () => run(() => api.post<LearningRequest>('/learning-requests', { text, choices: picks }), setReq);
+  const [answers, setAnswers] = useState<string[]>([]);
+  // One round of questions; skipping sends blank answers and Socrat picks sensible defaults.
+  const answer = (skip = false) => {
+    if (!req) return;
+    const given = (req.intent?.clarifications ?? []).map((_, i) => (skip ? '' : (answers[i] ?? '').trim()));
+    run(
+      () => api.post<LearningRequest>(`/learning-requests/${req.id}/clarify`, { answers: given.length ? given : [''], choices: picks }),
+      (r) => {
+        setAnswers([]);
+        setReq(r);
+      },
+    );
+  };
   const confirm = () => {
     if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/confirm`, {}), setReq);
   };
@@ -340,11 +353,38 @@ export default function NewCourse() {
                   {n}
                 </p>
               ))}
-              {intent.clarifications.map((q) => (
-                <p key={q} className="mt-2 text-sm font-medium">
-                  {q}
-                </p>
-              ))}
+              {req.status === 'needs_clarification' ? (
+                <form
+                  className="mt-4 space-y-4 border-t pt-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    answer();
+                  }}
+                >
+                  <p className="text-sm text-muted-foreground">A quick question before Socrat plans your course.</p>
+                  {intent.clarifications.map((q, i) => (
+                    <div key={q}>
+                      <label htmlFor={`answer-${i}`} className="mb-2 block text-sm font-medium">
+                        {q}
+                      </label>
+                      <Input
+                        id={`answer-${i}`}
+                        value={answers[i] ?? ''}
+                        maxLength={500}
+                        onChange={(e) => setAnswers((a) => Object.assign([...a], { [i]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap gap-3">
+                    <Button type="submit" disabled={busy || !answers.some((a) => a?.trim())}>
+                      {busy ? 'Reading your answers…' : 'Continue'}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => answer(true)} disabled={busy}>
+                      Skip, let Socrat decide
+                    </Button>
+                  </div>
+                </form>
+              ) : null}
             </section>
           ) : null}
 
