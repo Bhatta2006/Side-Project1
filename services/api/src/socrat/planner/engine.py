@@ -653,6 +653,8 @@ def build_plan(
                 f"{gates_title(catalog, first)} checkpoint."
             )
     queued_reviews = {a.concept for a in queue if a.kind in {"review", "testout"}}
+    # Reviews the learner snoozed stay off the plan until then (learn.reviews).
+    held = {k: int(v) for k, v in (overrides.get("snoozed") or {}).items()}
     reviews = sorted(
         (states[q].next_review_at, q)
         for q in path
@@ -669,7 +671,7 @@ def build_plan(
         end = now + (day - today).days * DAY  # due by this time that day, never a day early
         budget = minutes_per_day
         items: list[dict] = []
-        due = [q for at, q in reviews if at <= end][:MAX_REVIEWS_PER_DAY]
+        due = [q for at, q in reviews if at <= end and held.get(q, 0) <= end][:MAX_REVIEWS_PER_DAY]
         for q in due:
             reviews = [(at, c) for at, c in reviews if c != q]
             items.append(

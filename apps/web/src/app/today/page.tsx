@@ -94,10 +94,10 @@ function GrowBar({ value, label }: { value: number; label: string }) {
   );
 }
 
-function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
+function SessionRow({ activity, done, onLater }: { activity: Activity; done: boolean; onLater?: () => void }) {
   return (
-    <li>
-      <Link href={activityHref(activity.id)} className="group flex min-h-14 items-center gap-3 rounded-[16px] px-3 py-2 transition-colors hover:bg-raised">
+    <li className="flex items-center gap-1">
+      <Link href={activityHref(activity.id)} className="group flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-[16px] px-3 py-2 transition-colors hover:bg-raised">
         <StatusIcon status={done ? 'practised' : 'not_seen'} size={22} />
         <span className="min-w-0 flex-1">
           <span className={cn('block font-semibold', done && 'text-muted-foreground')}>{activity.title}</span>
@@ -106,6 +106,12 @@ function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
         {!done ? <ReasonChip code={activity.code} className="hidden sm:inline-flex" /> : null}
         {!done ? <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
       </Link>
+      {/* A review can wait a few days; the schedule itself is unchanged (learn/reviews.py). */}
+      {onLater && !done ? (
+        <button type="button" onClick={onLater} className="min-h-11 flex-none rounded-full px-3 text-[13px] font-medium text-muted-foreground underline-offset-4 hover:underline">
+          Later<span className="sr-only">: remind me about {activity.title} in 3 days</span>
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -360,7 +366,14 @@ export default function TodayPage() {
                       <span className="text-sm font-semibold text-muted-foreground tabular-nums">{today.done.length ? `${today.done.length} of ${session.length} done` : `${session.length} step${session.length === 1 ? '' : 's'}, in order`}</span>
                     </div>
                     <ul className="grid px-[calc(var(--card-spacing)-12px)]">
-                      {session.map(({ a, done }) => <SessionRow key={a.id} activity={a} done={done} />)}
+                      {session.map(({ a, done }) => (
+                        <SessionRow
+                          key={a.id}
+                          activity={a}
+                          done={done}
+                          onLater={a.kind === 'review' && a.concept ? () => api.post(`/reviews/${a.concept}/snooze`, { days: 3 }).then(load).catch(() => undefined) : undefined}
+                        />
+                      ))}
                     </ul>
                   </Card>
                 ) : (

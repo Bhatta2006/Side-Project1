@@ -41,6 +41,7 @@ from socrat.engine.routes import router as engine_router
 from socrat.explainer.routes import router as explainer_router
 from socrat.lab.routes import router as lab_router
 from socrat.learn.graded_routes import router as graded_router
+from socrat.learn.reviews import router as reviews_router
 from socrat.learn.routes import router as learner_router
 from socrat.learn.session_routes import router as session_router
 from socrat.library import autosync
@@ -137,6 +138,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(diagnostic_router)
     app.include_router(maintenance_router)
     app.include_router(engine_costs_router)
+    app.include_router(reviews_router)
     app.include_router(locale_public)
     app.include_router(locale_admin)
     app.include_router(moderation_learner)
