@@ -72,7 +72,15 @@ def test_renamed_items_still_resolve_from_stored_sessions():
     from socrat.catalog.schema import QuizItem
 
     def make(id_, former=()):
-        return QuizItem(id=id_, prompt="prompt", options=["a", "b"], answer=0, explanation="because", difficulty=3, former_ids=list(former))
+        return QuizItem(
+            id=id_,
+            prompt="prompt",
+            options=["a", "b"],
+            answer=0,
+            explanation="because",
+            difficulty=3,
+            former_ids=list(former),
+        )
 
     renamed, other = make("list-neighbours", ["neighbours"]), make("neighbours")
     assert renamed.matches("neighbours") and renamed.matches("list-neighbours")
