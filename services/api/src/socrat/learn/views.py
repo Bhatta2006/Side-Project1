@@ -427,6 +427,8 @@ def concept_view(
         # Work a quiz cannot judge, with this learner's latest submission for each.
         tasks=_tasks(db, enrollment, qualified, concept),
         sequence=concept.sequence,
+        # Which source backs which claim, built by code from the lesson's [n] markers.
+        citations=[c.model_dump(mode="json") for c in concept.citations],
         # How this concept is taught to this learner now, and why (Pedagogical Strategist).
         teaching=_teaching(catalog, course_id, concept, summary.stage),
         # What stands behind the estimate: the stage and the kinds of evidence (prompt 9.2).

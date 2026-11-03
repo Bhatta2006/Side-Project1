@@ -530,6 +530,7 @@ def test_a_teenager_asks_for_circuits_and_gets_a_working_course(on, monkeypatch,
     first = plan["blueprint"]["modules"][0]["concepts"][1]
     assert first["id"] == "ohms-law" and first["status"] == "live"
     lesson_view = on.get(f"/api/v1/concepts/{course_id}:{first['id']}").json()
+    assert lesson_view["citations"] == []  # no sources were found, so no claim cites one
     assert (
         lesson_view["ai_generated"] is True
         and "Not reviewed by a person" in lesson_view["attribution"]

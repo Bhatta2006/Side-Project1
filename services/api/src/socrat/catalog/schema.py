@@ -53,6 +53,21 @@ class Resource(Model):
     why: str = Field(default="", max_length=300)  # why it was chosen, in plain words
 
 
+class Citation(Model):
+    """Which source backs which claim, and where (master prompt 11.4). Built by code from the
+    lesson's inline [n] markers (``coursegen.research.ground``); never written by a model."""
+
+    n: int = Field(ge=1, le=20)
+    url: HttpUrl
+    offset: int = Field(ge=0)  # character position of the [n] marker in the lesson text
+    claim: str = Field(max_length=400)  # the sentence that carries the marker
+    passage: str = Field(default="", max_length=400)  # the source text the claim rests on
+    # retrieved: text the search provider returned; summary: the researcher's paraphrase only
+    basis: Literal["retrieved", "summary"] = "summary"
+    overlap: float = Field(ge=0, le=1)  # share of the claim's content words found in it
+    supported: bool
+
+
 class Review(Model):
     """Human sign-off recorded when a drafted problem is approved (item 5 of the backlog)."""
 
@@ -328,6 +343,10 @@ class Concept(Model):
     # "lesson", "quiz", "visual:N", or "prompt:", "exercise:", "experiment:", "problem:",
     # "task:" followed by an id. Every entry must name something this concept has.
     sequence: list[str] = Field(default_factory=list, max_length=24)
+    # Quiz items a rewrite dropped: never offered again, but still resolvable so open
+    # sessions, placements and stored attempts keep working (catalog/revisions.carry).
+    retired_quiz: list[QuizItem] = Field(default_factory=list, max_length=40)
+    citations: list[Citation] = Field(default_factory=list, max_length=40)
     provenance: Provenance | None = None
     outline: Outline | None = None
     # A draft is being authored: validated and kept in the graph, but never served.
@@ -363,7 +382,17 @@ class Concept(Model):
             raise ValueError(f"concept {self.id} sequence repeats an activity")
         if len({t.id for t in self.tasks}) != len(self.tasks):
             raise ValueError(f"concept {self.id} task ids must be unique")
+        live_ids = {i for q in self.quiz for i in (q.id, *q.former_ids)}
+        if clash := sorted({q.id for q in self.retired_quiz} & live_ids):
+            raise ValueError(f"concept {self.id} retired quiz ids are still live: {clash}")
         return self
+
+    def quiz_item(self, item_id: str) -> QuizItem:
+        """The quiz item stored under ``item_id`` (current, renamed or retired)."""
+        for q in (*self.quiz, *self.retired_quiz):
+            if q.matches(item_id):
+                return q
+        raise KeyError(f"concept {self.id} has no quiz item {item_id}")
 
 
 class Example(Model):

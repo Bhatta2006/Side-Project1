@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
+from socrat.catalog.schema import Citation
 from socrat.config import Settings
 from socrat.coursegen import execute, research, roles, search, validation
 from socrat.coursegen import package as pkg
@@ -551,6 +552,11 @@ async def run_package(
         )
         if passed != (status in validation.RELEASED):  # the two must agree; the gate wins
             status = "needs_revision" if not passed else status
+        # Which source backs which claim, by code, kept on the concept (master prompt 11.4).
+        cites = research.ground(live.lesson, cited)
+        if status in validation.RELEASED:
+            status, findings = validation.with_grounding(status, findings, cites)
+        live = live.model_copy(update={"citations": [Citation.model_validate(c) for c in cites]})
         report(attempt, status, findings)
         summary = str((review.data or {}).get("summary", review.problem))[:1000]
         entry = {

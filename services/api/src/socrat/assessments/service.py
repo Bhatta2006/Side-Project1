@@ -421,7 +421,7 @@ def start(
 
 
 def _item(catalog: Catalog, concept: str, item_id: str) -> QuizItem:
-    return next(q for q in catalog.concept(concept).quiz if q.matches(item_id))
+    return catalog.concept(concept).quiz_item(item_id)
 
 
 def _shown(catalog: Catalog, attempt: WeeklyAssessment, concept: str, stored: str, language: str):

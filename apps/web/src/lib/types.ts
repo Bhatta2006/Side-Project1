@@ -586,6 +586,8 @@ export interface ConceptView {
   /** Work a quiz cannot judge, with the learner's latest submission. */
   tasks?: import('@/components/lesson-tasks').LessonTask[];
   sequence?: string[];
+  /** Which source backs which claim (master prompt 11.4), built by code; empty for hand-written lessons. */
+  citations?: { n: number; url: string; offset: number; claim: string; passage: string; basis: 'retrieved' | 'summary'; overlap: number; supported: boolean }[];
   /** How this concept is taught to this learner now, and why (evidence library). */
   teaching?: { stage: string; guidance: string; techniques: { name: string; why: string }[]; library: string };
   /** What stands behind the estimate (master prompt 9.2). */

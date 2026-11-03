@@ -109,6 +109,32 @@ def needs_person(adapter: Adapter, safety_notes: list[str]) -> list[Finding]:
     return out
 
 
+def grounding(citations: list[dict]) -> list[Finding]:
+    """Citations whose claim shares too little with the cited passage (master prompt 11.4).
+    A warning, not a block: overlap of words is evidence of support, not proof against it."""
+    return [
+        Finding(
+            "grounding",
+            "warning",
+            f"lesson@{c['offset']}",
+            f'Citation [{c["n"]}] backs "{c["claim"][:200]}" but its '
+            f"{'retrieved passage' if c['basis'] == 'retrieved' else 'summary'} shares little "
+            "with it.",
+            "Cite a source that states this, or reword the claim to what the source says.",
+        )
+        for c in citations
+        if not c["supported"]
+    ][:10]
+
+
+def with_grounding(status: str, findings: list[Finding], citations: list[dict]):
+    """Add grounding warnings to a released state: pass becomes pass_with_warnings."""
+    extra = grounding(citations)
+    if extra and status == "pass":
+        status = "pass_with_warnings"
+    return status, [*findings, *extra]
+
+
 def assess(
     gates: list[str],
     facts: dict | None,

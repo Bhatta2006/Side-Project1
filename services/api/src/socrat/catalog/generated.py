@@ -240,6 +240,14 @@ def store_concept(
         raise CatalogError(f"unknown generated concept {course_id}:{concept.id}")
     if problems is None:
         problems = [Problem.model_validate(p) for p in row.problems or []]
+    # Quiz ids from the version being replaced stay resolvable (criterion 15).
+    from socrat.catalog import revisions
+
+    try:
+        previous = Concept.model_validate(row.payload) if row.payload else None
+    except ValueError:
+        previous = None
+    concept = revisions.carry(previous, concept)
     owned = {p["id"] for p in row.problems or []}
     updated = stored.model_copy(
         update={

@@ -382,6 +382,21 @@ export default function Lesson() {
             return <div key={block.key} id={`step-task-${task.id}`}><LessonTasks concept={concept.id} tasks={[task]} heading={firstTask} /></div>;
           })}
 
+          {concept.citations?.length ? (
+            <details className="mt-8 max-w-[68ch] rounded-[20px] border px-4 py-3.5 text-[15px]">
+              <summary className="cursor-pointer font-semibold">Where each claim comes from</summary>
+              <ul className="mt-3 grid gap-3">
+                {concept.citations.map(c => (
+                  <li key={`${c.n}-${c.offset}`}>
+                    <p>{c.claim} <a className="underline underline-offset-4" href={c.url} target="_blank" rel="noopener noreferrer">[{c.n}]<span className="sr-only">, opens in a new tab</span></a></p>
+                    {c.passage ? <p className="mt-1 text-sm text-muted-foreground">{c.basis === 'retrieved' ? 'Source text' : 'Summary of the source'}: {c.passage}</p> : null}
+                    {!c.supported ? <p className="mt-1 text-sm text-attention">This source may not state this directly.</p> : null}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+
           {canCheck ? <FeelControls concept={qualified} /> : null}
 
           {/* Explain it differently. */}
