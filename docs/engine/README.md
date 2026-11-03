@@ -37,7 +37,22 @@ learner text ──► intent (coursegen/intent.py; model + rules fallback; engi
              change a visible revision; maintainer keeps links healthy (coursegen/maintain.py)
 ```
 
-Models propose and write; code decides, checks and scores. Every model call records its model,
+Models propose and write; code decides, checks and scores.
+
+Kept stable across change:
+- **Quiz ids across rewrites:** `catalog/revisions.carry` runs in `store_concept`. A rewritten
+  question keeps its old id as a former id; a dropped one moves to `Concept.retired_quiz`, never
+  offered but still found by `Concept.quiz_item` (always use it to look an item up by id).
+- **Claims to sources:** `coursegen/research.ground` maps every inline `[n]` to its sentence,
+  offset, source and passage (`Concept.citations`); weak overlap is a `grounding` warning.
+- **Scoring policy:** `mastery.POLICY` is a digest of the scoring numbers; each learner state
+  records it, and `mastery.replay` rebuilds a state from evidence under the current policy.
+- **Module versions:** `catalog/revisions.module_version`, derived from the module and its
+  concepts' content.
+- **Outline reuse:** an identical brief (ignoring id and budgets) reuses a critic-passed
+  outline with no model call (`jobs.reusable_outline`).
+- **Result envelope:** `coursegen/roles.envelope` records each model call's parse result,
+  confidence, assumptions and unresolved issues in the job log. Every model call records its model,
 prompt version (a hash of the instructions), time and cost in the job log.
 
 ## Add a domain
@@ -57,7 +72,8 @@ lesson `human_review_required` until a named person confirms it.
 ## Add an activity type
 
 1. Data: a typed model in `catalog/schema.py` on `Concept` (see `Task`), validated, with a rubric
-   or an answer key and an evaluator. Add it to the `Concept.sequence` vocabulary.
+   or an answer key and an evaluator. Add it to the `Concept.sequence` vocabulary, and, if it
+   renders on the lesson page, to `apps/web/src/lib/sequence.ts` so the page orders it.
 2. Generation: a prompt block in `coursegen/package.py` and parsing in `build_concept`; ask for it
    only where it fits (see `wants_tasks`).
 3. Its assessment contract in `engine/assessments.describe` (format, evaluation, scoring,
