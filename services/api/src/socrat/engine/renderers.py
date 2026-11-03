@@ -105,8 +105,9 @@ class ConceptMap(Params):
     edges: list[tuple[str, str]] = Field(max_length=120)
 
 
-class GeneratedVisual(Params):
-    request: str = Field(min_length=5, max_length=600)  # what the concept visual must show
+class PlaygroundVisual(Params):
+    # The concept's shared Playground visual at this depth; the concept is the lesson's own.
+    level: Literal["simple", "standard", "deep"] = "standard"
 
 
 class Simulation(Params):
@@ -213,19 +214,25 @@ CONCEPT_MAP = register(
         supports=("relate", "plan"),
     )
 )
-CONCEPT_PLAYGROUND = register(
+PLAYGROUND_VISUAL = register(
     Manifest(
-        id="concept-playground",
-        version="1.0",
-        description="A model-designed interactive visual, run in a network-blocked sandbox frame.",
+        id="playground-visual",
+        version="2.0",
+        description=(
+            "The concept's shared Playground visual: a sketch (rows, links, pointers drawn by the "
+            "host's layout kit) or a 3D film (parts, motions, chapters played by the host's WebGL "
+            "player). Both are declarative data the host checks; with the declarative sketch "
+            "setting on, no model-written code runs (sketch.py, film.py). Shown in an "
+            "opaque-origin sandbox frame, generated once per concept and depth for all learners."
+        ),
         domains=("*",),
-        params=GeneratedVisual,
-        events=("viewed", "reported"),
-        runtime=("sandbox-iframe",),
+        params=PlaygroundVisual,
+        events=("viewed", "stepped", "reported"),
+        runtime=("sandbox-frame", "svg", "webgl2"),
         evidence="exposure",
-        accessible_alternative="The written explanation that accompanies the visual.",
-        on_error="Show the explanation and a report button; never substitute another lesson.",
-        supports=("explore", "visualise"),
+        accessible_alternative="The visual's step notes and its written summary (transcript).",
+        on_error="Show the summary and a retry; never substitute another lesson's visual.",
+        supports=("explore", "visualise", "demonstrate"),
         sandboxed=True,
     )
 )

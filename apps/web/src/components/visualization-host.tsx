@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { Component, useState, type ReactNode } from 'react';
 import Markdown from '@/components/markdown';
 import { Graph } from '@/components/studio/graph';
@@ -25,7 +26,8 @@ export type VisualizationSpec = {
   alt_text: string;
 };
 
-type Renderer = (props: { params: Record<string, any>; spec: VisualizationSpec }) => ReactNode;
+type Lesson = { concept: string; title: string };
+type Renderer = (props: { params: Record<string, any>; spec: VisualizationSpec; lesson?: Lesson }) => ReactNode;
 
 /** Renderers available in the browser. Add a component here when a manifest is registered on the server. */
 const RENDERERS: Record<string, Renderer> = {
@@ -55,6 +57,7 @@ const RENDERERS: Record<string, Renderer> = {
   simulation: ({ params }) => <Simulation params={params as { model: string; inputs?: Record<string, number> }} />,
   timeline: ({ params }) => <Timeline params={params as { unit: string; length: number; tracks: string[] }} />,
   'code-studio': ({ params }) => <CodeTask params={params as { language: string; starter?: string; problem_id?: string | null }} />,
+  'playground-visual': ({ lesson }) => (lesson ? <ConceptVisual concept={lesson.concept} title={lesson.title} /> : null),
   'self-check': ({ params }) => (
     <ul className="space-y-2">
       {(params.criteria as string[]).map((c) => (
@@ -70,7 +73,10 @@ const RENDERERS: Record<string, Renderer> = {
 };
 
 /** Renderers that download a library or call the server on every change; lite mode holds them. */
-const HEAVY = new Set(['function-plot', 'simulation']);
+const HEAVY = new Set(['function-plot', 'simulation', 'playground-visual']);
+
+// The concept's shared Playground visual (sketch or 3D film), loaded only when a lesson has one.
+const ConceptVisual = dynamic(() => import('@/components/socrat/concept-visual').then(m => m.ConceptVisual), { ssr: false });
 
 function Fallback({ spec, why }: { spec: VisualizationSpec; why?: string }) {
   return (
@@ -91,7 +97,7 @@ class Guard extends Component<{ spec: VisualizationSpec; children: ReactNode }, 
   }
 }
 
-export function VisualizationHost({ spec }: { spec: VisualizationSpec }) {
+export function VisualizationHost({ spec, lesson }: { spec: VisualizationSpec; lesson?: Lesson }) {
   const { lite } = useLite();
   const { t } = useI18n();
   const [requested, setRequested] = useState(false);
@@ -111,7 +117,7 @@ export function VisualizationHost({ spec }: { spec: VisualizationSpec }) {
   return (
     <figure className="my-4">
       <Guard spec={spec}>
-        <div role="group" aria-label={spec.alt_text}>{render({ params: spec.params, spec })}</div>
+        <div role="group" aria-label={spec.alt_text}>{render({ params: spec.params, spec, lesson })}</div>
       </Guard>
       <figcaption className="mt-1 text-[13px] text-muted-foreground">{spec.purpose}</figcaption>
     </figure>

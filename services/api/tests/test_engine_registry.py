@@ -79,7 +79,7 @@ def test_selection_is_deterministic_and_falls_back_to_text():
     assert renderers.select("math-science", "visualise").id == "function-plot"
     assert renderers.select("software", "practise").id == "code-studio"
     assert renderers.select("music", "time").id == "timeline"
-    assert renderers.select("music", "visualise").id != "concept-playground"  # sandboxed: opt-in
+    assert renderers.select("music", "visualise").id != "playground-visual"  # sandboxed: opt-in
     assert renderers.select("general", "teleport").id == "markdown"
 
 

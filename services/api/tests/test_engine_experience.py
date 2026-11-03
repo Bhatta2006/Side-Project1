@@ -79,7 +79,7 @@ def test_the_designer_sees_only_allowed_renderers_and_valid_visuals_are_kept(
     client, published, web
 ):
     bad = [
-        dict(GOOD_MAP, renderer="concept-playground"),  # sandboxed: not offered
+        dict(GOOD_MAP, renderer="playground-visual"),  # sandboxed: not offered
         dict(GOOD_MAP, renderer="evil-script"),  # not registered
         dict(GOOD_MAP, params=dict(nodes=["only one"], edges=[])),  # fails the param schema
         dict(GOOD_MAP, fallback_text="short"),  # no usable fallback
@@ -88,7 +88,7 @@ def test_the_designer_sees_only_allowed_renderers_and_valid_visuals_are_kept(
     live = release(client, published, web, designer)
     assert live.status == "live" and [v.renderer for v in live.visuals] == ["concept-map"]
     offered = designer.prompts[0]
-    assert "concept-map" in offered and "concept-playground" not in offered
+    assert "concept-map" in offered and "playground-visual" not in offered
     assert "code-studio" not in offered
 
     learner = login(client, subject="ada", name="Ada")

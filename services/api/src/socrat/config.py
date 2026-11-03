@@ -163,6 +163,9 @@ class Settings(DatabaseSettings):
     # 3D is still being tested: only admin accounts may request it (and Auto never picks it for
     # anyone else). Set false to open 3D to every learner.
     explainer_3d_admin_only: bool = True
+    # Sketches as declarative data played by host code (explainer/sketch.py) instead of a
+    # model-written HTML page with scripts. Off until the owner switches it on.
+    explainer_sketch_declarative: bool = False
     explainer_3d_price_input_per_mtok: float = Field(default=0, ge=0, le=1000)
     explainer_3d_price_output_per_mtok: float = Field(default=0, ge=0, le=1000)
     # Large models think before their first token; the tutor's short timeout is too tight.

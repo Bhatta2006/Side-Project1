@@ -326,7 +326,7 @@ export default function Lesson() {
             </p>
           ) : null}
           <Markdown source={concept.lesson} language={concept.language} rich />
-          {(concept.visuals ?? []).map((v, i) => <VisualizationHost key={`${v.renderer}-${i}`} spec={v} />)}
+          {(concept.visuals ?? []).map((v, i) => <VisualizationHost key={`${v.renderer}-${i}`} spec={v} lesson={{ concept: concept.id, title: concept.title }} />)}
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
 
