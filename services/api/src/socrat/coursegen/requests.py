@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from socrat.catalog import generated
 from socrat.catalog.registry import CatalogError, default_catalog
+from socrat.catalog.revisions import module_version
 from socrat.coursegen import community, jobs, prefetch
 from socrat.coursegen import intent as intents
 from socrat.database import record_event
@@ -109,6 +110,7 @@ def view(db: Session, row: LearningRequest) -> dict:
                     dict(
                         id=m.id,
                         title=m.title,
+                        version=module_version(stored, m),
                         concepts=[
                             dict(
                                 id=cid,

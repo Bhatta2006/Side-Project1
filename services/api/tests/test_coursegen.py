@@ -232,3 +232,49 @@ def test_role_overrides_are_checked_and_applied(client):  # noqa: F811
     critic = roles.role_settings(settings, "critic")
     assert (critic.ai_provider, critic.openai_model, critic.ai_effort) == ("openai", "m-1", "low")
     assert roles.role_settings(settings, "architect").ai_effort == "high"
+
+
+def test_an_identical_brief_reuses_the_passed_outline_without_a_model_call(client, admin):  # noqa: F811
+    first = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "Solid.", "issues": []})],
+    )
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    assert run(client, first)
+
+    # Same request, another course id and budget: the design is the same, so is the outline.
+    twin = dict(BRIEF, id="ai-basics-two", budget_usd=9.0)
+    client.post("/api/v1/admin/courses/briefs", json=twin, headers=admin)
+    silent = Scripted(architect=[], critic=[])  # any model call would pop from an empty list
+    assert run(client, silent)
+    assert silent.prompts == {"architect": [], "critic": []}
+    detail = client.get("/api/v1/admin/courses/ai-basics-two").json()
+    assert detail["status"] == "review" and detail["jobs"][0]["state"] == "done"
+    assert [c["id"] for c in detail["course"]["concepts"]] == ["what-is-ml", "loss"]
+    log = detail["jobs"][0]["log"]
+    assert any(e.get("reused_from") == "ai-basics" for e in log)
+    assert detail["spent_usd"] == 0
+
+    # A different request is designed afresh.
+    other = dict(BRIEF, id="ai-deeper", outcome="Derive gradient descent and implement it.")
+    client.post("/api/v1/admin/courses/briefs", json=other, headers=admin)
+    fresh = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "Fine.", "issues": []})],
+    )
+    assert run(client, fresh)
+    assert len(fresh.prompts["architect"]) == 1
+
+
+def test_an_outline_the_critic_did_not_pass_is_never_reused(client, admin):  # noqa: F811
+    revise = json.dumps({"verdict": "revise", "summary": "Weak.", "issues": []})
+    weak = Scripted(architect=[json.dumps(OUTLINE)] * 3, critic=[revise] * 3)
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    assert run(client, weak)
+    client.post("/api/v1/admin/courses/briefs", json=dict(BRIEF, id="ai-again"), headers=admin)
+    retry = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "Ok.", "issues": []})],
+    )
+    assert run(client, retry)
+    assert len(retry.prompts["architect"]) == 1

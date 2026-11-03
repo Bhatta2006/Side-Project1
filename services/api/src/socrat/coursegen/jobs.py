@@ -23,6 +23,7 @@ the same thing would not help, it needs a revision. ``cancelled`` is a stop aske
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 
@@ -161,6 +162,10 @@ async def run_outline(
         brief = Brief.model_validate(job.input["brief"])
         owner = job.created_by if job.input.get("learning_request") else None
         stored = generated.course(db, brief.id)
+        fresh = not job.input.get("revise") and not job.input.get("notes")
+        reusable = reusable_outline(db, job_id, job.input["brief"]) if fresh else None
+    if reusable is not None and await _reuse(engine, base, job_id, brief, owner, *reusable):
+        return
     if brief.style is None and brief.style_request.strip():
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
         brief = brief.model_copy(update={"style": spec})
@@ -267,6 +272,86 @@ async def run_outline(
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
+
+
+# Fields of a brief that do not change what the architect is asked to design.
+_NOT_DESIGN = {"id", "budget_usd", "concept_budget_usd"}
+REUSE_SCAN = 200  # recent finished outline jobs searched for an identical brief
+
+
+def design_key(brief: dict) -> str:
+    """Identical briefs (ignoring id and budgets) ask for the same outline (master prompt 17:
+    cache reusable non-personalised structures). The key covers every word the learner wrote,
+    so reuse only ever happens between exactly equal requests and reveals nothing new."""
+    kept = {k: v for k, v in brief.items() if k not in _NOT_DESIGN}
+    return hashlib.sha256(json.dumps(kept, sort_keys=True).encode()).hexdigest()
+
+
+def reusable_outline(db: Session, job_id: str, brief: dict):
+    """(course id, architect log entry) of a recent outline for an identical brief that the
+    critic passed and that is still in good standing; None when there is none."""
+    key = design_key(brief)
+    for job in db.scalars(
+        select(GenerationJob)
+        .where(
+            GenerationJob.kind == "outline",
+            GenerationJob.state == "done",
+            GenerationJob.id != job_id,
+        )
+        .order_by(GenerationJob.created_at.desc())
+        .limit(REUSE_SCAN)
+    ):
+        if design_key(job.input.get("brief") or {}) != key:
+            continue
+        log_ = job.log or []
+        if not any(e.get("role") == "critic" and e.get("verdict") == "pass" for e in log_):
+            continue
+        row = db.get(GeneratedCourse, job.course_id)
+        if row is None or row.moderation != "ok":
+            continue
+        architect: dict = next((e for e in reversed(log_) if e.get("role") == "architect"), {})
+        return job.course_id, architect
+    return None
+
+
+async def _reuse(
+    engine: Engine,
+    base: Catalog,
+    job_id: str,
+    brief: Brief,
+    owner: str | None,
+    source_id: str,
+    architect: dict,
+) -> bool:
+    """Save the earlier outline under this brief's id without a model call. False (and
+    nothing saved) when it no longer validates against today's catalog."""
+
+    with Session(engine) as db:
+        source = generated.course(db, source_id)
+    if source is None:
+        return False
+    try:
+        course = to_course(brief, from_course(source))
+        with Session(engine) as db, db.begin():
+            generated.save_course(
+                db, base, course, status="review", brief=brief.model_dump(mode="json")
+            )
+            if owner is not None:
+                need(db.get(GeneratedCourse, brief.id)).owner_id = owner
+    except (ValueError, CatalogError):
+        return False
+    entry = {
+        "role": "architect",
+        "round": 0,
+        "reused_from": source_id,
+        "concepts": len(course.concepts),
+        "modules": len(course.modules),
+        "assumptions": architect.get("assumptions", []),
+        "unresolved": architect.get("unresolved", []),
+    }
+    _note(engine, job_id, entry)
+    _note(engine, job_id, {"role": "system", "event": "outline_reused"}, state="done")
+    return True
 
 
 def _over_budget(engine: Engine, course_id: str, budget_usd: float) -> bool:
@@ -378,6 +463,8 @@ async def run_package(
                 "prompt": reply.prompt_version,
                 "ms": reply.ms,
                 "cost_usd": round(reply.cost_usd, 6),
+                # The typed result envelope: parsed or not, confidence, assumptions, issues.
+                "result": roles.envelope(role, reply).as_log(),
             }
         )
         return reply

@@ -88,6 +88,59 @@ class Reply:
     ms: int = 0  # wall time of the call
 
 
+@dataclass(frozen=True)
+class Envelope:
+    """The typed result every bounded worker hands the orchestrator (master prompt 7): whether
+    its reply parsed, plus the confidence, assumptions, unresolved issues and evidence it
+    stated. Read from optional top-level keys of the reply; anything malformed is dropped,
+    never trusted. The orchestrator still validates the payload itself before using it."""
+
+    role: str
+    ok: bool
+    problem: str = ""
+    confidence: float | None = None
+    assumptions: tuple[str, ...] = ()
+    unresolved: tuple[str, ...] = ()
+    evidence: tuple[str, ...] = ()
+
+    def as_log(self) -> dict:
+        out: dict = {"ok": self.ok}
+        if self.problem:
+            out["problem"] = self.problem[:300]
+        if self.confidence is not None:
+            out["confidence"] = self.confidence
+        for name in ("assumptions", "unresolved", "evidence"):
+            if value := getattr(self, name):
+                out[name] = list(value)
+        return out
+
+
+def _texts(value, limit: int = 10) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(str(v)[:300] for v in value if isinstance(v, str | int | float) and str(v))[:limit]
+
+
+def envelope(role: str, reply: "Reply") -> Envelope:
+    data = reply.data
+    if data is None:
+        return Envelope(role, False, reply.problem)
+    raw = data.get("confidence")
+    confidence = (
+        round(float(raw), 3)
+        if isinstance(raw, int | float) and not isinstance(raw, bool) and 0 <= raw <= 1
+        else None
+    )
+    return Envelope(
+        role,
+        True,
+        confidence=confidence,
+        assumptions=_texts(data.get("assumptions")),
+        unresolved=_texts(data.get("unresolved")),
+        evidence=_texts(data.get("evidence")),
+    )
+
+
 def parse_json(text: str) -> tuple[dict | None, str]:
     # Lessons contain ``` fences inside JSON strings, so only an outer fence is stripped.
     raw = text.strip()

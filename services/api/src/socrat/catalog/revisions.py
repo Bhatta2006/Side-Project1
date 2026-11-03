@@ -87,3 +87,32 @@ def carry(old: Concept | None, new: Concept) -> Concept:
             unique.append(q)
     retired = list(reversed(unique))[-MAX_RETIRED:]
     return new.model_copy(update={"quiz": live, "retired_quiz": retired})
+
+
+def module_version(course, module) -> str:
+    """A module's own version (master prompt 4, 13: course, module and activity versioned
+    independently). Derived from the module's definition and each of its concepts' content
+    (status, content version, quiz ids, sequence), so it changes exactly when the module does,
+    and two modules can change independently. Activities carry their own version in
+    ``Provenance.version``; the course its ``version``."""
+    import hashlib
+    import json
+
+    by_id = {c.id: c for c in course.concepts}
+    parts = [module.model_dump(mode="json")]
+    for cid in module.concepts:
+        c = by_id.get(cid)
+        if c is None:
+            continue
+        parts.append(
+            [
+                c.id,
+                c.status,
+                c.provenance.version if c.provenance else 0,
+                [q.id for q in c.quiz],
+                c.sequence,
+                len(c.lesson),
+            ]
+        )
+    digest = hashlib.sha256(json.dumps(parts, sort_keys=True).encode()).hexdigest()
+    return f"m-{digest[:10]}"

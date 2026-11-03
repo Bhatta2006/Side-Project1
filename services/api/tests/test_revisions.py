@@ -106,3 +106,20 @@ def test_store_concept_carries_ids_for_a_released_generated_lesson(client, relea
     learner = login(client, subject="ada", name="Ada")
     onboard(client, learner, course="ai-basics")
     assert client.get(f"/api/v1/concepts/{KEY}").status_code == 200
+
+
+def test_each_module_has_its_own_version_that_moves_only_with_it():
+    from socrat.catalog.revisions import module_version
+
+    cat = default_catalog()
+    full = cat.course("cp")
+    first, second = full.modules[0], full.modules[1]
+    before = (module_version(full, first), module_version(full, second))
+    assert before[0].startswith("m-") and before[0] != before[1]
+    target = next(c for c in full.concepts if c.id == first.concepts[0])
+    changed = target.model_copy(update={"lesson": target.lesson + " More."})
+    edited = full.model_copy(
+        update={"concepts": [changed if c.id == target.id else c for c in full.concepts]}
+    )
+    assert module_version(edited, first) != before[0]
+    assert module_version(edited, second) == before[1]

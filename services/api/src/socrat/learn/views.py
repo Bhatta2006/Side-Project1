@@ -440,6 +440,9 @@ def concept_view(
             delayed=summary.delayed,
             needs_follow_up=summary.needs_follow_up,
             reasons=summary.reasons,
+            # Which scoring policy produced the estimate, and whether it is the one in force.
+            scoring_policy=state.policy or None,
+            policy_current=state.current,
         ),
         # How the generated lesson was checked: pass, with warnings, or still needs a person.
         validation=_validation(db, qualified, concept),
