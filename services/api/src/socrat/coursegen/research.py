@@ -98,12 +98,32 @@ def candidates(data) -> list[dict]:
     return out[:MAX_SOURCES]
 
 
-async def screen(data, http=None) -> list[dict]:
-    """Candidates whose links are public and reachable, numbered from 1 and license-tagged."""
+NOMINAL_MINUTES = 10  # reading time for a researched source; nobody has timed it
+
+
+async def screen(data, http=None, allowed: dict | None = None) -> list[dict]:
+    """Candidates whose links are public and reachable, numbered from 1 and license-tagged.
+    ``allowed`` (url -> search ``Hit``): only search results may be chosen, and their author,
+    date, licence and ranking reasons travel with them."""
     found = candidates(data)
+    if allowed is not None:
+        found = [
+            {
+                **s,
+                "author": allowed[s["url"]].author,
+                "published": allowed[s["url"]].published,
+                "license": allowed[s["url"]].license,
+                "why": "; ".join(allowed[s["url"]].reasons),
+            }
+            for s in found
+            if s["url"] in allowed
+        ]
     dead = set(await links.broken([s["url"] for s in found], http)) if found else set()
     kept = [s for s in found if s["url"] not in dead]
-    return [{**s, "n": i, "license": _license(s["url"])} for i, s in enumerate(kept, 1)]
+    return [
+        {**s, "n": i, "license": s.get("license") or _license(s["url"])}
+        for i, s in enumerate(kept, 1)
+    ]
 
 
 def block(sources: list[dict]) -> str:
@@ -141,8 +161,20 @@ def attach(lesson: dict, sources: list[dict]) -> dict:
         )
         text = f"{text.rstrip()}\n\n## Sources\n\n{listing}\n"
     have = {r.get("url") for r in lesson.get("resources", []) if isinstance(r, dict)}
+    # A cited source the author did not list becomes a resource. It needs a site name and a
+    # reading time to be a valid Resource; the time is a stated nominal value, not measured.
     extra = [
-        {"title": s["title"], "url": s["url"], "kind": ROLE_KIND[s.get("role", "explain")]}
+        {
+            "title": s["title"],
+            "url": s["url"],
+            "kind": ROLE_KIND[s.get("role", "explain")],
+            "source": (_host(s["url"]) or "web")[:80],
+            "minutes": NOMINAL_MINUTES,
+            "author": str(s.get("author", ""))[:200],
+            "published": str(s.get("published", ""))[:40],
+            "license": str(s.get("license", ""))[:120],
+            "why": (str(s.get("why") or s.get("supports", "")))[:300],
+        }
         for s in sources
         if s["url"] not in have
     ]

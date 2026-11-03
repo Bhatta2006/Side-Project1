@@ -46,6 +46,11 @@ class Resource(Model):
     minutes: int = Field(ge=1, le=600)
     level: Literal["intro", "core", "deep"] = "core"
     languages: list[Language] = Field(default_factory=list)  # empty = language-neutral
+    # Provenance for researched sources (master prompt 11.2); empty for hand-picked ones.
+    author: str = Field(default="", max_length=200)
+    published: str = Field(default="", max_length=40)
+    license: str = Field(default="", max_length=120)
+    why: str = Field(default="", max_length=300)  # why it was chosen, in plain words
 
 
 class Review(Model):

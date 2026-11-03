@@ -198,6 +198,10 @@ class Settings(DatabaseSettings):
     simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
     diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)
     gen_visuals: bool = False  # Experience Designer adds typed visuals to generated lessons
+    # Search providers the researcher must choose sources from (coursegen.search.PROVIDERS),
+    # e.g. ["wikipedia", "arxiv", "open-library"]. Empty: the model names sources from memory
+    # and only the link check guards them.
+    research_providers: list[str] = Field(default_factory=list)
     # Lite mode on slow or metered connections: heavy web parts load only when asked for.
     lite_mode_enabled: bool = False
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course

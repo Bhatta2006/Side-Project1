@@ -456,6 +456,11 @@ export interface Resource {
   minutes: number;
   level: 'intro' | 'core' | 'deep';
   languages: Language[];
+  /** Provenance of a researched source; empty for hand-picked ones. */
+  author?: string;
+  published?: string;
+  license?: string;
+  why?: string;
   /** Among the few picked for this learner right now. */
   picked?: boolean;
   opened?: boolean;

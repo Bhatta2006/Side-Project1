@@ -33,7 +33,7 @@ from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.config import Settings
-from socrat.coursegen import execute, research, roles, validation
+from socrat.coursegen import execute, research, roles, search, validation
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -378,13 +378,24 @@ async def run_package(
         return reply
 
     if brief.research and not data.get("previous"):
-        found = await ask("researcher", research.RESEARCHER, research.prompt(ctx), 2000)
-        cited = await research.screen(found.data, http)
+        prompt = research.prompt(ctx)
+        allowed = None
+        if settings.research_providers:
+            hits = await search.gather(
+                f"{concept.title} {course.title}", settings.research_providers, http
+            )
+            if hits:  # nothing found: fall back to named sources, still link-checked
+                allowed = {h.url: h for h in hits}
+                prompt = f"{prompt}\n\n{search.block(hits)}"
+            _note(engine, job_id, {"role": "search", "hits": len(hits)})
+        found = await ask("researcher", research.RESEARCHER, prompt, 2000)
+        cited = await research.screen(found.data, http, allowed)
         _note(
             engine,
             job_id,
             {
                 "role": "researcher",
+                "grounded": allowed is not None,
                 "sources": [{k: s[k] for k in ("n", "title", "url")} for s in cited],
             },
             found.cost_usd,

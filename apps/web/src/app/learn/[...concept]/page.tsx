@@ -99,7 +99,10 @@ function ResourceList({ concept, resources, onChange }: { concept: string; resou
             {r.title}<span className="sr-only">, opens in a new tab</span> <ExternalLink className="size-3.5" aria-hidden="true" />
           </a>
           <div className="flex items-center justify-between gap-2 text-[13px] text-muted-foreground">
-            <span>{r.source}, {r.kind}, {r.minutes} min{r.opened ? ', opened' : ''}</span>
+            <span>
+              {r.author ? `${r.author}, ` : ''}{r.source}{r.published ? ` (${r.published.slice(0, 4)})` : ''}, {r.kind}, {r.minutes} min{r.opened ? ', opened' : ''}
+              {r.license ? <span className="block text-[12px]">Licence: {r.license}{r.why ? `. Chosen because: ${r.why}.` : ''}</span> : null}
+            </span>
             {r.opened ? (
               <span className="flex gap-0.5">
                 {([true, false] as const).map(value => {
