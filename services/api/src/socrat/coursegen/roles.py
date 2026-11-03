@@ -23,6 +23,9 @@ ROLES = {
     "architect",
     "critic",
     "author",
+    # Rewrites a lesson that failed its gates or review. Unset, it is the author's model; set
+    # a stronger one (SOCRAT_GEN_ROLES) so a cheap model drafts and a strong one fixes.
+    "reviser",
     "quiz",
     "atoms",
     "facts",
@@ -72,6 +75,8 @@ def role_settings(settings: Settings, role: str) -> Settings:
         "ai_effort": ROLE_EFFORT.get(role, DEFAULT_EFFORT),
         "ai_timeout_seconds": settings.gen_timeout_seconds,
     }
+    if role == "reviser" and role not in settings.gen_roles:
+        role = "author"  # no stronger model set: the author revises its own drafts
     for key, value in settings.gen_roles.get(role, {}).items():
         for field in KEYS[key]:
             update[field] = value

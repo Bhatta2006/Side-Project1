@@ -35,8 +35,9 @@ class Hit:
     url: str
     snippet: str
     provider: str
-    kind: str  # article | paper | book
+    kind: str  # article | paper | book | video | playlist
     author: str = ""
+    views: int = 0  # videos: their views; playlists: the views of their first videos
     published: str = ""  # a year or date, as the provider gives it
     license: str = ""
     score: int = 0
@@ -197,7 +198,13 @@ def rank(hits: list[Hit], query: str) -> list[Hit]:
         if h.kind == "paper":
             score += 1
             why.append("primary research")
-        overlap = len(words & set(re.findall(r"[a-z0-9]+", h.title.lower())))
+        if h.views:
+            reach = 3 if h.views >= 1_000_000 else 2 if h.views >= 100_000 else 1
+            score += reach if h.views >= 10_000 else 0
+            why.append(f"{h.views:,} views")
+        # A video's title is often a hook; its description says what it teaches.
+        about = h.title + (" " + h.snippet if h.kind in {"video", "playlist"} else "")
+        overlap = len(words & set(re.findall(r"[a-z0-9]+", about.lower())))
         if overlap:
             score += min(overlap, 3)
             why.append(f"title matches {overlap} query term{'s' if overlap > 1 else ''}")
@@ -210,24 +217,28 @@ async def gather(
     providers: list[str],
     client: httpx.AsyncClient | None = None,
     broad: str = "",
+    youtube_key: str = "",
 ) -> list[Hit]:
     """Ask every enabled provider at once; a provider that fails adds nothing. De-duplicated.
     ``broad`` (the course's subject) is searched too: a lesson-sized query often finds little
     of use ("Egg hygiene and cracking Basic home cooking" found "Poland" in a live run), while
     the subject's own page is always a sound second source."""
     chosen = [PROVIDERS[p] for p in providers if p in PROVIDERS]
-    if not chosen or not query.strip():
+    tube = "youtube" in providers and bool(youtube_key)
+    if not (chosen or tube) or not query.strip():
         return []
     queries = [query[:200]] + ([broad[:200]] if broad.strip() and broad != query else [])
     own = client is None
     client = client or httpx.AsyncClient(
         timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": USER_AGENT}
     )
+    calls = [p(client, q, PER_PROVIDER) for q in queries for p in chosen]
+    if tube:  # the lesson's own query only: each YouTube search costs 100 of the daily quota
+        from socrat.coursegen import youtube
+
+        calls.append(youtube.search(client, queries[0], PER_PROVIDER, youtube_key))
     try:
-        batches = await asyncio.gather(
-            *(p(client, q, PER_PROVIDER) for q in queries for p in chosen),
-            return_exceptions=True,
-        )
+        batches = await asyncio.gather(*calls, return_exceptions=True)
     finally:
         if own:
             await client.aclose()
@@ -247,6 +258,7 @@ def block(hits: list[Hit]) -> str:
         f"- {h.title} | {h.url} | {h.kind}"
         + (f" | {h.author}" if h.author else "")
         + (f" | {h.published}" if h.published else "")
+        + (f" | {h.views:,} views" if h.views else "")
         + f" | about: {h.snippet}"
         for h in hits
     ]

@@ -211,6 +211,13 @@ class Settings(DatabaseSettings):
     # e.g. ["wikipedia", "wikibooks", "arxiv", "open-library"]. Empty: the model names sources from memory
     # and only the link check guards them.
     research_providers: list[str] = Field(default_factory=list)
+    # "youtube" in research_providers searches videos and playlists with the YouTube Data API
+    # (a free Google Cloud key; about 100 lessons a day on the free quota).
+    youtube_api_key: SecretStr = SecretStr("")
+    # Read the public captions of the videos the researcher picks and give them to the author
+    # as source text. There is no official API for this (youtube-transcript-api reads the
+    # watch page), so it is off until the owner turns it on.
+    youtube_transcripts: bool = False
     # Lite mode on slow or metered connections: heavy web parts load only when asked for.
     lite_mode_enabled: bool = False
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course

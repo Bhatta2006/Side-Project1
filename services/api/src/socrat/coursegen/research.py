@@ -40,6 +40,7 @@ ROLE_KIND = {
     "visual": "interactive",
     "practice": "docs",
 }
+MEDIA_KIND = {"video": "video", "playlist": "course", "book": "book"}  # search hit -> Resource
 MIN_FIT = 3
 
 
@@ -136,6 +137,7 @@ async def screen(data, http=None, allowed: dict | None = None) -> list[dict]:
                 "published": allowed[s["url"]].published,
                 "license": allowed[s["url"]].license,
                 "why": "; ".join(allowed[s["url"]].reasons),
+                "media": allowed[s["url"]].kind,
                 # The provider's own text for this result: what a claim can be checked against.
                 "passage": allowed[s["url"]].snippet,
             }
@@ -273,7 +275,7 @@ def attach(lesson: dict, sources: list[dict]) -> dict:
         {
             "title": s["title"],
             "url": s["url"],
-            "kind": ROLE_KIND[s.get("role", "explain")],
+            "kind": MEDIA_KIND.get(s.get("media", ""), ROLE_KIND[s.get("role", "explain")]),
             "source": (_host(s["url"]) or "web")[:80],
             "minutes": NOMINAL_MINUTES,
             "author": str(s.get("author", ""))[:200],

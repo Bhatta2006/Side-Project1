@@ -35,7 +35,7 @@ from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.catalog.schema import Citation
 from socrat.config import Settings
-from socrat.coursegen import execute, research, roles, search, validation
+from socrat.coursegen import execute, research, roles, search, validation, youtube
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -582,6 +582,7 @@ async def run_package(
                 settings.research_providers,
                 http,
                 broad=course.title,
+                youtube_key=settings.youtube_api_key.get_secret_value(),
             )
             if hits:  # nothing found: fall back to named sources, still link-checked
                 allowed = {h.url: h for h in hits}
@@ -589,13 +590,19 @@ async def run_package(
             _note(engine, job_id, {"role": "search", "hits": len(hits)})
         found = await ask("researcher", research.RESEARCHER, prompt, 2000)
         cited = await research.screen(found.data, http, allowed)
+        if settings.youtube_transcripts:
+            cited = await youtube.with_transcripts(cited)
         _note(
             engine,
             job_id,
             {
                 "role": "researcher",
                 "grounded": allowed is not None,
-                "sources": [{k: s[k] for k in ("n", "title", "url")} for s in cited],
+                "sources": [
+                    {k: s[k] for k in ("n", "title", "url")}
+                    | ({"transcript_chars": len(s["passage"])} if s.get("transcript") else {})
+                    for s in cited
+                ],
             },
             found.cost_usd,
         )
@@ -633,7 +640,10 @@ async def run_package(
             break
         if "lesson" in redo:
             prompt = pkg.lesson_prompt(ctx, reference, lesson, notes["lesson"])
-            reply = await ask("author", pkg.LESSON + note, prompt, 16000)
+            # The first draft is the cheap model's; a lesson sent back is rewritten by the
+            # reviser (a stronger model when one is set), so only failing lessons cost more.
+            writer = "author" if lesson is None else "reviser"
+            reply = await ask(writer, pkg.LESSON + note, prompt, 16000)
             if reply.data is None:
                 notes["lesson"] = [reply.problem]
                 entry = {"role": "author", "round": attempt, "issues": notes["lesson"]}
