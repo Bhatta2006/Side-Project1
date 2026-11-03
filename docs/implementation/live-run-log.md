@@ -23,7 +23,12 @@ provider: no real latency, rate limits, token counts or refusals.
 | 6 | lesson review | Fact checker raised four warnings (overstatements such as "casino games", "must profit") | model output, caught by checker | released as `human_review_required`, as designed for this domain |
 | 7 | learner step | Generated lesson `expected-value` returned `concept_locked` (HTTP 423) for the learner placed at it | **app bug** (see below) | fix written, verifying |
 | 8 | my test for #7 | First regression test passed without the fix, so it did not reproduce the bug | mine | test changed (more concepts in module 2); now fails without the fix |
-| 9 | process | I cancelled the queue with the app's own cancel after the first lesson; one job (`house-edge`) was already running and finished or was dropped | mine (scope control) | noted, not a defect |
+| 9 | process | I cancelled the queue with the app's own cancel after the first lesson; one job (`house-edge`) was already running and finished | mine (scope control) | two lessons exist; not a defect |
+| 10 | after the fix | My `learner.py login` reloaded the previous session cookie, saved a stale one, and the next call returned 401 | mine (test harness) | login now starts with a clean session |
+| 11 | after restart | Re-enrolling put the learner into placement, not active, because the start lesson was now written | not a bug: expected behaviour | placement answered as a learner who knows the topic |
+| 12 | after restart | Lessons still locked (HTTP 423), now behind module 1's checkpoint: placement left unwritten earlier concepts unknown whenever the start lesson was written. **My first fix covered only the unwritten-start branch** | **app bug, and my fix was incomplete** | placement now marks every unwritten earlier concept known in both branches; second regression test added, fails without the fix |
+| 13 | writing the test for #12 | I copied an existing concept that referenced a problem not in the new course (`unknown problem echo-reading`) | mine | removed its problems and practice links |
+| 14 | after re-enrolling | Enrolling started background generation again (prefetch keeps three lessons ahead), unrequested | by design, not a bug | cancelled through the app; `house-edge` had already finished before the first cancel, so two lessons exist, not one |
 
 ### Bug #7 in detail
 
@@ -33,3 +38,13 @@ the dependency order, so it was neither known nor written. Module 2's checkpoint
 module-3 lesson that had just been generated for the learner, and Today offered nothing.
 Fix: `learn/placement.py` now marks everything earlier in either dependency order or the course's
 own module order as known. Regression test: `test_a_later_start_counts_every_earlier_module_as_known`.
+
+### Bug #7 and #12: a learner placed late is locked out of their own lessons (two shapes)
+
+Shape 1 (start lesson not written): only the start's prerequisites were marked known, so an
+earlier-module concept that sat deeper in dependency order stayed unknown and its module
+checkpoint locked the start. Shape 2 (start lesson written, found only after re-enrolling):
+placement probes the start and left every unwritten earlier concept unknown, so module 1's
+checkpoint locked everything generated. Fix in `learn/placement.py` covers both; tests:
+`test_a_later_start_counts_every_earlier_module_as_known` and
+`test_a_written_start_lesson_is_not_locked_behind_unwritten_earlier_modules`.

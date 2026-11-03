@@ -51,21 +51,23 @@ def enroll(
         if catalog.concept(c).status != "planned"
     ]
     start = f"{course_id}:{level.start_concept}" if level.start_concept else None
-    if start is not None and start not in path:
-        # The level starts at a concept whose lesson is not written yet (a generated course).
-        # Everything before it counts as already known, so the plan begins there, and there is
-        # nothing to probe: placement ends at once.
+    if start is not None:
+        # Everything the level says the learner already knows, and that cannot be probed
+        # because its lesson is not written yet (a generated course), counts as known.
         # "Before" means both: earlier in dependency order (prerequisites, also from other
         # courses) and earlier in the course's own module order, which is what checkpoints
-        # gate on. Dependency order alone can put the start ahead of a deeper concept of an
-        # earlier module; that module's checkpoint then locked the start (found in a live run).
+        # gate on. Either alone can leave an unwritten concept unknown, and its module
+        # checkpoint then locks the very lessons generated for the learner (found in a live
+        # run, twice: once with the start itself unwritten, once with it written).
         order = catalog.closure(catalog.course_concepts(course_id))
         own = catalog.course_concepts(course_id)
         earlier = set(order[: order.index(start)] if start in order else [])
         earlier |= set(own[: own.index(start)] if start in own else [])
-        for concept in [c for c in order if c in earlier]:
+        written = set(path)
+        for concept in [c for c in order if c in earlier and c not in written]:
             learn.set_state(db, enrollment, concept, placed(True, now), now)
-        start = None
+        if start not in written:
+            start = None  # nothing to probe: placement ends at once
     state = placement.start(
         catalog, path, start, seed=int(enrollment.id.replace("-", "")[:8], 16), language=language
     )

@@ -320,3 +320,52 @@ def test_a_later_start_counts_every_earlier_module_as_known(client, admin):  # n
     assert "ai-basics:worth" not in known
     # ... so the start concept is not locked behind the skipped module's checkpoint.
     assert "ai-basics:worth" not in locked
+
+
+def test_a_written_start_lesson_is_not_locked_behind_unwritten_earlier_modules(client, admin):  # noqa: F811
+    """Second shape of the live-run bug: the start lesson exists, so placement probes there, and
+    the earlier lessons (not written, level says known) used to stay unknown, so module
+    checkpoints locked the written lesson for good."""
+    import time
+
+    from socrat.catalog import generated
+    from socrat.learn import service as learn
+    from socrat.models import Enrollment
+
+    modules = [
+        dict(id="basics", title="Basics", summary="What a chance is, on a scale.",
+             concepts=[concept("scale")]),
+        dict(id="combining", title="Combining", summary="Joining two chances together.",
+             concepts=[concept("both", ["scale"]), concept("either", ["both"])]),
+        dict(id="games", title="Games", summary="What a bet is worth on average.",
+             concepts=[concept("worth", ["scale"])]),
+    ]
+    levels = [
+        dict(id="new", label="New", description="Start at the beginning.", start_concept=None),
+        dict(id="games", label="I can combine events", description="Start at games.",
+             start_concept="worth"),
+    ]
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    passed = json.dumps({"verdict": "pass", "summary": "Fine.", "issues": []})
+    graph = dict(OUTLINE, modules=modules, levels=levels)
+    assert run(client, Scripted(architect=[json.dumps(graph)], critic=[passed]))
+    client.post("/api/v1/admin/courses/ai-basics/publish", headers=admin)
+
+    base = default_catalog()
+    model = base.concept("zero:programs-and-output").model_dump(mode="json")
+    live = type(base.concept("zero:programs-and-output")).model_validate(
+        model | dict(id="worth", module="games", prerequisites=["scale"], outline=None, sequence=[], problems=[], practice_links=[])
+    )
+    with Session(client.app.state.engine) as db, db.begin():
+        generated.store_concept(db, base, "ai-basics", live, None)
+
+    learner = login(client, subject="ada", name="Ada")
+    onboard(client, learner, course="ai-basics", level="games")
+    with Session(client.app.state.engine) as db:
+        enrollment = db.scalars(select(Enrollment)).one()
+        assert enrollment.status == "placement"  # the written start lesson is probed
+        cat = generated.merged(default_catalog())
+        known = {q for q, s in learn.states_for(db, enrollment).items() if s.assumed}
+        locked = learn.locked_concepts(db, cat, enrollment, int(time.time()))
+    assert {"ai-basics:scale", "ai-basics:both", "ai-basics:either"} <= known
+    assert "ai-basics:worth" not in known and "ai-basics:worth" not in locked
