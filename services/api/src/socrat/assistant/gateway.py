@@ -264,7 +264,9 @@ class OpenAIProvider:
         # A vLLM/Nebius extension: api.openai.com (no base URL) rejects it, so a value left over
         # from a compatible endpoint must not break every request after switching to OpenAI.
         self.chat_template_kwargs = (
-            dict(chat_template_kwargs or {}) if settings.openai_base_url else {}
+            {**settings.openai_chat_template_kwargs, **(chat_template_kwargs or {})}
+            if settings.openai_base_url
+            else {}
         )
         self.client = openai.AsyncOpenAI(
             api_key=settings.openai_api_key.get_secret_value() or None,

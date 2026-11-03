@@ -183,7 +183,12 @@ async def ask(
         with Session(engine) as db:
             budget.check(db, tuned, user_id, now())
     text, cost = "", 0.0
-    async for event in provider.converse(system, [Turn("user", prompt)], max_tokens):
+    extra = (
+        {"response_format": {"type": "json_object"}}
+        if provider.name == "openai" and tuned.openai_json_mode
+        else {}
+    )
+    async for event in provider.converse(system, [Turn("user", prompt)], max_tokens, **extra):
         if event.kind == "text":
             text += event.text
         elif event.kind == "usage":

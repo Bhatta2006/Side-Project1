@@ -2,12 +2,13 @@
 and how an outline reply becomes a ``Course`` of planned concepts."""
 
 import json
+from typing import get_args
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
-from socrat.catalog.schema import Course, Language, Ref, Slug
+from socrat.catalog.schema import Course, EvidenceType, Language, PracticeType, Ref, Slug
 from socrat.style import spec as styles
 
 
@@ -177,26 +178,42 @@ SHAPE = """{
        "prerequisites": ["earlier-concept-id", "zero:existing-id"],
        "difficulty": 1-5,
        "estimated_minutes": 10-600 (3-600 when the learning style asks for short sessions),
-       "depth": "overview | practitioner | mastery",
-       "objectives": ["1-6 observable outcomes, each starting with a verb"],
-       "misconceptions": ["up to 6 concrete wrong beliefs learners hold"],
-       "assessment": ["quiz", "code", "explain", "project"],
-       "category": "knowledge | skill | both",
-       "related": ["concept ids that connect without being required first (0-6)"],
-       "evidence": ["recognition | recall | application | transfer | explanation | performance"],
-       "expected": "the observable performance that shows the concept is learned",
-       "practice": ["retrieval | worked-example | problem-set | lab | project | performance | reflection | discussion"]}
+       "depth": "overview | practitioner | mastery"}
     ]}
   ],
   "assumptions": ["what you assumed about the learner or subject that the brief did not say"],
   "unresolved": ["prerequisite questions you could not settle; empty when none"]
 }"""
 
+# What each concept gets once the skeleton stands, written per module in parallel.
+DETAIL_FIELDS = (
+    "objectives",
+    "misconceptions",
+    "assessment",
+    "category",
+    "related",
+    "evidence",
+    "expected",
+    "practice",
+)
+
+DETAIL_SHAPE = """{"concepts": [
+  {"id": "the concept id, exactly as given",
+   "objectives": ["1-6 observable outcomes, each starting with a verb"],
+   "misconceptions": ["up to 6 concrete wrong beliefs learners hold"],
+   "assessment": ["quiz", "code", "explain", "project"],
+   "category": "knowledge | skill | both",
+   "related": ["concept ids that connect without being required first (0-6)"],
+   "evidence": ["recognition | recall | application | transfer | explanation | performance"],
+   "expected": "at most 300 chars: the observable performance that shows the concept is learned",
+   "practice": ["retrieval | worked-example | problem-set | lab | project | performance | reflection | discussion"]}
+]}"""
+
 ARCHITECT = f"""You are the Course Architect for Socrat, an adaptive learning platform whose
 courses are deep enough to master a skill, not just survey it. You plan the whole outline
-of a new course from the owner's brief. Other agents later write each concept's lesson
-(worked examples, why it works, edge cases, self-checks), quizzes and exercises from your
-outline, so every concept needs precise objectives.
+of a new course from the owner's brief: its modules and concepts, their order and their
+prerequisites. Each concept's objectives, misconceptions and evidence are written next, one
+module at a time, from your plan, so make every title and summary precise.
 
 Rules:
 - A concept is too broad if a learner can be strong in one part and weak in another while
@@ -209,17 +226,6 @@ Rules:
 - Prerequisites form a DAG. List only concepts that come earlier in this course, or
   existing Socrat concepts by their full id from the list given. Reuse an existing concept
   instead of re-teaching it. Modules are in learning order.
-- Objectives are observable ("Compute...", "Explain why...", "Implement..."), never
-  "understand". Misconceptions are specific wrong beliefs, not topics.
-- Assessment: "quiz" always fits; "code" only when the course languages apply; "explain"
-  for reasoning; "project" for module capstones.
-- The outline is a competency graph, not a list. For each concept say whether it is
-  knowledge, a skill, or both; which other concepts it relates to without needing them first;
-  what evidence shows it is learned (recognising a right answer is weaker than recalling it,
-  applying it, transferring it to an unfamiliar case, explaining it, or performing it); the
-  observable performance expected; and the practice that builds it. A skill needs application
-  or performance evidence, not only recognition. A subject learned by doing (music, movement,
-  hands-on electronics) needs performance evidence and says that a person must judge it.
 - List your assumptions about the learner and any prerequisite questions you could not settle,
   so the learner and the critic can see them. Do not hide uncertainty.
 - Levels: 2-4 self-reported starting points. The first has start_concept null.
@@ -232,11 +238,34 @@ Rules:
 - Write original text. Do not copy any published syllabus.
 - If the brief carries a learning style, it governs the plan: concept size follows the
   session length (a 5-minute session means 3-8 minute concepts and many of them), depth tags
-  and assessments follow the learner and rigor (no "code" or "project" for young learners or
-  overviews unless asked), and titles speak the learner's register.
+  follow the learner and rigor, and titles speak the learner's register.
 
 Reply with one JSON object only, in exactly this shape:
 {SHAPE}"""
+
+DETAILER = f"""You are the Course Architect for Socrat. The course outline is planned; you now
+write the details of a few concepts of one module so other agents can write each lesson
+(worked examples, why it works, edge cases, self-checks), quizzes and exercises from them.
+
+Rules:
+- Objectives are observable ("Compute...", "Explain why...", "Implement..."), never
+  "understand". Misconceptions are specific wrong beliefs, not topics.
+- Assessment: "quiz" always fits; "code" only when the course languages apply; "explain"
+  for reasoning; "project" for module capstones.
+- The outline is a competency graph, not a list. For each concept say whether it is
+  knowledge, a skill, or both; which other concepts of the course it relates to without
+  needing them first (never one of its prerequisites, never itself); what evidence shows it is
+  learned (recognising a right answer is weaker than recalling it, applying it, transferring it
+  to an unfamiliar case, explaining it, or performing it); the observable performance expected;
+  and the practice that builds it. A skill needs application or performance evidence, not only
+  recognition. A subject learned by doing (music, movement, hands-on electronics) needs
+  performance evidence and says that a person must judge it.
+- If the brief carries a learning style, assessments follow the learner and rigor (no "code"
+  or "project" for young learners or overviews unless asked).
+- Write every concept you are given, by its exact id, and no others.
+
+Reply with one JSON object only, in exactly this shape:
+{DETAIL_SHAPE}"""
 
 CRITIC = """You are the Curriculum Critic for Socrat. You review a course outline written by
 another agent against the owner's brief, before any lesson is written. Be strict: fixing
@@ -249,13 +278,20 @@ Check:
   (merge them).
 - Order and prerequisites: missing or wrong edges, concepts used before they are taught,
   existing Socrat concepts that should be reused instead of re-taught.
-- Depth tags fit the audience; objectives are observable; misconceptions are concrete.
+- Depth tags fit the audience. When concepts carry objectives and misconceptions, objectives
+  are observable and misconceptions concrete; an outline without them is a plan whose details
+  are written separately, so their absence is not an issue.
 - Style fit: when the brief has a learning style, concept size, depth, assessments and
   titles must suit it (a mismatch is blocking).
 - Duplicates, vague titles, levels whose start_concept makes no sense.
 - Shape: the studio, loop and evidence must fit how this subject is really learned (a
-  physics course on the code studio, or a math course proven by tests, is blocking).
+  physics course on the code studio, or a math course proven by tests, is blocking). The
+  studios are fixed: code, workbench, lab and reading, with only the loops, evidence and tools
+  in the outline's shape. "reading" is the right studio for every subject without its own
+  (drawing, music, finance, languages, ...); never ask for another studio, loop or evidence
+  type, and never treat reading for such a subject as an issue.
 
+List blocking issues only, at most 10, each in a sentence or two; skip praise and nitpicks.
 verdict is "pass" only when nothing blocking remains. Reply with one JSON object only:
 {"verdict": "pass" | "revise",
  "summary": "2-3 sentences on the outline's quality",
@@ -293,6 +329,172 @@ def critic_prompt(brief: Brief, outline: dict) -> str:
         + "\n\nOutline to review:\n"
         + json.dumps(outline, indent=1)
     )
+
+
+def needs_detail(outline: dict) -> bool:
+    """True when the architect planned the skeleton only (the usual case); an outline that
+    already carries every concept's objectives and assessment is used as it is."""
+    concepts = [c for m in outline.get("modules", []) for c in m.get("concepts", [])]
+    return any(not (c.get("objectives") and c.get("assessment")) for c in concepts)
+
+
+def skeleton_of(outline: dict) -> dict:
+    """The outline without per-concept details: what the architect revises, kept short."""
+    return {
+        **outline,
+        "modules": [
+            {
+                **m,
+                "concepts": [
+                    {k: v for k, v in c.items() if k not in DETAIL_FIELDS}
+                    for c in m.get("concepts", [])
+                ],
+            }
+            for m in outline.get("modules", [])
+        ],
+    }
+
+
+def detail_prompt(
+    brief: Brief,
+    skeleton: dict,
+    module_id: str,
+    concept_ids: list[str],
+    issues: list[str] | None = None,
+) -> str:
+    plan = "\n".join(
+        f"- {m.get('id')}: {m.get('title', '')}\n"
+        + "\n".join(
+            f"  - {c.get('id')}: {c.get('title', '')}"
+            f" (needs: {', '.join(map(str, c.get('prerequisites', []))) or 'none'})"
+            for c in m.get("concepts", [])
+            if isinstance(c, dict)
+        )
+        for m in skeleton.get("modules", [])
+        if isinstance(m, dict)
+    )
+    module = next(m for m in skeleton["modules"] if m.get("id") == module_id)
+    wanted = [c for c in module["concepts"] if c.get("id") in concept_ids]
+    parts = [
+        "Brief:\n" + brief.model_dump_json(indent=2, exclude={"budget_usd"}),
+        *([styles.block(brief.style)] if brief.style else []),
+        "Studio and evidence of the course:\n" + json.dumps(skeleton.get("shape", {})),
+        "The whole course plan, for related concepts:\n" + plan,
+        f"Module {module_id}: {module.get('title', '')} ({module.get('summary', '')})",
+        "Write the details of these concepts:\n" + json.dumps(wanted, indent=1),
+    ]
+    if issues:
+        parts.append(
+            "A reviewer raised these issues; fix any that concern these concepts:\n- "
+            + "\n- ".join(issues)
+        )
+    return "\n\n".join(parts)
+
+
+def merge_details(skeleton: dict, concept_ids: list[str], reply: dict) -> list[str]:
+    """Copies the details of ``concept_ids`` into the skeleton; returns the ids still missing."""
+    given = {
+        c["id"]: c
+        for c in reply.get("concepts", [])
+        if isinstance(c, dict) and isinstance(c.get("id"), str)
+    }
+    wanted = set(concept_ids)
+    missing = []
+    for m in skeleton["modules"]:
+        for c in m["concepts"]:
+            if c["id"] not in wanted:
+                continue
+            detail = given.get(c["id"])
+            if not detail or not detail.get("objectives") or not detail.get("assessment"):
+                missing.append(c["id"])
+                continue
+            c.update({k: detail[k] for k in DETAIL_FIELDS if k in detail})
+    return missing
+
+
+_ASSESSMENT = ("quiz", "code", "explain", "project")
+_LISTS = {  # field -> (allowed values or None for free text, most kept)
+    "assessment": (_ASSESSMENT, 4),
+    "evidence": (get_args(EvidenceType), 5),
+    "practice": (get_args(PracticeType), 5),
+    "objectives": (None, 6),
+    "misconceptions": (None, 6),
+}
+_CHOICES = {
+    "category": ("knowledge", "skill", "both"),
+    "depth": ("overview", "practitioner", "mastery"),
+}
+
+
+def _clip(text: str, limit: int) -> str:
+    """Cut at the last word that fits, so an over-long sentence still reads as one."""
+    if len(text) <= limit:
+        return text
+    cut = text[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:")
+    return cut + "…"
+
+
+_LOOP_FIRST = ("solve", "predict-observe-explain", "read-reflect", "derive")
+
+
+def _tidy_shape(given: dict) -> None:
+    """Keeps only what the chosen studio supports. An unknown studio becomes "reading", the
+    studio the architect is told to use for any subject without its own."""
+    if given.get("studio") not in shape.STUDIOS:
+        given["studio"] = "reading"
+    allowed = shape.STUDIOS[given["studio"]]
+    if given.get("loop") not in allowed["loops"]:
+        given["loop"] = next(loop for loop in _LOOP_FIRST if loop in allowed["loops"])
+    for name, most, fallback in (("evidence", 4, ["quiz"]), ("tools", 3, [])):
+        values = given.get(name) if isinstance(given.get(name), list) else []
+        kept = list(dict.fromkeys(v for v in values if v in allowed[name]))[:most]
+        given[name] = kept or fallback
+
+
+def tidy(outline: dict, catalog: Catalog) -> dict:
+    """Deterministic repairs of slips that need no model, instead of a whole new round:
+    - a concept related to itself, to one of its own prerequisites, or to a concept that does
+      not exist (related links are optional context, so dropping one never changes what is
+      taught);
+    - list values outside the allowed set, duplicates and lists over their limit;
+    - an unknown category or depth (the schema default applies);
+    - an expected performance over 300 characters (cut at a word).
+    An empty assessment becomes ["quiz"], which fits every concept."""
+    concepts = [
+        c
+        for m in outline.get("modules", [])
+        if isinstance(m, dict) and isinstance(m.get("concepts"), list)
+        for c in m["concepts"]
+        if isinstance(c, dict)
+    ]
+    if isinstance(outline.get("shape"), dict):
+        _tidy_shape(outline["shape"])
+    ids = {c.get("id") for c in concepts}
+    for c in concepts:
+        related = c.get("related")
+        if isinstance(related, list):
+            needs = set(c.get("prerequisites") or [])
+            c["related"] = [
+                r
+                for r in dict.fromkeys(x for x in related if isinstance(x, str))
+                if r != c.get("id") and r not in needs and (r in ids or r in catalog.concepts)
+            ][:6]
+        for name, (allowed, most) in _LISTS.items():
+            values = c.get(name)
+            if not isinstance(values, list):
+                continue
+            kept = [v for v in values if isinstance(v, str) and v.strip()]
+            if allowed is not None:
+                kept = [v for v in kept if v in allowed]
+            c[name] = list(dict.fromkeys(kept))[:most]
+        if "assessment" in c and not c["assessment"]:
+            c["assessment"] = ["quiz"]
+        for name, allowed in _CHOICES.items():
+            if name in c and c[name] not in allowed:
+                del c[name]
+        if isinstance(c.get("expected"), str):
+            c["expected"] = _clip(c["expected"], 300)
+    return outline
 
 
 def graph_issues(course: Course, adapter=None) -> list[str]:

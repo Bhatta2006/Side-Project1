@@ -121,6 +121,12 @@ class Settings(DatabaseSettings):
     openai_api_key_file: str = ""
     openai_model: str = ""
     openai_base_url: str = ""
+    # Compatible endpoints only (ignored for api.openai.com): sent with every call, e.g.
+    # {"thinking": false} for DeepSeek, so a model does not reason for seconds before answering.
+    openai_chat_template_kwargs: dict = Field(default_factory=dict)
+    # Ask OpenAI-compatible endpoints for a JSON object (response_format) on course-generation
+    # calls, so a long outline cannot come back with a stray comma. Off for endpoints without it.
+    openai_json_mode: bool = False
     ai_timeout_seconds: float = Field(default=45, ge=5, le=120)
     ai_daily_messages: int = Field(default=150, ge=1, le=5000)
     ai_reply_tokens: int = Field(default=1500, ge=200, le=8000)
@@ -220,6 +226,11 @@ class Settings(DatabaseSettings):
     # The worker touches this file every loop; `python -m socrat.worker --check` fails when stale.
     worker_heartbeat_file: str = ""
     gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
+    # Critic reviews per outline job. Each "revise" costs a full new outline round; with 1, the
+    # outline revised after the first review is kept without a second review. 0: the critic
+    # still reviews (logged for the owner and the learner) but never asks for a rewrite, so the
+    # blueprint is ready after one round.
+    gen_outline_reviews: int = Field(default=3, ge=0, le=3)
     # Course Maintainer: scheduled link checks and repairs of released generated courses.
     maintainer_enabled: bool = False
     maintainer_batch: int = Field(default=200, ge=1, le=5000)  # links checked per pass

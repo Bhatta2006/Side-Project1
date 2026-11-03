@@ -124,6 +124,21 @@ def test_chat_template_options_are_explicit_and_do_not_change_other_provider_ins
     assert make_provider(config).chat_template_kwargs == {}
 
 
+def test_configured_chat_template_options_apply_to_every_call_and_explicit_ones_win():
+    config = settings(
+        ai_provider="openai",
+        openai_model="m",
+        openai_api_key="k",
+        openai_base_url="https://compatible.example/v1/",
+        openai_chat_template_kwargs={"thinking": False, "x": 1},
+    )
+    assert make_provider(config).chat_template_kwargs == {"thinking": False, "x": 1}
+    assert make_provider(config, chat_template_kwargs={"x": 2}).chat_template_kwargs == {
+        "thinking": False,
+        "x": 2,
+    }
+
+
 def test_openai_runs_a_tool_then_answers():
     provider, fake = openai_provider(
         [

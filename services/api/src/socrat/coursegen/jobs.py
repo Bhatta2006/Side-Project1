@@ -40,10 +40,16 @@ from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
     CRITIC,
+    DETAILER,
     Brief,
     architect_prompt,
     critic_prompt,
+    detail_prompt,
     from_course,
+    merge_details,
+    needs_detail,
+    skeleton_of,
+    tidy,
     to_course,
 )
 from socrat.models import GeneratedCourse, GenerationJob, need, now
@@ -52,8 +58,10 @@ from socrat.style import spec as styles
 log = logging.getLogger(__name__)
 
 ROUNDS = 3  # architect attempts per job; the critic sees every valid one
+DETAIL_CONCURRENCY = 12  # detail calls at the same time
+DETAIL_CHUNK = 4  # concepts per detail call: small replies keep the slowest call short
 STALE_SECONDS = 3600  # a running job this old was orphaned by a crash or restart
-POLL_SECONDS = 5
+POLL_SECONDS = 2
 MAX_ATTEMPTS = 3  # transient failures before a job is dead
 BACKOFF_SECONDS = (60, 300, 900)  # wait before the next try, by attempt
 # Provider errors that a later try can fix. Anything else (offline, disabled, budget, a refusal,
@@ -170,13 +178,16 @@ async def run_outline(
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
         brief = brief.model_copy(update={"style": spec})
         _note(engine, job_id, {"role": "stylist", "style": spec.name, "source": source})
-    previous = from_course(stored) if stored is not None and job.input.get("revise") else None
+    previous = (
+        skeleton_of(from_course(stored)) if stored is not None and job.input.get("revise") else None
+    )
     from socrat.coursegen.outline import graph_issues
     from socrat.engine import domains
 
     adapter = domains.ADAPTERS.get(brief.adapter)
     issues = [job.input["notes"]] if job.input.get("notes") else []
     best = None
+    reviews = 0
     for attempt in range(1, ROUNDS + 1):
         with Session(engine) as db:
             if spent(db, brief.id) >= brief.budget_usd:
@@ -188,7 +199,7 @@ async def run_outline(
             "architect",
             ARCHITECT,
             architect_prompt(brief, base, previous, issues),
-            32000,
+            16000,
             make,
         )
         if reply.data is None:
@@ -200,9 +211,40 @@ async def run_outline(
                 reply.cost_usd,
             )
             continue
-        previous = reply.data
+        previous = skeleton_of(reply.data)
+        outline = reply.data
+        early = None  # the critic's review of the skeleton, run while the details are written
+        if needs_detail(outline):
+            work = [_detail(engine, settings, brief, outline, issues, make)]
+            if reviews < max(1, settings.gen_outline_reviews):
+                reviews += 1
+                work.append(
+                    roles.ask(
+                        engine,
+                        settings,
+                        "critic",
+                        CRITIC,
+                        critic_prompt(brief, previous),
+                        8000,
+                        make,
+                    )
+                )
+            (missing, cost), *rest = await asyncio.gather(*work)
+            early = rest[0] if rest else None
+            reply.cost_usd += cost
+            if missing:
+                issues = [f"No details could be written for: {', '.join(missing[:20])}"]
+                _note(
+                    engine,
+                    job_id,
+                    {"role": "architect", "round": attempt, "issues": issues},
+                    reply.cost_usd,
+                )
+                issues += _review(engine, job_id, attempt, early)[1] if early else []
+                continue
+        tidy(outline, base)
         try:
-            course = to_course(brief, reply.data)
+            course = to_course(brief, outline)
             with Session(engine) as db:
                 # The same check save_course runs, before spending a critic call on it.
                 generated.extend(
@@ -218,6 +260,7 @@ async def run_outline(
                 {"role": "architect", "round": attempt, "issues": issues},
                 reply.cost_usd,
             )
+            issues += _review(engine, job_id, attempt, early)[1] if early else []
             continue
         best = course
         _note(
@@ -234,28 +277,23 @@ async def run_outline(
             },
             reply.cost_usd,
         )
-        review = await roles.ask(
-            engine, settings, "critic", CRITIC, critic_prompt(brief, reply.data), 8000, make
-        )
-        verdict = (review.data or {}).get("verdict", "revise")
-        found = [
-            f"{i.get('where', '?')}: {i.get('problem', '')} Fix: {i.get('fix', '')}"
-            for i in (review.data or {}).get("issues", [])
-            if isinstance(i, dict)
-        ][:30]
-        _note(
-            engine,
-            job_id,
-            {
-                "role": "critic",
-                "round": attempt,
-                "verdict": verdict,
-                "summary": str((review.data or {}).get("summary", review.problem))[:1000],
-                "issues": found,
-            },
-            review.cost_usd,
-        )
+        if early is not None:
+            review = early
+        elif reviews >= max(1, settings.gen_outline_reviews):
+            # The architect has answered every review it was given; keep this revision.
+            _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
+            break
+        else:
+            reviews += 1
+            review = await roles.ask(
+                engine, settings, "critic", CRITIC, critic_prompt(brief, outline), 8000, make
+            )
+        verdict, found = _review(engine, job_id, attempt, review)
         if verdict == "pass":
+            break
+        if settings.gen_outline_reviews == 0:
+            # Advisory review: the findings are in the log, the outline stands.
+            _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
             break
         issues = found or ["The critic asked for a revision without details; tighten the outline."]
     if best is None:
@@ -272,6 +310,72 @@ async def run_outline(
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
+
+
+def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, list[str]]:
+    """Records a critic reply in the job log; returns its verdict and issues as fix notes.
+    The issues are empty for a pass."""
+    verdict = (review.data or {}).get("verdict", "revise")
+    found = [
+        f"{i.get('where', '?')}: {i.get('problem', '')} Fix: {i.get('fix', '')}"
+        for i in (review.data or {}).get("issues", [])
+        if isinstance(i, dict)
+    ][:30]
+    _note(
+        engine,
+        job_id,
+        {
+            "role": "critic",
+            "round": attempt,
+            "verdict": verdict,
+            "summary": str((review.data or {}).get("summary", review.problem))[:1000],
+            "issues": found,
+        },
+        review.cost_usd,
+    )
+    return verdict, [] if verdict == "pass" else found
+
+
+async def _detail(
+    engine: Engine, settings: Settings, brief: Brief, outline: dict, issues: list[str], make
+) -> tuple[list[str], float]:
+    """Writes every concept's details into ``outline``, a few concepts per call and all calls in
+    parallel, so the slowest call stays short; a chunk whose reply is unusable is asked once
+    more. Returns the concept ids still without details and the cost of all calls."""
+    gate = asyncio.Semaphore(DETAIL_CONCURRENCY)
+
+    async def one(module_id: str, ids: list[str]) -> tuple[list[str], float]:
+        cost, missing = 0.0, ids
+        for _ in range(2):
+            async with gate:
+                reply = await roles.ask(
+                    engine,
+                    settings,
+                    "architect",
+                    DETAILER,
+                    detail_prompt(brief, outline, module_id, missing, issues),
+                    8000,
+                    make,
+                )
+            cost += reply.cost_usd
+            missing = merge_details(outline, missing, reply.data or {})
+            if not missing:
+                break
+        return missing, cost
+
+    # A malformed module is left alone here: to_course rejects it with a readable reason.
+    chunks = [
+        (m["id"], ids[i : i + DETAIL_CHUNK])
+        for m in outline.get("modules", [])
+        if isinstance(m, dict)
+        and isinstance(m.get("id"), str)
+        and isinstance(m.get("concepts"), list)
+        and all(isinstance(c, dict) and isinstance(c.get("id"), str) for c in m["concepts"])
+        for ids in [[c["id"] for c in m["concepts"]]]
+        for i in range(0, len(ids), DETAIL_CHUNK)
+    ]
+    results = await asyncio.gather(*(one(module_id, ids) for module_id, ids in chunks))
+    return [cid for missing, _ in results for cid in missing], sum(c for _, c in results)
 
 
 # Fields of a brief that do not change what the architect is asked to design.
