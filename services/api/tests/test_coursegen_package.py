@@ -236,6 +236,23 @@ def test_package_is_revised_by_artifact_then_released(client, published, web):  
     assert held.json()["error"]["code"] == "concept_preparing"
 
 
+def test_a_dead_extra_link_is_dropped_without_a_new_round(client, published, web):  # noqa: F811
+    generate(client, published, "what-is-ml")
+    script = Scripted(
+        author=[lesson(urls=[*GOOD, "https://nowhere.example.com/x"])],
+        quiz=[QUIZ],
+        atoms=[ATOMS],
+        facts=[FACTS_OK],
+        reviewer=[PASS],
+    )
+    assert run(client, script.make, web())
+    assert len(script.prompts["author"]) == 1
+    view = client.get("/api/v1/admin/courses/ai-basics/concepts/what-is-ml", headers=published)
+    assert view.json()["jobs"][0]["state"] == "done"
+    live = generated.merged(default_catalog()).concept("ai-basics:what-is-ml")
+    assert [str(r.url) for r in live.resources] == GOOD
+
+
 def test_a_package_that_never_passes_stays_planned(client, published, web):  # noqa: F811
     generate(client, published, "loss")
     script = Scripted(

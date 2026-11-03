@@ -217,6 +217,9 @@ class Settings(DatabaseSettings):
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)
     gen_runner: bool = True  # run queued generation jobs in the API process (off in tests)
+    # Generation jobs the API process runs at once. With 1 a course's first lessons are written
+    # one after another; with 3-4 the first lesson is not kept waiting behind the others.
+    gen_runner_concurrency: int = Field(default=1, ge=1, le=16)
     # Admin-published courses: write the first slice at once (learner courses always do).
     gen_initial_on_publish: bool = False
     # Split deployment: API with SOCRAT_GEN_RUNNER=false, worker with SOCRAT_WORKER_RUNS_GENERATION=true.

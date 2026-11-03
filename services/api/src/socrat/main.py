@@ -92,11 +92,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background = None
         if settings.codeforces_autosync:
             background = asyncio.create_task(autosync.run_forever(engine))
-        generation = None
-        if settings.gen_runner:
-            generation = asyncio.create_task(
-                coursegen_jobs.run_forever(engine, settings, default_catalog)
-            )
+        # Several loops write several lessons at once; jobs.claim gives each job to one loop.
+        generation = [
+            asyncio.create_task(coursegen_jobs.run_forever(engine, settings, default_catalog))
+            for _ in range(settings.gen_runner_concurrency if settings.gen_runner else 0)
+        ]
         # Parsing the catalog takes seconds; do it at start so the first learner does not pay for
         # it (requests that arrive meanwhile wait for this one load, see single_flight).
         if settings.prewarm_content:
@@ -111,8 +111,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         if background is not None:
             background.cancel()
-        if generation is not None:
-            generation.cancel()
+        for task in generation:
+            task.cancel()
         engine.dispose()
 
     app = FastAPI(

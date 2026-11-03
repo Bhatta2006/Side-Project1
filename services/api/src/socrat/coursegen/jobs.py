@@ -632,13 +632,22 @@ async def run_package(
                 entry = {"role": "author", "round": attempt, "issues": notes["lesson"]}
                 _note(engine, job_id, entry, reply.cost_usd)
                 continue
-            lesson = reply.data
+            lesson = pkg.tidy_lesson(reply.data, cited)
             issues = pkg.check_lesson(concept, course, lesson, style)
             issues += research.check(str(lesson.get("lesson", "")), cited)
-            issues += [
-                f"This resource link is unreachable or not public https; replace it: {url}"
-                for url in await pkg.broken_links(lesson, http)
+            # A dead link is dropped, not a reason for a new round, while the live ones and the
+            # researcher's sources still make the two a lesson needs.
+            dead = set(await pkg.broken_links(lesson, http))
+            lesson["resources"] = [
+                r
+                for r in lesson.get("resources", [])
+                if not (isinstance(r, dict) and r.get("url") in dead)
             ]
+            if len(research.attach(lesson, cited).get("resources", [])) < 2:
+                issues += [
+                    f"This resource link is unreachable or not public https; replace it: {url}"
+                    for url in sorted(dead)
+                ] or ["Give at least 2 resources you are certain exist at that exact URL."]
             entry = {
                 "role": "author",
                 "round": attempt,

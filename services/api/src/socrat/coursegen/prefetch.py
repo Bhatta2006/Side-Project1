@@ -110,4 +110,8 @@ def initial(db: Session, course_id: str, start: str | None = None) -> list:
             queued.append(
                 jobs.enqueue(db, "package", course_id, {"trigger": "initial"}, None, target=local)
             )
+    # Jobs are claimed oldest first and these share one second: stagger them backwards so the
+    # learner's first lesson is always written first.
+    for i, job in enumerate(queued):
+        job.created_at -= len(queued) - i
     return queued

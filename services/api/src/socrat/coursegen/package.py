@@ -16,7 +16,7 @@ from pydantic import ValidationError
 
 from socrat import harness
 from socrat.catalog import dialect, shape
-from socrat.catalog.atoms import AtomPack
+from socrat.catalog.atoms import Atom, AtomPack, Step
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import (
     Concept,
@@ -329,6 +329,42 @@ def quiz_example(reference: Concept | None) -> str:
     return "Reference items for quality:\n" + json.dumps(items, indent=1)
 
 
+SHELL_FENCES = {"bash", "sh", "shell", "console", "zsh", "powershell", "ps", "cmd", "terminal"}
+# A style's upper bound is guidance for the author; the gate allows this much over it, since
+# a model cannot count characters and a lesson 10% long is not a reason to discard it.
+CEILING_SLACK = 1.25
+
+
+def teaching_length(text: str) -> int:
+    """Characters of the lesson itself: the self-check answers in <details> and a trailing
+    sources list are not what the length bounds are about."""
+    body = re.sub(r"<details.*?</details>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    body = re.split(r"^#{1,3}\s*(?:Sources|References|Further reading)\b", body, flags=re.M | re.I)[
+        0
+    ]
+    return len(body.strip())
+
+
+def tidy_lesson(draft: dict, sources: list[dict]) -> dict:
+    """Deterministic repairs instead of a new round: shell commands are fenced as text (they
+    are not course code), and citation markers that match no source are dropped."""
+    text = draft.get("lesson")
+    if not isinstance(text, str):
+        return draft
+    text = re.sub(
+        r"^```([a-zA-Z]+)",
+        lambda m: "```text" if m.group(1).lower() in SHELL_FENCES else m.group(0),
+        text,
+        flags=re.MULTILINE,
+    )
+    if sources:
+        valid = {s["n"] for s in sources}
+        text = re.sub(
+            r"\s?\[(\d{1,2})\]", lambda m: m.group(0) if int(m.group(1)) in valid else "", text
+        )
+    return {**draft, "lesson": text}
+
+
 def check_lesson(
     concept: Concept, course: Course, draft: dict, style: styles.StyleSpec | None = None
 ) -> list[str]:
@@ -344,10 +380,12 @@ def check_lesson(
             f"The lesson is {len(text)} characters; this concept needs at least "
             f"{floor}. Add worked examples, reasoning and edge cases, not padding."
         )
-    if ceiling and len(text) > ceiling:
+    taught = teaching_length(text)
+    if ceiling and taught > ceiling * CEILING_SLACK:
         problems.append(
-            f"The lesson is {len(text)} characters; this style allows at most {ceiling}. "
-            "Keep one idea and cut the rest."
+            f"The lesson (without the self-check answers and sources) is {taught} characters, "
+            f"about {taught // 6} words; this style allows at most {ceiling} characters "
+            f"(about {ceiling // 6} words). Keep one idea and cut the rest."
         )
     wanted = style.min_headings() if style is not None else 3
     if len(re.findall(r"^## ", text, re.MULTILINE)) < wanted:
@@ -478,7 +516,7 @@ def build_concept(
     items: list = found if isinstance(found, list) else []
     if not 4 <= len(items) <= 10:
         problems["quiz"].append(f"Write 5-8 items; got {len(items)}.")
-    parsed = []
+    parsed, broken = [], []
     for raw in items:
         try:
             item = {**raw, "kind": raw.get("kind", "mcq")} if languages else {**raw, "kind": "mcq"}
@@ -502,7 +540,11 @@ def build_concept(
         except (ValidationError, TypeError) as exc:
             where = raw.get("id", "?") if isinstance(raw, dict) else "?"
             detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
-            problems["quiz"].append(f"item {where}: {'; '.join(detail)}")
+            broken.append(f"item {where}: {'; '.join(detail)}")
+    # A malformed item is dropped (never repaired into a question nobody wrote) while the
+    # quiz keeps enough sound items; otherwise it goes back to the author.
+    if len(parsed) < 4:
+        problems["quiz"] += broken
     if len({q.id for q in parsed}) != len(parsed):
         problems["quiz"].append("Quiz item ids must be unique.")
     found = quiz.get("prompts")
@@ -521,13 +563,16 @@ def build_concept(
     if len({x.id for x in prompts}) != len(prompts):
         problems["quiz"].append("Prompt ids must be unique.")
     tasks: list[Task] = []
+    bad_tasks = []
     for raw in quiz.get("tasks", []) if isinstance(quiz.get("tasks"), list) else []:
         try:
             tasks.append(Task.model_validate(raw))
         except (ValidationError, TypeError) as exc:
             where = raw.get("id", "?") if isinstance(raw, dict) else "?"
             detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
-            problems["quiz"].append(f"task {where}: {'; '.join(detail)}")
+            bad_tasks.append(f"task {where}: {'; '.join(detail)}")
+    if not tasks:  # one sound task is enough; a malformed extra is dropped
+        problems["quiz"] += bad_tasks
     sequence = [s for s in quiz.get("sequence", []) if isinstance(s, str)][:24]
     exercises: list[Exercise] = []
     if workbench:
@@ -537,6 +582,16 @@ def build_concept(
     if lab:
         experiments, bad = check_experiments(quiz.get("experiments"))
         problems["quiz"].extend(bad)
+    # The sequence only orders activities. One naming an activity that is not there (a typo,
+    # or one dropped above as malformed) is left out instead of failing the whole package: a
+    # live run spent all three rounds rewriting the lesson over a quiz-side slip.
+    made = {f"prompt:{x.id}" for x in prompts} | {f"task:{x.id}" for x in tasks}
+    made |= {f"exercise:{x.id}" for x in exercises} | {f"experiment:{x.id}" for x in experiments}
+    sequence = [
+        s
+        for s in sequence
+        if s in made or s.split(":", 1)[0] not in {"prompt", "task", "exercise", "experiment"}
+    ]
     if any(problems.values()):
         return None, problems
     try:
@@ -566,13 +621,60 @@ def build_concept(
         return None, {"lesson": detail, "quiz": []}
 
 
+_ATOM_KEYS = set(Atom.model_fields)
+_STEP_KEYS = set(Step.model_fields)
+INTERACTIVE = {"faded", "visualizer", "trace", "predict", "debug", "explanation", "classify"}
+
+
+def tidy_atom(atom):
+    """Deterministic repairs of an atom the model got almost right, instead of a new round:
+    unknown keys dropped, a missing or out-of-range duration set within bounds, a hook cut to
+    its first two sentences, checks too short to be questions dropped, and an interactive
+    atom left without any check (or a micro-lesson without a misconception) shown as a plain
+    concept card. Nothing a learner is graded on is invented."""
+    if not isinstance(atom, dict):
+        return atom
+    out = {k: v for k, v in atom.items() if k in _ATOM_KEYS}
+    seconds = out.get("seconds")
+    out["seconds"] = min(120, max(10, seconds)) if isinstance(seconds, int) else 60
+    if isinstance(out.get("steps"), list):
+        out["steps"] = [
+            {k: v for k, v in s.items() if k in _STEP_KEYS}
+            for s in out["steps"]
+            if isinstance(s, dict) and len(str(s.get("prompt", "")).strip()) >= 5
+        ]
+    if out.get("kind") == "hook" and isinstance(out.get("body"), str):
+        sentences = re.split(r"(?<=[.!?])\s+", out["body"].strip())
+        out["body"] = " ".join(sentences[:2])
+    if not str(out.get("body", "")).strip() and str(out.get("why", "")).strip():
+        out["body"] = out["why"]
+    limit = 80 if out.get("kind") == "pattern" else 120
+    if isinstance(out.get("body"), str) and len(out["body"].split()) > limit:
+        kept: list[str] = []
+        for sentence in re.split(r"(?<=[.!?])\s+", out["body"].strip()):
+            if len(" ".join([*kept, sentence]).split()) > limit:
+                break
+            kept.append(sentence)
+        out["body"] = " ".join(kept) or " ".join(out["body"].split()[:limit])
+    if (out.get("kind") in INTERACTIVE and not out.get("steps")) or (
+        out.get("kind") == "micro" and not out.get("misconception")
+    ):
+        out["kind"] = "concept"
+        out.pop("adapters", None)
+    return out
+
+
 def build_atoms(
     course: Course, concept: Concept, atoms: dict, version: int, languages: Sequence[str] = ()
 ):
     """A draft pack, or (None, problems). ``languages``: code adapters allowed (and needed in
     each of them); their output is filled in by ``run_code``."""
     found = atoms.get("atoms")
-    raw: list = found if isinstance(found, list) else []
+    raw: list = [tidy_atom(a) for a in found] if isinstance(found, list) else []
+    # An atom with nothing for the learner to read is dropped while enough remain.
+    filled = [a for a in raw if not isinstance(a, dict) or str(a.get("body", "")).strip()]
+    if len(filled) >= 3:
+        raw = filled
     problems: list[str] = []
     if not 3 <= len(raw) <= 8:
         problems.append(f"Write 4-8 atoms; got {len(raw)}.")
