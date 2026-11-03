@@ -965,6 +965,7 @@ quiz:
 problems:
 - nearest-taller-either-side
 - peak-totals
+- sum-of-minimums
 practice_links:
 - title: Next Greater Element II
   url: https://leetcode.com/problems/next-greater-element-ii/

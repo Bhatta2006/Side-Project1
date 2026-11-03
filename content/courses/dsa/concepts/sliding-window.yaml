@@ -336,7 +336,7 @@ quiz:
     explanation: 'This is amortised analysis: the inner loop''s total work across all outer iterations is
       bounded by the number of left-pointer moves, which is at most n.'
     difficulty: 5
-problems: [longest-unique-substring, max-window-sum, shortest-fundraiser]
+problems: [longest-unique-substring, max-window-sum, shortest-fundraiser, shortest-window-negatives]
 practice_links:
   - title: Longest Substring Without Repeating Characters
     url: https://leetcode.com/problems/longest-substring-without-repeating-characters/

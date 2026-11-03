@@ -302,7 +302,7 @@ quiz:
       loop always runs to the end: n + (n − 1) + ... = O(n²). If every element exceeds x, the inner loop
       stops at once (O(n) total).'
     difficulty: 5
-problems: [sum-queries, matching-pairs]
+problems: [sum-queries, matching-pairs, loop-iterations]
 practice_links:
   - title: Contains Duplicate
     url: https://leetcode.com/problems/contains-duplicate/

@@ -358,7 +358,7 @@ quiz:
       4, one node past the entry. This offset is why resetting one pointer to the head and moving both one
       step at a time finds the entry node.
     difficulty: 5
-problems: [playlist-editor]
+problems: [playlist-editor, repeated-group-reverse]
 practice_links:
   - title: Reverse Linked List
     url: https://leetcode.com/problems/reverse-linked-list/

@@ -846,6 +846,7 @@ quiz:
 problems:
 - longest-divisible-run
 - balanced-segments
+- four-array-zero-sums
 practice_links:
 - title: Maximum Size Subarray Sum Equals k
   url: https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/

@@ -299,7 +299,7 @@ quiz:
       differ on that bit, so they land in different groups, while each duplicate pair stays together. XOR
       each group to recover 3 and 5.
     difficulty: 5
-problems: [single-number]
+problems: [single-number, max-xor-pair]
 practice_links:
   - title: Single Number
     url: https://leetcode.com/problems/single-number/

@@ -302,7 +302,7 @@ quiz:
       so n pushes cost O(n). Decreasing input makes every new value climb all the way to the root, giving
       the O(n log n) worst case. The heap's cost depends on the data order, not just on n.
     difficulty: 5
-problems: [kth-largest-stream]
+problems: [kth-largest-stream, running-median]
 practice_links:
   - title: Kth Largest Element in a Stream
     url: https://leetcode.com/problems/kth-largest-element-in-a-stream/
