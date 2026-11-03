@@ -208,7 +208,7 @@ export default function TodayPage() {
         <ul className="-mt-2 mb-6 flex flex-wrap gap-2 lg:-mt-4 lg:mb-8" aria-label="Today at a glance">
           <Pill><Flame className="size-4" strokeWidth={1.5} aria-hidden="true" />{fresh ? 'Start your streak today' : `${today.streak.current}-day streak`}</Pill>
           <Pill><span className="tabular-nums">{today.minutes.done} of {today.minutes.goal} min today</span></Pill>
-          {today.reviews_due ? <Pill><StatusIcon status="review" size={16} /> {today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</Pill> : null}
+          {today.reviews_due ? <Pill><StatusIcon status="review" size={16} /> <Link href="/reviews" className="underline-offset-4 hover:underline">{today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</Link></Pill> : <Pill><Link href="/reviews" className="underline-offset-4 hover:underline">Reviews</Link></Pill>}
         </ul>
       </Reveal>
 

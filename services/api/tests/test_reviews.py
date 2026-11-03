@@ -112,3 +112,82 @@ def test_planner_keeps_a_snoozed_review_off_until_the_snooze_ends():
     later = review_days({"snoozed": {target: now + 3 * DAY}})
     assert later and later[0] == 3  # back on the plan the day the snooze ends
     assert review_days({"snoozed": {target: now - DAY}}) == [0]  # an expired snooze is ignored
+
+
+# ---------------------------------------------------------------- across courses (prompt 9.6)
+
+
+def _two_courses(client):
+    """Ada finished some of Zero, then started CP; CP's fast-io builds on Zero's
+    input-and-arithmetic. Review state is written directly: the schedule is the model's job."""
+    import time
+
+    from socrat.mastery.model import ConceptState
+    from socrat.models import ConceptState as Row
+
+    headers = login(client, subject="ada", name="Ada")
+    onboard(client, headers)
+    stamp = int(time.time())
+    with Session(client.app.state.engine) as db, db.begin():
+        zero = db.scalars(select(Enrollment)).one()
+        zero.status, zero.active = "active", False
+        db.query(Row).delete()  # only the schedule this test sets
+        cp = Enrollment(
+            user_id=zero.user_id,
+            course_id="cp",
+            language="python",
+            level_id=zero.level_id,
+            minutes_per_day=30,
+            weekdays=[0, 1, 2, 3, 4, 5, 6],
+            status="active",
+            active=True,
+        )
+        db.add(cp)
+        db.flush()
+        due = ConceptState(
+            evidence_count=3,
+            review_step=2,
+            last_evidence_at=stamp - 9 * DAY,
+            next_review_at=stamp - 60,
+        )
+        later = ConceptState(
+            evidence_count=2,
+            review_step=1,
+            last_evidence_at=stamp - DAY,
+            next_review_at=stamp + 3 * DAY,
+        )
+        db.add(Row(enrollment_id=zero.id, concept="zero:input-and-arithmetic", state=due.to_dict()))
+        db.add(Row(enrollment_id=zero.id, concept=CONCEPT, state=later.to_dict()))
+        db.add(Row(enrollment_id=cp.id, concept=CONCEPT, state=due.to_dict()))
+        db.add(Row(enrollment_id=cp.id, concept="cp:fast-io", state=later.to_dict()))
+    return headers
+
+
+def test_reviews_from_every_course_with_overlap_and_what_the_current_course_needs(client):
+    headers = _two_courses(client)
+    own = client.get("/api/v1/reviews").json()
+    assert {i["concept"] for i in own["items"]} == {CONCEPT, "cp:fast-io"}  # active course only
+
+    everywhere = client.get("/api/v1/reviews?scope=all").json()
+    assert everywhere["scope"] == "all" and everywhere["daily_limit"] >= 1
+    by = {i["concept"]: i for i in everywhere["items"]}
+    assert set(by) == {CONCEPT, "cp:fast-io", "zero:input-and-arithmetic"}
+    # Scheduled in both enrolments: listed once, at the earlier date, naming both courses.
+    assert by[CONCEPT]["courses"] == ["cp", "zero"] and by[CONCEPT]["due"] is True
+    needed = by["zero:input-and-arithmetic"]
+    assert needed["builds_on"] is True and needed["current_course"] is False
+    assert "builds on this" in needed["reason"] and needed["course"] == "zero"
+    assert everywhere["due_now"] == 2
+    # Due at the same time, the prerequisite the current course needs comes first.
+    assert everywhere["items"][0]["concept"] == "zero:input-and-arithmetic"
+
+    # Snoozing a review held by the paused course works, and bringing it back too.
+    held = client.post(
+        "/api/v1/reviews/zero:input-and-arithmetic/snooze", json={"days": 3}, headers=headers
+    )
+    assert held.status_code == 200
+    listed = {i["concept"]: i for i in client.get("/api/v1/reviews?scope=all").json()["items"]}
+    assert listed["zero:input-and-arithmetic"]["snoozed_until"] == held.json()["snoozed_until"]
+    client.delete("/api/v1/reviews/zero:input-and-arithmetic/snooze", headers=headers)
+    listed = {i["concept"]: i for i in client.get("/api/v1/reviews?scope=all").json()["items"]}
+    assert listed["zero:input-and-arithmetic"]["snoozed_until"] is None
