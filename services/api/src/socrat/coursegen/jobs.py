@@ -470,7 +470,7 @@ async def run_package(
         return reply
 
     if brief.research and not data.get("previous"):
-        prompt = research.prompt(ctx)
+        prompt = research.prompt(ctx, brief.adapter)
         allowed = None
         if settings.research_providers:
             hits = await search.gather(

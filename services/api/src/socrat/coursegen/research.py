@@ -43,13 +43,35 @@ ROLE_KIND = {
 MIN_FIT = 3
 
 
-def registry_hint() -> str:
+# Registry sources that suit any subject. The rest of the registry is about computing
+# (competitive programming, Python and C++ tutorials, interview prep) and is offered only to
+# software courses: a probability or music course told to "prefer" those gets poor sources
+# (found in a live run). ``tests/test_resource_search.py`` checks every id still exists.
+GENERAL_SOURCES = frozenset(
+    {
+        "openstax",
+        "mit-ocw",
+        "wikipedia",
+        "wikibooks",
+        "khan-academy",
+        "libretexts",
+        "phet",
+        "nist-physics",
+    }
+)
+ALL_SOURCES_ADAPTERS = {"software"}  # plus courses with no adapter, which keep today's list
+
+
+def registry_hint(adapter: str = "") -> str:
+    """The registry sources the researcher is told to prefer for a course in ``adapter``."""
     entries = registry.load_registry().sources
+    if adapter and adapter not in ALL_SOURCES_ADAPTERS:
+        entries = [e for e in entries if e.id in GENERAL_SOURCES]
     return "\n".join(f"- {e.name} ({e.url}): {e.content}" for e in entries)
 
 
-def prompt(ctx: str) -> str:
-    return f"{ctx}\n\nSources from our registry (prefer these):\n{registry_hint()}"
+def prompt(ctx: str, adapter: str = "") -> str:
+    return f"{ctx}\n\nSources from our registry (prefer these):\n{registry_hint(adapter)}"
 
 
 def _host(url: str) -> str:

@@ -239,3 +239,18 @@ def test_a_resource_the_author_listed_keeps_the_researched_licence_and_provenanc
     assert resource["license"] == "CC BY-SA 4.0" and resource["author"] == "Wikipedia contributors"
     assert resource["why"] == "The author's own reason." and resource["minutes"] == 8  # author wins
     Resource.model_validate(resource)
+
+
+def test_a_non_software_course_is_offered_only_subject_neutral_registry_sources():
+    from socrat.catalog import sources as registry
+
+    ids = {e.id for e in registry.load_registry().sources}
+    assert research.GENERAL_SOURCES <= ids  # a renamed or removed source fails here
+    everything = research.registry_hint()
+    assert "competitive" in everything.lower() and "CSES" in everything  # unchanged default
+    assert research.registry_hint("software") == everything
+    for adapter in ("math-science", "electronics", "music", "animation-movement", "general"):
+        shown = research.registry_hint(adapter)
+        assert "Khan Academy" in shown and "OpenStax" in shown
+        assert "CSES" not in shown and "USACO" not in shown and "Codeforces" not in shown
+    assert "Math and science lessons" in research.prompt("ctx", "math-science")

@@ -255,7 +255,7 @@ async def find_replacements(
                 settings,
                 "researcher",
                 research.RESEARCHER,
-                research.prompt(ctx),
+                research.prompt(ctx, str(parent.brief.get("adapter") or "")),
                 2000,
                 make,
             )
