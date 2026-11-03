@@ -163,79 +163,230 @@ resources:
     minutes: 15
     level: intro
 quiz:
-  - id: last-index
-    kind: mcq
-    prompt: A list has 8 elements. What is the index of the last one?
-    options: ["7", "8", "9", "-8"]
-    answer: 0
-    explanation: Indexes start at 0, so the last of n elements is at n − 1.
-    difficulty: 1
-  - id: list-neighbours
-    former_ids: [neighbours]
-    kind: mcq
-    prompt: You compare each element with the previous one using a[i] and a[i - 1]. Where should i start?
-    options: ["1", "0", "-1", "n"]
-    answer: 0
-    explanation: At i = 0 there is no previous element; start at 1.
-    difficulty: 2
-  - id: list-output
+  - id: index-sum
     kind: output
-    prompt: What is printed?
+    prompt: Positions in a list start at 0. What is printed?
     code:
-      python: |
-        a = [3, 1, 4]
-        a[0] = a[1] + a[2]
-        print(a[0], len(a))
-      cpp: |
-        vector<int> a = {3, 1, 4};
-        a[0] = a[1] + a[2];
-        cout << a[0] << " " << a.size();
-      java: |
-        int[] a = {3, 1, 4};
-        a[0] = a[1] + a[2];
-        System.out.println(a[0] + " " + a.length);
-    options: ["5 3", "4 3", "5 4", "8 3"]
+      python: 'a = [10, 20, 30, 40]
+
+        print(a[1] + a[2])
+
+        '
+      cpp: 'vector<int> a = {10, 20, 30, 40};
+
+        cout << a[1] + a[2];
+
+        '
+      java: 'int[] a = {10, 20, 30, 40};
+
+        System.out.println(a[1] + a[2]);
+
+        '
+    options:
+    - '50'
+    - '30'
+    - '40'
+    - '60'
     answer: 0
-    explanation: a[1] + a[2] = 1 + 4 = 5 replaces a[0]. The length is still 3.
+    explanation: Position 0 holds 10, position 1 holds 20 and position 2 holds 30. So a[1] + a[2] = 20 +
+      30 = 50.
     difficulty: 1
-  - id: best-so-far
-    kind: mcq
-    prompt: To find the maximum of a list, what should "best so far" start as?
-    options: ["The first element", "0", "The last index", "The list length"]
-    answer: 0
-    explanation: Starting at 0 fails when every value is negative. The first element is always a real candidate.
-    difficulty: 2
-  - id: alias
+  - id: append-length
     kind: output
-    prompt: "What does this print?"
+    prompt: Adding to the end of a list makes it one longer. What is printed (the last item, then the length)?
     code:
-      python: |
-        a = [1, 2]
+      python: 'a = [4, 8, 15]
+
+        a.append(16)
+
+        print(a[len(a) - 1], len(a))
+
+        '
+      cpp: 'vector<int> a = {4, 8, 15};
+
+        a.push_back(16);
+
+        cout << a[a.size() - 1] << " " << a.size();
+
+        '
+      java: 'ArrayList<Integer> a = new ArrayList<>(List.of(4, 8, 15));
+
+        a.add(16);
+
+        System.out.println(a.get(a.size() - 1) + " " + a.size());
+
+        '
+    options:
+    - 16 4
+    - 16 3
+    - 15 4
+    - 4 16
+    answer: 0
+    explanation: After the append there are four items, and the last one sits at position length - 1 = 3.
+      The last valid position is always one less than the length.
+    difficulty: 2
+  - id: index-past-end
+    kind: mcq
+    prompt: A list holds 5 items. Which positions can you safely read?
+    options:
+    - 0, 1, 2, 3 and 4
+    - 1, 2, 3, 4 and 5
+    - 0 to 5, which is six positions
+    - Any position, as the list adds more as needed
+    answer: 0
+    explanation: Counting starts at 0, so n items occupy positions 0 to n - 1. Reading position 5 is an
+      error (or worse, silently reads garbage in C++), and it is the most common list mistake.
+    difficulty: 2
+  - id: alias-shared
+    kind: output
+    languages:
+    - python
+    - java
+    prompt: b = a does not copy the list; both names refer to the same list. What is printed?
+    code:
+      python: 'a = [1, 2, 3]
+
         b = a
-        b.append(3)
-        print(a)
+
+        b.append(4)
+
+        print(len(a))
+
+        '
+      java: 'ArrayList<Integer> a = new ArrayList<>(List.of(1, 2, 3));
+
+        ArrayList<Integer> b = a;
+
+        b.add(4);
+
+        System.out.println(a.size());
+
+        '
     options:
-      - "[1, 2, 3]"
-      - "[1, 2]"
-      - "[3]"
-      - "An error"
+    - '4'
+    - '3'
+    - '7'
+    - Error
     answer: 0
-    explanation: "b = a makes both names refer to the same list; append changes that one list. Copy with a[:] or list(a)."
+    explanation: There is only one list, with two names. Adding through b is visible through a. To get an
+      independent copy you must ask for one explicitly (a.copy() or a[:] in Python, new ArrayList<>(a) in
+      Java).
     difficulty: 4
-  - id: slice-reverse
+  - id: copy-cpp
     kind: output
-    prompt: "What does this print?"
+    languages:
+    - cpp
+    prompt: In C++, a vector is copied when you assign it to another vector. What is printed?
     code:
-      python: |
-        xs = [5, 6, 7, 8, 9]
-        print(xs[-2::-2])
+      cpp: 'vector<int> a = {1, 2, 3};
+
+        vector<int> b = a;
+
+        b.push_back(4);
+
+        cout << a.size();
+
+        '
     options:
-      - "[8, 6]"
-      - "[9, 7, 5]"
-      - "[8, 6, 4]"
-      - "[8]"
+    - '3'
+    - '4'
+    - '7'
+    - Error
     answer: 0
-    explanation: "Start at index -2 (8) and step back by 2: 8, then 6; the next index would be before the start."
+    explanation: 'C++ vectors behave like values: b = a makes a full, separate copy. Changing b leaves a
+      alone. (Copying large vectors is slow, which is why functions often take them by reference.)'
+    difficulty: 4
+  - id: max-start-trap
+    kind: bug
+    prompt: This is meant to find the largest value, starting from 0. What does it print for a list of only
+      negative numbers?
+    code:
+      python: "a = [-5, -2, -9]\nbest = 0\nfor x in a:\n    if x > best:\n        best = x\nprint(best)\n"
+      cpp: "vector<int> a = {-5, -2, -9};\nint best = 0;\nfor (int x : a)\n    if (x > best) best = x;\n\
+        cout << best;\n"
+      java: "int[] a = {-5, -2, -9};\nint best = 0;\nfor (int x : a)\n    if (x > best) best = x;\nSystem.out.println(best);\n"
+    options:
+    - '0'
+    - '-2'
+    - '-9'
+    - '-5'
+    answer: 0
+    explanation: No number is greater than the starting 0, so best never changes and the answer 0 is not
+      even in the list. Start from the first element (a[0]) instead of a made-up value.
+    difficulty: 4
+  - id: reverse-swap
+    kind: output
+    prompt: Two positions move towards each other and swap. What is printed?
+    code:
+      python: "a = [1, 2, 3, 4, 5]\ni, j = 0, len(a) - 1\nwhile i < j:\n    a[i], a[j] = a[j], a[i]\n  \
+        \  i += 1\n    j -= 1\nprint(*a)\n"
+      cpp: "vector<int> a = {1, 2, 3, 4, 5};\nint i = 0, j = a.size() - 1;\nwhile (i < j) {\n    int t =\
+        \ a[i]; a[i] = a[j]; a[j] = t;\n    i++; j--;\n}\nfor (int x : a) cout << x << \" \";\n"
+      java: "int[] a = {1, 2, 3, 4, 5};\nint i = 0, j = a.length - 1;\nwhile (i < j) {\n    int t = a[i];\
+        \ a[i] = a[j]; a[j] = t;\n    i++; j--;\n}\nfor (int x : a) System.out.print(x + \" \");\n"
+    options:
+    - 5 4 3 2 1
+    - 1 2 3 4 5
+    - 5 2 3 4 1
+    - 2 1 4 3 5
+    answer: 0
+    explanation: The ends swap, then the next pair inwards, and the loop stops when the two pointers meet.
+      The middle element 3 stays where it is, which is why the condition is i < j rather than i <= j.
+    difficulty: 3
+  - id: count-matches
+    kind: output
+    prompt: Counting how many times a value appears. What is printed?
+    code:
+      python: "a = [2, 5, 2, 2, 7]\nn = 0\nfor x in a:\n    if x == 2:\n        n += 1\nprint(n)\n"
+      cpp: "vector<int> a = {2, 5, 2, 2, 7};\nint n = 0;\nfor (int x : a)\n    if (x == 2) n++;\ncout <<\
+        \ n;\n"
+      java: "int[] a = {2, 5, 2, 2, 7};\nint n = 0;\nfor (int x : a)\n    if (x == 2) n++;\nSystem.out.println(n);\n"
+    options:
+    - '3'
+    - '2'
+    - '5'
+    - '1'
+    answer: 0
+    explanation: The value 2 sits at three positions, so n goes up three times. Start the counter at 0 and
+      add one per match.
+    difficulty: 2
+  - id: slicing
+    kind: output
+    languages:
+    - python
+    prompt: A slice a[start:stop] takes the items from start up to, but not including, stop. Negative positions
+      count from the end. What is printed?
+    code:
+      python: 'a = [10, 20, 30, 40, 50]
+
+        print(a[1:3], a[-1], a[::-1][0])
+
+        '
+    options:
+    - '[20, 30] 50 50'
+    - '[20, 30, 40] 50 10'
+    - '[20, 30] 40 50'
+    - '[10, 20, 30] 50 50'
+    answer: 0
+    explanation: a[1:3] is positions 1 and 2. a[-1] is the last item, 50. a[::-1] is the reversed list,
+      whose first item is again 50.
+    difficulty: 3
+  - id: remove-while-looping
+    kind: output
+    languages:
+    - python
+    prompt: Removing items from a list while looping over it makes the loop skip the item after each removal.
+      What is printed?
+    code:
+      python: "a = [2, 4, 6, 1]\nfor x in a:\n    if x % 2 == 0:\n        a.remove(x)\nprint(a)\n"
+    options:
+    - '[4, 1]'
+    - '[1]'
+    - '[2, 4, 6, 1]'
+    - '[4, 6, 1]'
+    answer: 0
+    explanation: After 2 is removed, the list shifts left, so the loop's next position lands on 6 and skips
+      4. Then 6 is removed. Loop over a copy (for x in a[:]) or build a new list instead.
     difficulty: 5
 problems: [above-average, increasing-steps, runner-up-score]
 practice_links:

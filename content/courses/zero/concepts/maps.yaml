@@ -142,78 +142,259 @@ resources:
     minutes: 15
     level: deep
 quiz:
-  - id: unique-keys
+  - id: lookup
     kind: output
-    prompt: What is printed?
+    prompt: A map stores values under keys. What is printed?
     code:
-      python: |
-        d = {}
-        d["x"] = 1
-        d["y"] = 2
-        d["x"] = 5
-        print(len(d), d["x"])
-      cpp: |
-        unordered_map<string,int> d;
-        d["x"] = 1; d["y"] = 2; d["x"] = 5;
-        cout << d.size() << " " << d["x"];
-      java: |
-        HashMap<String,Integer> d = new HashMap<>();
-        d.put("x", 1); d.put("y", 2); d.put("x", 5);
-        System.out.println(d.size() + " " + d.get("x"));
-    options: ["2 5", "3 5", "2 1", "3 1"]
-    answer: 0
-    explanation: Keys are unique; the second "x" replaces the value 1 with 5. There are two keys.
-    difficulty: 2
-  - id: which-structure
-    kind: mcq
-    prompt: You need to know how many times each word appears in a book. Best choice?
-    options: ["A map from word to count", "A list of words searched each time", "A single integer", "A sorted list of counts"]
-    answer: 0
-    explanation: A map gives instant lookup and update per word — one pass over the book.
-    difficulty: 1
-  - id: set-use
-    kind: mcq
-    prompt: Which question is a set perfect for?
-    options: ["Have I seen this value before?", "What is the 5th element?", "What is the sum?", "Which value is largest?"]
-    answer: 0
-    explanation: Sets answer membership questions quickly.
-    difficulty: 1
-  - id: order
-    kind: mcq
-    prompt: A problem says "print each word and its count in alphabetical order". What must you do with a hash map?
-    options: ["Sort the keys before printing", "Nothing, hash maps are sorted", "Reverse the map", "Use a list instead"]
-    answer: 0
-    explanation: Hash maps have no guaranteed sorted order. Sort the keys (or use a sorted map such as C++ map or Java TreeMap).
-    difficulty: 2
-  - id: get-default
-    kind: output
-    prompt: "What does this print?"
-    code:
-      python: |
-        counts = {}
-        for ch in "banana":
-            counts[ch] = counts.get(ch, 0) + 1
-        print(counts["a"], counts.get("z", 0))
+      python: 'm = {"a": 1, "b": 2, "c": 3}
+
+        print(m["b"] + m["c"])
+
+        '
+      cpp: 'map<string, int> m = {{"a", 1}, {"b", 2}, {"c", 3}};
+
+        cout << m["b"] + m["c"];
+
+        '
+      java: 'Map<String, Integer> m = new HashMap<>();
+
+        m.put("a", 1); m.put("b", 2); m.put("c", 3);
+
+        System.out.println(m.get("b") + m.get("c"));
+
+        '
     options:
-      - "3 0"
-      - "3 None"
-      - "An error"
-      - "2 0"
+    - '5'
+    - '3'
+    - '6'
+    - '23'
     answer: 0
-    explanation: "\"banana\" has three a's; get returns the default 0 for a missing key instead of raising KeyError."
+    explanation: 'You look a value up by its key, not by its position: 2 + 3 = 5.'
+    difficulty: 1
+  - id: overwrite
+    kind: output
+    prompt: Keys are unique. Storing under an existing key replaces its value. What is printed (the value,
+      then the size)?
+    code:
+      python: 'm = {}
+
+        m["x"] = 1
+
+        m["x"] = 2
+
+        print(m["x"], len(m))
+
+        '
+      cpp: 'map<string, int> m;
+
+        m["x"] = 1;
+
+        m["x"] = 2;
+
+        cout << m["x"] << " " << m.size();
+
+        '
+      java: 'Map<String, Integer> m = new HashMap<>();
+
+        m.put("x", 1);
+
+        m.put("x", 2);
+
+        System.out.println(m.get("x") + " " + m.size());
+
+        '
+    options:
+    - 2 1
+    - 2 2
+    - 1 1
+    - 1 2
+    answer: 0
+    explanation: The second store replaces the first value, and there is still only one key. A map never
+      holds two entries with the same key.
+    difficulty: 2
+  - id: missing-key-safe
+    kind: output
+    languages:
+    - python
+    - java
+    prompt: Asking for a missing key with a default value does not change the map. What is printed (the
+      answer, then the size)?
+    code:
+      python: 'm = {"a": 1, "b": 2}
+
+        print(m.get("z", 0), len(m))
+
+        '
+      java: 'Map<String, Integer> m = new HashMap<>();
+
+        m.put("a", 1); m.put("b", 2);
+
+        System.out.println(m.getOrDefault("z", 0) + " " + m.size());
+
+        '
+    options:
+    - 0 2
+    - 0 3
+    - Error
+    - None 2
+    answer: 0
+    explanation: get with a default only reads. It returns the fallback 0 and leaves the map as it was,
+      with two entries.
+    difficulty: 3
+  - id: missing-key-inserts-cpp
+    kind: output
+    languages:
+    - cpp
+    prompt: In C++, reading m[key] for a missing key creates that key with a default value. What is printed
+      (the value, then the size)?
+    code:
+      cpp: 'map<string, int> m = {{"a", 1}, {"b", 2}};
+
+        int v = m["z"];
+
+        cout << v << " " << m.size();
+
+        '
+    options:
+    - 0 3
+    - 0 2
+    - Error
+    - 1 2
+    answer: 0
+    explanation: m["z"] quietly inserts z with the value 0, so the map grew to three entries just by being
+      read. Use m.count(key) or m.find(key) to look without creating.
     difficulty: 4
-  - id: key-types
-    languages: [python]
-    kind: mcq
-    prompt: "Which of these can be a dictionary key in Python?"
+  - id: frequency
+    kind: output
+    prompt: Counting how often each word appears is the classic use of a map. How many times does 'a' appear
+      (what is printed)?
+    code:
+      python: "count = {}\nfor w in [\"a\", \"b\", \"a\", \"c\", \"a\"]:\n    count[w] = count.get(w, 0)\
+        \ + 1\nprint(count[\"a\"])\n"
+      cpp: 'map<string, int> count;
+
+        for (string w : {"a", "b", "a", "c", "a"}) count[w]++;
+
+        cout << count["a"];
+
+        '
+      java: 'Map<String, Integer> count = new HashMap<>();
+
+        for (String w : new String[]{"a", "b", "a", "c", "a"}) count.merge(w, 1, Integer::sum);
+
+        System.out.println(count.get("a"));
+
+        '
     options:
-      - "(1, 2)"
-      - "[1, 2]"
-      - "{1: 2}"
-      - "{1, 2}"
+    - '3'
+    - '1'
+    - '5'
+    - '2'
     answer: 0
-    explanation: "Keys must be hashable (immutable). A tuple works; lists, dicts and sets do not."
-    difficulty: 5
+    explanation: Each word adds one to its own counter, starting from zero for new words. The word a is
+      seen three times.
+    difficulty: 2
+  - id: contains-key
+    kind: output
+    prompt: Check whether a key exists before using it. What is printed for 'b' and then 'z'?
+    code:
+      python: "m = {\"a\": 1, \"b\": 2}\nfor k in (\"b\", \"z\"):\n    print(\"found\" if k in m else \"\
+        missing\", end=\" \")\n"
+      cpp: "map<string, int> m = {{\"a\", 1}, {\"b\", 2}};\nfor (string k : {\"b\", \"z\"})\n    cout <<\
+        \ (m.count(k) ? \"found\" : \"missing\") << \" \";\n"
+      java: "Map<String, Integer> m = new HashMap<>();\nm.put(\"a\", 1); m.put(\"b\", 2);\nfor (String k\
+        \ : new String[]{\"b\", \"z\"})\n    System.out.print((m.containsKey(k) ? \"found\" : \"missing\"\
+        ) + \" \");\n"
+    options:
+    - found missing
+    - found found
+    - missing missing
+    - missing found
+    answer: 0
+    explanation: Membership tests look at the keys, not the values. Testing first avoids an error (Python)
+      or an accidental insert (C++) for absent keys.
+    difficulty: 2
+  - id: order-python
+    kind: output
+    languages:
+    - python
+    prompt: A Python dict remembers the order keys were first added. What is printed?
+    code:
+      python: "m = {}\nfor k in [\"b\", \"a\", \"c\", \"a\"]:\n    m[k] = 1\nprint(*m)\n"
+    options:
+    - b a c
+    - a b c
+    - b a c a
+    - c b a
+    answer: 0
+    explanation: Keys appear in the order they were first inserted. The second 'a' only updated an existing
+      key and did not move it or add a new one.
+    difficulty: 3
+  - id: order-cpp
+    kind: output
+    languages:
+    - cpp
+    prompt: A C++ std::map keeps its keys sorted, whatever order they were added in. What is printed?
+    code:
+      cpp: 'map<string, int> m;
+
+        for (string k : {"b", "a", "c", "a"}) m[k] = 1;
+
+        for (auto& kv : m) cout << kv.first << " ";
+
+        '
+    options:
+    - a b c
+    - b a c
+    - b a c a
+    - c b a
+    answer: 0
+    explanation: std::map is ordered by key. (unordered_map does not promise any order, so never rely on
+      it.)
+    difficulty: 3
+  - id: first-unique
+    kind: output
+    prompt: Find the first letter that appears only once. What is printed for 'swiss'?
+    code:
+      python: "s = \"swiss\"\ncount = {}\nfor ch in s:\n    count[ch] = count.get(ch, 0) + 1\nfor ch in\
+        \ s:\n    if count[ch] == 1:\n        print(ch)\n        break\n"
+      cpp: "string s = \"swiss\";\nmap<char, int> count;\nfor (char ch : s) count[ch]++;\nfor (char ch :\
+        \ s)\n    if (count[ch] == 1) { cout << ch; break; }\n"
+      java: "String s = \"swiss\";\nMap<Character, Integer> count = new HashMap<>();\nfor (char ch : s.toCharArray())\
+        \ count.merge(ch, 1, Integer::sum);\nfor (char ch : s.toCharArray())\n    if (count.get(ch) == 1)\
+        \ { System.out.println(ch); break; }\n"
+    options:
+    - w
+    - i
+    - s
+    - Nothing
+    answer: 0
+    explanation: s appears three times, w once, i once. The second loop walks the original word in order,
+      so the first letter with count 1 is w (not i). Looping over the map instead could give a different
+      order.
+    difficulty: 4
+  - id: two-sum-map
+    kind: output
+    prompt: Find two positions whose values add up to 9. For each value, the map is asked whether the matching
+      partner was already seen. What is printed?
+    code:
+      python: "nums = [2, 7, 11, 15]\nseen = {}\nfor i, x in enumerate(nums):\n    if 9 - x in seen:\n \
+        \       print(seen[9 - x], i)\n        break\n    seen[x] = i\n"
+      cpp: "vector<int> nums = {2, 7, 11, 15};\nmap<int, int> seen;\nfor (int i = 0; i < (int)nums.size();\
+        \ i++) {\n    int x = nums[i];\n    if (seen.count(9 - x)) { cout << seen[9 - x] << \" \" << i;\
+        \ break; }\n    seen[x] = i;\n}\n"
+      java: "int[] nums = {2, 7, 11, 15};\nMap<Integer, Integer> seen = new HashMap<>();\nfor (int i = 0;\
+        \ i < nums.length; i++) {\n    int x = nums[i];\n    if (seen.containsKey(9 - x)) { System.out.println(seen.get(9\
+        \ - x) + \" \" + i); break; }\n    seen.put(x, i);\n}\n"
+    options:
+    - 0 1
+    - 1 0
+    - 2 3
+    - 0 2
+    answer: 0
+    explanation: At 2 nothing has been seen, so 2 is stored. At 7 the partner 9 - 7 = 2 is in the map at
+      position 0, so the answer is 0 1. One pass with a map replaces a slower pair-by-pair search.
+    difficulty: 4
 problems: [word-frequency, first-repeat, class-election]
 practice_links:
   - title: Distinct Numbers

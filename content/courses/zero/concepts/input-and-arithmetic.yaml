@@ -141,71 +141,257 @@ resources:
     minutes: 150
     languages: [java]
 quiz:
-  - id: int-division
+  - id: div-and-mod
     kind: output
-    prompt: What is printed?
+    prompt: Whole-number division and remainder. What is printed?
     code:
-      python: print(17 // 5, 17 % 5)
-      cpp: std::cout << 17 / 5 << " " << 17 % 5;
-      java: System.out.println(17 / 5 + " " + 17 % 5);
-    options: ["3 2", "3.4 2", "3 0", "2 3"]
+      python: 'print(17 // 5, 17 % 5)
+
+        '
+      cpp: 'cout << 17 / 5 << " " << 17 % 5;
+
+        '
+      java: 'System.out.println(17 / 5 + " " + 17 % 5);
+
+        '
+    options:
+    - 3 2
+    - 3.4 2
+    - 3 0
+    - 2 3
     answer: 0
-    explanation: Five fits into 17 three whole times (15), leaving a remainder of 2.
+    explanation: '17 holds three full fives (15) with 2 left over, so the quotient is 3 and the remainder
+      is 2. They always fit together: 5 * 3 + 2 = 17.'
     difficulty: 1
   - id: precedence
     kind: output
-    prompt: What is the value of `10 - 2 * 3`?
-    options: ["4", "24", "-4", "6"]
-    answer: 0
-    explanation: Multiplication first (2*3 = 6), then 10 - 6 = 4.
-    difficulty: 1
-  - id: last-digit
-    kind: mcq
-    prompt: Which expression gives the last digit of a positive whole number n?
-    options: ["n % 10", "n / 10", "n - 10", "n * 10"]
-    answer: 0
-    explanation: Dividing by 10 leaves the last digit as the remainder.
-    difficulty: 2
-  - id: input-is-text
-    languages: [python]
-    kind: mcq
-    prompt: "In Python, `x = input()` and the user types 5. What is `x + x`?"
-    options: ["\"55\" — text joined together", "10 — the two numbers added", "An error — text cannot be added", "25 — the number multiplied by itself"]
-    answer: 0
-    explanation: input() returns text. Adding two strings joins them. Use int(input()) to get a number.
-    difficulty: 2
-  - id: even-check
-    kind: mcq
-    prompt: How do you check if n is even?
-    options: ["n % 2 == 0", "n / 2 == 0", "n % 2 == 1", "n * 2 == n"]
-    answer: 0
-    explanation: Even numbers leave no remainder when divided by 2.
-    difficulty: 1
-  - id: string-plus
-    kind: mcq
-    prompt: "A program reads two numbers with a = input() and b = input() and prints a + b. The user types 2 and 3. What is printed?"
-    options:
-      - "\"55\" — text joined together"
-      - "10 — the two numbers added"
-      - "An error — text cannot be added"
-      - "25 — the number multiplied by itself"
-    answer: 0
-    explanation: "input() returns text, and + joins texts. Convert with int() before adding."
-    difficulty: 4
-  - id: negative-mod
-    kind: output
-    prompt: "What does Python print?"
+    prompt: Multiplication happens before subtraction unless brackets say otherwise. What is printed?
     code:
-      python: |
-        print(-7 // 2, -7 % 2)
+      python: 'print(10 - 2 * 3, (10 - 2) * 3)
+
+        '
+      cpp: 'cout << 10 - 2 * 3 << " " << (10 - 2) * 3;
+
+        '
+      java: 'System.out.println(10 - 2 * 3 + " " + (10 - 2) * 3);
+
+        '
     options:
-      - "-4 1"
-      - "-3 -1"
-      - "-3 1"
-      - "-4 -1"
+    - 4 24
+    - 24 24
+    - 4 4
+    - 24 4
     answer: 0
-    explanation: "Python's // rounds down (towards minus infinity), so -7 // 2 = -4, and % follows so that (-4)·2 + 1 = -7."
-    difficulty: 5
+    explanation: Without brackets, 2 * 3 is done first, so 10 - 6 = 4. The brackets force 10 - 2 to happen
+      first, giving 8 * 3 = 24.
+    difficulty: 1
+  - id: negative-remainder-python
+    kind: output
+    languages:
+    - python
+    prompt: Python rounds a division DOWN (towards minus infinity), and the remainder follows. What is printed?
+    code:
+      python: 'print(-7 // 2, -7 % 2)
+
+        '
+    options:
+    - -4 1
+    - -3 -1
+    - -3 1
+    - -4 -1
+    answer: 0
+    explanation: '-7 / 2 is -3.5, which rounds down to -4. The remainder is whatever makes the equation
+      true: 2 * (-4) + 1 = -7. So the remainder is never negative here.'
+    difficulty: 4
+  - id: negative-remainder-cpp-java
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: C++ and Java cut a division towards ZERO, and the remainder keeps the sign of the first number.
+      What is printed?
+    code:
+      cpp: 'cout << -7 / 2 << " " << -7 % 2;
+
+        '
+      java: 'System.out.println(-7 / 2 + " " + -7 % 2);
+
+        '
+    options:
+    - -3 -1
+    - -4 1
+    - -3 1
+    - -4 -1
+    answer: 0
+    explanation: -3.5 is cut towards zero, giving -3, and the remainder that makes it add up is -1 (2 *
+      -3 + -1 = -7). A check like n % 2 == 1 misses negative odd numbers here, so test n % 2 != 0 instead.
+    difficulty: 4
+  - id: text-vs-number
+    kind: output
+    prompt: Input arrives as text. Joining two pieces of text is not the same as adding the numbers they
+      spell. What is printed?
+    code:
+      python: 'a = "12"
+
+        b = "30"
+
+        print(a + b, int(a) + int(b))
+
+        '
+      cpp: 'string a = "12", b = "30";
+
+        cout << a + b << " " << stoi(a) + stoi(b);
+
+        '
+      java: 'String a = "12", b = "30";
+
+        System.out.println(a + b + " " + (Integer.parseInt(a) + Integer.parseInt(b)));
+
+        '
+    options:
+    - 1230 42
+    - 42 1230
+    - 42 42
+    - 1230 1230
+    answer: 0
+    explanation: '+ between two pieces of text glues them: 1230. Converting each to a number first, with
+      int, stoi or parseInt, makes + add them: 42. Always convert what you read before doing arithmetic.'
+    difficulty: 3
+  - id: average-floor
+    kind: output
+    prompt: The average of two whole numbers is computed with whole-number division. What is printed?
+    code:
+      python: 'a, b = 3, 4
+
+        print((a + b) // 2)
+
+        '
+      cpp: 'int a = 3, b = 4;
+
+        cout << (a + b) / 2;
+
+        '
+      java: 'int a = 3, b = 4;
+
+        System.out.println((a + b) / 2);
+
+        '
+    options:
+    - '3'
+    - '3.5'
+    - '4'
+    - '7'
+    answer: 0
+    explanation: 3 + 4 = 7, and whole-number division by 2 gives 3 with a remainder of 1 that is thrown
+      away. If you need the half, you must use decimal division instead.
+    difficulty: 2
+  - id: time-convert
+    kind: output
+    prompt: Splitting 135 minutes into hours and leftover minutes. What is printed?
+    code:
+      python: 'm = 135
+
+        print(m // 60, m % 60)
+
+        '
+      cpp: 'int m = 135;
+
+        cout << m / 60 << " " << m % 60;
+
+        '
+      java: 'int m = 135;
+
+        System.out.println(m / 60 + " " + m % 60);
+
+        '
+    options:
+    - 2 15
+    - 2.25 15
+    - 15 2
+    - 2 75
+    answer: 0
+    explanation: Division counts full hours (2) and the remainder is what is left over (15 minutes). This
+      pairing of quotient and remainder converts between units of any size.
+    difficulty: 2
+  - id: left-to-right
+    kind: output
+    prompt: Operators of the same rank are applied from left to right. What is printed?
+    code:
+      python: 'print(100 // 10 // 5, 100 // (10 // 5))
+
+        '
+      cpp: 'cout << 100 / 10 / 5 << " " << 100 / (10 / 5);
+
+        '
+      java: 'System.out.println(100 / 10 / 5 + " " + 100 / (10 / 5));
+
+        '
+    options:
+    - 2 50
+    - 50 2
+    - 2 2
+    - 50 50
+    answer: 0
+    explanation: 100 / 10 is 10, then 10 / 5 is 2. With brackets, 10 / 5 is done first (2) and then 100
+      / 2 is 50. Same numbers, different grouping, different answer.
+    difficulty: 3
+  - id: digit-extract
+    kind: output
+    prompt: Division and remainder can pick out the digits of a number. What is printed?
+    code:
+      python: 'n = 4821
+
+        print(n % 10, n // 10 % 10)
+
+        '
+      cpp: 'int n = 4821;
+
+        cout << n % 10 << " " << n / 10 % 10;
+
+        '
+      java: 'int n = 4821;
+
+        System.out.println(n % 10 + " " + n / 10 % 10);
+
+        '
+    options:
+    - 1 2
+    - 2 1
+    - 4 8
+    - 1 4821
+    answer: 0
+    explanation: n % 10 is the last digit, 1. n / 10 drops that digit and leaves 482, and % 10 on that gives
+      its last digit, 2.
+    difficulty: 3
+  - id: pages-needed
+    kind: output
+    prompt: 25 photos are placed 10 to a page, and a partly filled page still counts as a page. This trick
+      rounds the division UP. What is printed?
+    code:
+      python: 'photos, per = 25, 10
+
+        print((photos + per - 1) // per)
+
+        '
+      cpp: 'int photos = 25, per = 10;
+
+        cout << (photos + per - 1) / per;
+
+        '
+      java: 'int photos = 25, per = 10;
+
+        System.out.println((photos + per - 1) / per);
+
+        '
+    options:
+    - '3'
+    - '2'
+    - '2.5'
+    - '4'
+    answer: 0
+    explanation: 'Adding per - 1 before dividing pushes any leftover over the next whole number: 34 // 10
+      = 3. Plain 25 // 10 would give 2 and leave 5 photos without a page.'
+    difficulty: 4
 problems: [greeting, time-convert, split-the-bill]
 practice_links:
   - title: Watermelon (even split)

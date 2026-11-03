@@ -596,107 +596,291 @@ resources:
   level: core
   languages: [java]
 quiz:
-- id: split-seconds
-  languages: [python]
-  kind: mcq
-  prompt: t = 3725. What does t % 3600 // 60 give?
-  options:
-  - '2'
-  - '62'
-  - '5'
-  - '1'
-  answer: 0
-  explanation: 125 seconds are left after the hour, and 125 // 60 is 2.
-  difficulty: 1
-- id: minutes-from-total
-  kind: mcq
-  prompt: Why is m = t // 60 wrong for the minutes part of t seconds?
-  options:
-  - "It also counts the minutes that are already inside the hours"
-  - "It rounds the minutes down, so it should round them up instead"
-  - "It gives a decimal number of minutes rather than a whole one"
-  - "It is correct; t // 60 is exactly the minutes part of the time"
-  answer: 0
-  explanation: Take the minutes from what is left after the hours.
-  difficulty: 2
-- id: negative-floor
-  languages: [python]
-  kind: mcq
-  prompt: What is -7 // 2 in Python?
-  options:
-  - '-4'
-  - '-3'
-  - '-3.5'
-  - '3'
-  answer: 0
-  explanation: Python rounds down; C++ and Java would give -3.
-  difficulty: 3
-- id: average-brackets
-  kind: mcq
-  prompt: a = 4, b = 5, c = 9. What is a + b + c // 3 in Python?
-  options:
-  - '12'
-  - '6'
-  - '18'
-  - '7'
-  answer: 0
-  explanation: Only c is divided, because // runs before +.
-  difficulty: 2
-- id: plus-equals
-  kind: mcq
-  prompt: total = 5, then total =+ 3. What is total?
-  options:
-  - '3'
-  - '8'
-  - '5'
-  - An error
-  answer: 0
-  explanation: '=+ 3 means = (+3).'
-  difficulty: 2
-- id: guard-first
-  kind: mcq
-  prompt: d = 0. Which condition is safe?
-  options:
-  - d != 0 and n % d == 0
-  - n % d == 0 and d != 0
-  - Both
-  - Neither
-  answer: 0
-  explanation: and stops at the first false, so the guard must come first.
-  difficulty: 3
-- id: round-up
-  kind: mcq
-  prompt: How many boxes of 12 hold 1000 eggs?
-  options:
-  - '84'
-  - '83'
-  - '85'
-  - '4'
-  answer: 0
-  explanation: (1000 + 11) // 12 = 84.
-  difficulty: 3
-- id: round-up-trap
-  kind: mcq
-  prompt: Why is a // b + 1 not a safe way to round up?
-  options:
-  - It is one too many when b divides a
-  - It is too slow
-  - It gives a decimal
-  - It only works for negative numbers
-  answer: 0
-  explanation: 8 // 2 + 1 is 5, but 8 / 2 is exactly 4.
-  difficulty: 4
-- id: float-root
-  kind: mcq
-  prompt: Why can int(math.sqrt(n)) be wrong for n near 10^16?
-  options:
-  - "A decimal cannot store such a big n exactly, so it is rounded before the root is taken"
-  - "math.sqrt only accepts numbers below about 10^9 and silently returns 0 beyond that"
-  - "int() always rounds a decimal up, so a root just below a whole number is pushed over"
-  - "It is never wrong, because math.sqrt returns an exact answer for any whole number"
-  answer: 0
-  explanation: Use math.isqrt, or correct a decimal guess with whole numbers.
-  difficulty: 5
+  - id: split-seconds
+    kind: output
+    prompt: 3725 seconds is split into hours, minutes and seconds with division and remainder. What is printed?
+    code:
+      python: 't = 3725
+
+        print(t // 3600, t % 3600 // 60, t % 60)
+
+        '
+      cpp: 'int t = 3725;
+
+        cout << t / 3600 << " " << t % 3600 / 60 << " " << t % 60;
+
+        '
+      java: 'int t = 3725;
+
+        System.out.println(t / 3600 + " " + t % 3600 / 60 + " " + t % 60);
+
+        '
+    options:
+    - 1 2 5
+    - 1 62 5
+    - 62 1 5
+    - 1 2 25
+    answer: 0
+    explanation: 3725 holds one full hour (3600) with 125 seconds left. The leftover 125 holds 2 full minutes
+      with 5 seconds left. Take the remainder first, then divide, to peel the units off from the largest.
+    difficulty: 2
+  - id: average-brackets
+    kind: output
+    prompt: a = 4, b = 5 and c = 9. The left value forgets its brackets, the right one has them. What is
+      printed?
+    code:
+      python: 'a, b, c = 4, 5, 9
+
+        print(a + b + c // 3, (a + b + c) // 3)
+
+        '
+      cpp: 'int a = 4, b = 5, c = 9;
+
+        cout << a + b + c / 3 << " " << (a + b + c) / 3;
+
+        '
+      java: 'int a = 4, b = 5, c = 9;
+
+        System.out.println(a + b + c / 3 + " " + (a + b + c) / 3);
+
+        '
+    options:
+    - 12 6
+    - 6 6
+    - 12 12
+    - 6 12
+    answer: 0
+    explanation: Division binds tighter than addition, so the first expression is 4 + 5 + (9 / 3) = 12.
+      Only the brackets make the whole sum get divided, giving 18 / 3 = 6.
+    difficulty: 2
+  - id: reversed-plus-equals
+    kind: output
+    prompt: The programmer meant to add 3 to total but typed `total =+ 3` (the signs are swapped). What
+      is printed?
+    code:
+      python: 'total = 5
+
+        total =+ 3
+
+        print(total)
+
+        '
+      cpp: 'int total = 5;
+
+        total =+ 3;
+
+        cout << total;
+
+        '
+      java: 'int total = 5;
+
+        total =+ 3;
+
+        System.out.println(total);
+
+        '
+    options:
+    - '3'
+    - '8'
+    - '5'
+    - Error
+    answer: 0
+    explanation: '`=+ 3` is read as `= +3`: store the positive number 3. It runs without any error and quietly
+      throws away the old total. The compound form is written +=.'
+    difficulty: 3
+  - id: post-and-pre-increment
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: i++ gives the old value and then adds one; ++i adds one first and gives the new value. What
+      is printed (a, b, then i)?
+    code:
+      cpp: 'int i = 5;
+
+        int a = i++;
+
+        int b = ++i;
+
+        cout << a << " " << b << " " << i;
+
+        '
+      java: 'int i = 5;
+
+        int a = i++;
+
+        int b = ++i;
+
+        System.out.println(a + " " + b + " " + i);
+
+        '
+    options:
+    - 5 7 7
+    - 6 7 7
+    - 5 6 7
+    - 6 6 7
+    answer: 0
+    explanation: a takes the old 5 and i becomes 6. Then ++i makes i 7 before b takes it. Both effects happen,
+      which is why mixing them in one expression is risky.
+    difficulty: 4
+  - id: floor-first
+    kind: output
+    prompt: Whole-number division loses the fraction, and once it is lost it is gone. What is printed (the
+      value of each expression, converted to a whole number)?
+    code:
+      python: 'print(int(1 // 2 * 4.0), int(1 / 2 * 4))
+
+        '
+      cpp: 'cout << (int)(1 / 2 * 4.0) << " " << (int)(1 / 2.0 * 4);
+
+        '
+      java: 'System.out.println((int)(1 / 2 * 4.0) + " " + (int)(1 / 2.0 * 4));
+
+        '
+    options:
+    - 0 2
+    - 2 2
+    - 0 0
+    - 2 0
+    answer: 0
+    explanation: In the first, 1 divided by 2 is done on whole numbers and gives 0 before it ever meets
+      4.0. In the second, 2.0 forces a decimal division giving 0.5, and 0.5 * 4 = 2. The order and type
+      of the first division decide the result.
+    difficulty: 4
+  - id: compound-ops
+    kind: output
+    prompt: Compound operators change the variable in place, one line after another. What is printed?
+    code:
+      python: 'x = 10
+
+        x -= 3
+
+        x *= 2
+
+        x //= 4
+
+        print(x)
+
+        '
+      cpp: 'int x = 10;
+
+        x -= 3;
+
+        x *= 2;
+
+        x /= 4;
+
+        cout << x;
+
+        '
+      java: 'int x = 10;
+
+        x -= 3;
+
+        x *= 2;
+
+        x /= 4;
+
+        System.out.println(x);
+
+        '
+    options:
+    - '3'
+    - '4'
+    - '7'
+    - '14'
+    answer: 0
+    explanation: 10 - 3 = 7, then 7 * 2 = 14, then 14 divided by 4 is 3 (the .5 is dropped).
+    difficulty: 2
+  - id: round-up-trap
+    kind: output
+    prompt: Eggs are packed 12 to a box. The left value rounds up with (n + 11) divided by 12; the right
+      adds 1 to the plain division. What is printed for 1000 eggs, and for exactly 24 eggs with the second
+      method?
+    code:
+      python: 'print((1000 + 11) // 12, 24 // 12 + 1)
+
+        '
+      cpp: 'cout << (1000 + 11) / 12 << " " << 24 / 12 + 1;
+
+        '
+      java: 'System.out.println((1000 + 11) / 12 + " " + (24 / 12 + 1));
+
+        '
+    options:
+    - 84 3
+    - 84 2
+    - 83 3
+    - 83 2
+    answer: 0
+    explanation: 1000 eggs need 84 boxes (83 full ones plus a partial one). But 24 / 12 + 1 gives 3 when
+      24 fits into exactly 2 boxes, so 'divide and add one' over-counts whenever there is no remainder.
+      Adding (box size - 1) before dividing is correct for both.
+    difficulty: 4
+  - id: clock-wrap
+    kind: output
+    prompt: A 24-hour clock shows 20. What does it show 30 hours later?
+    code:
+      python: 'print((20 + 30) % 24)
+
+        '
+      cpp: 'cout << (20 + 30) % 24;
+
+        '
+      java: 'System.out.println((20 + 30) % 24);
+
+        '
+    options:
+    - '2'
+    - '6'
+    - '26'
+    - '50'
+    answer: 0
+    explanation: 20 + 30 = 50, which is two full days (48 hours) and 2 more. The remainder after dividing
+      by the cycle length is how you wrap around.
+    difficulty: 2
+  - id: backwards-wrap-python
+    kind: output
+    languages:
+    - python
+    prompt: The clock shows 3 and we go 5 hours BACK, using remainder to wrap around. In Python the remainder
+      takes the sign of the divisor. What is printed?
+    code:
+      python: 'print((3 - 5) % 24)
+
+        '
+    options:
+    - '22'
+    - '-2'
+    - '2'
+    - '-22'
+    answer: 0
+    explanation: -2 wraps around to 22, the right answer on a clock. Python always gives a result from 0
+      up to 23 here.
+    difficulty: 4
+  - id: backwards-wrap-cpp-java
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: The clock shows 3 and we go 5 hours BACK, using remainder to wrap around. In C++ and Java the
+      remainder keeps the sign of the first number. What is printed?
+    code:
+      cpp: 'cout << (3 - 5) % 24;
+
+        '
+      java: 'System.out.println((3 - 5) % 24);
+
+        '
+    options:
+    - '-2'
+    - '22'
+    - '2'
+    - '-22'
+    answer: 0
+    explanation: -2 % 24 stays -2 here, which is not a valid hour. The usual fix is ((x % 24) + 24) % 24,
+      which always lands between 0 and 23.
+    difficulty: 4
 problems:
 - party-packs
 - clock-after

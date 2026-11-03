@@ -160,75 +160,289 @@ resources:
     minutes: 10
     level: deep
 quiz:
-  - id: char-math
-    kind: mcq
-    prompt: What is the value of 'e' - 'a' (C++/Java) or ord('e') - ord('a') (Python)?
-    options: ["4", "5", "101", "An error"]
-    answer: 0
-    explanation: Letters are consecutive codes, and e is four letters after a.
-    difficulty: 2
-  - id: java-equals
-    kind: mcq
-    prompt: In Java, how should you check whether two strings have the same text?
-    options: ["a.equals(b)", "a == b", "a = b", "a.compare(b)"]
-    answer: 0
-    explanation: == compares object identity in Java; equals compares the characters.
-    difficulty: 1
-  - id: immutability
-    languages: [python]
-    kind: mcq
-    prompt: In Python, what does `name.upper()` do to the string stored in name?
-    options:
-      - Nothing — it returns a new uppercase string
-      - Changes name to uppercase in place
-      - Raises an error
-      - Deletes name
-    answer: 0
-    explanation: Python strings are immutable. Assign the result (name = name.upper()) to keep it.
-    difficulty: 2
-  - id: string-index
+  - id: index-and-length
     kind: output
-    prompt: What is printed?
+    prompt: Characters are numbered from 0, like list positions. What is printed (the character at position
+      1, then the length)?
     code:
-      python: |
-        s = "algorithm"
-        print(s[2] + s[len(s) - 1])
-      cpp: |
-        string s = "algorithm";
-        cout << s[2] << s[s.size() - 1];
-      java: |
-        String s = "algorithm";
-        System.out.println("" + s.charAt(2) + s.charAt(s.length() - 1));
-    options: ["gm", "lm", "gh", "ga"]
-    answer: 0
-    explanation: Index 2 is g (a=0, l=1, g=2) and the last character is m.
-    difficulty: 1
-  - id: immutable
-    kind: mcq
-    prompt: "s = \"cat\". What happens on s[0] = \"b\"?"
+      python: 's = "hello"
+
+        print(s[1], len(s))
+
+        '
+      cpp: 'string s = "hello";
+
+        cout << s[1] << " " << s.size();
+
+        '
+      java: 'String s = "hello";
+
+        System.out.println(s.charAt(1) + " " + s.length());
+
+        '
     options:
-      - "A TypeError: strings cannot be changed in place"
-      - "s becomes \"bat\", with only the first letter changed"
-      - "s becomes \"b\", replacing the whole string at once"
-      - "Nothing happens, and s silently stays as \"cat\""
+    - e 5
+    - h 5
+    - e 4
+    - l 5
     answer: 0
-    explanation: "Strings are immutable. Build a new one instead: s = \"b\" + s[1:]."
+    explanation: Position 0 is h and position 1 is e. The length counts all five letters, so the last valid
+      position is 4.
+    difficulty: 1
+  - id: strings-do-not-change
+    kind: output
+    languages:
+    - python
+    - java
+    prompt: Text values cannot be changed in place; a method like upper-casing returns a NEW string. What
+      is printed?
+    code:
+      python: 's = "hi"
+
+        s.upper()
+
+        print(s)
+
+        '
+      java: 'String s = "hi";
+
+        s.toUpperCase();
+
+        System.out.println(s);
+
+        '
+    options:
+    - hi
+    - HI
+    - Hi
+    - Error
+    answer: 0
+    explanation: The upper-cased copy was created and thrown away because it was not stored anywhere. You
+      need s = s.upper() to keep the result.
+    difficulty: 3
+  - id: cpp-string-mutable
+    kind: output
+    languages:
+    - cpp
+    prompt: Unlike Python and Java, a C++ string can be changed in place. What is printed?
+    code:
+      cpp: 'string s = "hi";
+
+        s[0] = ''H'';
+
+        cout << s;
+
+        '
+    options:
+    - Hi
+    - hi
+    - H
+    - Error
+    answer: 0
+    explanation: s[0] = 'H' overwrites the first character directly. The same line is an error in Python
+      and does not compile in Java.
+    difficulty: 3
+  - id: palindrome
+    kind: output
+    prompt: A word is a palindrome if it reads the same backwards. What is printed?
+    code:
+      python: 'w = "level"
+
+        print("yes" if w == w[::-1] else "no")
+
+        '
+      cpp: 'string w = "level";
+
+        string r(w.rbegin(), w.rend());
+
+        cout << (w == r ? "yes" : "no");
+
+        '
+      java: 'String w = "level";
+
+        String r = new StringBuilder(w).reverse().toString();
+
+        System.out.println(w.equals(r) ? "yes" : "no");
+
+        '
+    options:
+    - 'yes'
+    - 'no'
+    - level
+    - Error
+    answer: 0
+    explanation: Reversing l-e-v-e-l gives the same letters, so the comparison is true. Note it compares
+      letter by letter, so 'Level' with a capital L would not match.
+    difficulty: 3
+  - id: word-count
+    kind: output
+    prompt: Splitting a sentence on its spaces. How many words are there (what is printed)?
+    code:
+      python: 'print(len("the quick brown fox".split()))
+
+        '
+      cpp: 'stringstream ss("the quick brown fox");
+
+        string w;
+
+        int n = 0;
+
+        while (ss >> w) n++;
+
+        cout << n;
+
+        '
+      java: 'System.out.println("the quick brown fox".split(" ").length);
+
+        '
+    options:
+    - '4'
+    - '3'
+    - '19'
+    - '5'
+    answer: 0
+    explanation: The sentence has four words separated by three spaces. Splitting gives one piece per word,
+      so always one more piece than separators.
+    difficulty: 2
+  - id: first-and-last
+    kind: output
+    prompt: Taking the first three and the last three characters of a word. What is printed?
+    code:
+      python: 's = "programming"
+
+        print(s[:3] + s[-3:])
+
+        '
+      cpp: 'string s = "programming";
+
+        cout << s.substr(0, 3) + s.substr(s.size() - 3);
+
+        '
+      java: 'String s = "programming";
+
+        System.out.println(s.substring(0, 3) + s.substring(s.length() - 3));
+
+        '
+    options:
+    - proing
+    - proming
+    - pro
+    - programmingmming
+    answer: 0
+    explanation: The first three letters are 'pro' and the last three are 'ing' (from programm-ing). Starting
+      position is length - 3, so the piece runs to the end.
+    difficulty: 3
+  - id: digit-chars
+    kind: output
+    prompt: Each character of a numeric text must be converted into a number before it can be added. What
+      is printed?
+    code:
+      python: "total = 0\nfor ch in \"4821\":\n    total += int(ch)\nprint(total)\n"
+      cpp: 'int total = 0;
+
+        for (char ch : string("4821")) total += ch - ''0'';
+
+        cout << total;
+
+        '
+      java: 'int total = 0;
+
+        for (char ch : "4821".toCharArray()) total += ch - ''0'';
+
+        System.out.println(total);
+
+        '
+    options:
+    - '15'
+    - '4821'
+    - '12'
+    - '216'
+    answer: 0
+    explanation: 4 + 8 + 2 + 1 = 15. In C++ and Java a digit character's code is 48 plus its value, so subtracting
+      '0' gives the number. Adding the raw character instead would give the code, not the digit.
+    difficulty: 3
+  - id: alphabetical-order
+    kind: output
+    prompt: Text is compared character by character using character codes, where capital letters come before
+      lowercase ones. What is printed for 'apple' < 'banana' and 'Zebra' < 'apple'?
+    code:
+      python: 'print("T" if "apple" < "banana" else "F", "T" if "Zebra" < "apple" else "F")
+
+        '
+      cpp: 'cout << (string("apple") < string("banana") ? "T" : "F") << " " << (string("Zebra") < string("apple")
+        ? "T" : "F");
+
+        '
+      java: 'System.out.println(("apple".compareTo("banana") < 0 ? "T" : "F") + " " + ("Zebra".compareTo("apple")
+        < 0 ? "T" : "F"));
+
+        '
+    options:
+    - T T
+    - T F
+    - F T
+    - F F
+    answer: 0
+    explanation: a comes before b, so the first is true. A capital Z has a smaller code than any lowercase
+      letter, so 'Zebra' sorts before 'apple'. For a real dictionary order, compare in a single case.
     difficulty: 4
-  - id: split-join
+  - id: search-not-found
     kind: output
-    prompt: "What does this print?"
+    prompt: Searching for a letter that is not there gives -1, a position that can never be real. What is
+      printed for 'e' and for 'z' in 'hello'?
     code:
-      python: |
-        line = "  a  b c "
-        print("-".join(line.split()))
+      python: 's = "hello"
+
+        print(s.find("e"), s.find("z"))
+
+        '
+      cpp: 'string s = "hello";
+
+        cout << (int)s.find("e") << " " << (int)s.find("z");
+
+        '
+      java: 'String s = "hello";
+
+        System.out.println(s.indexOf("e") + " " + s.indexOf("z"));
+
+        '
     options:
-      - "a-b-c"
-      - "--a--b-c-"
-      - "a--b-c"
-      - "-a-b-c-"
+    - 1 -1
+    - 1 0
+    - 2 -1
+    - 1 5
     answer: 0
-    explanation: "split() with no argument splits on runs of whitespace and drops empty pieces."
-    difficulty: 5
+    explanation: e is at position 1. A missing letter is reported as -1, so always test for -1 before using
+      the result as a position.
+    difficulty: 3
+  - id: build-in-loop
+    kind: output
+    prompt: A string can be built one piece at a time. What is printed?
+    code:
+      python: "result = \"\"\nfor i in range(1, 4):\n    result += str(i) + \"-\"\nprint(result)\n"
+      cpp: 'string result = "";
+
+        for (int i = 1; i <= 3; i++) result += to_string(i) + "-";
+
+        cout << result;
+
+        '
+      java: 'String result = "";
+
+        for (int i = 1; i <= 3; i++) result += i + "-";
+
+        System.out.println(result);
+
+        '
+    options:
+    - 1-2-3-
+    - 1-2-3
+    - '123'
+    - -1-2-3
+    answer: 0
+    explanation: Each round appends the number and a dash, so the dash is added after the last number too.
+      Handling that trailing separator is a common small bug.
+    difficulty: 2
 problems: [vowel-count, caesar-shift, mirror-phrase]
 practice_links:
   - title: Petya and Strings

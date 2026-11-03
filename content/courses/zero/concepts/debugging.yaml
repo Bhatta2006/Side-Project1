@@ -117,36 +117,185 @@ resources:
     source: Harvard CS50
     minutes: 60
 quiz:
-  - id: first-error
-    kind: mcq
-    prompt: The compiler reports 14 errors. Which should you read first?
-    options: ["The first one", "The last one", "The longest one", "Any of them"]
-    answer: 0
-    explanation: Later errors are often caused by the first. Fix it and recompile.
-    difficulty: 1
-  - id: smallest-case
-    kind: mcq
-    prompt: Your solution fails on a hidden test. What is the most useful next step?
+  - id: wrong-divisor
+    kind: bug
+    prompt: This is meant to print the average of 2, 4 and 6, which is 4. What does it actually print?
+    code:
+      python: "a = [2, 4, 6]\ntotal = 0\nfor x in a:\n    total += x\nprint(total // (len(a) + 1))\n"
+      cpp: 'vector<int> a = {2, 4, 6};
+
+        int total = 0;
+
+        for (int x : a) total += x;
+
+        cout << total / (a.size() + 1);
+
+        '
+      java: 'int[] a = {2, 4, 6};
+
+        int total = 0;
+
+        for (int x : a) total += x;
+
+        System.out.println(total / (a.length + 1));
+
+        '
     options:
-      - "Construct the smallest input you can find that also fails"
-      - "Rewrite the whole program from scratch using a new idea"
-      - "Resubmit the same code in case the judge was flaky"
-      - "Add comments to every line until the bug becomes obvious"
+    - '3'
+    - '4'
+    - '12'
+    - '2'
     answer: 0
-    explanation: A tiny failing case is easy to trace by hand and usually reveals the bug directly.
-    difficulty: 1
-  - id: logic-bug
-    kind: mcq
-    prompt: The program runs with no crash but prints 9 instead of 10. What kind of error is it?
-    options: ["A logic error", "A syntax error", "A runtime error", "A compiler bug"]
-    answer: 0
-    explanation: It ran successfully but computed the wrong value — that is a logic error.
-    difficulty: 1
-  - id: edge-cases
-    kind: mcq
-    prompt: Which input is most likely to reveal an off-by-one bug in a loop over a list?
-    options: ["A list with exactly one element", "A list with 50 random elements", "A list of positive numbers", "Any typical list"]
-    answer: 0
-    explanation: Boundary sizes like 1 (and 0 if allowed) expose loops that start or stop one place wrong.
+    explanation: 'The sum is 12, but it is divided by 4 instead of 3, giving 3. A wrong result that is ''close''
+      is typical of an off-by-one: trace with a tiny input and compare each step with your expectation.'
     difficulty: 2
+  - id: missing-last-number
+    kind: bug
+    prompt: This should add up 1 to 10 and print 55. What does it print?
+    code:
+      python: "total = 0\nfor i in range(1, 10):\n    total += i\nprint(total)\n"
+      cpp: 'int total = 0;
+
+        for (int i = 1; i < 10; i++) total += i;
+
+        cout << total;
+
+        '
+      java: 'int total = 0;
+
+        for (int i = 1; i < 10; i++) total += i;
+
+        System.out.println(total);
+
+        '
+    options:
+    - '45'
+    - '55'
+    - '54'
+    - '10'
+    answer: 0
+    explanation: 'The end value 10 is not included, so the loop adds 1 to 9. The error is in the loop bound:
+      for 1 to 10 inclusive, use range(1, 11) or i <= 10.'
+    difficulty: 2
+  - id: lost-fraction
+    kind: bug
+    prompt: The average of 3 and 2 should be 2.5, but this program is written with whole numbers. What does
+      it print?
+    code:
+      python: 'a, b = 3, 2
+
+        print((a + b) // 2)
+
+        '
+      cpp: 'int a = 3, b = 2;
+
+        cout << (a + b) / 2;
+
+        '
+      java: 'int a = 3, b = 2;
+
+        System.out.println((a + b) / 2);
+
+        '
+    options:
+    - '2'
+    - '2.5'
+    - '3'
+    - '5'
+    answer: 0
+    explanation: Whole-number division throws the .5 away, with no warning at all. Make one side a decimal
+      (a + b) / 2.0 (or use / in Python) when you want a fraction.
+    difficulty: 3
+  - id: read-first-error
+    kind: mcq
+    prompt: The compiler reports 14 errors after you wrote a long program. Where do you start?
+    options:
+    - At the first error, because later ones are often side effects of it
+    - At the last error, since it is the newest
+    - At the one that looks easiest, so you can make fast progress
+    - By deleting the lines the errors mention
+    answer: 0
+    explanation: One missing bracket or a misspelled name early on can confuse everything after it. Fix
+      the first error, recompile, and watch how many of the others disappear.
+    difficulty: 1
+  - id: smallest-failing-case
+    kind: mcq
+    prompt: Your solution passes the examples but fails a hidden test. What is the most useful next move?
+    options:
+    - Invent the smallest inputs that might break it (empty, one item, repeated values) and run them
+    - Submit the same code again, in case the judge made a mistake the first time
+    - Rewrite the whole solution from scratch using a completely different method
+    - Add extra output lines until the judge finally accepts what the code prints
+    answer: 0
+    explanation: 'Small cases are easy to trace by hand, and bugs live at boundaries: zero, one, the maximum,
+      and duplicates. A failing tiny case tells you exactly which line is wrong.'
+    difficulty: 2
+  - id: edge-case-choice
+    kind: mcq
+    prompt: Which input is most likely to expose an off-by-one error in a loop over a list?
+    options:
+    - A list with exactly one item
+    - A list of 1000 random numbers
+    - A list of ten ordinary numbers
+    - A list where every number is different
+    answer: 0
+    explanation: With one item, the first and last positions are the same place, so loops that start or
+      stop one step off visibly fail. Large random inputs hide such bugs.
+    difficulty: 2
+  - id: misspelled-name
+    kind: mcq
+    prompt: A variable is called total on one line, and spelled totl on a later line that uses it. What
+      happens?
+    options:
+    - The unknown name is rejected, or stops the program, at that line with an error
+    - The program guesses that totl means total and carries on regardless
+    - totl is silently treated as 0 and the program just continues
+    - Both spellings are merged and treated as one single variable
+    answer: 0
+    explanation: Names must match exactly, including capitals. The error message usually points at the unknown
+      name, so look there for a typo before suspecting the logic.
+    difficulty: 2
+  - id: silent-hang
+    kind: mcq
+    prompt: A program prints nothing and never finishes, though you expected it to take a second. What is
+      the best first suspicion?
+    options:
+    - A loop whose condition never turns false because its variable is never updated
+    - The computer is simply too slow to run a program like that quickly
+    - print is broken in that language, so nothing shows on the screen
+    - The input file is shorter than the program expected it to be
+    answer: 0
+    explanation: A missing counter update, or an update that moves the wrong way, keeps the condition true
+      forever. Add a print inside the loop to see whether its variable is changing.
+    difficulty: 2
+  - id: bisect-the-bug
+    kind: mcq
+    prompt: A 100-line program gives a wrong final answer. What is the most effective way to find the line
+      responsible?
+    options:
+    - Print the in-between values and find the first one that differs from your expectation
+    - Read the whole code once more from the top and hope the mistake jumps out
+    - Change lines at random until the final answer happens to look right
+    - Delete half of the program and see whether it still runs at all
+    answer: 0
+    explanation: The bug happens at the first place where reality and your expectation part ways. Printing
+      intermediate values narrows the search to that spot quickly, instead of guessing.
+    difficulty: 3
+  - id: shadowed-builtin
+    kind: mcq
+    languages:
+    - python
+    prompt: A programmer names a variable sum, and later calls the built-in sum([1, 2, 3]). What happens
+      at that later call?
+    options:
+    - 'It fails with TypeError: the name sum now holds a number, not the function'
+    - It returns 6 as usual, because built-in functions are protected from this
+    - It returns the number stored in the variable called sum
+    - It silently returns 0 because the list is not used
+    answer: 0
+    explanation: Assigning to sum replaces the built-in name in that scope. Calling a number as a function
+      is a TypeError. Avoid names like sum, max, list and str for your own variables.
+    difficulty: 4
+    code:
+      python: "sum = 0\nfor x in [1, 2, 3]:\n    sum += x\nprint(sum([1, 2, 3]))\n"
 problems: [fix-the-average]

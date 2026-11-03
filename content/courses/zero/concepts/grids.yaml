@@ -146,61 +146,246 @@ resources:
     minutes: 25
     level: deep
 quiz:
-  - id: index-order
-    kind: mcq
-    prompt: In grid[r][c], what does r select?
-    options: ["The row", "The column", "The cell value", "The number of rows"]
-    answer: 0
-    explanation: The outer list holds rows, so the first index picks a row and the second a column within it.
-    difficulty: 1
-  - id: corner-neighbours
-    kind: mcq
-    prompt: How many of the 4 up/down/left/right neighbours does a corner cell have inside the grid?
-    options: ["2", "4", "3", "1"]
-    answer: 0
-    explanation: A corner is on two edges, so two of its four directions leave the grid.
-    difficulty: 2
-  - id: python-shared-rows
-    languages: [python]
-    kind: mcq
-    prompt: "In Python, g = [[0] * 3] * 2 and then g[0][0] = 5. What is g[1][0]?"
-    options: ["5", "0", "An error", "3"]
-    answer: 0
-    explanation: Both rows are the same list object, so changing one changes the other.
-    difficulty: 3
-  - id: work
-    kind: mcq
-    prompt: For a 100 × 100 grid, checking all 8 neighbours of every cell takes about how many checks?
-    options: ["80,000", "10,000", "800", "1,000,000"]
-    answer: 0
-    explanation: 100 × 100 cells × 8 directions = 80,000.
-    difficulty: 2
-  - id: grid-trap
+  - id: row-then-column
     kind: output
-    prompt: "What does this print?"
+    prompt: A grid is a list of rows. The first index picks the row, the second picks the column. What is
+      printed?
     code:
-      python: |
-        g = [[0] * 2] * 2
-        g[0][0] = 1
-        print(g)
+      python: 'g = [[1, 2, 3], [4, 5, 6]]
+
+        print(g[1][2])
+
+        '
+      cpp: 'vector<vector<int>> g = {{1, 2, 3}, {4, 5, 6}};
+
+        cout << g[1][2];
+
+        '
+      java: 'int[][] g = {{1, 2, 3}, {4, 5, 6}};
+
+        System.out.println(g[1][2]);
+
+        '
     options:
-      - "[[1, 0], [1, 0]]"
-      - "[[1, 0], [0, 0]]"
-      - "[[1, 1], [0, 0]]"
-      - "An error"
+    - '6'
+    - '3'
+    - '5'
+    - '2'
     answer: 0
-    explanation: "[[0] * 2] * 2 repeats the same inner list twice. Build rows separately: [[0] * 2 for _ in range(2)]."
-    difficulty: 4
-  - id: neighbours
+    explanation: g[1] is the second row, [4, 5, 6], and index 2 of that row is 6. Row first, then column.
+    difficulty: 1
+  - id: dimensions
+    kind: output
+    prompt: The number of rows is the length of the outer list; the number of columns is the length of one
+      row. What is printed (rows, then columns)?
+    code:
+      python: 'g = [[1, 2, 3], [4, 5, 6]]
+
+        print(len(g), len(g[0]))
+
+        '
+      cpp: 'vector<vector<int>> g = {{1, 2, 3}, {4, 5, 6}};
+
+        cout << g.size() << " " << g[0].size();
+
+        '
+      java: 'int[][] g = {{1, 2, 3}, {4, 5, 6}};
+
+        System.out.println(g.length + " " + g[0].length);
+
+        '
+    options:
+    - 2 3
+    - 3 2
+    - 6 1
+    - 2 2
+    answer: 0
+    explanation: There are two rows of three values each. Mixing up the two lengths is a classic source
+      of out-of-range errors.
+    difficulty: 1
+  - id: column-sum
+    kind: output
+    prompt: Adding down one column means keeping the column fixed and walking through the rows. What is
+      printed for column 1?
+    code:
+      python: "g = [[1, 2, 3], [4, 5, 6]]\ntotal = 0\nfor r in range(len(g)):\n    total += g[r][1]\nprint(total)\n"
+      cpp: 'vector<vector<int>> g = {{1, 2, 3}, {4, 5, 6}};
+
+        int total = 0;
+
+        for (int r = 0; r < (int)g.size(); r++) total += g[r][1];
+
+        cout << total;
+
+        '
+      java: 'int[][] g = {{1, 2, 3}, {4, 5, 6}};
+
+        int total = 0;
+
+        for (int r = 0; r < g.length; r++) total += g[r][1];
+
+        System.out.println(total);
+
+        '
+    options:
+    - '7'
+    - '5'
+    - '9'
+    - '12'
+    answer: 0
+    explanation: Column 1 holds 2 and 5. The row index changes in the loop while the column index stays
+      put.
+    difficulty: 2
+  - id: diagonal
+    kind: output
+    prompt: On the main diagonal of a square grid the row and column numbers are equal. What is printed?
+    code:
+      python: 'g = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+
+        print(sum(g[i][i] for i in range(3)))
+
+        '
+      cpp: 'int g[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+        int s = 0;
+
+        for (int i = 0; i < 3; i++) s += g[i][i];
+
+        cout << s;
+
+        '
+      java: 'int[][] g = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+        int s = 0;
+
+        for (int i = 0; i < 3; i++) s += g[i][i];
+
+        System.out.println(s);
+
+        '
+    options:
+    - '15'
+    - '12'
+    - '45'
+    - '18'
+    answer: 0
+    explanation: The cells (0,0), (1,1) and (2,2) hold 1, 5 and 9, which add to 15. The other diagonal needs
+      row + column = size - 1 instead.
+    difficulty: 2
+  - id: count-cells
+    kind: output
+    prompt: Counting the marked cells (the 1s) with two nested loops. What is printed?
+    code:
+      python: "g = [[1, 0, 1], [0, 1, 0], [0, 0, 1]]\nn = 0\nfor row in g:\n    for v in row:\n        if\
+        \ v == 1:\n            n += 1\nprint(n)\n"
+      cpp: "int g[3][3] = {{1, 0, 1}, {0, 1, 0}, {0, 0, 1}};\nint n = 0;\nfor (int r = 0; r < 3; r++)\n\
+        \    for (int c = 0; c < 3; c++)\n        if (g[r][c] == 1) n++;\ncout << n;\n"
+      java: "int[][] g = {{1, 0, 1}, {0, 1, 0}, {0, 0, 1}};\nint n = 0;\nfor (int[] row : g)\n    for (int\
+        \ v : row)\n        if (v == 1) n++;\nSystem.out.println(n);\n"
+    options:
+    - '4'
+    - '3'
+    - '9'
+    - '5'
+    answer: 0
+    explanation: Row by row there are 2, 1 and 1 marked cells, so 4 in total.
+    difficulty: 2
+  - id: neighbour-bounds
+    kind: output
+    prompt: Counting the in-grid neighbours (up, down, left, right) of the corner cell (0, 0) in a 3 by
+      3 grid, checking the edges first. What is printed?
+    code:
+      python: "R = C = 3\nn = 0\nfor dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):\n    r, c = 0 + dr, 0\
+        \ + dc\n    if 0 <= r < R and 0 <= c < C:\n        n += 1\nprint(n)\n"
+      cpp: "int R = 3, C = 3, n = 0;\nint dr[] = {-1, 1, 0, 0}, dc[] = {0, 0, -1, 1};\nfor (int k = 0; k\
+        \ < 4; k++) {\n    int r = 0 + dr[k], c = 0 + dc[k];\n    if (r >= 0 && r < R && c >= 0 && c < C)\
+        \ n++;\n}\ncout << n;\n"
+      java: "int R = 3, C = 3, n = 0;\nint[] dr = {-1, 1, 0, 0}, dc = {0, 0, -1, 1};\nfor (int k = 0; k\
+        \ < 4; k++) {\n    int r = 0 + dr[k], c = 0 + dc[k];\n    if (r >= 0 && r < R && c >= 0 && c < C)\
+        \ n++;\n}\nSystem.out.println(n);\n"
+    options:
+    - '2'
+    - '4'
+    - '3'
+    - '1'
+    answer: 0
+    explanation: Only the cell below (1, 0) and the cell to the right (0, 1) exist; the cells above and
+      to the left are outside the grid. The boundary test must come before reading the cell.
+    difficulty: 3
+  - id: by-columns
+    kind: output
+    prompt: Swapping the order of the two loops changes the order in which cells are visited. What is printed?
+    code:
+      python: "g = [[1, 2, 3], [4, 5, 6]]\nfor c in range(3):\n    for r in range(2):\n        print(g[r][c],\
+        \ end=\" \")\n"
+      cpp: "int g[2][3] = {{1, 2, 3}, {4, 5, 6}};\nfor (int c = 0; c < 3; c++)\n    for (int r = 0; r <\
+        \ 2; r++) cout << g[r][c] << \" \";\n"
+      java: "int[][] g = {{1, 2, 3}, {4, 5, 6}};\nfor (int c = 0; c < 3; c++)\n    for (int r = 0; r < 2;\
+        \ r++) System.out.print(g[r][c] + \" \");\n"
+    options:
+    - 1 4 2 5 3 6
+    - 1 2 3 4 5 6
+    - 6 5 4 3 2 1
+    - 1 4 5 2 3 6
+    answer: 0
+    explanation: With the column loop outside, each column is read fully (top to bottom) before the next.
+      The outer loop picks the 'slow' direction.
+    difficulty: 3
+  - id: rows-and-columns-mixed
     kind: mcq
-    prompt: "In an r × c grid, which check correctly tests that a neighbour (i + di, j + dj) is inside the grid?"
+    prompt: A grid has 2 rows and 3 columns. The code loops `for r in range(3)` (three times) and reads
+      g[r][0]. What goes wrong?
     options:
-      - "0 <= i + di < r and 0 <= j + dj < c"
-      - "i + di < r and j + dj < c"
-      - "0 < i + di <= r and 0 < j + dj <= c"
-      - "abs(di) + abs(dj) == 1"
+    - On the third round r is 2, which is not a valid row, so it fails with an index error
+    - Nothing goes wrong, the loop simply reads an empty third row and goes on
+    - It reads the correct values but is one column too far to the right
+    - It silently wraps around to the first row and reads that again
     answer: 0
-    explanation: "Rows are 0..r-1 and columns 0..c-1, so both lower and upper bounds must be checked."
+    explanation: There are only rows 0 and 1. The row loop must run len(g) times, and the column loop len(g[0])
+      times; swapping them only works for square grids.
+    difficulty: 3
+  - id: negative-index-python
+    kind: output
+    languages:
+    - python
+    prompt: In Python a negative index counts from the end. What is printed?
+    code:
+      python: 'g = [[1, 2, 3], [4, 5, 6]]
+
+        print(g[0][-1], g[-1][0])
+
+        '
+    options:
+    - 3 4
+    - 1 6
+    - 3 6
+    - 2 4
+    answer: 0
+    explanation: 'g[0][-1] is the last value of the first row (3) and g[-1][0] is the first value of the
+      last row (4). Beware: this means an index of -1 never raises an error, so a missing bounds check hides
+      a bug.'
+    difficulty: 4
+  - id: shared-rows
+    kind: output
+    languages:
+    - python
+    prompt: Multiplying a list repeats the reference to the SAME row, it does not copy it. What is printed?
+    code:
+      python: 'grid = [[0] * 3] * 2
+
+        grid[0][0] = 1
+
+        print(grid)
+
+        '
+    options:
+    - '[[1, 0, 0], [1, 0, 0]]'
+    - '[[1, 0, 0], [0, 0, 0]]'
+    - '[[0, 0, 0], [0, 0, 0]]'
+    - '[[1, 1, 1], [0, 0, 0]]'
+    answer: 0
+    explanation: 'Both rows are the same list object, so a change through one row shows in the other. Build
+      rows separately: [[0] * 3 for _ in range(2)].'
     difficulty: 5
 problems: [minesweeper-counts, row-and-column-sums]
 practice_links:

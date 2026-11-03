@@ -147,81 +147,187 @@ resources:
     source: Harvard CS50
     minutes: 120
 quiz:
-  - id: body-count
-    kind: mcq
-    prompt: An outer loop runs 5 times and its inner loop runs 4 times each round. How many times does the inner body run?
-    options: ["20", "9", "45", "16"]
+  - id: grid-count
+    kind: output
+    prompt: For every round of the outer loop, the inner loop runs completely. How many times does the counter
+      go up (what is printed)?
+    code:
+      python: "count = 0\nfor i in range(3):\n    for j in range(4):\n        count += 1\nprint(count)\n"
+      cpp: "int count = 0;\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 4; j++) count++;\ncout\
+        \ << count;\n"
+      java: "int count = 0;\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 4; j++) count++;\nSystem.out.println(count);\n"
+    options:
+    - '12'
+    - '16'
+    - '24'
+    - '10'
     answer: 0
-    explanation: Each of the 5 outer rounds runs the inner loop 4 times, so 5 × 4 = 20.
+    explanation: 3 outer rounds times 4 inner rounds is 12. Nested loops multiply their counts; they do
+      not add them.
     difficulty: 1
-  - id: triangle
+  - id: triangle-count
     kind: output
-    prompt: How many stars are printed in total?
+    prompt: The inner loop's limit depends on the outer counter. What is printed?
     code:
-      python: |
-        for row in range(1, 4):
-            print("*" * row)
-      cpp: |
-        for (int row = 1; row <= 3; row++) {
-            for (int k = 0; k < row; k++) cout << '*';
-            cout << "\n";
-        }
-      java: |
-        for (int row = 1; row <= 3; row++) {
-            for (int k = 0; k < row; k++) System.out.print('*');
-            System.out.println();
-        }
-    options: ["6", "9", "3", "4"]
-    answer: 0
-    explanation: Rows have 1, 2 and 3 stars, so 1 + 2 + 3 = 6.
-    difficulty: 2
-  - id: pairs
-    kind: mcq
-    prompt: To visit every pair of different items exactly once, the inner loop index j should start at...
-    options: ["i + 1", "0", "i", "n − 1"]
-    answer: 0
-    explanation: Starting after i skips pairing an item with itself and avoids visiting (i, j) and (j, i) twice.
-    difficulty: 2
-  - id: break-inner
-    kind: mcq
-    prompt: A break inside the inner loop does what?
-    options: ["Exits only the inner loop", "Exits both loops", "Ends the program", "Skips one inner round"]
-    answer: 0
-    explanation: break leaves the innermost loop that contains it; the outer loop continues.
-    difficulty: 2
-  - id: inner-body-runs
-    kind: mcq
-    prompt: "How many times does the inner body run?"
-    code:
-      python: |
-        for i in range(5):
-            for j in range(i):
-                pass
+      python: "count = 0\nfor i in range(1, 5):\n    for j in range(1, i + 1):\n        count += 1\nprint(count)\n"
+      cpp: "int count = 0;\nfor (int i = 1; i <= 4; i++)\n    for (int j = 1; j <= i; j++) count++;\ncout\
+        \ << count;\n"
+      java: "int count = 0;\nfor (int i = 1; i <= 4; i++)\n    for (int j = 1; j <= i; j++) count++;\nSystem.out.println(count);\n"
     options:
-      - "i + 1"
-      - "0"
-      - "i"
-      - "n − 1"
+    - '10'
+    - '16'
+    - '4'
+    - '8'
     answer: 0
-    explanation: "The inner loop runs 0 + 1 + 2 + 3 + 4 = 10 times."
+    explanation: The inner loop runs 1, 2, 3 and 4 times, and 1 + 2 + 3 + 4 = 10. This triangular total,
+      n(n + 1) / 2, shows up all the time.
+    difficulty: 2
+  - id: star-rows
+    kind: output
+    prompt: Row i prints i stars. What is printed (rows joined by a space)?
+    code:
+      python: "for i in range(1, 4):\n    print(\"*\" * i)\n"
+      cpp: "for (int i = 1; i <= 3; i++) {\n    for (int j = 0; j < i; j++) cout << \"*\";\n    cout <<\
+        \ endl;\n}\n"
+      java: "for (int i = 1; i <= 3; i++) {\n    for (int j = 0; j < i; j++) System.out.print(\"*\");\n\
+        \    System.out.println();\n}\n"
+    options:
+    - '* ** ***'
+    - '*** ** *'
+    - '*** *** ***'
+    - '* * *'
+    answer: 0
+    explanation: The outer loop picks the row and the inner loop (or the repetition) decides its width,
+      so the rows grow by one star each. Printing the line break after the inner loop is what ends each
+      row.
+    difficulty: 2
+  - id: pairs-smaller-first
+    kind: output
+    prompt: Counting pairs (i, j) of positions where i comes before j, among 5 positions. What is printed?
+    code:
+      python: "count = 0\nfor i in range(5):\n    for j in range(i + 1, 5):\n        count += 1\nprint(count)\n"
+      cpp: "int count = 0;\nfor (int i = 0; i < 5; i++)\n    for (int j = i + 1; j < 5; j++) count++;\n\
+        cout << count;\n"
+      java: "int count = 0;\nfor (int i = 0; i < 5; i++)\n    for (int j = i + 1; j < 5; j++) count++;\n\
+        System.out.println(count);\n"
+    options:
+    - '10'
+    - '25'
+    - '20'
+    - '15'
+    answer: 0
+    explanation: 4 + 3 + 2 + 1 + 0 = 10 pairs. Starting j at i + 1 avoids pairing an element with itself
+      and counting each pair twice.
+    difficulty: 3
+  - id: break-inner-only
+    kind: output
+    prompt: A break only leaves the loop it is written in. What is printed?
+    code:
+      python: "count = 0\nfor i in range(3):\n    for j in range(3):\n        if j == 1:\n            break\n\
+        \        count += 1\nprint(count)\n"
+      cpp: "int count = 0;\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 3; j++) {\n        if (j\
+        \ == 1) break;\n        count++;\n    }\ncout << count;\n"
+      java: "int count = 0;\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 3; j++) {\n        if\
+        \ (j == 1) break;\n        count++;\n    }\nSystem.out.println(count);\n"
+    options:
+    - '3'
+    - '1'
+    - '9'
+    - '0'
+    answer: 0
+    explanation: In every outer round the inner loop counts j = 0 and then breaks at j = 1. The outer loop
+      is unaffected and runs all 3 rounds, giving 3.
+    difficulty: 3
+  - id: table-sum
+    kind: output
+    prompt: Add up every cell of a small multiplication table. What is printed?
+    code:
+      python: "total = 0\nfor i in range(1, 4):\n    for j in range(1, 4):\n        total += i * j\nprint(total)\n"
+      cpp: "int total = 0;\nfor (int i = 1; i <= 3; i++)\n    for (int j = 1; j <= 3; j++) total += i *\
+        \ j;\ncout << total;\n"
+      java: "int total = 0;\nfor (int i = 1; i <= 3; i++)\n    for (int j = 1; j <= 3; j++) total += i *\
+        \ j;\nSystem.out.println(total);\n"
+    options:
+    - '36'
+    - '18'
+    - '27'
+    - '9'
+    answer: 0
+    explanation: Rows add up to 6, 12 and 18, and 6 + 12 + 18 = 36. It is also (1 + 2 + 3) * (1 + 2 + 3)
+      = 6 * 6, which is a shortcut worth noticing.
+    difficulty: 3
+  - id: find-in-both
+    kind: output
+    prompt: Two nested loops look for the first pair (i, j) with i * j = 6. A flag is needed to leave both
+      loops. What is printed?
+    code:
+      python: "found = False\nfor i in range(1, 5):\n    for j in range(1, 5):\n        if i * j == 6:\n\
+        \            found = True\n            break\n    if found:\n        break\nprint(i, j)\n"
+      cpp: "bool found = false;\nint i, j;\nfor (i = 1; i <= 4; i++) {\n    for (j = 1; j <= 4; j++)\n \
+        \       if (i * j == 6) { found = true; break; }\n    if (found) break;\n}\ncout << i << \" \" <<\
+        \ j;\n"
+      java: "boolean found = false;\nint i, j = 0;\nfor (i = 1; i <= 4; i++) {\n    for (j = 1; j <= 4;\
+        \ j++)\n        if (i * j == 6) { found = true; break; }\n    if (found) break;\n}\nSystem.out.println(i\
+        \ + \" \" + j);\n"
+    options:
+    - 2 3
+    - 3 2
+    - 6 1
+    - 4 4
+    answer: 0
+    explanation: i = 1 has no match (j is at most 4). At i = 2, j = 3 gives 6, so the pair is 2 3. Without
+      the flag, the outer loop would keep going after the inner break.
     difficulty: 4
-  - id: break-only-inner
-    kind: output
-    prompt: "What does this print?"
-    code:
-      python: |
-        for i in range(3):
-            for j in range(3):
-                if j == 1:
-                    break
-                print(i, j)
+  - id: doubling-time
+    kind: mcq
+    prompt: An outer loop runs n times, and for each round an inner loop also runs n times. If n doubles,
+      roughly what happens to the total work?
     options:
-      - "0 0\n1 0\n2 0"
-      - "0 0"
-      - "0 0\n0 2\n1 0\n1 2\n2 0\n2 2"
-      - "Nothing"
+    - It becomes about four times as large
+    - It becomes about twice as large
+    - It stays the same
+    - It becomes about eight times as large
     answer: 0
-    explanation: "break leaves only the inner loop, so each i prints its j = 0 line and moves on."
+    explanation: The work is n times n. Doubling n gives 2n times 2n, which is 4 times the original. This
+      growth is why nested loops get slow on large input.
+    difficulty: 3
+  - id: reused-counter-python
+    kind: output
+    languages:
+    - python
+    prompt: Both loops use the name i in Python. Each for loop picks its own value from its range, so the
+      inner one does not disturb the outer one's schedule. What is printed?
+    code:
+      python: "count = 0\nfor i in range(3):\n    for i in range(2):\n        count += 1\nprint(count)\n"
+    options:
+    - '6'
+    - '2'
+    - '3'
+    - '9'
+    answer: 0
+    explanation: The outer loop still hands out 0, 1, 2 on its own schedule, and the inner one runs 2 rounds
+      each time, so 3 * 2 = 6. It is confusing to read, so use different names anyway.
+    difficulty: 5
+  - id: reused-counter-cpp-java
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: Here the inner loop reuses the OUTER counter (it assigns to it instead of declaring a new one).
+      The inner loop leaves i at 2. What is printed?
+    code:
+      cpp: "int count = 0;\nint i;\nfor (i = 0; i < 3; i++)\n    for (i = 0; i < 2; i++) count++;\ncout\
+        \ << count;\n"
+      java: "int count = 0;\nint i;\nfor (i = 0; i < 3; i++)\n    for (i = 0; i < 2; i++) count++;\nSystem.out.println(count);\n"
+    options:
+    - '2'
+    - '6'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: 'The inner loop finishes with i = 2, then the outer i++ makes it 3, which fails i < 3.
+      The outer loop ends after a single round: 2 counts instead of 6. Always give nested loops different
+      counters.'
     difficulty: 5
 problems: [staircase, pair-count, number-triangle]
 practice_links:

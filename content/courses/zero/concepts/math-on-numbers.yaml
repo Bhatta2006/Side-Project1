@@ -698,116 +698,233 @@ resources:
   minutes: 40
   level: deep
 quiz:
-- id: digit-count-zero
-  kind: mcq
-  prompt: The loop `while n > 0` counts digits. What must you add for n = 0?
-  options:
-  - "A special case, because 0 has one digit but the loop never runs"
-  - "Nothing, because the loop already counts one digit for zero"
-  - "Start the count at 1 for every n, not only when n is zero"
-  - "Change the condition to while n >= 0 so the loop runs for zero"
-  answer: 0
-  explanation: Starting at 1 would overcount every other number, and n >= 0 never stops.
-  difficulty: 1
-- id: reverse-trace
-  kind: mcq
-  prompt: What does reverse = reverse * 10 + d build for 4729?
-  options:
-  - '9274'
-  - '4729'
-  - '22'
-  - '927'
-  answer: 0
-  explanation: Each new digit is shifted in from the right.
-  difficulty: 2
-- id: armstrong
-  kind: mcq
-  prompt: Is 1634 an Armstrong number?
-  options:
-  - Yes; 1 + 1296 + 81 + 256 = 1634 with fourth powers
-  - No; its cubes add up to 308
-  - No; Armstrong numbers have three digits
-  - Only in base 4
-  answer: 0
-  explanation: The power is the number of digits.
-  difficulty: 2
-- id: divisor-pairs
-  kind: mcq
-  prompt: Which divisor of 36 is not paired with a different divisor?
-  options:
-  - '6'
-  - '1'
-  - '9'
-  - All are paired
-  answer: 0
-  explanation: 6 · 6 = 36, so 6 is its own partner.
-  difficulty: 2
-- id: square-root-once
-  kind: mcq
-  prompt: The root loop always adds 2 per divisor found. What does it report for 36?
-  options:
-  - "10 divisors, one too many"
-  - "9 divisors, exactly right"
-  - "18 divisors, doubled twice"
-  - "6 divisors, missing the root"
-  answer: 0
-  explanation: It counts 6 twice.
-  difficulty: 3
-- id: sqrt-cost
-  kind: mcq
-  prompt: About how many steps does the square-root loop take for n = 10^12?
-  options:
-  - A million
-  - A trillion
-  - Twelve
-  - A thousand
-  answer: 0
-  explanation: √(10¹²) = 10⁶.
-  difficulty: 3
-- id: prime-one
-  kind: mcq
-  prompt: Why does a primality test need a special check for n < 2?
-  options:
-  - "0 and 1 are not prime, but the loop never runs for them"
-  - "The loop crashes with a division by zero when n is 0 or 1"
-  - "0 and 1 are prime, and the loop would wrongly reject them"
-  - "It does not need one; the divisor loop already rejects them"
-  answer: 0
-  explanation: A prime needs exactly two different divisors.
-  difficulty: 3
-- id: euclid-step
-  kind: mcq
-  prompt: Euclid on (12, 18). What pair comes after (18, 12)?
-  options:
-  - (12, 6)
-  - (6, 12)
-  - (18, 6)
-  - (12, 0)
-  answer: 0
-  explanation: (x, y) becomes (y, x % y), and 18 % 12 = 6.
-  difficulty: 4
-- id: lcm-order
-  kind: mcq
-  prompt: Why compute the LCM as a // g * b instead of a * b // g in C++?
-  options:
-  - "a * b can overflow 64 bits even when the LCM fits"
-  - "Dividing first is faster, but both orders are always safe"
-  - "The two orders give different answers in exact maths"
-  - "The compiler rejects a * b // g as an invalid expression"
-  answer: 0
-  explanation: Dividing first keeps the intermediate value small.
-  difficulty: 4
-- id: fib-update
-  kind: mcq
-  prompt: a = 2, b = 3. The code runs a = b, then b = a + b. What are a and b?
-  options:
-  - 3 and 6
-  - 3 and 5
-  - 2 and 5
-  - 5 and 8
-  answer: 0
-  explanation: The second line already sees the new a.
-  difficulty: 5
+  - id: digit-count-of-zero
+    kind: bug
+    prompt: This counts how many digits a number has by dividing by 10 until nothing is left. What does
+      it print for 0 and for 407?
+    code:
+      python: "for n in (0, 407):\n    digits = 0\n    while n > 0:\n        digits += 1\n        n //=\
+        \ 10\n    print(digits, end=\" \")\n"
+      cpp: "for (int n : {0, 407}) {\n    int digits = 0;\n    while (n > 0) { digits++; n /= 10; }\n  \
+        \  cout << digits << \" \";\n}\n"
+      java: "for (int n : new int[]{0, 407}) {\n    int digits = 0;\n    while (n > 0) { digits++; n /=\
+        \ 10; }\n    System.out.print(digits + \" \");\n}\n"
+    options:
+    - 0 3
+    - 1 3
+    - 0 4
+    - 1 4
+    answer: 0
+    explanation: For 0 the loop body never runs, so the answer is 0, but the number 0 does have one digit.
+      Zero needs its own special case before the loop.
+    difficulty: 3
+  - id: armstrong
+    kind: output
+    prompt: A four-digit number is an Armstrong number if its digits, each raised to the 4th power, add
+      up to the number itself. What is printed for 1634?
+    code:
+      python: "n = 1634\ns = 0\nfor ch in str(n):\n    s += int(ch) ** 4\nprint(\"yes\" if s == n else \"\
+        no\")\n"
+      cpp: "int n = 1634, s = 0, m = n;\nwhile (m > 0) {\n    int d = m % 10;\n    s += d * d * d * d;\n\
+        \    m /= 10;\n}\ncout << (s == n ? \"yes\" : \"no\");\n"
+      java: "int n = 1634, s = 0, m = n;\nwhile (m > 0) {\n    int d = m % 10;\n    s += d * d * d * d;\n\
+        \    m /= 10;\n}\nSystem.out.println(s == n ? \"yes\" : \"no\");\n"
+    options:
+    - 'yes'
+    - 'no'
+    - '1634'
+    - Error
+    answer: 0
+    explanation: 1 + 1296 + 81 + 256 = 1634. Handling each digit separately and combining the results is
+      the standard way to test digit-based properties.
+    difficulty: 2
+  - id: divisor-count
+    kind: output
+    prompt: Divisors come in pairs (i and n / i), so only numbers up to the square root need testing. A
+      perfect square has one unpaired divisor. What is printed for 36?
+    code:
+      python: "n = 36\ncount = 0\ni = 1\nwhile i * i <= n:\n    if n % i == 0:\n        count += 1 if i\
+        \ * i == n else 2\n    i += 1\nprint(count)\n"
+      cpp: "int n = 36, count = 0;\nfor (int i = 1; i * i <= n; i++)\n    if (n % i == 0) count += (i *\
+        \ i == n) ? 1 : 2;\ncout << count;\n"
+      java: "int n = 36, count = 0;\nfor (int i = 1; i * i <= n; i++)\n    if (n % i == 0) count += (i *\
+        \ i == n) ? 1 : 2;\nSystem.out.println(count);\n"
+    options:
+    - '9'
+    - '10'
+    - '8'
+    - '6'
+    answer: 0
+    explanation: The divisors of 36 are 1, 2, 3, 4, 6, 9, 12, 18, 36. The pair counting finds (1,36), (2,18),
+      (3,12), (4,9) and the single 6, for 9 in total. Adding 2 for 6 as well would wrongly report 10.
+    difficulty: 3
+  - id: prime-test-list
+    kind: output
+    prompt: A prime has exactly two divisors, 1 and itself. This test checks every possible divisor up to
+      the square root. What is printed for 1, 2, 9 and 13 (T for prime, F for not)?
+    code:
+      python: "for n in (1, 2, 9, 13):\n    ok = n >= 2\n    i = 2\n    while i * i <= n:\n        if n\
+        \ % i == 0:\n            ok = False\n        i += 1\n    print(\"T\" if ok else \"F\", end=\" \"\
+        )\n"
+      cpp: "for (int n : {1, 2, 9, 13}) {\n    bool ok = n >= 2;\n    for (int i = 2; i * i <= n; i++)\n\
+        \        if (n % i == 0) ok = false;\n    cout << (ok ? \"T\" : \"F\") << \" \";\n}\n"
+      java: "for (int n : new int[]{1, 2, 9, 13}) {\n    boolean ok = n >= 2;\n    for (int i = 2; i * i\
+        \ <= n; i++)\n        if (n % i == 0) ok = false;\n    System.out.print((ok ? \"T\" : \"F\") + \"\
+        \ \");\n}\n"
+    options:
+    - F T F T
+    - T T F T
+    - F T T T
+    - F F F T
+    answer: 0
+    explanation: 1 is not prime, 2 is the smallest prime, 9 = 3 * 3 has a divisor, and 13 has none. The
+      n >= 2 start is what handles 1, and 2 passes because the loop does not even start.
+    difficulty: 3
+  - id: prime-one-bug
+    kind: bug
+    prompt: This primality test forgets that numbers below 2 are not prime. What does it print for 1 and
+      for 0?
+    code:
+      python: "for n in (1, 0):\n    ok = True\n    i = 2\n    while i * i <= n:\n        if n % i == 0:\n\
+        \            ok = False\n        i += 1\n    print(\"T\" if ok else \"F\", end=\" \")\n"
+      cpp: "for (int n : {1, 0}) {\n    bool ok = true;\n    for (int i = 2; i * i <= n; i++)\n        if\
+        \ (n % i == 0) ok = false;\n    cout << (ok ? \"T\" : \"F\") << \" \";\n}\n"
+      java: "for (int n : new int[]{1, 0}) {\n    boolean ok = true;\n    for (int i = 2; i * i <= n; i++)\n\
+        \        if (n % i == 0) ok = false;\n    System.out.print((ok ? \"T\" : \"F\") + \" \");\n}\n"
+    options:
+    - T T
+    - F F
+    - T F
+    - F T
+    answer: 0
+    explanation: For 1 and 0 the loop never runs, so ok keeps its starting True and both are reported as
+      primes. Starting with the check n >= 2 fixes it.
+    difficulty: 4
+  - id: sqrt-cost
+    kind: mcq
+    prompt: A divisor search tests every i with i * i <= n. About how many tests is that for n = 10^12?
+    options:
+    - About 1,000,000 (10^6)
+    - About 10^12
+    - About 500,000,000,000
+    - About 12
+    answer: 0
+    explanation: The loop stops at the square root, and sqrt(10^12) = 10^6. Looping to n would be a million
+      times slower, which is the whole point of testing only up to the square root.
+    difficulty: 3
+  - id: gcd-lcm
+    kind: output
+    prompt: The least common multiple is found as a / gcd * b, where the gcd comes from Euclid's method.
+      What is printed (gcd, lcm) for 84 and 36?
+    code:
+      python: "a, b = 84, 36\nx, y = a, b\nwhile y:\n    x, y = y, x % y\nprint(x, a // x * b)\n"
+      cpp: 'int a = 84, b = 36, x = a, y = b;
+
+        while (y) { int t = x % y; x = y; y = t; }
+
+        cout << x << " " << a / x * b;
+
+        '
+      java: 'int a = 84, b = 36, x = a, y = b;
+
+        while (y != 0) { int t = x % y; x = y; y = t; }
+
+        System.out.println(x + " " + a / x * b);
+
+        '
+    options:
+    - 12 252
+    - 6 504
+    - 12 3024
+    - 36 84
+    answer: 0
+    explanation: (84, 36) → (36, 12) → (12, 0), so the gcd is 12. The lcm is 84 / 12 * 36 = 252. Dividing
+      first keeps the intermediate number small, which prevents overflow with big values.
+    difficulty: 3
+  - id: fib-update-bug
+    kind: bug
+    prompt: The next Fibonacci pair is meant to be (b, a + b). This code does the updates in the wrong order
+      for a = 2, b = 3. What does it print?
+    code:
+      python: 'a, b = 2, 3
+
+        a = b
+
+        b = a + b
+
+        print(a, b)
+
+        '
+      cpp: 'int a = 2, b = 3;
+
+        a = b;
+
+        b = a + b;
+
+        cout << a << " " << b;
+
+        '
+      java: 'int a = 2, b = 3;
+
+        a = b;
+
+        b = a + b;
+
+        System.out.println(a + " " + b);
+
+        '
+    options:
+    - 3 6
+    - 3 5
+    - 5 3
+    - 2 5
+    answer: 0
+    explanation: After a = b, the old a (2) is lost, so b becomes 3 + 3 = 6 rather than 2 + 3 = 5. Keep
+      the sum in a temporary variable (t = a + b) first, then shift.
+    difficulty: 4
+  - id: perfect-number
+    kind: output
+    prompt: A perfect number equals the sum of its proper divisors (the divisors smaller than itself). What
+      is printed for 28?
+    code:
+      python: "n = 28\ns = 0\nfor d in range(1, n):\n    if n % d == 0:\n        s += d\nprint(\"perfect\"\
+        \ if s == n else \"not perfect\")\n"
+      cpp: "int n = 28, s = 0;\nfor (int d = 1; d < n; d++)\n    if (n % d == 0) s += d;\ncout << (s ==\
+        \ n ? \"perfect\" : \"not perfect\");\n"
+      java: "int n = 28, s = 0;\nfor (int d = 1; d < n; d++)\n    if (n % d == 0) s += d;\nSystem.out.println(s\
+        \ == n ? \"perfect\" : \"not perfect\");\n"
+    options:
+    - perfect
+    - not perfect
+    - '28'
+    - Error
+    answer: 0
+    explanation: The proper divisors of 28 are 1, 2, 4, 7 and 14, and they add up to 28. The loop stops
+      before n so that n itself is not counted.
+    difficulty: 2
+  - id: java-multiply-overflow
+    kind: output
+    languages:
+    - java
+    prompt: A Java int holds numbers only up to about 2.1 billion, and larger results wrap around. What
+      is printed?
+    code:
+      java: 'int a = 100000, b = 100000;
+
+        System.out.println(a * b);
+
+        System.out.println((long) a * b);
+
+        '
+    options:
+    - 1410065408 10000000000
+    - 10000000000 10000000000
+    - 1410065408 1410065408
+    - Error 10000000000
+    answer: 0
+    explanation: 100000 * 100000 = 10^10 does not fit in an int, so the first result silently wraps to 1410065408.
+      Converting one operand to long before multiplying makes the whole calculation use 64 bits.
+    difficulty: 5
 problems:
 - number-mood
 - square-tiles

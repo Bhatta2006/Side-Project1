@@ -149,78 +149,211 @@ resources:
     source: Python Tutor
     minutes: 10
 quiz:
-  - id: range-end
-    languages: [python]
-    kind: mcq
-    prompt: "In Python, which numbers does range(2, 6) produce?"
-    options: ["2, 3, 4, 5", "2, 3, 4, 5, 6", "3, 4, 5, 6", "2, 6"]
-    answer: 0
-    explanation: range includes the start and stops before the end.
-    difficulty: 1
   - id: count-rounds
     kind: output
-    prompt: How many lines are printed?
+    prompt: The loop counter goes up in steps of 5. How many rounds does it run (what is printed)?
     code:
-      python: |
-        for i in range(0, 20, 5):
-            print(i)
-      cpp: |
-        for (int i = 0; i < 20; i += 5) cout << i << "\n";
-      java: |
-        for (int i = 0; i < 20; i += 5) System.out.println(i);
-    options: ["4", "5", "20", "3"]
+      python: "rounds = 0\nfor i in range(0, 20, 5):\n    rounds += 1\nprint(rounds)\n"
+      cpp: 'int rounds = 0;
+
+        for (int i = 0; i < 20; i += 5) rounds++;
+
+        cout << rounds;
+
+        '
+      java: 'int rounds = 0;
+
+        for (int i = 0; i < 20; i += 5) rounds++;
+
+        System.out.println(rounds);
+
+        '
+    options:
+    - '4'
+    - '5'
+    - '20'
+    - '3'
     answer: 0
-    explanation: i takes 0, 5, 10 and 15. At 20 the condition fails, so 4 lines.
+    explanation: i takes the values 0, 5, 10 and 15; 20 is not below 20, so it stops. Counting the values,
+      not dividing the end by the step, is the safe way.
     difficulty: 2
+  - id: inclusive-sum
+    kind: output
+    prompt: Add up the whole numbers from 1 to 5, including 5. What is printed?
+    code:
+      python: "total = 0\nfor i in range(1, 6):\n    total += i\nprint(total)\n"
+      cpp: 'int total = 0;
+
+        for (int i = 1; i <= 5; i++) total += i;
+
+        cout << total;
+
+        '
+      java: 'int total = 0;
+
+        for (int i = 1; i <= 5; i++) total += i;
+
+        System.out.println(total);
+
+        '
+    options:
+    - '15'
+    - '10'
+    - '21'
+    - '5'
+    answer: 0
+    explanation: 1 + 2 + 3 + 4 + 5 = 15. Python's range stops before its end value, so it needs 6 to include
+      5; C++ and Java get the same effect with <= 5.
+    difficulty: 2
+  - id: countdown
+    kind: output
+    prompt: This loop counts down in steps of 3. What is printed?
+    code:
+      python: "for i in range(10, 0, -3):\n    print(i, end=\" \")\n"
+      cpp: 'for (int i = 10; i > 0; i -= 3) cout << i << " ";
+
+        '
+      java: 'for (int i = 10; i > 0; i -= 3) System.out.print(i + " ");
+
+        '
+    options:
+    - 10 7 4 1
+    - 10 7 4 1 -2
+    - 10 7 4
+    - 9 6 3
+    answer: 0
+    explanation: 10, 7, 4 and 1 are all still above 0. The next value, -2, fails the test, so the loop ends
+      before using it.
+    difficulty: 3
+  - id: continue-break
+    kind: output
+    prompt: continue skips the rest of this round; break leaves the loop entirely. What is printed?
+    code:
+      python: "for i in range(1, 7):\n    if i == 3:\n        continue\n    if i == 5:\n        break\n\
+        \    print(i, end=\" \")\n"
+      cpp: "for (int i = 1; i <= 6; i++) {\n    if (i == 3) continue;\n    if (i == 5) break;\n    cout\
+        \ << i << \" \";\n}\n"
+      java: "for (int i = 1; i <= 6; i++) {\n    if (i == 3) continue;\n    if (i == 5) break;\n    System.out.print(i\
+        \ + \" \");\n}\n"
+    options:
+    - 1 2 4
+    - 1 2 4 6
+    - 1 2
+    - 1 2 3 4
+    answer: 0
+    explanation: 3 is skipped by continue, 4 prints, and at 5 the break ends everything, so 6 is never reached.
+    difficulty: 3
+  - id: even-sum
+    kind: output
+    prompt: Only the even numbers from 1 to 10 are added. What is printed?
+    code:
+      python: "total = 0\nfor i in range(1, 11):\n    if i % 2 == 0:\n        total += i\nprint(total)\n"
+      cpp: "int total = 0;\nfor (int i = 1; i <= 10; i++)\n    if (i % 2 == 0) total += i;\ncout << total;\n"
+      java: "int total = 0;\nfor (int i = 1; i <= 10; i++)\n    if (i % 2 == 0) total += i;\nSystem.out.println(total);\n"
+    options:
+    - '30'
+    - '55'
+    - '25'
+    - '20'
+    answer: 0
+    explanation: 2 + 4 + 6 + 8 + 10 = 30. The condition inside the loop filters which rounds add to the
+      total.
+    difficulty: 2
+  - id: zero-rounds
+    kind: output
+    prompt: The starting value already fails the loop condition. What is printed?
+    code:
+      python: "count = 0\nfor i in range(5, 5):\n    count += 1\nprint(count)\n"
+      cpp: 'int count = 0;
+
+        for (int i = 5; i < 5; i++) count++;
+
+        cout << count;
+
+        '
+      java: 'int count = 0;
+
+        for (int i = 5; i < 5; i++) count++;
+
+        System.out.println(count);
+
+        '
+    options:
+    - '0'
+    - '1'
+    - '5'
+    - Error
+    answer: 0
+    explanation: The condition is checked before the first round, so a loop can run zero times without any
+      error. An empty range is a valid, common edge case.
+    difficulty: 2
+  - id: count-vowels
+    kind: output
+    prompt: A loop can walk over the characters of a word. What is printed?
+    code:
+      python: "n = 0\nfor ch in \"education\":\n    if ch in \"aeiou\":\n        n += 1\nprint(n)\n"
+      cpp: "string w = \"education\";\nint n = 0;\nfor (char ch : w)\n    if (string(\"aeiou\").find(ch)\
+        \ != string::npos) n++;\ncout << n;\n"
+      java: "int n = 0;\nfor (char ch : \"education\".toCharArray())\n    if (\"aeiou\".indexOf(ch) >= 0)\
+        \ n++;\nSystem.out.println(n);\n"
+    options:
+    - '5'
+    - '4'
+    - '6'
+    - '3'
+    answer: 0
+    explanation: e, u, a, i and o are the five vowels in e-d-u-c-a-t-i-o-n. Each character gets one round,
+      and the if decides whether to count it.
+    difficulty: 3
   - id: for-vs-while
     kind: mcq
     prompt: Which task suits a while loop better than a for loop?
     options:
-      - "Keep asking for a password until it is correct"
-      - "Print every whole number from 1 up to 100"
-      - "Add up every value stored in a list of prices"
-      - "Repeat a greeting message exactly five times"
+    - Keep asking for a password until it is correct
+    - Print every whole number from 1 to 100
+    - Add up every price in a list of 20 prices
+    - Show a greeting exactly five times
     answer: 0
-    explanation: You cannot know in advance how many attempts it will take, so loop until the condition changes.
+    explanation: You cannot know in advance how many tries the password will take, so the loop must run
+      while a condition holds. A for loop is for a known number of rounds.
     difficulty: 1
-  - id: break-meaning
-    kind: mcq
-    prompt: What does break do inside a loop?
-    options: ["Leaves the loop immediately", "Skips to the next round", "Restarts the loop", "Ends the program"]
-    answer: 0
-    explanation: break exits the loop; continue skips to the next round.
-    difficulty: 1
-  - id: range-step
+  - id: change-counter-python
     kind: output
-    prompt: "What does this print?"
+    languages:
+    - python
+    prompt: In Python, each round gets a fresh i from the range, so changing i inside the body does not
+      affect the next round. What is printed?
     code:
-      python: |
-        print(list(range(10, 0, -3)))
+      python: "total = 0\nfor i in range(3):\n    i = i * 10\n    total += i\nprint(total)\n"
     options:
-      - "[10, 7, 4, 1]"
-      - "[10, 7, 4, 1, -2]"
-      - "[10, 7, 4]"
-      - "[]"
+    - '30'
+    - '10'
+    - '0'
+    - '60'
     answer: 0
-    explanation: "range stops before reaching 0 when stepping by -3: 10, 7, 4, 1."
+    explanation: 'The rounds still give i = 0, 1, 2 from the range, and each is multiplied by 10 before
+      use: 0 + 10 + 20 = 30.'
     difficulty: 4
-  - id: modify-loop-var
+  - id: change-counter-cpp-java
     kind: output
-    prompt: "What does this print?"
+    languages:
+    - cpp
+    - java
+    prompt: In C++ and Java the loop counter is one real variable, so changing it inside the body changes
+      the loop itself. What is printed?
     code:
-      python: |
-        total = 0
-        for i in range(3):
-            i = i * 10
-            total += i
-        print(total)
+      cpp: "int total = 0;\nfor (int i = 0; i < 3; i++) {\n    i = i * 10;\n    total += i;\n}\ncout <<\
+        \ total;\n"
+      java: "int total = 0;\nfor (int i = 0; i < 3; i++) {\n    i = i * 10;\n    total += i;\n}\nSystem.out.println(total);\n"
     options:
-      - "30"
-      - "3"
-      - "0"
-      - "60"
+    - '10'
+    - '30'
+    - '0'
+    - '60'
     answer: 0
-    explanation: "Reassigning i changes this iteration only; range still supplies 0, 1, 2, so total = 0 + 10 + 20."
+    explanation: 'Round one: i = 0 stays 0. Then i++ makes it 1; round two: i becomes 10 and total is 10.
+      i++ gives 11, which fails i < 3, so the loop ends. Writing to the loop counter is almost always a
+      bug.'
     difficulty: 5
 problems: [fizzbuzz, sum-of-multiples, times-table]
 practice_links:

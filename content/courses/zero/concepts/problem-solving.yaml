@@ -124,41 +124,164 @@ quiz:
     kind: mcq
     prompt: You open a brand-new problem. What should you do first?
     options:
-      - "Work through the given examples by hand to confirm you understand them"
-      - "Start typing a solution straight away and let the examples catch mistakes"
-      - "Search online for the problem's name and read an accepted solution first"
-      - "Choose the fastest algorithm you know and adapt the problem to fit it"
+    - Restate it in your own words and work out the answer for a tiny example by hand
+    - Start writing code straight away and fix whatever goes wrong as you go
+    - Search online for a finished solution that you can copy and paste
+    - Pick the most advanced technique you know and try to make it fit
     answer: 0
-    explanation: If you cannot produce the example outputs by hand, any code you write is guesswork.
+    explanation: If you cannot solve a tiny case on paper, you do not yet understand the task. The by-hand
+      steps usually reveal the loop or rule that the code needs.
     difficulty: 1
-  - id: constraints
+  - id: size-limits
     kind: mcq
     prompt: A problem has n up to 200,000. Which approach is most likely too slow?
-    options: ["Checking every pair with nested loops", "One pass over the input with a map", "Sorting the input, then one scan", "Reading all the input once at the start"]
-    answer: 0
-    explanation: 200,000² is 4·10^10 operations — far too many. One pass or sorting is fine.
-    difficulty: 2
-  - id: brute-force
-    kind: mcq
-    prompt: You see a slow but simple correct solution and are unsure of a fast one. Good move?
     options:
-      - "Write the simple one first, then look for repeated work to remove"
-      - "Give up on the problem and come back once you know the trick"
-      - "Submit nothing until you are sure the solution is optimal"
-      - "Submit the slow one without testing to save time for the fast one"
+    - Two nested loops over all pairs, about 4 * 10^10 steps
+    - One loop with a quick check per item, about 2 * 10^5 steps
+    - Sorting the data first, about 4 * 10^6 steps
+    - Counting values with a map, about 2 * 10^5 steps
     answer: 0
-    explanation: A correct baseline gives progress, confidence, and a checker for faster versions.
+    explanation: 'A computer does roughly 10^8 simple steps per second, so 4 * 10^10 would take minutes.
+      Read the constraints before choosing the method: they tell you how much work is allowed.'
+    difficulty: 2
+  - id: slow-but-correct
+    kind: mcq
+    prompt: You can see a slow but simple solution, and you are unsure about a faster idea. What is a good
+      move?
+    options:
+    - Write the slow one first, as a correct reference to check any faster version against
+    - Skip it entirely, because a slow solution has no real value in a contest
+    - Wait until you are completely sure about the fast version before coding
+    - Submit the slow one anyway and hope that the hidden tests are small
+    answer: 0
+    explanation: A brute-force answer works as a checker for small inputs. If the fast version ever disagrees
+      with it, you have found a bug and a failing test at once.
     difficulty: 1
+  - id: count-the-work
+    kind: output
+    prompt: 'Estimating cost: how many times does the innermost line run? What is printed?'
+    code:
+      python: "count = 0\nfor i in range(1000):\n    for j in range(i):\n        count += 1\nprint(count)\n"
+      cpp: "long long count = 0;\nfor (int i = 0; i < 1000; i++)\n    for (int j = 0; j < i; j++) count++;\n\
+        cout << count;\n"
+      java: "long count = 0;\nfor (int i = 0; i < 1000; i++)\n    for (int j = 0; j < i; j++) count++;\n\
+        System.out.println(count);\n"
+    options:
+    - '499500'
+    - '1000000'
+    - '1000'
+    - '500000'
+    answer: 0
+    explanation: The inner loop runs 0, 1, 2 ... 999 times, adding up to 999 * 1000 / 2 = 499,500. It is
+      about half of n squared, which is still quadratic.
+    difficulty: 3
+  - id: equal-pairs
+    kind: output
+    prompt: 'Working a tiny example by hand: how many pairs of positions (i before j) hold equal values
+      in [1, 2, 1, 2, 1]? What is printed?'
+    code:
+      python: "a = [1, 2, 1, 2, 1]\ncount = 0\nfor i in range(len(a)):\n    for j in range(i + 1, len(a)):\n\
+        \        if a[i] == a[j]:\n            count += 1\nprint(count)\n"
+      cpp: "vector<int> a = {1, 2, 1, 2, 1};\nint count = 0;\nfor (int i = 0; i < (int)a.size(); i++)\n\
+        \    for (int j = i + 1; j < (int)a.size(); j++)\n        if (a[i] == a[j]) count++;\ncout << count;\n"
+      java: "int[] a = {1, 2, 1, 2, 1};\nint count = 0;\nfor (int i = 0; i < a.length; i++)\n    for (int\
+        \ j = i + 1; j < a.length; j++)\n        if (a[i] == a[j]) count++;\nSystem.out.println(count);\n"
+    options:
+    - '4'
+    - '5'
+    - '3'
+    - '10'
+    answer: 0
+    explanation: The three 1s form 3 pairs and the two 2s form 1 pair, so 4. A value appearing k times gives
+      k(k - 1) / 2 pairs, which suggests a faster counting method with a map.
+    difficulty: 3
+  - id: test-a-maximum
+    kind: mcq
+    prompt: You wrote a function that returns the largest value in a list. Which test list is the best at
+      catching a hidden mistake?
+    options:
+    - '[-5, -2, -9], where every value is negative'
+    - '[3, 1, 4, 1, 5], a typical mix of values'
+    - '[10, 20, 30], already sorted in order'
+    - '[7, 7, 7], where all the values are equal'
+    answer: 0
+    explanation: A function that starts its 'best so far' at 0 passes the ordinary lists and fails only
+      when all values are negative. Tests should target the assumptions your code quietly makes.
+    difficulty: 2
+  - id: reuse-a-lookup
+    kind: output
+    prompt: 'Reduce the problem to one you know: does any pair of the numbers add up to 9? A set of the
+      numbers already seen answers it in one pass. What is printed?'
+    code:
+      python: "a = [3, 8, 5, 4]\nseen = set()\nfound = False\nfor x in a:\n    if 9 - x in seen:\n     \
+        \   found = True\n    seen.add(x)\nprint(\"yes\" if found else \"no\")\n"
+      cpp: "vector<int> a = {3, 8, 5, 4};\nset<int> seen;\nbool found = false;\nfor (int x : a) {\n    if\
+        \ (seen.count(9 - x)) found = true;\n    seen.insert(x);\n}\ncout << (found ? \"yes\" : \"no\");\n"
+      java: "int[] a = {3, 8, 5, 4};\nSet<Integer> seen = new HashSet<>();\nboolean found = false;\nfor\
+        \ (int x : a) {\n    if (seen.contains(9 - x)) found = true;\n    seen.add(x);\n}\nSystem.out.println(found\
+        \ ? \"yes\" : \"no\");\n"
+    options:
+    - 'yes'
+    - 'no'
+    - '9'
+    - Error
+    answer: 0
+    explanation: When x = 4, the partner 9 - 4 = 5 has already been seen, so a pair (5, 4) exists. Remembering
+      earlier values replaces the pair-by-pair search.
+    difficulty: 3
+  - id: running-window
+    kind: output
+    prompt: 'Instead of re-adding three numbers every time, slide a window: add the new value and subtract
+      the one that leaves. What is the largest sum of 3 neighbours in [1, 2, 3, 4, 5]?'
+    code:
+      python: "a = [1, 2, 3, 4, 5]\ncur = sum(a[:3])\nbest = cur\nfor i in range(3, len(a)):\n    cur +=\
+        \ a[i] - a[i - 3]\n    best = max(best, cur)\nprint(best)\n"
+      cpp: "vector<int> a = {1, 2, 3, 4, 5};\nint cur = a[0] + a[1] + a[2], best = cur;\nfor (int i = 3;\
+        \ i < (int)a.size(); i++) {\n    cur += a[i] - a[i - 3];\n    best = max(best, cur);\n}\ncout <<\
+        \ best;\n"
+      java: "int[] a = {1, 2, 3, 4, 5};\nint cur = a[0] + a[1] + a[2], best = cur;\nfor (int i = 3; i <\
+        \ a.length; i++) {\n    cur += a[i] - a[i - 3];\n    best = Math.max(best, cur);\n}\nSystem.out.println(best);\n"
+    options:
+    - '12'
+    - '15'
+    - '9'
+    - '6'
+    answer: 0
+    explanation: The windows add to 6, 9 and 12, and the last is the largest. Each step does two operations
+      instead of three, and the saving grows with the window size.
+    difficulty: 3
+  - id: greedy-trap
+    kind: bug
+    prompt: Making 6 with coins of 1, 3 and 4. This greedy method always takes the largest coin that still
+      fits. What does it print for the number of coins? (The best possible is 2.)
+    code:
+      python: "amount = 6\ncoins = 0\nfor c in (4, 3, 1):\n    coins += amount // c\n    amount %= c\nprint(coins)\n"
+      cpp: "int amount = 6, coins = 0;\nfor (int c : {4, 3, 1}) {\n    coins += amount / c;\n    amount\
+        \ %= c;\n}\ncout << coins;\n"
+      java: "int amount = 6, coins = 0;\nfor (int c : new int[]{4, 3, 1}) {\n    coins += amount / c;\n\
+        \    amount %= c;\n}\nSystem.out.println(coins);\n"
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: Greedy takes 4, then 1 and 1, for 3 coins, while 3 + 3 uses only 2. A rule that feels right
+      is not a proof; check it against a brute force on small cases before trusting it.
+    difficulty: 4
   - id: reflect
     kind: mcq
-    prompt: Why reflect after solving a problem?
+    prompt: You have just solved a problem and it passed. Why is it still worth a minute to look back at
+      it?
     options:
-      - "To extract the key insight so you recognise it in future problems"
-      - "To shave milliseconds off the accepted submission's running time"
-      - "Because the judge requires a written reflection before scoring"
-      - "To memorise the exact code so you can type it again from memory"
+    - Naming the idea that worked lets you recognise and reuse it on later problems
+    - It does not matter any more once the judge has accepted the solution
+    - To check whether the judge happened to make a mistake in its tests
+    - To find a way of making the accepted code a bit longer than before
     answer: 0
-    explanation: Patterns, not memorized code, transfer to new problems.
+    explanation: 'Skill comes from patterns you can recall later: what was the key observation, what would
+      have broken it, and what is it similar to. Writing that down is what turns one solved problem into
+      many.'
     difficulty: 1
 problems: [two-sum-exists]
 practice_links:
