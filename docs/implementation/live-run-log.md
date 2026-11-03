@@ -43,6 +43,7 @@ provider: no real latency, rate limits, token counts or refusals.
 | 26 | browser step, phone width | Every page is 20px wider than a 390px screen (settings far wider); the avatar in the top bar is cut off | **existing app bug in the shared top bar**, not caused by generated content | not fixed; the lesson table is already inside its own scroll box |
 | 27 | browser step | The sidebar shows "Mastered" with the reason "Not yet shown without help on a real task" under it, and the step list says "Practice: Mastered", after one 4/5 quiz and one graded answer | **wording defect on screen**: older band names ("strong" shown as Mastered) vs newer evidence stages | not changed; owner to choose the wording |
 | 28 | browser step | The lesson text still says insurance "must profit", the sentence the fact checker flagged as too strong; it was released with the warning and the "a person needs to confirm" label | by design (warnings do not block) | worth deciding whether fact warnings should trigger one more revision |
+| 29 | researcher step (reported by the stand-in) | The registry the researcher is told to prefer is mostly competitive-programming sources, which suit a probability course poorly; the stand-in used only the few general ones, and said its URLs were not checked | **app quality issue**: registry hint is not filtered by the course's domain | not changed; worth filtering by adapter |
 
 ### Bug #7 in detail
 
