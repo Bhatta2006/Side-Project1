@@ -184,20 +184,6 @@ quiz:
     explanation: 'The longest chain is 1, 2, 4, 6: four nodes. The base case h(0) = 0 is what makes an empty
       child count as nothing, and every node adds one on top of its taller child.'
     difficulty: 2
-  - id: stack-depth
-    kind: mcq
-    prompt: A recursive DFS visits every node of a tree with 1,000,000 nodes. How deep does the call stack
-      get for a perfectly balanced tree, and for a single long chain?
-    options:
-    - About 20 frames for the balanced tree, and up to 1,000,000 frames for the chain
-    - About 500,000 frames for the balanced tree, and 1,000,000 frames for the chain
-    - About 1,000,000 frames for both, since every node has to be visited once
-    - About 20 frames for both, since the recursion depth depends only on log n
-    answer: 0
-    explanation: Stack depth is the tree height, not the node count. Balanced means height about log2 n;
-      a chain has height n. Space for recursive tree code is O(h), which is why deep skewed inputs overflow
-      the stack.
-    difficulty: 2
   - id: postorder-output
     kind: output
     prompt: Same tree as before (1 has children 2, 3; 2 has children 4, 5; 4 has the left child 6). What
@@ -322,6 +308,30 @@ quiz:
       recursion consumes exactly the tokens of each subtree, so the parse has one possible reading. Distinct
       values are not required.
     difficulty: 5
+  - id: diameter-nodes-or-edges
+    kind: bug
+    prompt: The diameter is the number of EDGES on the longest path. This code is run on a chain of three
+      nodes (1 - 2 - 3) and should print 2, but it counts nodes instead. What does it print?
+    code:
+      python: "L = [1, 2, -1]\nR = [-1, -1, -1]\nbest = 0\ndef h(u):\n    global best\n    if u == -1:\n\
+        \        return 0\n    a, b = h(L[u]), h(R[u])\n    best = max(best, a + b + 1)\n    return max(a,\
+        \ b) + 1\nh(0)\nprint(best)\n"
+      cpp: "int L[3] = {1, 2, -1}, R[3] = {-1, -1, -1};\nint best = 0;\nfunction<int(int)> h = [&](int u)\
+        \ -> int {\n    if (u == -1) return 0;\n    int a = h(L[u]), b = h(R[u]);\n    best = max(best,\
+        \ a + b + 1);\n    return max(a, b) + 1;\n};\nh(0);\ncout << best;\n"
+      java: "class T {\n    int[] L = {1, 2, -1}, R = {-1, -1, -1};\n    int best = 0;\n    int h(int u)\
+        \ {\n        if (u == -1) return 0;\n        int a = h(L[u]), b = h(R[u]);\n        best = Math.max(best,\
+        \ a + b + 1);\n        return Math.max(a, b) + 1;\n    }\n}\nT t = new T();\nt.h(0);\nSystem.out.println(t.best);\n"
+    options:
+    - '3'
+    - '2'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: The + 1 turns left height + right height into a count of nodes on the path. For edges,
+      record a + b without the extra 1 (heights here count nodes, so the path through the root has a + b
+      edges).
+    difficulty: 3
 problems: [tree-levels, tree-diameter, village-sentries]
 practice_links:
   - title: Invert Binary Tree

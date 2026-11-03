@@ -180,19 +180,6 @@ quiz:
     explanation: 'The inner loop runs 5, 4, 3, 2, 1, 0 times: 5 + 4 + 3 + 2 + 1 = 15 = n(n − 1)/2. That
       is O(n²) even though it is half of n².'
     difficulty: 2
-  - id: time-budget
-    kind: mcq
-    prompt: n = 10^5 and the algorithm does n² simple steps. At about 10^8 simple steps per second, roughly
-      how long does it take?
-    options:
-    - About 100 seconds
-    - About 1 second
-    - About 10 milliseconds
-    - About 10 seconds
-    answer: 0
-    explanation: n² = 10^10, and 10^10 / 10^8 = 100 s. This arithmetic is how you rule out an approach before
-      writing it.
-    difficulty: 2
   - id: hidden-list
     kind: mcq
     languages:
@@ -302,6 +289,27 @@ quiz:
       loop always runs to the end: n + (n − 1) + ... = O(n²). If every element exceeds x, the inner loop
       stops at once (O(n) total).'
     difficulty: 5
+  - id: front-insert-cost
+    kind: output
+    prompt: A loop inserts the numbers 0 to 999 at the FRONT of a dynamic array, one at a time. Inserting
+      at the front shifts every existing element one place to the right. How many element moves are counted
+      in total?
+    code:
+      python: "moves = 0\na = []\nfor x in range(1000):\n    moves += len(a)\n    a.insert(0, x)\nprint(moves)\n"
+      cpp: "long long moves = 0;\nvector<int> a;\nfor (int x = 0; x < 1000; x++) {\n    moves += a.size();\n\
+        \    a.insert(a.begin(), x);\n}\ncout << moves;\n"
+      java: "long moves = 0;\nArrayList<Integer> a = new ArrayList<>();\nfor (int x = 0; x < 1000; x++)\
+        \ {\n    moves += a.size();\n    a.add(0, x);\n}\nSystem.out.println(moves);\n"
+    options:
+    - '499500'
+    - '1000'
+    - '999'
+    - '1000000'
+    answer: 0
+    explanation: The k-th insert moves k elements, so the total is 0 + 1 + ... + 999 = 499,500, about n
+      squared / 2. Each insert looks cheap, yet the loop is quadratic; appending at the end (or using a
+      deque) avoids it.
+    difficulty: 3
 problems: [sum-queries, matching-pairs, loop-iterations]
 practice_links:
   - title: Contains Duplicate

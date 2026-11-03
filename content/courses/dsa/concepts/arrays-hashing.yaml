@@ -152,19 +152,6 @@ quiz:
     explanation: One pass with O(1) average lookups is O(n) time. The price is the map, which can hold up
       to n entries.
     difficulty: 1
-  - id: anagram-key
-    kind: mcq
-    prompt: You group words so that anagrams land together. Which key puts two words in the same group exactly
-      when they are anagrams?
-    options:
-    - The word's letters sorted, or its 26-letter count tuple
-    - The word's length, since anagrams have the same length
-    - The word's first letter, which anagrams always share
-    - The word reversed, because anagrams read the same backwards
-    answer: 0
-    explanation: 'Anagrams have identical letter multisets, so a canonical form of the multiset is the key.
-      Length alone is necessary but not sufficient: ''ab'' and ''cd'' share it.'
-    difficulty: 2
   - id: two-sum-trace
     kind: output
     prompt: What does this one-pass Two Sum print?
@@ -280,6 +267,28 @@ quiz:
     answer: 0
     explanation: std::map works because pair has operator<. For unordered_map you must provide a hash, for
       instance combining the two ints into one 64-bit value.
+    difficulty: 3
+  - id: sum-key-collision
+    kind: bug
+    prompt: A programmer groups anagrams by using the SUM of the letter codes as the dictionary key. The
+      words are 'ad' and 'bc', which are NOT anagrams. How many groups does this print?
+    code:
+      python: "words = [\"ad\", \"bc\"]\ngroups = {}\nfor w in words:\n    key = sum(ord(c) for c in w)\n\
+        \    groups.setdefault(key, []).append(w)\nprint(len(groups))\n"
+      cpp: "map<int, vector<string>> groups;\nfor (string w : {\"ad\", \"bc\"}) {\n    int key = 0;\n  \
+        \  for (char c : w) key += c;\n    groups[key].push_back(w);\n}\ncout << groups.size();\n"
+      java: "Map<Integer, List<String>> groups = new HashMap<>();\nfor (String w : new String[]{\"ad\",\
+        \ \"bc\"}) {\n    int key = 0;\n    for (char c : w.toCharArray()) key += c;\n    groups.computeIfAbsent(key,\
+        \ k -> new ArrayList<>()).add(w);\n}\nSystem.out.println(groups.size());\n"
+    options:
+    - '1'
+    - '2'
+    - '0'
+    - '4'
+    answer: 0
+    explanation: 'a + d = 97 + 100 = 197 and b + c = 98 + 99 = 197, so different letter sets collide on
+      the same sum. A key must be unique to the anagram class: use the sorted letters, or a tuple of 26
+      letter counts.'
     difficulty: 3
 problems: [valid-anagram, top-k-frequent, consecutive-run]
 practice_links:

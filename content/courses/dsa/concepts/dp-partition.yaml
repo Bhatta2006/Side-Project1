@@ -800,17 +800,6 @@ quiz:
     answer: 0
     explanation: Every bracketing ends with a final split of the range.
     difficulty: 1
-  - id: loop-order
-    kind: mcq
-    prompt: In which order must dp[i][j] be filled?
-    options:
-    - By range length, shortest first
-    - Row by row from i = 0
-    - Column by column from j = n − 1
-    - Any order
-    answer: 0
-    explanation: A range reads only strictly shorter ranges.
-    difficulty: 2
   - id: three
     kind: mcq
     prompt: Dimensions 10 30 5 60. What does the table give?
@@ -920,6 +909,34 @@ quiz:
     explanation: 'Pad the array with a 1 on both ends and let dp[lo][hi] be the best for balloons strictly
       between lo and hi, choosing k as the LAST balloon burst there: dp[lo][k] + dp[k][hi] + n[lo] * n[k]
       * n[hi]. One optimal order is 1, 5, 3, 8, which earns 15 + 120 + 24 + 8 = 167.'
+    difficulty: 4
+  - id: wrong-fill-order
+    kind: bug
+    prompt: Matrix-chain cost for dimensions 10, 20, 30, 40, 30 should be 30000. This table loops i upwards
+      and j upwards, so some sub-ranges it reads are not computed yet (they still hold 0). What does it
+      print?
+    code:
+      python: "p = [10, 20, 30, 40, 30]\nn = len(p) - 1\ndp = [[0] * n for _ in range(n)]\nfor i in range(n):\n\
+        \    for j in range(i + 1, n):\n        dp[i][j] = 10**9\n        for k in range(i, j):\n      \
+        \      dp[i][j] = min(dp[i][j], dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] * p[j + 1])\nprint(dp[0][n\
+        \ - 1])\n"
+      cpp: "int p[5] = {10, 20, 30, 40, 30};\nint n = 4;\nint dp[4][4] = {};\nfor (int i = 0; i < n; i++)\n\
+        \    for (int j = i + 1; j < n; j++) {\n        dp[i][j] = 1000000000;\n        for (int k = i;\
+        \ k < j; k++)\n            dp[i][j] = min(dp[i][j], dp[i][k] + dp[k + 1][j] + p[i] * p[k + 1] *\
+        \ p[j + 1]);\n    }\ncout << dp[0][n - 1];\n"
+      java: "int[] p = {10, 20, 30, 40, 30};\nint n = 4;\nint[][] dp = new int[4][4];\nfor (int i = 0; i\
+        \ < n; i++)\n    for (int j = i + 1; j < n; j++) {\n        dp[i][j] = 1_000_000_000;\n        for\
+        \ (int k = i; k < j; k++)\n            dp[i][j] = Math.min(dp[i][j], dp[i][k] + dp[k + 1][j] + p[i]\
+        \ * p[k + 1] * p[j + 1]);\n    }\nSystem.out.println(dp[0][n - 1]);\n"
+    options:
+    - '6000'
+    - '30000'
+    - '0'
+    - '18000'
+    answer: 0
+    explanation: dp[i][j] needs dp[k+1][j], whose row index is larger than i and is not filled yet when
+      i runs upwards. Interval tables must be filled by increasing range LENGTH (or with i going downwards),
+      so shorter ranges are always ready.
     difficulty: 4
 problems:
 - crate-merging

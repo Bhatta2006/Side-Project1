@@ -545,17 +545,6 @@ quiz:
     answer: 0
     explanation: 'Sum of rises: (3 − 1) + (5 − 2) = 5.'
     difficulty: 2
-  - id: hold-init
-    kind: mcq
-    prompt: What should hold[t] be before the first day?
-    options:
-    - Minus infinity
-    - '0'
-    - The first price
-    - t
-    answer: 0
-    explanation: You cannot hold a share you never bought; 0 would let you sell it for free.
-    difficulty: 2
   - id: buy-index
     kind: mcq
     prompt: Why does a buy read cash[t − 1] and not cash[t]?
@@ -661,6 +650,26 @@ quiz:
       rise would overcount, because each small trade would pay its own fee. The fee is subtracted once per
       trade, in the sell transition.'
     difficulty: 4
+  - id: hold-starts-at-zero
+    kind: bug
+    prompt: 'Prices only fall: 5, 4, 3. The best profit is 0 (never trade). This state machine starts hold
+      at 0, as if you owned a stock you got for free. What profit does it print?'
+    code:
+      python: "prices = [5, 4, 3]\ncash, hold = 0, 0\nfor p in prices:\n    cash, hold = max(cash, hold\
+        \ + p), max(hold, cash - p)\nprint(cash)\n"
+      cpp: "int prices[3] = {5, 4, 3};\nint cash = 0, hold = 0;\nfor (int p : prices) {\n    int nc = max(cash,\
+        \ hold + p), nh = max(hold, cash - p);\n    cash = nc;\n    hold = nh;\n}\ncout << cash;\n"
+      java: "int[] prices = {5, 4, 3};\nint cash = 0, hold = 0;\nfor (int p : prices) {\n    int nc = Math.max(cash,\
+        \ hold + p), nh = Math.max(hold, cash - p);\n    cash = nc;\n    hold = nh;\n}\nSystem.out.println(cash);\n"
+    options:
+    - '5'
+    - '0'
+    - '3'
+    - '2'
+    answer: 0
+    explanation: A hold of 0 means 'I already own one stock that cost nothing', so selling it on day one
+      earns 5. Before the first buy, the 'holding' state is impossible and must start at minus infinity.
+    difficulty: 3
 problems:
 - warehouse-trading
 - rest-days

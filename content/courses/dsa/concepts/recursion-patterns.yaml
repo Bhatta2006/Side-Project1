@@ -823,17 +823,6 @@ quiz:
     answer: 0
     explanation: Two branches per index, so 2ⁿ choices.
     difficulty: 1
-  - id: leaves
-    kind: mcq
-    prompt: How many leaves does the pick or not pick tree have for n = 10?
-    options:
-    - '1024'
-    - '512'
-    - '2047'
-    - '100'
-    answer: 0
-    explanation: 2¹⁰ choices.
-    difficulty: 2
   - id: early-stop
     kind: mcq
     prompt: 1 2 0 3 with k = 3. Stopping as soon as the sum reaches 3 gives 3. What is the right count?
@@ -948,6 +937,29 @@ quiz:
     explanation: 'The exponent goes 10, 5, 2, 1, 0: five calls, about log2(p) + 1. Calling power(b, p //
       2) twice would instead explode into p calls, because each level doubles the work and the halving only
       cancels it out.'
+    difficulty: 3
+  - id: odd-forgets-square
+    kind: bug
+    prompt: Fast exponentiation should give 2^5 = 32. In the odd case this version returns half * base and
+      forgets to square the half first. What does power(2, 5) print?
+    code:
+      python: "def power(b, e):\n    if e == 0:\n        return 1\n    h = power(b, e // 2)\n    if e %\
+        \ 2 == 1:\n        return h * b\n    return h * h\nprint(power(2, 5))\n"
+      cpp: "function<long long(long long, int)> power = [&](long long b, int e) -> long long {\n    if (e\
+        \ == 0) return 1;\n    long long h = power(b, e / 2);\n    if (e % 2 == 1) return h * b;\n    return\
+        \ h * h;\n};\ncout << power(2, 5);\n"
+      java: "class T {\n    long power(long b, int e) {\n        if (e == 0) return 1;\n        long h =\
+        \ power(b, e / 2);\n        if (e % 2 == 1) return h * b;\n        return h * h;\n    }\n}\nSystem.out.println(new\
+        \ T().power(2, 5));\n"
+    options:
+    - '8'
+    - '32'
+    - '16'
+    - '10'
+    answer: 0
+    explanation: 'For an odd exponent the answer is h * h * b: the half is squared AND the leftover base
+      is multiplied in. Dropping the square makes the result grow only by one factor of 2 per level (8 instead
+      of 32).'
     difficulty: 3
 problems:
 - squad-selection

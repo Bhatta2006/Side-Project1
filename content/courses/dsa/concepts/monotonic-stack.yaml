@@ -831,17 +831,6 @@ quiz:
     answer: 0
     explanation: Bars still on the stack would otherwise never be measured.
     difficulty: 3
-  - id: ties
-    kind: mcq
-    prompt: Sum of subarray minimums of 1 1. What is the right answer?
-    options:
-    - '3'
-    - '2'
-    - '4'
-    - '1'
-    answer: 0
-    explanation: '[1], [1] and [1, 1], each with minimum 1.'
-    difficulty: 4
   - id: deque-why
     kind: mcq
     prompt: Why does sliding window maximum need a deque rather than a stack?
@@ -962,6 +951,30 @@ quiz:
       around. The 2 itself has no greater element anywhere, so it stays -1. Pushing indexes only during
       the first pass avoids duplicate entries while the second pass resolves the leftovers.
     difficulty: 4
+  - id: pops-on-equal
+    kind: bug
+    prompt: The next STRICTLY greater element of [2, 2, 3] is 3, 3, -1. This stack pops while the top is
+      less than OR EQUAL to the current value. What does it print?
+    code:
+      python: "a = [2, 2, 3]\nres = [-1] * 3\nst = []\nfor i, x in enumerate(a):\n    while st and a[st[-1]]\
+        \ <= x:\n        res[st.pop()] = x\n    st.append(i)\nprint(*res)\n"
+      cpp: "int a[3] = {2, 2, 3};\nint res[3] = {-1, -1, -1};\nvector<int> st;\nfor (int i = 0; i < 3; i++)\
+        \ {\n    while (!st.empty() && a[st.back()] <= a[i]) {\n        res[st.back()] = a[i];\n       \
+        \ st.pop_back();\n    }\n    st.push_back(i);\n}\nfor (int i = 0; i < 3; i++) cout << res[i] <<\
+        \ \" \";\n"
+      java: "int[] a = {2, 2, 3};\nint[] res = {-1, -1, -1};\nDeque<Integer> st = new ArrayDeque<>();\n\
+        for (int i = 0; i < 3; i++) {\n    while (!st.isEmpty() && a[st.peek()] <= a[i]) res[st.pop()] =\
+        \ a[i];\n    st.push(i);\n}\nfor (int v : res) System.out.print(v + \" \");\n"
+    options:
+    - 2 3 -1
+    - 3 3 -1
+    - 3 3 3
+    - -1 3 -1
+    answer: 0
+    explanation: The second 2 pops the first 2 and is recorded as its 'next greater', although it is only
+      equal. For a STRICT answer pop only while the top is smaller (<); with <= you would get the next greater
+      or equal element.
+    difficulty: 3
 problems:
 - nearest-taller-either-side
 - peak-totals

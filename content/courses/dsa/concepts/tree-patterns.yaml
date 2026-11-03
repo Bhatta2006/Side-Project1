@@ -1099,17 +1099,6 @@ quiz:
     answer: 0
     explanation: A node counts as its own descendant.
     difficulty: 3
-  - id: distance-up
-    kind: mcq
-    prompt: Why does distance K need parent pointers?
-    options:
-    - Some nodes at distance K are reached by going up through ancestors
-    - To sort the answer by depth before returning it to the caller
-    - To find the leaves quickly, since leaves are always at distance K
-    - It does not; a DFS down from the target already reaches them all
-    answer: 0
-    explanation: Child pointers only lead down.
-    difficulty: 4
   - id: width
     kind: mcq
     prompt: A level has nodes at positions 0, 1 and 3. What is its width?
@@ -1224,6 +1213,32 @@ quiz:
       answer. For (5, 4) the search stops at 5 as soon as it meets it, and the 4 is below 5, so 5 is its
       own LCA. The early return at a target is what makes the 'ancestor of the other' case work without
       a special check.
+    difficulty: 4
+  - id: returns-both-branches
+    kind: bug
+    prompt: In the tree 1 -> (2 -> (4, 5)), the best path is 4 - 2 - 5 with sum 11. This max-path-sum code
+      returns val + left + right to the parent, so a path can fork in the middle. What does it print?
+    code:
+      python: "val = [1, 2, 4, 5]\nleft = [1, 2, -1, -1]\nright = [-1, 3, -1, -1]\nbest = [0]\ndef go(u):\n\
+        \    if u < 0:\n        return 0\n    l = max(0, go(left[u]))\n    r = max(0, go(right[u]))\n  \
+        \  best[0] = max(best[0], val[u] + l + r)\n    return val[u] + l + r\ngo(0)\nprint(best[0])\n"
+      cpp: "int val[4] = {1, 2, 4, 5};\nint lf[4] = {1, 2, -1, -1};\nint rt[4] = {-1, 3, -1, -1};\nint best\
+        \ = 0;\nfunction<int(int)> go = [&](int u) -> int {\n    if (u < 0) return 0;\n    int l = max(0,\
+        \ go(lf[u]));\n    int r = max(0, go(rt[u]));\n    best = max(best, val[u] + l + r);\n    return\
+        \ val[u] + l + r;\n};\ngo(0);\ncout << best;\n"
+      java: "class T {\n    int[] val = {1, 2, 4, 5};\n    int[] lf = {1, 2, -1, -1};\n    int[] rt = {-1,\
+        \ 3, -1, -1};\n    int best = 0;\n    int go(int u) {\n        if (u < 0) return 0;\n        int\
+        \ l = Math.max(0, go(lf[u]));\n        int r = Math.max(0, go(rt[u]));\n        best = Math.max(best,\
+        \ val[u] + l + r);\n        return val[u] + l + r;\n    }\n}\nT t = new T();\nt.go(0);\nSystem.out.println(t.best);\n"
+    options:
+    - '12'
+    - '11'
+    - '8'
+    - '7'
+    answer: 0
+    explanation: A node may only pass ONE branch upwards (val + max(l, r)), because a path cannot split
+      into two arms and still continue to the parent. Passing both makes the code add node 1 on top of the
+      fork 4-2-5, a path that does not exist.
     difficulty: 4
 problems:
 - balanced-splits

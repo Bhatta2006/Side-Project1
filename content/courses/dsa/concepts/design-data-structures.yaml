@@ -1042,17 +1042,6 @@ quiz:
     answer: 0
     explanation: The map finds the node; the list moves it in O(1).
     difficulty: 1
-  - id: get-is-use
-    kind: mcq
-    prompt: Capacity 2. put 1, put 2, get 1, put 3. Which key is evicted?
-    options:
-    - '2'
-    - '1'
-    - '3'
-    - None
-    answer: 0
-    explanation: get 1 made key 1 recent, so key 2 is the least recently used.
-    difficulty: 2
   - id: update
     kind: mcq
     prompt: The cache is full and put updates a key that is already stored. What is evicted?
@@ -1255,6 +1244,34 @@ quiz:
       one. Timestamps arrive in increasing order, so each key's history is already sorted and a lookup costs
       O(log n).
     difficulty: 4
+  - id: get-forgets-recency
+    kind: bug
+    prompt: An LRU cache of capacity 2 stores keys from least to most recently used. The programmer's get()
+      reads a key but does not mark it as recently used. After put(1), put(2), get(1), put(3), which keys
+      remain (in order)?
+    code:
+      python: "order = []\ndef put(k):\n    if k in order:\n        order.remove(k)\n    order.append(k)\n\
+        \    if len(order) > 2:\n        order.pop(0)\ndef get(k):\n    return k in order\nput(1)\nput(2)\n\
+        get(1)\nput(3)\nprint(*order)\n"
+      cpp: "deque<int> order;\nauto put = [&](int k) {\n    auto it = find(order.begin(), order.end(), k);\n\
+        \    if (it != order.end()) order.erase(it);\n    order.push_back(k);\n    if (order.size() > 2)\
+        \ order.pop_front();\n};\nauto get = [&](int k) { return find(order.begin(), order.end(), k) !=\
+        \ order.end(); };\nput(1);\nput(2);\nget(1);\nput(3);\nfor (int k : order) cout << k << \" \";\n"
+      java: "LinkedList<Integer> order = new LinkedList<>();\nclass T {\n    LinkedList<Integer> order;\n\
+        \    T(LinkedList<Integer> o) { order = o; }\n    void put(int k) {\n        order.remove((Integer)\
+        \ k);\n        order.addLast(k);\n        if (order.size() > 2) order.removeFirst();\n    }\n  \
+        \  boolean get(int k) { return order.contains(k); }\n}\nT t = new T(order);\nt.put(1);\nt.put(2);\n\
+        t.get(1);\nt.put(3);\nStringBuilder sb = new StringBuilder();\nfor (int k : order) sb.append(k).append(\"\
+        \ \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 2 3
+    - 1 3
+    - 1 2
+    - '3'
+    answer: 0
+    explanation: Without refreshing key 1 on get, it is still the oldest, so adding key 3 throws it out.
+      A correct cache moves a key to the 'most recent' end on every get, which would keep 1 and evict 2.
+    difficulty: 3
 problems:
 - thumbnail-cache
 - library-shelf

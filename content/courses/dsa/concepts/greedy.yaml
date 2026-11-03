@@ -201,20 +201,6 @@ quiz:
       third no longer fits. The best whole selection is items two and three, worth 220. Greedy by ratio
       is exact only for the fractional version, where 240 is reachable.
     difficulty: 3
-  - id: ropes
-    kind: mcq
-    prompt: Ropes of length 4, 3, 2 and 6 are joined two at a time, and a join costs the sum of the two
-      lengths. What is the cheapest total cost?
-    options:
-    - '29'
-    - '31'
-    - '15'
-    - '25'
-    answer: 0
-    explanation: 'Always join the two shortest ropes: 2 + 3 = 5, then 4 + 5 = 9, then 6 + 9 = 15, for a
-      total of 5 + 9 + 15 = 29. Joining in the given order costs 31. A min-heap supplies the two smallest
-      each round in O(log n), and this is the idea behind Huffman coding.'
-    difficulty: 3
   - id: partition-labels
     kind: output
     prompt: The string is split into as many parts as possible so that no letter appears in more than one
@@ -286,6 +272,30 @@ quiz:
       and no cheaper edge crosses that cut, so swapping it into any optimal tree costs nothing. The proof
       is an exchange argument, which is the usual way to justify a greedy algorithm.
     difficulty: 5
+  - id: sorted-by-start
+    kind: bug
+    prompt: 'Activity selection: pick the most meetings that do not overlap, from (1,10), (2,3) and (4,5).
+      The best is 2 meetings, (2,3) and (4,5). This greedy sorts by START time and takes every meeting that
+      begins after the last chosen one ended. What does it print?'
+    code:
+      python: "iv = [(1, 10), (2, 3), (4, 5)]\niv.sort()\nend = -1\ncount = 0\nfor s, e in iv:\n    if s\
+        \ >= end:\n        count += 1\n        end = e\nprint(count)\n"
+      cpp: "vector<pair<int, int>> iv = {{1, 10}, {2, 3}, {4, 5}};\nsort(iv.begin(), iv.end());\nint end\
+        \ = -1, count = 0;\nfor (auto& p : iv)\n    if (p.first >= end) {\n        count++;\n        end\
+        \ = p.second;\n    }\ncout << count;\n"
+      java: "int[][] iv = {{1, 10}, {2, 3}, {4, 5}};\nArrays.sort(iv, (a, b) -> a[0] - b[0]);\nint end =\
+        \ -1, count = 0;\nfor (int[] p : iv)\n    if (p[0] >= end) {\n        count++;\n        end = p[1];\n\
+        \    }\nSystem.out.println(count);\n"
+    options:
+    - '1'
+    - '2'
+    - '3'
+    - '0'
+    answer: 0
+    explanation: The long meeting (1,10) starts first, is chosen, and blocks everything else. The exchange
+      argument only works when intervals are sorted by END time, so the choice leaves the most room for
+      the rest.
+    difficulty: 3
 problems: [max-meetings, can-reach-end, seed-fund]
 practice_links:
   - title: Jump Game

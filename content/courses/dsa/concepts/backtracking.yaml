@@ -180,19 +180,6 @@ quiz:
     explanation: Collections hold references. Use result.add(new ArrayList<>(path)). In C++, push_back copies
       a vector by value, so this bug does not occur there.
     difficulty: 2
-  - id: diagonals
-    kind: mcq
-    prompt: In N-Queens a queen sits at (row 1, column 2) on a 4 × 4 board (0-indexed). Which square does
-      it attack along a diagonal?
-    options:
-    - '(3, 0): the same anti-diagonal, since row + column is 3 for both'
-    - '(2, 0): the same diagonal, since both have a difference of 2'
-    - '(0, 0): the same diagonal, since both are on the top-left corner line'
-    - '(3, 3): the same anti-diagonal, since both are in the last row and column'
-    answer: 0
-    explanation: Squares share a diagonal when row − column is equal, and an anti-diagonal when row + column
-      is equal. Here 1 + 2 = 3 = 3 + 0. Two O(1) lookup arrays of size 2N replace the O(N) attack test.
-    difficulty: 2
   - id: subsets-output
     kind: output
     prompt: What does this recursive search print?
@@ -294,6 +281,31 @@ quiz:
       the tree dramatically. It is a heuristic for the order of choices; it does not change the problem's
       hardness.
     difficulty: 5
+  - id: forgot-to-unmark
+    kind: bug
+    prompt: This should count all permutations of 3 items, so the answer is 6. The programmer marks an item
+      as used but never unmarks it on the way back. What does it print?
+    code:
+      python: "n = 3\nused = [False] * n\ncount = 0\ndef go(k):\n    global count\n    if k == n:\n    \
+        \    count += 1\n        return\n    for i in range(n):\n        if not used[i]:\n            used[i]\
+        \ = True\n            go(k + 1)\ngo(0)\nprint(count)\n"
+      cpp: "int n = 3, count = 0;\nbool used[3] = {false, false, false};\nfunction<void(int)> go = [&](int\
+        \ k) {\n    if (k == n) { count++; return; }\n    for (int i = 0; i < n; i++)\n        if (!used[i])\
+        \ {\n            used[i] = true;\n            go(k + 1);\n        }\n};\ngo(0);\ncout << count;\n"
+      java: "class T {\n    int n = 3, count = 0;\n    boolean[] used = new boolean[3];\n    void go(int\
+        \ k) {\n        if (k == n) { count++; return; }\n        for (int i = 0; i < n; i++)\n        \
+        \    if (!used[i]) {\n                used[i] = true;\n                go(k + 1);\n            }\n\
+        \    }\n}\nT t = new T();\nt.go(0);\nSystem.out.println(t.count);\n"
+    options:
+    - '1'
+    - '6'
+    - '3'
+    - '0'
+    answer: 0
+    explanation: The first path marks all three items and reaches the end once. When the calls return, nothing
+      is free again, so no other branch can start. Every choice must be undone after the recursive call
+      (used[i] = false).
+    difficulty: 3
 problems: [subset-sum-count, n-queens-count]
 practice_links:
   - title: Subsets

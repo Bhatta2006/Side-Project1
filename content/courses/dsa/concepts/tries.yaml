@@ -302,19 +302,6 @@ quiz:
       walk each number from its highest bit and always try the opposite bit, which maximises the XOR: O(n
       * bits) instead of checking all O(n^2) pairs.'
     difficulty: 4
-  - id: trie-delete
-    kind: mcq
-    prompt: How do you correctly delete a word from a trie that is shared with other words?
-    options:
-    - Clear the end-of-word flag, then remove nodes bottom-up while they have no children and no flag
-    - Remove the node of the last letter only, and leave the rest of the path for other words to use
-    - Remove every node on the word's path, since a node with fewer words below it is no longer needed
-    - Rebuild the whole trie from the remaining words, since single deletions break the prefix sharing
-    answer: 0
-    explanation: Nodes on the path may be needed by other words (a shared prefix, or a longer word that
-      continues past this one). Un-marking the end and pruning only childless, unmarked nodes frees exactly
-      what no other word uses. Skipping the pruning is still correct but leaks memory.
-    difficulty: 4
   - id: multi-pattern
     kind: mcq
     prompt: You must find every occurrence of any of 10,000 patterns inside a long text in a single pass.
@@ -329,6 +316,34 @@ quiz:
       Failure links say where to continue after a mismatch, much like KMP does for one pattern, so the scan
       never moves backwards in the text.
     difficulty: 5
+  - id: search-accepts-prefix
+    kind: bug
+    prompt: Only the word 'apple' is inserted into the trie. Searching the whole word 'app' should find
+      nothing. This search walks the letters and returns success when the walk completes, without checking
+      for a word-end mark. What does it print?
+    code:
+      python: "root = {}\nnode = root\nfor ch in \"apple\":\n    node = node.setdefault(ch, {})\nnode[\"\
+        $\"] = True\nnode = root\nfound = True\nfor ch in \"app\":\n    if ch not in node:\n        found\
+        \ = False\n        break\n    node = node[ch]\nprint(\"found\" if found else \"not found\")\n"
+      cpp: "struct N {\n    N* c[26] = {};\n    bool end = false;\n};\nN* root = new N();\nN* cur = root;\n\
+        for (char ch : string(\"apple\")) {\n    if (!cur->c[ch - 'a']) cur->c[ch - 'a'] = new N();\n  \
+        \  cur = cur->c[ch - 'a'];\n}\ncur->end = true;\nN* node = root;\nbool found = true;\nfor (char\
+        \ ch : string(\"app\")) {\n    if (!node->c[ch - 'a']) { found = false; break; }\n    node = node->c[ch\
+        \ - 'a'];\n}\ncout << (found ? \"found\" : \"not found\");\n"
+      java: "class T {\n    T[] c = new T[26];\n    boolean end;\n}\nT root = new T();\nT cur = root;\n\
+        for (char ch : \"apple\".toCharArray()) {\n    if (cur.c[ch - 'a'] == null) cur.c[ch - 'a'] = new\
+        \ T();\n    cur = cur.c[ch - 'a'];\n}\ncur.end = true;\nT node = root;\nboolean found = true;\n\
+        for (char ch : \"app\".toCharArray()) {\n    if (node.c[ch - 'a'] == null) { found = false; break;\
+        \ }\n    node = node.c[ch - 'a'];\n}\nSystem.out.println(found ? \"found\" : \"not found\");\n"
+    options:
+    - found
+    - not found
+    - crashes
+    - empty
+    answer: 0
+    explanation: A walk that finishes only proves that 'app' is a PREFIX of some word. A real word search
+      must also check the end-of-word flag on the last node, which for 'app' is not set.
+    difficulty: 3
 problems: [prefix-counts, vault-xor]
 practice_links:
   - title: Implement Trie (Prefix Tree)

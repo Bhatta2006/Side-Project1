@@ -782,17 +782,6 @@ quiz:
     answer: 0
     explanation: Robbing x forbids robbing its children.
     difficulty: 1
-  - id: order
-    kind: mcq
-    prompt: In which order are the nodes filled?
-    options:
-    - Children before parents, such as reverse BFS order
-    - Root first, then its children, as in BFS order
-    - By node value, smallest first, then the larger ones
-    - Any order, since each node is only visited once
-    answer: 0
-    explanation: A node reads its children's states.
-    difficulty: 2
   - id: levels
     kind: mcq
     prompt: Tree 10 → 1 → 1 → 10 (a chain) plus a second child 1 of the root. Alternating levels gives 12.
@@ -915,6 +904,31 @@ quiz:
       there uses its two tallest child arms, while only the tallest arm is passed up to the parent (the
       return value). Mixing those two up is the classic bug in path problems.
     difficulty: 3
+  - id: skip-forces-child-take
+    kind: bug
+    prompt: 'House robber on a tree: neighbours cannot both be robbed. The tree is a chain of four houses
+      worth 2, 1, 1, 2 (the best is 4, robbing the two ends). When a node is skipped, this code forces its
+      child to be taken instead of choosing the better of take and skip. What does it print?'
+    code:
+      python: "val = [2, 1, 1, 2]\nch = [[1], [2], [3], []]\ndef go(u):\n    t, s = val[u], 0\n    for v\
+        \ in ch[u]:\n        tv, sv = go(v)\n        t += sv\n        s += tv\n    return t, s\nprint(max(go(0)))\n"
+      cpp: "int val[4] = {2, 1, 1, 2};\nvector<vector<int>> ch = {{1}, {2}, {3}, {}};\nfunction<pair<int,\
+        \ int>(int)> go = [&](int u) -> pair<int, int> {\n    int t = val[u], s = 0;\n    for (int v : ch[u])\
+        \ {\n        auto r = go(v);\n        t += r.second;\n        s += r.first;\n    }\n    return {t,\
+        \ s};\n};\nauto r = go(0);\ncout << max(r.first, r.second);\n"
+      java: "class T {\n    int[] val = {2, 1, 1, 2};\n    int[][] ch = {{1}, {2}, {3}, {}};\n    int[]\
+        \ go(int u) {\n        int t = val[u], s = 0;\n        for (int v : ch[u]) {\n            int[]\
+        \ r = go(v);\n            t += r[1];\n            s += r[0];\n        }\n        return new int[]{t,\
+        \ s};\n    }\n}\nint[] r = new T().go(0);\nSystem.out.println(Math.max(r[0], r[1]));\n"
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '6'
+    answer: 0
+    explanation: A skipped node leaves its child FREE to be taken or skipped, so it should add max(take,
+      skip) of the child. Forcing 'take' loses the ends-only solution and gives 3 instead of 4.
+    difficulty: 4
 problems:
 - watchtowers
 - street-lamps

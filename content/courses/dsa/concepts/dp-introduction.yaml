@@ -850,20 +850,6 @@ quiz:
       the 100. When a small counterexample like this exists and subproblems repeat, define the state and
       use DP.'
     difficulty: 3
-  - id: reconstruct-needs
-    kind: mcq
-    prompt: You solved a minimum-cost problem with a DP table, but now must print the actual choices that
-      achieve the cost, not just the cost itself. What do you need?
-    options:
-    - A record of which option won at each cell, to walk back from the final answer
-    - Only the last two dp values, since they hold the cost of the final decision
-    - Only the final answer, because the choices can be recomputed from it by a formula
-    - The input sorted by cost, so the cheapest options can simply be listed in order
-    answer: 0
-    explanation: 'The table stores costs, not decisions. Save the winning transition (or recompute which
-      one gives dp[i]) and walk backwards from the answer cell to the base case. This is why space-saving
-      tricks are applied last: they throw away the cells a walk-back needs.'
-    difficulty: 3
   - id: coin-table-output
     kind: output
     prompt: This bottom-up table finds the fewest coins for every amount from 0 to 6 using coins 1, 3 and
@@ -930,6 +916,35 @@ quiz:
       break the simple-path rule. For shortest paths the halves never conflict, which is why those are solved
       by DP.
     difficulty: 5
+  - id: filled-backwards
+    kind: bug
+    prompt: A bottom-up Fibonacci table (dp[0] = 0, dp[1] = 1) should give dp[4] = 3. The programmer fills
+      it from the END towards the start, using entries that are not computed yet. What does it print?
+    code:
+      python: "dp = [0, 1, 0, 0, 0]\nfor i in range(4, 1, -1):\n    dp[i] = dp[i - 1] + dp[i - 2]\nprint(dp[4])\n"
+      cpp: 'int dp[5] = {0, 1, 0, 0, 0};
+
+        for (int i = 4; i >= 2; i--) dp[i] = dp[i - 1] + dp[i - 2];
+
+        cout << dp[4];
+
+        '
+      java: 'int[] dp = {0, 1, 0, 0, 0};
+
+        for (int i = 4; i >= 2; i--) dp[i] = dp[i - 1] + dp[i - 2];
+
+        System.out.println(dp[4]);
+
+        '
+    options:
+    - '0'
+    - '3'
+    - '2'
+    - '1'
+    answer: 0
+    explanation: 'When dp[4] is computed, dp[3] and dp[2] are still 0. A table must be filled so that every
+      entry a state depends on is already known: here, in increasing order of i.'
+    difficulty: 3
 problems:
 - fence-painting
 - stepping-stones-path

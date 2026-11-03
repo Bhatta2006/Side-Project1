@@ -272,20 +272,6 @@ quiz:
       of the cell above or the cell to the left. The 5 in the middle is avoided, which a left-to-right greedy
       pick of the smaller next step would also do here, but not in general.
     difficulty: 3
-  - id: lcs-rows
-    kind: mcq
-    prompt: Two strings each have length 5,000 and you only need the LENGTH of their longest common subsequence.
-      How much table memory is enough?
-    options:
-    - Two rows of about 5,000 numbers each, since row i reads only row i - 1 and itself
-    - The full 5,001 x 5,001 table, since any later cell can read back to an early one
-    - A single number, since the answer depends only on the previous cell that was filled
-    - No extra memory at all, since the two input strings already hold the whole answer
-    answer: 0
-    explanation: A full table has 25 million cells (about 100 MB with 4-byte ints), but only the previous
-      row is ever read. The price of the rolling rows is that you can no longer walk back to print the subsequence
-      itself, unless you use a divide-and-conquer such as Hirschberg's method.
-    difficulty: 3
   - id: knapsack-numeric
     kind: mcq
     prompt: 'Items (weight, value): (1, 1), (3, 4), (4, 5), (5, 7) and a capacity of 7. Each item may be
@@ -330,6 +316,34 @@ quiz:
       to form the first j letters of the target from the first i letters of the source: dp[i-1][j] (skip
       this letter), plus dp[i-1][j-1] when the letters match (use it).'
     difficulty: 5
+  - id: blocked-start
+    kind: bug
+    prompt: Counting right-or-down paths through a 2 x 2 grid where 1 marks an obstacle. The START cell
+      is blocked, so the true answer is 0. The programmer seeds dp[0][0] = 1 without looking at the grid.
+      What does it print?
+    code:
+      python: "g = [[1, 0], [0, 0]]\nn = m = 2\ndp = [[0] * m for _ in range(n)]\ndp[0][0] = 1\nfor i in\
+        \ range(n):\n    for j in range(m):\n        if (i, j) == (0, 0):\n            continue\n      \
+        \  if g[i][j] == 1:\n            dp[i][j] = 0\n        else:\n            dp[i][j] = (dp[i - 1][j]\
+        \ if i else 0) + (dp[i][j - 1] if j else 0)\nprint(dp[n - 1][m - 1])\n"
+      cpp: "int g[2][2] = {{1, 0}, {0, 0}};\nint n = 2, m = 2;\nint dp[2][2] = {};\ndp[0][0] = 1;\nfor (int\
+        \ i = 0; i < n; i++)\n    for (int j = 0; j < m; j++) {\n        if (i == 0 && j == 0) continue;\n\
+        \        if (g[i][j] == 1) dp[i][j] = 0;\n        else dp[i][j] = (i ? dp[i - 1][j] : 0) + (j ?\
+        \ dp[i][j - 1] : 0);\n    }\ncout << dp[n - 1][m - 1];\n"
+      java: "int[][] g = {{1, 0}, {0, 0}};\nint n = 2, m = 2;\nint[][] dp = new int[2][2];\ndp[0][0] = 1;\n\
+        for (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++) {\n        if (i == 0 && j == 0) continue;\n\
+        \        if (g[i][j] == 1) dp[i][j] = 0;\n        else dp[i][j] = (i > 0 ? dp[i - 1][j] : 0) + (j\
+        \ > 0 ? dp[i][j - 1] : 0);\n    }\nSystem.out.println(dp[n - 1][m - 1]);\n"
+    options:
+    - '2'
+    - '0'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: 'The blocked start is treated as open, so both neighbours inherit one path and the end
+      sees 2. Special cells (start and end) need the obstacle test too: dp[0][0] = 1 only when the cell
+      is free.'
+    difficulty: 3
 problems: [lcs-length, grid-paths, crypt-descent]
 practice_links:
   - title: Unique Paths

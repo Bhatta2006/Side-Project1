@@ -283,20 +283,6 @@ quiz:
       then 3 and 2, then 4 and 5 once everything below them is done. Reversed, it is 5 4 2 3 1 0. This is
       a different valid answer than Kahn''s algorithm gives for the same graph.'
     difficulty: 4
-  - id: smallest-order
-    kind: mcq
-    prompt: 'Four tasks: task 0 needs task 2, and task 1 needs task 3. What does Kahn''s algorithm with
-      a plain FIFO queue give, and what is the lexicographically smallest valid order?'
-    options:
-    - FIFO gives 2 3 0 1, while the smallest valid order is 2 0 3 1
-    - FIFO gives 2 0 3 1, while the smallest valid order is 2 3 0 1
-    - FIFO gives 2 3 0 1, while the smallest valid order is 3 2 0 1
-    - Both give 2 0 3 1, since a queue always releases the smaller label
-    answer: 0
-    explanation: Tasks 2 and 3 start ready; FIFO takes 2, queues 0 behind 3, then takes 3 and queues 1.
-      To get the smallest order, replace the queue with a min-heap so that after taking 2 the smaller ready
-      task (0) goes before 3. The cost becomes O((V + E) log V).
-    difficulty: 4
   - id: alien-order
     kind: mcq
     prompt: An alien dictionary lists the words wrt, wrf, er, ett, rftt in sorted order. Comparing neighbouring
@@ -326,6 +312,37 @@ quiz:
       If exactly one is ready at each step, every choice is forced. A single starting node is not enough:
       it might release two nodes together afterwards.'
     difficulty: 5
+  - id: duplicate-edge-stall
+    kind: bug
+    prompt: Two tasks, and the same dependency 0 -> 1 is listed twice. In-degrees are counted from the edge
+      LIST, but the adjacency uses a set (which stores the edge only once). How many tasks does Kahn's algorithm
+      output?
+    code:
+      python: "n = 2\nedges = [(0, 1), (0, 1)]\nadj = [set() for _ in range(n)]\nindeg = [0] * n\nfor u,\
+        \ v in edges:\n    adj[u].add(v)\n    indeg[v] += 1\nq = [i for i in range(n) if indeg[i] == 0]\n\
+        order = []\nwhile q:\n    u = q.pop()\n    order.append(u)\n    for v in adj[u]:\n        indeg[v]\
+        \ -= 1\n        if indeg[v] == 0:\n            q.append(v)\nprint(len(order))\n"
+      cpp: "int n = 2;\nvector<pair<int, int>> edges = {{0, 1}, {0, 1}};\nvector<set<int>> adj(n);\nvector<int>\
+        \ indeg(n, 0);\nfor (auto& e : edges) {\n    adj[e.first].insert(e.second);\n    indeg[e.second]++;\n\
+        }\nvector<int> q, order;\nfor (int i = 0; i < n; i++)\n    if (indeg[i] == 0) q.push_back(i);\n\
+        while (!q.empty()) {\n    int u = q.back();\n    q.pop_back();\n    order.push_back(u);\n    for\
+        \ (int v : adj[u])\n        if (--indeg[v] == 0) q.push_back(v);\n}\ncout << order.size();\n"
+      java: "int n = 2;\nint[][] edges = {{0, 1}, {0, 1}};\nList<Set<Integer>> adj = new ArrayList<>();\n\
+        for (int i = 0; i < n; i++) adj.add(new HashSet<>());\nint[] indeg = new int[n];\nfor (int[] e :\
+        \ edges) {\n    adj.get(e[0]).add(e[1]);\n    indeg[e[1]]++;\n}\nDeque<Integer> q = new ArrayDeque<>();\n\
+        int count = 0;\nfor (int i = 0; i < n; i++)\n    if (indeg[i] == 0) q.push(i);\nwhile (!q.isEmpty())\
+        \ {\n    int u = q.pop();\n    count++;\n    for (int v : adj.get(u))\n        if (--indeg[v] ==\
+        \ 0) q.push(v);\n}\nSystem.out.println(count);\n"
+    options:
+    - '1'
+    - '2'
+    - '0'
+    - '3'
+    answer: 0
+    explanation: 'Node 1 gets in-degree 2 but loses only 1, so it is never released and the output looks
+      like a cycle. The degree count and the adjacency must be built from the same data: store both from
+      the same (deduplicated) edge set.'
+    difficulty: 4
 problems: [course-order, project-crunch]
 practice_links:
   - title: Course Schedule

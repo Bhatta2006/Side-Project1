@@ -202,26 +202,6 @@ quiz:
       although a is smaller. The comparator then breaks the heap''s ordering on inputs that include very
       large or very negative values.'
     difficulty: 3
-  - id: topk-output
-    kind: output
-    prompt: This keeps a min-heap of size 3 while scanning the numbers 4, 1, 7, 3, 8, 5. What does it print?
-    code:
-      python: "import heapq\nh = []\nfor x in [4, 1, 7, 3, 8, 5]:\n    heapq.heappush(h, x)\n    if len(h)\
-        \ > 3:\n        heapq.heappop(h)\nprint(h[0])\n"
-      cpp: "priority_queue<int, vector<int>, greater<int>> h;\nfor (int x : {4, 1, 7, 3, 8, 5}) {\n    h.push(x);\n\
-        \    if (h.size() > 3) h.pop();\n}\ncout << h.top();\n"
-      java: "PriorityQueue<Integer> h = new PriorityQueue<>();\nfor (int x : new int[]{4, 1, 7, 3, 8, 5})\
-        \ {\n    h.add(x);\n    if (h.size() > 3) h.poll();\n}\nSystem.out.println(h.peek());\n"
-    options:
-    - '5'
-    - '3'
-    - '8'
-    - '7'
-    answer: 0
-    explanation: 'Whenever the heap grows past three, the smallest is evicted, so it ends holding the three
-      largest values 5, 7 and 8, and its root is the smallest of those: the 3rd largest overall. This is
-      O(n log k) time with O(k) memory, which beats sorting for large n and small k.'
-    difficulty: 3
   - id: heapify-cost
     kind: mcq
     prompt: You already have an array of n values and turn it into a heap by sifting nodes down, starting
@@ -302,6 +282,26 @@ quiz:
       so n pushes cost O(n). Decreasing input makes every new value climb all the way to the root, giving
       the O(n log n) worst case. The heap's cost depends on the data order, not just on n.
     difficulty: 5
+  - id: kth-largest-off-by-one
+    kind: bug
+    prompt: The 3rd largest of [4, 1, 7, 3, 8, 5] is 5. This keeps a min-heap and pops the smallest as soon
+      as the heap size reaches k (instead of when it exceeds k). What does it print as the top?
+    code:
+      python: "import heapq\na = [4, 1, 7, 3, 8, 5]\nk = 3\nh = []\nfor x in a:\n    heapq.heappush(h, x)\n\
+        \    if len(h) >= k:\n        heapq.heappop(h)\nprint(h[0])\n"
+      cpp: "int a[6] = {4, 1, 7, 3, 8, 5};\nint k = 3;\npriority_queue<int, vector<int>, greater<int>> pq;\n\
+        for (int x : a) {\n    pq.push(x);\n    if ((int)pq.size() >= k) pq.pop();\n}\ncout << pq.top();\n"
+      java: "int[] a = {4, 1, 7, 3, 8, 5};\nint k = 3;\nPriorityQueue<Integer> pq = new PriorityQueue<>();\n\
+        for (int x : a) {\n    pq.add(x);\n    if (pq.size() >= k) pq.poll();\n}\nSystem.out.println(pq.peek());\n"
+    options:
+    - '7'
+    - '5'
+    - '8'
+    - '3'
+    answer: 0
+    explanation: The heap never holds more than k - 1 = 2 values, so its top is the 2nd largest (7). Pop
+      only when the size EXCEEDS k, so exactly the k largest remain and the top is the k-th largest.
+    difficulty: 3
 problems: [kth-largest-stream, running-median]
 practice_links:
   - title: Kth Largest Element in a Stream

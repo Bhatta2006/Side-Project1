@@ -926,19 +926,35 @@ quiz:
       so the number of set bits tells which worker is next, and the state is not (worker, mask) but just
       mask.'
     difficulty: 4
-  - id: mask-memory
-    kind: mcq
-    prompt: A bitmask DP over n = 22 items stores one 4-byte integer per mask. About how much memory does
-      the table take?
+  - id: missing-empty-submask
+    kind: bug
+    prompt: This should count ALL submasks of mask = 5 (binary 101), which are 5, 4, 1 and the empty set
+      0, so 4 in total. What does the loop count?
+    code:
+      python: "mask = 5\ncount = 0\nsub = mask\nwhile sub > 0:\n    count += 1\n    sub = (sub - 1) & mask\n\
+        print(count)\n"
+      cpp: 'int mask = 5, count = 0;
+
+        for (int sub = mask; sub > 0; sub = (sub - 1) & mask) count++;
+
+        cout << count;
+
+        '
+      java: 'int mask = 5, count = 0;
+
+        for (int sub = mask; sub > 0; sub = (sub - 1) & mask) count++;
+
+        System.out.println(count);
+
+        '
     options:
-    - About 16 MB
-    - About 4 MB
-    - About 160 MB
-    - About 1 GB
+    - '3'
+    - '4'
+    - '2'
+    - '5'
     answer: 0
-    explanation: 2^22 is about 4.2 million masks, and at 4 bytes each that is 16 MB. The time is about 2^22
-      * 22, roughly 9 x 10^7 steps. Each extra item doubles both numbers, so bitmask DP stops being practical
-      somewhere around n = 22 to 25.
+    explanation: The condition sub > 0 stops before the empty submask is processed. Handle sub = 0 separately
+      after the loop (or use a do-while that tests after the body).
     difficulty: 3
 problems:
 - lab-partners

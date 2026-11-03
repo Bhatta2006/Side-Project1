@@ -206,20 +206,6 @@ quiz:
       the float result truncates toward zero. Many solutions ported from other languages silently change
       meaning on negative values.
     difficulty: 3
-  - id: power-of-two
-    kind: mcq
-    prompt: Which test correctly decides whether an integer n is a power of two for every value, including
-      0 and negative numbers?
-    options:
-    - n is positive, and n AND (n - 1) equals zero
-    - n AND (n - 1) equals zero, with no other condition
-    - n AND (n - 1) is non-zero, since several bits are set
-    - n OR (n - 1) equals n, since the lowest bit is set
-    answer: 0
-    explanation: 'A power of two has exactly one set bit, so removing it leaves zero. But 0 also satisfies
-      the AND test, so the positivity check is required. Also mind precedence: in Python and C++, n & n
-      - 1 == 0 does not parse the way it reads, so keep the parentheses.'
-    difficulty: 3
   - id: mask-40-cpp
     kind: mcq
     languages:
@@ -299,6 +285,60 @@ quiz:
       differ on that bit, so they land in different groups, while each duplicate pair stays together. XOR
       each group to recover 3 and 5.
     difficulty: 5
+  - id: xor-swap-itself
+    kind: bug
+    prompt: The three-XOR trick swaps two array slots without a temporary variable. It is called with i
+      = j, meaning the same slot twice. What does a[0] hold afterwards?
+    code:
+      python: 'a = [5, 7]
+
+        i = j = 0
+
+        a[i] ^= a[j]
+
+        a[j] ^= a[i]
+
+        a[i] ^= a[j]
+
+        print(a[0])
+
+        '
+      cpp: 'int a[2] = {5, 7};
+
+        int i = 0, j = 0;
+
+        a[i] ^= a[j];
+
+        a[j] ^= a[i];
+
+        a[i] ^= a[j];
+
+        cout << a[0];
+
+        '
+      java: 'int[] a = {5, 7};
+
+        int i = 0, j = 0;
+
+        a[i] ^= a[j];
+
+        a[j] ^= a[i];
+
+        a[i] ^= a[j];
+
+        System.out.println(a[0]);
+
+        '
+    options:
+    - '0'
+    - '5'
+    - '7'
+    - '2'
+    answer: 0
+    explanation: x ^ x = 0, so the first step already wipes the slot, and the later steps keep it at 0.
+      The XOR swap silently destroys the value when both operands are the same location; guard with if (i
+      != j).
+    difficulty: 4
 problems: [single-number, max-xor-pair]
 practice_links:
   - title: Single Number

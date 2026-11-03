@@ -170,19 +170,6 @@ quiz:
       search ends after two nodes without finding it. Each comparison discards a whole subtree, which is
       why a search costs the height of the tree.
     difficulty: 2
-  - id: validate-trap
-    kind: mcq
-    prompt: A tree has root 10, a left child 5, and 5 has a right child 15. A checker that only compares
-      every node with its own children says it is valid. What is the truth?
-    options:
-    - 'Invalid: 15 lies in the left subtree of 10, so every value there must be smaller than 10'
-    - 'Valid: 5 is less than 10 and 15 is greater than 5, so every parent-child link is ordered'
-    - 'Valid: only the root''s immediate children need to respect the ordering of the whole tree'
-    - 'Invalid: a right child may never be larger than the parent of its own parent node'
-    answer: 0
-    explanation: 'The BST rule is about whole subtrees, not just neighbours. A correct validator passes
-      down an allowed range: going left tightens the upper bound, going right tightens the lower bound.'
-    difficulty: 3
   - id: ceil-output
     kind: output
     prompt: 'Nodes are stored in arrays: 8 is the root with children 3 and 10; 3 has children 1 and 6; 10
@@ -312,6 +299,34 @@ quiz:
       step one node at a time, so it takes O(n). The member function uses the tree structure. find returns
       end() when x is absent, and find_if scans linearly.
     difficulty: 5
+  - id: parent-child-only
+    kind: bug
+    prompt: The root is 10, its left child is 5, and 5 has a right child 15. This validator only compares
+      each node with its direct children. What does it print? (The tree is NOT a valid BST, as 15 is on
+      the left of 10.)
+    code:
+      python: "val = [10, 5, 15]\nL = [1, -1, -1]\nR = [-1, 2, -1]\ndef ok(u):\n    if u == -1:\n      \
+        \  return True\n    if L[u] != -1 and val[L[u]] >= val[u]:\n        return False\n    if R[u] !=\
+        \ -1 and val[R[u]] <= val[u]:\n        return False\n    return ok(L[u]) and ok(R[u])\nprint(\"\
+        valid\" if ok(0) else \"invalid\")\n"
+      cpp: "int val[3] = {10, 5, 15}, L[3] = {1, -1, -1}, R[3] = {-1, 2, -1};\nfunction<bool(int)> ok =\
+        \ [&](int u) -> bool {\n    if (u == -1) return true;\n    if (L[u] != -1 && val[L[u]] >= val[u])\
+        \ return false;\n    if (R[u] != -1 && val[R[u]] <= val[u]) return false;\n    return ok(L[u]) &&\
+        \ ok(R[u]);\n};\ncout << (ok(0) ? \"valid\" : \"invalid\");\n"
+      java: "class T {\n    int[] val = {10, 5, 15}, L = {1, -1, -1}, R = {-1, 2, -1};\n    boolean ok(int\
+        \ u) {\n        if (u == -1) return true;\n        if (L[u] != -1 && val[L[u]] >= val[u]) return\
+        \ false;\n        if (R[u] != -1 && val[R[u]] <= val[u]) return false;\n        return ok(L[u])\
+        \ && ok(R[u]);\n    }\n}\nSystem.out.println(new T().ok(0) ? \"valid\" : \"invalid\");\n"
+    options:
+    - valid
+    - invalid
+    - no output
+    - an error
+    answer: 0
+    explanation: Each node looks fine next to its children, but the 15 breaks the rule for the root 10,
+      which needs EVERY value in its left subtree to be smaller. Pass down an allowed range (low, high)
+      instead of comparing only neighbours.
+    difficulty: 3
 problems: [bst-validate, shorter-to-the-right]
 practice_links:
   - title: Validate Binary Search Tree

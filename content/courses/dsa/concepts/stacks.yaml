@@ -183,18 +183,6 @@ quiz:
     explanation: After the pushes the stack is 1 2 3. The first pop removes 3, push 4 gives 1 2 4, the second
       pop removes 4. The top is 2.
     difficulty: 1
-  - id: brackets
-    kind: mcq
-    prompt: The stack algorithm checks the string "(]". What does it decide, and at which step?
-    options:
-    - 'Not balanced: when ] arrives, the top is ( and does not match'
-    - Balanced, because there is one opener and one closer
-    - 'Not balanced: the stack is empty when ( arrives'
-    - Balanced, because the counts of ( and ] are equal
-    answer: 0
-    explanation: Equal counts are not enough. Each closer must match the most recent unclosed opener, which
-      is exactly the stack's top.
-    difficulty: 2
   - id: bracket-output
     kind: output
     prompt: What does this bracket checker print for "([)]" (1 means balanced, 0 means not)?
@@ -331,6 +319,29 @@ quiz:
     explanation: The new top is the nearest shorter bar on the left, and the current bar is the nearest
       shorter bar on the right. Everything strictly between them is at least as tall as the popped bar.
     difficulty: 5
+  - id: leftover-openers
+    kind: bug
+    prompt: The string '(()' is NOT balanced because one opener is never closed. This checker reports a
+      failure only when a closer meets an empty stack. What does it print?
+    code:
+      python: "s = \"(()\"\nst = []\nok = True\nfor ch in s:\n    if ch == \"(\":\n        st.append(ch)\n\
+        \    elif st:\n        st.pop()\n    else:\n        ok = False\n        break\nprint(\"balanced\"\
+        \ if ok else \"unbalanced\")\n"
+      cpp: "string s = \"(()\";\nvector<char> st;\nbool ok = true;\nfor (char ch : s) {\n    if (ch == '(')\
+        \ st.push_back(ch);\n    else if (!st.empty()) st.pop_back();\n    else { ok = false; break; }\n\
+        }\ncout << (ok ? \"balanced\" : \"unbalanced\");\n"
+      java: "String s = \"(()\";\nDeque<Character> st = new ArrayDeque<>();\nboolean ok = true;\nfor (char\
+        \ ch : s.toCharArray()) {\n    if (ch == '(') st.push(ch);\n    else if (!st.isEmpty()) st.pop();\n\
+        \    else { ok = false; break; }\n}\nSystem.out.println(ok ? \"balanced\" : \"unbalanced\");\n"
+    options:
+    - balanced
+    - unbalanced
+    - crashes
+    - empty
+    answer: 0
+    explanation: After the loop one '(' is still on the stack. The final verdict must also require the stack
+      to be EMPTY, otherwise strings with only extra openers are accepted.
+    difficulty: 2
 problems: [balanced-brackets, next-greater, next-taller-building]
 practice_links:
   - title: Valid Parentheses

@@ -186,20 +186,6 @@ quiz:
       (keep prev1) or robbing it (prev2 + x). Greedily grabbing the largest value 7 and its best compatible
       partner would give less.'
     difficulty: 2
-  - id: coin-combos
-    kind: mcq
-    prompt: How many different combinations of coins 1, 2 and 5 make 5, where 1 + 2 and 2 + 1 count as the
-      same combination?
-    options:
-    - '4'
-    - '9'
-    - '3'
-    - '5'
-    answer: 0
-    explanation: 'The combinations are 5, 2+2+1, 2+1+1+1 and 1+1+1+1+1. If order mattered you would count
-      9. In the DP this is decided by loop order: put the coins in the outer loop to count combinations,
-      and the amount in the outer loop to count ordered sequences.'
-    difficulty: 3
   - id: perfect-squares
     kind: mcq
     prompt: What is the fewest perfect squares (1, 4, 9, ...) that add up to 12?
@@ -307,6 +293,29 @@ quiz:
     answer: 0
     explanation: The remainder takes the sign of the dividend, so a negative difference stays negative and
       can leak into a later dp value. After subtracting, normalise with ((a - b) % MOD + MOD) % MOD.
+    difficulty: 3
+  - id: min-coins-zero-init
+    kind: bug
+    prompt: The fewest coins to make 3 with only a 2-coin is impossible (the answer should be -1). This
+      table starts every entry at 0 instead of 'infinity'. What does it print for dp[3]?
+    code:
+      python: "coins = [2]\namount = 3\ndp = [0] * (amount + 1)\nfor a in range(1, amount + 1):\n    for\
+        \ c in coins:\n        if a >= c:\n            dp[a] = min(dp[a], dp[a - c] + 1)\nprint(dp[amount])\n"
+      cpp: "vector<int> coins = {2};\nint amount = 3;\nvector<int> dp(amount + 1, 0);\nfor (int a = 1; a\
+        \ <= amount; a++)\n    for (int c : coins)\n        if (a >= c) dp[a] = min(dp[a], dp[a - c] + 1);\n\
+        cout << dp[amount];\n"
+      java: "int[] coins = {2};\nint amount = 3;\nint[] dp = new int[amount + 1];\nfor (int a = 1; a <=\
+        \ amount; a++)\n    for (int c : coins)\n        if (a >= c) dp[a] = Math.min(dp[a], dp[a - c] +\
+        \ 1);\nSystem.out.println(dp[amount]);\n"
+    options:
+    - '0'
+    - '-1'
+    - '1'
+    - '2'
+    answer: 0
+    explanation: min with a starting 0 can never become larger, so every amount is reported as 0 coins.
+      Minimum tables must start at a huge value (infinity) for 'not reachable yet', with dp[0] = 0 as the
+      only exception.
     difficulty: 3
 problems: [house-robber, min-coins]
 practice_links:

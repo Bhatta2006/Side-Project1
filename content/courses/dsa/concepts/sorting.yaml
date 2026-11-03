@@ -309,19 +309,6 @@ quiz:
       more memory and time than sorting a million items. Radix sort splits the numbers into a few digits
       so each pass uses a small table (k = 256 or 65,536).
     difficulty: 4
-  - id: quickselect
-    kind: mcq
-    prompt: You need the median of 1,000,000 unsorted values once. Which approach is fastest on average?
-    options:
-    - 'Quickselect: partition around a pivot and recurse into one side only, O(n) on average'
-    - Sort everything and read the middle element, which is O(n log n) and cannot be improved on
-    - Push all values into a heap and pop half of them, which is O(n) because heaps are fast
-    - Binary search the array directly, since the median always sits at the middle position
-    answer: 0
-    explanation: After partitioning you know which side holds the target rank and can discard the other
-      side, so the expected work is n + n/2 + n/4 + ... = O(n). Heaps would cost O(n log n) for half the
-      pops, and binary search needs sorted input.
-    difficulty: 4
   - id: sort-lower-bound
     kind: mcq
     prompt: What is the fewest comparisons that any comparison-based algorithm is guaranteed to need, in
@@ -336,6 +323,29 @@ quiz:
       tree needs at least log2(120) = 6.9, which rounds up to 7 levels. The same argument gives the Omega(n
       log n) lower bound for comparison sorting, which counting and radix sort sidestep by not comparing.
     difficulty: 5
+  - id: insertion-skips-last
+    kind: bug
+    prompt: Insertion sort of [3, 2, 1] should print 1 2 3. This version loops i over range(1, n - 1) and
+      so never inserts the last element. What does it print?
+    code:
+      python: "a = [3, 2, 1]\nfor i in range(1, len(a) - 1):\n    key = a[i]\n    j = i - 1\n    while j\
+        \ >= 0 and a[j] > key:\n        a[j + 1] = a[j]\n        j -= 1\n    a[j + 1] = key\nprint(*a)\n"
+      cpp: "int a[3] = {3, 2, 1};\nfor (int i = 1; i < 3 - 1; i++) {\n    int key = a[i], j = i - 1;\n \
+        \   while (j >= 0 && a[j] > key) {\n        a[j + 1] = a[j];\n        j--;\n    }\n    a[j + 1]\
+        \ = key;\n}\nfor (int x : a) cout << x << \" \";\n"
+      java: "int[] a = {3, 2, 1};\nfor (int i = 1; i < a.length - 1; i++) {\n    int key = a[i], j = i -\
+        \ 1;\n    while (j >= 0 && a[j] > key) {\n        a[j + 1] = a[j];\n        j--;\n    }\n    a[j\
+        \ + 1] = key;\n}\nfor (int x : a) System.out.print(x + \" \");\n"
+    options:
+    - 2 3 1
+    - 1 2 3
+    - 3 2 1
+    - 1 3 2
+    answer: 0
+    explanation: 'Indexes run from 1 to n - 1 inclusive, so the loop bound must be n, not n - 1. Skipping
+      the last index leaves it out of the sorted prefix: 1 is never inserted, and the array stays [2, 3,
+      1].'
+    difficulty: 2
 problems: [rank-students, count-inversions]
 practice_links:
   - title: Sort an Array

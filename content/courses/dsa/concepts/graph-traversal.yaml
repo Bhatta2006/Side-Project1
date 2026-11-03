@@ -297,23 +297,6 @@ quiz:
       helps up to the point where the real C stack overflows and the process crashes, so deep graphs should
       use an iterative DFS with a list as the stack.
     difficulty: 3
-  - id: native-depth
-    kind: mcq
-    languages:
-    - cpp
-    - java
-    prompt: A recursive DFS runs on a graph that is one long path of 1,000,000 nodes, with the default stack
-      size. What is the likely outcome?
-    options:
-    - A stack overflow (a crash, or a StackOverflowError), so use an explicit stack or a larger thread stack
-    - A correct answer, because the compiler turns every recursive call into a loop automatically
-    - A slowdown but a correct result, because the call stack grows into the heap on demand
-    - A silently wrong answer, because deep calls overwrite the visited array as they go
-    answer: 0
-    explanation: Each frame uses tens of bytes of a stack that is typically 1 to 8 MB (and far smaller for
-      ordinary Java threads), so depths of a few tens of thousands to a few hundred thousand are the practical
-      limit. Convert to an iterative DFS, or run the search in a thread created with a large stack size.
-    difficulty: 3
   - id: cycle-detect
     kind: mcq
     prompt: In a DFS on a DIRECTED graph, you reach a node that is already marked visited. When does that
@@ -390,6 +373,32 @@ quiz:
       the red key and reaching it with the key are different nodes: the second may open doors the first
       cannot. Visiting by cell alone would wrongly prune the path that went back for a key.'
     difficulty: 5
+  - id: visited-on-pop-count
+    kind: bug
+    prompt: A BFS on the graph 0 -> 1, 0 -> 2, 1 -> 3, 2 -> 3 should process each of the 4 nodes once. This
+      version marks a node as seen only when it is POPPED from the queue. How many nodes does it process?
+    code:
+      python: "adj = {0: [1, 2], 1: [3], 2: [3], 3: []}\nseen = set()\nq = [0]\nprocessed = 0\nwhile q:\n\
+        \    u = q.pop(0)\n    seen.add(u)\n    processed += 1\n    for v in adj[u]:\n        if v not in\
+        \ seen:\n            q.append(v)\nprint(processed)\n"
+      cpp: "vector<vector<int>> adj = {{1, 2}, {3}, {3}, {}};\nset<int> seen;\nqueue<int> q;\nq.push(0);\n\
+        int processed = 0;\nwhile (!q.empty()) {\n    int u = q.front();\n    q.pop();\n    seen.insert(u);\n\
+        \    processed++;\n    for (int v : adj[u])\n        if (!seen.count(v)) q.push(v);\n}\ncout <<\
+        \ processed;\n"
+      java: "int[][] adj = {{1, 2}, {3}, {3}, {}};\nSet<Integer> seen = new HashSet<>();\nDeque<Integer>\
+        \ q = new ArrayDeque<>();\nq.add(0);\nint processed = 0;\nwhile (!q.isEmpty()) {\n    int u = q.poll();\n\
+        \    seen.add(u);\n    processed++;\n    for (int v : adj[u])\n        if (!seen.contains(v)) q.add(v);\n\
+        }\nSystem.out.println(processed);\n"
+    options:
+    - '5'
+    - '4'
+    - '3'
+    - '6'
+    answer: 0
+    explanation: Node 3 is reached from both 1 and 2 before either of its copies is popped, so it enters
+      the queue twice and is processed twice. Mark a node the moment it is PUSHED, so it can never be queued
+      again.
+    difficulty: 3
 problems: [count-islands, fewest-hops, wall-breaker]
 practice_links:
   - title: Number of Islands

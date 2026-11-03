@@ -677,17 +677,6 @@ quiz:
     answer: 0
     explanation: 7 2 5 | 10 | 8.
     difficulty: 2
-  - id: average-trap
-    kind: mcq
-    prompt: Why is cutting near the average not enough?
-    options:
-    - An early cut can leave too little room for the parts that come later
-    - The average is always the answer, so no search is needed at all
-    - Computing the average is too slow for arrays of 10^5 elements
-    - Cutting near the average only works when the array is sorted
-    answer: 0
-    explanation: On 3 1 4 1 5 9 2 6 with k = 3 it gives 17 instead of 14.
-    difficulty: 3
   - id: kth-split
     kind: mcq
     prompt: a = 1 3 8 9, b = 2 4 5 7 10 and k = 6. How many of the 6 smallest come from a?
@@ -792,6 +781,27 @@ quiz:
     explanation: The width shrinks from 10^9 to 10^-6, a factor of 10^15, and log2(10^15) is about 50. A
       fixed iteration count such as 100 is safer than comparing floating-point values for equality, and
       it still costs only 100 checks.
+    difficulty: 3
+  - id: overshoot-by-one
+    kind: bug
+    prompt: This search should print the largest x with x * x <= 10, which is 3. The branches were written
+      the wrong way round for a 'largest value' search. What does it print?
+    code:
+      python: "lo, hi = 0, 10\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if mid * mid <= 10:\n     \
+        \   lo = mid + 1\n    else:\n        hi = mid\nprint(lo)\n"
+      cpp: "int lo = 0, hi = 10;\nwhile (lo < hi) {\n    int mid = (lo + hi) / 2;\n    if (mid * mid <=\
+        \ 10) lo = mid + 1;\n    else hi = mid;\n}\ncout << lo;\n"
+      java: "int lo = 0, hi = 10;\nwhile (lo < hi) {\n    int mid = (lo + hi) / 2;\n    if (mid * mid <=\
+        \ 10) lo = mid + 1;\n    else hi = mid;\n}\nSystem.out.println(lo);\n"
+    options:
+    - '4'
+    - '3'
+    - '5'
+    - '10'
+    answer: 0
+    explanation: This loop finds the FIRST value where the test fails, which is 4. To get the last value
+      that passes, either subtract 1 at the end, or use lo = mid with the rounded-up middle (lo + hi + 1)
+      / 2.
     difficulty: 3
 problems:
 - courier-vans

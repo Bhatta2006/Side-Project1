@@ -204,20 +204,6 @@ quiz:
       moves 1 -> 2 -> 3 -> 4 while fast goes 1 -> 3 -> 5 -> null. To get the first middle instead, test
       fast.next and fast.next.next in the loop condition.
     difficulty: 2
-  - id: no-leapfrog
-    kind: mcq
-    prompt: Inside a cycle, slow moves one node per step and fast moves two. Why must they meet instead
-      of leapfrogging each other?
-    options:
-    - The gap between them shrinks by exactly one each step, so it cannot skip past zero
-    - Fast moves twice as far, so it always lands exactly on slow's position at some step
-    - Every cycle has an even number of nodes, which makes the two positions coincide
-    - Slow eventually stops moving, which gives fast all the time it needs to catch up
-    answer: 0
-    explanation: Measure the distance fast still has to cover to reach slow. Each step fast gains one node
-      on slow, so that distance drops 3, 2, 1, 0 and never jumps over 0. If fast moved three per step the
-      gap could change by two and skip it.
-    difficulty: 3
   - id: nth-from-end
     kind: output
     prompt: The list is 1 -> 2 -> 3 -> 4 -> 5 and a dummy node sits in front of the head. What does this
@@ -358,6 +344,35 @@ quiz:
       4, one node past the entry. This offset is why resetting one pointer to the head and moving both one
       step at a time finds the entry node.
     difficulty: 5
+  - id: remove-nth-whole-list
+    kind: bug
+    prompt: Remove the 3rd node from the end of 1 -> 2 -> 3. That is the head, so the list should become
+      2 -> 3. This code has no dummy node and stops its fast pointer with 'while fast and fast.next'. What
+      does it print?
+    code:
+      python: "class N:\n    def __init__(self, v, nx=None):\n        self.v = v\n        self.nx = nx\n\
+        \nhead = N(1, N(2, N(3)))\nn = 3\nfast = slow = head\nfor _ in range(n):\n    fast = fast.nx\nwhile\
+        \ fast and fast.nx:\n    fast = fast.nx\n    slow = slow.nx\nslow.nx = slow.nx.nx\nout = []\np =\
+        \ head\nwhile p:\n    out.append(p.v)\n    p = p.nx\nprint(*out)\n"
+      cpp: "struct N {\n    int v;\n    N* nx;\n};\nN* head = new N{1, new N{2, new N{3, nullptr}}};\nint\
+        \ n = 3;\nN* fast = head;\nN* slow = head;\nfor (int i = 0; i < n; i++) fast = fast->nx;\nwhile\
+        \ (fast && fast->nx) {\n    fast = fast->nx;\n    slow = slow->nx;\n}\nslow->nx = slow->nx->nx;\n\
+        for (N* p = head; p; p = p->nx) cout << p->v << \" \";\n"
+      java: "class T {\n    int v;\n    T nx;\n    T(int v, T nx) {\n        this.v = v;\n        this.nx\
+        \ = nx;\n    }\n}\nT head = new T(1, new T(2, new T(3, null)));\nint n = 3;\nT fast = head, slow\
+        \ = head;\nfor (int i = 0; i < n; i++) fast = fast.nx;\nwhile (fast != null && fast.nx != null)\
+        \ {\n    fast = fast.nx;\n    slow = slow.nx;\n}\nslow.nx = slow.nx.nx;\nfor (T p = head; p != null;\
+        \ p = p.nx) System.out.print(p.v + \" \");\n"
+    options:
+    - 1 3
+    - 2 3
+    - 1 2
+    - 1 2 3
+    answer: 0
+    explanation: When n equals the length, fast falls off the list after n steps, and slow is still at the
+      head. The head must be removed itself, which is why a dummy node in front (slow starting at the dummy)
+      removes the special case.
+    difficulty: 4
 problems: [playlist-editor, repeated-group-reverse]
 practice_links:
   - title: Reverse Linked List

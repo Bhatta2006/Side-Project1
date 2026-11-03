@@ -933,17 +933,6 @@ quiz:
     answer: 0
     explanation: Levenshtein distance uses insert, delete and replace.
     difficulty: 1
-  - id: base-column
-    kind: mcq
-    prompt: What is dp[3][0], the cost of turning a 3-character prefix into the empty string?
-    options:
-    - '3'
-    - '0'
-    - '1'
-    - '4'
-    answer: 0
-    explanation: Delete all three characters.
-    difficulty: 2
   - id: horse
     kind: mcq
     prompt: The LCS shortcut n + m − 2·LCS gives 4 for horse → ros. What is the edit distance?
@@ -1068,6 +1057,35 @@ quiz:
       is the old dp[j], which the current assignment is about to overwrite. Save it in a variable first
       and use it one step later. This is the same trick as in the maximal-square rolling array.
     difficulty: 4
+  - id: no-replace-operation
+    kind: bug
+    prompt: The edit distance from 'ab' to 'cb' is 1 (replace a with c). This table only allows insert and
+      delete when letters differ. What does it print?
+    code:
+      python: "s, t = \"ab\", \"cb\"\nn, m = len(s), len(t)\ndp = [[0] * (m + 1) for _ in range(n + 1)]\n\
+        for i in range(n + 1):\n    dp[i][0] = i\nfor j in range(m + 1):\n    dp[0][j] = j\nfor i in range(1,\
+        \ n + 1):\n    for j in range(1, m + 1):\n        if s[i - 1] == t[j - 1]:\n            dp[i][j]\
+        \ = dp[i - 1][j - 1]\n        else:\n            dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1])\n\
+        print(dp[n][m])\n"
+      cpp: "string s = \"ab\", t = \"cb\";\nint n = s.size(), m = t.size();\nvector<vector<int>> dp(n +\
+        \ 1, vector<int>(m + 1, 0));\nfor (int i = 0; i <= n; i++) dp[i][0] = i;\nfor (int j = 0; j <= m;\
+        \ j++) dp[0][j] = j;\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++) {\n       \
+        \ if (s[i - 1] == t[j - 1]) dp[i][j] = dp[i - 1][j - 1];\n        else dp[i][j] = 1 + min(dp[i -\
+        \ 1][j], dp[i][j - 1]);\n    }\ncout << dp[n][m];\n"
+      java: "String s = \"ab\", t = \"cb\";\nint n = s.length(), m = t.length();\nint[][] dp = new int[n\
+        \ + 1][m + 1];\nfor (int i = 0; i <= n; i++) dp[i][0] = i;\nfor (int j = 0; j <= m; j++) dp[0][j]\
+        \ = j;\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++) {\n        if (s.charAt(i\
+        \ - 1) == t.charAt(j - 1)) dp[i][j] = dp[i - 1][j - 1];\n        else dp[i][j] = 1 + Math.min(dp[i\
+        \ - 1][j], dp[i][j - 1]);\n    }\nSystem.out.println(dp[n][m]);\n"
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '0'
+    answer: 0
+    explanation: Without the replace option (dp[i-1][j-1] + 1), changing one letter costs a delete plus
+      an insert, which is 2. The third neighbour of the recurrence is easy to forget.
+    difficulty: 3
 problems:
 - typo-costs
 - wildcard-sightings

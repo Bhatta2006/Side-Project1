@@ -324,18 +324,30 @@ quiz:
     explanation: 'An index gives both: its value is a[idx], and idx ≤ i − k tells you to pop it from the
       front. Each index is pushed and popped once, so the total is O(n).'
     difficulty: 5
-  - id: window-complexity
-    kind: mcq
-    prompt: A variable-size window has a while loop nested in a for loop. Why is the total time still O(n)?
+  - id: shrink-once-only
+    kind: bug
+    prompt: The shortest subarray of [1, 1, 1, 9] with sum at least 9 has length 1 (the 9 alone). This sliding
+      window shrinks from the left with an 'if' that runs once, not a loop. What does it print?
+    code:
+      python: "a = [1, 1, 1, 9]\ntarget = 9\nbest = len(a) + 1\nl = s = 0\nfor r in range(len(a)):\n   \
+        \ s += a[r]\n    if s >= target:\n        best = min(best, r - l + 1)\n        s -= a[l]\n     \
+        \   l += 1\nprint(best)\n"
+      cpp: "int a[4] = {1, 1, 1, 9};\nint target = 9, best = 5, l = 0, s = 0;\nfor (int r = 0; r < 4; r++)\
+        \ {\n    s += a[r];\n    if (s >= target) {\n        best = min(best, r - l + 1);\n        s -=\
+        \ a[l];\n        l++;\n    }\n}\ncout << best;\n"
+      java: "int[] a = {1, 1, 1, 9};\nint target = 9, best = 5, l = 0, s = 0;\nfor (int r = 0; r < 4; r++)\
+        \ {\n    s += a[r];\n    if (s >= target) {\n        best = Math.min(best, r - l + 1);\n       \
+        \ s -= a[l];\n        l++;\n    }\n}\nSystem.out.println(best);\n"
     options:
-    - Each index enters and leaves the window at most once, so the bodies run at most 2n times
-    - The while loop runs at most once per step of the for loop, so it is O(n)
-    - n is small enough in practice that the nested loops do not really matter here
-    - It is actually O(n²) in theory, but the constant factor stays small in practice
+    - '4'
+    - '1'
+    - '2'
+    - '5'
     answer: 0
-    explanation: 'This is amortised analysis: the inner loop''s total work across all outer iterations is
-      bounded by the number of left-pointer moves, which is at most n.'
-    difficulty: 5
+    explanation: The window is shrunk once and then moves on, although it was still valid after losing a[0].
+      The shrinking step must be a while loop that continues as long as the window stays valid, recording
+      the best length each time.
+    difficulty: 3
 problems: [longest-unique-substring, max-window-sum, shortest-fundraiser, shortest-window-negatives]
 practice_links:
   - title: Longest Substring Without Repeating Characters

@@ -290,20 +290,6 @@ quiz:
       does at most four finds and four unions, so k additions cost near O(k) in total instead of O(k * rows
       * columns).'
     difficulty: 4
-  - id: dsu-cost
-    kind: mcq
-    prompt: A union-find with both union by size and path compression handles 1,000,000 operations on 1,000,000
-      nodes. What is the cost per operation?
-    options:
-    - 'Effectively constant: amortised O(alpha(n)), where alpha is at most 4 for any practical n'
-    - O(log n) per operation, since the trees stay balanced binary trees under both optimisations
-    - O(sqrt n) per operation, since each find walks about sqrt n parents before the root
-    - O(n) per operation in the worst case, even when both optimisations are applied together
-    answer: 0
-    explanation: The inverse Ackermann function grows so slowly that it is at most 4 for any input that
-      fits in a computer. Each of the two optimisations alone gives O(log n) amortised; together they give
-      the near-constant bound.
-    difficulty: 4
   - id: offline-reverse
     kind: mcq
     prompt: Edges are removed one by one from a graph, and after each removal you need the number of connected
@@ -319,6 +305,30 @@ quiz:
       that remains after all removals, record its component count, then add the removed edges back in reverse
       order, recording the count each time. Reading the records backwards gives the answers.'
     difficulty: 5
+  - id: union-without-find
+    kind: bug
+    prompt: After union(1, 2) and union(1, 3), nodes 1, 2 and 3 are all connected. This union just sets
+      parent[a] = b, without first finding the roots of a and b. What does 'is 1 connected to 2?' print?
+    code:
+      python: "p = list(range(4))\ndef find(x):\n    while p[x] != x:\n        x = p[x]\n    return x\n\
+        def union(a, b):\n    p[a] = b\nunion(1, 2)\nunion(1, 3)\nprint(\"yes\" if find(1) == find(2) else\
+        \ \"no\")\n"
+      cpp: "int p[4] = {0, 1, 2, 3};\nauto find = [&](int x) {\n    while (p[x] != x) x = p[x];\n    return\
+        \ x;\n};\nauto uni = [&](int a, int b) { p[a] = b; };\nuni(1, 2);\nuni(1, 3);\ncout << (find(1)\
+        \ == find(2) ? \"yes\" : \"no\");\n"
+      java: "class T {\n    int[] p = {0, 1, 2, 3};\n    int find(int x) {\n        while (p[x] != x) x\
+        \ = p[x];\n        return x;\n    }\n    void union(int a, int b) {\n        p[a] = b;\n    }\n\
+        }\nT t = new T();\nt.union(1, 2);\nt.union(1, 3);\nSystem.out.println(t.find(1) == t.find(2) ? \"\
+        yes\" : \"no\");\n"
+    options:
+    - 'no'
+    - 'yes'
+    - yes via 3
+    - crash
+    answer: 0
+    explanation: 'The second union overwrites parent[1], which cut node 1 away from its first partner 2.
+      Union must join the ROOTS: parent[find(a)] = find(b), so existing links in either set are preserved.'
+    difficulty: 3
 problems: [online-components, shared-cables]
 practice_links:
   - title: Redundant Connection

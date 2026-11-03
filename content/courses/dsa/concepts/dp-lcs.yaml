@@ -933,17 +933,6 @@ quiz:
     answer: 0
     explanation: A contiguous block cannot continue through a mismatch.
     difficulty: 3
-  - id: scs-length
-    kind: mcq
-    prompt: a has 6 characters, b has 4, and their LCS has length 3. How long is the shortest common supersequence?
-    options:
-    - '7'
-    - '10'
-    - '13'
-    - '4'
-    answer: 0
-    explanation: 6 + 4 − 3 = 7; each LCS character is written once.
-    difficulty: 3
   - id: lps-value
     kind: output
     prompt: What does this print?
@@ -1046,6 +1035,34 @@ quiz:
     explanation: 10,001 x 10,001 cells at 4 bytes is about 400 MB, which often exceeds a judge's memory
       limit, while two rows hold 20,002 numbers. Rolling rows give the length only; to print the subsequence
       itself you need the whole table or a divide-and-conquer such as Hirschberg's algorithm.
+    difficulty: 3
+  - id: mismatch-copies-up-only
+    kind: bug
+    prompt: The longest common subsequence of 'aaa' and 'aab' is 2 ('aa'). On a mismatch this table copies
+      only the value from the row above, and forgets to compare it with the value on its left. What does
+      it print?
+    code:
+      python: "a, b = \"aaa\", \"aab\"\nn, m = len(a), len(b)\ndp = [[0] * (m + 1) for _ in range(n + 1)]\n\
+        for i in range(1, n + 1):\n    for j in range(1, m + 1):\n        if a[i - 1] == b[j - 1]:\n   \
+        \         dp[i][j] = dp[i - 1][j - 1] + 1\n        else:\n            dp[i][j] = dp[i - 1][j]\n\
+        print(dp[n][m])\n"
+      cpp: "string a = \"aaa\", b = \"aab\";\nint n = a.size(), m = b.size();\nvector<vector<int>> dp(n\
+        \ + 1, vector<int>(m + 1, 0));\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++) {\n\
+        \        if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;\n        else dp[i][j] = dp[i\
+        \ - 1][j];\n    }\ncout << dp[n][m];\n"
+      java: "String a = \"aaa\", b = \"aab\";\nint n = a.length(), m = b.length();\nint[][] dp = new int[n\
+        \ + 1][m + 1];\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++) {\n        if (a.charAt(i\
+        \ - 1) == b.charAt(j - 1)) dp[i][j] = dp[i - 1][j - 1] + 1;\n        else dp[i][j] = dp[i - 1][j];\n\
+        \    }\nSystem.out.println(dp[n][m]);\n"
+    options:
+    - '0'
+    - '2'
+    - '1'
+    - '3'
+    answer: 0
+    explanation: 'The last letters differ, and the only value copied is the one above, which is 0 along
+      the first column. The correct rule on a mismatch is max(up, left): the best of dropping a letter from
+      either string.'
     difficulty: 3
 problems:
 - weighted-common-playlist

@@ -1029,17 +1029,6 @@ quiz:
     answer: 0
     explanation: 0/1 means take once or skip; reuse is the unbounded family.
     difficulty: 1
-  - id: subset-base
-    kind: mcq
-    prompt: In subset sum, what must can[0] be before any number is processed?
-    options:
-    - true, because the empty subset sums to 0
-    - false, because no number has been used yet
-    - true only when 0 appears in the input
-    - It does not matter; it is overwritten later
-    answer: 0
-    explanation: Every reachable sum is built on top of the empty subset.
-    difficulty: 2
   - id: greedy-ratio
     kind: mcq
     prompt: Weights 1 3 4 5, values 1 4 5 7, capacity 7. Greedy by value per weight gets 8. What is the
@@ -1157,6 +1146,29 @@ quiz:
       may update every cell once, so 100 items cost about 5 x 10^7 operations, which is fine. Both budget
       loops must run downwards so that an item is still used at most once.'
     difficulty: 4
+  - id: can-zero-false
+    kind: bug
+    prompt: 'Subset sum: can the numbers 2 and 3 make the target 5? They obviously can. This table forgot
+      to set can[0] = True before processing the numbers. What does it print?'
+    code:
+      python: "nums = [2, 3]\ntarget = 5\ncan = [False] * (target + 1)\nfor x in nums:\n    for s in range(target,\
+        \ x - 1, -1):\n        if can[s - x]:\n            can[s] = True\nprint(\"yes\" if can[target] else\
+        \ \"no\")\n"
+      cpp: "int nums[2] = {2, 3};\nint target = 5;\nvector<bool> can(target + 1, false);\nfor (int x : nums)\n\
+        \    for (int s = target; s >= x; s--)\n        if (can[s - x]) can[s] = true;\ncout << (can[target]\
+        \ ? \"yes\" : \"no\");\n"
+      java: "int[] nums = {2, 3};\nint target = 5;\nboolean[] can = new boolean[target + 1];\nfor (int x\
+        \ : nums)\n    for (int s = target; s >= x; s--)\n        if (can[s - x]) can[s] = true;\nSystem.out.println(can[target]\
+        \ ? \"yes\" : \"no\");\n"
+    options:
+    - 'no'
+    - 'yes'
+    - yes twice
+    - nothing
+    answer: 0
+    explanation: Every reachable sum grows from an earlier reachable sum, and the first one is the empty
+      set with sum 0. Without can[0] = True nothing is ever reachable, so every answer is no.
+    difficulty: 2
 problems:
 - exact-change-festival
 - fair-teams

@@ -724,20 +724,6 @@ quiz:
       0 1 2 2, and their sum 13 counts every all-ones square in the grid: each cell with value k is the
       corner of exactly k squares (sides 1 to k).'
     difficulty: 3
-  - id: diagonal
-    kind: mcq
-    prompt: The grid rows are 101 / 001 / 011. A buggy solution uses 1 + min(up, left) and forgets the diagonal
-      neighbour, and it reports an area of 4. What is the true area of the largest all-ones square?
-    options:
-    - '1'
-    - '4'
-    - '2'
-    - '0'
-    answer: 0
-    explanation: At the bottom-right cell up and left are both 1, so the buggy code claims a 2 x 2 square.
-      But the cell diagonally up-left is 0, so that square has a hole. Only the diagonal checks the far
-      corner, so the correct dp value there is 1 and the area is 1.
-    difficulty: 3
   - id: all-squares
     kind: mcq
     prompt: A 3 x 3 grid is entirely ones. How many all-ones squares of any size does it contain?
@@ -822,6 +808,34 @@ quiz:
       later cells, so no single value captures what a future cell needs. That is why rectangles use per-row
       histograms and a stack instead of a one-number-per-cell DP.
     difficulty: 5
+  - id: no-diagonal-neighbour
+    kind: bug
+    prompt: The grid rows are 101, 001 and 011. Its largest all-ones square has area 1. The dp below computes
+      1 + min(up, left) and forgets the diagonal neighbour. What area does it print?
+    code:
+      python: "g = [\"101\", \"001\", \"011\"]\nn, m = 3, 3\ndp = [[0] * m for _ in range(n)]\nbest = 0\n\
+        for i in range(n):\n    for j in range(m):\n        if g[i][j] == \"1\":\n            if i == 0\
+        \ or j == 0:\n                dp[i][j] = 1\n            else:\n                dp[i][j] = 1 + min(dp[i\
+        \ - 1][j], dp[i][j - 1])\n            best = max(best, dp[i][j])\nprint(best * best)\n"
+      cpp: "string g[3] = {\"101\", \"001\", \"011\"};\nint n = 3, m = 3, best = 0;\nint dp[3][3] = {};\n\
+        for (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++)\n        if (g[i][j] == '1') {\n  \
+        \          if (i == 0 || j == 0) dp[i][j] = 1;\n            else dp[i][j] = 1 + min(dp[i - 1][j],\
+        \ dp[i][j - 1]);\n            best = max(best, dp[i][j]);\n        }\ncout << best * best;\n"
+      java: "String[] g = {\"101\", \"001\", \"011\"};\nint n = 3, m = 3, best = 0;\nint[][] dp = new int[3][3];\n\
+        for (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++)\n        if (g[i].charAt(j) == '1')\
+        \ {\n            if (i == 0 || j == 0) dp[i][j] = 1;\n            else dp[i][j] = 1 + Math.min(dp[i\
+        \ - 1][j], dp[i][j - 1]);\n            best = Math.max(best, dp[i][j]);\n        }\nSystem.out.println(best\
+        \ * best);\n"
+    options:
+    - '4'
+    - '1'
+    - '2'
+    - '9'
+    answer: 0
+    explanation: Cell (2,2) has ones above and to the left, but the cell diagonally up-left is 0, so no
+      real 2 x 2 square exists. Without the diagonal term the code believes in a square of side 2 and prints
+      4.
+    difficulty: 3
 problems:
 - solar-squares
 - meadow-fence

@@ -691,17 +691,6 @@ quiz:
     answer: 0
     explanation: Elements only meet partners to their left.
     difficulty: 1
-  - id: pairs-of-three
-    kind: mcq
-    prompt: The values 3 3 3 and k = 6. How many pairs i < j sum to k?
-    options:
-    - '3'
-    - '9'
-    - '6'
-    - '4'
-    answer: 0
-    explanation: Three 3s make 3 pairs.
-    difficulty: 2
   - id: longest-trace
     kind: mcq
     prompt: a = 1 -1 5 -2 3 and k = 3. What is the length of the longest subarray with sum k?
@@ -843,6 +832,26 @@ quiz:
       set), 100 and 200 start a walk, so every number is visited at most twice in total: O(n) overall. Walking
       from every element instead would be O(n^2) on a long run.'
     difficulty: 4
+  - id: set-instead-of-counter
+    kind: bug
+    prompt: Counting pairs i < j with a[i] + a[j] = 6 in [3, 3, 3] gives 3 pairs. This one-pass code remembers
+      the earlier values in a SET. What does it print?
+    code:
+      python: "a = [3, 3, 3]\nk = 6\nseen = set()\ncount = 0\nfor x in a:\n    if k - x in seen:\n     \
+        \   count += 1\n    seen.add(x)\nprint(count)\n"
+      cpp: "int a[3] = {3, 3, 3};\nint k = 6, count = 0;\nset<int> seen;\nfor (int x : a) {\n    if (seen.count(k\
+        \ - x)) count++;\n    seen.insert(x);\n}\ncout << count;\n"
+      java: "int[] a = {3, 3, 3};\nint k = 6, count = 0;\nSet<Integer> seen = new HashSet<>();\nfor (int\
+        \ x : a) {\n    if (seen.contains(k - x)) count++;\n    seen.add(x);\n}\nSystem.out.println(count);\n"
+    options:
+    - '2'
+    - '3'
+    - '1'
+    - '0'
+    answer: 0
+    explanation: 'A set stores 3 only once, so each later 3 finds ONE partner instead of all earlier copies.
+      Counting pairs needs the number of times each value occurred: a map from value to count.'
+    difficulty: 2
 problems:
 - longest-divisible-run
 - balanced-segments

@@ -263,20 +263,6 @@ quiz:
       giving 2 * 2 = 4 shortest paths. A BFS that also keeps count[v] += count[u] whenever dist[v] = dist[u]
       + 1 computes this in O(V + E).
     difficulty: 3
-  - id: dense-graph
-    kind: mcq
-    prompt: A dense graph has V = 2,000 vertices and about 2,000,000 edges. Which Dijkstra implementation
-      is cheaper, and roughly by how much?
-    options:
-    - 'The O(V^2) array version: about 4 million steps against about 22 million for the heap'
-    - 'The binary-heap version: about 4 million steps against about 22 million for the array'
-    - Both cost the same, since the number of vertices decides everything in the end
-    - The heap version, since O(E log V) is smaller than O(V^2) whenever E is large
-    answer: 0
-    explanation: The heap version costs about E log V = 2,000,000 * 11 = 22 million operations, while scanning
-      an array for the minimum costs V^2 = 4 million. The heap only wins on sparse graphs, where E is much
-      smaller than V^2 / log V.
-    difficulty: 4
   - id: floyd-order
     kind: mcq
     prompt: In Floyd-Warshall, which of the three nested loops must be the outermost one, and why?
@@ -321,6 +307,38 @@ quiz:
       use Bellman-Ford limited to k + 1 rounds on a copy of the distances, or Dijkstra over (node, stops
       used).
     difficulty: 5
+  - id: dijkstra-negative-edge
+    kind: bug
+    prompt: 'Edges: 0 -> 1 (weight 2), 0 -> 2 (weight 3) and 2 -> 1 (weight -2). The shortest distance to
+      node 1 is 1 (through node 2). This Dijkstra never revisits a node after it is finalised. What does
+      it print for dist[1]?'
+    code:
+      python: "import heapq\ng = {0: [(1, 2), (2, 3)], 1: [], 2: [(1, -2)]}\ndist = [10**9] * 3\ndist[0]\
+        \ = 0\ndone = set()\npq = [(0, 0)]\nwhile pq:\n    d, u = heapq.heappop(pq)\n    if u in done:\n\
+        \        continue\n    done.add(u)\n    for v, w in g[u]:\n        if v not in done and d + w <\
+        \ dist[v]:\n            dist[v] = d + w\n            heapq.heappush(pq, (dist[v], v))\nprint(dist[1])\n"
+      cpp: "vector<vector<pair<int, int>>> g = {{{1, 2}, {2, 3}}, {}, {{1, -2}}};\nvector<int> dist(3, 1000000000),\
+        \ done(3, 0);\ndist[0] = 0;\npriority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int,\
+        \ int>>> pq;\npq.push({0, 0});\nwhile (!pq.empty()) {\n    int d = pq.top().first, u = pq.top().second;\n\
+        \    pq.pop();\n    if (done[u]) continue;\n    done[u] = 1;\n    for (auto& e : g[u])\n       \
+        \ if (!done[e.first] && d + e.second < dist[e.first]) {\n            dist[e.first] = d + e.second;\n\
+        \            pq.push({dist[e.first], e.first});\n        }\n}\ncout << dist[1];\n"
+      java: "int[][][] g = {{{1, 2}, {2, 3}}, {}, {{1, -2}}};\nint[] dist = {1000000000, 1000000000, 1000000000};\n\
+        boolean[] done = new boolean[3];\ndist[0] = 0;\nPriorityQueue<int[]> pq = new PriorityQueue<>((a,\
+        \ b) -> a[0] - b[0]);\npq.add(new int[]{0, 0});\nwhile (!pq.isEmpty()) {\n    int[] top = pq.poll();\n\
+        \    int d = top[0], u = top[1];\n    if (done[u]) continue;\n    done[u] = true;\n    for (int[]\
+        \ e : g[u])\n        if (!done[e[0]] && d + e[1] < dist[e[0]]) {\n            dist[e[0]] = d + e[1];\n\
+        \            pq.add(new int[]{dist[e[0]], e[0]});\n        }\n}\nSystem.out.println(dist[1]);\n"
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '-2'
+    answer: 0
+    explanation: Node 1 is finalised with distance 2 before the route through node 2 is seen. Dijkstra assumes
+      a finalised distance can never improve, which is false once an edge has negative weight. Use Bellman-Ford
+      in that case.
+    difficulty: 4
 problems: [cheapest-routes, deadline-tolls]
 practice_links:
   - title: Network Delay Time
