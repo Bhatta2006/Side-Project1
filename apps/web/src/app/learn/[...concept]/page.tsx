@@ -30,6 +30,8 @@ import { Spinner } from '@/components/ui/spinner';
 
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 // Most lessons have no visuals, so their renderers load only with a lesson that does.
+// Tasks (reflections, real work a person judges) load only for lessons that have them.
+const LessonTasks = dynamic(() => import('@/components/lesson-tasks'), { ssr: false });
 const VisualizationHost = dynamic(() => import('@/components/visualization-host').then(m => m.VisualizationHost), { ssr: false });
 
 const STYLES = [
@@ -327,6 +329,7 @@ export default function Lesson() {
           ) : null}
           <Markdown source={concept.lesson} language={concept.language} rich />
           {(concept.visuals ?? []).map((v, i) => <VisualizationHost key={`${v.renderer}-${i}`} spec={v} lesson={{ concept: concept.id, title: concept.title }} />)}
+          {concept.tasks?.length ? <LessonTasks concept={concept.id} tasks={concept.tasks} /> : null}
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
 

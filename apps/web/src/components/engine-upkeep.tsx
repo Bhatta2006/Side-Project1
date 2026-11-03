@@ -227,7 +227,62 @@ function Validation() {
   );
 }
 
+type Submitted = { id: string; concept: string; kind: string; text: string; link: string | null; rubric: { criterion: string; points: number; look_for: string }[] };
+
+/** Learners' real work (oral, performance, portfolio, practical) that only a person can judge. */
+function TaskReviews() {
+  const [items, setItems] = useState<Submitted[] | null>(null);
+  const [points, setPoints] = useState<Record<string, Record<string, number>>>({});
+  const [names, setNames] = useState<Record<string, string>>({});
+  const load = useCallback(() => {
+    api.get<{ items: Submitted[] }>('/admin/tasks').then(r => setItems(r.items)).catch(e => toast.error(explain(e)));
+  }, []);
+  useEffect(load, [load]);
+
+  async function grade(s: Submitted) {
+    const given = Object.fromEntries(s.rubric.map(c => [c.criterion, points[s.id]?.[c.criterion] ?? 0]));
+    try {
+      await api.post(`/admin/tasks/${s.id}/grade`, { reviewer: (names[s.id] ?? '').trim(), points: given });
+      toast.success('Graded.');
+      load();
+    } catch (e) { toast.error(explain(e)); }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Work to judge</CardTitle>
+        <CardDescription>Only a named person's rubric grade counts as evidence for this kind of work.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-2">
+        {!items ? <Empty>Loading…</Empty> : items.length === 0 ? <Empty>Nothing waiting.</Empty> : items.map(s => (
+          <div key={s.id} className="grid gap-2 rounded-md border p-3 text-sm">
+            <span className="font-medium">{s.concept} · {s.kind}</span>
+            <p className="whitespace-pre-wrap text-muted-foreground">{s.text}</p>
+            {s.link ? <a className="underline underline-offset-4" href={s.link} target="_blank" rel="noreferrer noopener">Open the learner's link</a> : null}
+            {s.rubric.map(c => (
+              <label key={c.criterion} className="flex items-center gap-2">
+                <Input
+                  type="number" min={0} max={c.points} className="h-9 w-20"
+                  aria-label={`${c.criterion}, out of ${c.points}`}
+                  value={points[s.id]?.[c.criterion] ?? 0}
+                  onChange={e => setPoints(p => ({ ...p, [s.id]: { ...p[s.id], [c.criterion]: Math.max(0, Math.min(c.points, Number(e.target.value) || 0)) } }))}
+                />
+                <span>{c.criterion} (out of {c.points}): {c.look_for}</span>
+              </label>
+            ))}
+            <span className="flex flex-wrap items-center gap-2">
+              <Input aria-label={`Reviewer's full name for ${s.id}`} className="h-9 w-48" placeholder="Reviewer's full name" value={names[s.id] ?? ''} onChange={e => setNames(n => ({ ...n, [s.id]: e.target.value }))} />
+              <Button size="sm" disabled={(names[s.id] ?? '').trim().split(/\s+/).length < 2} onClick={() => grade(s)}>Grade</Button>
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Admin-only: keep released courses healthy and translations honest. */
 export function EngineUpkeep() {
-  return <div className="grid gap-6"><Validation /><Maintenance /><Translations /></div>;
+  return <div className="grid gap-6"><Validation /><TaskReviews /><Maintenance /><Translations /></div>;
 }

@@ -343,6 +343,26 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
     )
 
 
+def _tasks(db: Session, enrollment, qualified: str, concept) -> list[dict]:
+    if not concept.tasks:
+        return []
+    from socrat.learn import tasks
+
+    latest = tasks.mine(db, enrollment, qualified)
+    return [
+        dict(
+            id=t.id,
+            kind=t.kind,
+            prompt=t.prompt,
+            rubric=[c.model_dump() for c in t.rubric],
+            safety=t.safety or None,
+            evaluator=t.evaluator,
+            submission=latest.get(t.id),
+        )
+        for t in concept.tasks
+    ]
+
+
 def _validation(db: Session, qualified: str, concept) -> dict | None:
     if not (concept.provenance and concept.provenance.author == AI_AUTHOR):
         return None
@@ -392,6 +412,9 @@ def concept_view(
         lesson=concept.lesson,
         # Generated lessons say so, with how they were checked (no human review).
         ai_generated=bool(concept.provenance and concept.provenance.author == AI_AUTHOR),
+        # Work a quiz cannot judge, with this learner's latest submission for each.
+        tasks=_tasks(db, enrollment, qualified, concept),
+        sequence=concept.sequence,
         # What stands behind the estimate: the stage and the kinds of evidence (prompt 9.2).
         evidence=dict(
             stage=summary.stage,

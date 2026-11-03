@@ -757,6 +757,31 @@ class GeneratedConcept(Base):
     job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
+class TaskSubmission(Base):
+    """A learner's work on a task (``learn.tasks``): self-checked, waiting for a person, or
+    graded by a named person (only that grade becomes evidence)."""
+
+    __tablename__ = "task_submissions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    enrollment_id: Mapped[str] = mapped_column(
+        ForeignKey("enrollments.id", ondelete="CASCADE"), index=True
+    )
+    concept: Mapped[str] = mapped_column(String(160))
+    task_id: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(16))
+    text: Mapped[str] = mapped_column(String(4000))
+    link: Mapped[str] = mapped_column(String(500), default="")
+    met: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # self_checked|awaiting_person|graded
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reviewer: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    feedback: Mapped[str] = mapped_column(String(2000), default="")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    graded_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
 class ValidationReport(Base):
     """One validation round of a generated lesson: a state and its findings
     (see ``coursegen.validation``). Append-only; the newest row per concept counts."""

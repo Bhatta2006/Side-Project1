@@ -191,6 +191,23 @@ class Prompt(Model):
     max_words: int = Field(default=250, ge=30, le=600)
 
 
+class Task(Model):
+    """Work a quiz cannot judge (master prompt 4): a reflection, case study, oral explanation,
+    performance, portfolio piece or practical. Each has a rubric and says who judges it. Work
+    shown by doing (oral, performance, portfolio, practical) is judged by a person; reflections
+    and case studies are checked by the learner against the rubric and never count as evidence."""
+
+    id: Slug
+    kind: Literal["reflection", "case-study", "oral", "performance", "portfolio", "practical"]
+    prompt: str = Field(min_length=10, max_length=1500)
+    rubric: list[Criterion] = Field(min_length=2, max_length=6)
+    safety: str = Field(default="", max_length=300)  # what to do (or not) when practising it
+
+    @property
+    def evaluator(self) -> str:
+        return "self" if self.kind in ("reflection", "case-study") else "person"
+
+
 class PracticeLink(Model):
     title: str = Field(min_length=2, max_length=160)
     url: HttpUrl
@@ -306,6 +323,11 @@ class Concept(Model):
     experiments: list[Experiment] = Field(default_factory=list, max_length=6)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
+    tasks: list[Task] = Field(default_factory=list, max_length=4)
+    # The order a learner meets this concept's activities (empty: the page's default order):
+    # "lesson", "quiz", "visual:N", or "prompt:", "exercise:", "experiment:", "problem:",
+    # "task:" followed by an id. Every entry must name something this concept has.
+    sequence: list[str] = Field(default_factory=list, max_length=24)
     provenance: Provenance | None = None
     outline: Outline | None = None
     # A draft is being authored: validated and kept in the graph, but never served.
@@ -330,6 +352,17 @@ class Concept(Model):
             ]
             if missing:
                 raise ValueError(f"live concept {self.id} needs {', '.join(missing)}")
+        known = {"lesson", "quiz"} | {f"visual:{i}" for i in range(len(self.visuals))}
+        known |= {f"prompt:{x.id}" for x in self.prompts} | {f"task:{x.id}" for x in self.tasks}
+        known |= {f"exercise:{x.id}" for x in self.exercises}
+        known |= {f"experiment:{x.id}" for x in self.experiments}
+        known |= {f"problem:{x}" for x in self.problems}
+        if unknown := [s for s in self.sequence if s not in known]:
+            raise ValueError(f"concept {self.id} sequence names unknown activities: {unknown}")
+        if len(set(self.sequence)) != len(self.sequence):
+            raise ValueError(f"concept {self.id} sequence repeats an activity")
+        if len({t.id for t in self.tasks}) != len(self.tasks):
+            raise ValueError(f"concept {self.id} task ids must be unique")
         return self
 
 

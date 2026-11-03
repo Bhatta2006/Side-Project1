@@ -47,6 +47,7 @@ TYPE = {
     "explanation": "explanation",
     "explain": "explanation",
     "project": "performance",
+    "performance": "performance",
     "tutor": "exposure",  # an observation, never a success on its own
 }
 APPLIED = {"application", "transfer", "performance"}

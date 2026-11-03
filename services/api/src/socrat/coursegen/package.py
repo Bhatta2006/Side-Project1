@@ -26,6 +26,7 @@ from socrat.catalog.schema import (
     Prompt,
     Provenance,
     QuizItem,
+    Task,
 )
 from socrat.coursegen import execute, links
 from socrat.judge.service import normalized
@@ -267,6 +268,29 @@ can apply to any wording, and a model answer that would earn every point:
              "rubric": [{{"criterion": "...", "points": 2, "look_for": "what earns the points"}}],
              "model_answer": "..."}}]"""
 
+TASKS = """This concept is also practised beyond a quiz. Add "tasks": 1-2 of the kinds the
+practice calls for: "reflection" or "case-study" (the learner checks their own work against the
+rubric) or "oral", "performance", "portfolio", "practical" (a person judges the real work; say
+what to record or hand in). Each has a rubric of 2-6 criteria worth 1-4 points. For anything
+physical, "safety" says what to do or avoid; never ask for anything dangerous without a
+qualified person present. Also give "sequence": the order the learner meets this concept's
+activities, using "lesson", "quiz", "visual:0", "prompt:<id>", "task:<id>" (only ids you wrote).
+"tasks": [{{"id": "kebab-case", "kind": "reflection|case-study|oral|performance|portfolio|practical",
+  "prompt": "...", "rubric": [{{"criterion": "...", "points": 2, "look_for": "..."}}], "safety": ""}}],
+"sequence": ["lesson", "quiz", "task:<id>"]"""
+
+DOING = {"performance", "reflection", "discussion", "project", "lab"}
+
+
+def wants_tasks(concept, adapter=None) -> bool:
+    """Tasks are asked for when the competency is practised by doing or reflecting."""
+    practice = set(concept.outline.practice) if concept.outline else set()
+    hands_on = adapter is not None and (
+        adapter.needs_physical_practice or adapter.needs_external_evaluator
+    )
+    return bool(practice & DOING) or hands_on
+
+
 ATOMS_CODE = """Code adapters are allowed on worked, predict and trace atoms:
 "adapters": {{"<language>": {{"code": "complete program", "stdin": ""}}}} with one for each of:
 {languages}. The programs are run and must print the same output in every language;
@@ -496,6 +520,15 @@ def build_concept(
             problems["quiz"].append(f"prompt {where}: {'; '.join(detail)}")
     if len({x.id for x in prompts}) != len(prompts):
         problems["quiz"].append("Prompt ids must be unique.")
+    tasks: list[Task] = []
+    for raw in quiz.get("tasks", []) if isinstance(quiz.get("tasks"), list) else []:
+        try:
+            tasks.append(Task.model_validate(raw))
+        except (ValidationError, TypeError) as exc:
+            where = raw.get("id", "?") if isinstance(raw, dict) else "?"
+            detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
+            problems["quiz"].append(f"task {where}: {'; '.join(detail)}")
+    sequence = [s for s in quiz.get("sequence", []) if isinstance(s, str)][:24]
     exercises: list[Exercise] = []
     if workbench:
         exercises, bad = check_exercises(quiz.get("exercises"))
@@ -515,6 +548,8 @@ def build_concept(
                 "pitfalls": lesson.get("pitfalls", []),
                 "quiz": parsed,
                 "prompts": prompts,
+                "tasks": tasks,
+                "sequence": sequence,
                 "exercises": exercises,
                 "experiments": experiments,
                 "provenance": Provenance(

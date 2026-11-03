@@ -583,6 +583,9 @@ export interface ConceptView {
   module: string;
   lesson: string;
   ai_generated: boolean;
+  /** Work a quiz cannot judge, with the learner's latest submission. */
+  tasks?: import('@/components/lesson-tasks').LessonTask[];
+  sequence?: string[];
   /** What stands behind the estimate (master prompt 9.2). */
   evidence?: { stage: 'unknown' | 'emerging' | 'developing' | 'proficient' | 'demonstrated'; needs_follow_up: boolean; reasons: string[] };
   /** How a generated lesson was checked; null for hand-written lessons. */
