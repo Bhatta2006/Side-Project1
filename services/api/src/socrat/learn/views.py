@@ -371,6 +371,18 @@ def concept_view(
     solved = solved_problems(db, user.id)
     index = practice.default_index()
     current_band = band(state, now)
+    from socrat.mastery import evidence as kinds
+
+    rows = (
+        db.scalars(
+            select(Evidence).where(
+                Evidence.enrollment_id == enrollment.id, Evidence.concept == qualified
+            )
+        ).all()
+        if enrollment
+        else []
+    )
+    summary = kinds.summarise(list(rows), state, now)
     return dict(
         id=qualified,
         course=course_id,
@@ -380,6 +392,16 @@ def concept_view(
         lesson=concept.lesson,
         # Generated lessons say so, with how they were checked (no human review).
         ai_generated=bool(concept.provenance and concept.provenance.author == AI_AUTHOR),
+        # What stands behind the estimate: the stage and the kinds of evidence (prompt 9.2).
+        evidence=dict(
+            stage=summary.stage,
+            by_type=summary.by_type,
+            independent=summary.independent,
+            assisted=summary.assisted,
+            delayed=summary.delayed,
+            needs_follow_up=summary.needs_follow_up,
+            reasons=summary.reasons,
+        ),
         # How the generated lesson was checked: pass, with warnings, or still needs a person.
         validation=_validation(db, qualified, concept),
         attribution=concept.provenance.attribution_md if concept.provenance else "",

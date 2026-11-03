@@ -24,6 +24,7 @@ class AnswerInput(BaseModel):
     item: str = Field(min_length=3, max_length=200)
     choice: int | None = Field(default=None, ge=0, le=9)  # None: "I haven't seen this"
     time_s: int = Field(default=0, ge=0, le=7200)
+    confidence: int | None = Field(default=None, ge=1, le=4)  # optional, for calibration
 
 
 def enabled(request: Request) -> None:
@@ -77,7 +78,15 @@ def submit_answer(session_id: str, body: AnswerInput, request: Request):
         enrollment = active(db, user)
         session = service.owned(db, enrollment, session_id)
         result = service.answer(
-            db, cat, enrollment, session, body.item, body.choice, body.time_s, now()
+            db,
+            cat,
+            enrollment,
+            session,
+            body.item,
+            body.choice,
+            body.time_s,
+            now(),
+            confidence=body.confidence,
         )
         return {**result, "session": service.view(cat, session, enrollment.language)}
 

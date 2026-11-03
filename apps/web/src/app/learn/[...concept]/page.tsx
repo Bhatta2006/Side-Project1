@@ -481,6 +481,9 @@ export default function Lesson() {
         <aside className="hidden content-start gap-5 lg:sticky lg:top-24 lg:grid lg:self-start" aria-label="Lesson tools">
           <div className="paper rounded-card p-5">
             <StatusLabel status={statusFromBand(concept.band)} className="mb-4" />
+            {concept.evidence?.reasons.length ? (
+              <p className="-mt-2 mb-4 text-sm text-muted-foreground">{concept.evidence.reasons[0]}</p>
+            ) : null}
             <Stepper concept={concept} className="flex-col gap-4" />
           </div>
           {sections.length > 1 ? (

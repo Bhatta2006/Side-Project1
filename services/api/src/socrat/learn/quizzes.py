@@ -418,6 +418,7 @@ def answer(
     item_id: str,
     choice: int,
     now: int,
+    confidence: int | None = None,
 ) -> dict:
     if session.completed_at is not None:
         raise HTTPException(409, "quiz_already_completed")
@@ -430,7 +431,10 @@ def answer(
     if item_id in session.answers:
         raise HTTPException(409, "already_answered")
     correct = q.is_correct(session.id, choice)  # choice is a display position
-    session.answers = {**session.answers, item_id: {"choice": choice, "correct": correct}}
+    entry = {"choice": choice, "correct": correct}
+    if confidence is not None:
+        entry["confidence"] = confidence
+    session.answers = {**session.answers, item_id: entry}
     if session.activity_id.startswith("checkpoint:"):
         state = gate_state(catalog, session, enrollment.language)
         if not state.done:
@@ -472,7 +476,12 @@ def finish(
             per_concept.setdefault(concept, []).append(bool(session.answers[item_id]["correct"]))
     if session.activity_id.partition(":")[0] in TESTOUTS:
         return finish_testout(db, catalog, user, enrollment, session, per_concept, now)
+    rated: dict[str, list[int]] = {}
+    for concept, item_id in session.items:
+        if (c := (session.answers.get(item_id) or {}).get("confidence")) is not None:
+            rated.setdefault(concept, []).append(int(c))
     for concept, results in per_concept.items():
+        sure = rated.get(concept, [])
         learn.record_evidence(
             db,
             enrollment,
@@ -483,6 +492,10 @@ def finish(
             now,
             elapsed_seconds=elapsed,
             expected_seconds=expected,
+            # Mean stated confidence on a 0-1 scale, when the learner rated their answers.
+            details={"confidence": round((sum(sure) / len(sure) - 1) / 3, 3), "rated": len(sure)}
+            if sure
+            else None,
         )
     if session.activity_id.startswith("checkpoint:"):
         state = gate_state(catalog, session, enrollment.language, exhausted=True)
@@ -625,3 +638,27 @@ def settle_testout(
         )
     outcome = {"score": round(score, 3), "passed": passed, "engine": "adaptive"}
     learn.complete_activity(db, user, enrollment, activity_id, now, outcome=outcome)
+
+
+def rated_answers(db: Session, user_id: str) -> list[tuple[float, bool]]:
+    """(confidence 0-1, correct) for every quiz answer this learner rated, across courses."""
+
+    sessions = db.scalars(
+        select(QuizSession)
+        .join(Enrollment, Enrollment.id == QuizSession.enrollment_id)
+        .where(Enrollment.user_id == user_id)
+    )
+    standard = [
+        ((int(a["confidence"]) - 1) / 3, bool(a["correct"]))
+        for s in sessions
+        for a in (s.answers or {}).values()
+        if isinstance(a, dict) and a.get("confidence") is not None
+    ]
+    from socrat.models import QuizResponse
+
+    adaptive = db.execute(
+        select(QuizResponse.confidence, QuizResponse.correct)
+        .join(Enrollment, Enrollment.id == QuizResponse.enrollment_id)
+        .where(Enrollment.user_id == user_id, QuizResponse.confidence.is_not(None))
+    )
+    return standard + [((int(c or 1) - 1) / 3, bool(ok)) for c, ok in adaptive]

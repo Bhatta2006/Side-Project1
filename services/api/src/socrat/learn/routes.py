@@ -123,6 +123,8 @@ class PlacementAnswer(Strict):
 class QuizAnswer(Strict):
     item: str = Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")
     choice: int = Field(ge=0, le=9)
+    # Optional "how sure are you?" (1 guessing .. 4 certain), for confidence calibration.
+    confidence: int | None = Field(default=None, ge=1, le=4)
 
 
 class TransferAnswer(Strict):
@@ -649,6 +651,18 @@ def plan(request: Request):
         return views.plan_view(db, catalog(), user, active(db, user), now())
 
 
+@router.get("/progress/calibration")
+def progress_calibration(request: Request):
+    """How sure the learner said they were against how often they were right, from the quiz
+    answers they rated. Nothing is inferred about the person; it is a skill they can practise."""
+    from socrat.mastery import evidence
+
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        pairs = quizzes.rated_answers(db, user.id)
+        return dict(calibration=evidence.calibration(pairs))
+
+
 @router.get("/progress")
 def progress(request: Request):
     with Session(engine(request)) as db, db.begin():
@@ -845,7 +859,9 @@ def quiz_answer(activity_id: str, body: QuizAnswer, request: Request):
         user = user_of(request, db, write=True)
         enrollment = active(db, user)
         session = quizzes.open_session(db, cat, enrollment, valid_activity(cat, activity_id), now())
-        quizzes.answer(db, cat, user, enrollment, session, body.item, body.choice, now())
+        quizzes.answer(
+            db, cat, user, enrollment, session, body.item, body.choice, now(), body.confidence
+        )
         return quizzes.session_view(cat, session, enrollment.language, db, user.locale)
 
 

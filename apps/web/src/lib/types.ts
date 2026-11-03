@@ -578,6 +578,8 @@ export interface ConceptView {
   module: string;
   lesson: string;
   ai_generated: boolean;
+  /** What stands behind the estimate (master prompt 9.2). */
+  evidence?: { stage: 'unknown' | 'emerging' | 'developing' | 'proficient' | 'demonstrated'; needs_follow_up: boolean; reasons: string[] };
   /** How a generated lesson was checked; null for hand-written lessons. */
   validation?: { status: 'pass' | 'pass_with_warnings' | 'human_review_required'; label: string; reviewer: string | null } | null;
   attribution: string;

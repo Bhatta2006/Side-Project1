@@ -567,6 +567,7 @@ class QuizResponse(Base):
     time_s: Mapped[int] = mapped_column(Integer, default=0)
     seed: Mapped[str] = mapped_column(String(64), default="")
     choice: Mapped[int | None] = mapped_column(Integer, nullable=True)  # authored option index
+    confidence: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1..4, optional
     created_at: Mapped[int] = mapped_column(Integer, default=now)
 
 

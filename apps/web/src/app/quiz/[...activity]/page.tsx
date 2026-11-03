@@ -11,6 +11,7 @@ import type { ActivityKind, Gate, QuizQuestion, QuizSession } from '@/lib/types'
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading } from '@/components/common';
 import { Choice } from '@/components/choice';
+import { ConfidencePicker } from '@/components/confidence';
 import { StatusIcon } from '@/components/socrat/status';
 import { AttentionIcon, LockedState } from '@/components/socrat/states';
 import { AdaptiveCheck } from '@/components/socrat/adaptive-check';
@@ -157,6 +158,8 @@ export default function Quiz() {
   const [session, setSession] = useState<QuizSession | null>(null);
   const [index, setIndex] = useState(0);
   const [choice, setChoice] = useState<number | null>(null);
+  // Optional: how sure the learner is, compared later with how often they were right.
+  const [sure, setSure] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const finishedFixed = Boolean(session?.completed && (session.feedback === 'at_end' || index === (session?.questions.length ?? 0)));
@@ -186,9 +189,11 @@ export default function Quiz() {
     setBusy(true);
     setError('');
     try {
-      const next = await api.post<QuizSession>(`/quiz/${activityId}/answer`, { item: q.id, choice });
+      const body = sure === null ? { item: q.id, choice } : { item: q.id, choice, confidence: sure };
+      const next = await api.post<QuizSession>(`/quiz/${activityId}/answer`, body);
       setSession(next);
       setChoice(null);
+      setSure(null);
       if (next.feedback === 'at_end' && !next.completed) setIndex(i => Math.min(i + 1, next.questions.length - 1));
     } catch (e) {
       setError(explain(e));
@@ -331,6 +336,8 @@ export default function Quiz() {
             </div>
           </div>
         ) : null}
+
+        {!q.answered && choice !== null ? <ConfidencePicker value={sure} onChange={setSure} /> : null}
 
         <div className="flex flex-wrap items-center gap-3">
           {!q.answered ? (

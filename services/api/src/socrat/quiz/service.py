@@ -486,6 +486,7 @@ def answer(
     time_s: int,
     now: int,
     cfg: EngineConfig = DEFAULT,
+    confidence: int | None = None,
 ) -> dict:
     """Grade the pending item (``choice=None`` means "not seen this"), then move on."""
     pending = session.state.get("pending")
@@ -557,6 +558,7 @@ def answer(
                 hint_level=hints,
                 time_s=max(0, time_s),
                 choice=authored,
+                confidence=confidence if choice is not None else None,
                 created_at=now,
             )
         )
