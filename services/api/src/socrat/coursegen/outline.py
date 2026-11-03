@@ -437,11 +437,27 @@ def _clip(text: str, limit: int) -> str:
 _LOOP_FIRST = ("solve", "predict-observe-explain", "read-reflect", "derive")
 
 
-def _tidy_shape(given: dict) -> None:
+# Studios a subject may use, by the intent's adapter (engine.domains), first is the default.
+# A live run gave a cooking course the physics lab: its quiz then had to be simulator
+# experiments, which failed every round and cost the most. Adapters not listed (general, music,
+# animation-movement) have no studio of their own yet.
+STUDIOS_FOR = {
+    "software": ("code", "reading"),
+    "math-science": ("workbench", "lab", "reading"),
+    "electronics": ("lab", "reading"),
+}
+
+
+def _tidy_shape(given: dict, adapter: str = "") -> None:
     """Keeps only what the chosen studio supports. An unknown studio becomes "reading", the
-    studio the architect is told to use for any subject without its own."""
+    studio the architect is told to use for any subject without its own; with an ``adapter``
+    the studio must also suit the subject."""
     if given.get("studio") not in shape.STUDIOS:
         given["studio"] = "reading"
+    if adapter:
+        fits = STUDIOS_FOR.get(adapter, ("reading",))
+        if given["studio"] not in fits:
+            given["studio"] = fits[0]
     allowed = shape.STUDIOS[given["studio"]]
     if given.get("loop") not in allowed["loops"]:
         given["loop"] = next(loop for loop in _LOOP_FIRST if loop in allowed["loops"])
@@ -451,7 +467,7 @@ def _tidy_shape(given: dict) -> None:
         given[name] = kept or fallback
 
 
-def tidy(outline: dict, catalog: Catalog) -> dict:
+def tidy(outline: dict, catalog: Catalog, adapter: str = "") -> dict:
     """Deterministic repairs of slips that need no model, instead of a whole new round:
     - a concept related to itself, to one of its own prerequisites, or to a concept that does
       not exist (related links are optional context, so dropping one never changes what is
@@ -468,7 +484,7 @@ def tidy(outline: dict, catalog: Catalog) -> dict:
         if isinstance(c, dict)
     ]
     if isinstance(outline.get("shape"), dict):
-        _tidy_shape(outline["shape"])
+        _tidy_shape(outline["shape"], adapter)
     ids = {c.get("id") for c in concepts}
     for c in concepts:
         related = c.get("related")

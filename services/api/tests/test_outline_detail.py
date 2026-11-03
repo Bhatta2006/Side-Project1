@@ -231,3 +231,19 @@ def test_tidy_keeps_only_what_the_studio_supports():
     assert outline["shape"] == dict(
         studio="lab", loop="solve", evidence=["numeric"], tools=["simulation"]
     )
+
+
+def test_the_studio_must_suit_the_subject():
+    lab = {"studio": "lab", "loop": "predict-observe-explain", "evidence": ["quiz"], "tools": []}
+    cooking = copy.deepcopy(OUTLINE) | {"shape": copy.deepcopy(lab)}
+    tidy(cooking, default_catalog(), "general")  # a live run put a cooking course in the lab
+    assert cooking["shape"]["studio"] == "reading" and cooking["shape"]["loop"] == "read-reflect"
+    physics = copy.deepcopy(OUTLINE) | {"shape": copy.deepcopy(lab)}
+    tidy(physics, default_catalog(), "math-science")
+    assert physics["shape"]["studio"] == "lab"
+    code = copy.deepcopy(OUTLINE) | {"shape": copy.deepcopy(lab)}
+    tidy(code, default_catalog(), "software")
+    assert code["shape"]["studio"] == "code"
+    unknown = copy.deepcopy(OUTLINE) | {"shape": copy.deepcopy(lab)}
+    tidy(unknown, default_catalog())  # no adapter (an admin brief): the architect decides
+    assert unknown["shape"]["studio"] == "lab"

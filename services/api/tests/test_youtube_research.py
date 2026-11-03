@@ -150,3 +150,36 @@ def test_rewrites_use_the_reviser_model_and_fall_back_to_the_author():
     mixed = Settings(gen_roles={"author": {"model": "cheap"}, "reviser": {"model": "strong"}})
     assert roles.role_settings(mixed, "reviser").ai_model == "strong"
     assert roles.role_settings(mixed, "author").ai_model == "cheap"
+
+
+def test_a_role_can_reason_while_the_others_do_not():
+    mixed = Settings(
+        openai_chat_template_kwargs={"thinking": False},
+        gen_roles={"reviser": {"chat_template_kwargs": {"thinking": True}}},
+    )
+    roles.check_roles(mixed.gen_roles)
+    assert roles.role_settings(mixed, "reviser").openai_chat_template_kwargs == {"thinking": True}
+    assert roles.role_settings(mixed, "quiz").openai_chat_template_kwargs == {"thinking": False}
+
+
+def test_a_busy_site_is_tried_again_before_its_link_counts_as_dead(monkeypatch):
+    from socrat.coursegen import links
+
+    monkeypatch.setattr(links, "public_https", lambda url: True)
+    answers = iter([httpx.ConnectError("blip"), httpx.Response(200)])
+
+    def handler(request):
+        answer = next(answers)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    async def check():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await links.reachable(client, "https://en.wikipedia.org/wiki/Cholera")
+
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr(links.asyncio, "sleep", lambda s: real_sleep(0))
+    assert asyncio.run(check())
+    missing = httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
+    assert not asyncio.run(links.reachable(missing, "https://example.org/gone"))

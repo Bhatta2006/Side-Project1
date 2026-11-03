@@ -242,7 +242,7 @@ async def run_outline(
                 )
                 issues += _review(engine, job_id, attempt, early)[1] if early else []
                 continue
-        tidy(outline, base)
+        tidy(outline, base, brief.adapter)
         try:
             course = to_course(brief, outline)
             with Session(engine) as db:

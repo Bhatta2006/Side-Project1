@@ -195,6 +195,12 @@ If "visuals" are present, each must serve a stated objective, its params must ma
 idea, and its fallback_text must teach the same thing without the visual; list any that do not
 under "lesson". Decorative visuals count against clarity.
 
+What a score means, in every dimension: 5 = meets the contract, nothing to fix there; 4 = one
+specific fix needed; 3 = several fixes or one real gap; 2 = a serious problem; 1 = unusable.
+Correctness is 5 when you find no factual error or misleading statement. Any score below 5 must
+come with the exact fix under "lesson", "quiz" or "atoms" (for correctness: the claim and its
+correction), so the author can make it; a lower score with no fix named is not allowed.
+
 Reply with one JSON object only:
 {"scores": {"correctness": 1, "depth": 1, "continuity": 1, "misconceptions": 1,
             "assessment_alignment": 1, "clarity": 1, "accessibility": 1},
@@ -213,7 +219,8 @@ STYLE_REVIEW = """
 
 A LEARNING STYLE block is part of the context. Judge depth and clarity against that style,
 not against the reference lesson. Also score "style_fit" 1-5: would the learner described
-find the length, register, tone, examples and rigor right for them? Add "style_fit" to scores."""
+find the length, register, tone, examples and rigor right for them? Add "style_fit" to scores,
+on the same 1-5 meaning, with the fix named when it is below 5."""
 
 EXERCISES = """This course practises in a math workbench that checks answers with a computer
 algebra system. Add "exercises": 3-6 problems the learner solves by typing an answer, easy to
@@ -331,8 +338,10 @@ def quiz_example(reference: Concept | None) -> str:
 
 SHELL_FENCES = {"bash", "sh", "shell", "console", "zsh", "powershell", "ps", "cmd", "terminal"}
 # A style's upper bound is guidance for the author; the gate allows this much over it, since
-# a model cannot count characters and a lesson 10% long is not a reason to discard it.
-CEILING_SLACK = 1.25
+# a model cannot count characters and a lesson 10% long is not a reason to discard it. Live runs
+# wrote bite lessons 30-45% over while the reviewer scored their style fit 4, so the reviewer's
+# style_fit (>= 4 to pass) judges the length the learner meets; this only stops a runaway.
+CEILING_SLACK = 1.5
 
 
 def teaching_length(text: str) -> int:
@@ -513,7 +522,8 @@ def build_concept(
     required when the outline assesses by "explain"."""
     problems: dict[str, list[str]] = {"lesson": [], "quiz": []}
     found = quiz.get("quiz")
-    items: list = found if isinstance(found, list) else []
+    # Items past the tenth are dropped rather than failing a whole round (a live run wrote 11).
+    items: list = found[:10] if isinstance(found, list) else []
     if not 4 <= len(items) <= 10:
         problems["quiz"].append(f"Write 5-8 items; got {len(items)}.")
     parsed, broken = [], []

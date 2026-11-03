@@ -198,7 +198,8 @@ class Settings(DatabaseSettings):
     # Course generation (docs/architecture/course-generation.md). Each agent role may use its
     # own provider, model, effort and prices, e.g. SOCRAT_GEN_ROLES='{"critic": {"provider":
     # "openai", "model": "...", "base_url": "..."}}'; unset keys fall back to SOCRAT_AI_*.
-    gen_roles: dict[str, dict[str, str | float]] = Field(default_factory=dict)
+    # "chat_template_kwargs" (an object) overrides SOCRAT_OPENAI_CHAT_TEMPLATE_KWARGS per role.
+    gen_roles: dict[str, dict[str, str | float | dict]] = Field(default_factory=dict)
     style_engine_enabled: bool = True  # learning styles; admin accounts only while testing
     # Learner-typed courses ("teach me X"): off until the owner turns it on.
     learning_requests_enabled: bool = False

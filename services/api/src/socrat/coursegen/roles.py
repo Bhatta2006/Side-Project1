@@ -47,6 +47,8 @@ KEYS = {
     "model": ("ai_model", "openai_model"),
     "effort": ("ai_effort",),
     "base_url": ("openai_base_url",),
+    # e.g. {"thinking": true} so the reviser reasons while cheap drafts do not
+    "chat_template_kwargs": ("openai_chat_template_kwargs",),
     "price_input_per_mtok": ("ai_price_input_per_mtok",),
     "price_output_per_mtok": ("ai_price_output_per_mtok",),
 }
