@@ -315,7 +315,7 @@ export default function Settings() {
   return (
     <Page>
       <PageHeader eyebrow="make it yours" title={NAME.settings} description="Changes to your schedule update your plan straight away." actions={<Soc size={88} mood="wink" className="hidden sm:block" />} />
-      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
         <SectionNav active={section} onPick={setSection} />
         <div className="grid min-w-0 gap-10">
         <div id="appearance" className="scroll-mt-32"><Appearance /></div>

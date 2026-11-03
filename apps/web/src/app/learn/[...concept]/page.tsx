@@ -13,6 +13,7 @@ import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@
 import type { ConceptView, Resource } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { defaultBlocks, orderBlocks, steps as pathSteps } from '@/lib/sequence';
+import { strongSoFar } from '@/lib/strong-so-far';
 import Markdown, { outline } from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
@@ -66,7 +67,7 @@ function Stepper({ concept, className }: { concept: ConceptView; className?: str
   const steps: { label: string; status: Status; detail: string }[] = [
     { label: 'Read', status: concept.lesson_done ? 'read' : 'not_seen', detail: concept.lesson_done ? 'Lesson read' : 'Not read yet' },
     { label: 'Check', status: locked ? 'locked' : concept.quiz_done ? 'practised' : 'not_seen', detail: locked ? 'Locked' : concept.quiz_done ? 'Concept check done' : 'Not taken yet' },
-    { label: 'Practice', status: locked ? 'locked' : concept.band === 'strong' ? 'mastered' : solved ? 'practised' : 'not_seen', detail: locked ? 'Locked' : concept.band === 'strong' ? 'Mastered' : solved ? 'Practised' : 'Not started' },
+    { label: 'Practice', status: locked ? 'locked' : concept.band === 'strong' ? (strongSoFar(concept) ? 'learned' : 'mastered') : solved ? 'practised' : 'not_seen', detail: locked ? 'Locked' : concept.band === 'strong' ? (strongSoFar(concept) ? 'Strong so far' : 'Mastered') : solved ? 'Practised' : 'Not started' },
   ];
   return (
     <ol className={cn('flex items-start gap-2', className)} aria-label="Lesson steps">
@@ -552,7 +553,7 @@ export default function Lesson() {
         {/* Desktop support column: stepper, on this page, Ask Soc, reminders. */}
         <aside className="hidden content-start gap-5 lg:sticky lg:top-24 lg:grid lg:self-start" aria-label="Lesson tools">
           <div className="paper rounded-card p-5">
-            <StatusLabel status={statusFromBand(concept.band)} className="mb-4" />
+            <StatusLabel status={strongSoFar(concept) ? 'learned' : statusFromBand(concept.band)} detail={strongSoFar(concept) ? 'Strong so far' : undefined} className="mb-4" />
             {concept.evidence?.reasons.length ? (
               <p className="-mt-2 mb-4 text-sm text-muted-foreground">{concept.evidence.reasons[0]}</p>
             ) : null}
