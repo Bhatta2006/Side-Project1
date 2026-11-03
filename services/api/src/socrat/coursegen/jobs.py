@@ -495,6 +495,24 @@ async def run_package(
         if cited:
             ctx = "\n\n".join([ctx, research.block(cited)])
 
+    def release(live_, pack_, summary_) -> None:
+        pack_ = pkg.release_pack(pack_, models["reviewer"], summary_)
+        wants = concept.outline is not None and "code" in concept.outline.assessment
+        needed = sorted({"python", *course.languages})
+        exercise = wants and executor.available(needed) == needed
+        with Session(engine) as db, db.begin():
+            generated.store_concept(db, base, course_id, live_, pack_, job_id=job_id)
+            if exercise:
+                enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
+            if project_due(db, course, concept_id):
+                enqueue(db, "project", course_id, {"trigger": "release"}, None, concept.module)
+        event = {"role": "system", "event": "released", "calls": calls}
+        if wants and not exercise:
+            event["exercise"] = "waiting for the execution service"
+        _note(engine, job_id, event, state="done")
+
+    polished = False  # one extra round for imprecise facts, at most
+    fallback = None  # the first package that passed, kept while that round runs
     for attempt in range(1, ROUNDS + 1):
         if _over_budget(engine, course_id, brief.budget_usd):
             pause_for_budget(engine, course_id, job_id)
@@ -656,25 +674,29 @@ async def run_package(
         }
         spend = cost + facts.cost_usd + review.cost_usd
         _note(engine, job_id, entry, spend, output={**output, "scores": scores})
+        if passed and attempt < ROUNDS and not polished:
+            polish = pkg.imprecise_notes(facts.data)
+            # Only with room to spare: a polish round must not run into the lesson's budget.
+            if any(polish.values()) and _job_cost(engine, job_id) < brief.concept_budget_usd / 2:
+                polished, fallback = True, (live, pack, summary, status, findings)
+                notes, redo = polish, {k for k, v in polish.items() if v}
+                issues = [f"{k}: {x}" for k, v in polish.items() for x in v][:30]
+                entry = {"role": "system", "round": attempt, "event": "polishing", "issues": issues}
+                _note(engine, job_id, entry, stage="generating")
+                continue
         if passed:
-            pack = pkg.release_pack(pack, models["reviewer"], summary)
-            wants = concept.outline is not None and "code" in concept.outline.assessment
-            needed = sorted({"python", *course.languages})
-            exercise = wants and executor.available(needed) == needed
-            with Session(engine) as db, db.begin():
-                generated.store_concept(db, base, course_id, live, pack, job_id=job_id)
-                if exercise:
-                    enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
-                if project_due(db, course, concept_id):
-                    enqueue(db, "project", course_id, {"trigger": "release"}, None, concept.module)
-            event = {"role": "system", "event": "released", "calls": calls}
-            if wants and not exercise:
-                event["exercise"] = "waiting for the execution service"
-            _note(engine, job_id, event, state="done")
+            release(live, pack, summary)
             return
         redo = {k for k, v in notes.items() if v} or {"lesson"}
         entry = {"role": "system", "round": attempt, "event": "revising"}
         _note(engine, job_id, entry, stage="generating")
+    if fallback is not None:
+        # The polish round did not pass, but the package before it did: release that one, with
+        # its own report on top so the learner's label is not "being revised".
+        live, pack, summary, status, findings = fallback
+        report(ROUNDS, status, findings)
+        release(live, pack, summary)
+        return
     report(ROUNDS, "rejected", findings)
     _note(
         engine,

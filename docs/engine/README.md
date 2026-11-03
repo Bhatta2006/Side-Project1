@@ -51,6 +51,11 @@ Kept stable across change:
   concepts' content.
 - **Outline reuse:** an identical brief (ignoring id and budgets) reuses a critic-passed
   outline with no model call (`jobs.reusable_outline`).
+- **Imprecise facts get one polish round:** a package that passes but carries fact claims the
+  checker called *imprecise* is revised once (only with under half the lesson's budget spent).
+  If that round fails, the first passing version is released as it was (`jobs.run_package`).
+- **Researcher sources by subject:** only software courses see the whole source registry; other
+  adapters see `research.GENERAL_SOURCES`.
 - **Result envelope:** `coursegen/roles.envelope` records each model call's parse result,
   confidence, assumptions and unresolved issues in the job log. Every model call records its model,
 prompt version (a hash of the instructions), time and cost in the job log.

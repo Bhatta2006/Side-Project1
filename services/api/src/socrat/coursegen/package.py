@@ -674,6 +674,29 @@ async def broken_links(lesson: dict, client=None) -> list[str]:
     return await links.broken(urls, client) if urls else []
 
 
+def imprecise_notes(facts: dict | None) -> dict[str, list[str]]:
+    """Revision notes for fact claims judged imprecise: wording that overstates or leaves a
+    wrong impression, but is not wrong. A package carrying only these passes ``verdict``; it is
+    worth one more round (``jobs.run_package``), not a block. Incorrect claims are not here:
+    they fail the package outright."""
+    notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
+    for claim in (facts or {}).get("claims", []):
+        if not isinstance(claim, dict) or claim.get("verdict") != "imprecise":
+            continue
+        where = str(claim.get("where", "lesson"))
+        target = (
+            "quiz"
+            if where.startswith("quiz")
+            else "atoms"
+            if where.startswith("atom")
+            else "lesson"
+        )
+        notes[target].append(
+            f"[imprecise] {where}: {claim.get('claim', '')} → {claim.get('correction', '')}"
+        )
+    return notes
+
+
 def verdict(
     facts: dict | None, review: dict | None, style: bool = False
 ) -> tuple[bool, dict[str, list[str]], dict]:
