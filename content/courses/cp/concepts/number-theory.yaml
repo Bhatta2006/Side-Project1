@@ -212,7 +212,7 @@ quiz:
     answer: 0
     explanation: The sieve costs about 10^7 once. Trial division per query is √(10^7) ≈ 3162 steps, so 3·10^8
       overall, and a per-query sieve or scan is far worse.
-    difficulty: 4
+    difficulty: 5
   - id: lcm-overflow
     kind: mcq
     prompt: a = 4·10^9 and b = 6·10^9 in 64-bit signed integers (limit about 9.2·10^18). Which computes

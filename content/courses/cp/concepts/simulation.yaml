@@ -205,7 +205,7 @@ quiz:
     answer: 0
     explanation: Each write is read by the next iteration, so the 1 smears across the whole array. Iterate
       from the right, or copy into a second array.
-    difficulty: 4
+    difficulty: 5
   - id: cycle-pigeonhole
     kind: mcq
     prompt: A deterministic process has 28 possible states. You simulate step by step and record the first

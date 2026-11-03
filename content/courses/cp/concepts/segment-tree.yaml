@@ -179,7 +179,7 @@ quiz:
     explanation: The padding must never win a comparison. With non-negative values 0 happens to work, but
       with negatives only −infinity is safe.
     difficulty: 2
-  - id: build-output
+  - id: sum-tree-build-output
     kind: output
     prompt: This builds a sum tree bottom-up with leaves at positions n..2n−1. What does it print?
     code:
@@ -296,7 +296,7 @@ quiz:
     answer: 0
     explanation: The best subarray across the middle is (best suffix of left) + (best prefix of right),
       and the parent's prefix and suffix need the child totals. Design the node so merge is O(1).
-    difficulty: 4
+    difficulty: 5
   - id: range-add-need
     kind: mcq
     prompt: A segment tree supports point updates and range sums. You now also need 'add v to every element

@@ -275,7 +275,7 @@ quiz:
     - '2'
     answer: 0
     explanation: This is 3^100 mod 7. Since 3^6 ≡ 1, only 100 mod 6 = 4 matters, and 3^4 = 81 ≡ 4.
-    difficulty: 4
+    difficulty: 5
   - id: sum-formula
     kind: mcq
     prompt: You need n(n+1)/2 mod p for n up to 10^18 and p = 10^9 + 7, in 64-bit integers. Which is correct?

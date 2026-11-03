@@ -247,7 +247,7 @@ quiz:
     answer: 0
     explanation: Two prefix sums with the same remainder mod 5 delimit a subarray divisible by 5. Count
       equal remainders with a hash map in O(n), and remember to take negative remainders into [0, 5).
-    difficulty: 4
+    difficulty: 5
   - id: xor-diff
     kind: mcq
     prompt: You must apply 'xor every element of [l, r] with v' many times, then print the final array.

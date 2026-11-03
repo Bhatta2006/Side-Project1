@@ -274,7 +274,7 @@ quiz:
     explanation: 'At i = 5 the border ''aa'' (k = 2) cannot be extended by ''a'', but the shorter border
       ''a'' (k = pi[1] = 1) can, giving 2. A single reset to 0 misses it. The fallback is ''while k > 0
       and s[i] != s[k]: k = pi[k - 1]''.'
-    difficulty: 4
+    difficulty: 5
 problems: [pattern-count, border-occurrences]
 practice_links:
   - title: String Matching

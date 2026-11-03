@@ -223,7 +223,7 @@ quiz:
     answer: 0
     explanation: 'With sums on the outside, 1+2 and 2+1 are counted separately. This counts ordered sequences:
       1, 1, 2, 3, 5, then 5 + 3 + 1 = 9 for sum 5.'
-    difficulty: 4
+    difficulty: 5
   - id: forward-bug
     kind: output
     prompt: This 0/1 knapsack has one item (weight 2, value 3) and capacity 6. What does it print?

@@ -194,7 +194,7 @@ quiz:
     answer: 0
     explanation: 'n²/2 = 5·10^11 pairs times 10^−9 is about 500 collisions. Comparing many strings makes
       one small modulus unsafe: use 2^61 − 1 or two moduli.'
-    difficulty: 4
+    difficulty: 5
   - id: mulmod
     kind: mcq
     prompt: You hash modulo 2^61 − 1. The product of two residues can be as large as about 2^122. How do

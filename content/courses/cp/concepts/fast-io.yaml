@@ -256,7 +256,7 @@ quiz:
     answer: 0
     explanation: a·b < 1.0·10^18 fits (limit ≈ 9.2·10^18) but a·b·c ≈ 10^27 does not. Reduce after every
       multiplication. The last option reduces a only, leaving b·c unreduced.
-    difficulty: 4
+    difficulty: 5
   - id: java-shift
     kind: output
     languages:

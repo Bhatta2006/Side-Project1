@@ -57,7 +57,7 @@ def accept(client, headers, problem_id):
         ).json()["job"]
     )
     cases = [
-        CaseResult(index=i, status="passed", wall_ms=5, stdout=t.expected or "")
+        CaseResult(index=i, status="passed", wall_ms=5, stdout=(t.expected or "")[:16000])
         for i, t in enumerate(envelope.tests)
     ]
     m = envelope.manifest
