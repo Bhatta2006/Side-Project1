@@ -900,128 +900,153 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: subsequence-meaning
-  kind: mcq
-  prompt: Which of these is a subsequence of "abcde" but not a substring?
-  options:
-  - ace
-  - abc
-  - cde
-  - bcd
-  answer: 0
-  explanation: ace keeps the order but skips b and d; the others are contiguous.
-  difficulty: 1
-- id: mismatch-rule
-  kind: mcq
-  prompt: In LCS, a[i−1] differs from b[j−1]. What is dp[i][j]?
-  options:
-  - "max(dp[i−1][j], dp[i][j−1])"
-  - "dp[i−1][j−1], unchanged"
-  - "dp[i−1][j−1] + 1, as on a match"
-  - "0, since the run is broken"
-  answer: 0
-  explanation: Drop the last character of one string or the other and keep the better.
-  difficulty: 2
-- id: greedy-lcs
-  kind: mcq
-  prompt: LCS of "zabcd" and "abczd". Greedy matching through b prints 2. What is the true LCS?
-  options:
-  - '4'
-  - '2'
-  - '3'
-  - '5'
-  answer: 0
-  explanation: abcd. Matching z first wastes a, b and c.
-  difficulty: 2
-- id: substring-reset
-  kind: mcq
-  prompt: For the longest common substring, what does a mismatch cell hold?
-  options:
-  - '0'
-  - max of up and left
-  - up-left
-  - up-left + 1
-  answer: 0
-  explanation: A contiguous block cannot continue through a mismatch.
-  difficulty: 3
-- id: scs-length
-  kind: mcq
-  prompt: a has 6 characters, b has 4, and their LCS has length 3. How long is the shortest common supersequence?
-  options:
-  - '7'
-  - '10'
-  - '13'
-  - '4'
-  answer: 0
-  explanation: 6 + 4 − 3 = 7; each LCS character is written once.
-  difficulty: 3
-- id: lps-order
-  kind: mcq
-  prompt: For the palindromic subsequence table dp[i][j], in which order must i run?
-  options:
-  - From n − 1 down to 0
-  - From 0 up to n − 1
-  - Any order
-  - Only i = j matters
-  answer: 0
-  explanation: Row i reads row i + 1, which must already be filled.
-  difficulty: 4
-- id: lps-value
-  kind: output
-  prompt: What does this print?
-  code:
-    python: |
-      s = "abca"
-      n = len(s)
-      dp = [[0] * n for _ in range(n)]
-      for i in range(n - 1, -1, -1):
-          dp[i][i] = 1
-          for j in range(i + 1, n):
-              if s[i] == s[j]:
-                  dp[i][j] = dp[i + 1][j - 1] + 2
-              else:
-                  dp[i][j] = max(dp[i + 1][j], dp[i][j - 1])
-      print(dp[0][n - 1])
-    cpp: |
-      string s = "abca";
-      int n = s.size();
-      vector<vector<int>> dp(n, vector<int>(n, 0));
-      for (int i = n - 1; i >= 0; i--) {
-          dp[i][i] = 1;
-          for (int j = i + 1; j < n; j++)
-              dp[i][j] = s[i] == s[j] ? dp[i + 1][j - 1] + 2 : max(dp[i + 1][j], dp[i][j - 1]);
-      }
-      cout << dp[0][n - 1];
-    java: |
-      String s = "abca";
-      int n = s.length();
-      int[][] dp = new int[n][n];
-      for (int i = n - 1; i >= 0; i--) {
-          dp[i][i] = 1;
-          for (int j = i + 1; j < n; j++)
-              dp[i][j] = s.charAt(i) == s.charAt(j) ? dp[i + 1][j - 1] + 2
-                                                    : Math.max(dp[i + 1][j], dp[i][j - 1]);
-      }
-      System.out.print(dp[0][n - 1]);
-  options:
-  - '3'
-  - '2'
-  - '4'
-  - '1'
-  answer: 0
-  explanation: aba (or aca) has length 3.
-  difficulty: 4
-- id: two-pointer-safe
-  kind: mcq
-  prompt: Why is greedy earliest matching correct for "is s a subsequence of t" but not for LCS?
-  options:
-  - "All of s must be matched, so there is no choice of which characters to keep"
-  - "Because t is always longer than s, so the pointer over t can never run out"
-  - "Greedy is never correct for either one; both questions need a full DP table"
-  - "Because s is sorted first, so the earliest match is always the best one"
-  answer: 0
-  explanation: LCS chooses what to drop from both strings; subsequence matching does not.
-  difficulty: 5
+  - id: subsequence-meaning
+    kind: mcq
+    prompt: Which of these is a subsequence of "abcde" but not a substring?
+    options:
+    - ace
+    - abc
+    - cde
+    - bcd
+    answer: 0
+    explanation: ace keeps the order but skips b and d; the others are contiguous.
+    difficulty: 1
+  - id: greedy-lcs
+    kind: mcq
+    prompt: LCS of "zabcd" and "abczd". Greedy matching through b prints 2. What is the true LCS?
+    options:
+    - '4'
+    - '2'
+    - '3'
+    - '5'
+    answer: 0
+    explanation: abcd. Matching z first wastes a, b and c.
+    difficulty: 2
+  - id: substring-reset
+    kind: mcq
+    prompt: For the longest common substring, what does a mismatch cell hold?
+    options:
+    - '0'
+    - max of up and left
+    - up-left
+    - up-left + 1
+    answer: 0
+    explanation: A contiguous block cannot continue through a mismatch.
+    difficulty: 3
+  - id: scs-length
+    kind: mcq
+    prompt: a has 6 characters, b has 4, and their LCS has length 3. How long is the shortest common supersequence?
+    options:
+    - '7'
+    - '10'
+    - '13'
+    - '4'
+    answer: 0
+    explanation: 6 + 4 − 3 = 7; each LCS character is written once.
+    difficulty: 3
+  - id: lps-value
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "s = \"abca\"\nn = len(s)\ndp = [[0] * n for _ in range(n)]\nfor i in range(n - 1, -1, -1):\n\
+        \    dp[i][i] = 1\n    for j in range(i + 1, n):\n        if s[i] == s[j]:\n            dp[i][j]\
+        \ = dp[i + 1][j - 1] + 2\n        else:\n            dp[i][j] = max(dp[i + 1][j], dp[i][j - 1])\n\
+        print(dp[0][n - 1])\n"
+      cpp: "string s = \"abca\";\nint n = s.size();\nvector<vector<int>> dp(n, vector<int>(n, 0));\nfor\
+        \ (int i = n - 1; i >= 0; i--) {\n    dp[i][i] = 1;\n    for (int j = i + 1; j < n; j++) {\n   \
+        \     if (s[i] == s[j]) dp[i][j] = dp[i + 1][j - 1] + 2;\n        else dp[i][j] = max(dp[i + 1][j],\
+        \ dp[i][j - 1]);\n    }\n}\ncout << dp[0][n - 1];\n"
+      java: "String s = \"abca\";\nint n = s.length();\nint[][] dp = new int[n][n];\nfor (int i = n - 1;\
+        \ i >= 0; i--) {\n    dp[i][i] = 1;\n    for (int j = i + 1; j < n; j++) {\n        if (s.charAt(i)\
+        \ == s.charAt(j)) dp[i][j] = dp[i + 1][j - 1] + 2;\n        else dp[i][j] = Math.max(dp[i + 1][j],\
+        \ dp[i][j - 1]);\n    }\n}\nSystem.out.println(dp[0][n - 1]);\n"
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: aba (or aca) has length 3.
+    difficulty: 4
+  - id: two-pointer-safe
+    kind: mcq
+    prompt: Why is greedy earliest matching correct for "is s a subsequence of t" but not for LCS?
+    options:
+    - All of s must be matched, so there is no choice of which characters to keep
+    - Because t is always longer than s, so the pointer over t can never run out
+    - Greedy is never correct for either one; both questions need a full DP table
+    - Because s is sorted first, so the earliest match is always the best one
+    answer: 0
+    explanation: LCS chooses what to drop from both strings; subsequence matching does not.
+    difficulty: 5
+  - id: substring-output
+    kind: output
+    prompt: This finds the longest common SUBSTRING (contiguous) of two strings. What does it print?
+    code:
+      python: "a = \"abcdxyz\"\nb = \"xyzabcd\"\ndp = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]\n\
+        best = 0\nfor i in range(1, len(a) + 1):\n    for j in range(1, len(b) + 1):\n        if a[i - 1]\
+        \ == b[j - 1]:\n            dp[i][j] = dp[i - 1][j - 1] + 1\n            best = max(best, dp[i][j])\n\
+        print(best)\n"
+      cpp: "string a = \"abcdxyz\", b = \"xyzabcd\";\nvector<vector<int>> dp(a.size() + 1, vector<int>(b.size()\
+        \ + 1, 0));\nint best = 0;\nfor (size_t i = 1; i <= a.size(); i++)\n    for (size_t j = 1; j <=\
+        \ b.size(); j++)\n        if (a[i - 1] == b[j - 1]) {\n            dp[i][j] = dp[i - 1][j - 1] +\
+        \ 1;\n            best = max(best, dp[i][j]);\n        }\ncout << best;\n"
+      java: "String a = \"abcdxyz\", b = \"xyzabcd\";\nint[][] dp = new int[a.length() + 1][b.length() +\
+        \ 1];\nint best = 0;\nfor (int i = 1; i <= a.length(); i++)\n    for (int j = 1; j <= b.length();\
+        \ j++)\n        if (a.charAt(i - 1) == b.charAt(j - 1)) {\n            dp[i][j] = dp[i - 1][j -\
+        \ 1] + 1;\n            best = Math.max(best, dp[i][j]);\n        }\nSystem.out.println(best);\n"
+    options:
+    - '4'
+    - '3'
+    - '7'
+    - '1'
+    answer: 0
+    explanation: The common block is abcd (length 4); xyz has only length 3. A mismatch leaves the cell
+      at 0, because a substring cannot skip characters, and the answer is the largest cell anywhere in the
+      table rather than the corner. The longest common SUBSEQUENCE of the same strings would be 4 or more
+      only by skipping.
+    difficulty: 3
+  - id: lps-reverse
+    kind: mcq
+    prompt: What is the length of the longest palindromic subsequence of "bbbab"?
+    options:
+    - '4'
+    - '3'
+    - '5'
+    - '2'
+    answer: 0
+    explanation: 'Dropping the ''a'' leaves bbbb, a palindrome of length 4. One way to compute it: the longest
+      palindromic subsequence of s equals the LCS of s and its reverse. The direct interval table also works,
+      filled from the bottom row up.'
+    difficulty: 4
+  - id: lcs-distinct
+    kind: mcq
+    prompt: The strings are ABCBDAB and BDCABA, and their LCS has length 4. How many different strings of
+      length 4 are common subsequences of both?
+    options:
+    - '3'
+    - '1'
+    - '2'
+    - '4'
+    answer: 0
+    explanation: BCBA, BCAB and BDAB all work. The table gives one LCS when you walk back, but ties (equal
+      up and left) are the places where different answers branch. Counting them needs either a count table
+      alongside the length table, or a backtracking walk with deduplication.
+    difficulty: 5
+  - id: lcs-memory
+    kind: mcq
+    prompt: Two strings each have 10,000 characters. Roughly how much memory does the full LCS table of
+      4-byte integers need, compared with two rolling rows?
+    options:
+    - About 400 MB for the full table, but only about 80 KB for two rows
+    - About 40 MB for the full table, but only about 8 KB for two rows
+    - About 4 GB for the full table, but only about 800 KB for two rows
+    - About 400 MB for both, since the rows are copies of the full table
+    answer: 0
+    explanation: 10,001 x 10,001 cells at 4 bytes is about 400 MB, which often exceeds a judge's memory
+      limit, while two rows hold 20,002 numbers. Rolling rows give the length only; to print the subsequence
+      itself you need the whole table or a divide-and-conquer such as Hirschberg's algorithm.
+    difficulty: 3
 problems:
 - weighted-common-playlist
 - palindrome-trim

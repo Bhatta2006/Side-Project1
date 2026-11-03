@@ -642,124 +642,151 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: state
-  kind: mcq
-  prompt: In the O(n²) LIS, what does dp[i] mean?
-  options:
-  - The longest increasing subsequence that ends at a[i]
-  - The longest increasing subsequence of a[:i]
-  - The number of smaller elements before i
-  - Whether a[i] is in the LIS
-  answer: 0
-  explanation: Ending at i is what makes the transition possible; the answer is the maximum.
-  difficulty: 1
-- id: greedy
-  kind: mcq
-  prompt: 10 9 2 5 3 7 101 18. Greedy extension from the first element gets 2. What is the LIS?
-  options:
-  - '4'
-  - '2'
-  - '3'
-  - '5'
-  answer: 0
-  explanation: 2 5 7 101 (or 2 3 7 18).
-  difficulty: 2
-- id: answer-cell
-  kind: mcq
-  prompt: dp = 1 2 3 1. What is the LIS length?
-  options:
-  - '3'
-  - '1'
-  - '7'
-  - '4'
-  answer: 0
-  explanation: The maximum over all i, not the last cell.
-  difficulty: 2
-- id: bound
-  kind: mcq
-  prompt: For a strictly increasing LIS with tails, which search do you use?
-  options:
-  - The first tail >= x (lower bound)
-  - The first tail > x (upper bound)
-  - The last tail < x
-  - Linear search from the end
-  answer: 0
-  explanation: An equal value must replace, not extend.
-  difficulty: 3
-- id: tails-trace
-  kind: output
-  prompt: What does this print?
-  code:
-    python: |
-      from bisect import bisect_left
-      tails = []
-      for x in [3, 4, 1, 5, 2]:
-          k = bisect_left(tails, x)
-          if k == len(tails):
-              tails.append(x)
-          else:
-              tails[k] = x
-      print(tails)
-    cpp: |
-      vector<int> tails;
-      for (int x : {3, 4, 1, 5, 2}) {
-          auto it = lower_bound(tails.begin(), tails.end(), x);
-          if (it == tails.end()) tails.push_back(x);
-          else *it = x;
-      }
-      cout << "[";
-      for (size_t i = 0; i < tails.size(); i++) cout << (i ? ", " : "") << tails[i];
-      cout << "]";
-    java: |
-      java.util.List<Integer> tails = new java.util.ArrayList<>();
-      for (int x : new int[] {3, 4, 1, 5, 2}) {
-          int k = java.util.Collections.binarySearch(tails, x);
-          if (k < 0) k = -k - 1;
-          if (k == tails.size()) tails.add(x);
-          else tails.set(k, x);
-      }
-      System.out.print(tails);
-  options:
-  - '[1, 2, 5]'
-  - '[3, 4, 5]'
-  - '[1, 4, 5]'
-  - '[1, 2]'
-  answer: 0
-  explanation: tails is not a subsequence of the input; only its length 3 matters.
-  difficulty: 4
-- id: envelopes
-  kind: mcq
-  prompt: Envelopes are sorted by width. Why sort equal widths by height descending?
-  options:
-  - "So two envelopes of the same width can never both be in the chain"
-  - "To make the longest increasing subsequence of heights longer"
-  - "Because heights must decrease along any valid envelope chain"
-  - "It does not matter how equal widths are ordered by height"
-  answer: 0
-  explanation: Descending heights within a width cannot form an increasing pair.
-  difficulty: 4
-- id: removals
-  kind: mcq
-  prompt: 5 1 6 2 7 3 8. Fewest removals so the rest strictly increases?
-  options:
-  - '3'
-  - '4'
-  - '2'
-  - '0'
-  answer: 0
-  explanation: 7 − LIS, and the LIS is 4.
-  difficulty: 3
-- id: non-decreasing
-  kind: mcq
-  prompt: 2 2 2. Longest strictly increasing and longest non-decreasing subsequence?
-  options:
-  - 1 and 3
-  - 3 and 3
-  - 1 and 1
-  - 0 and 3
-  answer: 0
-  explanation: Equal values cannot follow each other in a strict LIS.
-  difficulty: 5
+  - id: state
+    kind: mcq
+    prompt: In the O(n²) LIS, what does dp[i] mean?
+    options:
+    - The longest increasing subsequence that ends at a[i]
+    - The longest increasing subsequence of a[:i]
+    - The number of smaller elements before i
+    - Whether a[i] is in the LIS
+    answer: 0
+    explanation: Ending at i is what makes the transition possible; the answer is the maximum.
+    difficulty: 1
+  - id: greedy
+    kind: mcq
+    prompt: 10 9 2 5 3 7 101 18. Greedy extension from the first element gets 2. What is the LIS?
+    options:
+    - '4'
+    - '2'
+    - '3'
+    - '5'
+    answer: 0
+    explanation: 2 5 7 101 (or 2 3 7 18).
+    difficulty: 2
+  - id: bound
+    kind: mcq
+    prompt: For a strictly increasing LIS with tails, which search do you use?
+    options:
+    - The first tail >= x (lower bound)
+    - The first tail > x (upper bound)
+    - The last tail < x
+    - Linear search from the end
+    answer: 0
+    explanation: An equal value must replace, not extend.
+    difficulty: 3
+  - id: removals
+    kind: mcq
+    prompt: 5 1 6 2 7 3 8. Fewest removals so the rest strictly increases?
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '0'
+    answer: 0
+    explanation: 7 − LIS, and the LIS is 4.
+    difficulty: 3
+  - id: tails-trace
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "from bisect import bisect_left\ntails = []\nfor x in [3, 4, 1, 5, 2]:\n    k = bisect_left(tails,\
+        \ x)\n    if k == len(tails):\n        tails.append(x)\n    else:\n        tails[k] = x\nprint(tails)\n"
+      cpp: "vector<int> tails;\nfor (int x : {3, 4, 1, 5, 2}) {\n    auto it = lower_bound(tails.begin(),\
+        \ tails.end(), x);\n    if (it == tails.end()) tails.push_back(x);\n    else *it = x;\n}\ncout <<\
+        \ \"[\";\nfor (size_t i = 0; i < tails.size(); i++) cout << tails[i] << (i + 1 < tails.size() ?\
+        \ \", \" : \"\");\ncout << \"]\";\n"
+      java: "List<Integer> tails = new ArrayList<>();\nfor (int x : new int[]{3, 4, 1, 5, 2}) {\n    int\
+        \ k = Collections.binarySearch(tails, x);\n    if (k < 0) k = -k - 1;\n    if (k == tails.size())\
+        \ tails.add(x);\n    else tails.set(k, x);\n}\nSystem.out.println(tails);\n"
+    options:
+    - '[1, 2, 5]'
+    - '[3, 4, 5]'
+    - '[1, 4, 5]'
+    - '[1, 2]'
+    answer: 0
+    explanation: tails is not a subsequence of the input; only its length 3 matters.
+    difficulty: 4
+  - id: envelopes
+    kind: mcq
+    prompt: Envelopes are sorted by width. Why sort equal widths by height descending?
+    options:
+    - So two envelopes of the same width can never both be in the chain
+    - To make the longest increasing subsequence of heights longer
+    - Because heights must decrease along any valid envelope chain
+    - It does not matter how equal widths are ordered by height
+    answer: 0
+    explanation: Descending heights within a width cannot form an increasing pair.
+    difficulty: 4
+  - id: non-decreasing
+    kind: mcq
+    prompt: 2 2 2. Longest strictly increasing and longest non-decreasing subsequence?
+    options:
+    - 1 and 3
+    - 3 and 3
+    - 1 and 1
+    - 0 and 3
+    answer: 0
+    explanation: Equal values cannot follow each other in a strict LIS.
+    difficulty: 5
+  - id: quadratic-vs-log
+    kind: mcq
+    prompt: An array has 200,000 numbers. About how many basic steps do the O(n^2) LIS table and the O(n
+      log n) tails method need?
+    options:
+    - About 4 x 10^10 for the table against about 3.5 x 10^6 for tails
+    - About 4 x 10^8 for the table against about 3.5 x 10^6 for tails
+    - About 4 x 10^10 for the table against about 4 x 10^8 for tails
+    - About 2 x 10^5 for the table against about 3.5 x 10^6 for tails
+    answer: 0
+    explanation: n^2 is 4 x 10^10, which is minutes of CPU time, while n log2 n is about 3.5 million. Constraint
+      sizes of 10^5 and above are the signal to reach for the tails method with a binary search.
+    difficulty: 2
+  - id: reconstruct-output
+    kind: output
+    prompt: This O(n^2) LIS keeps a parent index for each position, updating only when a strictly better
+      length is found, then prints the subsequence. What does it print?
+    code:
+      python: "a = [3, 1, 4, 2, 5]\nn = len(a)\ndp = [1] * n\npar = [-1] * n\nfor i in range(n):\n    for\
+        \ j in range(i):\n        if a[j] < a[i] and dp[j] + 1 > dp[i]:\n            dp[i] = dp[j] + 1\n\
+        \            par[i] = j\ni = dp.index(max(dp))\nout = []\nwhile i != -1:\n    out.append(a[i])\n\
+        \    i = par[i]\nprint(*reversed(out))\n"
+      cpp: "int a[5] = {3, 1, 4, 2, 5};\nint n = 5;\nint dp[5], par[5];\nfor (int i = 0; i < n; i++) {\n\
+        \    dp[i] = 1;\n    par[i] = -1;\n    for (int j = 0; j < i; j++)\n        if (a[j] < a[i] && dp[j]\
+        \ + 1 > dp[i]) { dp[i] = dp[j] + 1; par[i] = j; }\n}\nint best = 0;\nfor (int i = 1; i < n; i++)\
+        \ if (dp[i] > dp[best]) best = i;\nvector<int> out;\nfor (int i = best; i != -1; i = par[i]) out.push_back(a[i]);\n\
+        for (int k = (int)out.size() - 1; k >= 0; k--) cout << out[k] << (k > 0 ? \" \" : \"\");\n"
+      java: "int[] a = {3, 1, 4, 2, 5};\nint n = 5;\nint[] dp = new int[n], par = new int[n];\nfor (int\
+        \ i = 0; i < n; i++) {\n    dp[i] = 1;\n    par[i] = -1;\n    for (int j = 0; j < i; j++)\n    \
+        \    if (a[j] < a[i] && dp[j] + 1 > dp[i]) { dp[i] = dp[j] + 1; par[i] = j; }\n}\nint best = 0;\n\
+        for (int i = 1; i < n; i++) if (dp[i] > dp[best]) best = i;\nStringBuilder sb = new StringBuilder();\n\
+        List<Integer> out = new ArrayList<>();\nfor (int i = best; i != -1; i = par[i]) out.add(a[i]);\n\
+        for (int k = out.size() - 1; k >= 0; k--) sb.append(out.get(k)).append(\" \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 3 4 5
+    - 1 4 5
+    - 1 2 5
+    - 3 1 5
+    answer: 0
+    explanation: 'Three subsequences have length 3: 3 4 5, 1 4 5 and 1 2 5. Because 5 updates its parent
+      only on a strictly longer chain, the first best predecessor found (the 4, whose own parent is the
+      3) is kept. The answer depends on tie-breaking, which is why LIS problems that print the sequence
+      usually specify one.'
+    difficulty: 4
+  - id: lis-count
+    kind: mcq
+    prompt: In how many different ways can a longest strictly increasing subsequence be chosen from [1,
+      3, 5, 4, 7], where choices with different positions count as different?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: 'The longest length is 4, achieved by 1 3 5 7 and 1 3 4 7. To count them, keep a second
+      array cnt[i] next to dp[i]: when a better length is found, copy cnt[j]; when an equal length is found,
+      add cnt[j]. Finally sum cnt[i] over all i with dp[i] equal to the maximum.'
+    difficulty: 5
 problems:
 - tidy-shelf
 - heaviest-rise

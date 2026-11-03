@@ -644,105 +644,155 @@ resources:
   minutes: 25
   level: deep
 quiz:
-- id: answer-shape
-  kind: mcq
-  prompt: Which problem is binary search on the answer?
-  options:
-  - "The smallest ship capacity that delivers every package within D days"
-  - "The index of the value 7 in an array that is already sorted ascending"
-  - "The total sum of all the values in an array of package weights"
-  - "The length of the longest increasing subsequence of the weights"
-  answer: 0
-  explanation: Checking a capacity is easy and the check is monotone.
-  difficulty: 1
-- id: split-range
-  kind: mcq
-  prompt: 'Min max split of 7 2 5 10 8. What range does the search use?'
-  options:
-  - 10 to 32
-  - 1 to 32
-  - 0 to 10
-  - 7 to 10
-  answer: 0
-  explanation: From the largest element to the total.
-  difficulty: 2
-- id: split-check
-  kind: mcq
-  prompt: The cap is 15 and the array is 7 2 5 10 8. How many parts does greedy filling use?
-  options:
-  - '3'
-  - '2'
-  - '4'
-  - '5'
-  answer: 0
-  explanation: 7 2 5 | 10 | 8.
-  difficulty: 2
-- id: average-trap
-  kind: mcq
-  prompt: Why is cutting near the average not enough?
-  options:
-  - "An early cut can leave too little room for the parts that come later"
-  - "The average is always the answer, so no search is needed at all"
-  - "Computing the average is too slow for arrays of 10^5 elements"
-  - "Cutting near the average only works when the array is sorted"
-  answer: 0
-  explanation: On 3 1 4 1 5 9 2 6 with k = 3 it gives 17 instead of 14.
-  difficulty: 3
-- id: exactly-k
-  kind: mcq
-  prompt: A cap needs exactly k parts. Does it work?
-  options:
-  - Yes; at most k parts are allowed
-  - No; it must need fewer than k
-  - Only if k is even
-  - Only for the last part
-  answer: 0
-  explanation: The check is parts ≤ k.
-  difficulty: 3
-- id: round-up
-  kind: mcq
-  prompt: Searching for the largest gap that fits, with lo = mid on success. How must mid be computed?
-  options:
-  - Rounded up, (lo + hi + 1) // 2
-  - Rounded down, (lo + hi) // 2
-  - Either way
-  - As hi − 1
-  answer: 0
-  explanation: Rounding down with lo = mid can loop forever when hi = lo + 1.
-  difficulty: 3
-- id: gap-trace
-  kind: mcq
-  prompt: Positions 1 2 8 4 9 and m = 3. What is the largest minimum gap?
-  options:
-  - '3'
-  - '4'
-  - '1'
-  - '7'
-  answer: 0
-  explanation: 1, 4 and 8 (or 9).
-  difficulty: 4
-- id: kth-split
-  kind: mcq
-  prompt: a = 1 3 8 9, b = 2 4 5 7 10 and k = 6. How many of the 6 smallest come from a?
-  options:
-  - '2'
-  - '3'
-  - '4'
-  - '1'
-  answer: 0
-  explanation: 1 and 3 from a; 2, 4, 5 and 7 from b.
-  difficulty: 4
-- id: kth-value
-  kind: mcq
-  prompt: The k-th smallest number in an n × n multiplication table. What do you binary search over?
-  options:
-  - "The value x, counting the entries at most x"
-  - "The row index, then binary search inside it"
-  - "The positions in the merged list of all rows"
-  - "The column index, counting rows below it"
-  answer: 0
-  explanation: The table is too big to list; counting entries at most x is O(n).
-  difficulty: 5
+  - id: answer-shape
+    kind: mcq
+    prompt: Which problem is binary search on the answer?
+    options:
+    - The smallest ship capacity that delivers every package within D days
+    - The index of the value 7 in an array that is already sorted ascending
+    - The total sum of all the values in an array of package weights
+    - The length of the longest increasing subsequence of the weights
+    answer: 0
+    explanation: Checking a capacity is easy and the check is monotone.
+    difficulty: 1
+  - id: split-range
+    kind: mcq
+    prompt: Min max split of 7 2 5 10 8. What range does the search use?
+    options:
+    - 10 to 32
+    - 1 to 32
+    - 0 to 10
+    - 7 to 10
+    answer: 0
+    explanation: From the largest element to the total.
+    difficulty: 2
+  - id: split-check
+    kind: mcq
+    prompt: The cap is 15 and the array is 7 2 5 10 8. How many parts does greedy filling use?
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '5'
+    answer: 0
+    explanation: 7 2 5 | 10 | 8.
+    difficulty: 2
+  - id: average-trap
+    kind: mcq
+    prompt: Why is cutting near the average not enough?
+    options:
+    - An early cut can leave too little room for the parts that come later
+    - The average is always the answer, so no search is needed at all
+    - Computing the average is too slow for arrays of 10^5 elements
+    - Cutting near the average only works when the array is sorted
+    answer: 0
+    explanation: On 3 1 4 1 5 9 2 6 with k = 3 it gives 17 instead of 14.
+    difficulty: 3
+  - id: kth-split
+    kind: mcq
+    prompt: a = 1 3 8 9, b = 2 4 5 7 10 and k = 6. How many of the 6 smallest come from a?
+    options:
+    - '2'
+    - '3'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: 1 and 3 from a; 2, 4, 5 and 7 from b.
+    difficulty: 4
+  - id: kth-value
+    kind: mcq
+    prompt: The k-th smallest number in an n × n multiplication table. What do you binary search over?
+    options:
+    - The value x, counting the entries at most x
+    - The row index, then binary search inside it
+    - The positions in the merged list of all rows
+    - The column index, counting rows below it
+    answer: 0
+    explanation: The table is too big to list; counting entries at most x is O(n).
+    difficulty: 5
+  - id: ship-output
+    kind: output
+    prompt: The package weights are 1 to 10 in order and every package must ship within 5 days, in order,
+      with a daily capacity. This search finds the smallest capacity. What does it print?
+    code:
+      python: "w = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\nD = 5\nlo, hi = max(w), sum(w)\nwhile lo < hi:\n   \
+        \ mid = (lo + hi) // 2\n    days, cur = 1, 0\n    for x in w:\n        if cur + x > mid:\n     \
+        \       days += 1\n            cur = 0\n        cur += x\n    if days <= D:\n        hi = mid\n\
+        \    else:\n        lo = mid + 1\nprint(lo)\n"
+      cpp: "int w[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};\nint D = 5;\nint lo = *max_element(w, w + 10),\
+        \ hi = accumulate(w, w + 10, 0);\nwhile (lo < hi) {\n    int mid = (lo + hi) / 2;\n    int days\
+        \ = 1, cur = 0;\n    for (int x : w) {\n        if (cur + x > mid) { days++; cur = 0; }\n      \
+        \  cur += x;\n    }\n    if (days <= D) hi = mid;\n    else lo = mid + 1;\n}\ncout << lo;\n"
+      java: "int[] w = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};\nint D = 5;\nint lo = 0, hi = 0;\nfor (int x : w)\
+        \ { lo = Math.max(lo, x); hi += x; }\nwhile (lo < hi) {\n    int mid = (lo + hi) / 2;\n    int days\
+        \ = 1, cur = 0;\n    for (int x : w) {\n        if (cur + x > mid) { days++; cur = 0; }\n      \
+        \  cur += x;\n    }\n    if (days <= D) hi = mid;\n    else lo = mid + 1;\n}\nSystem.out.println(lo);\n"
+    options:
+    - '15'
+    - '14'
+    - '17'
+    - '19'
+    answer: 0
+    explanation: 'Capacity 15 gives the days (1 to 5), (6 and 7), (8), (9) and (10): exactly 5 days, while
+      capacity 14 needs 6. The check is monotone (more capacity never needs more days), so the smallest
+      feasible value can be found by halving the range between the heaviest package and the total weight.'
+    difficulty: 3
+  - id: cows-output
+    kind: output
+    prompt: Stalls are at positions 1, 2, 4, 8 and 9 and 3 cows must be placed as far apart as possible.
+      This search finds the largest possible minimum gap. What does it print?
+    code:
+      python: "pos = [1, 2, 4, 8, 9]\nc = 3\nlo, hi = 1, pos[-1] - pos[0]\nwhile lo < hi:\n    mid = (lo\
+        \ + hi + 1) // 2\n    count, last = 1, pos[0]\n    for p in pos[1:]:\n        if p - last >= mid:\n\
+        \            count += 1\n            last = p\n    if count >= c:\n        lo = mid\n    else:\n\
+        \        hi = mid - 1\nprint(lo)\n"
+      cpp: "vector<int> pos = {1, 2, 4, 8, 9};\nint c = 3;\nint lo = 1, hi = pos.back() - pos[0];\nwhile\
+        \ (lo < hi) {\n    int mid = (lo + hi + 1) / 2;\n    int count = 1, last = pos[0];\n    for (size_t\
+        \ i = 1; i < pos.size(); i++)\n        if (pos[i] - last >= mid) { count++; last = pos[i]; }\n \
+        \   if (count >= c) lo = mid;\n    else hi = mid - 1;\n}\ncout << lo;\n"
+      java: "int[] pos = {1, 2, 4, 8, 9};\nint c = 3;\nint lo = 1, hi = pos[pos.length - 1] - pos[0];\n\
+        while (lo < hi) {\n    int mid = (lo + hi + 1) / 2;\n    int count = 1, last = pos[0];\n    for\
+        \ (int i = 1; i < pos.length; i++)\n        if (pos[i] - last >= mid) { count++; last = pos[i];\
+        \ }\n    if (count >= c) lo = mid;\n    else hi = mid - 1;\n}\nSystem.out.println(lo);\n"
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '7'
+    answer: 0
+    explanation: 'Cows at 1, 4 and 8 are at least 3 apart; no placement reaches 4, because the stall after
+      1 would be 8 and after that nothing fits. This is a ''largest value that works'' search: on success
+      keep lo = mid, so mid must be rounded UP, otherwise lo = mid never advances and the loop runs forever.'
+    difficulty: 4
+  - id: bananas
+    kind: mcq
+    prompt: Piles hold [3, 6, 7, 11] bananas and all must be eaten within 8 hours. Each hour you pick one
+      pile and eat up to k bananas from it (a pile that is not finished waits for the next hour). What is
+      the smallest k that works?
+    options:
+    - '4'
+    - '3'
+    - '5'
+    - '6'
+    answer: 0
+    explanation: At k = 4 the hours needed are 1 + 2 + 2 + 3 = 8. At k = 3 they are 1 + 2 + 3 + 4 = 10,
+      which is too slow. Because a larger k never takes more hours, you can halve the range from 1 to the
+      biggest pile; the check is a single pass summing ceil(pile / k).
+    difficulty: 3
+  - id: real-iterations
+    kind: mcq
+    prompt: You binary search a real-valued answer in the range from 0 to 1,000,000,000 until the interval
+      is narrower than 0.000001. About how many halvings does it take?
+    options:
+    - About 50
+    - About 30
+    - About 1,000
+    - About 20
+    answer: 0
+    explanation: The width shrinks from 10^9 to 10^-6, a factor of 10^15, and log2(10^15) is about 50. A
+      fixed iteration count such as 100 is safer than comparing floating-point values for equality, and
+      it still costs only 100 checks.
+    difficulty: 3
 problems:
 - courier-vans
 - kth-cheapest-meal

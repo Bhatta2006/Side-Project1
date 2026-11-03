@@ -1031,105 +1031,230 @@ resources:
   minutes: 15
   level: deep
 quiz:
-- id: two-structures
-  kind: mcq
-  prompt: Which pair of structures gives an LRU cache O(1) get and put?
-  options:
-  - "A hash map and a doubly linked list"
-  - "A hash map and a FIFO queue"
-  - "Two stacks used as a queue"
-  - "A sorted array of timestamps"
-  answer: 0
-  explanation: The map finds the node; the list moves it in O(1).
-  difficulty: 1
-- id: get-is-use
-  kind: mcq
-  prompt: Capacity 2. put 1, put 2, get 1, put 3. Which key is evicted?
-  options:
-  - '2'
-  - '1'
-  - '3'
-  - None
-  answer: 0
-  explanation: get 1 made key 1 recent, so key 2 is the least recently used.
-  difficulty: 2
-- id: update
-  kind: mcq
-  prompt: The cache is full and put updates a key that is already stored. What is evicted?
-  options:
-  - Nothing
-  - The least recently used key
-  - The key being updated
-  - The most recently used key
-  answer: 0
-  explanation: The number of keys does not grow.
-  difficulty: 2
-- id: queue-fails
-  kind: mcq
-  prompt: Why is a queue of arrivals not enough for LRU?
-  options:
-  - "A get must move a key from the middle to the front, which a queue cannot do in O(1)"
-  - "Queues are always slower than linked lists, so every operation becomes O(log n)"
-  - "A queue cannot store integer keys, so each key would need converting to a string"
-  - "It is enough: evict the front of the queue and push every get to the back"
-  answer: 0
-  explanation: Queues only remove from their ends.
-  difficulty: 3
-- id: sentinels
-  kind: mcq
-  prompt: What do the head and tail sentinel nodes buy?
-  options:
-  - "No special cases for an empty list or for the first and last node"
-  - "Faster hashing, because the head and tail keys are precomputed"
-  - "Less memory, because nodes no longer need a prev pointer each"
-  - "Sorted order, because the sentinels keep keys in ascending order"
-  answer: 0
-  explanation: Every real node always has a prev and a next.
-  difficulty: 3
-- id: swap-delete
-  kind: mcq
-  prompt: The random set holds 5 7 9 and removes 5. What is the array afterwards?
-  options:
-  - 9 7
-  - 7 9
-  - 5 7
-  - 7 5 9
-  answer: 0
-  explanation: The last value, 9, moves into the hole at index 0.
-  difficulty: 3
-- id: history
-  kind: mcq
-  prompt: set foo bar at time 1, set foo baz at time 4. What does get foo 3 return?
-  options:
-  - bar
-  - baz
-  - Nothing
-  - bar baz
-  answer: 0
-  explanation: The last set at or before time 3 was at time 1.
-  difficulty: 4
-- id: lfu
-  kind: mcq
-  prompt: In an LFU cache, two keys have the same smallest frequency. Which one is evicted?
-  options:
-  - The one used least recently
-  - The smaller key
-  - Both
-  - The most recently used one
-  answer: 0
-  explanation: Ties are broken by recency, so each frequency keeps its own LRU list.
-  difficulty: 4
-- id: iterator-empty
-  kind: mcq
-  prompt: Rows 1, (empty), (empty). After next() returns 1, what must hasNext() return?
-  options:
-  - 'false'
-  - 'true'
-  - It depends on the row count
-  - It crashes
-  answer: 0
-  explanation: It must skip the empty rows before answering.
-  difficulty: 5
+  - id: two-structures
+    kind: mcq
+    prompt: Which pair of structures gives an LRU cache O(1) get and put?
+    options:
+    - A hash map and a doubly linked list
+    - A hash map and a FIFO queue
+    - Two stacks used as a queue
+    - A sorted array of timestamps
+    answer: 0
+    explanation: The map finds the node; the list moves it in O(1).
+    difficulty: 1
+  - id: get-is-use
+    kind: mcq
+    prompt: Capacity 2. put 1, put 2, get 1, put 3. Which key is evicted?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - None
+    answer: 0
+    explanation: get 1 made key 1 recent, so key 2 is the least recently used.
+    difficulty: 2
+  - id: update
+    kind: mcq
+    prompt: The cache is full and put updates a key that is already stored. What is evicted?
+    options:
+    - Nothing
+    - The least recently used key
+    - The key being updated
+    - The most recently used key
+    answer: 0
+    explanation: The number of keys does not grow.
+    difficulty: 2
+  - id: queue-fails
+    kind: mcq
+    prompt: Why is a queue of arrivals not enough for LRU?
+    options:
+    - A get must move a key from the middle to the front, which a queue cannot do in O(1)
+    - Queues are always slower than linked lists, so every operation becomes O(log n)
+    - A queue cannot store integer keys, so each key would need converting to a string
+    - 'It is enough: evict the front of the queue and push every get to the back'
+    answer: 0
+    explanation: Queues only remove from their ends.
+    difficulty: 3
+  - id: sentinels
+    kind: mcq
+    prompt: What do the head and tail sentinel nodes buy?
+    options:
+    - No special cases for an empty list or for the first and last node
+    - Faster hashing, because the head and tail keys are precomputed
+    - Less memory, because nodes no longer need a prev pointer each
+    - Sorted order, because the sentinels keep keys in ascending order
+    answer: 0
+    explanation: Every real node always has a prev and a next.
+    difficulty: 3
+  - id: lfu
+    kind: mcq
+    prompt: In an LFU cache, two keys have the same smallest frequency. Which one is evicted?
+    options:
+    - The one used least recently
+    - The smaller key
+    - Both
+    - The most recently used one
+    answer: 0
+    explanation: Ties are broken by recency, so each frequency keeps its own LRU list.
+    difficulty: 4
+  - id: iterator-empty
+    kind: mcq
+    prompt: Rows 1, (empty), (empty). After next() returns 1, what must hasNext() return?
+    options:
+    - 'false'
+    - 'true'
+    - It depends on the row count
+    - It crashes
+    answer: 0
+    explanation: It must skip the empty rows before answering.
+    difficulty: 5
+  - id: lru-output
+    kind: output
+    prompt: An LRU cache of capacity 2 runs put(1, 1), put(2, 2), get(1), put(3, 3), get(2), put(4, 4),
+      get(1), get(3), get(4), where get returns -1 for a missing key. What are the results of the get calls,
+      in order?
+    code:
+      python: "from collections import OrderedDict\ncap = 2\nd = OrderedDict()\nout = []\ndef get(k):\n\
+        \    if k not in d:\n        out.append(-1)\n        return\n    d.move_to_end(k)\n    out.append(d[k])\n\
+        def put(k, v):\n    if k in d:\n        d.move_to_end(k)\n    d[k] = v\n    if len(d) > cap:\n \
+        \       d.popitem(last=False)\nput(1, 1); put(2, 2); get(1); put(3, 3); get(2); put(4, 4); get(1);\
+        \ get(3); get(4)\nprint(*out)\n"
+      cpp: "int cap = 2;\nlist<pair<int, int>> order;\nunordered_map<int, list<pair<int, int>>::iterator>\
+        \ pos;\nvector<int> out;\nauto get = [&](int k) {\n    auto it = pos.find(k);\n    if (it == pos.end())\
+        \ { out.push_back(-1); return; }\n    order.splice(order.begin(), order, it->second);\n    out.push_back(it->second->second);\n\
+        };\nauto put = [&](int k, int v) {\n    auto it = pos.find(k);\n    if (it != pos.end()) {\n   \
+        \     it->second->second = v;\n        order.splice(order.begin(), order, it->second);\n       \
+        \ return;\n    }\n    order.push_front({k, v});\n    pos[k] = order.begin();\n    if ((int)order.size()\
+        \ > cap) {\n        pos.erase(order.back().first);\n        order.pop_back();\n    }\n};\nput(1,\
+        \ 1); put(2, 2); get(1); put(3, 3); get(2); put(4, 4); get(1); get(3); get(4);\nfor (size_t i =\
+        \ 0; i < out.size(); i++) cout << out[i] << (i + 1 < out.size() ? \" \" : \"\");\n"
+      java: "class LRU extends LinkedHashMap<Integer, Integer> {\n    int cap;\n    LRU(int cap) { super(16,\
+        \ 0.75f, true); this.cap = cap; }\n    protected boolean removeEldestEntry(Map.Entry<Integer, Integer>\
+        \ e) { return size() > cap; }\n}\nLRU c = new LRU(2);\nStringBuilder sb = new StringBuilder();\n\
+        c.put(1, 1); c.put(2, 2);\nsb.append(c.getOrDefault(1, -1)).append(\" \");\nc.put(3, 3);\nsb.append(c.getOrDefault(2,\
+        \ -1)).append(\" \");\nc.put(4, 4);\nsb.append(c.getOrDefault(1, -1)).append(\" \");\nsb.append(c.getOrDefault(3,\
+        \ -1)).append(\" \");\nsb.append(c.getOrDefault(4, -1));\nSystem.out.println(sb);\n"
+    options:
+    - 1 -1 -1 3 4
+    - 1 -1 1 3 4
+    - -1 -1 -1 3 4
+    - 1 2 -1 3 4
+    answer: 0
+    explanation: 'get(1) refreshes key 1, so put(3, 3) evicts key 2 and get(2) is -1. put(4, 4) then evicts
+      key 1, which has become the least recently used (3 was inserted after the get), so get(1) is -1 while
+      3 and 4 remain. Every get is also a use: that is the detail most first implementations miss.'
+    difficulty: 4
+  - id: swap-output
+    kind: output
+    prompt: 'A random-pick set stores its values in an array and keeps a map from value to array index.
+      This remove(5) deletes by moving the last value into the hole. What does it print: the array, then
+      the new index recorded for 9?'
+    code:
+      python: 'arr = [5, 7, 9]
+
+        idx = {5: 0, 7: 1, 9: 2}
+
+        i = idx[5]
+
+        last = arr[-1]
+
+        arr[i] = last
+
+        idx[last] = i
+
+        arr.pop()
+
+        del idx[5]
+
+        print(*arr, idx[9])
+
+        '
+      cpp: 'vector<int> arr = {5, 7, 9};
+
+        unordered_map<int, int> idx = {{5, 0}, {7, 1}, {9, 2}};
+
+        int i = idx[5];
+
+        int last = arr.back();
+
+        arr[i] = last;
+
+        idx[last] = i;
+
+        arr.pop_back();
+
+        idx.erase(5);
+
+        for (int x : arr) cout << x << " ";
+
+        cout << idx[9];
+
+        '
+      java: 'List<Integer> arr = new ArrayList<>(List.of(5, 7, 9));
+
+        Map<Integer, Integer> idx = new HashMap<>();
+
+        idx.put(5, 0); idx.put(7, 1); idx.put(9, 2);
+
+        int i = idx.get(5);
+
+        int last = arr.get(arr.size() - 1);
+
+        arr.set(i, last);
+
+        idx.put(last, i);
+
+        arr.remove(arr.size() - 1);
+
+        idx.remove(5);
+
+        StringBuilder sb = new StringBuilder();
+
+        for (int x : arr) sb.append(x).append(" ");
+
+        System.out.println(sb.toString() + idx.get(9));
+
+        '
+    options:
+    - 9 7 0
+    - 7 9 0
+    - 9 7 2
+    - 9 7 1
+    answer: 0
+    explanation: The last value, 9, fills the hole at index 0, so the array becomes 9 7 and the map must
+      be updated to say 9 now lives at index 0. Forgetting that map update (or doing the steps in the wrong
+      order when the removed value is itself the last one) is the usual bug. The delete stays O(1) and picking
+      a random index stays uniform.
+    difficulty: 3
+  - id: history-output
+    kind: output
+    prompt: 'A time-based store has two entries for one key: value bar at time 1 and value baz at time 4.
+      The lookup returns the value with the latest time at or before the query time, or none. What does
+      it print for the queries at times 3, 4, 0 and 5?'
+    code:
+      python: "from bisect import bisect_right\ntimes = [1, 4]\nvals = [\"bar\", \"baz\"]\nout = []\nfor\
+        \ q in [3, 4, 0, 5]:\n    i = bisect_right(times, q) - 1\n    out.append(vals[i] if i >= 0 else\
+        \ \"none\")\nprint(*out)\n"
+      cpp: "vector<int> times = {1, 4};\nvector<string> vals = {\"bar\", \"baz\"};\nint qs[4] = {3, 4, 0,\
+        \ 5};\nfor (int k = 0; k < 4; k++) {\n    int i = int(upper_bound(times.begin(), times.end(), qs[k])\
+        \ - times.begin()) - 1;\n    cout << (i >= 0 ? vals[i] : string(\"none\")) << (k < 3 ? \" \" : \"\
+        \");\n}\n"
+      java: "int[] times = {1, 4};\nString[] vals = {\"bar\", \"baz\"};\nint[] qs = {3, 4, 0, 5};\nStringBuilder\
+        \ sb = new StringBuilder();\nfor (int q : qs) {\n    int lo = 0, hi = times.length;\n    while (lo\
+        \ < hi) {\n        int mid = (lo + hi) / 2;\n        if (times[mid] <= q) lo = mid + 1;\n      \
+        \  else hi = mid;\n    }\n    int i = lo - 1;\n    sb.append(i >= 0 ? vals[i] : \"none\").append(\"\
+        \ \");\n}\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - bar baz none baz
+    - bar bar none baz
+    - bar baz bar baz
+    - baz baz none baz
+    answer: 0
+    explanation: bisect_right counts how many times are at or before the query; subtracting one gives the
+      latest such entry. Time 4 matches exactly, time 0 is before every entry, and time 5 uses the last
+      one. Timestamps arrive in increasing order, so each key's history is already sorted and a lookup costs
+      O(log n).
+    difficulty: 4
 problems:
 - thumbnail-cache
 - library-shelf
