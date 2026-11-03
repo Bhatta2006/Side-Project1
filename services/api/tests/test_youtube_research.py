@@ -183,3 +183,22 @@ def test_a_busy_site_is_tried_again_before_its_link_counts_as_dead(monkeypatch):
     assert asyncio.run(check())
     missing = httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
     assert not asyncio.run(links.reachable(missing, "https://example.org/gone"))
+
+
+def test_top_videos_join_the_sources_so_their_transcripts_reach_the_author():
+    def hit(n, kind="video"):
+        return search.Hit(
+            title=f"Lesson {n}",
+            url=f"https://www.youtube.com/watch?v=AAAAAAAAAA{n}",
+            snippet="",
+            provider="youtube",
+            kind=kind,
+            views=1000 * n,
+        )
+
+    chosen = [{"n": 1, "title": "Kannada", "url": "https://en.wikipedia.org/wiki/Kannada"}]
+    out = research.add_videos(chosen, [hit(1, "playlist"), hit(2), hit(3), hit(4)])
+    assert [s["url"][-1] for s in out[1:]] == ["2", "3"]  # two videos, best ranked first
+    assert [s["n"] for s in out] == [1, 2, 3] and all(s["media"] == "video" for s in out[1:])
+    picked = chosen + [{"n": 2, "url": hit(2).url, "media": "video"}]
+    assert len(research.add_videos(picked, [hit(2), hit(3), hit(4)])) == 3  # one more at most

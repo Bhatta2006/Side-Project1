@@ -305,6 +305,16 @@ learners see that output. At most 25 lines (trace 15, predict 10); Java uses
 "public class Solution"."""
 
 
+# A revision edits, it does not rewrite: in live runs a full rewrite fixed the named problems
+# and brought new ones, so no lesson converged within its rounds.
+REVISE = (
+    "Revise your previous draft. Apply each fix below exactly where it applies and keep every "
+    "other sentence, item and field as it is, word for word. Add no new claims. Where a note says "
+    "a source does not support a claim, remove that marker (or the claim). Reply with the complete "
+    "revised JSON.\nFixes:\n- "
+)
+
+
 def lesson_prompt(ctx: str, reference: Concept | None, draft: dict | None, notes: list[str]) -> str:
     parts = [ctx]
     if reference is not None:
@@ -314,7 +324,8 @@ def lesson_prompt(ctx: str, reference: Concept | None, draft: dict | None, notes
     if draft is not None:
         parts.append("Your previous draft:\n" + json.dumps(draft, indent=1))
     if notes:
-        parts.append("Fix all of these in a complete revised reply:\n- " + "\n- ".join(notes))
+        intro = REVISE if draft is not None else "Fix all of these in a complete reply:\n- "
+        parts.append(intro + "\n- ".join(notes))
     return "\n\n".join(parts)
 
 
@@ -325,7 +336,8 @@ def part_prompt(ctx: str, lesson: dict, draft: dict | None, notes: list[str], ex
     if draft is not None:
         parts.append("Your previous draft:\n" + json.dumps(draft, indent=1))
     if notes:
-        parts.append("Fix all of these in a complete revised reply:\n- " + "\n- ".join(notes))
+        intro = REVISE if draft is not None else "Fix all of these in a complete reply:\n- "
+        parts.append(intro + "\n- ".join(notes))
     return "\n\n".join(parts)
 
 
@@ -371,7 +383,9 @@ def tidy_lesson(draft: dict, sources: list[dict]) -> dict:
         text = re.sub(
             r"\s?\[(\d{1,2})\]", lambda m: m.group(0) if int(m.group(1)) in valid else "", text
         )
-    return {**draft, "lesson": text}
+    # Lists over their limit keep their first eight instead of failing the round.
+    capped = {k: draft[k][:8] for k in ("key_points", "pitfalls") if isinstance(draft.get(k), list)}
+    return {**draft, **capped, "lesson": text}
 
 
 def check_lesson(
@@ -648,6 +662,9 @@ def tidy_atom(atom):
     if not isinstance(atom, dict):
         return atom
     out = {k: v for k, v in atom.items() if k in _ATOM_KEYS}
+    if isinstance(out.get("id"), str):  # "Hook_1" or "atom 2" -> a valid kebab-case id
+        slug = re.sub(r"[^a-z0-9]+", "-", out["id"].lower()).strip("-")
+        out["id"] = (slug if slug[:1].isalpha() else f"a-{slug}")[:64] or "atom"
     seconds = out.get("seconds")
     out["seconds"] = min(120, max(10, seconds)) if isinstance(seconds, int) else 60
     if isinstance(out.get("steps"), list):
@@ -683,7 +700,7 @@ def build_atoms(
     """A draft pack, or (None, problems). ``languages``: code adapters allowed (and needed in
     each of them); their output is filled in by ``run_code``."""
     found = atoms.get("atoms")
-    raw: list = [tidy_atom(a) for a in found] if isinstance(found, list) else []
+    raw: list = [tidy_atom(a) for a in found[:8]] if isinstance(found, list) else []
     # An atom with nothing for the learner to read is dropped while enough remain.
     filled = [a for a in raw if not isinstance(a, dict) or str(a.get("body", "")).strip()]
     if len(filled) >= 3:

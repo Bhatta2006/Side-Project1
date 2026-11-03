@@ -591,6 +591,7 @@ async def run_package(
         found = await ask("researcher", research.RESEARCHER, prompt, 2000)
         cited = await research.screen(found.data, http, allowed)
         if settings.youtube_transcripts:
+            cited = research.add_videos(cited, list(allowed.values()) if allowed else [])
             cited = await youtube.with_transcripts(cited)
         _note(
             engine,
@@ -630,8 +631,9 @@ async def run_package(
         _note(engine, job_id, event, state="done")
 
     polished = False  # one extra round for imprecise facts, at most
+    rounds = settings.gen_package_rounds
     fallback = None  # the first package that passed, kept while that round runs
-    for attempt in range(1, ROUNDS + 1):
+    for attempt in range(1, rounds + 1):
         if _over_budget(engine, course_id, brief.budget_usd):
             pause_for_budget(engine, course_id, job_id)
             return
@@ -811,7 +813,7 @@ async def run_package(
         }
         spend = cost + facts.cost_usd + review.cost_usd
         _note(engine, job_id, entry, spend, output={**output, "scores": scores})
-        if passed and attempt < ROUNDS and not polished:
+        if passed and attempt < rounds and not polished:
             polish = pkg.imprecise_notes(facts.data)
             # Only with room to spare: a polish round must not run into the lesson's budget.
             if any(polish.values()) and _job_cost(engine, job_id) < brief.concept_budget_usd / 2:
@@ -831,10 +833,10 @@ async def run_package(
         # The polish round did not pass, but the package before it did: release that one, with
         # its own report on top so the learner's label is not "being revised".
         live, pack, summary, status, findings = fallback
-        report(ROUNDS, status, findings)
+        report(rounds, status, findings)
         release(live, pack, summary)
         return
-    report(ROUNDS, "rejected", findings)
+    report(rounds, "rejected", findings)
     _note(
         engine,
         job_id,

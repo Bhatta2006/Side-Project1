@@ -244,6 +244,9 @@ def test_the_studio_must_suit_the_subject():
     code = copy.deepcopy(OUTLINE) | {"shape": copy.deepcopy(lab)}
     tidy(code, default_catalog(), "software")
     assert code["shape"]["studio"] == "code"
+    long = copy.deepcopy(OUTLINE) | {"shape": lab | {"label": "Everyday Conversation Practice"}}
+    tidy(long, default_catalog(), "general")
+    assert long["shape"]["label"] == "Everyday Conversation"
     unknown = copy.deepcopy(OUTLINE) | {"shape": copy.deepcopy(lab)}
     tidy(unknown, default_catalog())  # no adapter (an admin brief): the architect decides
     assert unknown["shape"]["studio"] == "lab"

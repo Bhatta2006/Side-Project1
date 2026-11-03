@@ -200,6 +200,9 @@ class Settings(DatabaseSettings):
     # "openai", "model": "...", "base_url": "..."}}'; unset keys fall back to SOCRAT_AI_*.
     # "chat_template_kwargs" (an object) overrides SOCRAT_OPENAI_CHAT_TEMPLATE_KWARGS per role.
     gen_roles: dict[str, dict[str, str | float | dict]] = Field(default_factory=dict)
+    # Write-check-revise rounds per lesson package. Revisions are targeted edits, so a round
+    # costs little; subjects the model knows less well (a live Kannada course) need more.
+    gen_package_rounds: int = Field(default=3, ge=1, le=8)
     style_engine_enabled: bool = True  # learning styles; admin accounts only while testing
     # Learner-typed courses ("teach me X"): off until the owner turns it on.
     learning_requests_enabled: bool = False

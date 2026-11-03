@@ -152,6 +152,36 @@ async def screen(data, http=None, allowed: dict | None = None) -> list[dict]:
     ]
 
 
+def add_videos(sources: list[dict], hits: list, most: int = 2) -> list[dict]:
+    """The best-ranked search videos join the sources (up to ``most`` videos in all), so their
+    transcripts reach the author. A live Kannada run showed why: the researcher chose
+    "Kannada literature" and "Sanskrit" over 1.5M-view lessons, and the author, with nothing
+    to teach from, made real language errors. Hits come from the search API, so they exist."""
+    have = {s["url"] for s in sources}
+    room = most - sum(1 for s in sources if s.get("media") == "video")
+    extra = [h for h in hits if h.kind == "video" and h.url not in have][: max(room, 0)]
+    out = list(sources)
+    for h in extra[: MAX_SOURCES + 2 - len(out)]:
+        out.append(
+            {
+                "n": len(out) + 1,
+                "title": h.title,
+                "url": h.url,
+                "role": "examples",
+                "supports": h.snippet or h.title,
+                "use": "a well-viewed lesson on this topic; teach from what it shows",
+                "fit": MIN_FIT,
+                "author": h.author,
+                "published": h.published,
+                "license": h.license,
+                "why": "; ".join(h.reasons),
+                "media": "video",
+                "passage": h.snippet,
+            }
+        )
+    return out
+
+
 def block(sources: list[dict]) -> str:
     """The numbered source list the author sees."""
     if not sources:

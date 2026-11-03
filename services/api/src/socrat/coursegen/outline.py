@@ -454,6 +454,9 @@ def _tidy_shape(given: dict, adapter: str = "") -> None:
     the studio must also suit the subject."""
     if given.get("studio") not in shape.STUDIOS:
         given["studio"] = "reading"
+    label = given.get("label")
+    if isinstance(label, str) and len(label) > 24:  # cost two whole architect rounds live
+        given["label"] = label[:24].rsplit(" ", 1)[0].strip() if " " in label[:24] else label[:24]
     if adapter:
         fits = STUDIOS_FOR.get(adapter, ("reading",))
         if given["studio"] not in fits:

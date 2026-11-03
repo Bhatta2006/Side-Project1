@@ -45,6 +45,8 @@ def test_an_almost_right_atom_is_repaired_without_inventing_checks():
         }
     )
     assert hook["body"] == "One. Two?" and "extra" not in hook and hook["seconds"] == 60
+    assert pkg.tidy_atom({"id": "Hook_1 (warm-up)"})["id"] == "hook-1-warm-up"
+    assert pkg.tidy_atom({"id": "2nd"})["id"] == "a-2nd"
     Atom.model_validate(hook)
     bare = pkg.tidy_atom(
         {
