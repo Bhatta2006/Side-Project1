@@ -761,121 +761,175 @@ resources:
   languages:
   - python
 quiz:
-- id: two-properties
-  kind: mcq
-  prompt: Which two properties tell you a recursive solution can become DP?
-  options:
-  - Overlapping subproblems and optimal substructure
-  - Sorted input and a monotone answer
-  - Unique subproblems and a greedy choice
-  - Small input and many test cases
-  answer: 0
-  explanation: Subproblems must repeat, and the answer must be built from answers to subproblems.
-  difficulty: 1
-- id: naive-calls
-  kind: mcq
-  prompt: Plain recursive fib(n) makes 2·F(n+1) − 1 calls. Roughly how many is that for n = 50?
-  options:
-  - "About 4 × 10^10"
-  - "About 100 calls"
-  - "About 2,500 calls"
-  - "About 10^6 calls"
-  answer: 0
-  explanation: F(51) is about 2 × 10^10, so the call count is about 4 × 10^10.
-  difficulty: 2
-- id: memo-missing-store
-  kind: bug
-  prompt: This memoized fib is still exponential. Why?
-  code:
-    python: |
-      memo = {}
-      def fib(n):
-          if n < 2:
-              return n
-          if n in memo:
-              return memo[n]
-          return fib(n - 1) + fib(n - 2)
-    cpp: |
-      map<int, long long> memo;
-      long long fib(int n) {
-          if (n < 2) return n;
-          if (memo.count(n)) return memo[n];
-          return fib(n - 1) + fib(n - 2);
-      }
-    java: |
-      static Map<Integer, Long> memo = new HashMap<>();
-      static long fib(int n) {
-          if (n < 2) return n;
-          if (memo.containsKey(n)) return memo.get(n);
-          return fib(n - 1) + fib(n - 2);
-      }
-  options:
-  - The result is never stored in memo
-  - The base case is wrong
-  - It should use a list instead of a dict
-  - It recurses on n + 1
-  answer: 0
-  explanation: Nothing is ever written to memo, so the lookup never hits.
-  difficulty: 2
-- id: tab-output
-  kind: output
-  prompt: What does this print?
-  code:
-    python: |
-      dp = [0, 1]
-      for i in range(2, 7):
-          dp.append(dp[-1] + dp[-2])
-      print(dp[6])
-    cpp: |
-      vector<long long> dp = {0, 1};
-      for (int i = 2; i < 7; i++) dp.push_back(dp[i - 1] + dp[i - 2]);
-      cout << dp[6];
-    java: |
-      long[] dp = new long[7];
-      dp[1] = 1;
-      for (int i = 2; i < 7; i++) dp[i] = dp[i - 1] + dp[i - 2];
-      System.out.print(dp[6]);
-  options:
-  - '8'
-  - '13'
-  - '5'
-  - '6'
-  answer: 0
-  explanation: '0 1 1 2 3 5 8: dp[6] = 8.'
-  difficulty: 2
-- id: greedy-stairs
-  kind: mcq
-  prompt: Costs 1 2 100 3 (start on stair 0 or 1, top is stair 4). Greedy pays 6. What does DP pay?
-  options:
-  - '5'
-  - '6'
-  - '3'
-  - '4'
-  answer: 0
-  explanation: 'Start on stair 1 (cost 2), jump to stair 3 (cost 3): 5.'
-  difficulty: 3
-- id: reconstruct-needs
-  kind: mcq
-  prompt: You must print the stairs used, not just the cost. What must you keep?
-  options:
-  - Which choice won at every cell
-  - Only the last two dp values
-  - Only the final answer
-  - The input sorted by cost
-  answer: 0
-  explanation: Walking back from the answer needs the winning choice at every cell.
-  difficulty: 3
-- id: space-when
-  kind: mcq
-  prompt: When is it safe to replace the dp table with two variables?
-  options:
-  - "Each cell reads only the previous two and no path is printed"
-  - "Whenever the table grows longer than about 1000 entries"
-  - "Only for counting problems, never for min or max problems"
-  - "Only when the input array has been sorted before the loop"
-  answer: 0
-  explanation: Old cells can be dropped only if nothing reads them again.
-  difficulty: 4
+  - id: two-properties
+    kind: mcq
+    prompt: Which two properties tell you that a recursive solution can be turned into dynamic programming?
+    options:
+    - Overlapping subproblems and optimal substructure
+    - Sorted input and a monotone answer function
+    - Unique subproblems and an irrevocable greedy choice
+    - Small input size and many separate test cases
+    answer: 0
+    explanation: Overlapping subproblems mean the same smaller question is asked again and again, so remembering
+      answers pays off. Optimal substructure means the best answer to a question is built from best answers
+      to smaller questions. Without repeats, plain recursion is already enough.
+    difficulty: 1
+  - id: naive-calls
+    kind: mcq
+    prompt: Plain recursive fib(n) with no caching makes 2 * F(n + 1) - 1 calls. Roughly how many calls
+      is that for n = 50?
+    options:
+    - About 4 x 10^10
+    - About 5 x 10^3
+    - About 2 x 10^6
+    - About 3 x 10^8
+    answer: 0
+    explanation: 'F(51) is about 2 * 10^10, so the call count is about 4 * 10^10: far too slow. The recursion
+      tree is huge only because the same subproblems are solved over and over. Caching them leaves just
+      51 distinct states.'
+    difficulty: 2
+  - id: memo-missing-store
+    kind: mcq
+    prompt: This memoized fib is still exponential in n. Why?
+    code:
+      python: "memo = {}\ndef fib(n):\n    if n < 2:\n        return n\n    if n in memo:\n        return\
+        \ memo[n]\n    return fib(n - 1) + fib(n - 2)\n"
+      cpp: "map<int, long long> memo;\nfunction<long long(int)> fib = [&](int n) -> long long {\n    if\
+        \ (n < 2) return n;\n    if (memo.count(n)) return memo[n];\n    return fib(n - 1) + fib(n - 2);\n\
+        };\n"
+      java: "class Fib {\n    Map<Integer, Long> memo = new HashMap<>();\n    long fib(int n) {\n      \
+        \  if (n < 2) return n;\n        if (memo.containsKey(n)) return memo.get(n);\n        return fib(n\
+        \ - 1) + fib(n - 2);\n    }\n}\n"
+    options:
+    - The result is never stored in the memo, so the lookup can never succeed
+    - The base case returns the wrong value for n = 1, so every call is repeated
+    - A hash map cannot cache integers, so it must be replaced with an array
+    - It recurses on n + 1, so it never gets any closer to the base case
+    answer: 0
+    explanation: 'The code reads from the memo but never writes to it. The fix is to compute the value,
+      store it with memo[n] = result, and then return it. Always check both halves: look up before computing,
+      store before returning.'
+    difficulty: 2
+  - id: memo-calls
+    kind: output
+    prompt: This memoized fib counts how many times the function is entered. What does it print?
+    code:
+      python: "memo = {}\ncalls = 0\ndef fib(n):\n    global calls\n    calls += 1\n    if n < 2:\n    \
+        \    return n\n    if n in memo:\n        return memo[n]\n    memo[n] = fib(n - 1) + fib(n - 2)\n\
+        \    return memo[n]\nfib(10)\nprint(calls)\n"
+      cpp: "map<int, long long> memo;\nint calls = 0;\nfunction<long long(int)> fib = [&](int n) -> long\
+        \ long {\n    calls++;\n    if (n < 2) return n;\n    if (memo.count(n)) return memo[n];\n    long\
+        \ long r = fib(n - 1) + fib(n - 2);\n    memo[n] = r;\n    return r;\n};\nfib(10);\ncout << calls;\n"
+      java: "class Fib {\n    Map<Integer, Long> memo = new HashMap<>();\n    int calls = 0;\n    long fib(int\
+        \ n) {\n        calls++;\n        if (n < 2) return n;\n        if (memo.containsKey(n)) return\
+        \ memo.get(n);\n        long r = fib(n - 1) + fib(n - 2);\n        memo.put(n, r);\n        return\
+        \ r;\n    }\n}\nFib f = new Fib();\nf.fib(10);\nSystem.out.println(f.calls);\n"
+    options:
+    - '19'
+    - '177'
+    - '10'
+    - '11'
+    answer: 0
+    explanation: With memoization each fib(k) does its real work once, and its second child call is answered
+      straight from the memo. The total is 2n - 1 = 19 calls, against 177 for the unmemoized version. Time
+      drops from exponential to linear.
+    difficulty: 2
+  - id: greedy-stairs
+    kind: mcq
+    prompt: Climbing costs are [1, 2, 100, 3]. You may start on stair 0 or stair 1, climb one or two stairs
+      at a time, and the top is just past stair 3. Taking the cheaper of the next two stairs each time pays
+      6. What does the best plan pay?
+    options:
+    - '5'
+    - '6'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: 'Start on stair 1 (pay 2), jump to stair 3 (pay 3) and step over the top: 5 in total. A
+      local rule that only compares the next two options cannot see that the cheap-looking path leads into
+      the 100. When a small counterexample like this exists and subproblems repeat, define the state and
+      use DP.'
+    difficulty: 3
+  - id: reconstruct-needs
+    kind: mcq
+    prompt: You solved a minimum-cost problem with a DP table, but now must print the actual choices that
+      achieve the cost, not just the cost itself. What do you need?
+    options:
+    - A record of which option won at each cell, to walk back from the final answer
+    - Only the last two dp values, since they hold the cost of the final decision
+    - Only the final answer, because the choices can be recomputed from it by a formula
+    - The input sorted by cost, so the cheapest options can simply be listed in order
+    answer: 0
+    explanation: 'The table stores costs, not decisions. Save the winning transition (or recompute which
+      one gives dp[i]) and walk backwards from the answer cell to the base case. This is why space-saving
+      tricks are applied last: they throw away the cells a walk-back needs.'
+    difficulty: 3
+  - id: coin-table-output
+    kind: output
+    prompt: This bottom-up table finds the fewest coins for every amount from 0 to 6 using coins 1, 3 and
+      4. What does it print?
+    code:
+      python: "coins = [1, 3, 4]\nINF = 10 ** 9\ndp = [0] + [INF] * 6\nfor x in range(1, 7):\n    for c\
+        \ in coins:\n        if x >= c and dp[x - c] + 1 < dp[x]:\n            dp[x] = dp[x - c] + 1\nprint(*dp)\n"
+      cpp: "int coins[3] = {1, 3, 4};\nconst int INF = 1000000000;\nvector<int> dp(7, INF);\ndp[0] = 0;\n\
+        for (int x = 1; x <= 6; x++)\n    for (int c : coins)\n        if (x >= c && dp[x - c] + 1 < dp[x])\
+        \ dp[x] = dp[x - c] + 1;\nfor (int x = 0; x <= 6; x++) cout << dp[x] << (x < 6 ? \" \" : \"\");\n"
+      java: "int[] coins = {1, 3, 4};\nint[] dp = new int[7];\nArrays.fill(dp, 1_000_000_000);\ndp[0] =\
+        \ 0;\nfor (int x = 1; x <= 6; x++)\n    for (int c : coins)\n        if (x >= c && dp[x - c] + 1\
+        \ < dp[x]) dp[x] = dp[x - c] + 1;\nStringBuilder sb = new StringBuilder();\nfor (int x = 0; x <=\
+        \ 6; x++) sb.append(dp[x]).append(\" \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 0 1 2 1 1 2 2
+    - 0 1 2 1 1 2 3
+    - 0 1 2 3 1 2 2
+    - 0 1 2 1 2 2 2
+    answer: 0
+    explanation: dp[6] is 2 because 3 + 3 beats the greedy choice 4 + 1 + 1, which would give 3. Each cell
+      reads earlier cells only, so filling in increasing order of x is a valid evaluation order. INF is
+      large but small enough that dp[x - c] + 1 cannot overflow an int.
+    difficulty: 3
+  - id: space-when
+    kind: mcq
+    prompt: When is it safe to replace a whole dp table with just two or three variables?
+    options:
+    - When each cell reads only the previous couple of cells and no path has to be printed
+    - Whenever the table grows longer than about 1,000 entries, since big tables are slower
+    - Only for counting problems, never for the problems that ask for a minimum or maximum
+    - Only when the input array has been sorted before the loop that fills in the table
+    answer: 0
+    explanation: Rolling variables keep exactly the cells the next step reads. If a later step reaches back
+      further, or you need to reconstruct the choices, you must keep more. It works equally for min, max
+      and counting DPs.
+    difficulty: 4
+  - id: state-count
+    kind: mcq
+    prompt: A DP has the state (i, j) with i and j each up to 2,000, and each state tries up to 2,000 split
+      points. About how many basic steps is that, and is it feasible in a few seconds?
+    options:
+    - About 8 x 10^9, which is too slow
+    - About 4 x 10^6, which is fine
+    - About 8 x 10^6, which is fine
+    - About 4 x 10^9, which is too slow
+    answer: 0
+    explanation: Work is (number of states) x (cost per transition) = 2000 * 2000 * 2000. Estimating this
+      before coding tells you whether to look for a cheaper transition (prefix sums, a monotone split point,
+      a better state) or a different state definition.
+    difficulty: 4
+  - id: no-substructure
+    kind: mcq
+    prompt: Why can the longest simple path between two nodes of a general graph not be solved by combining
+      the best paths of smaller problems?
+    options:
+    - The best sub-path may use nodes the rest of the path needs, so the subproblems interfere
+    - A longest path can only be found in sorted graphs, and general graphs are not sorted
+    - The subproblems never repeat, so there is nothing for a cache to remember and reuse
+    - Longest paths have negative lengths, which a table of costs cannot represent properly
+    answer: 0
+    explanation: Optimal substructure needs the sub-answers to be independent. Here the best route to a
+      middle node may already consume the node the second half would need, so combining 'best' halves can
+      break the simple-path rule. For shortest paths the halves never conflict, which is why those are solved
+      by DP.
+    difficulty: 5
 problems:
 - fence-painting
 - stepping-stones-path

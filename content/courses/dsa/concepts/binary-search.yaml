@@ -148,65 +148,160 @@ resources:
 quiz:
   - id: steps
     kind: mcq
-    prompt: About how many comparisons does binary search need for 1,000,000 sorted items?
-    options: ["20", "1,000", "500,000", "1,000,000"]
+    prompt: About how many comparisons does binary search need on 1,000,000 sorted items?
+    options:
+    - About 20
+    - About 1,000
+    - About 500,000
+    - About 1,000,000
     answer: 0
-    explanation: 2^20 ≈ 10^6, so about 20 halvings.
+    explanation: 2^20 ≈ 10^6, so about 20 halvings. A linear scan averages 500,000 comparisons.
     difficulty: 1
   - id: count-x
     kind: mcq
-    prompt: How do you count occurrences of x in a sorted array with binary search?
+    prompt: How do you count how many times x occurs in a sorted array using binary search?
     options:
-      - "(first index with a[i] > x) − (first index with a[i] >= x)"
-      - "Find x once with binary search and return 1 if it is present"
-      - "Scan the whole array once and count every element equal to x"
-      - "(last index of the array) − (first index with a[i] >= x)"
+    - (first index with a[i] > x) − (first index with a[i] ≥ x)
+    - Find any x with one binary search and return 1 if it exists
+    - (last index of the array) − (first index with a[i] ≥ x)
+    - Scan the array once and count the elements equal to x
     answer: 0
-    explanation: The two bounds bracket exactly the block of x values.
+    explanation: The two boundaries bracket the block of x values exactly, in O(log n). Scanning is O(n).
     difficulty: 2
-  - id: answer-search
+  - id: mid-overflow
     kind: mcq
-    prompt: Binary search on the answer requires feasibility to be...
-    options: ["Monotonic (false...false then true...true)", "Random, as long as some answer is feasible", "Sorted by index, like the input array itself", "Always true for every value in the range"]
-    answer: 0
-    explanation: Only a monotonic condition lets you discard half the candidates safely.
-    difficulty: 2
-  - id: overflow
-    kind: mcq
-    prompt: In Java, why write mid = lo + (hi - lo) / 2 instead of (lo + hi) / 2?
-    options: ["lo + hi can overflow int", "It is faster", "It rounds up", "It avoids negative indexes"]
-    answer: 0
-    explanation: For large lo and hi their sum can exceed 2^31 − 1.
-    difficulty: 2
-  - id: midpoint-overflow
-    kind: mcq
-    prompt: "In a language with fixed-size integers (like C++ or Java), why write mid = lo + (hi - lo) / 2?"
+    languages:
+    - cpp
+    - java
+    prompt: Why write mid = lo + (hi − lo) / 2 instead of mid = (lo + hi) / 2 with 32-bit int indices?
     options:
-      - "Monotonic (false...false then true...true)"
-      - "Random, as long as some answer is feasible"
-      - "Sorted by index, like the input array itself"
-      - "Always true for every value in the range"
+    - lo + hi can exceed 2^31 − 1 and wrap to a negative number
+    - It is faster, because the subtraction is cheaper than the addition
+    - It rounds up instead of down, which the algorithm needs
+    - It avoids negative indexes when lo is zero
     answer: 0
-    explanation: "lo + hi can exceed the int range for large bounds; lo + (hi - lo) / 2 stays in range."
-    difficulty: 4
-  - id: infinite-search
-    kind: bug
-    prompt: "This search for the last x with ok(x) can loop forever. Why?"
+    explanation: For arrays near 2^30 elements or larger ranges, the sum overflows. lo + (hi − lo) / 2 never
+      exceeds hi. (Python integers cannot overflow.)
+    difficulty: 2
+  - id: lower-output
+    kind: output
+    prompt: What does this lower-bound search print?
     code:
-      python: |
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if ok(mid):
-                lo = mid
-            else:
-                hi = mid - 1
+      python: "a = [1, 3, 5, 5, 8]\nx = 5\nlo, hi = 0, len(a)\nwhile lo < hi:\n    mid = (lo + hi) // 2\n\
+        \    if a[mid] >= x:\n        hi = mid\n    else:\n        lo = mid + 1\nprint(lo)\n"
+      cpp: "int a[5] = {1, 3, 5, 5, 8};\nint x = 5, lo = 0, hi = 5;\nwhile (lo < hi) {\n    int mid = lo\
+        \ + (hi - lo) / 2;\n    if (a[mid] >= x) hi = mid; else lo = mid + 1;\n}\ncout << lo;\n"
+      java: "int[] a = {1, 3, 5, 5, 8};\nint x = 5, lo = 0, hi = 5;\nwhile (lo < hi) {\n    int mid = lo\
+        \ + (hi - lo) / 2;\n    if (a[mid] >= x) hi = mid; else lo = mid + 1;\n}\nSystem.out.println(lo);\n"
     options:
-      - "When hi = lo + 1 and ok(lo), mid = lo and nothing changes"
-      - "ok must be monotone decreasing, not increasing, for this loop"
-      - "hi should start at n instead of n − 1, so the range is wrong"
-      - "// should be /, because integer division loses the midpoint"
+    - '2'
+    - '3'
+    - '4'
+    - '0'
     answer: 0
-    explanation: "Rounding down makes mid = lo; with lo = mid the interval never shrinks. Use mid = (lo + hi + 1) // 2."
+    explanation: 'It finds the first index with a[i] ≥ 5, which is index 2 (not 3: the search must keep
+      going left when it finds an equal value).'
+    difficulty: 2
+  - id: rotated-output
+    kind: output
+    prompt: What does this search in a rotated sorted array print?
+    code:
+      python: "a = [4, 5, 6, 7, 0, 1, 2]\nt = 0\nlo, hi = 0, len(a) - 1\nans = -1\nwhile lo <= hi:\n   \
+        \ mid = (lo + hi) // 2\n    if a[mid] == t:\n        ans = mid\n        break\n    if a[lo] <= a[mid]:\n\
+        \        if a[lo] <= t < a[mid]:\n            hi = mid - 1\n        else:\n            lo = mid\
+        \ + 1\n    else:\n        if a[mid] < t <= a[hi]:\n            lo = mid + 1\n        else:\n   \
+        \         hi = mid - 1\nprint(ans)\n"
+      cpp: "int a[7] = {4, 5, 6, 7, 0, 1, 2};\nint t = 0, lo = 0, hi = 6, ans = -1;\nwhile (lo <= hi) {\n\
+        \    int mid = lo + (hi - lo) / 2;\n    if (a[mid] == t) { ans = mid; break; }\n    if (a[lo] <=\
+        \ a[mid]) {\n        if (a[lo] <= t && t < a[mid]) hi = mid - 1; else lo = mid + 1;\n    } else\
+        \ {\n        if (a[mid] < t && t <= a[hi]) lo = mid + 1; else hi = mid - 1;\n    }\n}\ncout << ans;\n"
+      java: "int[] a = {4, 5, 6, 7, 0, 1, 2};\nint t = 0, lo = 0, hi = 6, ans = -1;\nwhile (lo <= hi) {\n\
+        \    int mid = lo + (hi - lo) / 2;\n    if (a[mid] == t) { ans = mid; break; }\n    if (a[lo] <=\
+        \ a[mid]) {\n        if (a[lo] <= t && t < a[mid]) hi = mid - 1; else lo = mid + 1;\n    } else\
+        \ {\n        if (a[mid] < t && t <= a[hi]) lo = mid + 1; else hi = mid - 1;\n    }\n}\nSystem.out.println(ans);\n"
+    options:
+    - '4'
+    - −1
+    - '3'
+    - '5'
+    answer: 0
+    explanation: At mid = 3 the left half [4..7] is sorted and does not contain 0, so the search goes right.
+      It then finds 0 at index 4. At each step one half is always sorted, which decides the direction.
+    difficulty: 3
+  - id: loop-forever
+    kind: mcq
+    prompt: This search for the LAST x with ok(x) true can loop forever. Which input state makes it stall?
+    code:
+      python: "while lo < hi:\n    mid = (lo + hi) // 2\n    if ok(mid):\n        lo = mid\n    else:\n\
+        \        hi = mid - 1\n"
+      cpp: "while (lo < hi) {\n    int mid = lo + (hi - lo) / 2;\n    if (ok(mid)) lo = mid;\n    else hi\
+        \ = mid - 1;\n}\n"
+      java: "while (lo < hi) {\n    int mid = lo + (hi - lo) / 2;\n    if (ok(mid)) lo = mid;\n    else\
+        \ hi = mid - 1;\n}\n"
+    options:
+    - 'hi = lo + 1 and ok(lo) is true: mid = lo, so lo = mid changes nothing'
+    - ok(x) is false for every x in the range, so hi keeps shrinking by one forever
+    - lo and hi are equal when the loop starts, so the body repeats without end
+    - ok is monotone decreasing instead of increasing, so the two updates fight each other
+    answer: 0
+    explanation: When two candidates remain, rounding down gives mid = lo, and lo = mid makes no progress.
+      Use mid = (lo + hi + 1) / 2 whenever the update is lo = mid.
+    difficulty: 4
+  - id: peak
+    kind: mcq
+    prompt: Binary search can find a peak in [1, 3, 5, 4, 2] by comparing a[mid] with a[mid + 1]. Which
+      index does the predicate 'a[i] > a[i + 1]' first become true at?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: Going uphill the predicate is false; the first true index is a peak. This works even on
+      arrays that are not sorted, because the predicate is monotone around a single peak.
+    difficulty: 4
+  - id: sqrt-overflow
+    kind: mcq
+    languages:
+    - cpp
+    - java
+    prompt: You binary search floor(√x) for x up to 10^18 with lo = 0 and hi = x, testing mid * mid <= x
+      in 64-bit integers. What goes wrong?
+    options:
+    - 'mid * mid overflows 64-bit past mid ≈ 3·10^9: cap hi near 10^9 or test mid <= x / mid'
+    - 'Nothing: 64-bit integers can hold values up to about 10^36 here'
+    - The search needs more than 64 iterations, so it exceeds the time limit
+    - mid is always even, so every odd candidate value is skipped by the search
+    answer: 0
+    explanation: With hi = 10^18, the first mid is 5·10^17 and its square is 2.5·10^35, far beyond about
+      9.2·10^18. Tighten the range or divide instead of multiplying.
+    difficulty: 4
+  - id: ship-days
+    kind: mcq
+    prompt: Packages weigh [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] in this order and must ship within 5 days, each
+      day carrying consecutive packages up to the ship's capacity. What is the least capacity? (Binary search
+      on the answer.)
+    options:
+    - '15'
+    - '10'
+    - '14'
+    - '17'
+    answer: 0
+    explanation: 'Feasibility is monotone in the capacity, so search the range [max weight, total weight]
+      = [10, 55]. At 15 the days are 1..5, 6+7, 8, 9, 10: exactly 5 days; at 14 you need 6.'
+    difficulty: 4
+  - id: rotated-dups
+    kind: mcq
+    prompt: Searching for the minimum in a rotated sorted array that may contain duplicates, you see a[lo]
+      = a[mid] = a[hi]. What happens to the worst-case time?
+    options:
+    - 'It degrades to O(n): you cannot tell which half holds the pivot, so you can only shrink by one'
+    - It stays O(log n), because equal values make each comparison easier to decide
+    - It becomes O(n log n), because every step now needs a sort of the current range
+    - It becomes O(1), because equal endpoints reveal exactly where the minimum is
+    answer: 0
+    explanation: For [1, 1, 1, 1, 0, 1, 1] the three ends are equal and tell nothing. Only lo += 1 (or hi
+      −= 1) is safe. Strictly distinct values keep O(log n).
     difficulty: 5
 problems: [lower-bound-queries, koko-speed, whole-square-root]
 practice_links:

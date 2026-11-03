@@ -124,38 +124,168 @@ resources:
     source: CSES
     minutes: 20
 quiz:
-  - id: activity-key
+  - id: us-coins
     kind: mcq
-    prompt: To schedule the maximum number of non-overlapping meetings greedily, sort by...
-    options: ["End time", "Start time", "Duration", "Number of attendees"]
+    prompt: Using coins 25, 10, 5 and 1 with largest-first greedy, how many coins make 41?
+    options:
+    - '4'
+    - '5'
+    - '3'
+    - '6'
     answer: 0
-    explanation: Finishing earliest leaves the most room for the rest; the exchange argument proves it.
-    difficulty: 2
+    explanation: 25 + 10 + 5 + 1 is four coins. Here greedy is also optimal, but only because this coin
+      system happens to be well behaved. That is a property of the coins, not of the greedy idea.
+    difficulty: 1
   - id: coins-fail
     kind: mcq
-    prompt: With coins {1, 3, 4}, the greedy "largest coin first" for amount 6 gives how many coins vs the optimum?
-    options: ["3 vs 2", "2 vs 2", "6 vs 2", "3 vs 3"]
-    answer: 0
-    explanation: Greedy takes 4+1+1; optimal is 3+3. Greedy fails for this coin system.
-    difficulty: 3
-  - id: exchange
-    kind: mcq
-    prompt: What is an exchange argument?
+    prompt: Coins are 1, 3 and 4 and the amount is 6. How many coins does largest-first greedy use, and
+      what is the true minimum?
     options:
-      - "Showing any optimal solution can be transformed into the greedy one without getting worse"
-      - "Swapping two adjacent array elements whenever they are out of order, as in bubble sort"
-      - "Trying every possible solution and exchanging the current best whenever one is better"
-      - "Trading extra memory for less running time by caching the answers of earlier choices"
+    - 3 coins, but the minimum is 2 (3 + 3)
+    - 2 coins, which is also the true minimum
+    - 3 coins, which is also the true minimum
+    - 2 coins, but the true minimum is 1
     answer: 0
-    explanation: It proves greedy is at least as good as any optimal solution.
-    difficulty: 3
-  - id: jump
-    kind: mcq
-    prompt: In Jump Game, what single value do you track while scanning?
-    options: ["The farthest index reachable so far", "The number of jumps taken so far", "The smallest jump length seen so far", "The total of all jump lengths so far"]
-    answer: 0
-    explanation: If the current index exceeds the farthest reachable index, the end cannot be reached.
+    explanation: 'Greedy grabs the 4 and is left with 2, which needs two 1s: three coins in total. Taking
+      3 + 3 needs only two. A greedy choice is only valid if you can prove (usually with an exchange argument)
+      that it never rules out an optimal solution; otherwise reach for dynamic programming.'
     difficulty: 2
+  - id: jump-output
+    kind: output
+    prompt: 'In this jump game, nums[i] is the farthest you can jump from position i. What does the greedy
+      scan print: the farthest index reached, then 1 if it never got stuck or 0 if it did?'
+    code:
+      python: "nums = [3, 2, 1, 0, 4]\nreach = 0\nok = 1\nfor i, n in enumerate(nums):\n    if i > reach:\n\
+        \        ok = 0\n        break\n    reach = max(reach, i + n)\nprint(reach, ok)\n"
+      cpp: "int nums[5] = {3, 2, 1, 0, 4};\nint reach = 0, ok = 1;\nfor (int i = 0; i < 5; i++) {\n    if\
+        \ (i > reach) { ok = 0; break; }\n    reach = max(reach, i + nums[i]);\n}\ncout << reach << \" \"\
+        \ << ok;\n"
+      java: "int[] nums = {3, 2, 1, 0, 4};\nint reach = 0, ok = 1;\nfor (int i = 0; i < 5; i++) {\n    if\
+        \ (i > reach) { ok = 0; break; }\n    reach = Math.max(reach, i + nums[i]);\n}\nSystem.out.println(reach\
+        \ + \" \" + ok);\n"
+    options:
+    - 3 0
+    - 4 1
+    - 3 1
+    - 4 0
+    answer: 0
+    explanation: Every position up to 3 keeps the reach at 3, because the 0 at index 3 adds nothing. At
+      index 4 the scan finds i > reach, so index 4 can never be landed on. Keeping only the farthest reachable
+      index is enough, with no search over jump choices.
+    difficulty: 3
+  - id: gas-station
+    kind: mcq
+    prompt: Gas amounts are [1, 2, 3, 4, 5] and the costs to reach the next station are [3, 4, 5, 1, 2],
+      on a circle. At which index can you start and finish the whole loop?
+    options:
+    - '3'
+    - '0'
+    - '2'
+    - '4'
+    answer: 0
+    explanation: 'The net gain per station is -2, -2, -2, 3, 3. Starting at index 3 gives 3, 6, then 4,
+      2, 0 and never dips below zero. The greedy scan resets the start after any failure: if the tank goes
+      negative, no station between the old start and here can be a valid start.'
+    difficulty: 3
+  - id: knapsack-ratio
+    kind: mcq
+    prompt: 'Items (weight, value): (10, 60), (20, 100) and (30, 120), capacity 50, and items cannot be
+      split. What does taking items by best value-per-weight ratio give, and what is the true optimum?'
+    options:
+    - 160 and 220
+    - 220 and 220
+    - 160 and 160
+    - 240 and 220
+    answer: 0
+    explanation: Ratios are 6, 5 and 4, so greedy takes the first two (weight 30, value 160) and then the
+      third no longer fits. The best whole selection is items two and three, worth 220. Greedy by ratio
+      is exact only for the fractional version, where 240 is reachable.
+    difficulty: 3
+  - id: ropes
+    kind: mcq
+    prompt: Ropes of length 4, 3, 2 and 6 are joined two at a time, and a join costs the sum of the two
+      lengths. What is the cheapest total cost?
+    options:
+    - '29'
+    - '31'
+    - '15'
+    - '25'
+    answer: 0
+    explanation: 'Always join the two shortest ropes: 2 + 3 = 5, then 4 + 5 = 9, then 6 + 9 = 15, for a
+      total of 5 + 9 + 15 = 29. Joining in the given order costs 31. A min-heap supplies the two smallest
+      each round in O(log n), and this is the idea behind Huffman coding.'
+    difficulty: 3
+  - id: partition-labels
+    kind: output
+    prompt: The string is split into as many parts as possible so that no letter appears in more than one
+      part. This code prints the part sizes. What does it print?
+    code:
+      python: "s = \"ababcbacadefegdehijhklij\"\nlast = {c: i for i, c in enumerate(s)}\nout = []\nstart\
+        \ = end = 0\nfor i, c in enumerate(s):\n    end = max(end, last[c])\n    if i == end:\n        out.append(end\
+        \ - start + 1)\n        start = i + 1\nprint(*out)\n"
+      cpp: "string s = \"ababcbacadefegdehijhklij\";\nint last[26] = {};\nfor (int i = 0; i < (int)s.size();\
+        \ i++) last[s[i] - 'a'] = i;\nvector<int> out;\nint start = 0, end = 0;\nfor (int i = 0; i < (int)s.size();\
+        \ i++) {\n    end = max(end, last[s[i] - 'a']);\n    if (i == end) { out.push_back(end - start +\
+        \ 1); start = i + 1; }\n}\nfor (size_t k = 0; k < out.size(); k++) cout << out[k] << (k + 1 < out.size()\
+        \ ? \" \" : \"\");\n"
+      java: "String s = \"ababcbacadefegdehijhklij\";\nint[] last = new int[26];\nfor (int i = 0; i < s.length();\
+        \ i++) last[s.charAt(i) - 'a'] = i;\nStringBuilder sb = new StringBuilder();\nint start = 0, end\
+        \ = 0;\nfor (int i = 0; i < s.length(); i++) {\n    end = Math.max(end, last[s.charAt(i) - 'a']);\n\
+        \    if (i == end) { sb.append(end - start + 1).append(\" \"); start = i + 1; }\n}\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 9 7 8
+    - 9 8 7
+    - 8 8 8
+    - 10 7 7
+    answer: 0
+    explanation: The part that starts with 'a' must reach the last 'a', and every letter inside it extends
+      that boundary further, until index 8. The cut is made exactly when the scan position catches up with
+      the farthest last-occurrence seen. One pass, constant extra space for 26 letters.
+    difficulty: 4
+  - id: remove-digits
+    kind: mcq
+    prompt: Remove exactly 3 digits from 1432219 so that the remaining 4-digit number is as small as possible.
+      What is it?
+    options:
+    - '1219'
+    - '1229'
+    - '1319'
+    - '2219'
+    answer: 0
+    explanation: 'Scan left to right with a stack: whenever the next digit is smaller than the stack top
+      and removals remain, pop the top, since a smaller digit in an earlier position always wins. 4, 3 and
+      one 2 are removed, leaving 1, 2, 1, 9.'
+    difficulty: 4
+  - id: largest-number
+    kind: mcq
+    prompt: The numbers 3, 30, 34, 5 and 9 are concatenated in the best order to form the largest possible
+      number. What is it?
+    options:
+    - '9534330'
+    - '9534303'
+    - '9533430'
+    - '9343305'
+    answer: 0
+    explanation: Plain descending order puts 30 before 3 and gives 9534303. The right comparator puts a
+      before b when the text a + b is larger than b + a. Here '330' beats '303', so 3 goes first. The greedy
+      choice is about the pair, not about each number's own size.
+    difficulty: 4
+  - id: kruskal-why
+    kind: mcq
+    prompt: Kruskal's algorithm repeatedly adds the lightest edge that does not create a cycle. Why is that
+      greedy choice safe for a minimum spanning tree?
+    options:
+    - For every cut, the lightest edge crossing it belongs to some minimum spanning tree, so taking it never
+      hurts
+    - The single lightest edge in the graph is the only one needed, and every heavier edge is then discarded
+    - Edges are processed in order, so a lighter edge can never create a cycle with a heavier one later
+      on
+    - The graph's cycles are all removed first, which guarantees that every remaining edge is in the tree
+    answer: 0
+    explanation: This is the cut property. When the algorithm picks an edge, it separates two current components,
+      and no cheaper edge crosses that cut, so swapping it into any optimal tree costs nothing. The proof
+      is an exchange argument, which is the usual way to justify a greedy algorithm.
+    difficulty: 5
 problems: [max-meetings, can-reach-end, seed-fund]
 practice_links:
   - title: Jump Game

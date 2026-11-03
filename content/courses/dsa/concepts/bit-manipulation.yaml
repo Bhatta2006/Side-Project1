@@ -130,34 +130,175 @@ resources:
     source: Tech Interview Handbook
     minutes: 10
 quiz:
-  - id: xor-pairs
+  - id: clear-lowest
     kind: mcq
-    prompt: What is 4 ^ 9 ^ 4?
-    options: ["9", "17", "0", "4"]
+    prompt: What is 12 & (12 - 1), and what does the expression x & (x - 1) do to any positive x?
+    options:
+    - '8: it clears the lowest set bit'
+    - '4: it clears the highest set bit'
+    - '0: it clears every set bit'
+    - '11: it flips every bit below the lowest set bit'
     answer: 0
-    explanation: The two 4s cancel (4 ^ 4 = 0), leaving 9.
+    explanation: 12 is 1100 and 11 is 1011. Subtracting one flips the lowest set bit and everything below
+      it, so the AND removes exactly that bit and leaves 1000. Looping until zero counts set bits in time
+      proportional to how many there are.
     difficulty: 1
-  - id: power-two
-    kind: mcq
-    prompt: For x > 0, what does (x & (x − 1)) == 0 test?
-    options: ["x is a power of two", "x is an even number", "x is an odd number", "x is a prime number"]
+  - id: xor-odd
+    kind: output
+    prompt: What does this XOR fold print?
+    code:
+      python: "nums = [5, 5, 5, 2, 2, 9, 9]\nx = 0\nfor v in nums:\n    x ^= v\nprint(x)\n"
+      cpp: 'int nums[7] = {5, 5, 5, 2, 2, 9, 9};
+
+        int x = 0;
+
+        for (int v : nums) x ^= v;
+
+        cout << x;
+
+        '
+      java: 'int[] nums = {5, 5, 5, 2, 2, 9, 9};
+
+        int x = 0;
+
+        for (int v : nums) x ^= v;
+
+        System.out.println(x);
+
+        '
+    options:
+    - '5'
+    - '0'
+    - '9'
+    - '2'
     answer: 0
-    explanation: Powers of two have a single set bit, which x − 1 clears entirely.
+    explanation: a ^ a = 0 and a ^ 0 = a, so every value that appears an even number of times vanishes.
+      Here 2 and 9 appear twice, while 5 appears three times and leaves one copy behind.
     difficulty: 2
-  - id: subsets
+  - id: shift-negative-cj
     kind: mcq
-    prompt: Looping mask from 0 to 2^n − 1 visits...
-    options: ["Every subset of n items exactly once", "Every ordering of the n items once", "Only the subsets that have size n", "Exactly n subsets, one per item"]
+    languages:
+    - cpp
+    - java
+    prompt: With int x = -7, what do x / 2 and x >> 1 give, in that order?
+    options:
+    - -3 and -4
+    - -4 and -4
+    - -3 and -3
+    - -4 and -3
     answer: 0
-    explanation: Each n-bit pattern corresponds to exactly one subset.
-    difficulty: 2
-  - id: and-value
+    explanation: Integer division truncates toward zero, giving -3. The arithmetic right shift rounds toward
+      negative infinity, giving -4. They only agree for non-negative numbers, so do not use a shift as a
+      drop-in for dividing signed values.
+    difficulty: 3
+  - id: shift-negative-py
     kind: mcq
-    prompt: What is 12 & 10?
-    options: ["8", "14", "6", "2"]
+    languages:
+    - python
+    prompt: What do -7 // 2, -7 >> 1 and int(-7 / 2) give, in that order?
+    options:
+    - -4 -4 -3
+    - -3 -4 -3
+    - -4 -3 -3
+    - -3 -3 -4
     answer: 0
-    explanation: 1100 & 1010 = 1000, which is 8.
-    difficulty: 2
+    explanation: Floor division and the right shift both round toward negative infinity, while int() of
+      the float result truncates toward zero. Many solutions ported from other languages silently change
+      meaning on negative values.
+    difficulty: 3
+  - id: power-of-two
+    kind: mcq
+    prompt: Which test correctly decides whether an integer n is a power of two for every value, including
+      0 and negative numbers?
+    options:
+    - n is positive, and n AND (n - 1) equals zero
+    - n AND (n - 1) equals zero, with no other condition
+    - n AND (n - 1) is non-zero, since several bits are set
+    - n OR (n - 1) equals n, since the lowest bit is set
+    answer: 0
+    explanation: 'A power of two has exactly one set bit, so removing it leaves zero. But 0 also satisfies
+      the AND test, so the positivity check is required. Also mind precedence: in Python and C++, n & n
+      - 1 == 0 does not parse the way it reads, so keep the parentheses.'
+    difficulty: 3
+  - id: mask-40-cpp
+    kind: mcq
+    languages:
+    - cpp
+    prompt: You need a 64-bit mask with only bit 40 set. Which expression is correct?
+    options:
+    - 1LL << 40, because the literal 1 is a 32-bit int and shifting it by 40 is undefined
+    - 1 << 40, because the result is widened to 64 bits when it is stored
+    - (long long)1 << 40 is wrong, since the cast is applied after the shift happens
+    - 1 << 40 works whenever the target variable is declared as unsigned long long
+    answer: 0
+    explanation: 'The shift happens in the type of the left operand, before assignment. A plain int shifted
+      by 32 or more is undefined behaviour, and the compiler may produce 0, 1, or anything. Make the literal
+      wide: 1LL or 1ULL.'
+    difficulty: 3
+  - id: shift-32-java
+    kind: mcq
+    languages:
+    - java
+    prompt: In Java, what do int x = 1 << 32 and long y = 1L << 32 hold?
+    options:
+    - x is 1 and y is 4294967296
+    - x is 0 and y is 4294967296
+    - x is 4294967296 and y is 4294967296
+    - x is 1 and y is 1
+    answer: 0
+    explanation: Java masks the shift distance to its low 5 bits for int (6 bits for long), so shifting
+      an int by 32 is the same as shifting by 0. Use a long operand for masks wider than 31 bits.
+    difficulty: 4
+  - id: subset-xor-sum
+    kind: output
+    prompt: This enumerates all subsets of {1, 2, 3} as bitmasks. What does it print?
+    code:
+      python: "a = [1, 2, 3]\ntotal = 0\nfor m in range(1 << 3):\n    x = 0\n    for i in range(3):\n  \
+        \      if m >> i & 1:\n            x ^= a[i]\n    total += x\nprint(total)\n"
+      cpp: "int a[3] = {1, 2, 3};\nint total = 0;\nfor (int m = 0; m < (1 << 3); m++) {\n    int x = 0;\n\
+        \    for (int i = 0; i < 3; i++)\n        if (m >> i & 1) x ^= a[i];\n    total += x;\n}\ncout <<\
+        \ total;\n"
+      java: "int[] a = {1, 2, 3};\nint total = 0;\nfor (int m = 0; m < (1 << 3); m++) {\n    int x = 0;\n\
+        \    for (int i = 0; i < 3; i++)\n        if ((m >> i & 1) == 1) x ^= a[i];\n    total += x;\n}\n\
+        System.out.println(total);\n"
+    options:
+    - '12'
+    - '6'
+    - '8'
+    - '16'
+    answer: 0
+    explanation: The eight subset XORs are 0, 1, 2, 3, 3, 2, 1, 0, which add to 12. Bit i of the mask says
+      whether element i is in the subset, so masks from 0 to 2^n - 1 enumerate every subset exactly once,
+      in O(2^n * n).
+    difficulty: 4
+  - id: missing-xor
+    kind: mcq
+    prompt: Take the XOR of every number from 0 to 5 together with every element of [3, 0, 1, 5, 2]. What
+      do you get?
+    options:
+    - '4'
+    - '0'
+    - '5'
+    - '1'
+    answer: 0
+    explanation: Each value that is present appears twice and cancels, so only the missing value survives.
+      This finds a missing number in O(n) time and O(1) space, with no overflow risk that a sum-based formula
+      would carry.
+    difficulty: 4
+  - id: two-unique
+    kind: mcq
+    prompt: In [1, 2, 1, 3, 2, 5] two values appear once and the rest appear twice. The XOR of the whole
+      array is 6. What is the mask x & -x for x = 6, which you use to split the array into two groups?
+    options:
+    - '2'
+    - '4'
+    - '6'
+    - '1'
+    answer: 0
+    explanation: 6 is 110, so its lowest set bit is the value 2. The two unique numbers, 3 (011) and 5 (101),
+      differ on that bit, so they land in different groups, while each duplicate pair stays together. XOR
+      each group to recover 3 and 5.
+    difficulty: 5
 problems: [single-number]
 practice_links:
   - title: Single Number

@@ -149,34 +149,179 @@ resources:
     minutes: 60
     level: deep
 quiz:
-  - id: inorder
+  - id: max-nodes
     kind: mcq
-    prompt: Which traversal visits left subtree, then root, then right subtree?
-    options: ["Inorder", "Preorder", "Postorder", "Level order"]
+    prompt: A binary tree has height 5, counting nodes on the longest root-to-leaf path (a lone root has
+      height 1). What is the largest number of nodes it can have?
+    options:
+    - '31'
+    - '32'
+    - '25'
+    - '15'
     answer: 0
-    explanation: In-order puts the root in between its subtrees.
+    explanation: Level k holds at most 2^(k-1) nodes, so five full levels give 1 + 2 + 4 + 8 + 16 = 2^5
+      - 1 = 31. A balanced tree of n nodes therefore has height about log2(n), which is why balanced-tree
+      operations are fast.
     difficulty: 1
-  - id: bfs-structure
-    kind: mcq
-    prompt: Level-order traversal uses which data structure?
-    options: ["A queue", "A stack", "A heap", "A hash set"]
+  - id: height-output
+    kind: output
+    prompt: 'The tree is stored in arrays: node 1 has children 2 and 3, node 2 has children 4 and 5, node
+      4 has the single left child 6 (0 means no child). What does this print?'
+    code:
+      python: "L = [0, 2, 4, 0, 6, 0, 0]\nR = [0, 3, 5, 0, 0, 0, 0]\ndef h(i):\n    return 0 if i == 0 else\
+        \ 1 + max(h(L[i]), h(R[i]))\nprint(h(1))\n"
+      cpp: "int L[7] = {0, 2, 4, 0, 6, 0, 0};\nint R[7] = {0, 3, 5, 0, 0, 0, 0};\nfunction<int(int)> h =\
+        \ [&](int i) -> int {\n    return i == 0 ? 0 : 1 + max(h(L[i]), h(R[i]));\n};\ncout << h(1);\n"
+      java: "class T {\n    int[] L = {0, 2, 4, 0, 6, 0, 0};\n    int[] R = {0, 3, 5, 0, 0, 0, 0};\n   \
+        \ int h(int i) { return i == 0 ? 0 : 1 + Math.max(h(L[i]), h(R[i])); }\n}\nSystem.out.println(new\
+        \ T().h(1));\n"
+    options:
+    - '4'
+    - '3'
+    - '6'
+    - '5'
     answer: 0
-    explanation: Nodes are processed in the order they were discovered, level by level — FIFO.
-    difficulty: 1
-  - id: height-trace
-    kind: mcq
-    prompt: A tree is a single chain of 5 nodes (each has only a left child). Its height in nodes is...
-    options: ["5", "1", "3", "4"]
-    answer: 0
-    explanation: The longest root-to-leaf path contains all 5 nodes.
-    difficulty: 1
-  - id: postorder-use
-    kind: mcq
-    prompt: To compute every subtree's size, which order is natural?
-    options: ["Postorder — children before the node", "Preorder", "Inorder", "Any order works without recursion"]
-    answer: 0
-    explanation: A node's size is 1 + left size + right size, so children must be done first.
+    explanation: 'The longest chain is 1, 2, 4, 6: four nodes. The base case h(0) = 0 is what makes an empty
+      child count as nothing, and every node adds one on top of its taller child.'
     difficulty: 2
+  - id: stack-depth
+    kind: mcq
+    prompt: A recursive DFS visits every node of a tree with 1,000,000 nodes. How deep does the call stack
+      get for a perfectly balanced tree, and for a single long chain?
+    options:
+    - About 20 frames for the balanced tree, and up to 1,000,000 frames for the chain
+    - About 500,000 frames for the balanced tree, and 1,000,000 frames for the chain
+    - About 1,000,000 frames for both, since every node has to be visited once
+    - About 20 frames for both, since the recursion depth depends only on log n
+    answer: 0
+    explanation: Stack depth is the tree height, not the node count. Balanced means height about log2 n;
+      a chain has height n. Space for recursive tree code is O(h), which is why deep skewed inputs overflow
+      the stack.
+    difficulty: 2
+  - id: postorder-output
+    kind: output
+    prompt: Same tree as before (1 has children 2, 3; 2 has children 4, 5; 4 has the left child 6). What
+      does this traversal print?
+    code:
+      python: "L = [0, 2, 4, 0, 6, 0, 0]\nR = [0, 3, 5, 0, 0, 0, 0]\nres = []\ndef go(i):\n    if i == 0:\n\
+        \        return\n    go(L[i])\n    go(R[i])\n    res.append(i)\ngo(1)\nprint(*res)\n"
+      cpp: "int L[7] = {0, 2, 4, 0, 6, 0, 0};\nint R[7] = {0, 3, 5, 0, 0, 0, 0};\nvector<int> res;\nfunction<void(int)>\
+        \ go = [&](int i) {\n    if (i == 0) return;\n    go(L[i]);\n    go(R[i]);\n    res.push_back(i);\n\
+        };\ngo(1);\nfor (size_t k = 0; k < res.size(); k++) cout << res[k] << (k + 1 < res.size() ? \" \"\
+        \ : \"\");\n"
+      java: "class T {\n    int[] L = {0, 2, 4, 0, 6, 0, 0};\n    int[] R = {0, 3, 5, 0, 0, 0, 0};\n   \
+        \ StringBuilder sb = new StringBuilder();\n    void go(int i) {\n        if (i == 0) return;\n \
+        \       go(L[i]);\n        go(R[i]);\n        sb.append(i).append(\" \");\n    }\n}\nT t = new T();\n\
+        t.go(1);\nSystem.out.println(t.sb.toString().trim());\n"
+    options:
+    - 6 4 5 2 3 1
+    - 1 2 4 6 5 3
+    - 6 4 2 5 1 3
+    - 4 6 5 2 3 1
+    answer: 0
+    explanation: Postorder visits left, right, then the node itself, so children always come before their
+      parent and the root is last. The preorder here would be 1 2 4 6 5 3 and the inorder 6 4 2 5 1 3.
+    difficulty: 3
+  - id: diameter
+    kind: mcq
+    prompt: 'For that same tree, what is the diameter: the number of edges on the longest path between any
+      two nodes?'
+    options:
+    - 4, the path 6 - 4 - 2 - 1 - 3
+    - 3, the path 6 - 4 - 2 - 5
+    - 5, the path through all five nodes 6, 4, 2, 1, 3
+    - 6, one edge for every node in the tree
+    answer: 0
+    explanation: At each node the best path bending through it is height(left) + height(right) edges; the
+      answer is the maximum over all nodes, so one DFS returning the height while updating a global best
+      does it in O(n). Counting nodes instead of edges would say 5.
+    difficulty: 3
+  - id: py-recursion
+    kind: mcq
+    languages:
+    - python
+    prompt: A binary tree is one long left-leaning chain of 200,000 nodes. A recursive height function in
+      plain Python with default settings is called on its root. What happens?
+    options:
+    - It raises RecursionError after roughly a thousand nested calls, so use an explicit stack
+    - It returns 200000 correctly, because Python grows its call stack as needed
+    - It returns 200000 but slowly, since each call is copied into a fresh heap frame
+    - It crashes the interpreter with a segmentation fault on the very first call
+    answer: 0
+    explanation: CPython limits recursion depth to about 1000 by default. Raising the limit helps only a
+      little before the C stack runs out, so for deep or adversarial trees write the traversal iteratively
+      with a list as the stack.
+    difficulty: 3
+  - id: level-sizes
+    kind: output
+    prompt: Same tree again. This breadth-first search records how many nodes sit on each level. What does
+      it print?
+    code:
+      python: "from collections import deque\nL = [0, 2, 4, 0, 6, 0, 0]\nR = [0, 3, 5, 0, 0, 0, 0]\nq =\
+        \ deque([1])\nout = []\nwhile q:\n    n = len(q)\n    out.append(n)\n    for _ in range(n):\n  \
+        \      i = q.popleft()\n        if L[i]:\n            q.append(L[i])\n        if R[i]:\n       \
+        \     q.append(R[i])\nprint(*out)\n"
+      cpp: "int L[7] = {0, 2, 4, 0, 6, 0, 0};\nint R[7] = {0, 3, 5, 0, 0, 0, 0};\nqueue<int> q;\nq.push(1);\n\
+        vector<int> out;\nwhile (!q.empty()) {\n    int n = q.size();\n    out.push_back(n);\n    for (int\
+        \ k = 0; k < n; k++) {\n        int i = q.front();\n        q.pop();\n        if (L[i]) q.push(L[i]);\n\
+        \        if (R[i]) q.push(R[i]);\n    }\n}\nfor (size_t k = 0; k < out.size(); k++) cout << out[k]\
+        \ << (k + 1 < out.size() ? \" \" : \"\");\n"
+      java: "int[] L = {0, 2, 4, 0, 6, 0, 0};\nint[] R = {0, 3, 5, 0, 0, 0, 0};\nDeque<Integer> q = new\
+        \ ArrayDeque<>();\nq.add(1);\nStringBuilder sb = new StringBuilder();\nwhile (!q.isEmpty()) {\n\
+        \    int n = q.size();\n    sb.append(n).append(\" \");\n    for (int k = 0; k < n; k++) {\n   \
+        \     int i = q.poll();\n        if (L[i] != 0) q.add(L[i]);\n        if (R[i] != 0) q.add(R[i]);\n\
+        \    }\n}\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 1 2 2 1
+    - 1 2 4 6
+    - 1 3 2
+    - 1 2 3 4
+    answer: 0
+    explanation: Reading len(q) at the start of each round freezes the size of the current level before
+      its children are added. Level one is node 1, level two is nodes 2 and 3, level three is nodes 4 and
+      5, and level four is node 6.
+    difficulty: 4
+  - id: rebuild
+    kind: mcq
+    prompt: A tree has preorder [3, 9, 20, 15, 7] and inorder [9, 3, 15, 20, 7]. Which value is the root
+      of the right subtree?
+    options:
+    - '20'
+    - '9'
+    - '15'
+    - '7'
+    answer: 0
+    explanation: The first preorder value, 3, is the root. In the inorder list 3 sits at index 1, so the
+      left subtree has one node (9) and the right subtree's preorder is [20, 15, 7], whose first value 20
+      is its root. Neither traversal alone fixes the shape; together they do (with distinct values).
+    difficulty: 4
+  - id: lca-meaning
+    kind: mcq
+    prompt: A recursive lowest-common-ancestor function returns a node when it finds p or q, otherwise null.
+      At some node both the left call and the right call return non-null. What does that tell you?
+    options:
+    - This node is the lowest common ancestor, because p and q were found in different subtrees below it
+    - p is an ancestor of q, so this node should return whichever of the two values it found first
+    - The tree contains a duplicate value, so the search has to restart from the root once more
+    - This node is not the lowest common ancestor, because the answer must sit deeper in one subtree
+    answer: 0
+    explanation: One target on each side means no deeper node can contain both, so the current node is the
+      lowest shared ancestor. If only one side returns non-null, pass that result upward unchanged.
+    difficulty: 4
+  - id: serialize-nulls
+    kind: mcq
+    prompt: 'Why can a preorder listing with explicit null markers (for example 1 2 # # 3 # #) rebuild a
+      binary tree uniquely, while preorder values alone cannot?'
+    options:
+    - The markers record where each subtree ends, so every node knows whether a left and right child follow
+    - The markers sort the values, and a sorted sequence can only be arranged into one tree shape
+    - Preorder alone loses the values themselves, and the markers act as a checksum that restores them
+    - Preorder with markers lists the nodes level by level, which fixes each node's depth directly
+    answer: 0
+    explanation: Without markers, 1 2 3 could be a chain or a root with two children. With markers, the
+      recursion consumes exactly the tokens of each subtree, so the parse has one possible reading. Distinct
+      values are not required.
+    difficulty: 5
 problems: [tree-levels, tree-diameter, village-sentries]
 practice_links:
   - title: Invert Binary Tree

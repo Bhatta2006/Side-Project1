@@ -143,57 +143,148 @@ resources:
 quiz:
   - id: which-moves
     kind: mcq
-    prompt: Sorted array, a[i] + a[j] is greater than the target. Which pointer moves?
-    options: ["j moves left", "i moves right", "Both move", "Neither — stop"]
-    answer: 0
-    explanation: The sum is too big; only decreasing j can reduce it while keeping the sorted guarantee.
-    difficulty: 1
-  - id: correctness
-    kind: mcq
-    prompt: Why is it safe to discard a[i] when a[i] + a[j] < target (sorted array, i < j)?
+    prompt: In a sorted array with pointers i (left) and j (right), a[i] + a[j] is greater than the target.
+      Which pointer moves?
     options:
-      - "Every partner of a[i] at or before j is ≤ a[j], so all its sums are too small"
-      - "Because a[i] must be negative whenever the sum is below the target value"
-      - "Because i is the smaller index, so moving it is cheaper than moving j"
-      - "It isn't strictly safe; it is a heuristic that works on most inputs"
+    - j moves left, to a smaller value
+    - i moves right, to a larger value
+    - Both pointers move inward together
+    - Neither moves, because the search is over
     answer: 0
-    explanation: a[j] is the largest remaining partner; if even it is too small, a[i] has no valid partner.
-    difficulty: 3
+    explanation: The sum is too big, and the only way to reduce it is a smaller right element. Moving i
+      right would make the sum even larger.
+    difficulty: 1
   - id: container
     kind: mcq
-    prompt: In Container With Most Water, which pointer do you move?
-    options: ["The one at the shorter line", "The one at the taller line", "Always the left", "The one with the smaller index"]
-    answer: 0
-    explanation: The area is limited by the shorter line; moving the taller one can only shrink width without raising the limit.
-    difficulty: 2
-  - id: three-sum
-    kind: mcq
-    prompt: Sort + fix one + two pointers solves 3Sum in what time?
-    options: ["O(n²)", "O(n³)", "O(n log n)", "O(n)"]
-    answer: 0
-    explanation: n choices for the fixed element × an O(n) sweep each.
-    difficulty: 2
-  - id: dedupe-in-place
-    kind: mcq
-    prompt: "Removing duplicates from a sorted array in place with a slow pointer w and a fast pointer r, when do you write a[r] to a[w]?"
+    prompt: In Container With Most Water, with a pointer at each end, which pointer do you move inward,
+      and why?
     options:
-      - "When a[r] differs from a[w - 1] (the last kept value)"
-      - "When a[r] differs from the next value a[r + 1]"
-      - "On every step, then shrink the array at the end"
-      - "Only when r is even, skipping each second copy"
+    - 'The one at the shorter line: it limits the area, so keeping it cannot help'
+    - The one at the taller line, to search for an even taller partner line
+    - Always the left pointer, so that every container is visited exactly once
+    - The one with the smaller index, since width matters more than height
     answer: 0
-    explanation: "Keep a value only if it differs from the last value already kept; both pointers move forward, so O(n)."
+    explanation: Any container using the shorter line with a narrower width has height at most that line,
+      so it is no better. Discarding the shorter line is therefore safe.
+    difficulty: 2
+  - id: pair-output
+    kind: output
+    prompt: What does this sorted-array pair search print (the indices i and j)?
+    code:
+      python: "a = [1, 2, 3, 4, 6]\ntarget = 6\ni, j = 0, len(a) - 1\nwhile i < j:\n    s = a[i] + a[j]\n\
+        \    if s == target:\n        print(i, j)\n        break\n    if s < target:\n        i += 1\n \
+        \   else:\n        j -= 1\n"
+      cpp: "int a[5] = {1, 2, 3, 4, 6};\nint target = 6, i = 0, j = 4;\nwhile (i < j) {\n    int s = a[i]\
+        \ + a[j];\n    if (s == target) { cout << i << \" \" << j; break; }\n    if (s < target) i++; else\
+        \ j--;\n}\n"
+      java: "int[] a = {1, 2, 3, 4, 6};\nint target = 6, i = 0, j = 4;\nwhile (i < j) {\n    int s = a[i]\
+        \ + a[j];\n    if (s == target) { System.out.println(i + \" \" + j); break; }\n    if (s < target)\
+        \ i++; else j--;\n}\n"
+    options:
+    - 1 3
+    - 0 4
+    - 2 3
+    - 0 3
+    answer: 0
+    explanation: 1 + 6 = 7 is too big, so j moves left. 1 + 4 = 5 is too small, so i moves right. 2 + 4
+      = 6 matches at indices 1 and 3.
+    difficulty: 2
+  - id: container-numeric
+    kind: mcq
+    prompt: Heights are [1, 8, 6, 2, 5, 4, 8, 3, 7]. What is the largest container area (width times the
+      shorter height)?
+    options:
+    - '49'
+    - '56'
+    - '42'
+    - '36'
+    answer: 0
+    explanation: Using the 8 at index 1 and the 7 at index 8 gives width 7 and height min(8, 7) = 7, so
+      49. The two-pointer scan finds it in one pass.
+    difficulty: 3
+  - id: correctness
+    kind: mcq
+    prompt: Sorted array, i < j, and a[i] + a[j] < target. Why is it safe to discard index i for good?
+    options:
+    - Every partner of a[i] at or before j is at most a[j], so all those sums are too small
+    - a[i] must be negative whenever the sum falls below the target value
+    - i is the smaller index, so moving it is cheaper than moving the pointer j
+    - It is only a heuristic that works on most inputs but not on all of them
+    answer: 0
+    explanation: a[i] pairs with nothing in (i, j] to reach the target, since a[j] was the largest candidate.
+      Partners beyond j were already discarded earlier.
+    difficulty: 3
+  - id: dedupe-output
+    kind: output
+    prompt: In-place duplicate removal on a sorted array with a write index w. What does this print (the
+      new length, then the kept values)?
+    code:
+      python: "a = [1, 1, 2, 2, 2, 3]\nw = 1\nfor r in range(1, len(a)):\n    if a[r] != a[w - 1]:\n   \
+        \     a[w] = a[r]\n        w += 1\nprint(w, *a[:w])\n"
+      cpp: "int a[6] = {1, 1, 2, 2, 2, 3};\nint w = 1;\nfor (int r = 1; r < 6; r++)\n    if (a[r] != a[w\
+        \ - 1]) a[w++] = a[r];\ncout << w;\nfor (int i = 0; i < w; i++) cout << \" \" << a[i];\n"
+      java: "int[] a = {1, 1, 2, 2, 2, 3};\nint w = 1;\nfor (int r = 1; r < 6; r++)\n    if (a[r] != a[w\
+        \ - 1]) a[w++] = a[r];\nStringBuilder sb = new StringBuilder().append(w);\nfor (int i = 0; i < w;\
+        \ i++) sb.append(\" \").append(a[i]);\nSystem.out.println(sb);\n"
+    options:
+    - 3 1 2 3
+    - 3 1 1 2
+    - 6 1 1 2 2 2 3
+    - 4 1 2 2 3
+    answer: 0
+    explanation: w always marks the next free slot and a[w − 1] is the last kept value. The reader r writes
+      only when it sees a new value, so the kept prefix is 1, 2, 3.
+    difficulty: 3
+  - id: unsorted-fail
+    kind: mcq
+    prompt: The sorted-array pair-sum scan is run on the UNSORTED array [3, 1, 2] with target 3 (the pair
+      1 + 2 exists). What happens?
+    options:
+    - 'It reports no pair: 3 + 2 > 3 moves j, then 3 + 1 > 3 moves j again, and they meet'
+    - It finds 1 and 2, because every pair is eventually tested by the scan
+    - It finds 3 and 0 by wrapping around the end of the array to the start
+    - It crashes with an index error at the very first step of the scan
+    answer: 0
+    explanation: The discard rules rely on order. Here the scan throws away index 0 and the 3 incorrectly,
+      and the pair (1, 2) is never examined. Sort first, or use a hash set.
+    difficulty: 4
+  - id: rain-water
+    kind: mcq
+    prompt: Heights are [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]. How much rain water is trapped between the
+      bars?
+    options:
+    - '6'
+    - '9'
+    - '5'
+    - '8'
+    answer: 0
+    explanation: Each cell holds min(best bar to its left, best bar to its right) minus its own height.
+      Two pointers do this in O(1) space by always advancing the side whose running maximum is smaller.
+    difficulty: 4
+  - id: three-sum-dup
+    kind: mcq
+    prompt: 3Sum asks for all unique triplets summing to 0. How many unique triplets does [−1, 0, 1, 2,
+      −1, −4] have?
+    options:
+    - '2'
+    - '3'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: The triplets are (−1, −1, 2) and (−1, 0, 1). After sorting, fix i, run two pointers, and
+      skip equal values for i and for the pointers after each hit, or the same triplet is reported twice.
     difficulty: 4
   - id: pointer-invariant
     kind: mcq
-    prompt: "Pair sum on a sorted array: which invariant justifies the two-pointer scan?"
+    prompt: On a sorted array, which invariant justifies the opposite-ends pair-sum scan?
     options:
-      - "No valid pair uses an index outside [i, j]"
-      - "a[i] + a[j] only ever increases as they move"
-      - "i and j always move together, one step each"
-      - "The array has no duplicate values to skip"
+    - No valid pair uses an index outside the current range [i, j]
+    - a[i] + a[j] only ever increases as the pointers move
+    - The pointers always move together, one step each
+    - The array contains no duplicate values to skip
     answer: 0
-    explanation: "Each move discards an index that provably has no partner left, so a solution, if any, stays inside [i, j]."
+    explanation: Every move discards one index that provably cannot be part of any answer, so the answer,
+      if it exists, always stays inside [i, j]. That makes the scan O(n) and still complete.
     difficulty: 5
 problems: [pair-sum-sorted, container-water, difference-pairs, sorted-squares]
 practice_links:

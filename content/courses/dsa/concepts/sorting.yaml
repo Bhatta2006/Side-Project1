@@ -155,38 +155,187 @@ resources:
     source: Tech Interview Handbook
     minutes: 10
 quiz:
-  - id: merge-complexity
+  - id: bubble-pass
     kind: mcq
-    prompt: Why is merge sort O(n log n)?
+    prompt: After exactly one full left-to-right pass of bubble sort on [5, 1, 4, 2, 8], what does the array
+      look like?
     options:
-      - "log n levels of splitting, each doing O(n) merge work"
-      - "It compares every pair of elements exactly once overall"
-      - "It sorts n numbers in log n steps of constant work"
-      - "Each merge step costs O(log n), done once per element"
+    - '[1, 4, 2, 5, 8]'
+    - '[1, 2, 4, 5, 8]'
+    - '[1, 4, 2, 8, 5]'
+    - '[5, 1, 4, 2, 8]'
     answer: 0
-    explanation: Halving gives log n levels; merging all subarrays at one level touches n elements.
+    explanation: The pass swaps each adjacent out-of-order pair, so the 5 is carried along until it meets
+      the 8. After k passes the last k positions are final, which is why bubble sort needs up to n - 1 passes
+      and O(n^2) comparisons.
+    difficulty: 1
+  - id: insertion-shifts
+    kind: output
+    prompt: 'This insertion sort counts how many times an element is shifted one slot to the right. What
+      does it print: the shift count, then the final array?'
+    code:
+      python: "a = [2, 4, 1, 3, 5]\nshifts = 0\nfor i in range(1, len(a)):\n    key = a[i]\n    j = i -\
+        \ 1\n    while j >= 0 and a[j] > key:\n        a[j + 1] = a[j]\n        j -= 1\n        shifts +=\
+        \ 1\n    a[j + 1] = key\nprint(shifts, *a)\n"
+      cpp: "int a[5] = {2, 4, 1, 3, 5};\nint shifts = 0;\nfor (int i = 1; i < 5; i++) {\n    int key = a[i];\n\
+        \    int j = i - 1;\n    while (j >= 0 && a[j] > key) {\n        a[j + 1] = a[j];\n        j--;\n\
+        \        shifts++;\n    }\n    a[j + 1] = key;\n}\ncout << shifts;\nfor (int i = 0; i < 5; i++)\
+        \ cout << \" \" << a[i];\n"
+      java: "int[] a = {2, 4, 1, 3, 5};\nint shifts = 0;\nfor (int i = 1; i < 5; i++) {\n    int key = a[i];\n\
+        \    int j = i - 1;\n    while (j >= 0 && a[j] > key) {\n        a[j + 1] = a[j];\n        j--;\n\
+        \        shifts++;\n    }\n    a[j + 1] = key;\n}\nStringBuilder sb = new StringBuilder().append(shifts);\n\
+        for (int v : a) sb.append(\" \").append(v);\nSystem.out.println(sb);\n"
+    options:
+    - 3 1 2 3 4 5
+    - 4 1 2 3 4 5
+    - 3 2 4 1 3 5
+    - 2 1 2 3 4 5
+    answer: 0
+    explanation: 'Each shift removes exactly one inversion, and [2, 4, 1, 3, 5] has three: (2, 1), (4, 1)
+      and (4, 3). So the work is n plus the number of inversions, which is why insertion sort is fast on
+      nearly sorted data and quadratic on reversed data.'
     difficulty: 2
-  - id: stable
+  - id: py-stable
     kind: mcq
-    prompt: What does it mean for a sort to be stable?
-    options: ["Equal elements keep their original relative order", "It never crashes, whatever input it is given", "It sorts in place using only O(1) extra space", "It always runs in O(n log n), even at worst"]
+    languages:
+    - python
+    prompt: What does sorted(['bb', 'a', 'cc', 'd'], key=len) return?
+    options:
+    - '[''a'', ''d'', ''bb'', ''cc'']'
+    - '[''d'', ''a'', ''cc'', ''bb'']'
+    - '[''a'', ''d'', ''cc'', ''bb'']'
+    - '[''bb'', ''cc'', ''a'', ''d'']'
     answer: 0
-    explanation: Stability matters when sorting by one key after another.
+    explanation: 'Python''s sort is stable: elements with equal keys keep their input order, so ''a'' stays
+      before ''d'' and ''bb'' before ''cc''. That is what makes multi-pass sorting (sort by the minor key
+      first, then the major key) reliable.'
     difficulty: 2
+  - id: cpp-stable
+    kind: mcq
+    languages:
+    - cpp
+    prompt: Records are sorted by score with std::sort, and ties must keep their original relative order.
+      What should you use?
+    options:
+    - std::stable_sort, because std::sort makes no promise about the order of equal keys
+    - std::sort, because it is stable whenever its comparator uses a strict less-than
+    - std::partial_sort, because it leaves elements with equal keys exactly where they were
+    - std::sort with a less-or-equal comparator, because it breaks ties by input position
+    answer: 0
+    explanation: std::sort is typically an introsort and may reorder equal elements. A comparator that returns
+      true for equal values (<=) violates strict weak ordering and can crash or loop. Use stable_sort, or
+      add the original index as a tie-breaker key.
+    difficulty: 3
   - id: quicksort-worst
     kind: mcq
-    prompt: When does quicksort degrade to O(n²)?
-    options: ["When pivots are consistently the smallest or largest element", "On random data, where pivots land anywhere in the range", "When n is even, so the array cannot split exactly in half", "Never; quicksort is O(n log n) for every possible input"]
+    prompt: Quicksort uses the last element as its pivot. Which input is a worst case, and what is the standard
+      defense?
+    options:
+    - An already sorted array, since each partition peels off one element; use a random or median-of-three
+      pivot
+    - Only a reverse-ordered array, since sorted input splits evenly in the middle; use a bigger recursion
+      stack
+    - An array of all distinct values, since there are no ties to balance; remove duplicates before sorting
+    - A randomly shuffled array, since random data splits unevenly; fall back to bubble sort for small n
     answer: 0
-    explanation: Unbalanced partitions make n levels of recursion; random pivots make this very unlikely.
+    explanation: 'With the last element as pivot, sorted and reverse-sorted inputs both give splits of sizes
+      0 and n - 1 at every level: O(n^2) time and O(n) recursion depth. A random pivot makes the bad case
+      astronomically unlikely, and a three-way partition handles arrays full of equal keys.'
     difficulty: 3
-  - id: counting
-    kind: mcq
-    prompt: Sorting a million exam scores in 0..100 is fastest with...
-    options: ["Counting sort", "Bubble sort", "Merge sort", "Binary search"]
+  - id: merge-compares
+    kind: output
+    prompt: This merge of two sorted lists counts the comparisons it makes. What does it print?
+    code:
+      python: "a = [1, 4, 7]\nb = [2, 3, 9]\ni = j = cmp = 0\nwhile i < len(a) and j < len(b):\n    cmp\
+        \ += 1\n    if a[i] <= b[j]:\n        i += 1\n    else:\n        j += 1\nprint(cmp)\n"
+      cpp: "int a[3] = {1, 4, 7};\nint b[3] = {2, 3, 9};\nint i = 0, j = 0, cmp = 0;\nwhile (i < 3 && j\
+        \ < 3) {\n    cmp++;\n    if (a[i] <= b[j]) i++;\n    else j++;\n}\ncout << cmp;\n"
+      java: "int[] a = {1, 4, 7};\nint[] b = {2, 3, 9};\nint i = 0, j = 0, cmp = 0;\nwhile (i < 3 && j <\
+        \ 3) {\n    cmp++;\n    if (a[i] <= b[j]) i++;\n    else j++;\n}\nSystem.out.println(cmp);\n"
+    options:
+    - '5'
+    - '6'
+    - '3'
+    - '4'
     answer: 0
-    explanation: With only 101 possible values, counting takes O(n + 101).
-    difficulty: 2
+    explanation: The comparisons are 1 vs 2, 4 vs 2, 4 vs 3, 4 vs 9 and 7 vs 9. Once list a is used up,
+      the remaining 9 is copied without any comparison. A merge of n and m values makes at most n + m -
+      1 comparisons, which is why merge sort is O(n log n).
+    difficulty: 3
+  - id: comparator-output
+    kind: output
+    prompt: Words are sorted by length first and alphabetically among words of equal length. What does this
+      print?
+    code:
+      python: 'words = ["pear", "fig", "apple", "kiwi", "plum"]
+
+        words.sort(key=lambda w: (len(w), w))
+
+        print(*words)
+
+        '
+      cpp: "vector<string> w = {\"pear\", \"fig\", \"apple\", \"kiwi\", \"plum\"};\nsort(w.begin(), w.end(),\
+        \ [](const string& a, const string& b) {\n    if (a.size() != b.size()) return a.size() < b.size();\n\
+        \    return a < b;\n});\nfor (size_t k = 0; k < w.size(); k++) cout << w[k] << (k + 1 < w.size()\
+        \ ? \" \" : \"\");\n"
+      java: 'String[] w = {"pear", "fig", "apple", "kiwi", "plum"};
+
+        Arrays.sort(w, (a, b) -> a.length() != b.length() ? Integer.compare(a.length(), b.length()) : a.compareTo(b));
+
+        System.out.println(String.join(" ", w));
+
+        '
+    options:
+    - fig kiwi pear plum apple
+    - fig pear kiwi plum apple
+    - apple fig kiwi pear plum
+    - fig apple kiwi pear plum
+    answer: 0
+    explanation: Length decides first (3, then the three 4-letter words, then 5). The tie among kiwi, pear
+      and plum falls to alphabetical order. A multi-key comparator checks keys in priority order and only
+      moves to the next key when the previous one ties.
+    difficulty: 3
+  - id: counting-limits
+    kind: mcq
+    prompt: You must sort 1,000,000 integers that lie between 0 and 1,000,000,000. Counting sort is O(n
+      + k). Why is it a poor fit here?
+    options:
+    - k is 10^9, so the count table dwarfs n; radix sort or a comparison sort fits better
+    - Counting sort only works on non-negative values smaller than one million in size
+    - Counting sort is not stable, which ruins the final result for integer values
+    - Counting sort needs the input to be partly sorted before it can begin its work
+    answer: 0
+    explanation: The k in O(n + k) is the size of the value range. A table of a billion counters costs far
+      more memory and time than sorting a million items. Radix sort splits the numbers into a few digits
+      so each pass uses a small table (k = 256 or 65,536).
+    difficulty: 4
+  - id: quickselect
+    kind: mcq
+    prompt: You need the median of 1,000,000 unsorted values once. Which approach is fastest on average?
+    options:
+    - 'Quickselect: partition around a pivot and recurse into one side only, O(n) on average'
+    - Sort everything and read the middle element, which is O(n log n) and cannot be improved on
+    - Push all values into a heap and pop half of them, which is O(n) because heaps are fast
+    - Binary search the array directly, since the median always sits at the middle position
+    answer: 0
+    explanation: After partitioning you know which side holds the target rank and can discard the other
+      side, so the expected work is n + n/2 + n/4 + ... = O(n). Heaps would cost O(n log n) for half the
+      pops, and binary search needs sorted input.
+    difficulty: 4
+  - id: sort-lower-bound
+    kind: mcq
+    prompt: What is the fewest comparisons that any comparison-based algorithm is guaranteed to need, in
+      the worst case, to sort 5 distinct values?
+    options:
+    - '7'
+    - '4'
+    - '10'
+    - '5'
+    answer: 0
+    explanation: There are 5! = 120 possible orderings and each comparison has two outcomes, so a decision
+      tree needs at least log2(120) = 6.9, which rounds up to 7 levels. The same argument gives the Omega(n
+      log n) lower bound for comparison sorting, which counting and radix sort sidestep by not comparing.
+    difficulty: 5
 problems: [rank-students, count-inversions]
 practice_links:
   - title: Sort an Array

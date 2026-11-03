@@ -153,42 +153,182 @@ resources:
     minutes: 60
     level: deep
 quiz:
-  - id: prefix-cost
+  - id: node-count
     kind: mcq
-    prompt: A trie holds a million words. How long does checking a prefix of length 5 take?
-    options: ["O(5)", "O(1,000,000)", "O(log 1,000,000)", "O(5 × 1,000,000)"]
+    prompt: The words cat, car and dog are inserted into an empty trie. Not counting the root, how many
+      nodes does it contain?
+    options:
+    - '7'
+    - '9'
+    - '6'
+    - '3'
     answer: 0
-    explanation: You follow one edge per character, regardless of how many words are stored.
+    explanation: 'Each distinct prefix is one node: c, ca, cat, car, d, do, dog. ''cat'' and ''car'' share
+      the nodes c and ca, which is the whole point of a trie. Without sharing, the three words would need
+      9 nodes.'
     difficulty: 1
-  - id: end-marker
+  - id: search-vs-prefix
     kind: mcq
-    prompt: You insert "apple" only. Why does a search for the word "app" need an end marker?
+    prompt: Only the word "apple" has been inserted into a trie that marks the end of each word. What do
+      search("app") and startsWith("app") return?
     options:
-      - "The path for \"app\" exists, but no word ends there"
-      - "Because \"app\" is shorter than the stored word"
-      - "Tries cannot store words shorter than four letters"
-      - "To make the search run in O(1) instead of O(L)"
+    - false and true
+    - true and true
+    - false and false
+    - true and false
     answer: 0
-    explanation: Without end markers, every prefix of a stored word would look like a stored word.
+    explanation: The path a-p-p exists, so the prefix query succeeds. But the node after 'p' is not marked
+      as the end of a word, so a full-word search fails. Forgetting the end-of-word flag makes every prefix
+      look like a word.
     difficulty: 2
-  - id: counts
-    kind: mcq
-    prompt: How do you count words starting with a prefix in O(length)?
+  - id: nodes-output
+    kind: output
+    prompt: This inserts four words into a trie stored as a list of child tables, where node 0 is the root.
+      What does it print (the number of nodes not counting the root)?
+    code:
+      python: "t = [{}]\nfor w in [\"apple\", \"app\", \"ape\", \"bat\"]:\n    cur = 0\n    for ch in w:\n\
+        \        if ch not in t[cur]:\n            t[cur][ch] = len(t)\n            t.append({})\n     \
+        \   cur = t[cur][ch]\nprint(len(t) - 1)\n"
+      cpp: "vector<array<int, 26>> t(1);\nvector<string> words = {\"apple\", \"app\", \"ape\", \"bat\"};\n\
+        for (string& w : words) {\n    int cur = 0;\n    for (char ch : w) {\n        int c = ch - 'a';\n\
+        \        if (t[cur][c] == 0) {\n            t[cur][c] = t.size();\n            t.push_back(array<int,\
+        \ 26>{});\n        }\n        cur = t[cur][c];\n    }\n}\ncout << t.size() - 1;\n"
+      java: "List<int[]> t = new ArrayList<>();\nt.add(new int[26]);\nString[] words = {\"apple\", \"app\"\
+        , \"ape\", \"bat\"};\nfor (String w : words) {\n    int cur = 0;\n    for (char ch : w.toCharArray())\
+        \ {\n        int c = ch - 'a';\n        if (t.get(cur)[c] == 0) {\n            t.get(cur)[c] = t.size();\n\
+        \            t.add(new int[26]);\n        }\n        cur = t.get(cur)[c];\n    }\n}\nSystem.out.println(t.size()\
+        \ - 1);\n"
     options:
-      - "Keep a counter on each node of how many words pass through it"
-      - "Traverse the whole subtree below the prefix on every query"
-      - "Store every word in a list and scan it for the prefix"
-      - "Hash every prefix of every word into one big hash set"
+    - '9'
+    - '13'
+    - '12'
+    - '8'
     answer: 0
-    explanation: Increment counts during insertion; the count at the prefix's node is the answer.
+    explanation: 'The distinct prefixes are a, ap, app, appl, apple, ape, b, ba, bat: nine. ''app'' adds
+      nothing because it lies on the path of ''apple'', and ''ape'' adds only one node after the shared
+      prefix ''ap''. The cost of building is O(total characters), not O(words * length of the longest).'
     difficulty: 2
-  - id: when-not
+  - id: trie-memory
     kind: mcq
-    prompt: When is a hash set a better choice than a trie?
-    options: ["When you only need exact-word lookups", "When you need counts of words by prefix", "For autocomplete of a typed prefix", "For Word Search II over a letter grid"]
+    prompt: A trie stores each node's children in an array of 26 four-byte slots. In the worst case the
+      words share no prefixes and total 1,000,000 letters. About how much memory do the child arrays take?
+    options:
+    - About 104 MB
+    - About 4 MB
+    - About 26 MB
+    - About 1 GB
     answer: 0
-    explanation: Tries earn their memory cost through prefix operations.
-    difficulty: 2
+    explanation: One node per letter, and 26 slots * 4 bytes = 104 bytes per node, so 10^6 nodes need about
+      104 MB. Most slots are empty. A hash map or a sorted list of children per node saves memory at some
+      cost in speed, and a compressed (radix) trie merges single-child chains.
+    difficulty: 3
+  - id: prefix-count-output
+    kind: output
+    prompt: Every node keeps a counter of how many inserted words pass through it. What does this print
+      for the prefix "car"?
+    code:
+      python: "t = [{}]\ncnt = [0]\nfor w in [\"car\", \"card\", \"care\", \"cat\"]:\n    cur = 0\n    for\
+        \ ch in w:\n        if ch not in t[cur]:\n            t[cur][ch] = len(t)\n            t.append({})\n\
+        \            cnt.append(0)\n        cur = t[cur][ch]\n        cnt[cur] += 1\ncur = 0\nfor ch in\
+        \ \"car\":\n    cur = t[cur][ch]\nprint(cnt[cur])\n"
+      cpp: "vector<array<int, 26>> t(1);\nvector<int> cnt(1, 0);\nvector<string> words = {\"car\", \"card\"\
+        , \"care\", \"cat\"};\nfor (string& w : words) {\n    int cur = 0;\n    for (char ch : w) {\n  \
+        \      int c = ch - 'a';\n        if (t[cur][c] == 0) {\n            t[cur][c] = t.size();\n   \
+        \         t.push_back(array<int, 26>{});\n            cnt.push_back(0);\n        }\n        cur\
+        \ = t[cur][c];\n        cnt[cur]++;\n    }\n}\nint cur = 0;\nfor (char ch : string(\"car\")) cur\
+        \ = t[cur][ch - 'a'];\ncout << cnt[cur];\n"
+      java: "List<int[]> t = new ArrayList<>();\nt.add(new int[26]);\nList<Integer> cnt = new ArrayList<>();\n\
+        cnt.add(0);\nString[] words = {\"car\", \"card\", \"care\", \"cat\"};\nfor (String w : words) {\n\
+        \    int cur = 0;\n    for (char ch : w.toCharArray()) {\n        int c = ch - 'a';\n        if\
+        \ (t.get(cur)[c] == 0) {\n            t.get(cur)[c] = t.size();\n            t.add(new int[26]);\n\
+        \            cnt.add(0);\n        }\n        cur = t.get(cur)[c];\n        cnt.set(cur, cnt.get(cur)\
+        \ + 1);\n    }\n}\nint cur = 0;\nfor (char ch : \"car\".toCharArray()) cur = t.get(cur)[ch - 'a'];\n\
+        System.out.println(cnt.get(cur));\n"
+    options:
+    - '3'
+    - '4'
+    - '1'
+    - '2'
+    answer: 0
+    explanation: 'Three words pass through the node for ''car'': car, card and care. ''cat'' leaves the
+      path after ''ca''. Storing a pass-through counter makes ''how many words start with this prefix''
+      a single O(length) walk, with no need to enumerate the words.'
+    difficulty: 3
+  - id: py-defaultdict
+    kind: mcq
+    languages:
+    - python
+    prompt: A trie is built from collections.defaultdict, and search walks it with node = node[ch] for each
+      letter. What is the hidden side effect of searching for a word that is not stored?
+    options:
+    - A failed search quietly creates the missing nodes, so later prefix queries can wrongly succeed
+    - A failed search raises a KeyError at the first missing letter, so a try block is always needed
+    - Nothing at all, because defaultdict creates entries only when assigned and never when read
+    - The search slows down, because every letter lookup hashes the whole word again from the start
+    answer: 0
+    explanation: Indexing a defaultdict with a missing key inserts it. After searching for 'dog' in an empty
+      trie, startsWith('do') would find the empty path that the search itself created. In search code use
+      'ch in node' and node.get(ch) instead of indexing.
+    difficulty: 3
+  - id: case-index
+    kind: mcq
+    languages:
+    - cpp
+    - java
+    prompt: A trie keeps each node's children in an array of 26 slots indexed by c - 'a'. A query word contains
+      the uppercase letter 'B'. What happens?
+    options:
+    - The index is negative, which is undefined behaviour in C++ and an ArrayIndexOutOfBoundsException in
+      Java
+    - The letter is treated as 'b', since the character codes of both cases are equal modulo 26
+    - The lookup returns an empty slot, so the search simply reports that the word was not found
+    - The array grows automatically, since both languages resize arrays when a bad index is used
+    answer: 0
+    explanation: '''B'' is 66 and ''a'' is 97, so the index is -31. Validate or normalise input (convert
+      to lowercase, or use 52 or 128 slots) before indexing. A negative index in C++ may silently read other
+      memory instead of failing loudly.'
+    difficulty: 3
+  - id: max-xor
+    kind: mcq
+    prompt: Among the numbers 3, 10, 5, 25, 2 and 8, what is the largest value of a XOR b over any two of
+      them?
+    options:
+    - '28'
+    - '27'
+    - '31'
+    - '30'
+    answer: 0
+    explanation: '5 XOR 25 = 28 (00101 XOR 11001 = 11100). With a binary trie of the numbers'' bits, you
+      walk each number from its highest bit and always try the opposite bit, which maximises the XOR: O(n
+      * bits) instead of checking all O(n^2) pairs.'
+    difficulty: 4
+  - id: trie-delete
+    kind: mcq
+    prompt: How do you correctly delete a word from a trie that is shared with other words?
+    options:
+    - Clear the end-of-word flag, then remove nodes bottom-up while they have no children and no flag
+    - Remove the node of the last letter only, and leave the rest of the path for other words to use
+    - Remove every node on the word's path, since a node with fewer words below it is no longer needed
+    - Rebuild the whole trie from the remaining words, since single deletions break the prefix sharing
+    answer: 0
+    explanation: Nodes on the path may be needed by other words (a shared prefix, or a longer word that
+      continues past this one). Un-marking the end and pruning only childless, unmarked nodes frees exactly
+      what no other word uses. Skipping the pruning is still correct but leaks memory.
+    difficulty: 4
+  - id: multi-pattern
+    kind: mcq
+    prompt: You must find every occurrence of any of 10,000 patterns inside a long text in a single pass.
+      Which technique does this in time linear in the text plus the matches?
+    options:
+    - Build a trie of the patterns, add failure links, and scan the text once (Aho-Corasick)
+    - Run an ordinary trie search from every starting position of the text, which is already linear
+    - Sort the patterns and binary search for each one in the text, using a fixed number of steps
+    - Insert the whole text into a trie and look every pattern up as a word, whatever the length
+    answer: 0
+    explanation: A plain trie search restarted at every position costs up to O(text * longest pattern).
+      Failure links say where to continue after a mismatch, much like KMP does for one pattern, so the scan
+      never moves backwards in the text.
+    difficulty: 5
 problems: [prefix-counts, vault-xor]
 practice_links:
   - title: Implement Trie (Prefix Tree)

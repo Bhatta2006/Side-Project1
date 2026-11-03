@@ -151,70 +151,156 @@ resources:
     minutes: 25
     level: deep
 quiz:
-  - id: nested-cost
-    kind: mcq
-    prompt: A loop over n elements contains another loop over the same n elements. What is the time complexity?
-    options: ["O(n²)", "O(n)", "O(2n)", "O(n log n)"]
-    answer: 0
-    explanation: The inner loop runs n times for each of the n outer rounds.
-    difficulty: 1
-  - id: halving
-    kind: mcq
-    prompt: "`while n > 1: n = n // 2` runs about how many times?"
-    options: ["log₂ n", "n", "n / 2", "√n"]
-    answer: 0
-    explanation: Halving repeatedly reaches 1 after about log₂ n rounds.
-    difficulty: 2
-  - id: constraint-fit
-    kind: mcq
-    prompt: n can be 200,000. Which complexity is safe?
-    options: ["O(n log n)", "O(n²)", "O(n² log n)", "O(2^n)"]
-    answer: 0
-    explanation: 200,000 × 18 ≈ 3.6·10^6 is fast; n² is 4·10^10.
-    difficulty: 2
-  - id: hidden-cost
-    languages: [python]
-    kind: mcq
-    prompt: Inside a loop over n items you check `if x in my_list` (a Python list of size n). Total time?
-    options: ["O(n²)", "O(n)", "O(1)", "O(log n)"]
-    answer: 0
-    explanation: List membership scans the list, O(n), inside an O(n) loop. A set would make it O(n) overall.
-    difficulty: 3
   - id: drop-terms
     kind: mcq
     prompt: Simplify O(4n² + 100n + 7).
-    options: ["O(n²)", "O(4n²)", "O(n² + n)", "O(100n)"]
+    options:
+    - O(n²)
+    - O(4n²)
+    - O(n² + n)
+    - O(100n)
     answer: 0
-    explanation: Constants and lower-order terms are dropped; growth is dominated by n².
+    explanation: Big-O keeps only the fastest-growing term and drops constant factors, so 4n² becomes n².
+      Only the growth matters as n gets large.
     difficulty: 1
-  - id: halving-loop
-    kind: mcq
-    prompt: "What is the time complexity?"
+  - id: pairs-output
+    kind: output
+    prompt: How many times does the counter increase?
     code:
-      python: |
-        i = 1
-        while i < n:
-            for j in range(i):
-                work()
-            i *= 2
+      python: "cnt = 0\nfor i in range(6):\n    for j in range(i + 1, 6):\n        cnt += 1\nprint(cnt)\n"
+      cpp: "int cnt = 0;\nfor (int i = 0; i < 6; i++)\n    for (int j = i + 1; j < 6; j++) cnt++;\ncout\
+        \ << cnt;\n"
+      java: "int cnt = 0;\nfor (int i = 0; i < 6; i++)\n    for (int j = i + 1; j < 6; j++) cnt++;\nSystem.out.println(cnt);\n"
     options:
-      - "O(n log n)"
-      - "O(n²)"
-      - "O(n² log n)"
-      - "O(2^n)"
+    - '15'
+    - '36'
+    - '30'
+    - '21'
     answer: 0
-    explanation: "The inner loop runs 1 + 2 + 4 + … < 2n times in total: a geometric series, so O(n)."
-    difficulty: 4
-  - id: amortised
+    explanation: 'The inner loop runs 5, 4, 3, 2, 1, 0 times: 5 + 4 + 3 + 2 + 1 = 15 = n(n − 1)/2. That
+      is O(n²) even though it is half of n².'
+    difficulty: 2
+  - id: time-budget
     kind: mcq
-    prompt: "Appending n items to a dynamic array that doubles its capacity when full costs, in total,"
+    prompt: n = 10^5 and the algorithm does n² simple steps. At about 10^8 simple steps per second, roughly
+      how long does it take?
     options:
-      - "O(n)"
-      - "O(n log n)"
-      - "O(n²)"
-      - "O(log n)"
+    - About 100 seconds
+    - About 1 second
+    - About 10 milliseconds
+    - About 10 seconds
     answer: 0
-    explanation: "Copies happen at sizes 1, 2, 4, …, under 2n element moves overall, so each append is O(1) amortised."
+    explanation: n² = 10^10, and 10^10 / 10^8 = 100 s. This arithmetic is how you rule out an approach before
+      writing it.
+    difficulty: 2
+  - id: hidden-list
+    kind: mcq
+    languages:
+    - python
+    prompt: Inside a loop over n items you test `if x in seen`, where seen is a Python list that grows to
+      size n. What is the total time?
+    options:
+    - O(n²), because each membership test scans the list
+    - O(n), because membership is a single operation
+    - O(n log n), because lists are kept sorted
+    - O(1) per test, so O(n) in total
+    answer: 0
+    explanation: '`in` on a list is a linear scan. Using a set gives O(1) average membership and O(n) in
+      total: this is the most common hidden quadratic in Python.'
+    difficulty: 3
+  - id: fib-calls
+    kind: output
+    prompt: How many calls does naive recursive Fibonacci make for fib(15)? (The program counts them.)
+    code:
+      python: "calls = 0\ndef fib(n):\n    global calls\n    calls += 1\n    return n if n < 2 else fib(n\
+        \ - 1) + fib(n - 2)\nfib(15)\nprint(calls)\n"
+      cpp: "int calls = 0;\nfunction<int(int)> fib = [&](int n) {\n    calls++;\n    return n < 2 ? n :\
+        \ fib(n - 1) + fib(n - 2);\n};\nfib(15);\ncout << calls;\n"
+      java: "int[] calls = {0};\njava.util.function.IntUnaryOperator[] fib = new java.util.function.IntUnaryOperator[1];\n\
+        fib[0] = n -> {\n    calls[0]++;\n    return n < 2 ? n : fib[0].applyAsInt(n - 1) + fib[0].applyAsInt(n\
+        \ - 2);\n};\nfib[0].applyAsInt(15);\nSystem.out.println(calls[0]);\n"
+    options:
+    - '1973'
+    - '15'
+    - '225'
+    - '32768'
+    answer: 0
+    explanation: Each call spawns two more, and the count satisfies C(n) = C(n−1) + C(n−2) + 1, which grows
+      like 1.6^n. fib(15) already needs 1973 calls; fib(40) needs over 3·10^8. Memoisation makes it O(n).
+    difficulty: 3
+  - id: geometric-output
+    kind: output
+    prompt: For n = 1024, how much work does this loop pair do (what does it print)?
+    code:
+      python: "n = 1024\nwork = 0\ni = 1\nwhile i < n:\n    for j in range(i):\n        work += 1\n    i\
+        \ *= 2\nprint(work)\n"
+      cpp: "int n = 1024, work = 0;\nfor (int i = 1; i < n; i *= 2)\n    for (int j = 0; j < i; j++) work++;\n\
+        cout << work;\n"
+      java: "int n = 1024, work = 0;\nfor (int i = 1; i < n; i *= 2)\n    for (int j = 0; j < i; j++) work++;\n\
+        System.out.println(work);\n"
+    options:
+    - '1023'
+    - '10240'
+    - '1048576'
+    - '512'
+    answer: 0
+    explanation: 'The inner loop runs 1, 2, 4, ..., 512 times: a geometric series that sums to 2^10 − 1
+      = 1023, about n.'
+    difficulty: 3
+  - id: geometric-complexity
+    kind: mcq
+    prompt: From the previous loop pair, i doubles up to n and the inner loop runs i times. What is the
+      time complexity?
+    options:
+    - 'O(n): the work forms a geometric series 1 + 2 + 4 + ... < 2n'
+    - 'O(n log n): there are log n outer steps, each doing up to n work'
+    - 'O(n²): the loops are nested'
+    - 'O(log n): i doubles each time'
+    answer: 0
+    explanation: 'Nesting does not always multiply: the inner count changes with i. Summing the actual work
+      gives about 2n. Multiplying the worst case of each loop (n × log n) overestimates.'
+    difficulty: 4
+  - id: java-string
+    kind: mcq
+    languages:
+    - java
+    prompt: In Java, a loop runs n times and does s = s + "x" on a String. What is the total cost, and what
+      is the fix?
+    options:
+    - 'O(n²): each concatenation copies the whole string; use a StringBuilder'
+    - O(n), because Strings share their characters between the copies they make
+    - O(n log n), because the JVM rebalances the string after every single append
+    - O(1) per step in practice, so no change is needed at all
+    answer: 0
+    explanation: 'Strings are immutable, so each + creates a new string of growing length: 1 + 2 + ... +
+      n = O(n²) characters copied. StringBuilder.append is amortised O(1).'
+    difficulty: 4
+  - id: amortised-array
+    kind: mcq
+    prompt: A dynamic array doubles its capacity when full. Appending n items costs, in total, how much
+      (counting copies)?
+    options:
+    - 'O(n): the copies sum to 1 + 2 + 4 + ... < 2n'
+    - 'O(n log n): there are log n resizes of up to n elements each'
+    - 'O(n²): every append may copy the whole array'
+    - 'O(log n): only the resizes cost anything'
+    answer: 0
+    explanation: Resizes are rare and their sizes form a geometric series. Spread across n appends, each
+      costs O(1) amortised, even though a single append can cost O(n).
+    difficulty: 4
+  - id: early-break
+    kind: mcq
+    prompt: 'for i in range(n): for j in range(i, n): if a[j] > x: break. What is the worst-case time, and
+      what input achieves it?'
+    options:
+    - O(n²), when no element exceeds x, so the break never fires
+    - O(n), because the break stops the inner loop early
+    - O(n log n), because the break halves the work
+    - O(n²), when every element exceeds x
+    answer: 0
+    explanation: 'Worst case means the most work any input can force. If a[j] > x never holds, the inner
+      loop always runs to the end: n + (n − 1) + ... = O(n²). If every element exceeds x, the inner loop
+      stops at once (O(n) total).'
     difficulty: 5
 problems: [sum-queries, matching-pairs]
 practice_links:

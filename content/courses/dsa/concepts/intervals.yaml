@@ -129,34 +129,173 @@ resources:
     minutes: 20
     level: deep
 quiz:
-  - id: overlap
+  - id: touching
     kind: mcq
-    prompt: Do the closed intervals [1, 5] and [5, 9] overlap?
-    options: ["Yes, they share the point 5", "No", "Only if sorted", "Only if open intervals"]
+    prompt: Closed intervals [1, 3] and [3, 5] share the point 3. The half-open intervals [1, 3) and [3,
+      5) do not. Which statement is right?
+    options:
+    - The closed pair overlaps at 3, while the half-open pair does not overlap at all
+    - Both pairs overlap, since they touch at the single shared point 3 on the line
+    - Neither pair overlaps, since a single shared point has no length to speak of
+    - The half-open pair overlaps, while the closed pair does not overlap anywhere
     answer: 0
-    explanation: 1 ≤ 9 and 5 ≤ 5, so the closed intervals share point 5. Always confirm the convention.
+    explanation: Decide the endpoint convention before writing any code, because it changes every comparison
+      between <= and <. A meeting that ends at 11 and one that starts at 11 are usually half-open, so they
+      do not conflict.
     difficulty: 1
-  - id: nested
-    kind: mcq
-    prompt: Merging sorted intervals [1, 10] then [2, 3], what is the merged result?
-    options: ["[1, 10]", "[1, 3]", "[1, 10] and [2, 3]", "[2, 10]"]
+  - id: merge-output
+    kind: output
+    prompt: This merges overlapping intervals (touching counts as overlapping) and prints each result as
+      start-end. What does it print?
+    code:
+      python: "iv = sorted([[1, 3], [8, 10], [2, 6], [15, 18]])\nres = [iv[0]]\nfor s, e in iv[1:]:\n  \
+        \  if s <= res[-1][1]:\n        res[-1][1] = max(res[-1][1], e)\n    else:\n        res.append([s,\
+        \ e])\nprint(*[f\"{a}-{b}\" for a, b in res])\n"
+      cpp: "vector<pair<int, int>> iv = {{1, 3}, {8, 10}, {2, 6}, {15, 18}};\nsort(iv.begin(), iv.end());\n\
+        vector<pair<int, int>> res = {iv[0]};\nfor (size_t k = 1; k < iv.size(); k++) {\n    if (iv[k].first\
+        \ <= res.back().second) res.back().second = max(res.back().second, iv[k].second);\n    else res.push_back(iv[k]);\n\
+        }\nfor (size_t k = 0; k < res.size(); k++) cout << res[k].first << \"-\" << res[k].second << (k\
+        \ + 1 < res.size() ? \" \" : \"\");\n"
+      java: "int[][] iv = {{1, 3}, {8, 10}, {2, 6}, {15, 18}};\nArrays.sort(iv, (a, b) -> Integer.compare(a[0],\
+        \ b[0]));\nList<int[]> res = new ArrayList<>();\nres.add(iv[0]);\nfor (int k = 1; k < iv.length;\
+        \ k++) {\n    int[] last = res.get(res.size() - 1);\n    if (iv[k][0] <= last[1]) last[1] = Math.max(last[1],\
+        \ iv[k][1]);\n    else res.add(iv[k]);\n}\nStringBuilder sb = new StringBuilder();\nfor (int[] r\
+        \ : res) sb.append(r[0]).append(\"-\").append(r[1]).append(\" \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 1-6 8-10 15-18
+    - 1-3 2-6 8-10 15-18
+    - 1-6 8-18
+    - 1-18
     answer: 0
-    explanation: The end is max(10, 3) = 10 — that's why merging uses max.
+    explanation: After sorting by start, [1, 3] and [2, 6] overlap and become [1, 6]. [8, 10] starts after
+      6 and [15, 18] after 10, so each stays separate. Sorting first is what lets one pass with a single
+      comparison per interval do the job in O(n log n).
     difficulty: 2
-  - id: rooms
+  - id: only-last
     kind: mcq
-    prompt: Which technique finds the minimum number of meeting rooms?
-    options: ["Sweep line over start/end events tracking the maximum concurrent count", "Binary search on the number of rooms, checking each guess greedily", "Sort the meetings by length and give the longest ones rooms first", "Hash the start times and count how many meetings share each start"]
+    prompt: After sorting by start time, a merge pass compares each new interval only with the last merged
+      block. Why is that enough?
+    options:
+    - Earlier blocks end before the last block starts, so only the last block can reach the next interval
+    - The intervals are disjoint after sorting, so comparing with the last block is only a convention
+    - Comparing with every earlier block would be wrong, because it counts each overlap twice over
+    - The last block always has the smallest end, which makes it the cheapest block to compare against
     answer: 0
-    explanation: The peak number of simultaneous meetings is the number of rooms needed.
+    explanation: Blocks already in the result are disjoint and ordered, and every later interval starts
+      at or after the current start. If it cannot touch the last block it cannot touch any earlier one,
+      since those end even sooner.
     difficulty: 2
-  - id: first-step
+  - id: end-bug
     kind: mcq
-    prompt: What is almost always the first step in an interval problem?
-    options: ["Sort the intervals", "Build a hash map", "Reverse the list", "Use recursion"]
+    prompt: A merge loop sorted by start sets the current end to the new interval's end (end = e) instead
+      of max(end, e). What does it return for [1, 10], [2, 3], [4, 12]?
+    options:
+    - '[1, 3] and [4, 12], because the end shrank from 10 to 3 and the next interval looked disjoint'
+    - '[1, 12], since 4 is within the original end 10 and the overlap is still detected correctly'
+    - '[1, 10] and [4, 12], because the second interval is simply dropped for being fully contained'
+    - '[1, 12], because the sort order guarantees that the final end is the largest value seen'
     answer: 0
-    explanation: Sorting (by start, or by end for greedy selection) makes a linear sweep possible.
-    difficulty: 1
+    explanation: A fully nested interval must not shrink the block. With end = 3, the next interval [4,
+      12] no longer touches the block, so it is wrongly reported separately. Always take max(end, e).
+    difficulty: 3
+  - id: rooms-output
+    kind: output
+    prompt: Meetings are [0, 30], [5, 10], [15, 20] and [10, 25]. This sweep sorts starts and ends separately.
+      What does it print?
+    code:
+      python: "meetings = [[0, 30], [5, 10], [15, 20], [10, 25]]\nstarts = sorted(m[0] for m in meetings)\n\
+        ends = sorted(m[1] for m in meetings)\ni = j = rooms = best = 0\nwhile i < len(starts):\n    if\
+        \ starts[i] < ends[j]:\n        rooms += 1\n        i += 1\n    else:\n        rooms -= 1\n    \
+        \    j += 1\n    best = max(best, rooms)\nprint(best)\n"
+      cpp: "vector<pair<int, int>> m = {{0, 30}, {5, 10}, {15, 20}, {10, 25}};\nvector<int> st, en;\nfor\
+        \ (auto& p : m) { st.push_back(p.first); en.push_back(p.second); }\nsort(st.begin(), st.end());\n\
+        sort(en.begin(), en.end());\nsize_t i = 0, j = 0;\nint rooms = 0, best = 0;\nwhile (i < st.size())\
+        \ {\n    if (st[i] < en[j]) { rooms++; i++; }\n    else { rooms--; j++; }\n    best = max(best,\
+        \ rooms);\n}\ncout << best;\n"
+      java: "int[][] m = {{0, 30}, {5, 10}, {15, 20}, {10, 25}};\nint[] st = new int[4], en = new int[4];\n\
+        for (int k = 0; k < 4; k++) { st[k] = m[k][0]; en[k] = m[k][1]; }\nArrays.sort(st);\nArrays.sort(en);\n\
+        int i = 0, j = 0, rooms = 0, best = 0;\nwhile (i < 4) {\n    if (st[i] < en[j]) { rooms++; i++;\
+        \ }\n    else { rooms--; j++; }\n    best = Math.max(best, rooms);\n}\nSystem.out.println(best);\n"
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: At time 15 the meetings [0, 30], [10, 25] and [15, 20] are all running, so three rooms
+      are needed. The sweep only cares about the order of start and end events, not which end belongs to
+      which start. That drops the problem to two sorts plus one pass.
+    difficulty: 3
+  - id: erase-overlap
+    kind: mcq
+    prompt: Intervals [1, 2], [2, 3], [3, 4] and [1, 3]. Touching at an endpoint is allowed. What is the
+      fewest intervals to remove so that none of the rest overlap?
+    options:
+    - '1'
+    - '0'
+    - '2'
+    - '3'
+    answer: 0
+    explanation: Remove [1, 3]. The other three chain end to start. The greedy that keeps the interval with
+      the earliest end, then the next one starting at or after it, finds the largest set of compatible intervals,
+      and the removals are everything else.
+    difficulty: 3
+  - id: insert-merge
+    kind: mcq
+    prompt: The sorted, disjoint intervals are [1, 2], [3, 5], [6, 7], [8, 10] and [12, 16]. You insert
+      [4, 8] and merge everything that overlaps. What is the result?
+    options:
+    - '[[1, 2], [3, 10], [12, 16]]'
+    - '[[1, 2], [3, 8], [8, 10], [12, 16]]'
+    - '[[1, 2], [4, 8], [12, 16]]'
+    - '[[1, 2], [3, 10], [10, 16]]'
+    answer: 0
+    explanation: '[4, 8] overlaps [3, 5], [6, 7] and touches [8, 10], so all four fuse into [3, 10]. Intervals
+      ending before 4 are copied, the overlapping run is merged, and the ones starting after 8 are copied:
+      one O(n) pass because the input is already sorted.'
+    difficulty: 4
+  - id: arrows
+    kind: mcq
+    prompt: Balloons are the intervals [10, 16], [2, 8], [1, 6] and [7, 12] on a line. An arrow shot at
+      x bursts every balloon whose interval contains x. What is the fewest arrows needed?
+    options:
+    - '2'
+    - '3'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: Sort by end. An arrow at 6 bursts [1, 6] and [2, 8]. The next balloon [7, 12] starts after
+      6, so shoot at its end, 12, which also bursts [10, 16]. Shooting at the earliest end is the safest
+      place, because it still hits everything that has started.
+    difficulty: 4
+  - id: room-reuse
+    kind: mcq
+    prompt: In the sweep for minimum meeting rooms, a meeting that starts exactly when another ends should
+      be able to reuse the room. Which handling does that?
+    options:
+    - Count a start only when it is strictly less than the next end, so an equal end is processed first
+    - Count a start whenever it is less than or equal to the next end, so equal times go to the start
+    - Add one to every end time before sorting, so that no two meetings can ever share a boundary
+    - Remove all meetings whose start and end are equal, since those must be duplicates of each other
+    answer: 0
+    explanation: With a strict < test the end event wins ties, freeing the room before the new meeting claims
+      one. Using <= would make back-to-back meetings look like they overlap and overcount rooms.
+    difficulty: 4
+  - id: sort-by-what
+    kind: mcq
+    prompt: To merge overlapping intervals you sort by start time, but to keep the largest set of non-overlapping
+      intervals you sort by end time. Why?
+    options:
+    - Merging needs neighbours in position order, while the earliest finisher leaves the most room for the
+      rest
+    - Sorting by end is simply faster than sorting by start, so selection problems use it for speed
+    - Merging has to look at ends to detect gaps, while selection looks at starts to detect them
+    - Both can be done with either sort, and the choice is only a matter of taste between the two
+    answer: 0
+    explanation: 'Selection is a greedy exchange argument: among compatible choices, the one finishing first
+      never blocks anything the others would allow. Sorting by start would pick a long early meeting that
+      blocks many short ones. Merging has no choice to make, it just needs the geometry in order.'
+    difficulty: 5
 problems: [merge-intervals, tightest-booking]
 practice_links:
   - title: Merge Intervals

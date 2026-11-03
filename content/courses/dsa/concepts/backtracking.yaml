@@ -137,39 +137,163 @@ resources:
     minutes: 30
     level: deep
 quiz:
-  - id: template
-    kind: mcq
-    prompt: What is the backtracking template?
-    options: ["Choose, explore, un-choose", "Sort, scan, then return", "Push, pop, then peek", "Divide, sort, then merge"]
-    answer: 0
-    explanation: Make a choice, recurse, then undo it before trying the next option.
-    difficulty: 1
   - id: subset-count
     kind: mcq
-    prompt: How many subsets does a set of 10 distinct elements have?
-    options: ["1024", "100", "10", "3,628,800"]
-    answer: 0
-    explanation: Each element is in or out — 2^10 = 1024 (including the empty set).
-    difficulty: 1
-  - id: copy-bug
-    languages: [python]
-    kind: mcq
-    prompt: "In Python, result.append(current) instead of result.append(current[:]) causes..."
+    prompt: A set has 10 distinct elements. How many subsets does it have, and how many orderings (permutations)
+      of all of them are there?
     options:
-      - "Every saved subset to become the same (final) list"
-      - "A syntax error, since append needs a copied list"
-      - "Faster execution, because nothing is ever copied"
-      - "Duplicate elements appearing inside each subset"
+    - 1024 subsets and 3,628,800 permutations
+    - 100 subsets and 3,628,800 permutations
+    - 1024 subsets and 100 permutations
+    - 3,628,800 subsets and 1024 permutations
     answer: 0
-    explanation: All entries reference the one mutable list, which ends up empty.
-    difficulty: 2
-  - id: queens-prune
+    explanation: 'Each element is in or out: 2^10 = 1024 subsets. Orderings of all 10 elements: 10! = 3,628,800.
+      The size of the decision tree tells you how much pruning you will need.'
+    difficulty: 1
+  - id: copy-py
     kind: mcq
-    prompt: In N-Queens, which values identify the two diagonals of square (r, c)?
-    options: ["r + c and r − c", "r and c", "r × c and r / c", "r + 1 and c + 1"]
+    languages:
+    - python
+    prompt: A backtracking solution collects subsets with result.append(current) while it keeps mutating
+      the same list current. What do you see at the end?
+    options:
+    - Every saved entry is one shared list object, so all show the final state of current
+    - A syntax error, because append refuses to take a list that is still being changed
+    - Correct results, because append snapshots the list at the moment it is called
+    - Duplicate elements appear inside each saved subset, since values get pushed twice
     answer: 0
-    explanation: Squares on one diagonal share r + c; on the other they share r − c.
+    explanation: append stores a reference, not a copy. Save a snapshot with current[:], list(current) or
+      tuple(current).
+    difficulty: 2
+  - id: copy-java
+    kind: mcq
+    languages:
+    - java
+    prompt: In Java, a backtracking method does result.add(path) while path (an ArrayList) keeps changing.
+      What do you see at the end?
+    options:
+    - Every entry in result is one shared list object, showing the final state of path
+    - A compile error, because add rejects a list that is still being modified later
+    - Correct results, because ArrayList.add stores a snapshot of the list it is given
+    - A ConcurrentModificationException thrown by the very first add call
+    answer: 0
+    explanation: Collections hold references. Use result.add(new ArrayList<>(path)). In C++, push_back copies
+      a vector by value, so this bug does not occur there.
+    difficulty: 2
+  - id: diagonals
+    kind: mcq
+    prompt: In N-Queens a queen sits at (row 1, column 2) on a 4 × 4 board (0-indexed). Which square does
+      it attack along a diagonal?
+    options:
+    - '(3, 0): the same anti-diagonal, since row + column is 3 for both'
+    - '(2, 0): the same diagonal, since both have a difference of 2'
+    - '(0, 0): the same diagonal, since both are on the top-left corner line'
+    - '(3, 3): the same anti-diagonal, since both are in the last row and column'
+    answer: 0
+    explanation: Squares share a diagonal when row − column is equal, and an anti-diagonal when row + column
+      is equal. Here 1 + 2 = 3 = 3 + 0. Two O(1) lookup arrays of size 2N replace the O(N) attack test.
+    difficulty: 2
+  - id: subsets-output
+    kind: output
+    prompt: What does this recursive search print?
+    code:
+      python: "nums = [1, 2, 3]\ntarget = 3\ndef go(i, remaining):\n    if i == len(nums):\n        return\
+        \ 1 if remaining == 0 else 0\n    return go(i + 1, remaining) + go(i + 1, remaining - nums[i])\n\
+        print(go(0, target))\n"
+      cpp: "vector<int> nums = {1, 2, 3};\nfunction<int(int, int)> go = [&](int i, int remaining) -> int\
+        \ {\n    if (i == (int)nums.size()) return remaining == 0 ? 1 : 0;\n    return go(i + 1, remaining)\
+        \ + go(i + 1, remaining - nums[i]);\n};\ncout << go(0, 3);\n"
+      java: "class Solver {\n    int[] nums = {1, 2, 3};\n    int go(int i, int remaining) {\n        if\
+        \ (i == nums.length) return remaining == 0 ? 1 : 0;\n        return go(i + 1, remaining) + go(i\
+        \ + 1, remaining - nums[i]);\n    }\n}\nSystem.out.println(new Solver().go(0, 3));\n"
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: Each element is skipped or taken. The subsets with sum 3 are {3} and {1, 2}, so 2 of the
+      8 leaves count.
     difficulty: 3
+  - id: palindrome-partitions
+    kind: mcq
+    prompt: In how many ways can "aab" be split into pieces that are all palindromes?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: The splits are a | a | b and aa | b. At each position you choose a palindromic prefix and
+      recurse on the rest, so every successful path is one answer.
+    difficulty: 3
+  - id: dup-perm-output
+    kind: output
+    prompt: Sorted input with duplicates. What does this permutation generator count?
+    code:
+      python: "nums = sorted([1, 1, 2])\nused = [False] * 3\ncount = 0\ndef go(depth):\n    global count\n\
+        \    if depth == 3:\n        count += 1\n        return\n    for i in range(3):\n        if used[i]\
+        \ or (i > 0 and nums[i] == nums[i - 1] and not used[i - 1]):\n            continue\n        used[i]\
+        \ = True\n        go(depth + 1)\n        used[i] = False\ngo(0)\nprint(count)\n"
+      cpp: "vector<int> nums = {1, 1, 2};\nbool used[3] = {false, false, false};\nint count = 0;\nfunction<void(int)>\
+        \ go = [&](int depth) {\n    if (depth == 3) { count++; return; }\n    for (int i = 0; i < 3; i++)\
+        \ {\n        if (used[i] || (i > 0 && nums[i] == nums[i - 1] && !used[i - 1])) continue;\n     \
+        \   used[i] = true;\n        go(depth + 1);\n        used[i] = false;\n    }\n};\ngo(0);\ncout <<\
+        \ count;\n"
+      java: "class Solver {\n    int[] nums = {1, 1, 2};\n    boolean[] used = new boolean[3];\n    int\
+        \ count = 0;\n    void go(int depth) {\n        if (depth == 3) { count++; return; }\n        for\
+        \ (int i = 0; i < 3; i++) {\n            if (used[i] || (i > 0 && nums[i] == nums[i - 1] && !used[i\
+        \ - 1])) continue;\n            used[i] = true;\n            go(depth + 1);\n            used[i]\
+        \ = false;\n        }\n    }\n}\nSolver s = new Solver();\ns.go(0);\nSystem.out.println(s.count);\n"
+    options:
+    - '3'
+    - '6'
+    - '2'
+    - '4'
+    answer: 0
+    explanation: 'The three distinct permutations are 112, 121 and 211. Without the duplicate-skip rule
+      the search would count all 3! = 6, repeating each. The rule says: use an equal value only after its
+      earlier copy has been used.'
+    difficulty: 4
+  - id: queens-six
+    kind: mcq
+    prompt: How many ways can 6 queens be placed on a 6 × 6 board with none attacking another?
+    options:
+    - '4'
+    - '10'
+    - '2'
+    - '6'
+    answer: 0
+    explanation: 'The counts for n = 4, 5, 6, 7, 8 are 2, 10, 4, 40, 92: not monotone, so you cannot extrapolate.
+      Backtracking with column and diagonal sets explores only a tiny part of the 6! = 720 column permutations.'
+    difficulty: 4
+  - id: prune-negatives
+    kind: mcq
+    prompt: In subset-sum search you prune a branch as soon as the running total exceeds the target. For
+      which inputs is this pruning valid?
+    options:
+    - Only when every value is non-negative, because the total can never come back down
+    - For any integers, since exceeding the target always means failure
+    - Only when the values are sorted in decreasing order
+    - Only when the target is zero
+    answer: 0
+    explanation: With a negative value later in the list the total can drop again, so cutting the branch
+      loses valid answers. Pruning needs a bound that is genuinely monotone.
+    difficulty: 4
+  - id: mrv
+    kind: mcq
+    prompt: A Sudoku solver always fills the cell with the fewest remaining legal digits first (most constrained
+      variable). What does that change?
+    options:
+    - Still exponential in the worst case, but dead branches surface earlier, so it runs far faster
+    - It lowers the worst case to polynomial time, since the branching factor falls to one
+    - Nothing at all, since the order of cells never changes how many states get visited
+    - It forces the search to return a different solution from the one found before
+    answer: 0
+    explanation: Choosing the most constrained cell tends to expose contradictions immediately, shrinking
+      the tree dramatically. It is a heuristic for the order of choices; it does not change the problem's
+      hardness.
+    difficulty: 5
 problems: [subset-sum-count, n-queens-count]
 practice_links:
   - title: Subsets

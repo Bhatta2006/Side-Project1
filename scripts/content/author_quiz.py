@@ -12,7 +12,11 @@ Usage: python scripts/content/author_quiz.py <course> <concept> [--apply]
 """
 
 import argparse
+import bisect
+import collections
 import functools
+import heapq
+import itertools
 import math
 import re
 import subprocess
@@ -32,6 +36,54 @@ JAVA_HEAD = (
     "import java.util.*;\nimport java.util.stream.*;\n"
     "public class Main {\n    public static void main(String[] args) {\n"
 )
+
+
+def greedy_days(weights: list[int], cap: int) -> int:
+    """Days needed to ship consecutive packages with a daily capacity (for verify expressions)."""
+    days, cur = 1, 0
+    for w in weights:
+        if cur + w > cap:
+            days, cur = days + 1, 0
+        cur += w
+    return days
+
+
+def kruskal(n: int, edges: list[tuple[int, int, int]]) -> int:
+    """Minimum spanning tree weight over vertices 0..n-1 (for verify expressions)."""
+    parent = list(range(n))
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    total = 0
+    for a, b, w in sorted(edges, key=lambda e: e[2]):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+            total += w
+    return total
+
+
+def cycle_edge(edges: list[list[int]]) -> list[int]:
+    """First edge, in input order, whose endpoints are already connected (for verify expressions)."""
+    parent: dict[int, int] = {}
+
+    def find(x: int) -> int:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a, b in edges:
+        ra, rb = find(a), find(b)
+        if ra == rb:
+            return [a, b]
+        parent[ra] = rb
+    return []
 
 
 def norm(text: str) -> str:
@@ -75,11 +127,11 @@ def check(item: dict) -> list[str]:
         return [f"schema: {exc}"]
     answer = norm(item["options"][item["answer"]])
     if "verify" in item:
-        env = dict(functools=functools, math=math, combinations=combinations, permutations=permutations)
+        env = dict(greedy_days=greedy_days, kruskal=kruskal, cycle_edge=cycle_edge,bisect=bisect, collections=collections, functools=functools, heapq=heapq, itertools=itertools, math=math, combinations=combinations, permutations=permutations)
         got = norm(eval(item["verify"], env))  # noqa: S307 - authored by us
         if got != answer:
             problems.append(f"verify gives {got!r}, answer option is {answer!r}")
-    for language, code in item.get("code", {}).items():
+    for language, code in (item.get("code", {}).items() if item["kind"] in ("output", "bug") else []):
         got = run(language, code)
         if got != answer:
             problems.append(f"{language} prints {got!r}, answer option is {answer!r}")
@@ -95,7 +147,7 @@ def splice(path: Path, items: list[dict]) -> None:
         clean, allow_unicode=True, sort_keys=False, width=100, default_flow_style=False
     )
     block = "quiz:\n" + "".join(f"  {ln}\n" if ln else "\n" for ln in dumped.splitlines())
-    pattern = re.compile(r"(?ms)^quiz:\n.*?(?=^\S)")
+    pattern = re.compile(r"(?m)^quiz:\n(?:(?: |- ).*\n|\n)*")
     if not pattern.search(body):
         raise SystemExit("no quiz block found")
     body = pattern.sub(lambda _: block, body, count=1)
