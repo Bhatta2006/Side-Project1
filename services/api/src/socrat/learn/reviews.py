@@ -87,6 +87,8 @@ def items_for(
         for q, s in learn.states_for(db, enrollment).items():
             if not s.next_review_at or q not in cat.concepts:
                 continue
+            if s.assumed and s.evidence_count == 0:
+                continue  # placed as known, never practised: nothing to review yet
             course = cat.owner[q]
             entry = merged.get(q)
             if entry is not None:  # the same concept scheduled in two enrolments: overlap

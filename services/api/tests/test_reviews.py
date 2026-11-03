@@ -191,3 +191,38 @@ def test_reviews_from_every_course_with_overlap_and_what_the_current_course_need
     client.delete("/api/v1/reviews/zero:input-and-arithmetic/snooze", headers=headers)
     listed = {i["concept"]: i for i in client.get("/api/v1/reviews?scope=all").json()["items"]}
     assert listed["zero:input-and-arithmetic"]["snoozed_until"] is None
+
+
+def test_concepts_placement_only_assumed_known_are_not_listed_as_reviews(client):
+    """Found in a live run: a learner placed late had ten earlier concepts marked known without
+    ever practising them, and the Reviews page listed all ten with reasons about practice that
+    never happened. The planner already skipped them; the list must too."""
+    import time
+
+    from socrat.mastery.model import ConceptState, placed
+    from socrat.models import ConceptState as Row
+
+    headers = login(client)
+    onboard(client, headers)
+    stamp = int(time.time())
+    with Session(client.app.state.engine) as db, db.begin():
+        enrollment = db.scalars(select(Enrollment)).one()
+        db.query(Row).delete()
+        db.add(
+            Row(enrollment_id=enrollment.id, concept=CONCEPT, state=placed(True, stamp).to_dict())
+        )
+        real = ConceptState(
+            evidence_count=2,
+            review_step=1,
+            last_evidence_at=stamp - DAY,
+            next_review_at=stamp + DAY,
+        )
+        db.add(
+            Row(
+                enrollment_id=enrollment.id,
+                concept="zero:input-and-arithmetic",
+                state=real.to_dict(),
+            )
+        )
+    shown = [i["concept"] for i in client.get("/api/v1/reviews").json()["items"]]
+    assert shown == ["zero:input-and-arithmetic"]

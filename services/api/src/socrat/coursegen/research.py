@@ -221,6 +221,29 @@ def attach(lesson: dict, sources: list[dict]) -> dict:
             f"{s['n']}. [{s['title']}]({s['url']}) — {s['license']}" for s in sources
         )
         text = f"{text.rstrip()}\n\n## Sources\n\n{listing}\n"
+    # A source the author listed keeps the author's words but must not lose what research
+    # learned about it: licence, author, date and why it was chosen (found in a live run, where
+    # every listed resource showed an empty licence beside a credit line naming them).
+    by_url = {s["url"]: s for s in sources}
+    listed = []
+    for r in lesson.get("resources", []):
+        found = by_url.get(str(r.get("url"))) if isinstance(r, dict) else None
+        if found is not None:
+            r = {
+                **r,
+                **{
+                    key: (r.get(key) or str(found.get(key) or "")[:limit])
+                    for key, limit in (
+                        ("author", 200),
+                        ("published", 40),
+                        ("license", 120),
+                        ("why", 300),
+                    )
+                },
+            }
+            r["why"] = r["why"] or str(found.get("supports", ""))[:300]
+        listed.append(r)
+    lesson = {**lesson, "resources": listed}
     have = {r.get("url") for r in lesson.get("resources", []) if isinstance(r, dict)}
     # A cited source the author did not list becomes a resource. It needs a site name and a
     # reading time to be a valid Resource; the time is a stated nominal value, not measured.
