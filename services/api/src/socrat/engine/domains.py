@@ -65,6 +65,17 @@ register(
             "mechanics",
             "trigonometry",
             "equations",
+            # School maths: children ask for these, not "mathematics".
+            "fractions",
+            "fraction",
+            "arithmetic",
+            "multiplication",
+            "division",
+            "decimals",
+            "percentages",
+            "ratios",
+            "times tables",
+            "counting",
         ),
         methods=(
             "worked-examples",

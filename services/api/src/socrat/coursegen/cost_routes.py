@@ -25,3 +25,13 @@ def report(request: Request):
             roles=costs.by_role(db, since_day=month),
             reliability=costs.reliability(db),
         )
+
+
+@router.get("/outcomes")
+def outcomes(request: Request, course: str | None = None):
+    """Learning outcomes from the evidence (observational; see engine.outcomes)."""
+    from socrat.engine import outcomes as learning
+
+    with Session(engine(request)) as db:
+        require_admin(request, db)
+        return learning.report(db, course)
