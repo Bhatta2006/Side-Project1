@@ -127,25 +127,129 @@ resources:
 quiz:
   - id: lowbit
     kind: mcq
-    prompt: What is 12 & −12?
-    options: ["4", "12", "8", "1"]
+    prompt: What is 12 & −12, the lowest set bit of 12, which sets the length of the block a Fenwick node
+      covers?
+    options:
+    - '4'
+    - '12'
+    - '8'
+    - '1'
     answer: 0
-    explanation: 12 = 1100 in binary; the lowest set bit is 100 = 4.
+    explanation: 12 = 1100 in binary, so the lowest set bit is 100 = 4. Node 12 therefore covers the 4 elements
+      9..12.
     difficulty: 2
   - id: zero-index
     kind: mcq
-    prompt: Why must Fenwick indexes start at 1?
-    options: ["0 & −0 = 0, so updates at 0 would loop forever", "C++ arrays start at index 1, as the tree does", "Starting at 1 makes every query twice as fast", "It is only a convention; index 0 works the same"]
+    prompt: Why must a Fenwick tree use 1-based indices?
+    options:
+    - 0 & −0 = 0, so an update at index 0 would never advance and would loop forever
+    - Arrays in C++ start at 1 whenever they are used to store a tree structure
+    - Starting at 1 makes every query about twice as fast as starting at 0
+    - 'It is only a convention: index 0 works the same way in the update step'
     answer: 0
-    explanation: The step size i & −i must be positive.
+    explanation: Both the update step i += i & −i and the query step i −= i & −i rely on lowbit being at
+      least 1. Shift a 0-based array by one.
     difficulty: 2
-  - id: minmax
+  - id: update-path
     kind: mcq
-    prompt: Range-minimum queries with point updates — Fenwick or segment tree?
-    options: ["Segment tree", "Fenwick tree", "Prefix sums", "Difference array"]
+    prompt: In a Fenwick tree of size n = 8, which node indices does add(3, v) modify?
+    options:
+    - 3, 4, 8
+    - 3, 6
+    - 3, 4, 5, 6, 7, 8
+    - '3'
     answer: 0
-    explanation: Minimum isn't invertible, so prefix(r) − prefix(l − 1) has no equivalent.
-    difficulty: 2
+    explanation: 3 → 3 + 1 = 4 → 4 + 4 = 8 → 8 + 8 = 16 > n. Those are exactly the nodes whose blocks contain
+      position 3.
+    difficulty: 3
+  - id: build-output
+    kind: output
+    prompt: A Fenwick tree is built by adding the value i at position i, for i = 1..8. What does this print?
+    code:
+      python: "n = 8\nt = [0] * (n + 1)\nfor i in range(1, n + 1):\n    j = i\n    while j <= n:\n     \
+        \   t[j] += i\n        j += j & -j\ndef pre(i):\n    s = 0\n    while i > 0:\n        s += t[i]\n\
+        \        i -= i & -i\n    return s\nprint(pre(6), pre(5) - pre(2))\n"
+      cpp: "int n = 8;\nint t[9] = {0};\nfor (int i = 1; i <= n; i++)\n    for (int j = i; j <= n; j +=\
+        \ j & -j) t[j] += i;\nauto pre = [&](int i) { int s = 0; for (; i > 0; i -= i & -i) s += t[i]; return\
+        \ s; };\ncout << pre(6) << \" \" << pre(5) - pre(2);\n"
+      java: "int n = 8;\nint[] t = new int[9];\nfor (int i = 1; i <= n; i++)\n    for (int j = i; j <= n;\
+        \ j += j & -j) t[j] += i;\njava.util.function.IntUnaryOperator pre = x -> { int s = 0; for (; x\
+        \ > 0; x -= x & -x) s += t[x]; return s; };\nSystem.out.println(pre.applyAsInt(6) + \" \" + (pre.applyAsInt(5)\
+        \ - pre.applyAsInt(2)));\n"
+    options:
+    - 21 12
+    - 21 9
+    - 15 12
+    - 28 12
+    answer: 0
+    explanation: pre(6) = 1+2+3+4+5+6 = 21. The range sum of positions 3..5 is pre(5) − pre(2) = 15 − 3
+      = 12.
+    difficulty: 3
+  - id: inversion-count
+    kind: mcq
+    prompt: You count inversions (pairs i < j with a[i] > a[j]) by scanning left to right and querying a
+      Fenwick tree indexed by value. How many inversions does [3, 1, 2] have?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '0'
+    answer: 0
+    explanation: 'The pairs (3, 1) and (3, 2). At each element, count how many already-inserted values are
+      greater, then insert it: O(n log n) in total, after compressing large values to ranks.'
+    difficulty: 3
+  - id: max-fenwick
+    kind: mcq
+    prompt: Which of these can a plain Fenwick tree support in O(log n)?
+    options:
+    - Prefix maximum, when updates only ever increase a value
+    - Range maximum with arbitrary point assignments, including decreases
+    - The median of any range, using the stored block sums
+    - Range minimum after values are decreased and then increased again
+    answer: 0
+    explanation: A Fenwick tree needs an operation where combining the contents of a block is enough, and
+      it cannot undo anything. Maximum with only-increasing updates fits; arbitrary assignments need a segment
+      tree.
+    difficulty: 4
+  - id: range-update-point-query
+    kind: mcq
+    prompt: You need 'add v to every element in [l, r]' and 'what is the value at position i?', both in
+      O(log n). What is the Fenwick setup?
+    options:
+    - 'A Fenwick tree over the difference array: add(l, v), add(r + 1, −v); the value at i is prefix(i)'
+    - 'A Fenwick tree over the values themselves: add v to each position l..r one at a time'
+    - Two Fenwick trees whose difference gives the point value at position i
+    - It needs a segment tree, because a Fenwick tree cannot do range updates at all
+    answer: 0
+    explanation: The range update becomes two point updates on the differences, and the point query is a
+      prefix sum of the differences. Range update with range sum needs two trees.
+    difficulty: 4
+  - id: linear-build
+    kind: mcq
+    prompt: Building a Fenwick tree from an initial array of n values by calling add n times costs O(n log
+      n). What is the O(n) construction?
+    options:
+    - Copy the array into t, then push each t[i] into its parent i + lowbit(i), if that is ≤ n
+    - Sort the array first, then call add once for each distinct value
+    - Compute every prefix sum, then run a second pass of add over the result
+    - 'It is impossible: each position needs log n updates, so n log n is a lower bound'
+    answer: 0
+    explanation: Every node's final value is its own element plus the finished values of its children, and
+      the children are exactly the nodes that push into it. One upward pass suffices.
+    difficulty: 5
+  - id: kth-descent
+    kind: mcq
+    prompt: All stored values are non-negative and you need the smallest index whose prefix sum is at least
+      k. Which is the best approach?
+    options:
+    - 'Walk down the tree from the highest power of two: O(log n) per query'
+    - Binary search on the index, calling prefix() at every step of the search
+    - Scan the array once per query, stopping when the running sum reaches k
+    - Rebuild a prefix-sum array before every query, then binary search it
+    answer: 0
+    explanation: Binary search with a prefix query at each step costs O(log n) steps times O(log n) per
+      query, so O(log² n). The descent reads each tree node once and costs O(log n).
+    difficulty: 5
 problems: [dynamic-range-sum]
 practice_links:
   - title: Dynamic Range Sum Queries

@@ -132,31 +132,156 @@ quiz:
   - id: edges-tree
     kind: mcq
     prompt: A tree with n nodes has how many edges?
-    options: ["n − 1", "n", "n + 1", "2n"]
+    options:
+    - n − 1
+    - n
+    - n + 1
+    - 2n
     answer: 0
-    explanation: Connected and acyclic means exactly n − 1 edges.
+    explanation: Connected with no cycles means n − 1 edges. A connected graph with n edges has exactly
+      one cycle.
     difficulty: 1
   - id: reverse-order
     kind: mcq
-    prompt: Why process nodes in reverse BFS order for subtree sums?
-    options: ["Children appear after parents in BFS order, so reversing handles children first", "Reverse BFS order is faster because it visits the leaves with fewer cache misses", "BFS order is effectively random, so reversing it makes the order predictable", "Reversing the order avoids revisiting a node through a cycle in the tree"]
+    prompt: Why process nodes in reverse BFS order when computing subtree sums?
+    options:
+    - A parent always appears before its children in BFS order, so reversing handles children first
+    - Reverse order is faster because it visits leaves first with better cache behaviour
+    - BFS order is random, so reversing it makes it predictable
+    - Reversing avoids revisiting a node through a cycle
     answer: 0
-    explanation: Bottom-up DP needs every child finished before its parent.
+    explanation: By the time you process v, all of its descendants (which come later in BFS order) are already
+      finished, so you can add v's total to its parent.
     difficulty: 2
   - id: euler
     kind: mcq
-    prompt: With an Euler tour, the subtree of u corresponds to...
-    options: ["The contiguous range [tin[u], tout[u]]", "All nodes with labels larger than u", "The path from the root down to u", "The range [0, tin[u]] of the tour"]
+    prompt: With an Euler tour that records entry time tin[u] and exit time tout[u], the subtree of u corresponds
+      to...
+    options:
+    - The contiguous range [tin[u], tout[u]]
+    - All nodes with labels larger than u
+    - The path from the root down to u
+    - The range [0, tin[u]] of the tour
     answer: 0
-    explanation: DFS visits an entire subtree before leaving it.
+    explanation: A DFS visits u's whole subtree between entering and leaving u, so it becomes one array
+      range, which a Fenwick or segment tree can handle.
     difficulty: 2
-  - id: reroot
-    kind: mcq
-    prompt: Rerooting from parent p to child c changes the sum of distances by...
-    options: ["−size[c] + (n − size[c])", "+size[c] − (n − size[c])", "+1 for every node in c's subtree", "Nothing; the total stays the same"]
+  - id: size-output
+    kind: output
+    prompt: par[v] is the parent of v, and parents always have smaller labels than their children (par[0]
+      = −1 for the root). What does this print?
+    code:
+      python: "par = [-1, 0, 0, 1, 1, 2]\nsize = [1] * 6\nfor v in range(5, 0, -1):\n    size[par[v]] +=\
+        \ size[v]\nprint(size[1], size[2])\n"
+      cpp: 'int par[6] = {-1, 0, 0, 1, 1, 2};
+
+        int sz[6];
+
+        for (int i = 0; i < 6; i++) sz[i] = 1;
+
+        for (int v = 5; v > 0; v--) sz[par[v]] += sz[v];
+
+        cout << sz[1] << " " << sz[2];
+
+        '
+      java: 'int[] par = {-1, 0, 0, 1, 1, 2};
+
+        int[] sz = new int[6];
+
+        Arrays.fill(sz, 1);
+
+        for (int v = 5; v > 0; v--) sz[par[v]] += sz[v];
+
+        System.out.println(sz[1] + " " + sz[2]);
+
+        '
+    options:
+    - 3 2
+    - 2 3
+    - 5 1
+    - 3 3
     answer: 0
-    explanation: Nodes in c's subtree get 1 closer; all others get 1 farther.
+    explanation: Node 1 has children 3 and 4, so its size is 3. Node 2 has the child 5, so its size is 2.
+      Going from the highest label down guarantees that children are added before their parent is used.
     difficulty: 3
+  - id: diameter-start
+    kind: mcq
+    prompt: The two-BFS method finds a tree's diameter. Where must the second BFS start?
+    options:
+    - At the node farthest from the starting node of the first BFS
+    - At the root of the tree, which is always a diameter endpoint
+    - At a node chosen uniformly at random, repeated until it works
+    - At the node with the largest degree, since hubs lie on diameters
+    answer: 0
+    explanation: The farthest node from any start is always one end of some diameter. The second BFS from
+      that end finds the other end. This relies on non-negative edge weights.
+    difficulty: 3
+  - id: ancestor-test
+    kind: mcq
+    prompt: Euler times are a = (tin 1, tout 10), b = (2, 5), c = (6, 9), d = (3, 4). Which statement is
+      true?
+    options:
+    - b is an ancestor of d, but c is not an ancestor of d
+    - c is an ancestor of d, because 6 < 9
+    - d is an ancestor of b, because it exits earlier
+    - b and c are ancestors of d
+    answer: 0
+    explanation: 'u is an ancestor of v exactly when tin[u] ≤ tin[v] and tout[v] ≤ tout[u]. For b and d:
+      2 ≤ 3 and 4 ≤ 5, so yes. For c and d: tin[c] = 6 > 3, so no.'
+    difficulty: 3
+  - id: deep-recursion
+    kind: mcq
+    prompt: A tree is a single path of 2·10^5 nodes and you compute subtree sizes with recursive DFS. What
+      is the main risk?
+    options:
+    - 'Stack overflow at depth 2·10^5: use an iterative traversal or a larger stack'
+    - Integer overflow in the subtree sizes once they exceed about 10^5 nodes
+    - The recursion visits some nodes twice, so the answer is double-counted
+    - 'None: recursion depth is limited only by the time limit, never by memory'
+    answer: 0
+    explanation: Default limits are roughly 10^3 frames in Python and about 10^4–10^5 in C++ or Java. Depth
+      equals the tree height, so path-shaped inputs are the standard stress test.
+    difficulty: 3
+  - id: path-pairs
+    kind: mcq
+    prompt: For a tree, the sum over all unordered node pairs of their distance equals the sum over edges
+      of size[c] · (n − size[c]). What is the total for a path of 4 nodes?
+    options:
+    - '10'
+    - '6'
+    - '12'
+    - '20'
+    answer: 0
+    explanation: Cutting the three edges leaves splits of 1|3, 2|2 and 3|1, which give 3 + 4 + 3 = 10. Each
+      edge is used by every pair that it separates.
+    difficulty: 4
+  - id: reroot-numeric
+    kind: mcq
+    prompt: In a tree with 6 nodes, the sum of distances from the root p to all nodes is 14. Child c has
+      a subtree of size 2. What is the sum of distances from c?
+    options:
+    - '16'
+    - '12'
+    - '14'
+    - '10'
+    answer: 0
+    explanation: 'Moving the root from p to c brings the 2 nodes of c''s subtree one step closer (−2) and
+      pushes the other 4 one step farther (+4): 14 − 2 + 4 = 16, that is n − 2·size[c] added to the old
+      total.'
+    difficulty: 4
+  - id: negative-diameter
+    kind: mcq
+    prompt: Edge weights may be negative. Why does the two-BFS (or two-DFS) trick for the diameter stop
+      working?
+    options:
+    - 'The farthest node may not end a longest path: use a DP over the top two child paths'
+    - BFS cannot run on trees with negative edges at all, but a DFS still works as before
+    - The diameter is simply undefined once any edge weight is negative
+    - 'It still works: only the tie-breaking rule between equal paths needs adjusting'
+    answer: 0
+    explanation: The proof needs non-negative weights. A tree DP computes for each node the best and second-best
+      downward paths through its children, then combines them at that node.
+    difficulty: 5
 problems: [subtree-sizes, sum-of-distances]
 practice_links:
   - title: Subordinates

@@ -167,28 +167,175 @@ resources:
     minutes: 20
     level: deep
 quiz:
-  - id: identity
-    kind: mcq
-    prompt: For a range-maximum segment tree, unused leaves should hold...
-    options: ["−infinity", "0", "+infinity", "1"]
-    answer: 0
-    explanation: The identity for max is −∞, so padding never changes an answer.
-    difficulty: 2
   - id: nodes
     kind: mcq
-    prompt: A segment tree over n leaves (n a power of two) has how many nodes?
-    options: ["2n − 1", "n", "n log n", "n²"]
+    prompt: A segment tree over n leaves, where n is a power of two, has how many nodes in total?
+    options:
+    - 2n − 1
+    - n
+    - n log n
+    - n²
     answer: 0
-    explanation: n leaves plus n − 1 internal nodes.
+    explanation: 'Each level has half as many nodes as the one below: n + n/2 + ... + 1 = 2n − 1. The iterative
+      layout stores them in an array of size 2n.'
     difficulty: 2
+  - id: identity
+    kind: mcq
+    prompt: In a range-maximum segment tree, unused (padding) leaves should hold which value?
+    options:
+    - −infinity, because it can never beat a real value in a max
+    - 0, which is also the identity for sums
+    - +infinity, so the padding always loses to real values
+    - 1, the multiplicative identity
+    answer: 0
+    explanation: The padding must never win a comparison. With non-negative values 0 happens to work, but
+      with negatives only −infinity is safe.
+    difficulty: 2
+  - id: build-output
+    kind: output
+    prompt: This builds a sum tree bottom-up with leaves at positions n..2n−1. What does it print?
+    code:
+      python: "a = [5, 3, 8, 6]\nn = len(a)\nt = [0] * (2 * n)\nfor i in range(n):\n    t[n + i] = a[i]\n\
+        for i in range(n - 1, 0, -1):\n    t[i] = t[2 * i] + t[2 * i + 1]\nprint(t[1], t[2], t[3])\n"
+      cpp: 'int a[4] = {5, 3, 8, 6};
+
+        int n = 4;
+
+        vector<int> t(2 * n, 0);
+
+        for (int i = 0; i < n; i++) t[n + i] = a[i];
+
+        for (int i = n - 1; i >= 1; i--) t[i] = t[2 * i] + t[2 * i + 1];
+
+        cout << t[1] << " " << t[2] << " " << t[3];
+
+        '
+      java: 'int[] a = {5, 3, 8, 6};
+
+        int n = 4;
+
+        int[] t = new int[2 * n];
+
+        for (int i = 0; i < n; i++) t[n + i] = a[i];
+
+        for (int i = n - 1; i >= 1; i--) t[i] = t[2 * i] + t[2 * i + 1];
+
+        System.out.println(t[1] + " " + t[2] + " " + t[3]);
+
+        '
+    options:
+    - 22 8 14
+    - 22 14 8
+    - 8 22 14
+    - 22 11 11
+    answer: 0
+    explanation: Leaves are t[4..7] = 5, 3, 8, 6. Then t[2] = 5 + 3 = 8, t[3] = 8 + 6 = 14, and the root
+      t[1] = 22.
+    difficulty: 3
   - id: associative
     kind: mcq
-    prompt: Which operation can a plain segment tree NOT combine directly?
-    options: ["The median of a range", "The gcd of a range", "The minimum of a range", "The XOR of a range"]
+    prompt: Which of these can a plain segment tree NOT combine directly from its two children's stored
+      values?
+    options:
+    - The median of a range
+    - The gcd of a range
+    - The minimum of a range
+    - The XOR of a range
     answer: 0
-    explanation: Median isn't computable from two children's medians — it's not a simple associative merge.
+    explanation: Min, gcd and XOR are associative, so a parent's value follows from its children. A median
+      needs the actual sorted contents, which two medians cannot reconstruct.
     difficulty: 3
-problems: [range-min-updates]
+  - id: ops-estimate
+    kind: mcq
+    prompt: n = 2·10^5 and q = 2·10^5 range queries on a segment tree. A query touches about 2 log₂ n nodes.
+      About how many node visits is that overall?
+    options:
+    - ≈ 7·10^6
+    - ≈ 4·10^10
+    - ≈ 4·10^5
+    - ≈ 2·10^9
+    answer: 0
+    explanation: 2 · 18 · 2·10^5 ≈ 7·10^6, trivial for a second. The O(nq) alternative is 4·10^10.
+    difficulty: 3
+  - id: array-size
+    kind: mcq
+    prompt: A recursive (top-down) segment tree is stored in an array indexed 1, 2i, 2i + 1, and n = 2·10^5
+      is not a power of two. Which array size is the standard safe choice?
+    options:
+    - 4n = 8·10^5
+    - 2n = 4·10^5
+    - n + 1
+    - n log n
+    answer: 0
+    explanation: When n is not a power of two the tree can be one level deeper than log₂ n suggests, and
+      the heap-style indices reach up to nearly 4n. Using 2n would write out of bounds.
+    difficulty: 3
+  - id: query-output
+    kind: output
+    prompt: This bottom-up query uses the tree built from a = [5, 3, 8, 6] over the half-open range [1,
+      3). What does it print?
+    code:
+      python: "a = [5, 3, 8, 6]\nn = len(a)\nt = [0] * (2 * n)\nfor i in range(n):\n    t[n + i] = a[i]\n\
+        for i in range(n - 1, 0, -1):\n    t[i] = t[2 * i] + t[2 * i + 1]\nl, r, res = 1 + n, 3 + n, 0\n\
+        while l < r:\n    if l & 1:\n        res += t[l]\n        l += 1\n    if r & 1:\n        r -= 1\n\
+        \        res += t[r]\n    l >>= 1\n    r >>= 1\nprint(res)\n"
+      cpp: "int a[4] = {5, 3, 8, 6};\nint n = 4;\nvector<int> t(2 * n, 0);\nfor (int i = 0; i < n; i++)\
+        \ t[n + i] = a[i];\nfor (int i = n - 1; i >= 1; i--) t[i] = t[2 * i] + t[2 * i + 1];\nint l = 1\
+        \ + n, r = 3 + n, res = 0;\nwhile (l < r) {\n    if (l & 1) res += t[l++];\n    if (r & 1) res +=\
+        \ t[--r];\n    l >>= 1; r >>= 1;\n}\ncout << res;\n"
+      java: "int[] a = {5, 3, 8, 6};\nint n = 4;\nint[] t = new int[2 * n];\nfor (int i = 0; i < n; i++)\
+        \ t[n + i] = a[i];\nfor (int i = n - 1; i >= 1; i--) t[i] = t[2 * i] + t[2 * i + 1];\nint l = 1\
+        \ + n, r = 3 + n, res = 0;\nwhile (l < r) {\n    if ((l & 1) == 1) res += t[l++];\n    if ((r &\
+        \ 1) == 1) res += t[--r];\n    l >>= 1; r >>= 1;\n}\nSystem.out.println(res);\n"
+    options:
+    - '11'
+    - '14'
+    - '16'
+    - '8'
+    answer: 0
+    explanation: The range [1, 3) is the elements 3 and 8. l = 5 is odd, so t[5] = 3 is added; r = 7 is
+      odd, so t[6] = 8 is added; the pointers then meet. 3 + 8 = 11.
+    difficulty: 4
+  - id: maxsub-node
+    kind: mcq
+    prompt: You must answer 'maximum subarray sum inside a[l..r]' for many ranges. What must each segment
+      tree node store so that two children can be merged?
+    options:
+    - Total sum, best prefix, best suffix and best subarray of the node's range
+    - Only the best subarray sum inside the node's range, which merges directly
+    - Only the maximum element and the total sum, which are enough to merge
+    - The fully sorted contents of the node's range, merged like merge sort
+    answer: 0
+    explanation: The best subarray across the middle is (best suffix of left) + (best prefix of right),
+      and the parent's prefix and suffix need the child totals. Design the node so merge is O(1).
+    difficulty: 4
+  - id: range-add-need
+    kind: mcq
+    prompt: A segment tree supports point updates and range sums. You now also need 'add v to every element
+      of [l, r]'. What happens if you apply it as r − l + 1 point updates?
+    options:
+    - Each update costs O(n) in the worst case, so lazy propagation is needed
+    - 'Nothing changes: it is still O(log n) per range update'
+    - It becomes O(1), because all the point updates share their ancestors
+    - It cannot be done on a segment tree at all
+    answer: 0
+    explanation: A range of length n costs n · log n as point updates. Lazy tags store 'pending add' on
+      whole nodes and push down only when a query needs to go deeper.
+    difficulty: 4
+  - id: non-commutative
+    kind: mcq
+    prompt: A bottom-up (iterative) query combines matrices, where order matters because the product is
+      not commutative. What must you do with the nodes taken from the right boundary?
+    options:
+    - Accumulate them separately as right = node ∘ right, and combine left ∘ right at the end
+    - Combine them into the same running result in whatever order they are found
+    - 'Nothing special: the iterative version only works for commutative operations'
+    - Reverse the whole array before building the tree, then query as usual
+    answer: 0
+    explanation: Left-boundary nodes are found in left-to-right order, but right-boundary nodes are found
+      right-to-left. Keeping two accumulators preserves the true order.
+    difficulty: 5
+problems: [range-min-updates, max-subarray-updates]
 practice_links:
   - title: Dynamic Range Minimum Queries
     url: https://cses.fi/problemset/task/1649

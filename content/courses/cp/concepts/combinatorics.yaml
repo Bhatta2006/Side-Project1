@@ -125,56 +125,132 @@ resources:
     minutes: 30
     level: deep
 quiz:
-  - id: c-5-2
+  - id: precompute
     kind: mcq
-    prompt: What is C(5, 2)?
-    options: ["10", "20", "5", "25"]
+    prompt: With factorials and inverse factorials precomputed up to N modulo a prime, each C(n, k) query
+      costs...
+    options:
+    - O(1)
+    - O(n)
+    - O(log n)
+    - O(k)
     answer: 0
-    explanation: 5! / (2! · 3!) = 120 / 12 = 10.
+    explanation: C(n, k) = fact[n] · invfact[k] · invfact[n−k] is three multiplications. The precomputation
+      is O(N) plus one modular exponentiation.
     difficulty: 1
   - id: grid
     kind: mcq
-    prompt: How many right/down paths cross a grid needing 3 rights and 2 downs?
-    options: ["10", "6", "5", "32"]
+    prompt: How many right/down paths cross a grid that needs 4 rights and 3 downs?
+    options:
+    - '35'
+    - '12'
+    - '7'
+    - '64'
     answer: 0
-    explanation: Choose which 2 of the 5 moves are downs — C(5, 2) = 10.
+    explanation: 'Each path is a sequence of 7 moves; choose which 3 are downs: C(7, 3) = 35.'
     difficulty: 2
   - id: stars-bars
     kind: mcq
-    prompt: Ways to give 4 identical candies to 3 children (some may get none)?
-    options: ["15", "12", "64", "4"]
+    prompt: In how many ways can 4 identical candies be given to 3 children (some may get none)?
+    options:
+    - '15'
+    - '12'
+    - '64'
+    - '4'
     answer: 0
-    explanation: Stars and bars - C(4 + 3 − 1, 3 − 1) = C(6, 2) = 15.
+    explanation: 'Stars and bars: C(n + k − 1, k − 1) = C(6, 2) = 15.'
     difficulty: 3
-  - id: precompute
+  - id: product-rule
     kind: mcq
-    prompt: With factorials and inverse factorials precomputed up to N, each C(n, k) costs...
-    options: ["O(1)", "O(n)", "O(log n)", "O(k)"]
+    prompt: How many strings of length 5 over {a, b, c} have no two equal adjacent letters?
+    options:
+    - '48'
+    - '243'
+    - '32'
+    - '60'
     answer: 0
-    explanation: Three multiplications modulo p.
-    difficulty: 1
+    explanation: '3 choices for the first letter, then 2 for each of the next four (anything but the previous):
+      3·2⁴ = 48.'
+    difficulty: 3
+  - id: pascal-output
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "n = 6\nc = [[0] * (n + 1) for _ in range(n + 1)]\nfor i in range(n + 1):\n    c[i][0] = 1\n\
+        \    for j in range(1, i + 1):\n        c[i][j] = c[i - 1][j - 1] + c[i - 1][j]\nprint(c[6][3])\n"
+      cpp: "int n = 6;\nint c[7][7] = {};\nfor (int i = 0; i <= n; i++) {\n    c[i][0] = 1;\n    for (int\
+        \ j = 1; j <= i; j++) c[i][j] = c[i - 1][j - 1] + c[i - 1][j];\n}\ncout << c[6][3];\n"
+      java: "int n = 6;\nint[][] c = new int[7][7];\nfor (int i = 0; i <= n; i++) {\n    c[i][0] = 1;\n\
+        \    for (int j = 1; j <= i; j++) c[i][j] = c[i - 1][j - 1] + c[i - 1][j];\n}\nSystem.out.println(c[6][3]);\n"
+    options:
+    - '20'
+    - '15'
+    - '35'
+    - '10'
+    answer: 0
+    explanation: This builds Pascal's triangle with C(i, j) = C(i−1, j−1) + C(i−1, j). Row 6 is 1 6 15 20
+      15 6 1, so C(6, 3) = 20.
+    difficulty: 3
   - id: inclusion-exclusion
     kind: mcq
-    prompt: "How many numbers from 1 to 100 are divisible by 2 or 3?"
+    prompt: How many integers from 1 to 100 are divisible by 2 or by 3?
     options:
-      - "67"
-      - "83"
-      - "50"
-      - "16"
+    - '67'
+    - '83'
+    - '50'
+    - '16'
     answer: 0
-    explanation: "50 + 33 - 16 = 67: add both, then subtract the multiples of 6 counted twice."
-    difficulty: 5
-  - id: share-sweets
+    explanation: 50 + 33 − 16 = 67. Adding the two counts double-counts multiples of 6, so subtract them
+      once.
+    difficulty: 3
+  - id: factorial-limit
     kind: mcq
-    prompt: "How many ways can 10 identical sweets be shared among 3 children (a child may get none)?"
+    prompt: What is the largest n for which n! fits in a signed 64-bit integer (maximum about 9.22·10^18)?
     options:
-      - "C(12, 2) = 66"
-      - "C(10, 3) = 120"
-      - "3^10"
-      - "C(13, 3) = 286"
+    - '20'
+    - '15'
+    - '25'
+    - '18'
     answer: 0
-    explanation: "Stars and bars: arrange 10 stars and 2 bars, C(10 + 2, 2) = 66."
+    explanation: '20! ≈ 2.43·10^18 fits, while 21! ≈ 5.1·10^19 does not. So even exact C(n, k) as n!/(k!(n−k)!)
+      breaks for n ≥ 21: use modular tables or Pascal''s rule.'
     difficulty: 4
+  - id: lower-bounds
+    kind: mcq
+    prompt: How many solutions does x₁ + x₂ + x₃ = 10 have if every xᵢ is a positive integer (at least 1)?
+    options:
+    - '36'
+    - '66'
+    - '120'
+    - '45'
+    answer: 0
+    explanation: Substitute yᵢ = xᵢ − 1 ≥ 0, so y₁ + y₂ + y₃ = 7 and the count is C(7 + 2, 2) = 36. Without
+      the lower bound it would be C(12, 2) = 66.
+    difficulty: 4
+  - id: complement
+    kind: mcq
+    prompt: How many binary strings of length 6 contain at least one pair of equal adjacent bits?
+    options:
+    - '62'
+    - '32'
+    - '63'
+    - '58'
+    answer: 0
+    explanation: 'Count the complement: only the two strings 010101 and 101010 have no equal neighbours,
+      so 2^6 − 2 = 62.'
+    difficulty: 4
+  - id: bounded-ie
+    kind: mcq
+    prompt: How many solutions does x₁ + x₂ + x₃ = 10 have if each xᵢ is an integer from 0 to 4?
+    options:
+    - '6'
+    - '66'
+    - '3'
+    - '21'
+    answer: 0
+    explanation: 'Total without the cap: C(12, 2) = 66. Subtract the cases where one variable is at least
+      5 (3 · C(7, 2) = 63), add back cases where two are (3 · 1 = 3): 66 − 63 + 3 = 6.'
+    difficulty: 5
 problems: [binomial-queries, grid-routes-mod]
 practice_links:
   - title: Binomial Coefficients

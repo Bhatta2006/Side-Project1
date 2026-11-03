@@ -145,26 +145,137 @@ resources:
 quiz:
   - id: multisource
     kind: mcq
-    prompt: Distance from every cell to the nearest of k exits — most efficient approach?
-    options: ["One BFS with all exits enqueued at distance 0", "k separate BFS runs, one from each exit", "Dijkstra once from every cell of the grid", "Floyd–Warshall over all the grid's cells"]
+    prompt: You need the distance from every cell of a grid to its nearest exit, and there are k exits.
+      What is the most efficient approach?
+    options:
+    - One BFS with all exits enqueued at distance 0
+    - k separate BFS runs, one from each exit
+    - Dijkstra once from every cell of the grid
+    - Floyd–Warshall over all cells
     answer: 0
-    explanation: Multi-source BFS solves it in a single O(V + E) pass.
+    explanation: A single BFS from a virtual super-source costs O(V + E) however many exits there are. k
+      separate runs cost k times as much.
     difficulty: 2
   - id: deque
     kind: mcq
-    prompt: In 0-1 BFS, where does a node reached by a 0-weight edge go?
-    options: ["Front of the deque", "Back of the deque", "A separate heap", "It's skipped"]
+    prompt: In 0-1 BFS (edge weights 0 or 1, using a double-ended queue), where does a node reached over
+      a 0-weight edge go?
+    options:
+    - The front of the deque
+    - The back of the deque
+    - A separate heap
+    - It is skipped
     answer: 0
-    explanation: Same distance as the current node, so it should be processed next.
+    explanation: Pushing zero-weight neighbours to the front keeps the deque ordered by distance, so each
+      node is finalised in order, like Dijkstra, but in O(V + E).
     difficulty: 2
+  - id: bfs-output
+    kind: output
+    prompt: A path graph 0 – 1 – 2 – 3 – 4 is searched from two sources at once. What does this print (the
+      distance array)?
+    code:
+      python: "from collections import deque\nn = 5\nadj = [[1], [0, 2], [1, 3], [2, 4], [3]]\ndist = [-1]\
+        \ * n\nq = deque()\nfor s in (0, 4):\n    dist[s] = 0\n    q.append(s)\nwhile q:\n    u = q.popleft()\n\
+        \    for v in adj[u]:\n        if dist[v] < 0:\n            dist[v] = dist[u] + 1\n            q.append(v)\n\
+        print(*dist)\n"
+      cpp: "int n = 5;\nvector<vector<int>> adj = {{1}, {0, 2}, {1, 3}, {2, 4}, {3}};\nvector<int> dist(n,\
+        \ -1);\nqueue<int> q;\nfor (int s : {0, 4}) { dist[s] = 0; q.push(s); }\nwhile (!q.empty()) {\n\
+        \    int u = q.front(); q.pop();\n    for (int v : adj[u]) if (dist[v] < 0) { dist[v] = dist[u]\
+        \ + 1; q.push(v); }\n}\nfor (int i = 0; i < n; i++) cout << dist[i] << (i + 1 < n ? \" \" : \"\"\
+        );\n"
+      java: "int n = 5;\nint[][] adj = {{1}, {0, 2}, {1, 3}, {2, 4}, {3}};\nint[] dist = new int[n];\nArrays.fill(dist,\
+        \ -1);\nArrayDeque<Integer> q = new ArrayDeque<>();\nfor (int s : new int[]{0, 4}) { dist[s] = 0;\
+        \ q.add(s); }\nwhile (!q.isEmpty()) {\n    int u = q.poll();\n    for (int v : adj[u]) if (dist[v]\
+        \ < 0) { dist[v] = dist[u] + 1; q.add(v); }\n}\nStringBuilder sb = new StringBuilder();\nfor (int\
+        \ i = 0; i < n; i++) sb.append(dist[i]).append(i + 1 < n ? \" \" : \"\");\nSystem.out.println(sb);\n"
+    options:
+    - 0 1 2 1 0
+    - 0 1 2 3 4
+    - 0 1 1 1 0
+    - 4 3 2 3 4
+    answer: 0
+    explanation: Both ends start at distance 0. Node 2 is two steps from either end, and nodes 1 and 3 are
+      one step from their nearest source.
+    difficulty: 3
   - id: negcycle
     kind: mcq
-    prompt: Bellman–Ford detects a negative cycle when...
-    options: ["An edge still relaxes in the n-th round", "The graph turns out to be disconnected", "Every final distance comes out negative", "Dijkstra gives a different answer on it"]
+    prompt: Bellman–Ford on n nodes relaxes every edge n − 1 times. When does it report a negative cycle?
+    options:
+    - If some edge can still be relaxed in the n-th round
+    - If the graph turns out to be disconnected
+    - If every final distance is negative
+    - If Dijkstra gives a different answer
     answer: 0
-    explanation: Without negative cycles, n − 1 rounds suffice; further improvement proves a cycle.
+    explanation: Without a negative cycle, every shortest path has at most n − 1 edges, so n − 1 rounds
+      settle everything. An improvement in round n means a cycle keeps lowering the distance.
     difficulty: 3
-problems: [nearest-exit]
+  - id: state-count
+    kind: mcq
+    prompt: A 1000 × 1000 grid lets you break at most 3 walls on the way. You run BFS on states (row, column,
+      walls broken so far). How many states are there?
+    options:
+    - 4·10^6
+    - 10^6
+    - 3·10^6
+    - 10^9
+    answer: 0
+    explanation: The walls-broken count can be 0, 1, 2 or 3, so 4 · 10^6 states. A BFS over the state graph
+      is still linear in its size. Count states before you commit to the encoding.
+    difficulty: 3
+  - id: bellman-cost
+    kind: mcq
+    prompt: n = 2000 nodes and m = 5000 edges with some negative weights and no negative cycle. About how
+      many edge relaxations does Bellman–Ford perform in the worst case?
+    options:
+    - ≈ 10^7
+    - ≈ 10^4
+    - ≈ 10^10
+    - ≈ 4·10^6 · log
+    answer: 0
+    explanation: (n − 1) · m ≈ 10^7, comfortably fast. For n = 10^5 and m = 2·10^5 it would be 2·10^10,
+      which is too slow, so then you would need a queue-based variant or different structure.
+    difficulty: 3
+  - id: subdivide
+    kind: mcq
+    prompt: Every edge weight is 1 or 2 and the graph has 10^5 nodes and 3·10^5 edges. Which gives shortest
+      paths in O(V + E)?
+    options:
+    - Replace each weight-2 edge by two unit edges via a new node, then run plain BFS
+    - Run plain BFS and ignore the weights, since 1 and 2 are close enough
+    - Run Dijkstra with a binary heap, which already takes O(V + E) here
+    - Run Floyd–Warshall once and read off the single-source answers
+    answer: 0
+    explanation: Subdividing keeps shortest-path lengths while making every edge unit length. Plain BFS
+      on the original graph would treat weight-2 edges as 1. Dijkstra with a heap is O(E log V), not linear.
+    difficulty: 4
+  - id: parity-state
+    kind: mcq
+    prompt: You need the shortest walk from s to t that uses an EVEN number of edges. What do you search?
+    options:
+    - BFS on states (node, parity of edges so far), from (s, 0) to (t, 0)
+    - Ordinary BFS from s, accepting the answer only if its length happens to be even
+    - BFS from t instead of s, since the direction of the walk does not matter here
+    - A DFS that enumerates every possible walk and keeps the shortest even one
+    answer: 0
+    explanation: Ordinary BFS finds the shortest walk, which may be odd, and may skip the shortest even
+      one. Doubling the nodes by parity gives 2V states and 2E edges.
+    difficulty: 4
+  - id: fire-escape
+    kind: mcq
+    prompt: A grid has fire spreading one cell per second from several cells, and a person moves one cell
+      per second from a start cell. Which plan finds whether they can reach the border?
+    options:
+    - Multi-source BFS for fire arrival times; then BFS for the person, entering a cell only if they arrive
+      strictly earlier
+    - One BFS in which the person and all the fire cells are sources of the same queue, spreading together
+    - BFS for the person first, then check at the end whether the fire reached the border cell earlier
+    - A separate BFS from each fire cell, then add the distances to get each arrival time
+    answer: 0
+    explanation: The fire times are independent of the person, so compute them once. The person's BFS then
+      uses them as a per-cell deadline. Mixing the two searches in one queue cannot represent 'strictly
+      earlier'.
+    difficulty: 5
+problems: [nearest-exit, fire-escape]
 practice_links:
   - title: Labyrinth
     url: https://cses.fi/problemset/task/1193

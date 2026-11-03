@@ -127,26 +127,145 @@ resources:
 quiz:
   - id: pi-value
     kind: mcq
-    prompt: For s = "abab", what is π[3]?
-    options: ["2", "1", "3", "0"]
+    prompt: For s = "abab", the prefix function π[3] (the longest proper prefix that is also a suffix of
+      s[0..3]) is...
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '0'
     answer: 0
-    explanation: '"ab" is both a proper prefix and a suffix of "abab".'
+    explanation: The prefix "ab" is also the suffix "ab". Length 3 is not allowed ("aba" ≠ "bab"), and the
+      full string itself is excluded by 'proper'.
     difficulty: 2
   - id: period
     kind: mcq
-    prompt: For s = "abcabcabc", π[n−1] = 6. What is the smallest period?
-    options: ["3", "6", "9", "1"]
+    prompt: For s = "abcabcabc" (n = 9), π[n − 1] = 6. What is the smallest period of s?
+    options:
+    - '3'
+    - '6'
+    - '9'
+    - '1'
     answer: 0
-    explanation: n − π[n−1] = 9 − 6 = 3.
+    explanation: The smallest period is n − π[n − 1] = 3. Since 3 divides 9, s is exactly "abc" repeated
+      3 times.
     difficulty: 2
+  - id: pi-output
+    kind: output
+    prompt: What does this print (the prefix function of the string)?
+    code:
+      python: "s = \"aabaaab\"\npi = [0] * len(s)\nfor i in range(1, len(s)):\n    k = pi[i - 1]\n    while\
+        \ k and s[i] != s[k]:\n        k = pi[k - 1]\n    if s[i] == s[k]:\n        k += 1\n    pi[i] =\
+        \ k\nprint(*pi)\n"
+      cpp: "string s = \"aabaaab\";\nint n = s.size();\nvector<int> pi(n, 0);\nfor (int i = 1; i < n; i++)\
+        \ {\n    int k = pi[i - 1];\n    while (k && s[i] != s[k]) k = pi[k - 1];\n    if (s[i] == s[k])\
+        \ k++;\n    pi[i] = k;\n}\nfor (int i = 0; i < n; i++) cout << pi[i] << (i + 1 < n ? \" \" : \"\"\
+        );\n"
+      java: "String s = \"aabaaab\";\nint n = s.length();\nint[] pi = new int[n];\nfor (int i = 1; i < n;\
+        \ i++) {\n    int k = pi[i - 1];\n    while (k > 0 && s.charAt(i) != s.charAt(k)) k = pi[k - 1];\n\
+        \    if (s.charAt(i) == s.charAt(k)) k++;\n    pi[i] = k;\n}\nStringBuilder sb = new StringBuilder();\n\
+        for (int i = 0; i < n; i++) sb.append(pi[i]).append(i + 1 < n ? \" \" : \"\");\nSystem.out.println(sb);\n"
+    options:
+    - 0 1 0 1 2 2 3
+    - 0 1 0 1 2 3 4
+    - 0 1 2 0 1 2 3
+    - 0 0 0 1 2 2 3
+    answer: 0
+    explanation: 'At the 6th character the border ''aa'' cannot extend (the next prefix char is b), so it
+      falls back through the shorter border ''a'' and extends to ''aa'' again: 2. The last ''b'' matches
+      the prefix ''aab'' (length 3).'
+    difficulty: 3
+  - id: overlap-count
+    kind: mcq
+    prompt: How many times does the pattern "aa" occur in the text "aaaa" if overlapping occurrences count,
+      as they do in KMP?
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: Occurrences start at positions 0, 1 and 2. A built-in count such as Python's str.count
+      counts non-overlapping matches and returns 2, so it is the wrong tool when overlaps count.
+    difficulty: 3
+  - id: naive-worst
+    kind: mcq
+    prompt: Naive matching compares the pattern against every alignment. For text = 'a' repeated 10^6 times
+      and pattern = 'a' repeated 5·10^5 times followed by 'b', about how many character comparisons does
+      it make?
+    options:
+    - '≈ 2.5·10^11: about 5·10^5 alignments times 5·10^5 characters each'
+    - '≈ 10^6: one pass over the text, like KMP does'
+    - '≈ 5·10^5: one pass over the pattern at each alignment'
+    - '≈ 10^12: every alignment checks all 10^6 characters of the text'
+    answer: 0
+    explanation: 'There are about 5·10^5 alignments, and each matches almost all 5·10^5 characters before
+      failing at the ''b'': about 2.5·10^11. KMP never moves backwards in the text, so it is O(n + m).'
+    difficulty: 3
   - id: separator
     kind: mcq
-    prompt: Why insert a separator between pattern and text in KMP?
-    options: ["So borders can never extend across the boundary", "To speed up the prefix function by half", "To handle uppercase and lowercase letters", "It is optional and never changes the result"]
+    prompt: When matching by computing π of pattern + '#' + text, why insert the separator?
+    options:
+    - So no border can cross the boundary, keeping every π value at most |pattern|
+    - To make the prefix function run about twice as fast on long texts
+    - To treat uppercase and lowercase letters as the same symbol
+    - 'It is optional: leaving it out never changes any computed π value'
     answer: 0
-    explanation: Without it, π could exceed the pattern length and report false matches.
+    explanation: Without it, a border could mix pattern and text characters and give a value larger than
+      the pattern. With it, π[i] = |pattern| exactly marks an occurrence ending at i.
     difficulty: 3
-problems: [pattern-count]
+  - id: period-repeat
+    kind: mcq
+    prompt: For s = "abcabcab" (n = 8), π[n − 1] = 5. Is s a concatenation of copies of a shorter string?
+    options:
+    - 'No: the period n − π = 3 does not divide 8'
+    - 'Yes: it is "abc" repeated'
+    - 'Yes: it is "abcab" repeated'
+    - 'Yes: any string with π > 0 is a repetition'
+    answer: 0
+    explanation: A string is a whole number of copies of a block exactly when n mod (n − π[n−1]) = 0 and
+      π[n−1] > 0. Here 8 mod 3 = 2, so it only has period 3 and ends with a partial copy.
+    difficulty: 4
+  - id: borders-chain
+    kind: mcq
+    prompt: s = "abababab" has π[7] = 6. How many non-empty proper borders (prefixes that are also suffixes)
+      does s have? Follow the chain π[7], π[π[7] − 1], ...
+    options:
+    - '3'
+    - '1'
+    - '4'
+    - '6'
+    answer: 0
+    explanation: The chain gives the border lengths 6, 4, 2 (then 0). Every border of s is a border of the
+      longest border, which is why following π enumerates them all.
+    difficulty: 4
+  - id: amortised
+    kind: mcq
+    prompt: The prefix function loop contains a while that decreases k. Why is the whole computation still
+      O(n) and not O(n²)?
+    options:
+    - k rises by at most 1 per character, so the total number of decreases is at most n
+    - The while loop runs at most twice per character, whatever the string is
+    - The while loop only ever runs on strings with many repeated letters
+    - Comparisons are so cheap on modern CPUs that the extra work is not counted
+    answer: 0
+    explanation: k never goes below 0 and rises by at most 1 per position, so total decrements ≤ total increments
+      ≤ n. A single iteration can be slow, but the sum is linear (amortised analysis).
+    difficulty: 4
+  - id: prefix-occurrences
+    kind: mcq
+    prompt: For s = "abab", sum over every prefix of s the number of times that prefix occurs in s as a
+      substring. What is the total?
+    options:
+    - '6'
+    - '4'
+    - '8'
+    - '10'
+    answer: 0
+    explanation: '''a'' occurs 2 times, ''ab'' 2, ''aba'' 1, ''abab'' 1: total 6. With π you count how many
+      times each border length appears and push the counts down the π chain.'
+    difficulty: 5
+problems: [pattern-count, border-occurrences]
 practice_links:
   - title: String Matching
     url: https://cses.fi/problemset/task/1753

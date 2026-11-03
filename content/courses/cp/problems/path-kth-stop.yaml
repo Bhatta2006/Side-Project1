@@ -1,0 +1,163 @@
+id: path-kth-stop
+title: The k-th stop on the route
+concepts: [lca]
+difficulty: hard
+statement: |
+  A road network of `n` towns is a tree (exactly `n − 1` roads, every town reachable). A bus
+  runs along the unique route from town `u` to town `v`, stopping at every town on the way,
+  including `u` and `v`. Number the stops `0, 1, 2, ...` starting at `u`.
+
+  For each of `q` questions `u v k`, print the town number of stop `k`, or `-1` if the route
+  has fewer than `k + 1` stops.
+input_format: |
+  The first line contains n and q. Each of the next n − 1 lines contains two towns joined by
+  a road. Each of the next q lines contains u, v and k.
+output_format: q lines, one answer per question.
+constraints:
+  - 1 ≤ n, q ≤ 40000
+  - 0 ≤ k ≤ 10^9
+examples:
+  - input: "7 4\n1 2\n1 3\n2 4\n2 5\n3 6\n3 7\n4 6 3\n4 6 5\n5 7 2\n6 6 0"
+    output: "3\n-1\n1\n6"
+    explanation: The route from 4 to 6 is 4, 2, 1, 3, 6, so stop 3 is town 3 and stop 5 does not exist. The route from 5 to 7 is 5, 2, 1, 3, 7, so stop 2 is town 1.
+hints:
+  - The route goes up from u to the lowest common ancestor and then down to v. How can you tell on which side stop k lies?
+  - Let l be the LCA. The route has depth[u] − depth[l] edges going up, then depth[v] − depth[l] going down. If k is within the upward part, the answer is an ancestor of u.
+  - If k is within the upward part, return the k-th ancestor of u. Otherwise the stop is on v's side, at distance (total − k) above v, so return that ancestor of v. Use binary lifting for the LCA and for the k-th ancestor.
+approach: |
+  Root the tree and build binary lifting tables. With l = lca(u, v), a = depth[u] − depth[l]
+  and total = a + depth[v] − depth[l]: if k > total print −1; if k ≤ a print the k-th
+  ancestor of u; otherwise print the (total − k)-th ancestor of v. O((n + q) log n).
+reference: |
+  import sys
+  def main():
+      data = sys.stdin.buffer.read().split()
+      n, q = int(data[0]), int(data[1])
+      adj = [[] for _ in range(n + 1)]
+      pos = 2
+      for _ in range(n - 1):
+          a, b = int(data[pos]), int(data[pos + 1])
+          pos += 2
+          adj[a].append(b)
+          adj[b].append(a)
+      LOG = max(1, n.bit_length())
+      par = [0] * (n + 1)
+      depth = [0] * (n + 1)
+      order = [1]
+      par[1] = 1
+      for u in order:
+          for w in adj[u]:
+              if w != par[u]:
+                  par[w] = u
+                  depth[w] = depth[u] + 1
+                  order.append(w)
+      up = [par]
+      for j in range(1, LOG):
+          prev = up[j - 1]
+          up.append([prev[prev[v]] for v in range(n + 1)])
+      def kth(v, k):
+          j = 0
+          while k:
+              if k & 1:
+                  v = up[j][v]
+              k >>= 1
+              j += 1
+          return v
+      out = []
+      for _ in range(q):
+          u, v, k = int(data[pos]), int(data[pos + 1]), int(data[pos + 2])
+          pos += 3
+          a, b = u, v
+          if depth[a] < depth[b]:
+              a, b = b, a
+          a = kth(a, depth[a] - depth[b])
+          if a != b:
+              for j in range(LOG - 1, -1, -1):
+                  if up[j][a] != up[j][b]:
+                      a, b = up[j][a], up[j][b]
+              a = up[0][a]
+          up_len = depth[u] - depth[a]
+          total = up_len + depth[v] - depth[a]
+          if k > total:
+              out.append(-1)
+          elif k <= up_len:
+              out.append(kth(u, k))
+          else:
+              out.append(kth(v, total - k))
+      print("\n".join(map(str, out)))
+  main()
+brute: |
+  import sys
+  from collections import deque
+  data = sys.stdin.read().split()
+  n, q = int(data[0]), int(data[1])
+  adj = [[] for _ in range(n + 1)]
+  pos = 2
+  for _ in range(n - 1):
+      a, b = int(data[pos]), int(data[pos + 1])
+      pos += 2
+      adj[a].append(b)
+      adj[b].append(a)
+  out = []
+  for _ in range(q):
+      u, v, k = int(data[pos]), int(data[pos + 1]), int(data[pos + 2])
+      pos += 3
+      prev = {u: None}
+      dq = deque([u])
+      while dq:
+          x = dq.popleft()
+          for w in adj[x]:
+              if w not in prev:
+                  prev[w] = x
+                  dq.append(w)
+      path = []
+      x = v
+      while x is not None:
+          path.append(x)
+          x = prev[x]
+      path.reverse()
+      out.append(path[k] if k < len(path) else -1)
+  print("\n".join(map(str, out)))
+small_generator: |
+  def cases(rng):
+      for _ in range(50):
+          n = rng.randint(1, 10)
+          q = rng.randint(1, 8)
+          lines = [f"{n} {q}"]
+          for v in range(2, n + 1):
+              lines.append(f"{rng.randint(1, v - 1)} {v}")
+          for _ in range(q):
+              lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(0, n + 1)}")
+          yield "\n".join(lines)
+generator: |
+  def cases(rng):
+      yield "1 1\n1 1 0"
+      yield "7 4\n1 2\n1 3\n2 4\n2 5\n3 6\n3 7\n4 6 3\n4 6 5\n5 7 2\n6 6 0"
+      n = q = 40000
+      lines = [f"{n} {q}"]
+      for v in range(2, n + 1):
+          lines.append(f"{rng.randint(max(1, v - 3), v - 1)} {v}")  # a deep, narrow tree
+      for _ in range(q):
+          lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(0, 25000)}")
+      yield "\n".join(lines)
+      lines = [f"{n} {q}"]
+      for v in range(2, n + 1):
+          lines.append(f"{v // 2} {v}")  # a balanced tree
+      for _ in range(q):
+          lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(0, 40)}")
+      yield "\n".join(lines)
+      lines = [f"{n} {q}"]
+      for v in range(2, n + 1):
+          lines.append(f"{v - 1} {v}")  # a path
+      for _ in range(q):
+          lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(0, 10**9)}")
+      yield "\n".join(lines)
+      for _ in range(6):
+          n = rng.randint(2, 40)
+          q = rng.randint(1, 20)
+          lines = [f"{n} {q}"]
+          for v in range(2, n + 1):
+              lines.append(f"{rng.randint(1, v - 1)} {v}")
+          for _ in range(q):
+              lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(0, n)}")
+          yield "\n".join(lines)

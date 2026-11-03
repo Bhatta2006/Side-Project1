@@ -129,57 +129,177 @@ resources:
     minutes: 20
     level: deep
 quiz:
-  - id: subtract
-    kind: mcq
-    prompt: In C++, a = 3 and b = 5 (both already reduced mod 7). What is the correct (a − b) mod 7?
-    options: ["((a − b) % 7 + 7) % 7 = 5", "(a − b) % 7 = −2, used as is", "(b − a) % 7 = 2, order flipped", "abs(a − b) % 7 = 2, sign dropped"]
+  - id: neg-mod-cpp
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: What does this print?
+    code:
+      cpp: 'int a = -7, m = 3;
+
+        cout << a % m;
+
+        '
+      java: 'int a = -7, m = 3;
+
+        System.out.println(a % m);
+
+        '
+    options:
+    - '-1'
+    - '2'
+    - '1'
+    - '-2'
     answer: 0
-    explanation: C++ % keeps the sign of the dividend; adding 7 normalises it to 5.
+    explanation: 'In C++ and Java the remainder takes the sign of the dividend, so -7 % 3 = -1. Safe non-negative
+      form: ((a % m) + m) % m = 2.'
     difficulty: 2
-  - id: fermat
-    kind: mcq
-    prompt: Modulo the prime p = 10^9 + 7, the inverse of x is...
-    options: ["x^(p−2) mod p", "1 / x", "x^(p−1) mod p", "p − x"]
+  - id: neg-mod-py
+    kind: output
+    languages:
+    - python
+    prompt: What does this print?
+    code:
+      python: 'a, m = -7, 3
+
+        print(a % m)
+
+        '
+    options:
+    - '2'
+    - '-1'
+    - '1'
+    - '-2'
     answer: 0
-    explanation: Fermat's little theorem gives x^(p−1) ≡ 1, so x^(p−2) is the inverse.
+    explanation: Python's % takes the sign of the divisor, so the result is always in [0, m). You do not
+      need the + m fix-up, but it is harmless.
+    difficulty: 2
+  - id: fermat-numeric
+    kind: mcq
+    prompt: Modulo the prime p = 7, what is the inverse of 3?
+    options:
+    - '5'
+    - '3'
+    - '4'
+    - '2'
+    answer: 0
+    explanation: 3^(p−2) = 3^5 = 243 ≡ 5 (mod 7), and indeed 3·5 = 15 ≡ 1.
     difficulty: 2
   - id: pow-steps
     kind: mcq
-    prompt: How many multiplications does fast exponentiation need for b ≈ 10^18?
-    options: ["About 120 (2 per bit, 60 bits)", "About 10^18 (one per unit of b)", "About 10^9 (the square root of b)", "About 18 (one per decimal digit)"]
+    prompt: About how many modular multiplications does binary exponentiation need for an exponent near
+      10^18?
+    options:
+    - About 120 (two per bit, 60 bits)
+    - About 10^18, one multiplication per unit of the exponent
+    - About 10^9, the square root of the exponent
+    - About 18, one multiplication per decimal digit
     answer: 0
-    explanation: One squaring per bit plus one multiply per set bit — at most ~2·60.
+    explanation: 10^18 < 2^60, so there are at most 60 squarings and 60 multiplies. A loop over the exponent
+      itself would never finish.
     difficulty: 2
   - id: when-inverse
     kind: mcq
-    prompt: When does x have an inverse modulo m?
-    options: ["When gcd(x, m) = 1", "Always", "When x is prime", "When x < m"]
+    prompt: Which of these numbers has a multiplicative inverse modulo 15?
+    options:
+    - '4'
+    - '6'
+    - '9'
+    - '10'
     answer: 0
-    explanation: An inverse exists exactly when x and m are coprime.
+    explanation: An inverse exists exactly when gcd(x, m) = 1. gcd(6, 15) = 3, gcd(9, 15) = 3, gcd(10, 15)
+      = 5, but gcd(4, 15) = 1 (4·4 = 16 ≡ 1).
     difficulty: 3
-  - id: mod-subtraction
-    kind: mcq
-    prompt: "In C++ with values already reduced mod p, how do you compute (a - b) mod p safely?"
+  - id: mod-chain-output
+    kind: output
+    prompt: With M = 10^9 + 7 in 64-bit arithmetic, what does this print?
+    code:
+      python: 'M = 10**9 + 7
+
+        a = b = M - 1
+
+        print(a * b % M)
+
+        '
+      cpp: 'long long M = 1000000007LL;
+
+        long long a = M - 1, b = M - 1;
+
+        cout << a * b % M;
+
+        '
+      java: 'long M = 1_000_000_007L;
+
+        long a = M - 1, b = M - 1;
+
+        System.out.println(a * b % M);
+
+        '
     options:
-      - "((a - b) % p + p) % p"
-      - "(a - b) % p, as written"
-      - "abs(a - b) % p, sign dropped"
-      - "(a % p) - (b % p), no final mod"
+    - '1'
+    - '0'
+    - '1000000006'
+    - '1000000007'
     answer: 0
-    explanation: "% can return a negative result in C++; adding p before the final % brings it into [0, p)."
+    explanation: M − 1 ≡ −1 (mod M), so the product is (−1)² = 1. The product itself is about 10^18, which
+      still fits in a signed 64-bit integer.
+    difficulty: 3
+  - id: divide-mod
+    kind: mcq
+    prompt: Modulo p = 7, what is 10 ÷ 4 (that is, 10 · 4^(-1))?
+    options:
+    - '6'
+    - '3'
+    - '2'
+    - '5'
+    answer: 0
+    explanation: The inverse of 4 mod 7 is 2 (4·2 = 8 ≡ 1), and 10·2 = 20 ≡ 6. Plain integer division 10
+      / 4 has no meaning here.
+    difficulty: 3
+  - id: fermat-condition
+    kind: mcq
+    prompt: When does x^(m−2) mod m give the modular inverse of x?
+    options:
+    - When m is prime and x is not a multiple of m
+    - For every m, as long as x < m
+    - Whenever x is prime, whatever m is
+    - Only when m is a power of two
+    answer: 0
+    explanation: Fermat's little theorem needs a prime modulus. For composite m (say 12) use the extended
+      Euclidean algorithm, which works whenever gcd(x, m) = 1.
     difficulty: 4
-  - id: fermat-inverse
-    kind: mcq
-    prompt: "For a prime p and a not divisible by p, the modular inverse of a is"
+  - id: powmod-output
+    kind: output
+    prompt: What does this binary exponentiation print?
+    code:
+      python: "r, b, e = 1, 3, 100\nwhile e:\n    if e & 1:\n        r = r * b % 7\n    b = b * b % 7\n\
+        \    e >>= 1\nprint(r)\n"
+      cpp: "long long r = 1, b = 3, e = 100;\nwhile (e) {\n    if (e & 1) r = r * b % 7;\n    b = b * b\
+        \ % 7;\n    e >>= 1;\n}\ncout << r;\n"
+      java: "long r = 1, b = 3, e = 100;\nwhile (e > 0) {\n    if ((e & 1) == 1) r = r * b % 7;\n    b =\
+        \ b * b % 7;\n    e >>= 1;\n}\nSystem.out.println(r);\n"
     options:
-      - "a^(p-2) mod p"
-      - "a^(p-1) mod p"
-      - "(p - a) mod p"
-      - "p / a"
+    - '4'
+    - '1'
+    - '3'
+    - '2'
     answer: 0
-    explanation: "By Fermat's little theorem a^(p-1) ≡ 1, so a · a^(p-2) ≡ 1 (mod p)."
+    explanation: This is 3^100 mod 7. Since 3^6 ≡ 1, only 100 mod 6 = 4 matters, and 3^4 = 81 ≡ 4.
+    difficulty: 4
+  - id: sum-formula
+    kind: mcq
+    prompt: You need n(n+1)/2 mod p for n up to 10^18 and p = 10^9 + 7, in 64-bit integers. Which is correct?
+    options:
+    - Halve whichever of n and n + 1 is even first, then reduce each factor mod p and multiply
+    - Compute n * (n + 1) / 2 in 64-bit and then take the result % p
+    - Compute n * (n + 1) % p first and divide the remainder by 2 afterwards
+    - Use floating point, because the exact value is far too large for integers
+    answer: 0
+    explanation: n(n+1) reaches 10^36, far beyond 64 bits, so the product overflows before any division.
+      Dividing the even factor first (or multiplying by the inverse of 2 modulo p) keeps every value small.
     difficulty: 5
-problems: [mod-expressions, triangular-mod]
+problems: [mod-expressions, triangular-mod, cube-sums]
 practice_links:
   - title: Exponentiation
     url: https://cses.fi/problemset/task/1095
