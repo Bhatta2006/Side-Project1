@@ -298,4 +298,4 @@ quiz:
     difficulty: 4
     code:
       python: "sum = 0\nfor x in [1, 2, 3]:\n    sum += x\nprint(sum([1, 2, 3]))\n"
-problems: [fix-the-average]
+problems: [fix-the-average, first-bracket-error]

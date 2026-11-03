@@ -329,7 +329,7 @@ quiz:
     explanation: '7 + 5 + 3 + 1 = 16 and 8 + 6 + 4 + 2 = 20. Using <= 0 for the base case matters: stepping
       by 2 from 7 lands on 1 and then -1, which never equals 0.'
     difficulty: 3
-problems: [power-recursive, stairs-ways]
+problems: [power-recursive, stairs-ways, decode-ways]
 practice_links:
   - title: Climbing Stairs
     url: https://leetcode.com/problems/climbing-stairs/

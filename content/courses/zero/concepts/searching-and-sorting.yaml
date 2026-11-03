@@ -817,6 +817,7 @@ quiz:
 problems:
 - exam-ranking
 - swap-count
+- first-not-smaller
 practice_links:
 - title: Binary Search
   url: https://leetcode.com/problems/binary-search/

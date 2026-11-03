@@ -392,7 +392,7 @@ quiz:
     explanation: 'Adding per - 1 before dividing pushes any leftover over the next whole number: 34 // 10
       = 3. Plain 25 // 10 would give 2 and leave 5 photos without a page.'
     difficulty: 4
-problems: [greeting, time-convert, split-the-bill]
+problems: [greeting, time-convert, split-the-bill, add-durations]
 practice_links:
   - title: Watermelon (even split)
     url: https://codeforces.com/problemset/problem/4/A

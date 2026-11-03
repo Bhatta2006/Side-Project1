@@ -441,7 +441,7 @@ quiz:
         System.out.println("end");
 
         '
-problems: [echo-reading, ticket-stub]
+problems: [echo-reading, ticket-stub, receipt-lines]
 practice_links:
   - title: Hello World (try printing different messages)
     url: https://pythontutor.com/

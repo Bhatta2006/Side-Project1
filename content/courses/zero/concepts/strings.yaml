@@ -443,7 +443,7 @@ quiz:
     explanation: Each round appends the number and a dash, so the dash is added after the last number too.
       Handling that trailing separator is a common small bug.
     difficulty: 2
-problems: [vowel-count, caesar-shift, mirror-phrase]
+problems: [vowel-count, caesar-shift, mirror-phrase, one-deletion-palindrome]
 practice_links:
   - title: Petya and Strings
     url: https://codeforces.com/problemset/problem/112/A

@@ -355,7 +355,7 @@ quiz:
       i++ gives 11, which fails i < 3, so the loop ends. Writing to the loop counter is almost always a
       bug.'
     difficulty: 5
-problems: [fizzbuzz, sum-of-multiples, times-table]
+problems: [fizzbuzz, sum-of-multiples, times-table, longest-collatz-start]
 practice_links:
   - title: Way Too Long Words
     url: https://codeforces.com/problemset/problem/71/A

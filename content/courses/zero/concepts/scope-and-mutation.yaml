@@ -378,4 +378,4 @@ quiz:
     explanation: Both calls share the same default list, so the second call sees the item from the first.
       Use lst=None and create a fresh list inside the function.
     difficulty: 5
-problems: []
+problems: [snapshot-list]

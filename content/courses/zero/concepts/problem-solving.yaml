@@ -283,7 +283,7 @@ quiz:
       have broken it, and what is it similar to. Writing that down is what turns one solved problem into
       many.'
     difficulty: 1
-problems: [two-sum-exists]
+problems: [two-sum-exists, pairs-with-gap]
 practice_links:
   - title: Next Round
     url: https://codeforces.com/problemset/problem/158/A

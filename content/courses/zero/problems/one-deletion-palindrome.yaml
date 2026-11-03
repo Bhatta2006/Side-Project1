@@ -1,0 +1,84 @@
+id: one-deletion-palindrome
+title: Almost a mirror
+concepts:
+- strings
+difficulty: hard
+statement: |
+  First clean the text: keep only letters and digits, and treat capital and small letters as
+  the same. Then decide whether the cleaned text reads the same forwards and backwards after
+  deleting AT MOST ONE character from it. Print `YES` or `NO`.
+input_format: |
+  One line of text. It may contain spaces and punctuation (and may be empty).
+output_format: YES or NO.
+constraints:
+- 0 ≤ length ≤ 200000
+examples:
+- input: 'A man, a plan, a canal: Panama'
+  output: 'YES'
+  explanation: Already a palindrome after cleaning.
+- input: abca
+  output: 'YES'
+  explanation: Deleting the b (or the c) gives a palindrome.
+- input: abcdef
+  output: 'NO'
+hints:
+- Start by building the cleaned string. Then compare from both ends moving inwards.
+- 'At the first mismatch you get exactly one chance: skip the left character or skip the right character.'
+- After skipping, the rest must be a perfect palindrome. Try both choices; if either works, the answer
+  is YES. Do not try deleting every position (too slow).
+approach: |
+  Two pointers from the ends of the cleaned string. On the first mismatch (i, j), the answer is
+  YES exactly when s[i + 1..j] or s[i..j - 1] is a palindrome. O(n).
+reference: |
+  import sys
+  raw = sys.stdin.readline().rstrip("\n")
+  s = [c.lower() for c in raw if c.isalnum()]
+
+  def pal(i, j):
+      while i < j:
+          if s[i] != s[j]:
+              return False
+          i += 1
+          j -= 1
+      return True
+
+  i, j = 0, len(s) - 1
+  while i < j and s[i] == s[j]:
+      i += 1
+      j -= 1
+  print("YES" if i >= j or pal(i + 1, j) or pal(i, j - 1) else "NO")
+brute: |
+  import sys
+  raw = sys.stdin.readline().rstrip("\n")
+  s = "".join(c.lower() for c in raw if c.isalnum())
+  ok = s == s[::-1]
+  for k in range(len(s)):
+      t = s[:k] + s[k + 1:]
+      if t == t[::-1]:
+          ok = True
+  print("YES" if ok else "NO")
+small_generator: |
+  def cases(rng):
+      for _ in range(80):
+          n = rng.randint(0, 9)
+          yield "".join(rng.choice("aAbB1 ,") for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "A man, a plan, a canal: Panama"
+      yield "abca"
+      yield "abcdef"
+      yield ""
+      yield "x"
+      yield "a" * 100000 + "b" + "a" * 100000
+      yield "a" * 100000 + "bc" + "a" * 100000
+      yield "ab" * 100000
+      yield "!!! ??? ..."
+      for _ in range(6):
+          n = rng.randint(1, 50)
+          half = "".join(rng.choice("abc") for _ in range(n))
+          mid = rng.choice(["", "x"])
+          s = half + mid + half[::-1]
+          if rng.random() < 0.5:
+              k = rng.randint(0, len(s))
+              s = s[:k] + rng.choice("abcd") + s[k:]
+          yield s

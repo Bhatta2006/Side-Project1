@@ -1,0 +1,179 @@
+id: tiny-bank
+title: Tiny bank
+concepts:
+- classes-and-objects
+difficulty: medium
+statement: |
+  A bank keeps accounts, each with a name and a balance. Process the commands in order:
+
+  - `open name amount`: create an account with that starting balance. Rejected if the name
+    already exists.
+  - `deposit name amount`: add money. Rejected if the account does not exist.
+  - `withdraw name amount`: remove money. Rejected if the account does not exist or its balance is
+    smaller than the amount.
+  - `transfer from to amount`: move money. Rejected if either account does not exist, if the two
+    names are the same, or if `from` has too little.
+
+  A rejected command changes nothing. After all commands, print every account in the order it was
+  opened as `name balance`, then a final line `rejected K` with the number of rejected commands.
+input_format: |
+  The first line contains q. Each of the next q lines holds one command.
+output_format: One line per account, then the rejected count.
+constraints:
+- 1 ≤ q ≤ 60000
+- 0 ≤ amount ≤ 10^9
+- names are 1 to 10 lowercase letters
+examples:
+- input: '5
+
+    open ann 100
+
+    open bo 20
+
+    transfer ann bo 70
+
+    withdraw bo 100
+
+    open ann 5'
+  output: 'ann 30
+
+    bo 90
+
+    rejected 2'
+  explanation: Withdrawing 100 from bo (balance 90) is rejected, and the second open ann is rejected.
+- input: '2
+
+    deposit zed 5
+
+    transfer a a 1'
+  output: rejected 2
+hints:
+- Each account is a small bundle of data (name, balance). Keep them together, for example in a dictionary
+  from name to balance.
+- Check every rule BEFORE changing anything, so that a rejected command leaves the accounts exactly as
+  they were.
+- Remember the opening order in a separate list for the final printout. Balances can reach 10^14 in total,
+  so use 64-bit integers.
+approach: |
+  Dictionary name → balance plus a list of names in opening order. Each command validates its
+  conditions first and then mutates; failures increment a counter. O(q).
+reference: |
+  import sys
+  lines = sys.stdin.read().split("\n")
+  q = int(lines[0])
+  bal, order, rejected = {}, [], 0
+  for line in lines[1:1 + q]:
+      p = line.split()
+      c = p[0]
+      if c == "open":
+          if p[1] in bal:
+              rejected += 1
+          else:
+              bal[p[1]] = int(p[2])
+              order.append(p[1])
+      elif c == "deposit":
+          if p[1] not in bal:
+              rejected += 1
+          else:
+              bal[p[1]] += int(p[2])
+      elif c == "withdraw":
+          if p[1] not in bal or bal[p[1]] < int(p[2]):
+              rejected += 1
+          else:
+              bal[p[1]] -= int(p[2])
+      else:
+          a, b, x = p[1], p[2], int(p[3])
+          if a not in bal or b not in bal or a == b or bal[a] < x:
+              rejected += 1
+          else:
+              bal[a] -= x
+              bal[b] += x
+  out = [f"{n} {bal[n]}" for n in order] + [f"rejected {rejected}"]
+  print("\n".join(out))
+brute: |
+  import sys
+
+  class Account:
+      def __init__(self, name, balance):
+          self.name = name
+          self.balance = balance
+
+  lines = sys.stdin.read().split("\n")
+  q = int(lines[0])
+  accounts, rejected = [], 0
+
+  def find(name):
+      for a in accounts:
+          if a.name == name:
+              return a
+      return None
+
+  for line in lines[1:1 + q]:
+      p = line.split()
+      if p[0] == "open":
+          if find(p[1]):
+              rejected += 1
+          else:
+              accounts.append(Account(p[1], int(p[2])))
+      elif p[0] == "deposit":
+          a = find(p[1])
+          if a is None:
+              rejected += 1
+          else:
+              a.balance += int(p[2])
+      elif p[0] == "withdraw":
+          a = find(p[1])
+          if a is None or a.balance < int(p[2]):
+              rejected += 1
+          else:
+              a.balance -= int(p[2])
+      else:
+          a, b = find(p[1]), find(p[2])
+          x = int(p[3])
+          if a is None or b is None or a is b or a.balance < x:
+              rejected += 1
+          else:
+              a.balance -= x
+              b.balance += x
+  for a in accounts:
+      print(a.name, a.balance)
+  print("rejected", rejected)
+small_generator: |
+  def cases(rng):
+      names = ["a", "b", "c", "d"]
+      for _ in range(60):
+          q = rng.randint(1, 12)
+          rows = []
+          for _ in range(q):
+              c = rng.choice(["open", "deposit", "withdraw", "transfer"])
+              if c == "transfer":
+                  rows.append(f"transfer {rng.choice(names)} {rng.choice(names)} {rng.randint(0, 30)}")
+              else:
+                  rows.append(f"{c} {rng.choice(names)} {rng.randint(0, 30)}")
+          yield f"{q}\n" + "\n".join(rows)
+generator: |
+  def cases(rng):
+      yield "5\nopen ann 100\nopen bo 20\ntransfer ann bo 70\nwithdraw bo 100\nopen ann 5"
+      yield "2\ndeposit zed 5\ntransfer a a 1"
+      q = 60000
+      names = [f"u{i}" for i in range(200)]
+      names = ["".join(chr(97 + (i // 26 ** k) % 26) for k in range(3)) for i in range(200)]
+      rows = [f"open {n} {rng.randint(0, 10**9)}" for n in names]
+      while len(rows) < q:
+          c = rng.choice(["deposit", "withdraw", "transfer", "open"])
+          if c == "transfer":
+              rows.append(f"transfer {rng.choice(names)} {rng.choice(names)} {rng.randint(0, 10**9)}")
+          else:
+              rows.append(f"{c} {rng.choice(names)} {rng.randint(0, 10**9)}")
+      yield f"{q}\n" + "\n".join(rows)
+      for _ in range(5):
+          q = rng.randint(1, 400)
+          names = ["x", "y", "z", "w", "v"]
+          rows = []
+          for _ in range(q):
+              c = rng.choice(["open", "deposit", "withdraw", "transfer"])
+              if c == "transfer":
+                  rows.append(f"transfer {rng.choice(names)} {rng.choice(names)} {rng.randint(0, 1000)}")
+              else:
+                  rows.append(f"{c} {rng.choice(names)} {rng.randint(0, 1000)}")
+          yield f"{q}\n" + "\n".join(rows)

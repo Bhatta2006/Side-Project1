@@ -1,0 +1,80 @@
+id: add-durations
+title: Total running time
+concepts:
+- input-and-arithmetic
+difficulty: medium
+statement: |
+  A playlist has `n` tracks, each with a length written as `H:MM:SS` (hours, minutes, seconds).
+  Print the total length of the playlist in the same format. Hours are printed without leading
+  zeros and may exceed 24; minutes and seconds always use two digits.
+input_format: |
+  The first line contains n. Each of the next n lines contains one length.
+output_format: The total as H:MM:SS.
+constraints:
+- 1 ≤ n ≤ 10^5
+- 0 ≤ H ≤ 99, 0 ≤ MM, SS ≤ 59 for each track
+examples:
+- input: '3
+
+    0:03:45
+
+    1:59:30
+
+    0:00:45'
+  output: '2:04:00'
+  explanation: Seconds 45 + 30 + 45 = 120, which carries one minute twice over.
+- input: '1
+
+    0:00:00'
+  output: 0:00:00
+hints:
+- Adding the three parts separately and fixing carries afterwards is easy to get wrong. Convert every
+  track to seconds first.
+- Read each line as text and split it on the colon; the parts are text until you convert them to whole
+  numbers.
+- 'With total seconds T: hours = T // 3600, minutes = T % 3600 // 60, seconds = T % 60. Pad minutes and
+  seconds to two digits.'
+approach: |
+  Split each time on ':' and convert to seconds (3600 h + 60 m + s). Add them all. Convert the
+  total back with division and remainder, padding minutes and seconds. O(n).
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  total = 0
+  for s in data[1:1 + n]:
+      h, m, sec = map(int, s.split(":"))
+      total += h * 3600 + m * 60 + sec
+  print(f"{total // 3600}:{total % 3600 // 60:02d}:{total % 60:02d}")
+brute: |
+  import sys, re
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  hh = mm = ss = 0
+  for s in data[1:1 + n]:
+      a, b, c = re.match(r"(\d+):(\d+):(\d+)", s).groups()
+      hh += int(a)
+      mm += int(b)
+      ss += int(c)
+  mm += ss // 60
+  ss %= 60
+  hh += mm // 60
+  mm %= 60
+  print(str(hh) + ":" + str(mm).zfill(2) + ":" + str(ss).zfill(2))
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          n = rng.randint(1, 8)
+          rows = [f"{rng.randint(0, 99)}:{rng.randint(0, 59):02d}:{rng.randint(0, 59):02d}" for _ in range(n)]
+          yield f"{n}\n" + "\n".join(rows)
+generator: |
+  def cases(rng):
+      yield "3\n0:03:45\n1:59:30\n0:00:45"
+      yield "1\n0:00:00"
+      yield "2\n99:59:59\n0:00:01"
+      n = 100000
+      yield f"{n}\n" + "\n".join(f"{rng.randint(0, 99)}:{rng.randint(0, 59):02d}:{rng.randint(0, 59):02d}" for _ in range(n))
+      yield f"{n}\n" + "\n".join("99:59:59" for _ in range(n))
+      for _ in range(5):
+          n = rng.randint(1, 500)
+          yield f"{n}\n" + "\n".join(f"{rng.randint(0, 99)}:{rng.randint(0, 59):02d}:{rng.randint(0, 59):02d}" for _ in range(n))

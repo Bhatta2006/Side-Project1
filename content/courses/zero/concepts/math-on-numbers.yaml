@@ -928,6 +928,7 @@ quiz:
 problems:
 - number-mood
 - square-tiles
+- square-of-primes
 practice_links:
 - title: Palindrome Number
   url: https://leetcode.com/problems/palindrome-number/

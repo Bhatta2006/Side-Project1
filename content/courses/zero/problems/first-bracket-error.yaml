@@ -1,0 +1,96 @@
+id: first-bracket-error
+title: Where does the bracket go wrong?
+concepts:
+- debugging
+difficulty: medium
+statement: |
+  A compiler reads a line of code made only of the brackets `(`, `)`, `[`, `]`, `{` and `}`. It
+  reports the first bad position, using these rules while reading left to right:
+
+  - an opening bracket is remembered;
+  - a closing bracket must match the most recently remembered opener. If nothing is remembered,
+    or the opener is a different kind, this position is the error;
+  - if the whole line was read without error but some openers were never closed, the error is
+    the position of the EARLIEST opener that is still unclosed.
+
+  Print the 1-based position of the error, or `OK` when the brackets are balanced.
+input_format: |
+  A single line with the string.
+output_format: The 1-based error position, or OK.
+constraints:
+- 1 ≤ length ≤ 200000
+examples:
+- input: ([]{})
+  output: OK
+- input: ([)]
+  output: '3'
+  explanation: The ) at position 3 meets the open [, a different kind.
+- input: (()
+  output: '1'
+  explanation: Nothing went wrong while reading, but the first ( is never closed.
+hints:
+- Remember the openers in a list, and look only at the last one whenever a closing bracket arrives.
+- 'Store the POSITION of each opener, not only its kind: you need it for the final ''never closed'' case.'
+- At the end, if the list is not empty, the earliest unclosed opener is its first element.
+approach: |
+  Keep a stack of (kind, position) for openers. On a closer, fail with its position if the stack
+  is empty or the kind differs; else pop. At the end, a non-empty stack means the error is the
+  bottom entry's position. O(n).
+reference: |
+  s = input().strip()
+  pairs = {")": "(", "]": "[", "}": "{"}
+  st = []
+  for i, ch in enumerate(s, 1):
+      if ch in "([{":
+          st.append((ch, i))
+      else:
+          if not st or st[-1][0] != pairs[ch]:
+              print(i)
+              raise SystemExit
+          st.pop()
+  print(st[0][1] if st else "OK")
+brute: |
+  s = input().strip()
+  pairs = {")": "(", "]": "[", "}": "{"}
+
+  def first_bad_closer(prefix):
+      st = []
+      for ch in prefix:
+          if ch in "([{":
+              st.append(ch)
+          elif not st or st[-1] != pairs[ch]:
+              return True
+          else:
+              st.pop()
+      return False
+
+  for k in range(1, len(s) + 1):
+      if first_bad_closer(s[:k]):
+          print(k)
+          break
+  else:
+      st = []
+      for i, ch in enumerate(s, 1):
+          if ch in "([{":
+              st.append(i)
+          else:
+              st.pop()
+      print(st[0] if st else "OK")
+small_generator: |
+  def cases(rng):
+      for _ in range(80):
+          n = rng.randint(1, 10)
+          yield "".join(rng.choice("()[]{}") for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "([]{})"
+      yield "([)]"
+      yield "(()"
+      yield ")"
+      yield "(" * 100000 + ")" * 100000
+      yield "(" * 100000 + ")" * 99999
+      yield "()" * 100000
+      yield "[" * 100000 + "]" * 99999 + ")"
+      for _ in range(6):
+          n = rng.randint(1000, 50000)
+          yield "".join(rng.choice("()[]{}") for _ in range(n))

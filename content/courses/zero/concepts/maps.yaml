@@ -395,7 +395,7 @@ quiz:
     explanation: At 2 nothing has been seen, so 2 is stored. At 7 the partner 9 - 7 = 2 is in the map at
       position 0, so the answer is 0 1. One pass with a map replaces a slower pair-by-pair search.
     difficulty: 4
-problems: [word-frequency, first-repeat, class-election]
+problems: [word-frequency, first-repeat, class-election, top-word]
 practice_links:
   - title: Distinct Numbers
     url: https://cses.fi/problemset/task/1621

@@ -388,7 +388,7 @@ quiz:
     explanation: After 2 is removed, the list shifts left, so the loop's next position lands on 6 and skips
       4. Then 6 is removed. Loop over a copy (for x in a[:]) or build a new list instead.
     difficulty: 5
-problems: [above-average, increasing-steps, runner-up-score]
+problems: [above-average, increasing-steps, runner-up-score, rotate-right]
 practice_links:
   - title: Missing Number
     url: https://cses.fi/problemset/task/1083

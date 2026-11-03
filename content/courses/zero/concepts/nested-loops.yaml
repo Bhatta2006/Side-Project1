@@ -329,7 +329,7 @@ quiz:
       The outer loop ends after a single round: 2 counts instead of 6. Always give nested loops different
       counters.'
     difficulty: 5
-problems: [staircase, pair-count, number-triangle]
+problems: [staircase, pair-count, number-triangle, pythagorean-triples]
 practice_links:
   - title: Beautiful Matrix
     url: https://codeforces.com/problemset/problem/263/A

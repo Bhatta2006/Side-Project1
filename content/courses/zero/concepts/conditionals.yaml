@@ -419,7 +419,7 @@ quiz:
     explanation: Two separately created Strings are different objects even with the same letters, so ==
       is false. equals compares the characters and is what you almost always want.
     difficulty: 4
-problems: [grade-letter, max-of-three, museum-ticket]
+problems: [grade-letter, max-of-three, museum-ticket, triangle-type]
 practice_links:
   - title: Watermelon
     url: https://codeforces.com/problemset/problem/4/A

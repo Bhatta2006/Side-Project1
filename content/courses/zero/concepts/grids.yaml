@@ -387,7 +387,7 @@ quiz:
     explanation: 'Both rows are the same list object, so a change through one row shows in the other. Build
       rows separately: [[0] * 3 for _ in range(2)].'
     difficulty: 5
-problems: [minesweeper-counts, row-and-column-sums]
+problems: [minesweeper-counts, row-and-column-sums, spiral-order]
 practice_links:
   - title: Number Spiral
     url: https://cses.fi/problemset/task/1071

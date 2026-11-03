@@ -358,4 +358,4 @@ quiz:
         \ acct;\ncout << acct.balance;\n"
       java: "class Account {\n    private int balance = 100;\n    int get() { return balance; }\n}\nAccount\
         \ acct = new Account();\nSystem.out.println(acct.balance);\n"
-problems: [bank-ledger]
+problems: [bank-ledger, tiny-bank]

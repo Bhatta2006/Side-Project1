@@ -368,4 +368,4 @@ quiz:
     explanation: An empty string is false, so or moves on to "guest". For and, if the left value is true
       the result is the right value, 4. The operators return a value, not just True or False.
     difficulty: 5
-problems: [leap-year, club-entry]
+problems: [leap-year, club-entry, leap-years-between]
