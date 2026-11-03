@@ -289,17 +289,33 @@ def test_a_later_start_counts_every_earlier_module_as_known(client, admin):  # n
     from socrat.models import Enrollment
 
     modules = [
-        dict(id="basics", title="Basics", summary="What a chance is, on a scale.",
-             concepts=[concept("scale")]),
-        dict(id="combining", title="Combining", summary="Joining two chances together.",
-             concepts=[concept("both", ["scale"]), concept("either", ["both"])]),
-        dict(id="games", title="Games", summary="What a bet is worth on average.",
-             concepts=[concept("worth", ["scale"])]),
+        dict(
+            id="basics",
+            title="Basics",
+            summary="What a chance is, on a scale.",
+            concepts=[concept("scale")],
+        ),
+        dict(
+            id="combining",
+            title="Combining",
+            summary="Joining two chances together.",
+            concepts=[concept("both", ["scale"]), concept("either", ["both"])],
+        ),
+        dict(
+            id="games",
+            title="Games",
+            summary="What a bet is worth on average.",
+            concepts=[concept("worth", ["scale"])],
+        ),
     ]
     levels = [
         dict(id="new", label="New", description="Start at the beginning.", start_concept=None),
-        dict(id="games", label="I can combine events", description="Start at games.",
-             start_concept="worth"),
+        dict(
+            id="games",
+            label="I can combine events",
+            description="Start at games.",
+            start_concept="worth",
+        ),
     ]
     graph = dict(OUTLINE, modules=modules, levels=levels)
     client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
@@ -333,17 +349,33 @@ def test_a_written_start_lesson_is_not_locked_behind_unwritten_earlier_modules(c
     from socrat.models import Enrollment
 
     modules = [
-        dict(id="basics", title="Basics", summary="What a chance is, on a scale.",
-             concepts=[concept("scale")]),
-        dict(id="combining", title="Combining", summary="Joining two chances together.",
-             concepts=[concept("both", ["scale"]), concept("either", ["both"])]),
-        dict(id="games", title="Games", summary="What a bet is worth on average.",
-             concepts=[concept("worth", ["scale"])]),
+        dict(
+            id="basics",
+            title="Basics",
+            summary="What a chance is, on a scale.",
+            concepts=[concept("scale")],
+        ),
+        dict(
+            id="combining",
+            title="Combining",
+            summary="Joining two chances together.",
+            concepts=[concept("both", ["scale"]), concept("either", ["both"])],
+        ),
+        dict(
+            id="games",
+            title="Games",
+            summary="What a bet is worth on average.",
+            concepts=[concept("worth", ["scale"])],
+        ),
     ]
     levels = [
         dict(id="new", label="New", description="Start at the beginning.", start_concept=None),
-        dict(id="games", label="I can combine events", description="Start at games.",
-             start_concept="worth"),
+        dict(
+            id="games",
+            label="I can combine events",
+            description="Start at games.",
+            start_concept="worth",
+        ),
     ]
     client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
     passed = json.dumps({"verdict": "pass", "summary": "Fine.", "issues": []})
@@ -354,7 +386,16 @@ def test_a_written_start_lesson_is_not_locked_behind_unwritten_earlier_modules(c
     base = default_catalog()
     model = base.concept("zero:programs-and-output").model_dump(mode="json")
     live = type(base.concept("zero:programs-and-output")).model_validate(
-        model | dict(id="worth", module="games", prerequisites=["scale"], outline=None, sequence=[], problems=[], practice_links=[])
+        model
+        | dict(
+            id="worth",
+            module="games",
+            prerequisites=["scale"],
+            outline=None,
+            sequence=[],
+            problems=[],
+            practice_links=[],
+        )
     )
     with Session(client.app.state.engine) as db, db.begin():
         generated.store_concept(db, base, "ai-basics", live, None)
