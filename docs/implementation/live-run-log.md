@@ -38,6 +38,11 @@ provider: no real latency, rate limits, token counts or refusals.
 | 21 | grading step | Graded 1.0 with per-criterion notes and useful feedback; the response band says "strong" while the evidence stage says "proficient: not yet shown without help on a real task" | wording mismatch between the older band names and the newer stage names; not changed | for the owner to decide |
 | 22 | task step | I posted to `/tasks/<course>` instead of `/tasks/<course>:<concept>` and got 404 | mine | retried; the self-checked task saved as `self_checked` and wrote no evidence, as designed |
 | 23 | reviews step | The Reviews page I built listed 11 reviews; 10 were concepts placement had only assumed known, with reasons claiming practice that never happened | **app bug in my own feature**, found by the live run | assumed-and-never-practised concepts are not listed; regression test fails without the fix |
+| 24 | browser step | I started the web dev server from the wrong folder (no app directory found) | mine | used the repo's `npm run dev` |
+| 25 | browser step | First desktop pass reported the path list, citations and AI label missing | mine (no wait for the cold compile) | rerun with a wait: all present on desktop and phone |
+| 26 | browser step, phone width | Every page is 20px wider than a 390px screen (settings far wider); the avatar in the top bar is cut off | **existing app bug in the shared top bar**, not caused by generated content | not fixed; the lesson table is already inside its own scroll box |
+| 27 | browser step | The sidebar shows "Mastered" with the reason "Not yet shown without help on a real task" under it, and the step list says "Practice: Mastered", after one 4/5 quiz and one graded answer | **wording defect on screen**: older band names ("strong" shown as Mastered) vs newer evidence stages | not changed; owner to choose the wording |
+| 28 | browser step | The lesson text still says insurance "must profit", the sentence the fact checker flagged as too strong; it was released with the warning and the "a person needs to confirm" label | by design (warnings do not block) | worth deciding whether fact warnings should trigger one more revision |
 
 ### Bug #7 in detail
 
@@ -57,3 +62,20 @@ placement probes the start and left every unwritten earlier concept unknown, so 
 checkpoint locked everything generated. Fix in `learn/placement.py` covers both; tests:
 `test_a_later_start_counts_every_earlier_module_as_known` and
 `test_a_written_start_lesson_is_not_locked_behind_unwritten_earlier_modules`.
+
+## What worked end to end (stand-in model, real app)
+
+Request in plain words, intent parsed with safety notes, 35-concept outline through three
+architect rounds and two critic rounds, a six-question diagnostic scored by code, publish and
+enrol, background generation of the first lessons with retries, a 9.5k-character lesson with
+a visual, quiz, atoms, four citations and an honest "a person must confirm" label, a quiz
+with server-side answer keys, a model-graded written answer with per-criterion feedback,
+a self-checked task that correctly wrote no evidence, reviews, and a real browser pass at
+desktop and phone width.
+
+## Not tested by this run
+
+A real model (the stand-in is an agent through a relay: no real latency, rate limits,
+refusals or token counts); resource links (replaced by "reachable"); search providers;
+payments and email; more than one learner; the visual's interaction in the browser (loaded,
+not driven); audio and video (not built).
