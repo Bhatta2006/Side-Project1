@@ -278,3 +278,45 @@ def test_an_outline_the_critic_did_not_pass_is_never_reused(client, admin):  # n
     )
     assert run(client, retry)
     assert len(retry.prompts["architect"]) == 1
+
+
+def test_a_later_start_counts_every_earlier_module_as_known(client, admin):  # noqa: F811
+    """Found in a live run: a learner placed at module 3 of a generated course whose start
+    concept does not depend on module 2 had module 2 neither known nor written, so module 2's
+    checkpoint locked the very lesson generated for them and Today offered nothing."""
+    from socrat.catalog import generated
+    from socrat.learn import service as learn
+    from socrat.models import Enrollment
+
+    modules = [
+        dict(id="basics", title="Basics", summary="What a chance is, on a scale.",
+             concepts=[concept("scale")]),
+        dict(id="combining", title="Combining", summary="Joining two chances together.",
+             concepts=[concept("both", ["scale"]), concept("either", ["both"])]),
+        dict(id="games", title="Games", summary="What a bet is worth on average.",
+             concepts=[concept("worth", ["scale"])]),
+    ]
+    levels = [
+        dict(id="new", label="New", description="Start at the beginning.", start_concept=None),
+        dict(id="games", label="I can combine events", description="Start at games.",
+             start_concept="worth"),
+    ]
+    graph = dict(OUTLINE, modules=modules, levels=levels)
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    passed = json.dumps({"verdict": "pass", "summary": "Fine.", "issues": []})
+    assert run(client, Scripted(architect=[json.dumps(graph)], critic=[passed]))
+    client.post("/api/v1/admin/courses/ai-basics/publish", headers=admin)
+
+    learner = login(client, subject="ada", name="Ada")
+    onboard(client, learner, course="ai-basics", level="games")
+    with Session(client.app.state.engine) as db:
+        enrollment = db.scalars(select(Enrollment)).one()
+        known = {q for q, s in learn.states_for(db, enrollment).items() if s.assumed}
+        cat = generated.merged(default_catalog())
+        locked = learn.locked_concepts(db, cat, enrollment, int(__import__("time").time()))
+    # Everything before the start in course order is known, not only its prerequisites ...
+    # (dependency order puts "worth" before "either", which is deeper; course order does not)
+    assert {"ai-basics:scale", "ai-basics:both", "ai-basics:either"} <= known
+    assert "ai-basics:worth" not in known
+    # ... so the start concept is not locked behind the skipped module's checkpoint.
+    assert "ai-basics:worth" not in locked

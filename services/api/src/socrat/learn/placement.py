@@ -55,9 +55,16 @@ def enroll(
         # The level starts at a concept whose lesson is not written yet (a generated course).
         # Everything before it counts as already known, so the plan begins there, and there is
         # nothing to probe: placement ends at once.
+        # "Before" means both: earlier in dependency order (prerequisites, also from other
+        # courses) and earlier in the course's own module order, which is what checkpoints
+        # gate on. Dependency order alone can put the start ahead of a deeper concept of an
+        # earlier module; that module's checkpoint then locked the start (found in a live run).
         order = catalog.closure(catalog.course_concepts(course_id))
-        for earlier in order[: order.index(start)] if start in order else []:
-            learn.set_state(db, enrollment, earlier, placed(True, now), now)
+        own = catalog.course_concepts(course_id)
+        earlier = set(order[: order.index(start)] if start in order else [])
+        earlier |= set(own[: own.index(start)] if start in own else [])
+        for concept in [c for c in order if c in earlier]:
+            learn.set_state(db, enrollment, concept, placed(True, now), now)
         start = None
     state = placement.start(
         catalog, path, start, seed=int(enrollment.id.replace("-", "")[:8], 16), language=language
