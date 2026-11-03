@@ -16,6 +16,7 @@
     "build": "npm run build --workspace @socrat/web",
     "typecheck": "npm run typecheck --workspace @socrat/web",
     "test:m0": "node --test prototypes/concierge/model.test.mjs",
+    "test:web-unit": "node --experimental-strip-types --test apps/web/tests/*.test.mjs",
     "test:e2e": "playwright test",
     "test:visual": "playwright test --config playwright.visual.config.ts"
   },

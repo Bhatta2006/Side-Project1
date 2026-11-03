@@ -12,6 +12,7 @@ import { useI18n } from '@/lib/i18n';
 import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@/lib/routes';
 import type { ConceptView, Resource } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { defaultBlocks, orderBlocks, steps as pathSteps } from '@/lib/sequence';
 import Markdown, { outline } from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
@@ -80,6 +81,47 @@ function Stepper({ concept, className }: { concept: ConceptView; className?: str
         </li>
       ))}
     </ol>
+  );
+}
+
+const STEP_LABEL: Record<string, string> = {
+  lesson: 'Read the lesson',
+  quiz: 'Concept check',
+  visual: 'Interactive',
+  task: 'Task',
+  prompt: 'Written answer',
+  exercise: 'Exercise',
+  experiment: 'Experiment',
+  problem: 'Problem',
+};
+
+/** The planned path through this concept, shown only when the concept has one. */
+function LessonPath({ concept }: { concept: ConceptView }) {
+  const path = pathSteps(concept.sequence);
+  if (path.length < 2) return null;
+  function href(kind: string, ref: string): string | null {
+    if (kind === 'lesson') return '#step-lesson';
+    if (kind === 'visual') return `#step-visual-${ref}`;
+    if (kind === 'task') return `#step-task-${ref}`;
+    if (kind === 'quiz') return activityHref(`quiz:${concept.id}`);
+    if (kind === 'problem') return activityHref(`problem:${ref}`);
+    return null;
+  }
+  function label(kind: string, ref: string): string {
+    if (kind === 'visual') return `${STEP_LABEL.visual}: ${concept.visuals?.[Number(ref)]?.purpose ?? 'visual'}`;
+    if (kind === 'task') return `${STEP_LABEL.task}: ${concept.tasks?.find(t => t.id === ref)?.kind.replace('-', ' ') ?? ref}`;
+    return STEP_LABEL[kind] ?? kind;
+  }
+  return (
+    <nav aria-label="Your path through this lesson" className="mb-6 max-w-[68ch] rounded-[20px] border px-4 py-3.5">
+      <p className="mb-2 text-sm font-semibold">Your path through this lesson</p>
+      <ol className="grid list-decimal gap-1 pl-5 text-[15px]">
+        {path.map(s => {
+          const to = href(s.kind, s.ref);
+          return <li key={s.id}>{to ? <a className="underline underline-offset-4" href={to}>{label(s.kind, s.ref)}</a> : label(s.kind, s.ref)}</li>;
+        })}
+      </ol>
+    </nav>
   );
 }
 
@@ -327,9 +369,18 @@ export default function Lesson() {
               </span>
             </p>
           ) : null}
-          <Markdown source={concept.lesson} language={concept.language} rich />
-          {(concept.visuals ?? []).map((v, i) => <VisualizationHost key={`${v.renderer}-${i}`} spec={v} lesson={{ concept: concept.id, title: concept.title }} />)}
-          {concept.tasks?.length ? <LessonTasks concept={concept.id} tasks={concept.tasks} /> : null}
+          <LessonPath concept={concept} />
+          {/* Lesson text, visuals and tasks in the order this concept was planned (sequence). */}
+          {orderBlocks(concept.sequence, defaultBlocks(concept.visuals?.length ?? 0, (concept.tasks ?? []).map(t => t.id))).map((block, i, all) => {
+            if (block.kind === 'lesson') return <div key="lesson" id="step-lesson"><Markdown source={concept.lesson} language={concept.language} rich /></div>;
+            if (block.kind === 'visual') {
+              const v = concept.visuals![block.index];
+              return <div key={block.key} id={`step-visual-${block.index}`}><VisualizationHost spec={v} lesson={{ concept: concept.id, title: concept.title }} /></div>;
+            }
+            const task = concept.tasks![block.index];
+            const firstTask = all.findIndex(b => b.kind === 'task') === i;
+            return <div key={block.key} id={`step-task-${task.id}`}><LessonTasks concept={concept.id} tasks={[task]} heading={firstTask} /></div>;
+          })}
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
 

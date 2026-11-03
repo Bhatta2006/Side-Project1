@@ -97,10 +97,10 @@ function TaskCard({ concept, task }: { concept: string; task: LessonTask }) {
 }
 
 /** Work a quiz cannot judge: self-checked reflections, and real work a person grades. */
-export default function LessonTasks({ concept, tasks }: { concept: string; tasks: LessonTask[] }) {
+export default function LessonTasks({ concept, tasks, heading = true }: { concept: string; tasks: LessonTask[]; heading?: boolean }) {
   return (
     <div className="mt-8 grid gap-4">
-      <h2 className="font-display text-xl font-semibold">Practise it for real</h2>
+      {heading ? <h2 className="font-display text-xl font-semibold">Practise it for real</h2> : null}
       {tasks.map(t => <TaskCard key={t.id} concept={concept} task={t} />)}
     </div>
   );
