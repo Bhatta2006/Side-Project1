@@ -103,7 +103,12 @@ def apply_adapter(intent: Intent, text: str) -> Intent:
     verifiable = min(
         (intent.verifiable, adapter.verifiable), key=lambda v: domains.VERIFIABLE_RANK[v]
     )
+    from socrat.engine import safety as rules
+
     safety = list(intent.safety_notes)
+    # Code-owned notes first, so the cap below never drops them in favour of model text.
+    must = [n for n in rules.notes(f"{intent.subject} {text}") if n not in safety]
+    safety = must + safety
     safety += [n for n in adapter.safety if n not in safety]
     return intent.model_copy(
         update=dict(

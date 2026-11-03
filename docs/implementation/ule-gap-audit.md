@@ -10,7 +10,35 @@ Verdicts: **Strong** (built, tested, would survive real use), **Partial** (built
 part is missing or shallow), **Thin** (a stub or a model-trusting shortcut where the prompt asks for
 verification), **Missing**.
 
-## 1. Acceptance criteria (prompt section 20)
+## 0. Status after the gap work (2026-11-03, commits `0b3a697` to the item 12 commit)
+
+| # | Criterion | Now | What changed |
+|---|---|---|---|
+| 1 | Natural-language request | Strong | unchanged |
+| 2 | Inspectable blueprint | Strong | competency fields, graph checks, assumptions and unresolved questions |
+| 3 | Prerequisites, objectives, path visible | Strong | every objective, effort, evidence, assumptions on `/new` |
+| 4 | First modules without waiting | Done | first slice queued at publish from the diagnosed start |
+| 5 | Durable background jobs | Strong | retries with backoff, dead-letter, lifecycle stages |
+| 6 | Mixed activity types | Partial | tasks (reflection to practical) and an activity order; the page does not reorder by it yet; no audio or video upload |
+| 7 | Sketch and 3D through the registry | Done | declarative sketches (flagged), `playground-visual` renderer |
+| 8 | New renderer without the compiler | Strong | unchanged; README documents it |
+| 9 | Resources traceable and cited | Partial | real search results only (flagged), provenance fields; no passage-level grounding; no live search run |
+| 10 | Assessments with contracts | Strong | derived contract per assessment |
+| 11 | Evidence recorded | Strong | plus person-graded performance evidence |
+| 12 | Assisted vs independent | Strong | plus follow-up rule after a full solution |
+| 13 | Next activity changes | Strong | plus bridge lessons for owned courses |
+| 14 | Reviews | Strong | reasons, snooze, bring back; no cross-course review |
+| 15 | Progress survives revisions | Partial | revisions keep evidence and objectives; a rewrite can still orphan quiz ids |
+| 16 | Unsafe or invalid content flagged | Strong | five-state validation reports, deterministic safety notes |
+| 17 | Recovery without duplicates | Strong | atomic claims, idempotent initial slice, dead-letter |
+| 18 | Cost, latency, failures, outcomes measurable | Strong | latency per role, success and retry rates, outcome report |
+| 19 | Existing functionality not broken | Partial | full API suite and new browser tests pass; older Playwright and visual suites still not run on the branch |
+| 20 | Tests demonstrate behaviour | Partial | every item has tests; no live-model run; human review of the benchmark pending |
+
+Still needs the owner: a model key for a live run, qualified reviewers (benchmark sample, evidence
+library), named people to confirm lessons and grade tasks, and the decision to switch flags on.
+
+## 1. Acceptance criteria (prompt section 20), as found before the work
 
 | # | Criterion | Verdict | Evidence and what is wrong |
 |---|---|---|---|

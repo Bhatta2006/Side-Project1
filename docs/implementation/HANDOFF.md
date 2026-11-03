@@ -22,6 +22,20 @@ Commits on the branch, oldest first: `17b3c06` slice 1, `1481a78` 2, `afd1559` 3
 `git log --oneline origin/main..HEAD` to confirm the state above, run the related test subset for
 the area you will touch, then pick work from section 6.
 
+**Update 2026-11-03 (gap closure against the master prompt).** The master prompt was found at
+`D:\Downloads\SOCRAT_Universal_Learning_Engine_Master_Prompt.txt` on this machine. A depth audit
+(`docs/implementation/ule-gap-audit.md`, section 0 has the current status of all 20 acceptance
+criteria) led to twelve items, all committed on this branch after slice 10a: generation recovery
+and progressive start, validation reports, competency graph and assessment contracts, evidence
+types and stages with confidence calibration, review controls, grounded resource search,
+declarative sketches and the `playground-visual` renderer, tasks and activity order,
+Learning Evidence Library and Pedagogical Strategist, bridge lessons with visible revisions,
+benchmark and outcome report, deterministic safety notes. How the engine fits together and how
+to extend it: `docs/engine/README.md`. Migrations now run to `0044_course_revisions`. Owner
+decision recorded: sketches become declarative (flag `explainer_sketch_declarative`, off until
+switched). Every role is still only exercised with hand-written replies; a live-model run of
+`scripts/dev/benchmark.py` is the first thing to do with a key.
+
 ---
 
 ## 1. What the owner wants (do not re-ask these)

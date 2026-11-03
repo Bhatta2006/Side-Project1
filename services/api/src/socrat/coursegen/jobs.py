@@ -482,9 +482,14 @@ async def run_package(
         assert quiz is not None and atoms is not None  # both parsed by now
         entry = {"role": "system", "round": attempt, "event": "validating"}
         _note(engine, job_id, entry, stage="validating")
+        from socrat.engine import safety as rules
+
+        caution = rules.disclaimer(brief.safety)
         attribution = (
             f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
-            "before release. Not reviewed by a person." + research.credit(cited)
+            "before release. Not reviewed by a person."
+            + research.credit(cited)
+            + (f" {caution}" if caution else "")
         )
         live, problems = await asyncio.to_thread(
             pkg.build_concept, concept, lesson, quiz, version, attribution, code, workbench, lab
