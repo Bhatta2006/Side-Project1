@@ -223,19 +223,6 @@ quiz:
     explanation: Rebuilding after each update costs O(n) per query, 4·10^10 in total. A difference array
       only works when all updates come before all queries.
     difficulty: 3
-  - id: twod
-    kind: mcq
-    prompt: For a 2D prefix table P (P[i][j] = sum of the rectangle from the corner to (i, j)), the sum
-      of rows r1..r2 and columns c1..c2 is P[r2][c2] − P[r1−1][c2] − P[r2][c1−1] + ... which term?
-    options:
-    - P[r1−1][c1−1]
-    - P[r2][c1−1]
-    - P[r1−1][c2]
-    - P[r1][c1]
-    answer: 0
-    explanation: The top strip and left strip both contain the top-left corner rectangle, so it was subtracted
-      twice and must be added back once.
-    difficulty: 3
   - id: array-bounds
     kind: mcq
     prompt: A range update has r = n, and your code does diff[r + 1] −= v on an array declared with size
@@ -287,6 +274,28 @@ quiz:
     explanation: The two negative strips each remove the area to the right and below, which removes the
       bottom-right region twice, so it needs +v at (r2+1, c2+1). This is inclusion–exclusion again.
     difficulty: 5
+  - id: missing-closing-decrement
+    kind: bug
+    prompt: Add 2 to positions 1..3 (0-indexed) of five zeros, using a difference array. The final array
+      should be 0 2 2 2 0. The update writes diff[l] += v and forgets diff[r + 1] -= v. What does it print
+      after the prefix sums?
+    code:
+      python: "n = 5\ndiff = [0] * (n + 1)\nl, r, v = 1, 3, 2\ndiff[l] += v\na = []\nrun = 0\nfor i in range(n):\n\
+        \    run += diff[i]\n    a.append(run)\nprint(*a)\n"
+      cpp: "int n = 5;\nvector<int> diff(n + 1, 0);\nint l = 1, r = 3, v = 2;\ndiff[l] += v;\nint run =\
+        \ 0;\nfor (int i = 0; i < n; i++) {\n    run += diff[i];\n    cout << run << \" \";\n}\n"
+      java: "int n = 5;\nint[] diff = new int[n + 1];\nint l = 1, r = 3, v = 2;\ndiff[l] += v;\nint run\
+        \ = 0;\nfor (int i = 0; i < n; i++) {\n    run += diff[i];\n    System.out.print(run + \" \");\n\
+        }\n"
+    options:
+    - 0 2 2 2 2
+    - 0 2 2 2 0
+    - 0 2 2 0 0
+    - 2 2 2 2 2
+    answer: 0
+    explanation: The prefix sum carries the +2 to the end of the array, because nothing cancels it. The
+      closing diff[r + 1] -= v ends the effect right after position r.
+    difficulty: 2
 problems: [range-add]
 practice_links:
   - title: Static Range Sum Queries

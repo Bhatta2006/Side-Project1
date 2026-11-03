@@ -146,17 +146,6 @@ quiz:
     explanation: '84 = 2²·3·7 and 36 = 2²·3², so the gcd is 2²·3 = 12. Euclid: 84 mod 36 = 12, then 36 mod
       12 = 0.'
     difficulty: 1
-  - id: divisor-count
-    kind: mcq
-    prompt: How many divisors does 360 have?
-    options:
-    - '24'
-    - '18'
-    - '30'
-    - '12'
-    answer: 0
-    explanation: 360 = 2³·3²·5, so (3+1)(2+1)(1+1) = 24. Add one to each exponent and multiply.
-    difficulty: 2
   - id: leftover
     kind: mcq
     prompt: Trial division by every i with i·i ≤ n has finished and the remaining value is 1373 (> 1). What
@@ -264,6 +253,28 @@ quiz:
     explanation: Make i a 64-bit type (long long or long). Overflow in the comparison makes the loop misbehave
       in C++ (undefined behaviour) and Java (wrapped negatives).
     difficulty: 5
+  - id: loop-bound-strict
+    kind: bug
+    prompt: 9 = 3 * 3 is composite. This primality test loops while i * i < n (strictly less) instead of
+      <=. What does it print for 9?
+    code:
+      python: "def is_prime(n):\n    i = 2\n    while i * i < n:\n        if n % i == 0:\n            return\
+        \ False\n        i += 1\n    return True\nprint(\"prime\" if is_prime(9) else \"composite\")\n"
+      cpp: "auto is_prime = [](int n) {\n    for (int i = 2; i * i < n; i++)\n        if (n % i == 0) return\
+        \ false;\n    return true;\n};\ncout << (is_prime(9) ? \"prime\" : \"composite\");\n"
+      java: "class T {\n    boolean isPrime(int n) {\n        for (int i = 2; i * i < n; i++)\n        \
+        \    if (n % i == 0) return false;\n        return true;\n    }\n}\nSystem.out.println(new T().isPrime(9)\
+        \ ? \"prime\" : \"composite\");\n"
+    options:
+    - prime
+    - composite
+    - invalid
+    - nothing
+    answer: 0
+    explanation: For a perfect square the smallest factor is exactly sqrt(n), so the test must include i
+      * i == n. With < the loop never tries i = 3 for 9, and every square of a prime (4, 9, 25, 49) is declared
+      prime.
+    difficulty: 2
 problems: [prime-count-queries, divisor-counts]
 practice_links:
   - title: Counting Divisors

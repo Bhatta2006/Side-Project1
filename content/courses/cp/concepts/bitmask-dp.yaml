@@ -162,18 +162,6 @@ quiz:
     explanation: The mask tells you how many people are already served, so the next person is determined
       by it. That is what keeps the state at 2^n instead of 2^n · n.
     difficulty: 3
-  - id: add-guard
-    kind: mcq
-    prompt: In the transition that adds city j to mask, what must you check first?
-    options:
-    - That bit j is NOT already set in mask
-    - That bit j IS already set in mask
-    - That j is greater than the last city
-    - That mask is a power of two
-    answer: 0
-    explanation: Visiting a city twice would be a different problem. Skipping this test double-counts or
-      loops back, and the answer silently comes out too small.
-    difficulty: 3
   - id: assign-output
     kind: output
     prompt: cost[i][j] is the cost of giving task j to person i. What does this print?
@@ -251,6 +239,35 @@ quiz:
     explanation: For a yes/no answer, 'last ∈ set' is one bit. Packing those bits into a word turns an inner
       loop over cities into bit operations.
     difficulty: 5
+  - id: assignment-reuses-task
+    kind: bug
+    prompt: 'Two people, two tasks, profit[i][j] = what person i earns from task j: rows (3, 1) and (3,
+      1). Each task may be used once, so the best total is 3 + 1 = 4. This mask DP forgets to skip a task
+      that is already in the mask. What does it print?'
+    code:
+      python: "profit = [[3, 1], [3, 1]]\nn = 2\ndp = [-1] * (1 << n)\ndp[0] = 0\nfor mask in range(1 <<\
+        \ n):\n    if dp[mask] < 0:\n        continue\n    i = bin(mask).count(\"1\")\n    if i >= n:\n\
+        \        continue\n    for j in range(n):\n        nm = mask | (1 << j)\n        dp[nm] = max(dp[nm],\
+        \ dp[mask] + profit[i][j])\nprint(dp[(1 << n) - 1])\n"
+      cpp: "int profit[2][2] = {{3, 1}, {3, 1}};\nint n = 2;\nvector<int> dp(1 << n, -1);\ndp[0] = 0;\n\
+        for (int mask = 0; mask < (1 << n); mask++) {\n    if (dp[mask] < 0) continue;\n    int i = __builtin_popcount(mask);\n\
+        \    if (i >= n) continue;\n    for (int j = 0; j < n; j++) {\n        int nm = mask | (1 << j);\n\
+        \        dp[nm] = max(dp[nm], dp[mask] + profit[i][j]);\n    }\n}\ncout << dp[(1 << n) - 1];\n"
+      java: "int[][] profit = {{3, 1}, {3, 1}};\nint n = 2;\nint[] dp = new int[1 << n];\nArrays.fill(dp,\
+        \ -1);\ndp[0] = 0;\nfor (int mask = 0; mask < (1 << n); mask++) {\n    if (dp[mask] < 0) continue;\n\
+        \    int i = Integer.bitCount(mask);\n    if (i >= n) continue;\n    for (int j = 0; j < n; j++)\
+        \ {\n        int nm = mask | (1 << j);\n        dp[nm] = Math.max(dp[nm], dp[mask] + profit[i][j]);\n\
+        \    }\n}\nSystem.out.println(dp[(1 << n) - 1]);\n"
+    options:
+    - '7'
+    - '4'
+    - '6'
+    - '8'
+    answer: 0
+    explanation: 'Person 1 is assigned task 0 again, since mask | bit leaves the mask unchanged, and dp[1]
+      grows from 3 to 6 using its own value. The transition needs ''if mask >> j & 1: continue'' before
+      adding task j.'
+    difficulty: 4
 problems: [shortest-tour]
 practice_links:
   - title: Hamiltonian Flights

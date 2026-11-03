@@ -175,17 +175,6 @@ quiz:
     explanation: Python's % takes the sign of the divisor, so the result is always in [0, m). You do not
       need the + m fix-up, but it is harmless.
     difficulty: 2
-  - id: fermat-numeric
-    kind: mcq
-    prompt: Modulo the prime p = 7, what is the inverse of 3?
-    options:
-    - '5'
-    - '3'
-    - '4'
-    - '2'
-    answer: 0
-    explanation: 3^(p−2) = 3^5 = 243 ≡ 5 (mod 7), and indeed 3·5 = 15 ≡ 1.
-    difficulty: 2
   - id: pow-steps
     kind: mcq
     prompt: About how many modular multiplications does binary exponentiation need for an exponent near
@@ -299,6 +288,29 @@ quiz:
     explanation: n(n+1) reaches 10^36, far beyond 64 bits, so the product overflows before any division.
       Dividing the even factor first (or multiplying by the inverse of 2 modulo p) keeps every value small.
     difficulty: 5
+  - id: exponent-p-minus-one
+    kind: bug
+    prompt: The inverse of 3 modulo the prime 7 is 5 (3 * 5 = 15 = 1 mod 7). This code computes 3^(p - 1)
+      mod p with a correct binary power. What does it print?
+    code:
+      python: "def power(b, e, m):\n    r = 1\n    b %= m\n    while e:\n        if e & 1:\n           \
+        \ r = r * b % m\n        b = b * b % m\n        e >>= 1\n    return r\nprint(power(3, 7 - 1, 7))\n"
+      cpp: "auto power = [](long long b, long long e, long long m) {\n    long long r = 1;\n    b %= m;\n\
+        \    while (e) {\n        if (e & 1) r = r * b % m;\n        b = b * b % m;\n        e >>= 1;\n\
+        \    }\n    return r;\n};\ncout << power(3, 7 - 1, 7);\n"
+      java: "class T {\n    long power(long b, long e, long m) {\n        long r = 1;\n        b %= m;\n\
+        \        while (e > 0) {\n            if ((e & 1) == 1) r = r * b % m;\n            b = b * b %\
+        \ m;\n            e >>= 1;\n        }\n        return r;\n    }\n}\nSystem.out.println(new T().power(3,\
+        \ 7 - 1, 7));\n"
+    options:
+    - '1'
+    - '5'
+    - '3'
+    - '6'
+    answer: 0
+    explanation: Fermat says x^(p-1) = 1 for every x not divisible by p, which is useless as an inverse.
+      The inverse is x^(p-2) = 3^5 mod 7 = 5, because x * x^(p-2) = x^(p-1) = 1.
+    difficulty: 3
 problems: [mod-expressions, triangular-mod, cube-sums]
 practice_links:
   - title: Exponentiation

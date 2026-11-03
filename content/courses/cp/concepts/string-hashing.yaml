@@ -144,18 +144,6 @@ quiz:
     explanation: Equal strings always have equal hashes; the risk is two different strings sharing one.
       A modulus near 10^9 leaves that risk too high once you compare many pairs.
     difficulty: 2
-  - id: zero-code
-    kind: mcq
-    prompt: Why avoid mapping the letter 'a' to the value 0 in a polynomial hash?
-    options:
-    - '"a" and "aa" would both hash to 0, so different lengths collide'
-    - Zero is not an allowed residue when the modulus is a prime number
-    - It makes the hash slower to compute, since multiplying by zero is special-cased
-    - It silently changes the effective base of the hash to a different value
-    answer: 0
-    explanation: Leading zeros contribute nothing to the value, exactly as 007 equals 7. Map letters to
-      1..26 (or use ord).
-    difficulty: 3
   - id: hash-output
     kind: output
     prompt: Letters map to a = 1, b = 2, with base B = 10 and modulus 10^9 + 7. What does this print for
@@ -248,6 +236,28 @@ quiz:
     explanation: Hashing modulo a power of two is broken by the Thue–Morse construction regardless of the
       base. Use a prime modulus such as 2^61 − 1 instead. (Unsigned overflow itself is well defined.)
     difficulty: 5
+  - id: a-maps-to-zero
+    kind: bug
+    prompt: A polynomial hash maps each letter to its offset from 'a' (so 'a' = 0, 'b' = 1) with base 31
+      and modulus 10^9 + 7. Are the hashes of 'a' and 'aa' equal? Run it.
+    code:
+      python: "MOD = 10**9 + 7\ndef h(s):\n    v = 0\n    for c in s:\n        v = (v * 31 + (ord(c) - ord(\"\
+        a\"))) % MOD\n    return v\nprint(\"same\" if h(\"a\") == h(\"aa\") else \"different\")\n"
+      cpp: "const long long MOD = 1000000007;\nauto h = [&](const string& s) {\n    long long v = 0;\n \
+        \   for (char c : s) v = (v * 31 + (c - 'a')) % MOD;\n    return v;\n};\ncout << (h(\"a\") == h(\"\
+        aa\") ? \"same\" : \"different\");\n"
+      java: "class T {\n    long h(String s) {\n        long v = 0;\n        for (char c : s.toCharArray())\
+        \ v = (v * 31 + (c - 'a')) % 1_000_000_007L;\n        return v;\n    }\n}\nT t = new T();\nSystem.out.println(t.h(\"\
+        a\") == t.h(\"aa\") ? \"same\" : \"different\");\n"
+    options:
+    - same
+    - different
+    - error
+    - unsure
+    answer: 0
+    explanation: 'Leading zero letters add nothing: ''a'', ''aa'' and ''aaa'' all hash to 0, exactly like
+      leading zeros in a number. Map letters to 1..26 so no letter contributes zero.'
+    difficulty: 3
 problems: [repeated-substring]
 practice_links:
   - title: String Matching

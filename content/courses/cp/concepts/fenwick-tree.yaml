@@ -150,18 +150,6 @@ quiz:
     explanation: Both the update step i += i & −i and the query step i −= i & −i rely on lowbit being at
       least 1. Shift a 0-based array by one.
     difficulty: 2
-  - id: update-path
-    kind: mcq
-    prompt: In a Fenwick tree of size n = 8, which node indices does add(3, v) modify?
-    options:
-    - 3, 4, 8
-    - 3, 6
-    - 3, 4, 5, 6, 7, 8
-    - '3'
-    answer: 0
-    explanation: 3 → 3 + 1 = 4 → 4 + 4 = 8 → 8 + 8 = 16 > n. Those are exactly the nodes whose blocks contain
-      position 3.
-    difficulty: 3
   - id: build-output
     kind: output
     prompt: A Fenwick tree is built by adding the value i at position i, for i = 1..8. What does this print?
@@ -250,6 +238,31 @@ quiz:
     explanation: Binary search with a prefix query at each step costs O(log n) steps times O(log n) per
       query, so O(log² n). The descent reads each tree node once and costs O(log n).
     difficulty: 5
+  - id: update-goes-down
+    kind: bug
+    prompt: A Fenwick tree of size 4 gets add(2, 5) and add(3, 1), so the prefix sum of the first 3 positions
+      is 6. The update here walks i -= i & -i, which is the direction of a QUERY. What does query(3) print?
+    code:
+      python: "bit = [0] * 5\ndef add(i, v):\n    while i > 0:\n        bit[i] += v\n        i -= i & -i\n\
+        def query(i):\n    s = 0\n    while i > 0:\n        s += bit[i]\n        i -= i & -i\n    return\
+        \ s\nadd(2, 5)\nadd(3, 1)\nprint(query(3))\n"
+      cpp: "vector<int> bit(5, 0);\nauto add = [&](int i, int v) {\n    while (i > 0) { bit[i] += v; i -=\
+        \ i & -i; }\n};\nauto query = [&](int i) {\n    int s = 0;\n    while (i > 0) { s += bit[i]; i -=\
+        \ i & -i; }\n    return s;\n};\nadd(2, 5);\nadd(3, 1);\ncout << query(3);\n"
+      java: "class T {\n    int[] bit = new int[5];\n    void add(int i, int v) {\n        while (i > 0)\
+        \ { bit[i] += v; i -= i & -i; }\n    }\n    int query(int i) {\n        int s = 0;\n        while\
+        \ (i > 0) { s += bit[i]; i -= i & -i; }\n        return s;\n    }\n}\nT t = new T();\nt.add(2, 5);\n\
+        t.add(3, 1);\nSystem.out.println(t.query(3));\n"
+    options:
+    - '7'
+    - '6'
+    - '5'
+    - '1'
+    answer: 0
+    explanation: add(3, 1) also writes into node 2, which already covers position 3 through the query path,
+      so the 1 is counted twice (6 + 1). Updates must climb UP with i += i & -i, to every node whose block
+      contains the position.
+    difficulty: 4
 problems: [dynamic-range-sum]
 practice_links:
   - title: Dynamic Range Sum Queries

@@ -149,19 +149,6 @@ quiz:
     explanation: Adding such an edge would close a cycle. The DSU find on both endpoints is exactly this
       test.
     difficulty: 2
-  - id: dsu-opts
-    kind: mcq
-    prompt: Which two DSU optimisations together make find and union run in near-constant (inverse Ackermann)
-      amortised time?
-    options:
-    - Path compression and union by size (or rank)
-    - Sorting the nodes and binary search
-    - Storing the component in a hash set and merging sets by copying
-    - Path compression alone is already O(1) with no other change needed
-    answer: 0
-    explanation: Compression flattens trees during finds; union by size keeps them shallow when merging.
-      Compression alone gives O(log n) amortised.
-    difficulty: 2
   - id: maximum
     kind: mcq
     prompt: How do you get a MAXIMUM spanning tree with Kruskal?
@@ -261,6 +248,31 @@ quiz:
     explanation: The new edge closes exactly one cycle (the tree path plus itself). By the cycle property
       the heaviest edge on that cycle cannot be in the MST, so only that edge needs to be removed.
     difficulty: 5
+  - id: kruskal-forgot-union
+    kind: bug
+    prompt: 'A graph on 4 nodes has edges (weight, u, v): (1, 0, 1), (2, 1, 2), (3, 0, 2) and (4, 2, 3).
+      Its minimum spanning tree weighs 7. This Kruskal tests find(u) != find(v) but never performs the union.
+      What total does it print?'
+    code:
+      python: "edges = [(1, 0, 1), (2, 1, 2), (3, 0, 2), (4, 2, 3)]\np = list(range(4))\ndef find(x):\n\
+        \    while p[x] != x:\n        x = p[x]\n    return x\ntotal = 0\nfor w, u, v in sorted(edges):\n\
+        \    if find(u) != find(v):\n        total += w\nprint(total)\n"
+      cpp: "vector<array<int, 3>> edges = {{1, 0, 1}, {2, 1, 2}, {3, 0, 2}, {4, 2, 3}};\nint p[4] = {0,\
+        \ 1, 2, 3};\nauto find = [&](int x) {\n    while (p[x] != x) x = p[x];\n    return x;\n};\nsort(edges.begin(),\
+        \ edges.end());\nint total = 0;\nfor (auto& e : edges)\n    if (find(e[1]) != find(e[2])) total\
+        \ += e[0];\ncout << total;\n"
+      java: "int[][] edges = {{1, 0, 1}, {2, 1, 2}, {3, 0, 2}, {4, 2, 3}};\nint[] p = {0, 1, 2, 3};\nint\
+        \ total = 0;\nfor (int[] e : edges) {\n    int a = e[1], b = e[2];\n    while (p[a] != a) a = p[a];\n\
+        \    while (p[b] != b) b = p[b];\n    if (a != b) total += e[0];\n}\nSystem.out.println(total);\n"
+    options:
+    - '10'
+    - '7'
+    - '12'
+    - '13'
+    answer: 0
+    explanation: Without the union, every node stays its own set, so find(u) != find(v) is always true and
+      even the cycle edge (3, 0, 2) is taken. After accepting an edge you must join the two sets.
+    difficulty: 3
 problems: [road-repair, minimax-route]
 practice_links:
   - title: Road Reparation

@@ -125,19 +125,6 @@ resources:
     minutes: 25
     level: deep
 quiz:
-  - id: pi-value
-    kind: mcq
-    prompt: For s = "abab", the prefix function π[3] (the longest proper prefix that is also a suffix of
-      s[0..3]) is...
-    options:
-    - '2'
-    - '1'
-    - '3'
-    - '0'
-    answer: 0
-    explanation: The prefix "ab" is also the suffix "ab". Length 3 is not allowed ("aba" ≠ "bab"), and the
-      full string itself is excluded by 'proper'.
-    difficulty: 2
   - id: period
     kind: mcq
     prompt: For s = "abcabcabc" (n = 9), π[n − 1] = 6. What is the smallest period of s?
@@ -265,6 +252,29 @@ quiz:
     explanation: '''a'' occurs 2 times, ''ab'' 2, ''aba'' 1, ''abab'' 1: total 6. With π you count how many
       times each border length appears and push the counts down the π chain.'
     difficulty: 5
+  - id: reset-to-zero
+    kind: bug
+    prompt: The prefix function of 'aabaaab' is 0 1 0 1 2 2 3. This version sets k = 0 on a mismatch instead
+      of falling back through the earlier pi values. What does it print?
+    code:
+      python: "s = \"aabaaab\"\nn = len(s)\npi = [0] * n\nk = 0\nfor i in range(1, n):\n    if s[i] == s[k]:\n\
+        \        k += 1\n    else:\n        k = 0\n    pi[i] = k\nprint(*pi)\n"
+      cpp: "string s = \"aabaaab\";\nint n = s.size(), k = 0;\nvector<int> pi(n, 0);\nfor (int i = 1; i\
+        \ < n; i++) {\n    if (s[i] == s[k]) k++;\n    else k = 0;\n    pi[i] = k;\n}\nfor (int x : pi)\
+        \ cout << x << \" \";\n"
+      java: "String s = \"aabaaab\";\nint n = s.length(), k = 0;\nint[] pi = new int[n];\nfor (int i = 1;\
+        \ i < n; i++) {\n    if (s.charAt(i) == s.charAt(k)) k++;\n    else k = 0;\n    pi[i] = k;\n}\n\
+        for (int x : pi) System.out.print(x + \" \");\n"
+    options:
+    - 0 1 0 1 2 0 0
+    - 0 1 0 1 2 2 3
+    - 0 1 0 1 2 3 4
+    - 0 1 0 0 0 0 0
+    answer: 0
+    explanation: 'At i = 5 the border ''aa'' (k = 2) cannot be extended by ''a'', but the shorter border
+      ''a'' (k = pi[1] = 1) can, giving 2. A single reset to 0 misses it. The fallback is ''while k > 0
+      and s[i] != s[k]: k = pi[k - 1]''.'
+    difficulty: 4
 problems: [pattern-count, border-occurrences]
 practice_links:
   - title: String Matching

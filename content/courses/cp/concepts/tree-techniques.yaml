@@ -141,18 +141,6 @@ quiz:
     explanation: Connected with no cycles means n − 1 edges. A connected graph with n edges has exactly
       one cycle.
     difficulty: 1
-  - id: reverse-order
-    kind: mcq
-    prompt: Why process nodes in reverse BFS order when computing subtree sums?
-    options:
-    - A parent always appears before its children in BFS order, so reversing handles children first
-    - Reverse order is faster because it visits leaves first with better cache behaviour
-    - BFS order is random, so reversing it makes it predictable
-    - Reversing avoids revisiting a node through a cycle
-    answer: 0
-    explanation: By the time you process v, all of its descendants (which come later in BFS order) are already
-      finished, so you can add v's total to its parent.
-    difficulty: 2
   - id: euler
     kind: mcq
     prompt: With an Euler tour that records entry time tin[u] and exit time tout[u], the subtree of u corresponds
@@ -282,6 +270,42 @@ quiz:
     explanation: The proof needs non-negative weights. A tree DP computes for each node the best and second-best
       downward paths through its children, then combines them at that node.
     difficulty: 5
+  - id: forward-order-sizes
+    kind: bug
+    prompt: Parents have smaller labels than their children. In the tree with par = [-1, 0, 0, 1, 1] the
+      root's subtree has 5 nodes. This code adds each node's size to its parent's by running v = 1, 2, 3,
+      4 in INCREASING order. What does it print for size[0]?
+    code:
+      python: "par = [-1, 0, 0, 1, 1]\nsize = [1] * 5\nfor v in range(1, 5):\n    size[par[v]] += size[v]\n\
+        print(size[0])\n"
+      cpp: 'int par[5] = {-1, 0, 0, 1, 1};
+
+        int size[5] = {1, 1, 1, 1, 1};
+
+        for (int v = 1; v < 5; v++) size[par[v]] += size[v];
+
+        cout << size[0];
+
+        '
+      java: 'int[] par = {-1, 0, 0, 1, 1};
+
+        int[] size = {1, 1, 1, 1, 1};
+
+        for (int v = 1; v < 5; v++) size[par[v]] += size[v];
+
+        System.out.println(size[0]);
+
+        '
+    options:
+    - '3'
+    - '5'
+    - '4'
+    - '2'
+    answer: 0
+    explanation: Node 1 is added to the root while its own size is still 1, before its children 3 and 4
+      have been added to it. Process nodes from the deepest to the root (v = n - 1 down to 1) so every child
+      is finished first.
+    difficulty: 3
 problems: [subtree-sizes, sum-of-distances]
 practice_links:
   - title: Subordinates

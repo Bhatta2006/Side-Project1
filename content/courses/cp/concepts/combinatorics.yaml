@@ -191,18 +191,6 @@ quiz:
     explanation: This builds Pascal's triangle with C(i, j) = C(i−1, j−1) + C(i−1, j). Row 6 is 1 6 15 20
       15 6 1, so C(6, 3) = 20.
     difficulty: 3
-  - id: inclusion-exclusion
-    kind: mcq
-    prompt: How many integers from 1 to 100 are divisible by 2 or by 3?
-    options:
-    - '67'
-    - '83'
-    - '50'
-    - '16'
-    answer: 0
-    explanation: 50 + 33 − 16 = 67. Adding the two counts double-counts multiples of 6, so subtract them
-      once.
-    difficulty: 3
   - id: factorial-limit
     kind: mcq
     prompt: What is the largest n for which n! fits in a signed 64-bit integer (maximum about 9.22·10^18)?
@@ -251,6 +239,35 @@ quiz:
     explanation: 'Total without the cap: C(12, 2) = 66. Subtract the cases where one variable is at least
       5 (3 · C(7, 2) = 63), add back cases where two are (3 · 1 = 3): 66 − 63 + 3 = 6.'
     difficulty: 5
+  - id: forgot-the-overlap
+    kind: bug
+    prompt: How many integers from 1 to 100 are divisible by 2 or by 3? The true count is 67. This code
+      adds the two counts and stops there. What does it print?
+    code:
+      python: 'n = 100
+
+        print(n // 2 + n // 3)
+
+        '
+      cpp: 'int n = 100;
+
+        cout << n / 2 + n / 3;
+
+        '
+      java: 'int n = 100;
+
+        System.out.println(n / 2 + n / 3);
+
+        '
+    options:
+    - '83'
+    - '67'
+    - '50'
+    - '84'
+    answer: 0
+    explanation: 'Multiples of 6 are divisible by both and were counted twice. Inclusion-exclusion subtracts
+      the overlap: 50 + 33 - 16 = 67.'
+    difficulty: 2
 problems: [binomial-queries, grid-routes-mod]
 practice_links:
   - title: Binomial Coefficients

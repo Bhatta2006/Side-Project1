@@ -135,19 +135,6 @@ quiz:
     explanation: Greedy solutions are usually wrong on a tiny input the samples missed. Brute-force comparison
       finds it in minutes.
     difficulty: 1
-  - id: boats
-    kind: mcq
-    prompt: Weights [1, 2, 2, 3], boat limit 3, at most two people per boat. What is the minimum number
-      of boats?
-    options:
-    - '3'
-    - '2'
-    - '4'
-    - '1'
-    answer: 0
-    explanation: 'Pair the heaviest with the lightest that fits: 3 goes alone (3 + 1 = 4 > 3, so it cannot
-      be paired); then 2 and 1 share a boat; the last 2 goes alone. Total 3.'
-    difficulty: 2
   - id: interval-output
     kind: output
     prompt: This greedy picks non-overlapping intervals. What does it print?
@@ -278,6 +265,26 @@ quiz:
     explanation: 'Take the three jobs with deadlines 2, 2, 3 and profits 100, 27, 15: schedule them in slots
       1, 2, 3. A fourth job cannot fit because only three time slots exist before the latest deadline.'
     difficulty: 5
+  - id: boats-strict-less
+    kind: bug
+    prompt: Three people weigh 2, 2 and 2, a boat carries at most 3 and at most two people, so 3 boats are
+      needed. This two-pointer loop runs while i < j (not i <= j). How many boats does it count?
+    code:
+      python: "w = [2, 2, 2]\nlimit = 3\ni, j = 0, len(w) - 1\nboats = 0\nwhile i < j:\n    if w[i] + w[j]\
+        \ <= limit:\n        i += 1\n    j -= 1\n    boats += 1\nprint(boats)\n"
+      cpp: "int w[3] = {2, 2, 2};\nint limit = 3, i = 0, j = 2, boats = 0;\nwhile (i < j) {\n    if (w[i]\
+        \ + w[j] <= limit) i++;\n    j--;\n    boats++;\n}\ncout << boats;\n"
+      java: "int[] w = {2, 2, 2};\nint limit = 3, i = 0, j = 2, boats = 0;\nwhile (i < j) {\n    if (w[i]\
+        \ + w[j] <= limit) i++;\n    j--;\n    boats++;\n}\nSystem.out.println(boats);\n"
+    options:
+    - '2'
+    - '3'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: When the pointers meet (i == j) one person is still unassigned and needs their own boat.
+      The loop must continue while i <= j.
+    difficulty: 2
 problems: [ticket-matching]
 practice_links:
   - title: Ferris Wheel

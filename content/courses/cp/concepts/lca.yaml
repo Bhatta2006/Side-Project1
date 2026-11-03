@@ -151,18 +151,6 @@ quiz:
     explanation: 'dist = depth[u] + depth[v] − 2 · depth[lca] = 7 + 5 − 6 = 6: four edges up from u, two
       from v.'
     difficulty: 1
-  - id: jumps
-    kind: mcq
-    prompt: To move 13 levels up with binary lifting, which jumps do you take?
-    options:
-    - 2^3, 2^2 and 2^0 (8 + 4 + 1)
-    - 2^4 (16), then 3 single steps back down
-    - 2^3 and 2^2 (8 + 4 = 12)
-    - 13 jumps of 2^0, one level each
-    answer: 0
-    explanation: 13 = 1101 in binary, so the set bits give the jumps. This is why the table has one row
-      per power of two.
-    difficulty: 2
   - id: log-size
     kind: mcq
     prompt: For n = 200,000 nodes, what is the smallest LOG such that 2^LOG exceeds any possible depth?
@@ -265,6 +253,31 @@ quiz:
     explanation: The distance is (9 − 4) + (6 − 4) = 7. Going up from u takes 5 steps to reach the LCA (indices
       0..5); index 6 is past it, on the way down to v, which is 7 − 6 = 1 step from v.
     difficulty: 5
+  - id: lifting-table-never-doubles
+    kind: bug
+    prompt: The tree is a chain 0 - 1 - 2 - 3 - 4 - 5 - 6 rooted at 0, so the 5th ancestor of node 6 is
+      node 1. When the lifting table is built, row j is copied from row j - 1 instead of composing it with
+      itself (up[j][v] = up[j-1][up[j-1][v]]). What does the jump print?
+    code:
+      python: "n = 7\nup = [[max(v - 1, 0) for v in range(n)]]\nfor j in range(1, 3):\n    up.append([up[j\
+        \ - 1][v] for v in range(n)])\nu = 6\nfor j in range(3):\n    if 5 >> j & 1:\n        u = up[j][u]\n\
+        print(u)\n"
+      cpp: "int n = 7;\nvector<vector<int>> up(3, vector<int>(n));\nfor (int v = 0; v < n; v++) up[0][v]\
+        \ = max(v - 1, 0);\nfor (int j = 1; j < 3; j++)\n    for (int v = 0; v < n; v++) up[j][v] = up[j\
+        \ - 1][v];\nint u = 6;\nfor (int j = 0; j < 3; j++)\n    if (5 >> j & 1) u = up[j][u];\ncout <<\
+        \ u;\n"
+      java: "int n = 7;\nint[][] up = new int[3][n];\nfor (int v = 0; v < n; v++) up[0][v] = Math.max(v\
+        \ - 1, 0);\nfor (int j = 1; j < 3; j++)\n    for (int v = 0; v < n; v++) up[j][v] = up[j - 1][v];\n\
+        int u = 6;\nfor (int j = 0; j < 3; j++)\n    if ((5 >> j & 1) == 1) u = up[j][u];\nSystem.out.println(u);\n"
+    options:
+    - '4'
+    - '1'
+    - '5'
+    - '0'
+    answer: 0
+    explanation: Row j must hold the 2^j-th ancestor, built as up[j][v] = up[j-1][up[j-1][v]]. Copying the
+      previous row leaves every row at one step, so the 4-step jump moves a single node (from 5 to 4).
+    difficulty: 3
 problems: [tree-distance-queries, path-kth-stop]
 practice_links:
   - title: Company Queries I

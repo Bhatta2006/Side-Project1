@@ -180,19 +180,6 @@ quiz:
     explanation: Enumerate each half's 2^(n/2) sums, sort one side, and look up each sum of the other by
       binary search or two pointers.
     difficulty: 3
-  - id: largest-n
-    kind: mcq
-    prompt: Trying every permutation of n items with O(n) work each, what is the largest n that fits in
-      10^8 steps?
-    options:
-    - '10'
-    - '12'
-    - '9'
-    - '14'
-    answer: 0
-    explanation: 10!·10 ≈ 3.6·10^7 fits. 11!·11 ≈ 4.4·10^8 does not. Factorial growth means one extra item
-      costs a factor of n.
-    difficulty: 4
   - id: queens-candidates
     kind: mcq
     prompt: Placing 8 queens with exactly one per row and all columns different, how many candidate placements
@@ -232,6 +219,28 @@ quiz:
     explanation: 'An adversarial input, such as a huge target no branch can exceed, forces nearly every
       branch to run. Pruning is a constant-factor tool: still count the worst case before committing.'
     difficulty: 5
+  - id: mask-range-off-by-one
+    kind: bug
+    prompt: Counting the subsets of [1, 2, 3] with sum 6 should give 1 (the full set). This loop runs mask
+      from 0 up to (1 << n) - 2. What does it print?
+    code:
+      python: "a = [1, 2, 3]\nn = 3\ncnt = 0\nfor mask in range((1 << n) - 1):\n    s = sum(a[i] for i in\
+        \ range(n) if mask >> i & 1)\n    if s == 6:\n        cnt += 1\nprint(cnt)\n"
+      cpp: "int a[3] = {1, 2, 3}, n = 3, cnt = 0;\nfor (int mask = 0; mask < (1 << n) - 1; mask++) {\n \
+        \   int s = 0;\n    for (int i = 0; i < n; i++)\n        if (mask >> i & 1) s += a[i];\n    if (s\
+        \ == 6) cnt++;\n}\ncout << cnt;\n"
+      java: "int[] a = {1, 2, 3};\nint n = 3, cnt = 0;\nfor (int mask = 0; mask < (1 << n) - 1; mask++)\
+        \ {\n    int s = 0;\n    for (int i = 0; i < n; i++)\n        if ((mask >> i & 1) == 1) s += a[i];\n\
+        \    if (s == 6) cnt++;\n}\nSystem.out.println(cnt);\n"
+    options:
+    - '0'
+    - '1'
+    - '2'
+    - '3'
+    answer: 0
+    explanation: Masks run from 0 to 2^n - 1 inclusive, so the bound must be mask < (1 << n). Stopping one
+      short drops the mask with all bits set, which is the full set.
+    difficulty: 2
 problems: [apple-split, closest-subset-sum]
 practice_links:
   - title: Apple Division

@@ -191,19 +191,6 @@ quiz:
     explanation: This finds the largest x with x² ≤ 50, which is 7 (49). Compare with the first-true version,
       where the same boundary gave 8.
     difficulty: 3
-  - id: reading-speed
-    kind: mcq
-    prompt: Chapters have [3, 6, 7, 11] pages. At speed k pages per hour, chapter i takes ceil(p / k) hours.
-      What is the minimum integer k that finishes all chapters within 8 hours?
-    options:
-    - '4'
-    - '3'
-    - '5'
-    - '6'
-    answer: 0
-    explanation: 'At k = 4: 1 + 2 + 2 + 3 = 8 hours, which fits. At k = 3: 1 + 2 + 3 + 4 = 10, which does
-      not.'
-    difficulty: 3
   - id: min-max-split
     kind: mcq
     prompt: Split [7, 2, 5, 10, 8] into 2 contiguous parts so that the largest part sum is as small as possible.
@@ -244,6 +231,30 @@ quiz:
     explanation: The predicate itself overflowed, so a feasible T can look infeasible. Cap the running total
       (return true as soon as it reaches n) or use min(T / speed, n).
     difficulty: 5
+  - id: floor-instead-of-ceil
+    kind: bug
+    prompt: Chapters of 3, 6, 7 and 11 pages must be read in at most 8 hours, and chapter i takes ceil(p
+      / k) hours at speed k. The true minimum speed is 4. This search uses FLOOR division p / k for the
+      hours. What does it print?
+    code:
+      python: "piles = [3, 6, 7, 11]\nh = 8\nlo, hi = 1, 11\nwhile lo < hi:\n    mid = (lo + hi) // 2\n\
+        \    hours = sum(p // mid for p in piles)\n    if hours <= h:\n        hi = mid\n    else:\n   \
+        \     lo = mid + 1\nprint(lo)\n"
+      cpp: "int piles[4] = {3, 6, 7, 11};\nint h = 8, lo = 1, hi = 11;\nwhile (lo < hi) {\n    int mid =\
+        \ (lo + hi) / 2, hours = 0;\n    for (int p : piles) hours += p / mid;\n    if (hours <= h) hi =\
+        \ mid;\n    else lo = mid + 1;\n}\ncout << lo;\n"
+      java: "int[] piles = {3, 6, 7, 11};\nint h = 8, lo = 1, hi = 11;\nwhile (lo < hi) {\n    int mid =\
+        \ (lo + hi) / 2, hours = 0;\n    for (int p : piles) hours += p / mid;\n    if (hours <= h) hi =\
+        \ mid;\n    else lo = mid + 1;\n}\nSystem.out.println(lo);\n"
+    options:
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    answer: 0
+    explanation: A chapter of 7 pages at speed 3 takes 3 hours, not floor(7/3) = 2. Floor division undercounts
+      the hours, so a too-slow speed passes the check. Use (p + k - 1) / k, the ceiling.
+    difficulty: 3
 problems: [factory-time]
 practice_links:
   - title: Factory Machines

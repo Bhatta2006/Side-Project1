@@ -191,18 +191,6 @@ quiz:
     explanation: m has 3 set bits, so it has 2³ = 8 submasks, but the loop stops when sub reaches 0, so
       the empty submask is never counted. Handle it separately when you need it.
     difficulty: 3
-  - id: three-n
-    kind: mcq
-    prompt: Enumerating every submask of every mask over n bits takes...
-    options:
-    - O(3^n)
-    - O(4^n)
-    - O(2^n)
-    - O(n · 2^n)
-    answer: 0
-    explanation: 'Each element is independently outside the mask, inside the mask but not in the submask,
-      or in both: 3 choices, 3^n pairs in total.'
-    difficulty: 3
   - id: xor-subarrays
     kind: mcq
     prompt: How many subarrays of [3, 1, 2, 3] have XOR equal to 0?
@@ -254,6 +242,35 @@ quiz:
     explanation: 'The SOS DP adds one bit dimension at a time: for each bit, for each mask containing it,
       f[mask] += f[mask without the bit]. That is 20 · 2^20 ≈ 2.1·10^7.'
     difficulty: 5
+  - id: test-bit-equals-one
+    kind: bug
+    prompt: x = 6 (binary 110) has bit 1 set. This test compares the masked value with 1 instead of testing
+      it against zero. What does it print?
+    code:
+      python: "x, i = 6, 1\nif (x & (1 << i)) == 1:\n    print(\"set\")\nelse:\n    print(\"clear\")\n"
+      cpp: 'int x = 6, i = 1;
+
+        if ((x & (1 << i)) == 1) cout << "set";
+
+        else cout << "clear";
+
+        '
+      java: 'int x = 6, i = 1;
+
+        if ((x & (1 << i)) == 1) System.out.println("set");
+
+        else System.out.println("clear");
+
+        '
+    options:
+    - clear
+    - set
+    - error
+    - six
+    answer: 0
+    explanation: 'x & (1 << i) is 2 (the value of the bit), not 1. Only bit 0 would give exactly 1. Test
+      with != 0, or shift first: (x >> i) & 1.'
+    difficulty: 2
 problems: [xor-subarrays]
 practice_links:
   - title: Gray Code
