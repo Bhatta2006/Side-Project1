@@ -32,6 +32,17 @@ def now() -> int:
     return int(time.time())
 
 
+_last_seq = 0
+
+
+def next_seq() -> int:
+    """A nanosecond stamp that never repeats in this process. ``time.time_ns`` alone can return
+    the same value twice in a row on Windows, which makes "newest" ambiguous."""
+    global _last_seq
+    _last_seq = max(time.time_ns(), _last_seq + 1)
+    return _last_seq
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -809,7 +820,7 @@ class ValidationReport(Base):
     findings: Mapped[list] = mapped_column(JSON, default=list)
     reviewer: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
-    seq: Mapped[int] = mapped_column(BigInteger, default=time.time_ns)
+    seq: Mapped[int] = mapped_column(BigInteger, default=next_seq)
 
 
 class GenerationJob(Base):
