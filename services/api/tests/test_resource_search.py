@@ -88,6 +88,27 @@ def test_providers_return_cleaned_hits_and_failures_add_nothing():
     assert asyncio.run(search.gather("Ohm", ["no-such-provider"], everything())) == []
 
 
+def test_the_course_subject_is_searched_too_and_wikibooks_links_to_wikibooks():
+    asked = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        query = request.url.params.get("srsearch", "")
+        asked.append((request.url.host, query))
+        title = "Cookbook:Rice" if "rice" in query.lower() else "Cooking"
+        return httpx.Response(200, json={"query": {"search": [{"title": title, "snippet": ""}]}})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    hits = asyncio.run(
+        search.gather("Boiling rice Home cooking", ["wikibooks"], client, broad="Home cooking")
+    )
+    assert sorted(q for _, q in asked) == ["Boiling rice Home cooking", "Home cooking"]
+    assert {h.url for h in hits} == {
+        "https://en.wikibooks.org/wiki/Cookbook:Rice",
+        "https://en.wikibooks.org/wiki/Cooking",
+    }
+    assert all(h.provider == "wikibooks" for h in hits)
+
+
 def test_xml_with_entities_is_refused():
     bomb = b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]><feed>&a;</feed>'
     client = fake({"export.arxiv.org": httpx.Response(200, content=bomb)})

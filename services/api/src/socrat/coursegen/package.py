@@ -587,10 +587,13 @@ def build_concept(
     # live run spent all three rounds rewriting the lesson over a quiz-side slip.
     made = {f"prompt:{x.id}" for x in prompts} | {f"task:{x.id}" for x in tasks}
     made |= {f"exercise:{x.id}" for x in exercises} | {f"experiment:{x.id}" for x in experiments}
+    # Visuals are drawn after this check, so a "visual:0" the model sequenced is not there yet.
+    made |= {f"visual:{i}" for i in range(len(concept.visuals))}
     sequence = [
         s
         for s in sequence
-        if s in made or s.split(":", 1)[0] not in {"prompt", "task", "exercise", "experiment"}
+        if s in made
+        or s.split(":", 1)[0] not in {"prompt", "task", "exercise", "experiment", "visual"}
     ]
     if any(problems.values()):
         return None, problems

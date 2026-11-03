@@ -65,9 +65,20 @@ async def _get(client: httpx.AsyncClient, url: str, params: dict) -> httpx.Respo
 
 
 async def wikipedia(client: httpx.AsyncClient, query: str, limit: int) -> list[Hit]:
+    return await _mediawiki(client, query, limit, "en.wikipedia.org", "wikipedia")
+
+
+async def wikibooks(client: httpx.AsyncClient, query: str, limit: int) -> list[Hit]:
+    """Open textbooks: the Cookbook, language courses, hobby and how-to books."""
+    return await _mediawiki(client, query, limit, "en.wikibooks.org", "wikibooks")
+
+
+async def _mediawiki(
+    client: httpx.AsyncClient, query: str, limit: int, host: str, provider: str
+) -> list[Hit]:
     response = await _get(
         client,
-        "https://en.wikipedia.org/w/api.php",
+        f"https://{host}/w/api.php",
         {
             "action": "query",
             "list": "search",
@@ -85,9 +96,9 @@ async def wikipedia(client: httpx.AsyncClient, query: str, limit: int) -> list[H
             out.append(
                 Hit(
                     title=title,
-                    url="https://en.wikipedia.org/wiki/" + quote(title.replace(" ", "_")),
+                    url=f"https://{host}/wiki/" + quote(title.replace(" ", "_"), safe=":"),
                     snippet=clean(item.get("snippet", "")),
-                    provider="wikipedia",
+                    provider=provider,
                     kind="article",
                     published=str(item.get("timestamp", ""))[:10],
                     license="CC BY-SA 4.0",
@@ -158,7 +169,12 @@ async def open_library(client: httpx.AsyncClient, query: str, limit: int) -> lis
     return [h for h in out if h.title]
 
 
-PROVIDERS = {"wikipedia": wikipedia, "arxiv": arxiv, "open-library": open_library}
+PROVIDERS = {
+    "wikipedia": wikipedia,
+    "wikibooks": wikibooks,
+    "arxiv": arxiv,
+    "open-library": open_library,
+}
 
 
 def _host(url: str) -> str:
@@ -190,19 +206,27 @@ def rank(hits: list[Hit], query: str) -> list[Hit]:
 
 
 async def gather(
-    query: str, providers: list[str], client: httpx.AsyncClient | None = None
+    query: str,
+    providers: list[str],
+    client: httpx.AsyncClient | None = None,
+    broad: str = "",
 ) -> list[Hit]:
-    """Ask every enabled provider at once; a provider that fails adds nothing. De-duplicated."""
+    """Ask every enabled provider at once; a provider that fails adds nothing. De-duplicated.
+    ``broad`` (the course's subject) is searched too: a lesson-sized query often finds little
+    of use ("Egg hygiene and cracking Basic home cooking" found "Poland" in a live run), while
+    the subject's own page is always a sound second source."""
     chosen = [PROVIDERS[p] for p in providers if p in PROVIDERS]
     if not chosen or not query.strip():
         return []
+    queries = [query[:200]] + ([broad[:200]] if broad.strip() and broad != query else [])
     own = client is None
     client = client or httpx.AsyncClient(
         timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": USER_AGENT}
     )
     try:
         batches = await asyncio.gather(
-            *(p(client, query[:200], PER_PROVIDER) for p in chosen), return_exceptions=True
+            *(p(client, q, PER_PROVIDER) for q in queries for p in chosen),
+            return_exceptions=True,
         )
     finally:
         if own:

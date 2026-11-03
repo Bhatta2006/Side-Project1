@@ -578,7 +578,10 @@ async def run_package(
         allowed = None
         if settings.research_providers:
             hits = await search.gather(
-                f"{concept.title} {course.title}", settings.research_providers, http
+                f"{concept.title} {course.title}",
+                settings.research_providers,
+                http,
+                broad=course.title,
             )
             if hits:  # nothing found: fall back to named sources, still link-checked
                 allowed = {h.url: h for h in hits}
@@ -598,6 +601,10 @@ async def run_package(
         )
         if cited:
             ctx = "\n\n".join([ctx, research.block(cited)])
+        if len(cited) >= 2:
+            # Enough verified sources: they are the resources, and the author names no URL
+            # of its own (its guesses mostly 404ed in live runs and cost whole rounds).
+            ctx += "\n\nResources: list only the verified sources above, or leave it empty."
 
     def release(live_, pack_, summary_) -> None:
         pack_ = pkg.release_pack(pack_, models["reviewer"], summary_)
@@ -633,6 +640,13 @@ async def run_package(
                 _note(engine, job_id, entry, reply.cost_usd)
                 continue
             lesson = pkg.tidy_lesson(reply.data, cited)
+            if len(cited) >= 2:
+                verified = {s["url"] for s in cited}
+                lesson["resources"] = [
+                    r
+                    for r in lesson.get("resources", [])
+                    if isinstance(r, dict) and r.get("url") in verified
+                ]
             issues = pkg.check_lesson(concept, course, lesson, style)
             issues += research.check(str(lesson.get("lesson", "")), cited)
             # A dead link is dropped, not a reason for a new round, while the live ones and the

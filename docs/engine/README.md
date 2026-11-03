@@ -121,7 +121,7 @@ No learning styles: preferences change wording and format, never the method.
 | `SOCRAT_LEARNING_REQUESTS_ENABLED` | Learner-made courses (`/new`) | after a live-model run of the benchmark | set false; existing courses stay readable |
 | `SOCRAT_GEN_VISUALS` | Experience Designer adds lesson visuals | after reviewing a few designed lessons | set false; stored visuals still render |
 | `SOCRAT_MAINTAINER_ENABLED` | Scheduled link checks and repairs | any time; no model | set false |
-| `SOCRAT_RESEARCH_PROVIDERS` | Grounded research, e.g. `["wikipedia","arxiv","open-library"]` | after one live run | empty list |
+| `SOCRAT_RESEARCH_PROVIDERS` | Grounded research, e.g. `["wikipedia","wikibooks","arxiv","open-library"]` | after one live run | empty list |
 | `SOCRAT_EXPLAINER_SKETCH_DECLARATIVE` | Sketches as data, no model code | after checking a few generated sketches | set false; old and new sketches both still play |
 | `SOCRAT_LITE_MODE_ENABLED` | Data-use choice and lite mode | any time | set false |
 | `SOCRAT_GEN_INITIAL_ON_PUBLISH` | Admin-published courses write their first slice at once | any time | set false |

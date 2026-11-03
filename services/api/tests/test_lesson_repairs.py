@@ -94,7 +94,7 @@ def test_sequence_entries_for_missing_activities_are_left_out():
     }
     quiz = {
         "quiz": [q.model_dump(mode="json") for q in concept.quiz][:6],
-        "sequence": ["lesson", "task:never-written", "quiz"],
+        "sequence": ["lesson", "visual:0", "task:never-written", "quiz"],
     }
     live, problems = pkg.build_concept(concept, lesson, quiz, 1, "test")  # a non-code course
     assert not any(problems.values()), problems
