@@ -382,13 +382,12 @@ class Concept(Model):
             raise ValueError(f"concept {self.id} sequence repeats an activity")
         if len({t.id for t in self.tasks}) != len(self.tasks):
             raise ValueError(f"concept {self.id} task ids must be unique")
-        live_ids = {i for q in self.quiz for i in (q.id, *q.former_ids)}
-        if clash := sorted({q.id for q in self.retired_quiz} & live_ids):
-            raise ValueError(f"concept {self.id} retired quiz ids are still live: {clash}")
         return self
 
     def quiz_item(self, item_id: str) -> QuizItem:
-        """The quiz item stored under ``item_id`` (current, renamed or retired)."""
+        """The quiz item stored under ``item_id`` (current, renamed or retired). A live item
+        wins over a retired one with the same id: a rewrite may bring a question back before
+        ``catalog.revisions.carry`` tidies the retired list."""
         for q in (*self.quiz, *self.retired_quiz):
             if q.matches(item_id):
                 return q

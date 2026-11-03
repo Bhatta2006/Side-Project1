@@ -84,11 +84,13 @@ def test_retiring_everything_when_a_concept_goes_back_to_planned(base):
     assert out.quiz_item(base.quiz[1].id).id == base.quiz[1].id
 
 
-def test_a_retired_id_cannot_also_be_live(base):
-    with pytest.raises(ValueError, match="still live"):
-        Concept.model_validate(
-            base.model_dump(mode="json") | {"retired_quiz": [base.quiz[0].model_dump(mode="json")]}
-        )
+def test_a_live_item_wins_over_a_retired_one_with_the_same_id(base):
+    stale = base.quiz[0].model_copy(update={"prompt": "An older wording of this question?"})
+    both = Concept.model_validate(
+        base.model_dump(mode="json") | {"retired_quiz": [stale.model_dump(mode="json")]}
+    )
+    assert both.quiz_item(base.quiz[0].id).prompt == base.quiz[0].prompt
+    assert carry(both, both).retired_quiz == []  # the next store tidies it away
 
 
 def test_store_concept_carries_ids_for_a_released_generated_lesson(client, released):
