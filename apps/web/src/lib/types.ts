@@ -76,6 +76,8 @@ export interface Course {
   tagline: string;
   description: string;
   languages: Language[];
+  // How the subject is practised; only a "code" course has a code editor and a language choice.
+  shape?: { studio: 'code' | 'workbench' | 'lab' | 'reading' };
   levels: { id: string; label: string; description: string }[];
   modules: { id: string; title: string; summary: string; concepts: number }[];
   concept_count: number;

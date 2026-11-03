@@ -27,6 +27,8 @@ const ROLES = [
 ] as const;
 type Step = 'about' | 'course' | 'level' | 'language' | 'schedule' | 'review';
 const ORDER: Step[] = ['about', 'course', 'level', 'language', 'schedule', 'review'];
+// Only a programming course asks which language; others (Kannada, drawing, finance) skip it.
+const codes = (c: Course | null) => !c || !c.shape || c.shape.studio === 'code';
 const COURSE_ICON: Record<string, typeof BookOpen> = { zero: BookOpen, dsa: Target, cp: Trophy };
 const DRAFT_KEY = 'socrat:onboarding';
 const MIN_AGE = 13;
@@ -121,6 +123,8 @@ export default function Start() {
     api.get<{ items: Course[] }>('/courses').then(r => setCourses(r.items)).catch(e => setError(explain(e)));
     api.get<{ languages: Record<string, boolean> }>('/runtimes').then(r => setRuntimes(r.languages)).catch(() => undefined);
   }, []);
+  // A restored draft may stand on the language step of a course that has none.
+  useEffect(() => { if (step === 'language' && !codes(course)) setStep('schedule'); }, [step, course]);
   useEffect(() => {
     if (!profile) return;
     // A finished course may start the next one (the API refuses unless the course is done).
@@ -249,8 +253,9 @@ export default function Start() {
 
   if (!allowed || !courses) return error ? <div className="mx-auto max-w-2xl p-6"><ErrorNote message={error} /></div> : <Loading variant="form" label="Loading setup" />;
 
-  const position = ORDER.indexOf(step);
-  const back = position > (profile?.birth_year ? 1 : 0) ? () => setStep(ORDER[position - 1]) : undefined;
+  const steps = codes(course) ? ORDER : ORDER.filter(s => s !== 'language');
+  const position = Math.max(0, steps.indexOf(step));
+  const back = position > (profile?.birth_year ? 1 : 0) ? () => setStep(steps[position - 1]) : undefined;
   const toggleDay = (i: number) => setWeekdays(w => (w.includes(i) ? (w.length > 1 ? w.filter(x => x !== i) : w) : [...w, i].sort()));
   const weekly = minutes * weekdays.length;
 
@@ -259,9 +264,9 @@ export default function Start() {
       <div className="mb-10 grid gap-3">
         <div className="flex min-h-11 items-center justify-between gap-4">
           {back ? <Button type="button" variant="ghost" size="sm" className="-ml-3" onClick={back}><ArrowLeft data-icon="inline-start" /> Back</Button> : <span />}
-          <p className="text-sm font-semibold text-muted-foreground tabular-nums">Step {position + 1} of {ORDER.length}</p>
+          <p className="text-sm font-semibold text-muted-foreground tabular-nums">Step {position + 1} of {steps.length}</p>
         </div>
-        <Progress value={(100 * (position + 1)) / ORDER.length} aria-label={`Step ${position + 1} of ${ORDER.length}`} />
+        <Progress value={(100 * (position + 1)) / steps.length} aria-label={`Step ${position + 1} of ${steps.length}`} />
       </div>
 
       <div key={step} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -319,11 +324,11 @@ export default function Start() {
                     className="min-h-[72px]"
                     selected={course?.id === c.id}
                     aria-pressed={course?.id === c.id}
-                    onClick={() => { setCourse(c); if (course?.id !== c.id) { setLevel(''); setLanguage(c.languages.length === 1 ? c.languages[0] : ''); } setStep('level'); }}
+                    onClick={() => { setCourse(c); if (course?.id !== c.id) { setLevel(''); setLanguage(c.languages.length === 1 || !codes(c) ? c.languages[0] : ''); } setStep('level'); }}
                   >
                     <span className="choice-title block text-[17px] font-semibold">{c.title}</span>
                     <span className="block text-[15px] text-muted-foreground">{c.tagline}</span>
-                    <span className="mt-1 block text-[13px] text-muted-foreground">{c.concept_count} skills, {c.problem_count} judged problems</span>
+                    <span className="mt-1 block text-[13px] text-muted-foreground">{c.concept_count} skills{c.problem_count ? `, ${c.problem_count} judged problems` : ''}</span>
                   </Choice>
                 );
               })}
@@ -336,7 +341,7 @@ export default function Start() {
             <Heading title="How much do you already know?" body="If you pick a higher level, a short adaptive check confirms it, so nothing important gets skipped." />
             <div className="grid gap-3">
               {course.levels.map((l, i) => (
-                <Choice key={l.id} marker={i + 1} className="min-h-[72px]" selected={level === l.id} aria-pressed={level === l.id} onClick={() => { setLevel(l.id); setStep('language'); }}>
+                <Choice key={l.id} marker={i + 1} className="min-h-[72px]" selected={level === l.id} aria-pressed={level === l.id} onClick={() => { setLevel(l.id); setStep(codes(course) ? 'language' : 'schedule'); }}>
                   <span className="choice-title block text-[17px] font-semibold">{l.label}</span>
                   <span className="block text-[15px] text-muted-foreground">{l.description}</span>
                 </Choice>
@@ -345,7 +350,7 @@ export default function Start() {
           </div>
         ) : null}
 
-        {step === 'language' && course ? (
+        {step === 'language' && course && codes(course) ? (
           <div className="grid gap-6">
             <Heading title="Which language?" body="Lessons, examples, checks and your code editor all follow this choice. Not sure? Python reads closest to plain English." />
             <div className="grid gap-3 sm:grid-cols-3">
@@ -424,7 +429,7 @@ export default function Start() {
             <dl className="paper rounded-card px-5">
               <Summary label="Course" value={course.title} onEdit={() => setStep('course')} />
               <Summary label="Starting level" value={course.levels.find(l => l.id === level)?.label ?? 'Not chosen'} onEdit={() => setStep('level')} />
-              <Summary label="Language" value={language ? LANGUAGE_LABEL[language] : 'Not chosen'} onEdit={() => setStep('language')} />
+              {codes(course) ? <Summary label="Language" value={language ? LANGUAGE_LABEL[language] : 'Not chosen'} onEdit={() => setStep('language')} /> : null}
               <Summary label="Study time" value={`${hours(minutes)} on ${weekdays.map(i => DAYS[i]).join(', ')}`} onEdit={() => setStep('schedule')} />
               {targetDate ? <Summary label="Target date" value={new Date(`${targetDate}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })} onEdit={() => setStep('schedule')} /> : null}
             </dl>

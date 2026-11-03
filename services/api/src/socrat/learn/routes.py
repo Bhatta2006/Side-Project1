@@ -202,8 +202,11 @@ def is_admin(request: Request, user: User) -> bool:
 
 
 def studios_for(request: Request, user: User) -> bool:
-    """Course studios (the dynamic Practice slot) are on for admin accounts only while tested."""
-    return style_access.enabled(request.app.state.settings, user)
+    """Course studios (the dynamic Practice slot) are on for admin accounts only while tested,
+    and for everyone once learners can build their own courses: a learner's Kannada or drawing
+    course must not open on a code editor. Hand-authored code courses look the same either way."""
+    settings = request.app.state.settings
+    return settings.learning_requests_enabled or style_access.enabled(settings, user)
 
 
 def profile_view(
