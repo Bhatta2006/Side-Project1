@@ -19,6 +19,7 @@ from socrat.planner import gates, goals
 
 KINDS = {
     "repair",
+    "bridge",
     "probe",
     "test_out",
     "defer",
@@ -130,6 +131,12 @@ def sync(db: Session, enrollment: Enrollment, drafts: list[Draft], now: int) -> 
     for draft in drafts:
         if open_count >= MAX_PENDING:
             break
+        if draft.kind == "bridge":  # only the owner of a generated course may change it
+            from socrat.models import GeneratedCourse
+
+            meta = db.get(GeneratedCourse, enrollment.course_id)
+            if meta is None or meta.owner_id != enrollment.user_id:
+                continue
         new = add(db, enrollment, draft, "planner", now)
         if new is not None:
             created.append(new)
@@ -149,7 +156,7 @@ def validate(catalog: Catalog, enrollment: Enrollment, kind: str, payload: dict)
 
     if kind in {"probe", "defer", "prioritize"}:
         return {"concept": concept("concept")}
-    if kind == "repair":
+    if kind in {"repair", "bridge"}:
         weak, target = concept("concept"), concept("for")
         if weak not in catalog.closure([target]) or weak == target:
             raise HTTPException(422, "invalid_proposal")
@@ -296,6 +303,23 @@ def decide(
     if not accept:
         return row
     reason = apply(enrollment, row, now)
+    if row.kind == "bridge":
+        from socrat.catalog.registry import default_catalog
+        from socrat.coursegen import evolve
+
+        try:
+            evolve.insert_bridge(
+                db,
+                default_catalog(),
+                catalog,
+                enrollment.course_id,
+                row.payload["for"],
+                row.payload["concept"],
+                row.reason,
+                user.id,
+            )
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if row.group:
         for other in pending(db, enrollment):
             if other.group == row.group and other.id != row.id:

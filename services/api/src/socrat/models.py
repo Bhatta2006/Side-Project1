@@ -757,6 +757,19 @@ class GeneratedConcept(Base):
     job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
+class CourseRevision(Base):
+    """One visible change to a generated course's plan (coursegen.evolve): what and why."""
+
+    __tablename__ = "course_revisions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    change: Mapped[str] = mapped_column(String(300))
+    reason: Mapped[str] = mapped_column(String(500))
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
 class TaskSubmission(Base):
     """A learner's work on a task (``learn.tasks``): self-checked, waiting for a person, or
     graded by a named person (only that grade becomes evidence)."""

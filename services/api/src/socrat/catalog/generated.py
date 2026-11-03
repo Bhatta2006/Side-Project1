@@ -194,6 +194,7 @@ def save_course(
     # Generated atom packs and problems survive an outline save.
     atoms = {cid: old.atoms for cid, old in kept.items()}
     problems = {cid: old.problems for cid, old in kept.items()}
+    released_by = {cid: old.job_id for cid, old in kept.items()}
     for old in kept.values():
         db.delete(old)
     db.flush()
@@ -205,6 +206,7 @@ def save_course(
                 payload=concept.model_dump(mode="json"),
                 atoms=atoms.get(concept.id),
                 problems=problems.get(concept.id),
+                job_id=released_by.get(concept.id),
                 updated_at=stamp,
             )
         )

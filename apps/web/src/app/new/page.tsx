@@ -115,6 +115,13 @@ export default function NewCourse() {
   const [text, setText] = useState('');
   const [picks, setPicks] = useState<string[]>([]);
   const [req, setReq] = useState<LearningRequest | null>(null);
+  // Every change to a published plan, and why (never silent; coursegen/evolve.py).
+  const [changes, setChanges] = useState<{ version: number; change: string; reason: string }[]>([]);
+  useEffect(() => {
+    if (!req?.published) return;
+    api.get<{ items: { version: number; change: string; reason: string }[] }>(`/learning-requests/${req.id}/revisions`)
+      .then(r => setChanges(r.items)).catch(() => undefined);
+  }, [req?.id, req?.published]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [consent, setConsent] = useState(false);
@@ -349,6 +356,14 @@ export default function NewCourse() {
                 rest just before you reach them, and nothing is shown as ready until it is. Courses made by AI are
                 labelled as such.
               </p>
+              {changes.length ? (
+                <div className="mt-4 rounded-xl border px-4 py-3 text-sm">
+                  <p className="font-medium">Changes to your plan</p>
+                  <ul className="mt-1 grid gap-1 text-muted-foreground">
+                    {changes.map(c => <li key={c.version}>{c.change} Why: {c.reason}</li>)}
+                  </ul>
+                </div>
+              ) : null}
               {req.published && writing ? (
                 <Button className="mt-3" variant="outline" size="sm" onClick={stopWriting} disabled={busy}>
                   Stop lessons that have not started

@@ -417,3 +417,17 @@ def cancel(request_id: str, request: Request):
         record_event(db, user.id, "learning_request.cancel", row.id)
         db.flush()
         return view(db, row) | {"cancelled": len(waiting)}
+
+
+@router.get("/{request_id}/revisions")
+def revisions(request_id: str, request: Request):
+    """Every change made to this course's plan after it was published, newest first, and why."""
+    _enabled(request)
+    from socrat.coursegen import evolve
+
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        row = db.get(LearningRequest, request_id)
+        if row is None or row.user_id != user.id or not row.course_id:
+            raise HTTPException(404, "not_found")
+        return dict(items=evolve.history(db, row.course_id))
