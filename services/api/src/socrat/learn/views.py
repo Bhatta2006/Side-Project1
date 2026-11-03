@@ -363,6 +363,18 @@ def _tasks(db: Session, enrollment, qualified: str, concept) -> list[dict]:
     ]
 
 
+def _teaching(catalog: Catalog, course_id: str, concept, stage: str) -> dict:
+    from socrat.engine import design, strategy
+
+    p = strategy.plan(concept, stage, design.adapter_for(catalog.course(course_id)))
+    return dict(
+        stage=p.stage,
+        guidance=p.guidance,
+        techniques=[{k: t[k] for k in ("name", "why")} for t in p.techniques],
+        library=p.library,
+    )
+
+
 def _validation(db: Session, qualified: str, concept) -> dict | None:
     if not (concept.provenance and concept.provenance.author == AI_AUTHOR):
         return None
@@ -415,6 +427,8 @@ def concept_view(
         # Work a quiz cannot judge, with this learner's latest submission for each.
         tasks=_tasks(db, enrollment, qualified, concept),
         sequence=concept.sequence,
+        # How this concept is taught to this learner now, and why (Pedagogical Strategist).
+        teaching=_teaching(catalog, course_id, concept, summary.stage),
         # What stands behind the estimate: the stage and the kinds of evidence (prompt 9.2).
         evidence=dict(
             stage=summary.stage,

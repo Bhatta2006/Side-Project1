@@ -25,6 +25,14 @@ def list_renderers(request: Request):
     return httpcache.shared(request, {"items": items})
 
 
+@router.get("/strategies")
+def list_strategies(request: Request):
+    """The Learning Evidence Library: techniques, evidence, limits, Socrat's rules, references."""
+    from socrat.engine import evidence_library
+
+    return httpcache.shared(request, evidence_library.as_dict())
+
+
 @router.get("/simulations")
 def list_simulations(request: Request):
     """Each vetted experiment with its parameters (unit, range, default) and what it reports,

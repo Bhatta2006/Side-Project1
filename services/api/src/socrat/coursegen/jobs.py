@@ -345,6 +345,10 @@ async def run_package(
     code = list(course.languages) if editor and runnable == list(course.languages) else []
     style = brief.style
     ctx = pkg.context(base, course, brief.model_dump(), concept, style)
+    from socrat.engine import strategy
+
+    # The Pedagogical Strategist's plan, from the evidence library (deterministic).
+    ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, 'unknown', adapter))}"
     reference = pkg.gold(base) if style is None or style.shows_reference() else None
     note = pkg.STYLE_NOTE if style else ""
     cited: list[dict] = []

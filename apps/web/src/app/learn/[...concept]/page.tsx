@@ -491,6 +491,14 @@ export default function Lesson() {
               <p className="-mt-2 mb-4 text-sm text-muted-foreground">{concept.evidence.reasons[0]}</p>
             ) : null}
             <Stepper concept={concept} className="flex-col gap-4" />
+            {concept.teaching?.techniques.length ? (
+              <details className="mt-4 text-sm">
+                <summary className="cursor-pointer font-medium">Why it is taught this way</summary>
+                <ul className="mt-2 grid gap-1.5 text-muted-foreground">
+                  {concept.teaching.techniques.map(t => <li key={t.name}><span className="font-medium text-foreground">{t.name}.</span> {t.why}</li>)}
+                </ul>
+              </details>
+            ) : null}
           </div>
           {sections.length > 1 ? (
             <nav aria-label="On this page" className="paper rounded-card p-5">
