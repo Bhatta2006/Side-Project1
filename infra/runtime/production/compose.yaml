@@ -167,7 +167,7 @@ services:
       - no-new-privileges:true
     deploy:
       resources:
-        limits: { cpus: "1.50", memory: 1536M }
+        limits: { cpus: "1.50", memory: 3G }
     logging: *bounded-logging
 
   # Also runs Playground generations, so it shares the API's AI and checker configuration.
