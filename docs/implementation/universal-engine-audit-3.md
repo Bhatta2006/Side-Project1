@@ -189,3 +189,10 @@ Not done, honestly: generated podcasts (needs a speech provider and key), link a
 XP and friend streaks, FSRS (Socrat has its own spaced scheduler), a live-model run of any of
 this. Listen was checked by unit test, not in a real browser with speech; the notes box was
 checked in a real browser at phone width with a mocked API.
+
+### Test results for the second pass
+
+Full API suite: **952 passed, 30 skipped, 5 failed** (20 min); the 5 are the same environmental
+failures listed in section 6. The first full run of this pass found two rules too broad (lab
+practice in code courses, bite lessons at 15 minutes); both were narrowed and the run repeated.
+Ruff, ruff format, mypy (205 files), web typecheck and the web unit tests (13) are clean.
