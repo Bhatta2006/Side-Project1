@@ -10,6 +10,7 @@ import json
 import re
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
@@ -52,6 +53,8 @@ KEYS = {
     "price_input_per_mtok": ("ai_price_input_per_mtok",),
     "price_output_per_mtok": ("ai_price_output_per_mtok",),
 }
+# One retry of a truncated reply may double its budget, up to this many output tokens.
+TRUNCATION_CEILING = 16000
 DEFAULT_EFFORT = "high"  # outlines and reviews are worth the extra thinking
 # Finding and screening sources is retrieval, not reasoning: low effort keeps the cost down.
 ROLE_EFFORT = {
@@ -189,29 +192,43 @@ async def ask(
     if provider.name != "offline":
         with Session(engine) as db:
             budget.check(db, tuned, user_id, now())
-    text, cost = "", 0.0
-    extra = (
+    cost = 0.0
+    extra: dict[str, Any] = (
         {"response_format": {"type": "json_object"}}
         if provider.name == "openai" and tuned.openai_json_mode
         else {}
     )
-    async for event in provider.converse(system, [Turn("user", prompt)], max_tokens, **extra):
-        if event.kind == "text":
-            text += event.text
-        elif event.kind == "usage":
-            with Session(engine) as db, db.begin():
-                cost += budget.record(
-                    db,
-                    tuned,
-                    user_id=user_id,
-                    feature=f"coursegen.{role}",
-                    provider=provider.name,
-                    model=budget.model_name(tuned, provider),
-                    input_tokens=event.arguments["input_tokens"],
-                    output_tokens=event.arguments["output_tokens"],
-                    stamp=now(),
-                )
-    data, problem = parse_json(text)
+    limit = max_tokens
+    for attempt in range(2):
+        text, produced = "", 0
+        async for event in provider.converse(system, [Turn("user", prompt)], limit, **extra):
+            if event.kind == "text":
+                text += event.text
+            elif event.kind == "usage":
+                produced = event.arguments["output_tokens"]
+                with Session(engine) as db, db.begin():
+                    cost += budget.record(
+                        db,
+                        tuned,
+                        user_id=user_id,
+                        feature=f"coursegen.{role}",
+                        provider=provider.name,
+                        model=budget.model_name(tuned, provider),
+                        input_tokens=event.arguments["input_tokens"],
+                        output_tokens=produced,
+                        stamp=now(),
+                    )
+        data, problem = parse_json(text)
+        # A reasoning model can spend its whole budget thinking and never reach the JSON. That is
+        # a budget problem, not a content verdict: ask the same question once with more room
+        # instead of letting the caller score an empty reply and burn a whole revision round.
+        cut_off = data is None and produced >= int(limit * 0.97)
+        if not cut_off:
+            break
+        if attempt == 0:
+            limit = min(limit * 2, TRUNCATION_CEILING)
+            continue
+        problem = f"reply was cut off at the {limit} token limit before the JSON was complete"
     ms = int((time.monotonic() - started) * 1000)
     return Reply(
         data, problem, cost, budget.model_name(tuned, provider), prompt_version(system), ms

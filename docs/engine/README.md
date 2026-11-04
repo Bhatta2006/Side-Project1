@@ -114,6 +114,22 @@ Typed input, a sandboxed run with a timeout and a uniform result, in `socrat/har
 3. A measure in `engine/outcomes.py` if the rule needs one.
 No learning styles: preferences change wording and format, never the method.
 
+## What blocks a lesson from release
+
+A lesson is held back by a **defect**, not by a score. Blocking: a deterministic gate that fails
+(schema, length, code, math, links), a fact-check claim marked `incorrect`, a missing fact check,
+or a review that could not be read. The reviewer's 1 to 5 scores are a signal, and a cheap
+reviewer is noisy, so a score under target (5 for correctness, 4 for the other dimensions) is
+stored as a **warning** and the lesson is released as `pass_with_warnings`. Only a score below
+`SOCRAT_GEN_SCORE_FLOOR` (default 3, range 2 to 5) blocks. Raise the floor as stronger author and
+reviewer models are put in place. Released lessons stay labelled AI-generated and not reviewed by
+a person; warnings are visible to the owner in the Upkeep tab. A passing score is a same-class
+model finding nothing blocking, not proof of correctness.
+
+A model reply cut off at its token limit is asked again once with a doubled budget (ceiling
+16000) before it is counted, so a reasoning model that spends its budget thinking does not cost a
+whole revision round.
+
 ## Flags (all off by default) and how to switch them on
 
 | Setting | What it turns on | Switch on | Roll back |
