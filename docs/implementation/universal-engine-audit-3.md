@@ -141,3 +141,51 @@ owner decides whether to merge it into `feat/universal-engine` or open a pull re
   also fails on the old code (cause not investigated).
 - Ruff, ruff format and mypy (205 files): clean. Web typecheck: clean. Web unit tests: 10 passed.
 - Not run: the Playwright end-to-end, visual and accessibility suites; any live model.
+
+## 7. Second pass: competitor comparison (Wondering) and generation fixes
+
+### What could and could not be analysed
+
+The owner asked for a reverse-engineering analysis of **Wondering** (wondering.app, YC S26).
+The REA skill was installed, but this session's network policy blocks `wondering.app` for both
+the container and the web-fetch tool, so **none of Wondering's shipped code was inspected**.
+Everything below comes from public descriptions (their site's listing in search results, the
+App Store listing, YC and directory pages, and a competitor's comparison post), so it describes
+their product, not how they build it:
+
+- Input: a topic, a link, a PDF or a goal; they ask why, prior knowledge and desired depth.
+- Output: a path of roughly three-minute lessons, each watched (visuals), heard (generated
+  podcast) or read, with interactive exercises.
+- Retention: one global review across all courses, scheduled with FSRS; daily streaks, friend
+  streaks and XP per lesson.
+- Reported weakness (one Product Hunt comment, one competitor blog): content can sit below the
+  learner's stated level, and reading is stronger than practice.
+
+Their likely speed comes from small lessons generated as the learner goes. Socrat already
+generates progressively (first lesson first, lessons in parallel); what it lacked was making
+lessons small when the learner asked for short sessions (fixed below). Socrat's differentiators
+remain depth on request, verified practice (judge, CAS workbench, lab simulations) and graded
+evidence.
+
+### Strategies adopted, and generation defects fixed
+
+| # | Change | Root cause | Test (fails on old code) |
+|---|---|---|---|
+| 1 | Planned activities fitted to the studio | Outlines planned a lab or code assessment for maths; the outline is the writer's contract and the reviewer failed the lesson every round (the live run's planning mismatch) | `test_planning_fit.py` |
+| 2 | Unreadable quiz or atoms reply re-asked once inside the round | Each cost one of three rounds and could trigger a lesson rewrite | `test_part_reask.py` |
+| 3 | Session length decides lesson size (bite format at 15 minutes or less) | "5 minutes a day" was a sentence to the writer while the gate demanded 2,000-4,000 characters | `test_session_length.py` |
+| 4 | Course from the learner's own notes (pasted text, 20,000 characters; migration 0046) | Wondering's link/PDF input; links not fetched (SSRF risk and network policy), PDFs not parsed | `test_learner_material.py` |
+| 5 | Listen to a lesson with the browser's speech synthesis | Wondering's listen mode; no key, nothing uploaded | `apps/web/tests/speech.test.mjs` |
+| 6 | Account deletion with learning requests | `learning_requests.user_id` has no ON DELETE CASCADE: delete returned 500 and kept the learner's words; requests were also missing from the data export | `test_learner_material.py` |
+
+Security notes for this pass: the learner's notes are untrusted data, cleaned of markup and
+control characters before any prompt (so a forged closing tag cannot escape the data block),
+marked as data, kept out of the brief JSON, part of the idempotency key, read by the intent
+reader so the harm check covers them, never returned by the API (only their size), exported
+with the account and deleted with it. The re-ask adds at most one call per part per round and
+is metered like every other call.
+
+Not done, honestly: generated podcasts (needs a speech provider and key), link and PDF import,
+XP and friend streaks, FSRS (Socrat has its own spaced scheduler), a live-model run of any of
+this. Listen was checked by unit test, not in a real browser with speech; the notes box was
+checked in a real browser at phone width with a mocked API.
