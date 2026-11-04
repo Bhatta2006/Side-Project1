@@ -24,6 +24,7 @@ from socrat.models import (
     Draft,
     Enrollment,
     Evidence,
+    LearningRequest,
     LearningSession,
     LinkedAccount,
     PlanProposal,
@@ -721,6 +722,18 @@ def export(db: Session, user: User) -> dict:
                 outcome=x.outcome,
             )
             for x in db.scalars(select(ActivityRecord).where(ActivityRecord.enrollment_id.in_(ids)))
+        ],
+        learning_requests=[
+            dict(
+                id=r.id,
+                text=r.text,
+                intent=r.intent,
+                material=r.material,
+                status=r.status,
+                course_id=r.course_id,
+                created_at=r.created_at,
+            )
+            for r in db.scalars(select(LearningRequest).where(LearningRequest.user_id == user.id))
         ],
         learning_sessions=[
             dict(

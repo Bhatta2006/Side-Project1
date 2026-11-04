@@ -108,3 +108,19 @@ def features(course_id: str | None, chosen: CourseShape | None = None) -> dict[s
 def features_of(catalog, course_id: str | None) -> dict[str, bool]:
     course = catalog.courses.get(course_id) if course_id else None
     return features(course_id, effective(course) if course is not None else None)
+
+
+# Planned activities the authoring pipeline can only produce in one studio. An outline that
+# plans a "lab" for a maths course, or a "code" assessment for a language course, hands the
+# writer a contract it cannot meet, and the reviewer then fails every round for the missing
+# activity (seen in the first live run). Everything else (quiz, explain, project, worked
+# examples, problem sets, reflection...) can be written in every studio.
+NEEDS_STUDIO = {
+    ("assessment", "code"): "code",
+    ("practice", "lab"): "lab",
+}
+
+
+def producible(studio: str, field: str, values: list[str]) -> list[str]:
+    """``values`` without the activities this studio cannot produce, order kept."""
+    return [v for v in values if NEEDS_STUDIO.get((field, v), studio) == studio]

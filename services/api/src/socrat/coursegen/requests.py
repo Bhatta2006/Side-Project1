@@ -5,6 +5,8 @@ planned course (modules, concepts, prerequisites) as it is prepared; nothing her
 unfinished content as ready. Off unless ``learning_requests_enabled``.
 """
 
+import hashlib
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import func, select
@@ -28,6 +30,8 @@ class Create(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(min_length=3, max_length=2000)  # any subject, in the learner's words
     choices: list[str] = Field(default_factory=list, max_length=12)  # fixed picks: intent.PRESETS
+    # Optional: the learner's own notes to build the course from (Wondering-style).
+    material: str = Field(default="", max_length=intents.MATERIAL_LIMIT)
 
 
 class Clarify(BaseModel):
@@ -60,6 +64,7 @@ def view(db: Session, row: LearningRequest) -> dict:
         status=row.status,
         source=row.source,
         intent=row.intent,
+        material_chars=len(row.material or ""),  # the notes stay private; only their size
         course_id=row.course_id,
         created_at=row.created_at,
         blueprint=None,
@@ -167,6 +172,11 @@ def options(request: Request):
     return intents.options()
 
 
+def _notes(material: str) -> dict:
+    """Keyword arguments for ``intents.parse``: the notes only when there are some."""
+    return {"material": material} if material else {}
+
+
 @router.post("")
 async def create(body: Create, request: Request):
     _enabled(request)
@@ -175,7 +185,12 @@ async def create(body: Create, request: Request):
         picks = intents.check_choices(body.choices)
     except ValueError as exc:
         raise HTTPException(422, "invalid_choice") from exc
-    key = intents.request_key(intents.normalise(body.text) + "|" + ",".join(picks))
+    material = body.material.strip()
+    # Different notes make a different request; the same notes again are the same request.
+    noted = hashlib.sha256(material.encode()).hexdigest()[:16] if material else ""
+    key = intents.request_key(
+        intents.normalise(body.text) + "|" + ",".join(picks) + (f"|{noted}" if noted else "")
+    )
     with Session(eng) as db:
         user = user_of(request, db, write=True)
         user_id = user.id
@@ -193,7 +208,7 @@ async def create(body: Create, request: Request):
         )
         if (open_count or 0) >= settings.learning_requests_max_open:
             raise HTTPException(429, "too_many_open_requests")
-    parsed, source = await intents.parse(eng, settings, body.text, user_id)
+    parsed, source = await intents.parse(eng, settings, body.text, user_id, **_notes(material))
     parsed = intents.apply_adapter(parsed, body.text)
     parsed = intents.apply_choices(parsed, picks)
     status = (
@@ -211,6 +226,7 @@ async def create(body: Create, request: Request):
             intent=parsed.model_dump(mode="json"),
             source=source,
             status=status,
+            material=material or None,
         )
         db.add(row)
         record_event(db, user_id, "learning_request.created", row.id)
@@ -239,10 +255,10 @@ async def clarify(request_id: str, body: Clarify, request: Request):
         if row.status != "needs_clarification":
             return view(db, row)  # already answered (a double submit) or never asked
         questions = list(row.intent.get("clarifications") or [])
-        text = row.text
+        text, material = row.text, row.material or ""
     said = [f"Q: {q} A: {a}" for q, a in zip(questions, answers, strict=False) if a]
     combined = (f"{text} (The learner's answers: {' '.join(said)})" if said else text)[:2000]
-    parsed, source = await intents.parse(eng, settings, combined, user_id)
+    parsed, source = await intents.parse(eng, settings, combined, user_id, **_notes(material))
     parsed = intents.apply_adapter(parsed, combined)
     parsed = intents.apply_choices(parsed, picks).model_copy(update={"clarifications": []})
     with Session(eng) as db, db.begin():
@@ -306,7 +322,9 @@ def confirm(request_id: str, body: Confirm, request: Request):
         course_id = intents.slug(parsed.subject, user.id, row.key)
         if course_id in cat.courses or jobs.active(db, course_id) is not None:
             raise HTTPException(409, "generation_in_progress")
-        brief = intents.to_brief(parsed, course_id, settings.learning_request_budget_usd)
+        brief = intents.to_brief(
+            parsed, course_id, settings.learning_request_budget_usd, row.material or ""
+        )
         jobs.enqueue(
             db,
             "outline",

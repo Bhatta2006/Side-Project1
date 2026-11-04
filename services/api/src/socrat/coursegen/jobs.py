@@ -205,6 +205,10 @@ async def run_outline(
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
         brief = brief.model_copy(update={"style": spec})
         _note(engine, job_id, {"role": "stylist", "style": spec.name, "source": source})
+    if brief.session_minutes:
+        brief = brief.model_copy(
+            update={"style": styles.for_session(brief.style, brief.session_minutes)}
+        )
     previous = (
         skeleton_of(from_course(stored)) if stored is not None and job.input.get("revise") else None
     )
@@ -547,7 +551,7 @@ async def run_package(
 
     adapter = design.adapter_for(course, brief.adapter)
     bar = dict.fromkeys(pkg.DIMENSIONS, settings.gen_score_floor)
-    if brief.style is not None:
+    if styles.for_session(brief.style, brief.session_minutes) is not None:
         bar[pkg.STYLE_DIMENSION] = settings.gen_score_floor
     findings: list[validation.Finding] = []
 
@@ -562,7 +566,7 @@ async def run_package(
     workbench = "cas" in shape.effective(course).tools
     lab = "simulation" in shape.effective(course).tools
     code = list(course.languages) if editor and runnable == list(course.languages) else []
-    style = brief.style
+    style = styles.for_session(brief.style, brief.session_minutes)
     ctx = pkg.context(base, course, brief.model_dump(), concept, style)
     from socrat.engine import strategy
 
@@ -645,7 +649,12 @@ async def run_package(
 
     def release(live_, pack_, summary_) -> None:
         pack_ = pkg.release_pack(pack_, models["reviewer"], summary_)
-        wants = concept.outline is not None and "code" in concept.outline.assessment
+        # A code exercise only for a code course, whatever an older outline planned.
+        wants = (
+            concept.outline is not None
+            and "code" in concept.outline.assessment
+            and shape.effective(course).studio == "code"
+        )
         needed = sorted({"python", *course.languages})
         exercise = wants and executor.available(needed) == needed
         with Session(engine) as db, db.begin():
@@ -720,6 +729,7 @@ async def run_package(
             lesson = research.attach(lesson, cited)
         assert lesson is not None  # written above, or kept from the previous round
         pending = {}
+        asked: dict[str, tuple[str, str, int]] = {}  # part -> (system, prompt, tokens)
         if "quiz" in redo or quiz is None:
             example = pkg.quiz_example(reference)
             if code:
@@ -733,12 +743,38 @@ async def run_package(
             if pkg.wants_tasks(concept, adapter):
                 example += "\n\n" + pkg.TASKS.format()
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
-            pending["quiz"] = ask("quiz", pkg.QUIZ + note, prompt, 6000)
+            asked["quiz"] = (pkg.QUIZ + note, prompt, 6000)
+            pending["quiz"] = ask("quiz", *asked["quiz"])
         if "atoms" in redo or atoms is None:
             extra = pkg.ATOMS_CODE.format(languages=", ".join(code)) if code else ""
             prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], extra)
-            pending["atoms"] = ask("atoms", pkg.ATOMS + note, prompt, 8000)
+            asked["atoms"] = (pkg.ATOMS + note, prompt, 8000)
+            pending["atoms"] = ask("atoms", *asked["atoms"])
         replies = dict(zip(pending, await asyncio.gather(*pending.values()), strict=True))
+        # A quiz or atoms reply that is not readable JSON is re-asked once, at once and alone,
+        # with the parse error. Before, it cost a whole round (3 by default), and the next round
+        # could also rewrite the lesson; the first live run lost lessons this way.
+        unreadable = [name for name, reply in replies.items() if reply.data is None]
+        if unreadable:
+            retried = await asyncio.gather(
+                *(
+                    ask(
+                        name,
+                        asked[name][0],
+                        f"{asked[name][1]}\n\n{pkg.UNREADABLE.format(problem=replies[name].problem)}",
+                        asked[name][2],
+                    )
+                    for name in unreadable
+                )
+            )
+            spent = sum(replies[name].cost_usd for name in unreadable)
+            _note(
+                engine,
+                job_id,
+                {"role": "system", "round": attempt, "event": "reasked", "parts": unreadable},
+                spent,
+            )
+            replies.update(dict(zip(unreadable, retried, strict=True)))
         for name, reply in replies.items():
             if reply.data is None:
                 notes[name] = [reply.problem]

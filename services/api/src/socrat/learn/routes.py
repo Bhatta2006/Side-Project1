@@ -32,6 +32,7 @@ from socrat.models import (
     Draft,
     Enrollment,
     GeneratedCourse,
+    LearningRequest,
     OutboxEvent,
     Submission,
     User,
@@ -359,6 +360,10 @@ def delete_me(request: Request):
             delete(OutboxEvent).where(OutboxEvent.payload["actor_id"].as_string() == user.id)
         )
         db.execute(delete(AuditEvent).where(AuditEvent.actor_id == user.id))
+        # learning_requests.user_id has no ON DELETE CASCADE (migration 0034), so deleting a
+        # learner who ever typed "teach me X" failed with a 500 and kept their words and notes.
+        # Their diagnostics cascade from the request.
+        db.execute(delete(LearningRequest).where(LearningRequest.user_id == user.id))
         db.delete(user)  # Everything else cascades from the user row.
     response = Response(status_code=204)
     response.delete_cookie(COOKIE, path="/")

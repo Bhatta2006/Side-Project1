@@ -23,7 +23,17 @@ Rigor = Literal["intuitive", "standard", "rigorous"]
 # Lesson length floors in characters, by depth, for the standard format.
 LESSON_FLOOR = {"overview": 2000, "practitioner": 3000, "mastery": 4000}
 BITE_RANGE = (500, 1800)
+BITE_MINUTES = 15  # a stated session this short gets bite-sized lessons
 DEEP_EXTRA = 1000
+
+
+def for_session(spec: "StyleSpec | None", minutes: int | None) -> "StyleSpec | None":
+    """The course style fitted to the learner's stated session length. Before this, "5
+    minutes a day" was only a sentence to the writer while the gate still asked for a
+    2,000-4,000 character lesson, so lessons failed for being as short as asked."""
+    if not minutes:
+        return spec
+    return (spec or StyleSpec(name=f"{minutes} minutes a session")).fitted(minutes)
 
 
 class StyleSpec(BaseModel):
@@ -49,6 +59,17 @@ class StyleSpec(BaseModel):
         if self.format == "deep":
             return floor + DEEP_EXTRA, None
         return floor, None
+
+    def fitted(self, minutes: int | None) -> "StyleSpec":
+        """This style for a learner who said how long a session is. 15 minutes or less is a
+        bite-sized lesson (one idea per sitting) unless the learner asked for deep lessons;
+        the session length is theirs either way."""
+        if not minutes:
+            return self
+        update: dict = {"session_minutes": max(3, min(minutes, 120))}
+        if minutes <= BITE_MINUTES and self.format == "standard":
+            update["format"] = "bite"
+        return self.model_copy(update=update)
 
     def min_headings(self) -> int:
         return 1 if self.format == "bite" else 3

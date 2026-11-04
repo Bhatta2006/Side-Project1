@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import { useCourse } from '@/lib/course';
+import { Listen } from '@/components/listen';
 import { useI18n } from '@/lib/i18n';
 import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@/lib/routes';
 import type { ConceptView, Resource } from '@/lib/types';
@@ -328,6 +329,7 @@ export default function Lesson() {
         <article className="min-w-0">
           <Stepper concept={concept} className="mb-8 lg:hidden" />
           <p className="type-body-l mb-6 max-w-[68ch] text-muted-foreground text-pretty">{concept.summary}</p>
+          <Listen target="#step-lesson" />
 
           {/* The concept's shared visual sits above the reading; free-form requests stay in the Playground. */}
           <section className="mb-8" aria-label={`${concept.title}, visual`}>

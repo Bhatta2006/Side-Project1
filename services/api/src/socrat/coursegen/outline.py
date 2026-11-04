@@ -29,6 +29,12 @@ class Brief(BaseModel):
     # Stylist agent turns into one before the outline is written.
     style: styles.StyleSpec | None = None
     style_request: str = Field(default="", max_length=600)
+    # The learner's stated session length (fixed choice); it decides lesson size, see
+    # ``styles.for_session``. None: not stated.
+    session_minutes: int | None = Field(default=None, ge=1, le=480)
+    # The learner's own notes the course is built from (untrusted data). Never part of the
+    # brief JSON in prompts; ``brief_text`` adds it as its own marked block.
+    material: str = Field(default="", max_length=20000)
     budget_usd: float = Field(default=5.0, gt=0, le=1000)
     # One concept package (all its rounds) may not cost more than this.
     concept_budget_usd: float = Field(default=2.0, gt=0, le=100)
@@ -298,6 +304,16 @@ verdict is "pass" only when nothing blocking remains. Reply with one JSON object
  "issues": [{"where": "module or concept id", "problem": "...", "fix": "..."}]}"""
 
 
+def brief_text(brief: Brief) -> str:
+    """The brief for the architect and critic: JSON of its settings, then the learner's own
+    material (if any) as a separate block marked as data."""
+    from socrat.coursegen.intent import material_block
+
+    head = "Brief:\n" + brief.model_dump_json(indent=2, exclude={"budget_usd", "material"})
+    notes = material_block(brief.material, 12000) if brief.material.strip() else ""
+    return f"{head}\n\nBuild the course around this material:\n{notes}" if notes else head
+
+
 def architect_prompt(
     brief: Brief,
     catalog: Catalog,
@@ -305,7 +321,7 @@ def architect_prompt(
     issues: list[str] | None = None,
 ) -> str:
     parts = [
-        "Brief:\n" + brief.model_dump_json(indent=2, exclude={"budget_usd"}),
+        brief_text(brief),
         *([styles.block(brief.style)] if brief.style else []),
         "Existing Socrat concepts you may use as prerequisites:\n" + known_concepts(catalog),
         "For quality, granularity and ordering, match the hand-authored DSA course:\n"
@@ -323,8 +339,7 @@ def architect_prompt(
 
 def critic_prompt(brief: Brief, outline: dict) -> str:
     return (
-        "Brief:\n"
-        + brief.model_dump_json(indent=2, exclude={"budget_usd"})
+        brief_text(brief)
         + (f"\n\n{styles.block(brief.style)}" if brief.style else "")
         + "\n\nOutline to review:\n"
         + json.dumps(outline, indent=1)
@@ -376,7 +391,7 @@ def detail_prompt(
     module = next(m for m in skeleton["modules"] if m.get("id") == module_id)
     wanted = [c for c in module["concepts"] if c.get("id") in concept_ids]
     parts = [
-        "Brief:\n" + brief.model_dump_json(indent=2, exclude={"budget_usd"}),
+        brief_text(brief),
         *([styles.block(brief.style)] if brief.style else []),
         "Studio and evidence of the course:\n" + json.dumps(skeleton.get("shape", {})),
         "The whole course plan, for related concepts:\n" + plan,
@@ -489,6 +504,9 @@ def tidy(outline: dict, catalog: Catalog, adapter: str = "") -> dict:
     ]
     if isinstance(outline.get("shape"), dict):
         _tidy_shape(outline["shape"], adapter)
+    # A planned activity the course's studio cannot produce is dropped here, before any lesson
+    # is written against it (see ``shape.NEEDS_STUDIO``). No shape yet means a code course.
+    studio = outline["shape"]["studio"] if isinstance(outline.get("shape"), dict) else "code"
     ids = {c.get("id") for c in concepts}
     for c in concepts:
         related = c.get("related")
@@ -506,6 +524,8 @@ def tidy(outline: dict, catalog: Catalog, adapter: str = "") -> dict:
             kept = [v for v in values if isinstance(v, str) and v.strip()]
             if allowed is not None:
                 kept = [v for v in kept if v in allowed]
+            if name in ("assessment", "practice"):
+                kept = shape.producible(studio, name, kept)
             c[name] = list(dict.fromkeys(kept))[:most]
         if "assessment" in c and not c["assessment"]:
             c["assessment"] = ["quiz"]

@@ -29,6 +29,7 @@ from socrat.catalog.schema import (
     Task,
 )
 from socrat.coursegen import execute, links
+from socrat.coursegen.intent import material_block
 from socrat.judge.service import normalized
 from socrat.style import spec as styles
 
@@ -60,7 +61,9 @@ def context(
     concept: Concept,
     style: styles.StyleSpec | None = None,
 ) -> str:
-    """What every author needs: the concept's contract, the course, and its neighbours."""
+    """What every author needs: the concept's contract, the course, and its neighbours. The
+    contract lists only activities this course's studio can produce (outlines stored before
+    ``tidy`` filtered them may still plan a lab for a maths course)."""
     prerequisites = []
     for ref in concept.prerequisites:
         key = ref if ":" in ref else f"{course.id}:{ref}"
@@ -69,6 +72,7 @@ def context(
             points = "; ".join(other.key_points) if other.key_points else other.summary
             prerequisites.append(f"- {key}: {other.title} — {points}")
     module = next(m for m in course.modules if m.id == concept.module)
+    studio = shape.effective(course).studio
     siblings = [
         f"- {c.title}: {c.summary}"
         for c in course.concepts
@@ -79,7 +83,11 @@ def context(
             *([styles.block(style)] if style else []),
             f"Course: {course.title} — {course.description}",
             f"Learners: {brief['audience']}\nAlready know: {brief.get('background') or 'see prerequisites'}",
-            f"Course code languages: {', '.join(course.languages)}",
+            *(
+                [f"Course code languages: {', '.join(course.languages)}"]
+                if studio == "code"
+                else ["This course has no code: write no programs or code blocks."]
+            ),
             practice_line(course),
             "Concept to teach:\n"
             + json.dumps(
@@ -89,9 +97,17 @@ def context(
                     "summary": concept.summary,
                     "difficulty": concept.difficulty,
                     "estimated_minutes": concept.estimated_minutes,
-                    **(concept.outline.model_dump() if concept.outline else {}),
+                    **(contract(concept.outline, studio) if concept.outline else {}),
                 },
                 indent=1,
+            ),
+            *(
+                [
+                    "Ground this lesson in the learner's material where it covers this "
+                    "concept:\n" + material_block(str(brief["material"]), 6000)
+                ]
+                if str(brief.get("material") or "").strip()
+                else []
             ),
             "Prerequisites the learner has studied (build on them, do not re-teach):\n"
             + ("\n".join(prerequisites) or "- none"),
@@ -99,6 +115,15 @@ def context(
             + ("\n".join(siblings) or "- none"),
         ]
     )
+
+
+def contract(outline, studio: str) -> dict:
+    """The concept's outline as authors and reviewers see it, fitted to the studio."""
+    data = outline.model_dump()
+    for field in ("assessment", "practice"):
+        data[field] = shape.producible(studio, field, data[field])
+    data["assessment"] = data["assessment"] or ["quiz"]
+    return data
 
 
 def practice_line(course: Course) -> str:
@@ -329,6 +354,13 @@ def lesson_prompt(ctx: str, reference: Concept | None, draft: dict | None, notes
     return "\n\n".join(parts)
 
 
+# Sent with the same question when a reply could not be read as JSON.
+UNREADABLE = (
+    "Your previous reply could not be read ({problem}). Reply again with only the complete "
+    "JSON object, nothing before or after it."
+)
+
+
 def part_prompt(ctx: str, lesson: dict, draft: dict | None, notes: list[str], example: str) -> str:
     parts = [ctx, "Lesson:\n" + lesson["lesson"]]
     if example:
@@ -414,7 +446,9 @@ def check_lesson(
     if len(re.findall(r"^## ", text, re.MULTILINE)) < wanted:
         problems.append(f"Use at least {wanted} '## ' section heading{'s' if wanted > 1 else ''}.")
     fences = set(re.findall(r"^```([a-zA-Z+#]*)", text, re.MULTILINE)) - {""}
-    allowed = set(course.languages) | {"text", "math", "plaintext"}
+    # A course without code (maths, a language, drawing) gets no program listings at all.
+    code = shape.effective(course).studio == "code"
+    allowed = (set(course.languages) if code else set()) | {"text", "math", "plaintext"}
     stray = {f for f in fences if f.lower() not in allowed}
     if stray:
         problems.append(f"Code blocks in {sorted(stray)} are outside the course languages.")

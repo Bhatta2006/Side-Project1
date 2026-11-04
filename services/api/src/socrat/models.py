@@ -872,6 +872,8 @@ class LearningRequest(Base):
     text: Mapped[str] = mapped_column(String(2000))
     intent: Mapped[dict] = mapped_column(JSON)
     source: Mapped[str] = mapped_column(String(16), default="model")  # model | rules
+    # The learner's own notes to build the course from (migration 0046); untrusted data.
+    material: Mapped[str | None] = mapped_column(Text, nullable=True)
     # parsed | needs_clarification | blocked | confirmed
     status: Mapped[str] = mapped_column(String(24), default="parsed")
     course_id: Mapped[str | None] = mapped_column(String(80), nullable=True)

@@ -9,6 +9,10 @@ import { useSession } from '@/lib/session';
 import { Pill } from '@/components/choice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+
+// Matches the API's cap on a learner's notes (intent.MATERIAL_LIMIT).
+const MATERIAL_LIMIT = 20000;
 
 type Group = { id: string; single: boolean; choices: { id: string; label: string }[] };
 type Options = { subjects: { id: string; label: string; group: string }[]; groups: Group[] };
@@ -115,6 +119,7 @@ export default function NewCourse() {
   const [options, setOptions] = useState<Options | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [text, setText] = useState('');
+  const [material, setMaterial] = useState('');
   const [picks, setPicks] = useState<string[]>([]);
   const [req, setReq] = useState<LearningRequest | null>(null);
   // Every change to a published plan, and why (never silent; coursegen/evolve.py).
@@ -188,7 +193,7 @@ export default function NewCourse() {
   const stopWriting = () => {
     if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/cancel`, {}), setReq);
   };
-  const make = () => run(() => api.post<LearningRequest>('/learning-requests', { text, choices: picks }), setReq);
+  const make = () => run(() => api.post<LearningRequest>('/learning-requests', { text, choices: picks, ...(material.trim() ? { material } : {}) }), setReq);
   const [answers, setAnswers] = useState<string[]>([]);
   // One round of questions; skipping sends blank answers and Socrat picks sensible defaults.
   const answer = (skip = false) => {
@@ -317,6 +322,25 @@ export default function NewCourse() {
               ))}
             </ul>
           </div>
+          <details className="rounded-[16px] border bg-card px-4 py-3" open={material.length > 0}>
+            <summary className="cursor-pointer font-semibold">Build it from your own notes (optional)</summary>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Paste class notes, a chapter or an article. Socrat builds the course around them and teaches what is correct where they are not. Your notes stay private to you.
+            </p>
+            <label htmlFor="material" className="sr-only">Your notes</label>
+            <Textarea
+              id="material"
+              className="mt-3 min-h-32"
+              value={material}
+              maxLength={MATERIAL_LIMIT}
+              onChange={(e) => setMaterial(e.target.value)}
+              placeholder="Paste your notes here"
+              aria-describedby="material-count"
+            />
+            <p id="material-count" className="mt-1 text-right text-[13px] text-muted-foreground tabular-nums">
+              {material.length.toLocaleString()} / {MATERIAL_LIMIT.toLocaleString()}
+            </p>
+          </details>
           {options.groups.map((group) => (
             <fieldset key={group.id}>
               <legend className="mb-2 font-semibold">{tx(`new.group.${group.id}`, GROUP_TITLE[group.id] ?? group.id)}</legend>
