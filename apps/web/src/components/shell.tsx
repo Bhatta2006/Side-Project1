@@ -461,7 +461,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       <Tour />
       <ReportProblem />
       {/* Soc is one tap away everywhere; pages with their own tutor (lesson, problem, plan, today) mount a scoped one. */}
-      {ownTutor(pathname) || examRoute(pathname) ? null : <Assistant scope="general" title="Ask Soc" />}
+      {ownTutor(pathname) || examRoute(pathname) ? null : <Assistant key={profile?.enrollment?.course ?? 'none'} scope="general" title="Ask Soc" />}
     </div>
   );
 }

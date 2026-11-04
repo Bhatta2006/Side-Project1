@@ -87,7 +87,29 @@ def validate_scope(scope: str) -> str:
     return scope
 
 
+# "general" and "plan" chats are kept per course: "general@<course id>". Without this, a
+# learner who pauses a Kannada course and opens a math course would hand the math tutor the
+# Kannada conversation. Problem and concept scopes already name their course.
+COURSE = "@"
+COURSE_SCOPES = {"general", "plan"}
+
+
+def stored_scope(db: Session, user_id: str, scope: str) -> str:
+    """The key a chat is stored under for the learner's active course."""
+    scope = validate_scope(scope)
+    if scope not in COURSE_SCOPES:
+        return scope
+    enrollment = learn.active_enrollment(db, user_id)
+    return f"{scope}{COURSE}{enrollment.course_id}" if enrollment else scope
+
+
+def public_scope(stored: str) -> str:
+    """The scope a client knows, without the course or archive suffix."""
+    return stored.split(ARCHIVED)[0].split(COURSE)[0]
+
+
 def thread_for(db: Session, user_id: str, scope: str) -> AssistantThread:
+    scope = stored_scope(db, user_id, scope)
     thread = db.scalar(
         select(AssistantThread).where(
             AssistantThread.user_id == user_id, AssistantThread.scope == scope
@@ -737,9 +759,10 @@ def reveal_view(db: Session, user_id: str, scope: str, state: dict | None) -> di
 
 def thread_view(db: Session, user_id: str, scope: str) -> dict:
     scope = validate_scope(scope)
+    key = stored_scope(db, user_id, scope)
     thread = db.scalar(
         select(AssistantThread).where(
-            AssistantThread.user_id == user_id, AssistantThread.scope == scope
+            AssistantThread.user_id == user_id, AssistantThread.scope == key
         )
     )
     if thread is None:
@@ -789,7 +812,9 @@ def _owned_thread(db: Session, user_id: str, thread_id: str) -> AssistantThread:
     if (
         thread is None
         or thread.user_id != user_id
-        or not _SCOPE.match(thread.scope.split(ARCHIVED)[0])
+        or not _SCOPE.match(public_scope(thread.scope))
+        # another course's general or plan chat stays with that course
+        or thread.scope.split(ARCHIVED)[0] != stored_scope(db, user_id, public_scope(thread.scope))
     ):
         raise HTTPException(404, "not_found")
     return thread
@@ -807,20 +832,19 @@ def new_chat(db: Session, user_id: str, scope: str, now: int) -> dict:
     """Archive the current chat for this scope. The hint ladder carries over so a fresh chat
     never resets how much help a problem allows; only the conversation starts over."""
     scope = validate_scope(scope)
+    key = stored_scope(db, user_id, scope)
     current = db.scalar(
         select(AssistantThread).where(
-            AssistantThread.user_id == user_id, AssistantThread.scope == scope
+            AssistantThread.user_id == user_id, AssistantThread.scope == key
         )
     )
     if current is None or not _has_messages(db, current):
         return {"scope": scope, "archived": None}
-    current.scope = f"{scope}{ARCHIVED}{current.id}"
+    current.scope = f"{key}{ARCHIVED}{current.id}"
     db.flush()
     carried = {k: v for k, v in current.ladder.items() if k != "engine"}
     db.add(
-        AssistantThread(
-            user_id=user_id, scope=scope, ladder=carried, created_at=now, updated_at=now
-        )
+        AssistantThread(user_id=user_id, scope=key, ladder=carried, created_at=now, updated_at=now)
     )
     db.flush()
     return {"scope": scope, "archived": current.id}
@@ -828,16 +852,17 @@ def new_chat(db: Session, user_id: str, scope: str, now: int) -> dict:
 
 def list_chats(db: Session, user_id: str, scope: str) -> dict:
     scope = validate_scope(scope)
+    key = stored_scope(db, user_id, scope)
     threads = list(
         db.scalars(
             select(AssistantThread)
             .where(
                 AssistantThread.user_id == user_id,
-                (AssistantThread.scope == scope)
-                | AssistantThread.scope.startswith(f"{scope}{ARCHIVED}", autoescape=True),
+                (AssistantThread.scope == key)
+                | AssistantThread.scope.startswith(f"{key}{ARCHIVED}", autoescape=True),
             )
             # The current chat first, then the newest archived ones.
-            .order_by((AssistantThread.scope == scope).desc(), AssistantThread.updated_at.desc())
+            .order_by((AssistantThread.scope == key).desc(), AssistantThread.updated_at.desc())
             .limit(30)
         )
     )
@@ -862,7 +887,7 @@ def list_chats(db: Session, user_id: str, scope: str) -> dict:
                 "title": (first or "Chat")[:80],
                 "messages": count,
                 "updated_at": thread.updated_at,
-                "current": thread.scope == scope,
+                "current": thread.scope == key,
             }
         )
     return {"scope": scope, "items": items}
@@ -873,10 +898,10 @@ def chat_view(db: Session, user_id: str, thread_id: str) -> dict:
     thread = _owned_thread(db, user_id, thread_id)
     base = thread.scope.split(ARCHIVED)[0]
     view = (
-        thread_view(db, user_id, base)
+        thread_view(db, user_id, public_scope(base))
         if thread.scope == base
         else {
-            "scope": base,
+            "scope": public_scope(base),
             "ladder": {},
             "reveal": None,
             "messages": [
@@ -905,7 +930,7 @@ def resume_chat(db: Session, user_id: str, thread_id: str, now: int) -> dict:
     thread = _owned_thread(db, user_id, thread_id)
     base = thread.scope.split(ARCHIVED)[0]
     if thread.scope == base:
-        return {"scope": base, "thread_id": thread.id}
+        return {"scope": public_scope(base), "thread_id": thread.id}
     current = db.scalar(
         select(AssistantThread).where(
             AssistantThread.user_id == user_id, AssistantThread.scope == base
@@ -925,7 +950,7 @@ def resume_chat(db: Session, user_id: str, thread_id: str, now: int) -> dict:
     )
     thread.updated_at = now
     db.flush()
-    return {"scope": base, "thread_id": thread.id}
+    return {"scope": public_scope(base), "thread_id": thread.id}
 
 
 def context_view(db: Session, catalog: Catalog, user: User, scope: str, now: int) -> dict:
@@ -933,9 +958,10 @@ def context_view(db: Session, catalog: Catalog, user: User, scope: str, now: int
     scope = validate_scope(scope)
     enrollment = learn.active_enrollment(db, user.id)
     sections = learner_sections(db, catalog, user, enrollment, now)
+    key = stored_scope(db, user.id, scope)
     thread = db.scalar(
         select(AssistantThread).where(
-            AssistantThread.user_id == user.id, AssistantThread.scope == scope
+            AssistantThread.user_id == user.id, AssistantThread.scope == key
         )
     )
     state = engine.State.from_dict(thread.ladder.get("engine") if thread else None)

@@ -65,9 +65,9 @@ def request(db: Session, enrollment: Enrollment, now: int, catalog=None) -> list
         # so a concept that cannot pass its gates does not burn budget on every visit.
         if latest is not None and latest.state in SETTLED:
             continue
-        queued.append(
-            jobs.enqueue(db, "package", course.id, {"trigger": "prefetch"}, None, target=local)
-        )
+        job = jobs.enqueue_once(db, "package", course.id, {"trigger": "prefetch"}, None, local)
+        if job is not None:  # None: a concurrent page load queued it first
+            queued.append(job)
     return queued
 
 
@@ -107,9 +107,9 @@ def initial(db: Session, course_id: str, start: str | None = None) -> list:
             )
         )
         if seen is None:
-            queued.append(
-                jobs.enqueue(db, "package", course_id, {"trigger": "initial"}, None, target=local)
-            )
+            job = jobs.enqueue_once(db, "package", course_id, {"trigger": "initial"}, None, local)
+            if job is not None:
+                queued.append(job)
     # Jobs are claimed oldest first and these share one second: stagger them backwards so the
     # learner's first lesson is always written first.
     for i, job in enumerate(queued):

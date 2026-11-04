@@ -12,6 +12,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -828,6 +829,19 @@ class GenerationJob(Base):
     queued jobs; ``log`` keeps each agent round (verdicts, issues, cost) for the admin."""
 
     __tablename__ = "generation_jobs"
+    # One open job per course, kind and target (migration 0045): a concurrent duplicate is
+    # refused by the database, not only by a check that two requests can both pass.
+    __table_args__ = (
+        Index(
+            "uq_generation_jobs_one_open",
+            "course_id",
+            "kind",
+            "target",
+            unique=True,
+            sqlite_where=text("state IN ('queued', 'running')"),
+            postgresql_where=text("state IN ('queued', 'running')"),
+        ),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
     kind: Mapped[str] = mapped_column(String(24))
     course_id: Mapped[str] = mapped_column(String(80), index=True)

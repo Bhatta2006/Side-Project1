@@ -28,7 +28,9 @@ import json
 import logging
 from typing import Any
 
+from fastapi import HTTPException
 from sqlalchemy import CursorResult, Engine, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from socrat.assistant.gateway import ProviderError, make_provider
@@ -117,15 +119,39 @@ def active(db: Session, course_id: str, target: str | None = None) -> Generation
     return db.scalars(query).first()
 
 
+class AlreadyQueued(HTTPException):
+    """The same course, kind and target already has a queued or running job."""
+
+    def __init__(self) -> None:
+        super().__init__(409, "generation_in_progress")
+
+
 def enqueue(
     db: Session, kind: str, course_id: str, data: dict, user_id: str | None, target: str = ""
 ) -> GenerationJob:
+    """Queue a job, or raise ``AlreadyQueued`` (a 409) when an open one exists. The database
+    decides (migration 0045), so two requests that both passed an ``active()`` check cannot
+    both queue it; the savepoint keeps the caller's transaction usable."""
     job = GenerationJob(
         kind=kind, course_id=course_id, target=target, input=data, log=[], created_by=user_id
     )
-    db.add(job)
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.add(job)
+            db.flush()
+    except IntegrityError:
+        raise AlreadyQueued() from None
     return job
+
+
+def enqueue_once(
+    db: Session, kind: str, course_id: str, data: dict, user_id: str | None, target: str = ""
+) -> GenerationJob | None:
+    """``enqueue`` for background callers: an open job already doing the work is enough."""
+    try:
+        return enqueue(db, kind, course_id, data, user_id, target)
+    except AlreadyQueued:
+        return None
 
 
 def claim(engine: Engine) -> str | None:
@@ -625,9 +651,9 @@ async def run_package(
         with Session(engine) as db, db.begin():
             generated.store_concept(db, base, course_id, live_, pack_, job_id=job_id)
             if exercise:
-                enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
+                enqueue_once(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
             if project_due(db, course, concept_id):
-                enqueue(db, "project", course_id, {"trigger": "release"}, None, concept.module)
+                enqueue_once(db, "project", course_id, {"trigger": "release"}, None, concept.module)
         event = {"role": "system", "event": "released", "calls": calls}
         if wants and not exercise:
             event["exercise"] = "waiting for the execution service"

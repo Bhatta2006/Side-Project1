@@ -105,16 +105,24 @@ def test_queue_depth_is_reported_and_ignores_paused_courses(client):
         db.add(GeneratedCourse(id="live", payload={}))
         db.add(GeneratedCourse(id="held", payload={}, paused="budget"))
         db.flush()
-        for cid, state, age in (
-            ("live", "queued", 600),
-            ("live", "queued", 30),
-            ("live", "running", 10),
-            ("held", "queued", 9000),  # waiting on purpose
-            ("live", "done", 9999),
+        # Distinct lessons: one course has at most one open job per lesson (migration 0045).
+        for target, (cid, state, age) in enumerate(
+            (
+                ("live", "queued", 600),
+                ("live", "queued", 30),
+                ("live", "running", 10),
+                ("held", "queued", 9000),  # waiting on purpose
+                ("live", "done", 9999),
+            )
         ):
             db.add(
                 GenerationJob(
-                    kind="package", course_id=cid, input={}, state=state, created_at=stamp - age
+                    kind="package",
+                    course_id=cid,
+                    target=f"lesson-{target}",
+                    input={},
+                    state=state,
+                    created_at=stamp - age,
                 )
             )
     queue = client.get("/api/v1/admin/engine-costs", headers=admin).json()["queue"]

@@ -72,7 +72,7 @@ function Disclosure({ id, title, children, defaultOpen = false }: { id: string; 
 
 export default function PlanPage() {
   const allowed = useGuard('active');
-  const { features } = useCourse();
+  const { features, course } = useCourse();
   const planLocked = usePlanLocks();
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
@@ -83,7 +83,7 @@ export default function PlanPage() {
   // Remember which modules were locked; one that opened since the last visit draws its outline once.
   useEffect(() => {
     if (!plan) return;
-    const key = 'socrat:locked-modules';
+    const key = `socrat:locked-modules:${course ?? ''}`; // per course: module ids repeat across courses
     const locked = plan.modules.filter(m => m.locked_by).map(m => m.id);
     let before: string[] = [];
     try { before = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]; } catch { /* per-viewer nicety only */ }
@@ -93,7 +93,7 @@ export default function PlanPage() {
       try { localStorage.setItem(key, JSON.stringify(locked)); } catch { /* ignore */ }
     }, opened.length ? 3000 : 0);
     return () => clearTimeout(save);
-  }, [plan]);
+  }, [plan, course]);
 
   const load = useCallback(() => {
     setError('');

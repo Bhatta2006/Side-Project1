@@ -223,8 +223,9 @@ def generate_packages(course_id: str, body: Generate, request: Request):
         queued = []
         for cid in dict.fromkeys(body.concepts):
             if jobs.active(db, course_id, cid) is None:
-                job = jobs.enqueue(db, "package", course_id, {}, user.id, target=cid)
-                queued.append(job_view(job))
+                job = jobs.enqueue_once(db, "package", course_id, {}, user.id, target=cid)
+                if job is not None:
+                    queued.append(job_view(job))
         record_event(db, user.id, "coursegen.packages_requested", course_id)
         return {"queued": queued}
 

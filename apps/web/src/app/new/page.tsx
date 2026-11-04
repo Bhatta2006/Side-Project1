@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ApiError, api, explain } from '@/lib/api';
 import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { useI18n } from '@/lib/i18n';
+import { useSession } from '@/lib/session';
 import { Pill } from '@/components/choice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,6 +111,7 @@ const GROUP_TITLE: Record<string, string> = {
 export default function NewCourse() {
   const { t, tx } = useI18n();
   const router = useRouter();
+  const { refresh } = useSession();
   const [options, setOptions] = useState<Options | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [text, setText] = useState('');
@@ -209,6 +211,9 @@ export default function NewCourse() {
       async () => {
         const published = await api.post<LearningRequest>(`/learning-requests/${req.id}/publish`, {});
         await api.post('/enrollments', published.enroll);
+        // Load the new course into the session before leaving: otherwise every page keeps
+        // drawing the previous course (its language, its Practice tabs) until a reload.
+        await refresh();
       },
       () => router.push('/today'),
     );
@@ -241,7 +246,7 @@ export default function NewCourse() {
     if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/unshare`, {}), setReq);
   };
   const resume = (id: string) =>
-    run(() => api.post('/enrollments/switch', { enrollment: id }), () => router.push('/today'));
+    run(async () => { await api.post('/enrollments/switch', { enrollment: id }); await refresh(); }, () => router.push('/today'));
 
   if (unavailable) {
     return (
