@@ -90,3 +90,13 @@ def test_problem_and_concept_chats_keep_their_scope_names(client):
         )
         assert assistant.stored_scope(db, user.id, "general") == "general@zero"
         assert assistant.public_scope("general@zero#abc") == "general"
+
+
+def test_non_tutor_scopes_pass_through_unchanged(client):
+    """The Playground stores its visuals under its own scope through thread_for."""
+    headers = login(client, subject="pia", name="Pia")
+    onboard(client, headers)
+    with Session(client.app.state.engine) as db, db.begin():
+        user = db.scalar(select(User).where(User.subject == "pia"))
+        assert assistant.stored_scope(db, user.id, "playground:visual") == "playground:visual"
+        assert assistant.thread_for(db, user.id, "playground:visual").scope == "playground:visual"

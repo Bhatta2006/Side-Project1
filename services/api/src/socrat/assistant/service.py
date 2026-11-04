@@ -95,8 +95,8 @@ COURSE_SCOPES = {"general", "plan"}
 
 
 def stored_scope(db: Session, user_id: str, scope: str) -> str:
-    """The key a chat is stored under for the learner's active course."""
-    scope = validate_scope(scope)
+    """The key a chat is stored under for the learner's active course. Other scopes (problem,
+    concept, the Playground's own) are returned unchanged and are validated by their callers."""
     if scope not in COURSE_SCOPES:
         return scope
     enrollment = learn.active_enrollment(db, user_id)
