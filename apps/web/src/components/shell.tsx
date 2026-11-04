@@ -34,6 +34,7 @@ import {
 import { api } from '@/lib/api';
 import { NAV, navFor, navItems, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
+import { NavLabel } from '@/components/nav-label';
 import { PLAN_NAME } from '@/lib/plans';
 import { useInstall } from '@/lib/pwa';
 import { useCommunityUrl } from '@/components/community-link';
@@ -279,7 +280,7 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
               >
                 {current ? <span className="absolute inset-0 -z-10 rounded-full bg-ink animate-in fade-in duration-200" /> : null}
                 <Icon className={cn('size-[22px] flex-none')} strokeWidth={1.6} aria-hidden="true" />
-                <span className={cn('sr-only', !collapsed && 'lg:not-sr-only')}>{item.label}</span>
+                <span className={cn('sr-only', !collapsed && 'lg:not-sr-only')}><NavLabel item={item} /></span>
                 {flagged ? (
                   <span className={cn('absolute top-2.5 left-8 size-2.5 rounded-full bg-[var(--highlight)] ring-2 ring-[var(--soc-outline)]', !collapsed && 'lg:static lg:ml-auto')}>
                     <span className="sr-only">: weekly assessment available</span>
@@ -291,7 +292,7 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
               <li key={item.key}>
                 <Tooltip>
                   <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right" className={cn(!collapsed && 'lg:hidden')}>{item.label}</TooltipContent>
+                  <TooltipContent side="right" className={cn(!collapsed && 'lg:hidden')}><NavLabel item={item} /></TooltipContent>
                 </Tooltip>
               </li>
             );
@@ -357,7 +358,7 @@ function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean })
                   {current ? <span className="absolute inset-0 -z-10 rounded-full bg-ink animate-in fade-in zoom-in-90 duration-200" /> : null}
                   <Icon className="size-6" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                {item.label}
+                <NavLabel item={item} />
                 {ready && item.key === 'evidence' ? <span className="absolute top-2 right-[calc(50%-22px)] size-2.5 rounded-full bg-[var(--highlight)] ring-2 ring-[var(--soc-outline)]"><span className="sr-only">: weekly assessment available</span></span> : null}
               </Link>
             </li>

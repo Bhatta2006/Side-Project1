@@ -35,14 +35,24 @@ def public_https(url: str) -> bool:
     return all(ipaddress.ip_address(info[4][0]).is_global for info in infos)
 
 
-async def reachable(client: httpx.AsyncClient, url: str) -> bool:
+RETRY = {429, 500, 502, 503, 504}  # busy, not missing: worth one more try
+
+
+async def reachable(client: httpx.AsyncClient, url: str, tries: int = 2) -> bool:
     if not await asyncio.to_thread(public_https, url):
         return False
-    try:
-        response = await client.head(url)
-        if response.status_code in HEAD_REFUSED:
-            response = await client.get(url)
-    except httpx.HTTPError:
+    for attempt in range(tries):
+        try:
+            response = await client.head(url)
+            if response.status_code in HEAD_REFUSED:
+                response = await client.get(url)
+        except httpx.HTTPError:
+            response = None  # a live run lost a whole round to one failed check of Wikipedia
+        if response is not None and response.status_code not in RETRY:
+            break
+        if attempt + 1 < tries:
+            await asyncio.sleep(1)
+    if response is None:
         return False
     # shortcut: redirects are followed without re-checking each hop's address; add a
     # per-hop check if links ever reach internal-facing deployments.

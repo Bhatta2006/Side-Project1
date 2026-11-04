@@ -6,7 +6,7 @@ the new ones as pending; none of them changes anything until the learner accepts
 
 import hashlib
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 
 from socrat.adaptive.stuck import Stuck, next_rung
@@ -244,7 +244,7 @@ def stuck(catalog: Catalog, plan: Plan, s: Signals) -> list[Draft]:
             )
         elif rung[0] == "repair" and weak:
             proposed.add(concept)
-            out.append(_repair(catalog, concept, weak, signal.summary))
+            out.extend(_gap(catalog, concept, weak, signal.summary))
         elif rung[0] == "defer":
             out.append(
                 Draft(
@@ -257,8 +257,31 @@ def stuck(catalog: Catalog, plan: Plan, s: Signals) -> list[Draft]:
             )
     for concept, weak in sorted(plan.needs_repair.items()):
         if concept not in proposed and concept not in s.stuck:
-            out.append(_repair(catalog, concept, weak, "Several attempts missed in a row."))
+            out.extend(_gap(catalog, concept, weak, "Several attempts missed in a row."))
     return out
+
+
+def _gap(catalog: Catalog, concept: str, weak: str, why: str) -> list[Draft]:
+    """A refresher of the weak prerequisite, and for a generated course also a bridge lesson
+    (only offered to the course's owner: ``proposals.sync`` drops it otherwise). One group, so
+    accepting either closes the other."""
+    from socrat.coursegen.package import AI_AUTHOR
+
+    repair = _repair(catalog, concept, weak, why)
+    c = catalog.concepts.get(concept)
+    if not (c and c.provenance and c.provenance.author == AI_AUTHOR):
+        return [repair]
+    group = f"gap:{concept}"
+    bridge = Draft(
+        "bridge",
+        f"bridge:{weak}:{concept}",
+        f"Add a bridge lesson on {_title(catalog, weak)} before {_title(catalog, concept)}",
+        f"{why} A short new lesson uses {_title(catalog, weak)} in this setting; your "
+        "course's goals stay the same.",
+        {"concept": weak, "for": concept},
+        group,
+    )
+    return [replace(repair, group=group), bridge]
 
 
 def _repair(catalog: Catalog, concept: str, weak: str, why: str) -> Draft:

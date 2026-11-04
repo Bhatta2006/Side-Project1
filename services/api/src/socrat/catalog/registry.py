@@ -7,8 +7,10 @@ without a prefix belong to the same course.
 import hashlib
 import json
 import os
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from functools import cache
+from functools import cache, wraps
 from graphlib import CycleError, TopologicalSorter
 from pathlib import Path
 
@@ -169,6 +171,10 @@ def build(courses: list[Course]) -> Catalog:
         for prerequisite in prerequisites:
             if prerequisite not in catalog.concepts:
                 raise CatalogError(f"{key}: unknown prerequisite {prerequisite}")
+        outline = catalog.concepts[key].outline
+        for related in outline.related if outline else []:
+            if qualify(catalog.owner[key], related) not in catalog.concepts:
+                raise CatalogError(f"{key}: unknown related concept {related}")
     for course in courses:
         for concept in course.concepts:
             for problem_id in concept.problems:
@@ -265,6 +271,27 @@ def load(root: Path = CONTENT_ROOT, tests_root: Path | None = TESTS_ROOT) -> Cat
     return catalog
 
 
-@cache
+_loading = threading.Lock()
+
+
+def single_flight[T](load_once: Callable[[], T]) -> Callable[[], T]:
+    """Cache a no-argument loader so concurrent first callers wait for one load. ``functools.cache``
+    lets every concurrent caller compute on a miss: 25 learners arriving at a cold server each
+    parsed the whole catalog (about 6 s of CPU apiece) and the server stalled for minutes."""
+    cached = cache(load_once)
+
+    @wraps(load_once)
+    def get() -> T:
+        # Cheap path first: a lock-free hit once loaded (cache_info tells us without computing).
+        if cached.cache_info().currsize:
+            return cached()
+        with _loading:
+            return cached()
+
+    get.cache_clear = cached.cache_clear  # type: ignore[attr-defined]
+    return get
+
+
+@single_flight
 def default_catalog() -> Catalog:
     return load(Path(os.environ.get("SOCRAT_CONTENT_ROOT", CONTENT_ROOT)))

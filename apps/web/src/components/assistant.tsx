@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api, explain, stream } from '@/lib/api';
+import { useSession } from '@/lib/session';
 import type { ChatMessage, Proposal, ProposalsView } from '@/lib/types';
 import { ProposalList } from '@/components/socrat/proposals';
 import { ArrowLeft, BookOpen, Check, History, Lightbulb, SendHorizontal, SquarePen, ThumbsDown, ThumbsUp, X } from 'lucide-react';
@@ -57,9 +58,18 @@ const STARTERS: Record<string, string[]> = {
   plan: ['Help me build my plan', 'I have interviews coming up', "I'm stuck. What should change?"],
   concept: ['Explain this with a real example', 'When would I use this?', 'Give me a problem to practise this'],
 };
+// Courses without code (a language, drawing, finance): no problem library to pick from.
+const STARTERS_NO_CODE: Record<string, string[]> = {
+  general: ['What should I focus on this week?', 'Quiz me on what I learned', 'Where am I weakest right now?'],
+  plan: ['Help me build my plan', 'I have a deadline coming up', "I'm stuck. What should change?"],
+  concept: ['Explain this with a real example', 'When would I use this?', 'Ask me a question to practise this'],
+};
 
 export default function Assistant({ scope, title, language, context, onSent, openSignal = 0, launcher: showLauncher = true }: Props) {
   const problem = scope.startsWith('problem:');
+  // No shape means a programming course (the field is only sent once studios are on).
+  const studio = useSession().profile?.enrollment?.shape?.studio;
+  const coding = !studio || studio === 'code';
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [ladder, setLadder] = useState<Ladder>({});
@@ -370,13 +380,15 @@ export default function Assistant({ scope, title, language, context, onSent, ope
             {problem
               ? 'Tell me what you tried and where it breaks. Hints get more specific as you keep working. Run your code or explain your thinking to unlock the next level.'
               : scope === 'general'
-                ? 'I know your plan, your progress and the whole practice library. Ask what to study, which problems to do next, or anything you are stuck on.'
+                ? coding
+                  ? 'I know your plan, your progress and the whole practice library. Ask what to study, which problems to do next, or anything you are stuck on.'
+                  : 'I know your plan and your progress. Ask what to study next, to quiz you, or about anything you are stuck on.'
                 : scope === 'plan'
                   ? "Let's shape your roadmap together. I'll ask a few questions, then suggest changes you can accept or skip. Nothing changes without your yes."
                   : 'Ask about this lesson, an idea that feels fuzzy, or what to focus on next.'}
             {!problem ? (
               <div className="mt-4 grid gap-2">
-                {STARTERS[scope === 'general' || scope === 'plan' ? scope : 'concept'].map(s => (
+                {(coding ? STARTERS : STARTERS_NO_CODE)[scope === 'general' || scope === 'plan' ? scope : 'concept'].map(s => (
                   <Button key={s} type="button" variant="outline" size="sm" className="h-auto min-h-11 justify-start rounded-[16px] py-2.5 text-left font-medium whitespace-normal" disabled={busy || !loaded} onClick={() => send('chat', s)}>
                     {s}
                   </Button>

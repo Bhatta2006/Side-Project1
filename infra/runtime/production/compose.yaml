@@ -72,6 +72,7 @@ services:
     environment: &api-environment
       <<: *database-environment
       SOCRAT_ENVIRONMENT: production
+      SOCRAT_GEN_RUNNER: "${SOCRAT_GEN_RUNNER:-true}"
       SOCRAT_PUBLIC_ORIGIN: "https://${APP_HOST:?Set APP_HOST to the owned application DNS name}"
       SOCRAT_DEV_LOGIN_ENABLED: "false"
       SOCRAT_SESSION_SECRET_FILE: /run/secrets/session_secret
@@ -178,6 +179,10 @@ services:
     environment:
       <<: *api-environment
       PYTHONPATH: services/api/src
+      SOCRAT_WORKER_HEARTBEAT_FILE: /tmp/worker-heartbeat
+      # Split deployment (docs/operations/api-worker-split.md): set SOCRAT_WORKER_RUNS_GENERATION
+      # to true here and SOCRAT_GEN_RUNNER to false on the API. Both default to today's behaviour.
+      SOCRAT_WORKER_RUNS_GENERATION: "${SOCRAT_WORKER_RUNS_GENERATION:-false}"
     secrets: *api-secrets
     networks:
       - backend
@@ -188,6 +193,13 @@ services:
         condition: service_completed_successfully
       explainer-checker:
         condition: service_healthy
+    healthcheck:
+      # The worker touches the heartbeat file every loop; stale means hung, not just "up".
+      test: ["CMD", "python", "-m", "socrat.worker", "--check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     read_only: true
     tmpfs:
       - /tmp:size=32m,noexec,nosuid

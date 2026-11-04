@@ -8,9 +8,12 @@ import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp,
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
+import { useI18n } from '@/lib/i18n';
 import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@/lib/routes';
 import type { ConceptView, Resource } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { defaultBlocks, orderBlocks, steps as pathSteps } from '@/lib/sequence';
+import { strongSoFar } from '@/lib/strong-so-far';
 import Markdown, { outline } from '@/components/markdown';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
 import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
@@ -28,6 +31,10 @@ import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+// Most lessons have no visuals, so their renderers load only with a lesson that does.
+// Tasks (reflections, real work a person judges) load only for lessons that have them.
+const LessonTasks = dynamic(() => import('@/components/lesson-tasks'), { ssr: false });
+const VisualizationHost = dynamic(() => import('@/components/visualization-host').then(m => m.VisualizationHost), { ssr: false });
 
 const STYLES = [
   ['simpler', 'More simply'],
@@ -60,7 +67,7 @@ function Stepper({ concept, className }: { concept: ConceptView; className?: str
   const steps: { label: string; status: Status; detail: string }[] = [
     { label: 'Read', status: concept.lesson_done ? 'read' : 'not_seen', detail: concept.lesson_done ? 'Lesson read' : 'Not read yet' },
     { label: 'Check', status: locked ? 'locked' : concept.quiz_done ? 'practised' : 'not_seen', detail: locked ? 'Locked' : concept.quiz_done ? 'Concept check done' : 'Not taken yet' },
-    { label: 'Practice', status: locked ? 'locked' : concept.band === 'strong' ? 'mastered' : solved ? 'practised' : 'not_seen', detail: locked ? 'Locked' : concept.band === 'strong' ? 'Mastered' : solved ? 'Practised' : 'Not started' },
+    { label: 'Practice', status: locked ? 'locked' : concept.band === 'strong' ? (strongSoFar(concept) ? 'learned' : 'mastered') : solved ? 'practised' : 'not_seen', detail: locked ? 'Locked' : concept.band === 'strong' ? (strongSoFar(concept) ? 'Strong so far' : 'Mastered') : solved ? 'Practised' : 'Not started' },
   ];
   return (
     <ol className={cn('flex items-start gap-2', className)} aria-label="Lesson steps">
@@ -75,6 +82,47 @@ function Stepper({ concept, className }: { concept: ConceptView; className?: str
         </li>
       ))}
     </ol>
+  );
+}
+
+const STEP_LABEL: Record<string, string> = {
+  lesson: 'Read the lesson',
+  quiz: 'Concept check',
+  visual: 'Interactive',
+  task: 'Task',
+  prompt: 'Written answer',
+  exercise: 'Exercise',
+  experiment: 'Experiment',
+  problem: 'Problem',
+};
+
+/** The planned path through this concept, shown only when the concept has one. */
+function LessonPath({ concept }: { concept: ConceptView }) {
+  const path = pathSteps(concept.sequence);
+  if (path.length < 2) return null;
+  function href(kind: string, ref: string): string | null {
+    if (kind === 'lesson') return '#step-lesson';
+    if (kind === 'visual') return `#step-visual-${ref}`;
+    if (kind === 'task') return `#step-task-${ref}`;
+    if (kind === 'quiz') return activityHref(`quiz:${concept.id}`);
+    if (kind === 'problem') return activityHref(`problem:${ref}`);
+    return null;
+  }
+  function label(kind: string, ref: string): string {
+    if (kind === 'visual') return `${STEP_LABEL.visual}: ${concept.visuals?.[Number(ref)]?.purpose ?? 'visual'}`;
+    if (kind === 'task') return `${STEP_LABEL.task}: ${concept.tasks?.find(t => t.id === ref)?.kind.replace('-', ' ') ?? ref}`;
+    return STEP_LABEL[kind] ?? kind;
+  }
+  return (
+    <nav aria-label="Your path through this lesson" className="mb-6 max-w-[68ch] rounded-[20px] border px-4 py-3.5">
+      <p className="mb-2 text-sm font-semibold">Your path through this lesson</p>
+      <ol className="grid list-decimal gap-1 pl-5 text-[15px]">
+        {path.map(s => {
+          const to = href(s.kind, s.ref);
+          return <li key={s.id}>{to ? <a className="underline underline-offset-4" href={to}>{label(s.kind, s.ref)}</a> : label(s.kind, s.ref)}</li>;
+        })}
+      </ol>
+    </nav>
   );
 }
 
@@ -96,7 +144,10 @@ function ResourceList({ concept, resources, onChange }: { concept: string; resou
             {r.title}<span className="sr-only">, opens in a new tab</span> <ExternalLink className="size-3.5" aria-hidden="true" />
           </a>
           <div className="flex items-center justify-between gap-2 text-[13px] text-muted-foreground">
-            <span>{r.source}, {r.kind}, {r.minutes} min{r.opened ? ', opened' : ''}</span>
+            <span>
+              {r.author ? `${r.author}, ` : ''}{r.source}{r.published ? ` (${r.published.slice(0, 4)})` : ''}, {r.kind}, {r.minutes} min{r.opened ? ', opened' : ''}
+              {r.license ? <span className="block text-[12px]">Licence: {r.license}{r.why ? `. Chosen because: ${r.why}.` : ''}</span> : null}
+            </span>
             {r.opened ? (
               <span className="flex gap-0.5">
                 {([true, false] as const).map(value => {
@@ -147,6 +198,8 @@ function Section({ id, title, children, collapsible = false }: { id: string; tit
 export default function Lesson() {
   const allowed = useGuard('signed-in');
   const { profile } = useSession();
+  const { t } = useI18n();
+  const [original, setOriginal] = useState(false);
   const params = useParams<{ concept: string[] }>();
   const qualified = joinSegments(params.concept);
   const [concept, setConcept] = useState<ConceptView | null>(null);
@@ -164,16 +217,17 @@ export default function Lesson() {
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get('step') ?? '';
     setStep(SUPPORT_STEPS.includes(value) ? value : '');
+    setOriginal(false);
   }, [qualified]);
 
   const load = useCallback(() => {
     setError('');
-    api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(e => {
+    api.get<ConceptView>(`/concepts/${qualified}${original ? '?locale=en' : ''}`).then(setConcept).catch(e => {
       setUpgrade(e instanceof ApiError && e.code === 'upgrade_required');
       setLocked(e instanceof ApiError && e.code === 'concept_locked' ? 'gate' : e instanceof ApiError && e.code === 'concept_preparing' ? 'preparing' : '');
       setError(explain(e));
     });
-  }, [qualified]);
+  }, [qualified, original]);
   useEffect(() => {
     if (!allowed) return;
     load();
@@ -298,16 +352,51 @@ export default function Lesson() {
             <SupportStep step={step} concept={qualified} language={concept.language} onAsk={() => setAskSoc(n => n + 1)} />
           ) : null}
 
+          {concept.translation ? (
+            <p className="mb-4 rounded-[16px] border border-border-strong px-4 py-3 text-sm text-muted-foreground" dir={concept.translation.rtl ? 'rtl' : undefined}>
+              {concept.translation.status === 'reviewed' && concept.translation.reviewer
+                ? t('translation.reviewed', { name: concept.translation.reviewer })
+                : t('translation.machine')}{' '}
+              <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={() => setOriginal(true)}>{t('translation.english')}</button>
+            </p>
+          ) : null}
           {concept.ai_generated ? (
             <p className="mb-6 flex items-start gap-2 rounded-[16px] border border-border-strong px-4 py-3 text-sm text-muted-foreground">
               <TriangleAlert className="mt-0.5 size-4 flex-none" aria-hidden />
               <span>
                 {concept.attribution || 'Written by Socrat AI and checked by AI models.'}{' '}
+                {concept.validation ? <>{concept.validation.reviewer ? `Confirmed by ${concept.validation.reviewer}.` : concept.validation.label}{' '}</> : null}
                 <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={() => openReportProblem()}>Report a problem</button> if something looks wrong.
               </span>
             </p>
           ) : null}
-          <Markdown source={concept.lesson} language={concept.language} rich />
+          <LessonPath concept={concept} />
+          {/* Lesson text, visuals and tasks in the order this concept was planned (sequence). */}
+          {orderBlocks(concept.sequence, defaultBlocks(concept.visuals?.length ?? 0, (concept.tasks ?? []).map(t => t.id))).map((block, i, all) => {
+            if (block.kind === 'lesson') return <div key="lesson" id="step-lesson"><Markdown source={concept.lesson} language={concept.language} rich /></div>;
+            if (block.kind === 'visual') {
+              const v = concept.visuals![block.index];
+              return <div key={block.key} id={`step-visual-${block.index}`}><VisualizationHost spec={v} lesson={{ concept: concept.id, title: concept.title }} /></div>;
+            }
+            const task = concept.tasks![block.index];
+            const firstTask = all.findIndex(b => b.kind === 'task') === i;
+            return <div key={block.key} id={`step-task-${task.id}`}><LessonTasks concept={concept.id} tasks={[task]} heading={firstTask} /></div>;
+          })}
+
+          {concept.citations?.length ? (
+            <details className="mt-8 max-w-[68ch] rounded-[20px] border px-4 py-3.5 text-[15px]">
+              <summary className="cursor-pointer font-semibold">Where each claim comes from</summary>
+              <ul className="mt-3 grid gap-3">
+                {concept.citations.map(c => (
+                  <li key={`${c.n}-${c.offset}`}>
+                    <p>{c.claim} <a className="underline underline-offset-4" href={c.url} target="_blank" rel="noopener noreferrer">[{c.n}]<span className="sr-only">, opens in a new tab</span></a></p>
+                    {c.passage ? <p className="mt-1 text-sm text-muted-foreground">{c.basis === 'retrieved' ? 'Source text' : 'Summary of the source'}: {c.passage}</p> : null}
+                    {!c.supported ? <p className="mt-1 text-sm text-attention">This source may not state this directly.</p> : null}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
 
           {canCheck ? <FeelControls concept={qualified} /> : null}
 
@@ -464,8 +553,19 @@ export default function Lesson() {
         {/* Desktop support column: stepper, on this page, Ask Soc, reminders. */}
         <aside className="hidden content-start gap-5 lg:sticky lg:top-24 lg:grid lg:self-start" aria-label="Lesson tools">
           <div className="paper rounded-card p-5">
-            <StatusLabel status={statusFromBand(concept.band)} className="mb-4" />
+            <StatusLabel status={strongSoFar(concept) ? 'learned' : statusFromBand(concept.band)} detail={strongSoFar(concept) ? 'Strong so far' : undefined} className="mb-4" />
+            {concept.evidence?.reasons.length ? (
+              <p className="-mt-2 mb-4 text-sm text-muted-foreground">{concept.evidence.reasons[0]}</p>
+            ) : null}
             <Stepper concept={concept} className="flex-col gap-4" />
+            {concept.teaching?.techniques.length ? (
+              <details className="mt-4 text-sm">
+                <summary className="cursor-pointer font-medium">Why it is taught this way</summary>
+                <ul className="mt-2 grid gap-1.5 text-muted-foreground">
+                  {concept.teaching.techniques.map(t => <li key={t.name}><span className="font-medium text-foreground">{t.name}.</span> {t.why}</li>)}
+                </ul>
+              </details>
+            ) : null}
           </div>
           {sections.length > 1 ? (
             <nav aria-label="On this page" className="paper rounded-card p-5">

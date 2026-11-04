@@ -8,6 +8,7 @@ import type { AdaptiveAnswer, AdaptiveSession, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading } from '@/components/common';
 import { Choice } from '@/components/choice';
+import { ConfidencePicker } from '@/components/confidence';
 import { codeSpans } from '@/components/markdown';
 import { AttentionIcon } from '@/components/socrat/states';
 import { ReasonChip } from '@/components/socrat/reason-chip';
@@ -54,6 +55,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
   const [session, setSession] = useState<AdaptiveSession | null>(null);
   const [feedback, setFeedback] = useState<AdaptiveAnswer | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
+  const [sure, setSure] = useState<number | null>(null); // optional, for calibration
   const [history, setHistory] = useState<{ band: number; correct: boolean }[]>([]);
   const [next, setNext] = useState<Today['next'] | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -102,7 +104,9 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
         item: session.current.item,
         choice: picked,
         time_s: Math.round((Date.now() - shownAt.current) / 1000),
+        ...(picked !== null && sure !== null ? { confidence: sure } : {}),
       });
+      setSure(null);
       if (testout) {
         // Graded at the end: no right/wrong between questions, straight on to the next.
         setHistory(h => [...h, { band, correct: false }]);
@@ -235,6 +239,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
               </Choice>
             ))}
           </div>
+          {choice !== null ? <ConfidencePicker value={sure} onChange={setSure} /> : null}
           <div className="flex flex-wrap items-center gap-3">
             <Button size="lg" disabled={busy || choice === null} aria-busy={busy} onClick={() => answer(choice)}>Check answer</Button>
             {testout ? null : <Button size="lg" variant="ghost" disabled={busy} onClick={() => answer(null)}>I haven&apos;t learned this yet</Button>}

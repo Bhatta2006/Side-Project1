@@ -30,6 +30,8 @@ export interface Profile {
   display_name: string | null;
   birth_year: number | null;
   timezone: string | null;
+  /** Language tag the learner chose (en, hi, ...). */
+  locale?: string;
   csrf_token: string;
   onboarded: boolean;
   tour_seen: boolean;
@@ -62,6 +64,10 @@ export interface Features {
   community_url?: string | null;
   try_tutor?: boolean;
   adaptive_quiz?: boolean;
+  /** Learners may build their own course at /new. */
+  learning_requests?: boolean;
+  /** Learners may choose lite mode (heavy parts load on request). */
+  lite_mode?: boolean;
 }
 
 export interface Course {
@@ -70,6 +76,8 @@ export interface Course {
   tagline: string;
   description: string;
   languages: Language[];
+  // How the subject is practised; only a "code" course has a code editor and a language choice.
+  shape?: { studio: 'code' | 'workbench' | 'lab' | 'reading' };
   levels: { id: string; label: string; description: string }[];
   modules: { id: string; title: string; summary: string; concepts: number }[];
   concept_count: number;
@@ -450,6 +458,11 @@ export interface Resource {
   minutes: number;
   level: 'intro' | 'core' | 'deep';
   languages: Language[];
+  /** Provenance of a researched source; empty for hand-picked ones. */
+  author?: string;
+  published?: string;
+  license?: string;
+  why?: string;
   /** Among the few picked for this learner right now. */
   picked?: boolean;
   opened?: boolean;
@@ -572,8 +585,23 @@ export interface ConceptView {
   module: string;
   lesson: string;
   ai_generated: boolean;
+  /** Work a quiz cannot judge, with the learner's latest submission. */
+  tasks?: import('@/components/lesson-tasks').LessonTask[];
+  sequence?: string[];
+  /** Which source backs which claim (master prompt 11.4), built by code; empty for hand-written lessons. */
+  citations?: { n: number; url: string; offset: number; claim: string; passage: string; basis: 'retrieved' | 'summary'; overlap: number; supported: boolean }[];
+  /** How this concept is taught to this learner now, and why (evidence library). */
+  teaching?: { stage: string; guidance: string; techniques: { name: string; why: string }[]; library: string };
+  /** What stands behind the estimate (master prompt 9.2). */
+  evidence?: { stage: 'unknown' | 'emerging' | 'developing' | 'proficient' | 'demonstrated'; needs_follow_up: boolean; reasons: string[] };
+  /** How a generated lesson was checked; null for hand-written lessons. */
+  validation?: { status: 'pass' | 'pass_with_warnings' | 'human_review_required'; label: string; reviewer: string | null } | null;
   attribution: string;
+  /** Set when the text shown is a translation; null for the English original. */
+  translation?: { locale: string; status: 'machine' | 'reviewed'; reviewer: string | null; preview: boolean; rtl: boolean } | null;
   key_points: string[];
+  /** Registered interactive elements; each renders through the visualization host with a text fallback. */
+  visuals?: { renderer: string; version: string; params: Record<string, unknown>; purpose: string; fallback_text: string; alt_text: string }[];
   pitfalls: string[];
   resources: Resource[];
   practice_links: { title: string; url: string; platform: string; difficulty: 'easy' | 'medium' | 'hard' }[];

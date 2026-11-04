@@ -95,6 +95,16 @@ export async function* stream(path: string, body: unknown, signal?: AbortSignal)
 }
 
 const MESSAGES: Record<string, string> = {
+  diagnostic_unavailable: 'The starting check needs the AI reader, which is not available right now. You can start from the beginning.',
+  diagnostic_failed: 'The starting check could not be prepared. You can start from the beginning.',
+  answer_every_question: 'Answer every question first.',
+  sharing_not_allowed: 'This course cannot be shared.',
+  nothing_ready_to_share: 'Share it once at least one lesson is ready.',
+  too_many_shared_courses: 'You have reached the limit of shared courses.',
+  too_many_open_requests: 'You already have a few plans waiting. Start or finish one first.',
+  request_blocked: "Socrat can't help with that request.",
+  invalid_choice: 'One of those choices is not valid. Pick one option per group.',
+  outline_not_ready: 'Your plan is still being prepared.',
   minimum_age: 'Socrat is for learners aged 13 and over.',
   profile_incomplete: 'Finish your profile first.',
   content_unavailable: 'Course content is not built yet. Run python scripts/content/build.py.',

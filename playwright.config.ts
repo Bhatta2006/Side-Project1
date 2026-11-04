@@ -37,6 +37,7 @@ export default defineConfig({
         SOCRAT_DEV_LOGIN_ENABLED: 'true',
         SOCRAT_AI_PROVIDER: 'offline',
         SOCRAT_PREWARM_CONTENT: 'true',
+        SOCRAT_LITE_MODE_ENABLED: 'true',
         SOCRAT_PUBLIC_ORIGIN: 'http://localhost:3000',
       },
     },

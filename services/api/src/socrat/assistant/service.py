@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from socrat import entitlements
+from socrat import entitlements, localize
 from socrat.assessments import service as assessments
 from socrat.assistant import engine, socratic
 from socrat.assistant.gateway import Provider, ProviderError, ToolRunner, ToolSpec, Turn, complete
@@ -29,6 +29,7 @@ from socrat.assistant.tools import LABELS
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Problem
 from socrat.config import Settings
+from socrat.coursegen import audience
 from socrat.learn import service as learn
 from socrat.library import recommend
 from socrat.library import service as library
@@ -197,13 +198,18 @@ def learner_sections(
         for x in recent
         if x["concept"] in catalog.concepts
     )
-    return {
+    sections = {
         "learner": learner,
         "mastery": mastery or "No scored evidence yet.",
         "next_up": "\n".join(upcoming) or "Nothing scheduled.",
         "recent_results": recent_text or "No results yet.",
         "adaptive": adaptive_section(db, catalog, enrollment, plan, states, now),
     }
+    # How this learner asked to be taught in a course they made themselves (structured picks).
+    how = audience.tutor_block(db, user, enrollment)
+    if how:
+        sections["how_you_asked_to_learn"] = how
+    return sections
 
 
 def adaptive_section(db: Session, catalog: Catalog, enrollment, plan, states, now: int) -> str:
@@ -434,6 +440,9 @@ def prepare(
     style = personal_style(settings, user, enrollment)
     if style is not None:
         sections["learning_style"] = styles.tutor_block(style)
+    reply_language = localize.tutor_directive(user.locale)
+    if reply_language:
+        sections["reply_language"] = reply_language
     if enrollment is not None and style_access.enabled(settings, user):
         mentor_note = mentor.tutor_note(enrollment, catalog, scope)
         if mentor_note:
@@ -754,6 +763,7 @@ CONTEXT_TITLES = {
     "next_up": "Next in your plan",
     "recent_results": "Recent results",
     "adaptive": "Where you're stuck and trends",
+    "how_you_asked_to_learn": "How you asked to be taught",
 }
 
 

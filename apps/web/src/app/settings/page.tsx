@@ -26,6 +26,8 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Switch } from '@/components/ui/switch';
 import { useInstall } from '@/lib/pwa';
 import { CommunityButton, useCommunityUrl } from '@/components/community-link';
+import { LanguagePicker } from '@/components/language-picker';
+import { DataUsePicker } from '@/components/data-use';
 import { InstallAppButton } from '@/components/install-app';
 import { Soc } from '@/components/socrat/illustration';
 
@@ -183,7 +185,8 @@ function Appearance() {
           })}
         </div>
         <div className="grid content-start divide-y">
-          <div className="flex items-start justify-between gap-4 pb-5">
+          <LanguagePicker />
+          <div className="flex items-start justify-between gap-4 py-5">
             <div>
               <label htmlFor="reduce-motion" className="font-semibold">Reduce motion</label>
               <p id="reduce-motion-help" className="text-sm text-muted-foreground">
@@ -192,6 +195,7 @@ function Appearance() {
             </div>
             <Switch id="reduce-motion" checked={motion.setting} onCheckedChange={motion.set} aria-describedby="reduce-motion-help" />
           </div>
+          <DataUsePicker />
           <div className="flex items-start justify-between gap-4 py-5">
             <div>
               <label htmlFor="reminders" className="font-semibold">Study reminders</label>
@@ -311,7 +315,7 @@ export default function Settings() {
   return (
     <Page>
       <PageHeader eyebrow="make it yours" title={NAME.settings} description="Changes to your schedule update your plan straight away." actions={<Soc size={88} mood="wink" className="hidden sm:block" />} />
-      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
         <SectionNav active={section} onPick={setSection} />
         <div className="grid min-w-0 gap-10">
         <div id="appearance" className="scroll-mt-32"><Appearance /></div>

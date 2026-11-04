@@ -232,3 +232,181 @@ def test_role_overrides_are_checked_and_applied(client):  # noqa: F811
     critic = roles.role_settings(settings, "critic")
     assert (critic.ai_provider, critic.openai_model, critic.ai_effort) == ("openai", "m-1", "low")
     assert roles.role_settings(settings, "architect").ai_effort == "high"
+
+
+def test_an_identical_brief_reuses_the_passed_outline_without_a_model_call(client, admin):  # noqa: F811
+    first = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "Solid.", "issues": []})],
+    )
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    assert run(client, first)
+
+    # Same request, another course id and budget: the design is the same, so is the outline.
+    twin = dict(BRIEF, id="ai-basics-two", budget_usd=9.0)
+    client.post("/api/v1/admin/courses/briefs", json=twin, headers=admin)
+    silent = Scripted(architect=[], critic=[])  # any model call would pop from an empty list
+    assert run(client, silent)
+    assert silent.prompts == {"architect": [], "critic": []}
+    detail = client.get("/api/v1/admin/courses/ai-basics-two").json()
+    assert detail["status"] == "review" and detail["jobs"][0]["state"] == "done"
+    assert [c["id"] for c in detail["course"]["concepts"]] == ["what-is-ml", "loss"]
+    log = detail["jobs"][0]["log"]
+    assert any(e.get("reused_from") == "ai-basics" for e in log)
+    assert detail["spent_usd"] == 0
+
+    # A different request is designed afresh.
+    other = dict(BRIEF, id="ai-deeper", outcome="Derive gradient descent and implement it.")
+    client.post("/api/v1/admin/courses/briefs", json=other, headers=admin)
+    fresh = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "Fine.", "issues": []})],
+    )
+    assert run(client, fresh)
+    assert len(fresh.prompts["architect"]) == 1
+
+
+def test_an_outline_the_critic_did_not_pass_is_never_reused(client, admin):  # noqa: F811
+    revise = json.dumps({"verdict": "revise", "summary": "Weak.", "issues": []})
+    weak = Scripted(architect=[json.dumps(OUTLINE)] * 3, critic=[revise] * 3)
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    assert run(client, weak)
+    client.post("/api/v1/admin/courses/briefs", json=dict(BRIEF, id="ai-again"), headers=admin)
+    retry = Scripted(
+        architect=[json.dumps(OUTLINE)],
+        critic=[json.dumps({"verdict": "pass", "summary": "Ok.", "issues": []})],
+    )
+    assert run(client, retry)
+    assert len(retry.prompts["architect"]) == 1
+
+
+def test_a_later_start_counts_every_earlier_module_as_known(client, admin):  # noqa: F811
+    """Found in a live run: a learner placed at module 3 of a generated course whose start
+    concept does not depend on module 2 had module 2 neither known nor written, so module 2's
+    checkpoint locked the very lesson generated for them and Today offered nothing."""
+    from socrat.catalog import generated
+    from socrat.learn import service as learn
+    from socrat.models import Enrollment
+
+    modules = [
+        dict(
+            id="basics",
+            title="Basics",
+            summary="What a chance is, on a scale.",
+            concepts=[concept("scale")],
+        ),
+        dict(
+            id="combining",
+            title="Combining",
+            summary="Joining two chances together.",
+            concepts=[concept("both", ["scale"]), concept("either", ["both"])],
+        ),
+        dict(
+            id="games",
+            title="Games",
+            summary="What a bet is worth on average.",
+            concepts=[concept("worth", ["scale"])],
+        ),
+    ]
+    levels = [
+        dict(id="new", label="New", description="Start at the beginning.", start_concept=None),
+        dict(
+            id="games",
+            label="I can combine events",
+            description="Start at games.",
+            start_concept="worth",
+        ),
+    ]
+    graph = dict(OUTLINE, modules=modules, levels=levels)
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    passed = json.dumps({"verdict": "pass", "summary": "Fine.", "issues": []})
+    assert run(client, Scripted(architect=[json.dumps(graph)], critic=[passed]))
+    client.post("/api/v1/admin/courses/ai-basics/publish", headers=admin)
+
+    learner = login(client, subject="ada", name="Ada")
+    onboard(client, learner, course="ai-basics", level="games")
+    with Session(client.app.state.engine) as db:
+        enrollment = db.scalars(select(Enrollment)).one()
+        known = {q for q, s in learn.states_for(db, enrollment).items() if s.assumed}
+        cat = generated.merged(default_catalog())
+        locked = learn.locked_concepts(db, cat, enrollment, int(__import__("time").time()))
+    # Everything before the start in course order is known, not only its prerequisites ...
+    # (dependency order puts "worth" before "either", which is deeper; course order does not)
+    assert {"ai-basics:scale", "ai-basics:both", "ai-basics:either"} <= known
+    assert "ai-basics:worth" not in known
+    # ... so the start concept is not locked behind the skipped module's checkpoint.
+    assert "ai-basics:worth" not in locked
+
+
+def test_a_written_start_lesson_is_not_locked_behind_unwritten_earlier_modules(client, admin):  # noqa: F811
+    """Second shape of the live-run bug: the start lesson exists, so placement probes there, and
+    the earlier lessons (not written, level says known) used to stay unknown, so module
+    checkpoints locked the written lesson for good."""
+    import time
+
+    from socrat.catalog import generated
+    from socrat.learn import service as learn
+    from socrat.models import Enrollment
+
+    modules = [
+        dict(
+            id="basics",
+            title="Basics",
+            summary="What a chance is, on a scale.",
+            concepts=[concept("scale")],
+        ),
+        dict(
+            id="combining",
+            title="Combining",
+            summary="Joining two chances together.",
+            concepts=[concept("both", ["scale"]), concept("either", ["both"])],
+        ),
+        dict(
+            id="games",
+            title="Games",
+            summary="What a bet is worth on average.",
+            concepts=[concept("worth", ["scale"])],
+        ),
+    ]
+    levels = [
+        dict(id="new", label="New", description="Start at the beginning.", start_concept=None),
+        dict(
+            id="games",
+            label="I can combine events",
+            description="Start at games.",
+            start_concept="worth",
+        ),
+    ]
+    client.post("/api/v1/admin/courses/briefs", json=BRIEF, headers=admin)
+    passed = json.dumps({"verdict": "pass", "summary": "Fine.", "issues": []})
+    graph = dict(OUTLINE, modules=modules, levels=levels)
+    assert run(client, Scripted(architect=[json.dumps(graph)], critic=[passed]))
+    client.post("/api/v1/admin/courses/ai-basics/publish", headers=admin)
+
+    base = default_catalog()
+    model = base.concept("zero:programs-and-output").model_dump(mode="json")
+    live = type(base.concept("zero:programs-and-output")).model_validate(
+        model
+        | dict(
+            id="worth",
+            module="games",
+            prerequisites=["scale"],
+            outline=None,
+            sequence=[],
+            problems=[],
+            practice_links=[],
+        )
+    )
+    with Session(client.app.state.engine) as db, db.begin():
+        generated.store_concept(db, base, "ai-basics", live, None)
+
+    learner = login(client, subject="ada", name="Ada")
+    onboard(client, learner, course="ai-basics", level="games")
+    with Session(client.app.state.engine) as db:
+        enrollment = db.scalars(select(Enrollment)).one()
+        assert enrollment.status == "placement"  # the written start lesson is probed
+        cat = generated.merged(default_catalog())
+        known = {q for q, s in learn.states_for(db, enrollment).items() if s.assumed}
+        locked = learn.locked_concepts(db, cat, enrollment, int(time.time()))
+    assert {"ai-basics:scale", "ai-basics:both", "ai-basics:either"} <= known
+    assert "ai-basics:worth" not in known and "ai-basics:worth" not in locked

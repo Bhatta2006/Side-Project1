@@ -6,12 +6,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronRight, Flame } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
+import { useI18n } from '@/lib/i18n';
 import { KIND_LABEL, NAME, PACE_LABEL, activityHref, conceptHref, formatDate } from '@/lib/routes';
 import type { Activity, AssessmentStatus, PlanView, Recommendations, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal, Ring } from '@/components/common';
 import { Level, PlatformTag, ProblemName } from '@/components/practice';
-import { AdaptingCard } from '@/components/socrat/adapting';
 import { ReasonChip } from '@/components/socrat/reason-chip';
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { SocFigure } from '@/components/socrat/soc';
@@ -28,6 +28,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
 // otherwise sits in Today's first load. An early openSignal still opens it once it arrives.
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+// "What Socrat noticed" sits below the fold and brings the Markdown renderer with it. It loads
+// while Today's data is fetched (see the effect in TodayPage), so it is ready when the page shows.
+const loadAdapting = () => import('@/components/socrat/adapting').then(m => m.AdaptingCard);
+const AdaptingCard = dynamic(loadAdapting, { ssr: false });
 
 const VERB: Record<string, string> = {
   lesson: 'Start lesson',
@@ -90,10 +94,10 @@ function GrowBar({ value, label }: { value: number; label: string }) {
   );
 }
 
-function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
+function SessionRow({ activity, done, onLater }: { activity: Activity; done: boolean; onLater?: () => void }) {
   return (
-    <li>
-      <Link href={activityHref(activity.id)} className="group flex min-h-14 items-center gap-3 rounded-[16px] px-3 py-2 transition-colors hover:bg-raised">
+    <li className="flex items-center gap-1">
+      <Link href={activityHref(activity.id)} className="group flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-[16px] px-3 py-2 transition-colors hover:bg-raised">
         <StatusIcon status={done ? 'practised' : 'not_seen'} size={22} />
         <span className="min-w-0 flex-1">
           <span className={cn('block font-semibold', done && 'text-muted-foreground')}>{activity.title}</span>
@@ -102,6 +106,12 @@ function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
         {!done ? <ReasonChip code={activity.code} className="hidden sm:inline-flex" /> : null}
         {!done ? <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" /> : null}
       </Link>
+      {/* A review can wait a few days; the schedule itself is unchanged (learn/reviews.py). */}
+      {onLater && !done ? (
+        <button type="button" onClick={onLater} className="min-h-11 flex-none rounded-full px-3 text-[13px] font-medium text-muted-foreground underline-offset-4 hover:underline">
+          Later<span className="sr-only">: remind me about {activity.title} in 3 days</span>
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -116,8 +126,10 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 export default function TodayPage() {
   const allowed = useGuard('active');
+  useEffect(() => { void loadAdapting(); }, []);
   const planLocked = usePlanLocks();
-  const { profile } = useSession();
+  const { profile, features } = useSession();
+  const { t } = useI18n();
   const [today, setToday] = useState<Today | null>(null);
   const [error, setError] = useState('');
   const [recs, setRecs] = useState<Recommendations | null>(null);
@@ -196,7 +208,7 @@ export default function TodayPage() {
         <ul className="-mt-2 mb-6 flex flex-wrap gap-2 lg:-mt-4 lg:mb-8" aria-label="Today at a glance">
           <Pill><Flame className="size-4" strokeWidth={1.5} aria-hidden="true" />{fresh ? 'Start your streak today' : `${today.streak.current}-day streak`}</Pill>
           <Pill><span className="tabular-nums">{today.minutes.done} of {today.minutes.goal} min today</span></Pill>
-          {today.reviews_due ? <Pill><StatusIcon status="review" size={16} /> {today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</Pill> : null}
+          {today.reviews_due ? <Pill><StatusIcon status="review" size={16} /> <Link href="/reviews" className="underline-offset-4 hover:underline">{today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</Link></Pill> : <Pill><Link href="/reviews" className="underline-offset-4 hover:underline">Reviews</Link></Pill>}
         </ul>
       </Reveal>
 
@@ -354,7 +366,14 @@ export default function TodayPage() {
                       <span className="text-sm font-semibold text-muted-foreground tabular-nums">{today.done.length ? `${today.done.length} of ${session.length} done` : `${session.length} step${session.length === 1 ? '' : 's'}, in order`}</span>
                     </div>
                     <ul className="grid px-[calc(var(--card-spacing)-12px)]">
-                      {session.map(({ a, done }) => <SessionRow key={a.id} activity={a} done={done} />)}
+                      {session.map(({ a, done }) => (
+                        <SessionRow
+                          key={a.id}
+                          activity={a}
+                          done={done}
+                          onLater={a.kind === 'review' && a.concept ? () => api.post(`/reviews/${a.concept}/snooze`, { days: 3 }).then(load).catch(() => undefined) : undefined}
+                        />
+                      ))}
                     </ul>
                   </Card>
                 ) : (
@@ -493,6 +512,18 @@ export default function TodayPage() {
           </Tabs>
         </Reveal>
       </div>
+      {features?.learning_requests ? (
+        <Link
+          href="/new"
+          className="mt-6 flex min-h-14 items-center justify-between gap-4 rounded-[20px] border bg-card px-5 py-4 transition-colors hover:bg-raised"
+        >
+          <span>
+            <span className="block font-semibold">{t('today.build.title')}</span>
+            <span className="block text-sm text-muted-foreground">{t('today.build.body')}</span>
+          </span>
+          <span aria-hidden="true">→</span>
+        </Link>
+      ) : null}
       <CommunityCard className="mt-6" />
       <Assistant scope="general" title="Ask Soc" openSignal={askSoc} />
     </Page>

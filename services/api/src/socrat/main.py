@@ -28,16 +28,28 @@ from socrat.catalog import generated
 from socrat.catalog.registry import default_catalog
 from socrat.config import Settings
 from socrat.coursegen import jobs as coursegen_jobs
+from socrat.coursegen.cost_routes import router as engine_costs_router
+from socrat.coursegen.diagnostic_routes import router as diagnostic_router
+from socrat.coursegen.maintain_routes import router as maintenance_router
+from socrat.coursegen.moderation import admin as moderation_admin
+from socrat.coursegen.moderation import learner as moderation_learner
+from socrat.coursegen.requests import router as learning_requests_router
 from socrat.coursegen.routes import router as coursegen_router
 from socrat.database import make_engine, record_event
 from socrat.email_auth import router as email_auth_router
+from socrat.engine.routes import router as engine_router
 from socrat.explainer.routes import router as explainer_router
 from socrat.lab.routes import router as lab_router
 from socrat.learn.graded_routes import router as graded_router
+from socrat.learn.reviews import router as reviews_router
 from socrat.learn.routes import router as learner_router
 from socrat.learn.session_routes import router as session_router
+from socrat.learn.tasks import admin as tasks_admin
+from socrat.learn.tasks import router as tasks_router
 from socrat.library import autosync
 from socrat.library.routes import router as library_router
+from socrat.localize.routes import admin as locale_admin
+from socrat.localize.routes import public as locale_public
 from socrat.mentor.routes import router as mentor_router
 from socrat.models import User
 from socrat.passport import router as passport_router
@@ -80,11 +92,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background = None
         if settings.codeforces_autosync:
             background = asyncio.create_task(autosync.run_forever(engine))
-        generation = None
-        if settings.gen_runner:
-            generation = asyncio.create_task(
-                coursegen_jobs.run_forever(engine, settings, default_catalog)
-            )
+        # Several loops write several lessons at once; jobs.claim gives each job to one loop.
+        generation = [
+            asyncio.create_task(coursegen_jobs.run_forever(engine, settings, default_catalog))
+            for _ in range(settings.gen_runner_concurrency if settings.gen_runner else 0)
+        ]
+        # Parsing the catalog takes seconds; do it at start so the first learner does not pay for
+        # it (requests that arrive meanwhile wait for this one load, see single_flight).
+        if settings.prewarm_content:
+            await asyncio.to_thread(default_catalog)
+        elif settings.environment != "test":
+            threading.Thread(target=default_catalog, daemon=True).start()
         if settings.adaptive_quiz_enabled and settings.prewarm_content:
             await asyncio.to_thread(warm_quiz_bank)
         elif settings.adaptive_quiz_enabled and settings.environment != "test":
@@ -93,8 +111,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         if background is not None:
             background.cancel()
-        if generation is not None:
-            generation.cancel()
+        for task in generation:
+            task.cancel()
         engine.dispose()
 
     app = FastAPI(
@@ -117,6 +135,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(assessments_router)
     app.include_router(admin_router)
     app.include_router(coursegen_router)
+    app.include_router(learning_requests_router)
+    app.include_router(engine_router)
+    app.include_router(diagnostic_router)
+    app.include_router(maintenance_router)
+    app.include_router(engine_costs_router)
+    app.include_router(reviews_router)
+    app.include_router(tasks_router)
+    app.include_router(tasks_admin)
+    app.include_router(locale_public)
+    app.include_router(locale_admin)
+    app.include_router(moderation_learner)
+    app.include_router(moderation_admin)
     app.include_router(style_router)
     app.include_router(mentor_router)
     app.include_router(workbench_router)
@@ -186,10 +216,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers.update(
             {
                 "X-Request-ID": request_id,
-                "Cache-Control": "no-store",
                 "X-Content-Type-Options": "nosniff",
             }
         )
+        # Private by default; a route that serves the same bytes to everyone opts in to caching.
+        response.headers.setdefault("Cache-Control", "no-store")
         response.headers.setdefault("Referrer-Policy", "same-origin")
         if settings.secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
@@ -262,6 +293,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "pattern_planner": settings.pattern_planner_enabled,
             "community_url": settings.community_whatsapp_url or None,
             "try_tutor": settings.try_tutor_enabled,
+            "learning_requests": settings.learning_requests_enabled,
+            "lite_mode": settings.lite_mode_enabled,
         }
 
     @app.post("/api/v1/auth/dev-login")

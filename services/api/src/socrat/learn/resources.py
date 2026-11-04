@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from socrat.catalog.registry import REPO_ROOT
 from socrat.catalog.schema import Concept
-from socrat.models import ResourceEvent
+from socrat.models import ResourceEvent, ResourceHealth
 
 PICKS = 3
 TARGET_LEVEL = {
@@ -66,12 +66,22 @@ def personalised(
         )
     }
     votes = community(db, concept_id)
+    # Links the maintainer found dead are not offered while a person decides what replaces them.
+    dead = set(
+        db.scalars(
+            select(ResourceHealth.url).where(
+                ResourceHealth.concept == concept_id, ResourceHealth.status == "dead"
+            )
+        )
+    )
     target = LEVEL_ORDER.index(TARGET_LEVEL.get(band, "core"))
     scored = []
     for index, r in enumerate(concept.resources):
         if r.languages and language not in r.languages:
             continue
         url = str(r.url)
+        if url in dead:
+            continue
         event = mine.get(url)
         up, down = votes.get(url, (0, 0))
         score = 3 - abs(LEVEL_ORDER.index(r.level) - target) * 1.5

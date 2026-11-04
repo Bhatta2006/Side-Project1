@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useEditorPrefs } from '@/lib/editor-prefs';
 import { readLocalDraft, writeLocalDraft } from '@/lib/local-drafts';
 import { runInBrowser, warm, type RunnerStage } from '@/lib/runner';
+import { useLite } from '@/lib/lite';
 import CodeEditor from '@/components/code-editor';
 import { parseDiagnostics } from '@/components/code-editor/diagnostics';
 import Markdown from '@/components/markdown';
@@ -80,6 +81,7 @@ function CaseMark({ ok }: { ok: boolean }) {
 
 export default function Problem() {
   const allowed = useGuard('signed-in');
+  const { lite } = useLite();
   const { profile, features } = useSession();
   const { resolvedTheme } = useTheme();
   const params = useParams<{ id: string }>();
@@ -139,7 +141,8 @@ export default function Problem() {
       .catch(e => setError(explain(e)));
   }, [problemId, lang]);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
-  useEffect(() => { if (allowed) void warm(lang); }, [allowed, lang]);
+  // In lite mode the runtime downloads when the learner presses Run, not in the background.
+  useEffect(() => { if (allowed && !lite) void warm(lang); }, [allowed, lite, lang]);
   useEffect(() => {
     if (!allowed) return;
     api.get<{ languages: Record<string, boolean> }>('/runtimes').then(r => setRuntimes(r.languages)).catch(() => undefined);

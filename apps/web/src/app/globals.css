@@ -5,7 +5,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, "Segoe UI",
+    /* Geist is Latin only. These are fonts already installed on learners' devices, so Indic and
+       Arabic text renders without shipping font files (Nirmala UI: Windows; Kohinoor and Sangam:
+       Apple; Noto: Android, Linux, ChromeOS). */
+    "Nirmala UI", "Noto Sans Devanagari", "Noto Sans Telugu", "Noto Sans Tamil", "Noto Sans Bengali",
+    "Kohinoor Devanagari", "Kohinoor Telugu", "Tamil Sangam MN", "Bangla Sangam MN",
+    "Noto Sans Arabic", "Geeza Pro", sans-serif;
   --font-heading: var(--font-display);
   --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-hand: var(--font-delicious), "Segoe Print", "Bradley Hand", cursive;

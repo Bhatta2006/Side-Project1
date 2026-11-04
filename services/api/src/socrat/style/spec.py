@@ -157,7 +157,14 @@ def parse(value: dict | None) -> StyleSpec | None:
 def block(spec: StyleSpec) -> str:
     """The style as instructions every agent receives (one wording, so they agree)."""
     low, high = spec.lesson_bounds()
-    length = f"{low}-{high}" if high else f"at least {low}"
+    # Models cannot count characters but keep to a word count; the gate measures the teaching
+    # text only, so say so (a live run wrote 2,400-3,000 characters for an 1,800 ceiling).
+    length = (
+        f"{low}-{high} characters, about {low // 6}-{high // 6} words of teaching (the "
+        "<details> answers and the sources do not count); stay under the upper bound"
+        if high
+        else f"at least {low} characters"
+    )
     lines = [
         f"LEARNING STYLE: {spec.name}",
         f"- Learner: {spec.learner or 'as in the brief'}"
@@ -170,7 +177,7 @@ def block(spec: StyleSpec) -> str:
             "rigorous": "(precise definitions, derivations or proofs, and hard cases)",
         }[spec.rigor],
         f"- Format: {spec.format}: a session is about {spec.session_minutes} minutes; "
-        f"a lesson is {length} characters.",
+        f"a lesson is {length}.",
         f"- Tone: {spec.tone}."
         + (
             " Make it a game: quests, levels, points, streaks and playful challenges."

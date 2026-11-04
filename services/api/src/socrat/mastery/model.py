@@ -5,8 +5,11 @@ adds weighted pseudo-observations. Assistance lowers the weight of a success but
 never softens a failure, so help cannot manufacture mastery.
 """
 
+import hashlib
+import json
 import math
-from dataclasses import asdict, dataclass, replace
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass, fields, replace
 from typing import Literal
 
 DAY = 86_400
@@ -28,6 +31,7 @@ EvidenceKind = Literal[
     "explain",  # a free-text answer graded by AI against a released rubric
     "project",  # a project milestone graded by AI against the project rubric
     "transfer",
+    "performance",  # real work graded by a named person against a rubric (learn.tasks)
 ]
 WEIGHTS: dict[str, float] = {
     "placement": 1.0,
@@ -52,6 +56,7 @@ WEIGHTS: dict[str, float] = {
     "project": 0.8,
     # Independent solve of a problem never seen before, after naming the technique unaided.
     "transfer": 1.2,
+    "performance": 1.0,
 }
 AI_GRADED = {"explain", "project"}
 # Socratic assistance level 0–5 → how much a success still counts.
@@ -68,6 +73,29 @@ MIN_CONFIDENCE = 0.55
 PRIOR = 2.0  # alpha + beta of the default prior
 
 
+# The scoring policy's version (master prompt 9.1, 9.3): a digest of every number above, so any
+# change to weights, assistance, spacing or thresholds is a new version without anyone having
+# to remember to bump it. Each state records the policy that produced it.
+def policy_digest(parts: list) -> str:
+    return "beta-" + hashlib.sha256(json.dumps(parts, sort_keys=True).encode()).hexdigest()[:12]
+
+
+POLICY_PARTS = [
+    WEIGHTS,
+    ASSISTANCE,
+    REVIEW_DAYS,
+    MAX_STEP,
+    FAST_STEP,
+    TESTOUT_STEP,
+    TUTOR_MAX_SCORE,
+    GRADED_STEP,
+    MASTERED,
+    MIN_CONFIDENCE,
+    PRIOR,
+]
+POLICY = policy_digest(POLICY_PARTS)
+
+
 @dataclass(frozen=True)
 class ConceptState:
     alpha: float = 1.0
@@ -81,6 +109,7 @@ class ConceptState:
     next_review_at: int = 0
     assumed: bool = False  # Placed as known; confirmed later by a light review.
     graded: int = 0  # evidence graded by AI (explain, project)
+    policy: str = ""  # the scoring policy (POLICY) that last updated this state; "" before it
 
     @property
     def mean(self) -> float:
@@ -111,7 +140,15 @@ class ConceptState:
 
     @classmethod
     def from_dict(cls, value: dict | None) -> "ConceptState":
-        return cls(**value) if value else cls()
+        if not value:
+            return cls()
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in value.items() if k in known})
+
+    @property
+    def current(self) -> bool:
+        """Whether this state was produced by the scoring policy in force now."""
+        return self.policy == POLICY
 
 
 def placed(known: bool, now: int) -> ConceptState:
@@ -170,7 +207,23 @@ def apply(
         next_review_at=review_at,
         assumed=state.assumed and success,
         graded=state.graded + int(kind in AI_GRADED),
+        policy=POLICY,
     )
+
+
+def replay(
+    events: Iterable, start: ConceptState | None = None, interval_scale: float = 1.0
+) -> ConceptState:
+    """Rebuild a state from append-only evidence (rows or objects with kind, score,
+    assistance, created_at), oldest first, under the current policy. ``start`` is the
+    placement prior, if any. Tutor observations above the cap are skipped, as ``apply``
+    refuses them."""
+    state = start or ConceptState()
+    for e in sorted(events, key=lambda e: (e.created_at, getattr(e, "seq", 0))):
+        if e.kind == "tutor" and e.score > TUTOR_MAX_SCORE:
+            continue
+        state = apply(state, e.kind, e.score, e.created_at, e.assistance, interval_scale)
+    return state
 
 
 def step_cap(state: ConceptState, kind: str, score: float, assistance: int) -> float:

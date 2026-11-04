@@ -343,6 +343,49 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
     )
 
 
+def _tasks(db: Session, enrollment, qualified: str, concept) -> list[dict]:
+    if not concept.tasks:
+        return []
+    from socrat.learn import tasks
+
+    latest = tasks.mine(db, enrollment, qualified)
+    return [
+        dict(
+            id=t.id,
+            kind=t.kind,
+            prompt=t.prompt,
+            rubric=[c.model_dump() for c in t.rubric],
+            safety=t.safety or None,
+            evaluator=t.evaluator,
+            submission=latest.get(t.id),
+        )
+        for t in concept.tasks
+    ]
+
+
+def _teaching(catalog: Catalog, course_id: str, concept, stage: str) -> dict:
+    from socrat.engine import design, strategy
+
+    p = strategy.plan(concept, stage, design.adapter_for(catalog.course(course_id)))
+    return dict(
+        stage=p.stage,
+        guidance=p.guidance,
+        techniques=[{k: t[k] for k in ("name", "why")} for t in p.techniques],
+        library=p.library,
+    )
+
+
+def _validation(db: Session, qualified: str, concept) -> dict | None:
+    if not (concept.provenance and concept.provenance.author == AI_AUTHOR):
+        return None
+    from socrat.coursegen import validation
+
+    course_id, local = qualified.split(":", 1)
+    row = validation.view(validation.latest(db, course_id, local))
+    # Learners see the state and its plain label, not the checkers' internal findings.
+    return None if row is None else {k: row[k] for k in ("status", "label", "reviewer")}
+
+
 def concept_view(
     db: Session,
     catalog: Catalog,
@@ -360,6 +403,18 @@ def concept_view(
     solved = solved_problems(db, user.id)
     index = practice.default_index()
     current_band = band(state, now)
+    from socrat.mastery import evidence as kinds
+
+    rows = (
+        db.scalars(
+            select(Evidence).where(
+                Evidence.enrollment_id == enrollment.id, Evidence.concept == qualified
+            )
+        ).all()
+        if enrollment
+        else []
+    )
+    summary = kinds.summarise(list(rows), state, now)
     return dict(
         id=qualified,
         course=course_id,
@@ -369,12 +424,35 @@ def concept_view(
         lesson=concept.lesson,
         # Generated lessons say so, with how they were checked (no human review).
         ai_generated=bool(concept.provenance and concept.provenance.author == AI_AUTHOR),
+        # Work a quiz cannot judge, with this learner's latest submission for each.
+        tasks=_tasks(db, enrollment, qualified, concept),
+        sequence=concept.sequence,
+        # Which source backs which claim, built by code from the lesson's [n] markers.
+        citations=[c.model_dump(mode="json") for c in concept.citations],
+        # How this concept is taught to this learner now, and why (Pedagogical Strategist).
+        teaching=_teaching(catalog, course_id, concept, summary.stage),
+        # What stands behind the estimate: the stage and the kinds of evidence (prompt 9.2).
+        evidence=dict(
+            stage=summary.stage,
+            by_type=summary.by_type,
+            independent=summary.independent,
+            assisted=summary.assisted,
+            delayed=summary.delayed,
+            needs_follow_up=summary.needs_follow_up,
+            reasons=summary.reasons,
+            # Which scoring policy produced the estimate, and whether it is the one in force.
+            scoring_policy=state.policy or None,
+            policy_current=state.current,
+        ),
+        # How the generated lesson was checked: pass, with warnings, or still needs a person.
+        validation=_validation(db, qualified, concept),
         attribution=concept.provenance.attribution_md if concept.provenance else "",
         exercises=resources.selected(qualified, language, "exercises"),
         prompts=graded.prompt_views(db, enrollment, qualified, concept),
         workbench=len(concept.exercises),
         lab=len(concept.experiments),
         key_points=concept.key_points,
+        visuals=[v.model_dump(mode="json") for v in concept.visuals],
         pitfalls=concept.pitfalls,
         resources=resources.personalised(db, user.id, qualified, concept, language, current_band),
         # Authored links that are in the library become library rows (with status);

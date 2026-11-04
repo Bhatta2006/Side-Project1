@@ -126,6 +126,7 @@ services:
       <<: *database-environment
       PYTHONPATH: services/api/src
       SOCRAT_REMINDERS_ENABLED: "${SOCRAT_REMINDERS_ENABLED:-false}"
+      SOCRAT_WORKER_HEARTBEAT_FILE: /tmp/worker-heartbeat
     secrets:
       - postgres_password
     networks:
@@ -133,6 +134,13 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    healthcheck:
+      # The worker touches the heartbeat file every loop; stale means hung, not just "up".
+      test: ["CMD", "python", "-m", "socrat.worker", "--check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     read_only: true
     tmpfs:
       - /tmp:size=32m,noexec,nosuid

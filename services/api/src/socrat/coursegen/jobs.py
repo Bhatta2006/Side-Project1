@@ -13,9 +13,17 @@ concept whose outline asks for code queues one.
 
 A ``project`` job designs a module's project (see ``project``); releasing the last concept of
 a module whose outline asks for a project queues one.
+
+States (``GenerationJob.state``): ``queued`` -> ``running`` -> ``done``. A run that ends in a
+transient failure (provider unreachable or rate limited, a crash, the execution service down) goes
+back to ``queued`` with a backoff, up to ``MAX_ATTEMPTS``; after that it is ``dead`` (the
+dead-letter state, kept for the owner). Content that does not pass its gates is ``failed``: retrying
+the same thing would not help, it needs a revision. ``cancelled`` is a stop asked for by the owner.
+``lifecycle`` maps a job and its concept to the stages the learner and owner see.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 
@@ -25,16 +33,23 @@ from sqlalchemy.orm import Session
 from socrat.assistant.gateway import ProviderError, make_provider
 from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
+from socrat.catalog.schema import Citation
 from socrat.config import Settings
-from socrat.coursegen import execute, research, roles
+from socrat.coursegen import execute, research, roles, search, validation, youtube
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
     CRITIC,
+    DETAILER,
     Brief,
     architect_prompt,
     critic_prompt,
+    detail_prompt,
     from_course,
+    merge_details,
+    needs_detail,
+    skeleton_of,
+    tidy,
     to_course,
 )
 from socrat.models import GeneratedCourse, GenerationJob, need, now
@@ -43,8 +58,40 @@ from socrat.style import spec as styles
 log = logging.getLogger(__name__)
 
 ROUNDS = 3  # architect attempts per job; the critic sees every valid one
+DETAIL_CONCURRENCY = 12  # detail calls at the same time
+DETAIL_CHUNK = 4  # concepts per detail call: small replies keep the slowest call short
 STALE_SECONDS = 3600  # a running job this old was orphaned by a crash or restart
-POLL_SECONDS = 5
+POLL_SECONDS = 2
+MAX_ATTEMPTS = 3  # transient failures before a job is dead
+BACKOFF_SECONDS = (60, 300, 900)  # wait before the next try, by attempt
+# Provider errors that a later try can fix. Anything else (offline, disabled, budget, a refusal,
+# a 4xx) fails at once: retrying would only spend money or time on the same answer.
+TRANSIENT = {"provider_unreachable", "provider_rate_limited", "ai_rate_limited"}
+OPEN = ("queued", "running")
+CLOSED = ("done", "failed", "dead", "cancelled")
+
+
+def transient(error: ProviderError) -> bool:
+    code = str(error)
+    return code in TRANSIENT or code.startswith("provider_http_5")
+
+
+def lifecycle(job: GenerationJob | None, concept_status: str | None = None) -> str:
+    """The generation stage in the master prompt's terms, for one concept (or an outline):
+    planned, queued, generating, validating, published, failed, blocked, cancelled, superseded."""
+    if concept_status == "live":
+        return "published"
+    if job is None:
+        return "planned"
+    if job.state == "queued":
+        return "queued"
+    if job.state == "running":
+        return "validating" if job.stage == "validating" else "generating"
+    if job.state == "done":
+        return "published" if concept_status is None else "superseded"
+    if job.state == "dead":
+        return "blocked"
+    return job.state  # failed | cancelled
 
 
 def spent(db: Session, course_id: str) -> float:
@@ -62,7 +109,7 @@ def active(db: Session, course_id: str, target: str | None = None) -> Generation
     """A queued or running job for the course (``target`` narrows it to one concept)."""
     query = select(GenerationJob).where(
         GenerationJob.course_id == course_id,
-        GenerationJob.state.in_(["queued", "running"]),
+        GenerationJob.state.in_(OPEN),
     )
     if target is not None:
         query = query.where(GenerationJob.target == target)
@@ -85,7 +132,7 @@ def claim(engine: Engine) -> str | None:
     stamp = now()
     paused = select(GeneratedCourse.id).where(GeneratedCourse.paused != "")
     claimable = or_(
-        GenerationJob.state == "queued",
+        (GenerationJob.state == "queued") & (GenerationJob.not_before <= stamp),
         (GenerationJob.state == "running") & (GenerationJob.updated_at < stamp - STALE_SECONDS),
     ) & GenerationJob.course_id.not_in(paused)
     with Session(engine) as db, db.begin():
@@ -97,7 +144,7 @@ def claim(engine: Engine) -> str | None:
             result = db.execute(
                 update(GenerationJob)
                 .where(GenerationJob.id == job_id, claimable)
-                .values(state="running", updated_at=stamp)
+                .values(state="running", stage="generating", updated_at=stamp)
             )
             taken = result.rowcount if isinstance(result, CursorResult) else 0
             if taken:
@@ -121,14 +168,26 @@ async def run_outline(
     with Session(engine) as db:
         job = need(db.get(GenerationJob, job_id))
         brief = Brief.model_validate(job.input["brief"])
+        owner = job.created_by if job.input.get("learning_request") else None
         stored = generated.course(db, brief.id)
+        fresh = not job.input.get("revise") and not job.input.get("notes")
+        reusable = reusable_outline(db, job_id, job.input["brief"]) if fresh else None
+    if reusable is not None and await _reuse(engine, base, job_id, brief, owner, *reusable):
+        return
     if brief.style is None and brief.style_request.strip():
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
         brief = brief.model_copy(update={"style": spec})
         _note(engine, job_id, {"role": "stylist", "style": spec.name, "source": source})
-    previous = from_course(stored) if stored is not None and job.input.get("revise") else None
+    previous = (
+        skeleton_of(from_course(stored)) if stored is not None and job.input.get("revise") else None
+    )
+    from socrat.coursegen.outline import graph_issues
+    from socrat.engine import domains
+
+    adapter = domains.ADAPTERS.get(brief.adapter)
     issues = [job.input["notes"]] if job.input.get("notes") else []
     best = None
+    reviews = 0
     for attempt in range(1, ROUNDS + 1):
         with Session(engine) as db:
             if spent(db, brief.id) >= brief.budget_usd:
@@ -140,7 +199,7 @@ async def run_outline(
             "architect",
             ARCHITECT,
             architect_prompt(brief, base, previous, issues),
-            32000,
+            16000,
             make,
         )
         if reply.data is None:
@@ -152,14 +211,47 @@ async def run_outline(
                 reply.cost_usd,
             )
             continue
-        previous = reply.data
+        previous = skeleton_of(reply.data)
+        outline = reply.data
+        early = None  # the critic's review of the skeleton, run while the details are written
+        if needs_detail(outline):
+            work = [_detail(engine, settings, brief, outline, issues, make)]
+            if reviews < max(1, settings.gen_outline_reviews):
+                reviews += 1
+                work.append(
+                    roles.ask(
+                        engine,
+                        settings,
+                        "critic",
+                        CRITIC,
+                        critic_prompt(brief, previous),
+                        8000,
+                        make,
+                    )
+                )
+            (missing, cost), *rest = await asyncio.gather(*work)
+            early = rest[0] if rest else None
+            reply.cost_usd += cost
+            if missing:
+                issues = [f"No details could be written for: {', '.join(missing[:20])}"]
+                _note(
+                    engine,
+                    job_id,
+                    {"role": "architect", "round": attempt, "issues": issues},
+                    reply.cost_usd,
+                )
+                issues += _review(engine, job_id, attempt, early)[1] if early else []
+                continue
+        tidy(outline, base, brief.adapter)
         try:
-            course = to_course(brief, reply.data)
+            course = to_course(brief, outline)
             with Session(engine) as db:
                 # The same check save_course runs, before spending a critic call on it.
                 generated.extend(
                     base, [*(c for c in generated.courses(db) if c.id != brief.id), course]
                 )
+            if found_graph := graph_issues(course, adapter):
+                raise ValueError("; ".join(found_graph))
         except (ValueError, CatalogError) as exc:
             issues = [f"The outline failed validation: {exc}"]
             _note(
@@ -168,6 +260,7 @@ async def run_outline(
                 {"role": "architect", "round": attempt, "issues": issues},
                 reply.cost_usd,
             )
+            issues += _review(engine, job_id, attempt, early)[1] if early else []
             continue
         best = course
         _note(
@@ -178,31 +271,29 @@ async def run_outline(
                 "round": attempt,
                 "concepts": len(course.concepts),
                 "modules": len(course.modules),
+                # The prerequisite analysis the learner can inspect (master prompt 7.3).
+                "assumptions": [str(a)[:300] for a in reply.data.get("assumptions", [])][:10],
+                "unresolved": [str(u)[:300] for u in reply.data.get("unresolved", [])][:10],
             },
             reply.cost_usd,
         )
-        review = await roles.ask(
-            engine, settings, "critic", CRITIC, critic_prompt(brief, reply.data), 8000, make
-        )
-        verdict = (review.data or {}).get("verdict", "revise")
-        found = [
-            f"{i.get('where', '?')}: {i.get('problem', '')} Fix: {i.get('fix', '')}"
-            for i in (review.data or {}).get("issues", [])
-            if isinstance(i, dict)
-        ][:30]
-        _note(
-            engine,
-            job_id,
-            {
-                "role": "critic",
-                "round": attempt,
-                "verdict": verdict,
-                "summary": str((review.data or {}).get("summary", review.problem))[:1000],
-                "issues": found,
-            },
-            review.cost_usd,
-        )
+        if early is not None:
+            review = early
+        elif reviews >= max(1, settings.gen_outline_reviews):
+            # The architect has answered every review it was given; keep this revision.
+            _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
+            break
+        else:
+            reviews += 1
+            review = await roles.ask(
+                engine, settings, "critic", CRITIC, critic_prompt(brief, outline), 8000, make
+            )
+        verdict, found = _review(engine, job_id, attempt, review)
         if verdict == "pass":
+            break
+        if settings.gen_outline_reviews == 0:
+            # Advisory review: the findings are in the log, the outline stands.
+            _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
             break
         issues = found or ["The critic asked for a revision without details; tighten the outline."]
     if best is None:
@@ -216,7 +307,155 @@ async def run_outline(
         return
     with Session(engine) as db, db.begin():
         generated.save_course(db, base, best, status="review", brief=brief.model_dump(mode="json"))
+        if owner is not None:
+            need(db.get(GeneratedCourse, brief.id)).owner_id = owner
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
+
+
+def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, list[str]]:
+    """Records a critic reply in the job log; returns its verdict and issues as fix notes.
+    The issues are empty for a pass."""
+    verdict = (review.data or {}).get("verdict", "revise")
+    found = [
+        f"{i.get('where', '?')}: {i.get('problem', '')} Fix: {i.get('fix', '')}"
+        for i in (review.data or {}).get("issues", [])
+        if isinstance(i, dict)
+    ][:30]
+    _note(
+        engine,
+        job_id,
+        {
+            "role": "critic",
+            "round": attempt,
+            "verdict": verdict,
+            "summary": str((review.data or {}).get("summary", review.problem))[:1000],
+            "issues": found,
+        },
+        review.cost_usd,
+    )
+    return verdict, [] if verdict == "pass" else found
+
+
+async def _detail(
+    engine: Engine, settings: Settings, brief: Brief, outline: dict, issues: list[str], make
+) -> tuple[list[str], float]:
+    """Writes every concept's details into ``outline``, a few concepts per call and all calls in
+    parallel, so the slowest call stays short; a chunk whose reply is unusable is asked once
+    more. Returns the concept ids still without details and the cost of all calls."""
+    gate = asyncio.Semaphore(DETAIL_CONCURRENCY)
+
+    async def one(module_id: str, ids: list[str]) -> tuple[list[str], float]:
+        cost, missing = 0.0, ids
+        for _ in range(2):
+            async with gate:
+                reply = await roles.ask(
+                    engine,
+                    settings,
+                    "architect",
+                    DETAILER,
+                    detail_prompt(brief, outline, module_id, missing, issues),
+                    8000,
+                    make,
+                )
+            cost += reply.cost_usd
+            missing = merge_details(outline, missing, reply.data or {})
+            if not missing:
+                break
+        return missing, cost
+
+    # A malformed module is left alone here: to_course rejects it with a readable reason.
+    chunks = [
+        (m["id"], ids[i : i + DETAIL_CHUNK])
+        for m in outline.get("modules", [])
+        if isinstance(m, dict)
+        and isinstance(m.get("id"), str)
+        and isinstance(m.get("concepts"), list)
+        and all(isinstance(c, dict) and isinstance(c.get("id"), str) for c in m["concepts"])
+        for ids in [[c["id"] for c in m["concepts"]]]
+        for i in range(0, len(ids), DETAIL_CHUNK)
+    ]
+    results = await asyncio.gather(*(one(module_id, ids) for module_id, ids in chunks))
+    return [cid for missing, _ in results for cid in missing], sum(c for _, c in results)
+
+
+# Fields of a brief that do not change what the architect is asked to design.
+_NOT_DESIGN = {"id", "budget_usd", "concept_budget_usd"}
+REUSE_SCAN = 200  # recent finished outline jobs searched for an identical brief
+
+
+def design_key(brief: dict) -> str:
+    """Identical briefs (ignoring id and budgets) ask for the same outline (master prompt 17:
+    cache reusable non-personalised structures). The key covers every word the learner wrote,
+    so reuse only ever happens between exactly equal requests and reveals nothing new."""
+    kept = {k: v for k, v in brief.items() if k not in _NOT_DESIGN}
+    return hashlib.sha256(json.dumps(kept, sort_keys=True).encode()).hexdigest()
+
+
+def reusable_outline(db: Session, job_id: str, brief: dict):
+    """(course id, architect log entry) of a recent outline for an identical brief that the
+    critic passed and that is still in good standing; None when there is none."""
+    key = design_key(brief)
+    for job in db.scalars(
+        select(GenerationJob)
+        .where(
+            GenerationJob.kind == "outline",
+            GenerationJob.state == "done",
+            GenerationJob.id != job_id,
+        )
+        .order_by(GenerationJob.created_at.desc())
+        .limit(REUSE_SCAN)
+    ):
+        if design_key(job.input.get("brief") or {}) != key:
+            continue
+        log_ = job.log or []
+        if not any(e.get("role") == "critic" and e.get("verdict") == "pass" for e in log_):
+            continue
+        row = db.get(GeneratedCourse, job.course_id)
+        if row is None or row.moderation != "ok":
+            continue
+        architect: dict = next((e for e in reversed(log_) if e.get("role") == "architect"), {})
+        return job.course_id, architect
+    return None
+
+
+async def _reuse(
+    engine: Engine,
+    base: Catalog,
+    job_id: str,
+    brief: Brief,
+    owner: str | None,
+    source_id: str,
+    architect: dict,
+) -> bool:
+    """Save the earlier outline under this brief's id without a model call. False (and
+    nothing saved) when it no longer validates against today's catalog."""
+
+    with Session(engine) as db:
+        source = generated.course(db, source_id)
+    if source is None:
+        return False
+    try:
+        course = to_course(brief, from_course(source))
+        with Session(engine) as db, db.begin():
+            generated.save_course(
+                db, base, course, status="review", brief=brief.model_dump(mode="json")
+            )
+            if owner is not None:
+                need(db.get(GeneratedCourse, brief.id)).owner_id = owner
+    except (ValueError, CatalogError):
+        return False
+    entry = {
+        "role": "architect",
+        "round": 0,
+        "reused_from": source_id,
+        "concepts": len(course.concepts),
+        "modules": len(course.modules),
+        "assumptions": architect.get("assumptions", []),
+        "unresolved": architect.get("unresolved", []),
+    }
+    _note(engine, job_id, entry)
+    _note(engine, job_id, {"role": "system", "event": "outline_reused"}, state="done")
+    return True
 
 
 def _over_budget(engine: Engine, course_id: str, budget_usd: float) -> bool:
@@ -231,6 +470,26 @@ def pause_for_budget(engine: Engine, course_id: str, job_id: str) -> None:
         need(db.get(GeneratedCourse, course_id)).paused = "budget"
     _note(engine, job_id, {"role": "system", "event": "budget_reached_paused"}, state="queued")
     log.error("course generation paused: %s reached its budget", course_id)
+
+
+def retry_or_bury(engine: Engine, job_id: str, event: str, error: str) -> str:
+    """A transient failure: queue the job again after a backoff, or move it to ``dead`` once it
+    has failed ``MAX_ATTEMPTS`` times. Returns the new state."""
+    with Session(engine) as db, db.begin():
+        job = need(db.get(GenerationJob, job_id))
+        job.attempts += 1
+        dead = job.attempts >= MAX_ATTEMPTS
+        wait = BACKOFF_SECONDS[min(job.attempts, len(BACKOFF_SECONDS)) - 1]
+        job.state = "dead" if dead else "queued"
+        job.not_before = 0 if dead else now() + wait
+        job.stage, job.error, job.updated_at = "", error[:500], now()
+        entry = {"role": "system", "event": event, "attempt": job.attempts, "at": now()}
+        job.log = [*job.log, entry if dead else {**entry, "retry_in": wait}]
+        if dead:
+            log.error(
+                "generation job %s is dead after %s attempts: %s", job_id, job.attempts, error
+            )
+        return job.state
 
 
 def _job_cost(engine: Engine, job_id: str) -> float:
@@ -255,6 +514,18 @@ async def run_package(
     concept = course.concept(concept_id)
     if concept.status != "planned":
         raise ValueError(f"{course_id}:{concept_id} is not planned")
+    from socrat.engine import design
+
+    adapter = design.adapter_for(course, brief.adapter)
+    bar = {d: (5 if d == "correctness" else 4) for d in pkg.DIMENSIONS}
+    if brief.style is not None:
+        bar[pkg.STYLE_DIMENSION] = 4
+    findings: list[validation.Finding] = []
+
+    def report(round_: int, status: str, found: list[validation.Finding]) -> None:
+        with Session(engine) as db, db.begin():
+            validation.record(db, course_id, concept_id, job_id, round_, status, found)
+
     executor = executor or execute.Broker(engine, settings)
     # Code in quiz items and atoms only when every course language can be run to check it.
     runnable = executor.available(course.languages)
@@ -264,6 +535,10 @@ async def run_package(
     code = list(course.languages) if editor and runnable == list(course.languages) else []
     style = brief.style
     ctx = pkg.context(base, course, brief.model_dump(), concept, style)
+    from socrat.engine import strategy
+
+    # The Pedagogical Strategist's plan, from the evidence library (deterministic).
+    ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, 'unknown', adapter))}"
     reference = pkg.gold(base) if style is None or style.shows_reference() else None
     note = pkg.STYLE_NOTE if style else ""
     cited: list[dict] = []
@@ -280,28 +555,85 @@ async def run_package(
         notes["quiz"] = list(reported)
     redo = {"lesson", "quiz", "atoms"}
     models: dict[str, str] = {}
+    calls: list[dict] = []  # every model call: role, model, prompt version, time, cost
 
     async def ask(role, system, prompt, tokens):
         reply = await roles.ask(engine, settings, role, system, prompt, tokens, make)
         models[role] = reply.model
+        calls.append(
+            {
+                "role": role,
+                "model": reply.model,
+                "prompt": reply.prompt_version,
+                "ms": reply.ms,
+                "cost_usd": round(reply.cost_usd, 6),
+                # The typed result envelope: parsed or not, confidence, assumptions, issues.
+                "result": roles.envelope(role, reply).as_log(),
+            }
+        )
         return reply
 
     if brief.research and not data.get("previous"):
-        found = await ask("researcher", research.RESEARCHER, research.prompt(ctx), 2000)
-        cited = await research.screen(found.data, http)
+        prompt = research.prompt(ctx, brief.adapter)
+        allowed = None
+        if settings.research_providers:
+            hits = await search.gather(
+                f"{concept.title} {course.title}",
+                settings.research_providers,
+                http,
+                broad=course.title,
+                youtube_key=settings.youtube_api_key.get_secret_value(),
+            )
+            if hits:  # nothing found: fall back to named sources, still link-checked
+                allowed = {h.url: h for h in hits}
+                prompt = f"{prompt}\n\n{search.block(hits)}"
+            _note(engine, job_id, {"role": "search", "hits": len(hits)})
+        found = await ask("researcher", research.RESEARCHER, prompt, 2000)
+        cited = await research.screen(found.data, http, allowed)
+        if settings.youtube_transcripts:
+            cited = research.add_videos(cited, list(allowed.values()) if allowed else [])
+            cited = await youtube.with_transcripts(cited)
         _note(
             engine,
             job_id,
             {
                 "role": "researcher",
-                "sources": [{k: s[k] for k in ("n", "title", "url")} for s in cited],
+                "grounded": allowed is not None,
+                "sources": [
+                    {k: s[k] for k in ("n", "title", "url")}
+                    | ({"transcript_chars": len(s["passage"])} if s.get("transcript") else {})
+                    for s in cited
+                ],
             },
             found.cost_usd,
         )
         if cited:
             ctx = "\n\n".join([ctx, research.block(cited)])
+        if len(cited) >= 2:
+            # Enough verified sources: they are the resources, and the author names no URL
+            # of its own (its guesses mostly 404ed in live runs and cost whole rounds).
+            ctx += "\n\nResources: list only the verified sources above, or leave it empty."
 
-    for attempt in range(1, ROUNDS + 1):
+    def release(live_, pack_, summary_) -> None:
+        pack_ = pkg.release_pack(pack_, models["reviewer"], summary_)
+        wants = concept.outline is not None and "code" in concept.outline.assessment
+        needed = sorted({"python", *course.languages})
+        exercise = wants and executor.available(needed) == needed
+        with Session(engine) as db, db.begin():
+            generated.store_concept(db, base, course_id, live_, pack_, job_id=job_id)
+            if exercise:
+                enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
+            if project_due(db, course, concept_id):
+                enqueue(db, "project", course_id, {"trigger": "release"}, None, concept.module)
+        event = {"role": "system", "event": "released", "calls": calls}
+        if wants and not exercise:
+            event["exercise"] = "waiting for the execution service"
+        _note(engine, job_id, event, state="done")
+
+    polished = False  # one extra round for imprecise facts, at most
+    rounds = settings.gen_package_rounds
+    fallback = None  # the first package that passed, kept while that round runs
+    for attempt in range(1, rounds + 1):
         if _over_budget(engine, course_id, brief.budget_usd):
             pause_for_budget(engine, course_id, job_id)
             return
@@ -310,19 +642,38 @@ async def run_package(
             break
         if "lesson" in redo:
             prompt = pkg.lesson_prompt(ctx, reference, lesson, notes["lesson"])
-            reply = await ask("author", pkg.LESSON + note, prompt, 16000)
+            # The first draft is the cheap model's; a lesson sent back is rewritten by the
+            # reviser (a stronger model when one is set), so only failing lessons cost more.
+            writer = "author" if lesson is None else "reviser"
+            reply = await ask(writer, pkg.LESSON + note, prompt, 16000)
             if reply.data is None:
                 notes["lesson"] = [reply.problem]
                 entry = {"role": "author", "round": attempt, "issues": notes["lesson"]}
                 _note(engine, job_id, entry, reply.cost_usd)
                 continue
-            lesson = reply.data
+            lesson = pkg.tidy_lesson(reply.data, cited)
+            if len(cited) >= 2:
+                verified = {s["url"] for s in cited}
+                lesson["resources"] = [
+                    r
+                    for r in lesson.get("resources", [])
+                    if isinstance(r, dict) and r.get("url") in verified
+                ]
             issues = pkg.check_lesson(concept, course, lesson, style)
             issues += research.check(str(lesson.get("lesson", "")), cited)
-            issues += [
-                f"This resource link is unreachable or not public https; replace it: {url}"
-                for url in await pkg.broken_links(lesson, http)
+            # A dead link is dropped, not a reason for a new round, while the live ones and the
+            # researcher's sources still make the two a lesson needs.
+            dead = set(await pkg.broken_links(lesson, http))
+            lesson["resources"] = [
+                r
+                for r in lesson.get("resources", [])
+                if not (isinstance(r, dict) and r.get("url") in dead)
             ]
+            if len(research.attach(lesson, cited).get("resources", [])) < 2:
+                issues += [
+                    f"This resource link is unreachable or not public https; replace it: {url}"
+                    for url in sorted(dead)
+                ] or ["Give at least 2 resources you are certain exist at that exact URL."]
             entry = {
                 "role": "author",
                 "round": attempt,
@@ -331,6 +682,8 @@ async def run_package(
             }
             _note(engine, job_id, entry, reply.cost_usd, output={"lesson": lesson})
             if issues:
+                status, findings = validation.assess(issues, None, None, {}, bar, adapter, [])
+                report(attempt, status, findings)
                 notes["lesson"] = issues
                 redo |= {"lesson"}
                 continue
@@ -348,6 +701,8 @@ async def run_package(
                 example += "\n\n" + pkg.EXERCISES.format()
             if lab:
                 example += "\n\n" + pkg.EXPERIMENTS.format(models=pkg.models_text())
+            if pkg.wants_tasks(concept, adapter):
+                example += "\n\n" + pkg.TASKS.format()
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             pending["quiz"] = ask("quiz", pkg.QUIZ + note, prompt, 6000)
         if "atoms" in redo or atoms is None:
@@ -370,9 +725,16 @@ async def run_package(
             _note(engine, job_id, entry, cost)
             continue
         assert quiz is not None and atoms is not None  # both parsed by now
+        entry = {"role": "system", "round": attempt, "event": "validating"}
+        _note(engine, job_id, entry, stage="validating")
+        from socrat.engine import safety as rules
+
+        caution = rules.disclaimer(brief.safety)
         attribution = (
             f"Written by the {pkg.AI_AUTHOR}, then fact-checked and reviewed by AI models "
-            "before release. Not reviewed by a person." + research.credit(cited)
+            "before release. Not reviewed by a person."
+            + research.credit(cited)
+            + (f" {caution}" if caution else "")
         )
         live, problems = await asyncio.to_thread(
             pkg.build_concept, concept, lesson, quiz, version, attribution, code, workbench, lab
@@ -390,7 +752,20 @@ async def run_package(
             issues = [f"{k}: {x}" for k, v in notes.items() for x in v]
             entry = {"role": "system", "round": attempt, "event": "gates_failed", "issues": issues}
             _note(engine, job_id, entry, cost, output=output)
+            status, findings = validation.assess(issues, None, None, {}, bar, adapter, [])
+            report(attempt, status, findings)
             continue
+        if settings.gen_visuals:
+            live = await add_visuals(
+                ask,
+                live,
+                course,
+                str(lesson.get("lesson", "")),
+                engine,
+                job_id,
+                attempt,
+                brief.adapter,
+            )
         shown = {k: lesson.get(k) for k in ("lesson", "key_points", "pitfalls")}
         # The checkers see the code's real output (adapters' expected), not the author's claim.
         bundle = json.dumps(
@@ -400,6 +775,7 @@ async def run_package(
                 "prompts": [x.model_dump(mode="json") for x in live.prompts],
                 "exercises": [x.model_dump(mode="json") for x in live.exercises],
                 "experiments": [x.model_dump(mode="json") for x in live.experiments],
+                "visuals": [x.model_dump(mode="json") for x in live.visuals],
                 "atoms": [a.model_dump(mode="json", exclude_none=True) for a in pack.atoms],
             },
             indent=1,
@@ -415,6 +791,17 @@ async def run_package(
             ),
         )
         passed, notes, scores = pkg.verdict(facts.data, review.data, style is not None)
+        status, findings = validation.assess(
+            [], facts.data, review.data, scores, bar, adapter, brief.safety
+        )
+        if passed != (status in validation.RELEASED):  # the two must agree; the gate wins
+            status = "needs_revision" if not passed else status
+        # Which source backs which claim, by code, kept on the concept (master prompt 11.4).
+        cites = research.ground(live.lesson, cited)
+        if status in validation.RELEASED:
+            status, findings = validation.with_grounding(status, findings, cites)
+        live = live.model_copy(update={"citations": [Citation.model_validate(c) for c in cites]})
+        report(attempt, status, findings)
         summary = str((review.data or {}).get("summary", review.problem))[:1000]
         entry = {
             "role": "reviewer",
@@ -426,30 +813,59 @@ async def run_package(
         }
         spend = cost + facts.cost_usd + review.cost_usd
         _note(engine, job_id, entry, spend, output={**output, "scores": scores})
+        if passed and attempt < rounds and not polished:
+            polish = pkg.imprecise_notes(facts.data)
+            # Only with room to spare: a polish round must not run into the lesson's budget.
+            if any(polish.values()) and _job_cost(engine, job_id) < brief.concept_budget_usd / 2:
+                polished, fallback = True, (live, pack, summary, status, findings)
+                notes, redo = polish, {k for k, v in polish.items() if v}
+                issues = [f"{k}: {x}" for k, v in polish.items() for x in v][:30]
+                entry = {"role": "system", "round": attempt, "event": "polishing", "issues": issues}
+                _note(engine, job_id, entry, stage="generating")
+                continue
         if passed:
-            pack = pkg.release_pack(pack, models["reviewer"], summary)
-            wants = concept.outline is not None and "code" in concept.outline.assessment
-            needed = sorted({"python", *course.languages})
-            exercise = wants and executor.available(needed) == needed
-            with Session(engine) as db, db.begin():
-                generated.store_concept(db, base, course_id, live, pack)
-                if exercise:
-                    enqueue(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
-                if project_due(db, course, concept_id):
-                    enqueue(db, "project", course_id, {"trigger": "release"}, None, concept.module)
-            event = {"role": "system", "event": "released"}
-            if wants and not exercise:
-                event["exercise"] = "waiting for the execution service"
-            _note(engine, job_id, event, state="done")
+            release(live, pack, summary)
             return
         redo = {k for k, v in notes.items() if v} or {"lesson"}
+        entry = {"role": "system", "round": attempt, "event": "revising"}
+        _note(engine, job_id, entry, stage="generating")
+    if fallback is not None:
+        # The polish round did not pass, but the package before it did: release that one, with
+        # its own report on top so the learner's label is not "being revised".
+        live, pack, summary, status, findings = fallback
+        report(rounds, status, findings)
+        release(live, pack, summary)
+        return
+    report(rounds, "rejected", findings)
     _note(
         engine,
         job_id,
-        {"role": "system", "event": "not_released"},
+        {"role": "system", "event": "not_released", "calls": calls},
         state="failed",
         error="The package did not pass every gate; the concept stays planned. See the log.",
     )
+
+
+async def add_visuals(
+    ask, live, course, lesson_text: str, engine, job_id: str, attempt: int, chosen: str = ""
+):
+    """The Experience Designer step. Visuals only enrich a lesson, so a refusal, a bad reply or
+    specs that fail the registry leave the lesson as written (and say so in the log)."""
+    from socrat.engine import design
+
+    if not design.allowed(course, chosen):
+        return live
+    try:
+        reply = await ask(
+            "experience", design.SYSTEM, design.prompt(course, live, lesson_text, chosen), 3000
+        )
+    except ProviderError:
+        _note(engine, job_id, {"role": "experience", "round": attempt, "event": "unavailable"})
+        return live
+    kept, dropped = design.check((reply.data or {}).get("visuals", []), course, chosen)
+    entry = {"role": "experience", "round": attempt, "visuals": len(kept), "dropped": dropped[:5]}
+    _note(engine, job_id, entry, reply.cost_usd)
+    return live.model_copy(update={"visuals": kept}) if kept else live
 
 
 def project_due(db: Session, course, released: str) -> bool:
@@ -490,30 +906,27 @@ async def run_once(
         else:
             raise ValueError(f"unknown job kind {kind}")
     except execute.Unavailable as exc:
-        _note(
+        retry_or_bury(
             engine,
             job_id,
-            {"role": "system", "event": "execution_unavailable"},
-            state="failed",
-            error=f"The execution service could not run the code: {exc}",
+            "execution_unavailable",
+            f"The execution service could not run the code: {exc}",
         )
     except ProviderError as exc:
-        _note(
-            engine,
-            job_id,
-            {"role": "system", "event": "provider_error"},
-            state="failed",
-            error=f"AI provider refused: {exc}",
-        )
+        if transient(exc):
+            retry_or_bury(engine, job_id, "provider_error", f"AI provider failed: {exc}")
+        else:
+            _note(
+                engine,
+                job_id,
+                {"role": "system", "event": "provider_error"},
+                state="failed",
+                stage="",
+                error=f"AI provider refused: {exc}",
+            )
     except Exception as exc:  # a failed job must never stop the loop
         log.exception("generation job %s failed", job_id)
-        _note(
-            engine,
-            job_id,
-            {"role": "system", "event": "crashed"},
-            state="failed",
-            error=f"{type(exc).__name__}: {exc}"[:500],
-        )
+        retry_or_bury(engine, job_id, "crashed", f"{type(exc).__name__}: {exc}")
     return True
 
 

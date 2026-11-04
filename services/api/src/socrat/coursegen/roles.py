@@ -5,8 +5,10 @@ so the reply is parsed and schema-checked here, and a malformed reply becomes fe
 the next round instead of a crash.
 """
 
+import hashlib
 import json
 import re
+import time
 from dataclasses import dataclass
 
 from sqlalchemy import Engine
@@ -21,6 +23,9 @@ ROLES = {
     "architect",
     "critic",
     "author",
+    # Rewrites a lesson that failed its gates or review. Unset, it is the author's model; set
+    # a stronger one (SOCRAT_GEN_ROLES) so a cheap model drafts and a strong one fixes.
+    "reviser",
     "quiz",
     "atoms",
     "facts",
@@ -30,6 +35,10 @@ ROLES = {
     "grader",  # learners' free-text answers and project milestones
     "stylist",  # a free-text learning wish -> a style spec
     "researcher",  # finds open, public sources for a concept
+    "diagnostic",  # a short placement quiz for a learner's own course
+    "experience",  # picks registered visuals/labs for a lesson (never writes code)
+    "intent",  # a learner's free-text request -> a structured intent
+    "translator",  # lesson text -> another language, under placeholder and glossary checks
     "weekly",  # hard, execution-verified weekly exam questions
 }
 # Override key -> Settings field(s) it replaces for that role.
@@ -38,12 +47,20 @@ KEYS = {
     "model": ("ai_model", "openai_model"),
     "effort": ("ai_effort",),
     "base_url": ("openai_base_url",),
+    # e.g. {"thinking": true} so the reviser reasons while cheap drafts do not
+    "chat_template_kwargs": ("openai_chat_template_kwargs",),
     "price_input_per_mtok": ("ai_price_input_per_mtok",),
     "price_output_per_mtok": ("ai_price_output_per_mtok",),
 }
 DEFAULT_EFFORT = "high"  # outlines and reviews are worth the extra thinking
 # Finding and screening sources is retrieval, not reasoning: low effort keeps the cost down.
-ROLE_EFFORT = {"researcher": "low", "stylist": "low"}
+ROLE_EFFORT = {
+    "researcher": "low",
+    "stylist": "low",
+    "intent": "low",
+    "diagnostic": "low",
+    "experience": "low",
+}
 
 
 def check_roles(roles: dict) -> None:
@@ -60,6 +77,8 @@ def role_settings(settings: Settings, role: str) -> Settings:
         "ai_effort": ROLE_EFFORT.get(role, DEFAULT_EFFORT),
         "ai_timeout_seconds": settings.gen_timeout_seconds,
     }
+    if role == "reviser" and role not in settings.gen_roles:
+        role = "author"  # no stronger model set: the author revises its own drafts
     for key, value in settings.gen_roles.get(role, {}).items():
         for field in KEYS[key]:
             update[field] = value
@@ -72,6 +91,61 @@ class Reply:
     problem: str  # why parsing failed, for the next round
     cost_usd: float
     model: str = ""
+    prompt_version: str = ""  # see ``prompt_version``
+    ms: int = 0  # wall time of the call
+
+
+@dataclass(frozen=True)
+class Envelope:
+    """The typed result every bounded worker hands the orchestrator (master prompt 7): whether
+    its reply parsed, plus the confidence, assumptions, unresolved issues and evidence it
+    stated. Read from optional top-level keys of the reply; anything malformed is dropped,
+    never trusted. The orchestrator still validates the payload itself before using it."""
+
+    role: str
+    ok: bool
+    problem: str = ""
+    confidence: float | None = None
+    assumptions: tuple[str, ...] = ()
+    unresolved: tuple[str, ...] = ()
+    evidence: tuple[str, ...] = ()
+
+    def as_log(self) -> dict:
+        out: dict = {"ok": self.ok}
+        if self.problem:
+            out["problem"] = self.problem[:300]
+        if self.confidence is not None:
+            out["confidence"] = self.confidence
+        for name in ("assumptions", "unresolved", "evidence"):
+            if value := getattr(self, name):
+                out[name] = list(value)
+        return out
+
+
+def _texts(value, limit: int = 10) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(str(v)[:300] for v in value if isinstance(v, str | int | float) and str(v))[:limit]
+
+
+def envelope(role: str, reply: "Reply") -> Envelope:
+    data = reply.data
+    if data is None:
+        return Envelope(role, False, reply.problem)
+    raw = data.get("confidence")
+    confidence = (
+        round(float(raw), 3)
+        if isinstance(raw, int | float) and not isinstance(raw, bool) and 0 <= raw <= 1
+        else None
+    )
+    return Envelope(
+        role,
+        True,
+        confidence=confidence,
+        assumptions=_texts(data.get("assumptions")),
+        unresolved=_texts(data.get("unresolved")),
+        evidence=_texts(data.get("evidence")),
+    )
 
 
 def parse_json(text: str) -> tuple[dict | None, str]:
@@ -91,6 +165,12 @@ def parse_json(text: str) -> tuple[dict | None, str]:
     return value, ""
 
 
+def prompt_version(system: str) -> str:
+    """A short, stable id of a role's instructions: any edit to the prompt changes it, so every
+    artifact records exactly which wording produced it."""
+    return hashlib.sha256(system.encode()).hexdigest()[:12]
+
+
 async def ask(
     engine: Engine,
     settings: Settings,
@@ -103,13 +183,19 @@ async def ask(
 ) -> Reply:
     """One metered call, charged to ``user_id`` when a learner caused it. Raises ProviderError
     when the provider, the global budget or that learner's budget refuses."""
+    started = time.monotonic()
     tuned = role_settings(settings, role)
     provider: Provider = make(tuned)
     if provider.name != "offline":
         with Session(engine) as db:
             budget.check(db, tuned, user_id, now())
     text, cost = "", 0.0
-    async for event in provider.converse(system, [Turn("user", prompt)], max_tokens):
+    extra = (
+        {"response_format": {"type": "json_object"}}
+        if provider.name == "openai" and tuned.openai_json_mode
+        else {}
+    )
+    async for event in provider.converse(system, [Turn("user", prompt)], max_tokens, **extra):
         if event.kind == "text":
             text += event.text
         elif event.kind == "usage":
@@ -126,4 +212,7 @@ async def ask(
                     stamp=now(),
                 )
     data, problem = parse_json(text)
-    return Reply(data, problem, cost, budget.model_name(tuned, provider))
+    ms = int((time.monotonic() - started) * 1000)
+    return Reply(
+        data, problem, cost, budget.model_name(tuned, provider), prompt_version(system), ms
+    )

@@ -85,7 +85,7 @@ def track_for(enrollment: Enrollment) -> Track:
 def render(cat: Catalog, item: Item, seed: str, language: str) -> dict:
     """What the learner sees, plus the server-side answer in display order."""
     if not item.family:
-        q = next(q for q in cat.concept(item.concept).quiz if q.matches(item.item_id))
+        q = cat.concept(item.concept).quiz_item(item.item_id)
         order = q.order(seed)
         return dict(
             prompt=q.prompt,
@@ -486,6 +486,7 @@ def answer(
     time_s: int,
     now: int,
     cfg: EngineConfig = DEFAULT,
+    confidence: int | None = None,
 ) -> dict:
     """Grade the pending item (``choice=None`` means "not seen this"), then move on."""
     pending = session.state.get("pending")
@@ -557,6 +558,7 @@ def answer(
                 hint_level=hints,
                 time_s=max(0, time_s),
                 choice=authored,
+                confidence=confidence if choice is not None else None,
                 created_at=now,
             )
         )

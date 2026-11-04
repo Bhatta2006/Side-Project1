@@ -32,6 +32,17 @@ def now() -> int:
     return int(time.time())
 
 
+_last_seq = 0
+
+
+def next_seq() -> int:
+    """A nanosecond stamp that never repeats in this process. ``time.time_ns`` alone can return
+    the same value twice in a row on Windows, which makes "newest" ambiguous."""
+    global _last_seq
+    _last_seq = max(time.time_ns(), _last_seq + 1)
+    return _last_seq
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -57,6 +68,7 @@ class User(Base):
     referral_code: Mapped[str | None] = mapped_column(String(12), nullable=True, unique=True)
     # Opt-in study reminder emails; ``reminders_unanswered`` counts those sent with no study since.
     reminders: Mapped[bool] = mapped_column(Boolean, default=False)
+    locale: Mapped[str] = mapped_column(String(16), default="en")  # BCP-47, see socrat.localize
     reminder_sent_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reminders_unanswered: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
@@ -566,6 +578,7 @@ class QuizResponse(Base):
     time_s: Mapped[int] = mapped_column(Integer, default=0)
     seed: Mapped[str] = mapped_column(String(64), default="")
     choice: Mapped[int | None] = mapped_column(Integer, nullable=True)  # authored option index
+    confidence: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1..4, optional
     created_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
@@ -726,6 +739,14 @@ class GeneratedCourse(Base):
     # everything already released either way.
     paused: Mapped[str] = mapped_column(String(24), default="")
     projects: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Project``s
+    # Set for a course a learner asked for: private to them. Empty for the owner's courses.
+    owner_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    # private: only the owner. public: the owner agreed to share it with every learner.
+    visibility: Mapped[str] = mapped_column(String(8), default="private")
+    shared_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    credit_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # ok | held (hidden after reports, awaiting an admin) | removed (the owner may not re-share)
+    moderation: Mapped[str] = mapped_column(String(8), default="ok")
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
@@ -743,6 +764,63 @@ class GeneratedConcept(Base):
     atoms: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # an ``AtomPack``
     problems: Mapped[list | None] = mapped_column(JSON, nullable=True)  # ``Problem``s
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+    # The job that released this version; its log holds models, prompt versions and sources.
+    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
+class CourseRevision(Base):
+    """One visible change to a generated course's plan (coursegen.evolve): what and why."""
+
+    __tablename__ = "course_revisions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    change: Mapped[str] = mapped_column(String(300))
+    reason: Mapped[str] = mapped_column(String(500))
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class TaskSubmission(Base):
+    """A learner's work on a task (``learn.tasks``): self-checked, waiting for a person, or
+    graded by a named person (only that grade becomes evidence)."""
+
+    __tablename__ = "task_submissions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    enrollment_id: Mapped[str] = mapped_column(
+        ForeignKey("enrollments.id", ondelete="CASCADE"), index=True
+    )
+    concept: Mapped[str] = mapped_column(String(160))
+    task_id: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(16))
+    text: Mapped[str] = mapped_column(String(4000))
+    link: Mapped[str] = mapped_column(String(500), default="")
+    met: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # self_checked|awaiting_person|graded
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reviewer: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    feedback: Mapped[str] = mapped_column(String(2000), default="")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    graded_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class ValidationReport(Base):
+    """One validation round of a generated lesson: a state and its findings
+    (see ``coursegen.validation``). Append-only; the newest row per concept counts."""
+
+    __tablename__ = "validation_reports"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    concept_id: Mapped[str] = mapped_column(String(80))
+    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    round: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(24), index=True)
+    findings: Mapped[list] = mapped_column(JSON, default=list)
+    reviewer: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    seq: Mapped[int] = mapped_column(BigInteger, default=next_seq)
 
 
 class GenerationJob(Base):
@@ -760,6 +838,123 @@ class GenerationJob(Base):
     log: Mapped[list] = mapped_column(JSON, default=list)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     error: Mapped[str] = mapped_column(String(500), default="")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)  # transient failures so far
+    not_before: Mapped[int] = mapped_column(Integer, default=0)  # retry backoff
+    stage: Mapped[str] = mapped_column(String(16), default="")  # generating | validating
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class LearningRequest(Base):
+    """A learner's "teach me X": raw text, the parsed (and learner-editable) intent, and the
+    course it became. Unique per learner and text, so a retry never creates a second one."""
+
+    __tablename__ = "learning_requests"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_learning_request_user_key"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    key: Mapped[str] = mapped_column(String(64))
+    text: Mapped[str] = mapped_column(String(2000))
+    intent: Mapped[dict] = mapped_column(JSON)
+    source: Mapped[str] = mapped_column(String(16), default="model")  # model | rules
+    # parsed | needs_clarification | blocked | confirmed
+    status: Mapped[str] = mapped_column(String(24), default="parsed")
+    course_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class CreatorPerk(Base):
+    """A reward a course creator earned when enough other learners used their shared course.
+    One row per user, course and tier, so the sweep that awards them can run any time."""
+
+    __tablename__ = "creator_perks"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    course_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    tier: Mapped[str] = mapped_column(String(24), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16))  # badge | plus
+    earned_at: Mapped[int] = mapped_column(Integer, default=now)
+    expires_at: Mapped[int | None] = mapped_column(Integer, nullable=True)  # plus access end
+
+
+class CourseReport(Base):
+    """A learner's report on a shared course; one per learner and course."""
+
+    __tablename__ = "course_reports"
+    course_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    reason: Mapped[str] = mapped_column(String(16))  # unsafe | wrong | offensive | copied | other
+    note: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class Diagnostic(Base):
+    """A short starting-level check for a learner-requested course. ``items`` holds the
+    questions with their answer key; learners only ever receive the stems and options."""
+
+    __tablename__ = "diagnostics"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    request_id: Mapped[str] = mapped_column(
+        ForeignKey("learning_requests.id", ondelete="CASCADE"), unique=True
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    items: Mapped[list] = mapped_column(JSON)
+    answers: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    model: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class ContentTranslation(Base):
+    """One concept translated into one locale. ``units`` are the translated text pieces (code,
+    numbers and answer keys never pass through a model); ``source_hash`` ties it to the exact
+    English it came from, so an edited lesson makes it stale instead of silently wrong."""
+
+    __tablename__ = "content_translations"
+    concept: Mapped[str] = mapped_column(String(160), primary_key=True)
+    locale: Mapped[str] = mapped_column(String(16), primary_key=True)
+    source_hash: Mapped[str] = mapped_column(String(64))
+    units: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(12), default="machine")  # machine | reviewed
+    model: Mapped[str] = mapped_column(String(64), default="")
+    glossary_version: Mapped[str] = mapped_column(String(16), default="")
+    reviewer: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class ConceptVersion(Base):
+    """A released version of a generated concept, kept before it is replaced (a rewrite after
+    reports, a link repair, a rollback). Learner progress is keyed by concept id, so none is
+    lost; ``digest`` stops identical snapshots piling up."""
+
+    __tablename__ = "concept_versions"
+    __table_args__ = (Index("ix_concept_versions_concept", "course_id", "concept_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    course_id: Mapped[str] = mapped_column(String(80), index=True)
+    concept_id: Mapped[str] = mapped_column(String(80))
+    version: Mapped[int] = mapped_column(Integer)
+    digest: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict] = mapped_column(JSON)
+    atoms: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    problems: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    reason: Mapped[str] = mapped_column(String(40), default="update")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class ResourceHealth(Base):
+    """The latest link checks for one resource of one concept (``course:concept``)."""
+
+    __tablename__ = "resource_health"
+    concept: Mapped[str] = mapped_column(String(160), primary_key=True)
+    url: Mapped[str] = mapped_column(String(512), primary_key=True)
+    failures: Mapped[int] = mapped_column(Integer, default=0)  # consecutive failed checks
+    first_failed_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_ok_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_checked_at: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(8), default="ok")  # ok | failing | dead

@@ -16,6 +16,20 @@ from socrat.catalog.shape import CourseShape
 
 Slug = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
 Ref = Annotated[str, Field(pattern=r"^([a-z][a-z0-9-]{0,63}:)?[a-z][a-z0-9-]{0,63}$")]
+# Evidence a competency asks for, in the master prompt's terms (9.2), beyond mere exposure.
+EvidenceType = Literal[
+    "recognition", "recall", "application", "transfer", "explanation", "performance"
+]
+PracticeType = Literal[
+    "retrieval",
+    "worked-example",
+    "problem-set",
+    "lab",
+    "project",
+    "performance",
+    "reflection",
+    "discussion",
+]
 Language = Literal["python", "cpp", "java"]
 LANGUAGES: tuple[Language, ...] = ("python", "cpp", "java")
 
@@ -32,6 +46,26 @@ class Resource(Model):
     minutes: int = Field(ge=1, le=600)
     level: Literal["intro", "core", "deep"] = "core"
     languages: list[Language] = Field(default_factory=list)  # empty = language-neutral
+    # Provenance for researched sources (master prompt 11.2); empty for hand-picked ones.
+    author: str = Field(default="", max_length=200)
+    published: str = Field(default="", max_length=40)
+    license: str = Field(default="", max_length=120)
+    why: str = Field(default="", max_length=300)  # why it was chosen, in plain words
+
+
+class Citation(Model):
+    """Which source backs which claim, and where (master prompt 11.4). Built by code from the
+    lesson's inline [n] markers (``coursegen.research.ground``); never written by a model."""
+
+    n: int = Field(ge=1, le=20)
+    url: HttpUrl
+    offset: int = Field(ge=0)  # character position of the [n] marker in the lesson text
+    claim: str = Field(max_length=400)  # the sentence that carries the marker
+    passage: str = Field(default="", max_length=400)  # the source text the claim rests on
+    # retrieved: text the search provider returned; summary: the researcher's paraphrase only
+    basis: Literal["retrieved", "summary"] = "summary"
+    overlap: float = Field(ge=0, le=1)  # share of the claim's content words found in it
+    supported: bool
 
 
 class Review(Model):
@@ -172,6 +206,23 @@ class Prompt(Model):
     max_words: int = Field(default=250, ge=30, le=600)
 
 
+class Task(Model):
+    """Work a quiz cannot judge (master prompt 4): a reflection, case study, oral explanation,
+    performance, portfolio piece or practical. Each has a rubric and says who judges it. Work
+    shown by doing (oral, performance, portfolio, practical) is judged by a person; reflections
+    and case studies are checked by the learner against the rubric and never count as evidence."""
+
+    id: Slug
+    kind: Literal["reflection", "case-study", "oral", "performance", "portfolio", "practical"]
+    prompt: str = Field(min_length=10, max_length=1500)
+    rubric: list[Criterion] = Field(min_length=2, max_length=6)
+    safety: str = Field(default="", max_length=300)  # what to do (or not) when practising it
+
+    @property
+    def evaluator(self) -> str:
+        return "self" if self.kind in ("reflection", "case-study") else "person"
+
+
 class PracticeLink(Model):
     title: str = Field(min_length=2, max_length=160)
     url: HttpUrl
@@ -189,6 +240,15 @@ class Outline(Model):
     assessment: list[Literal["quiz", "code", "explain", "project"]] = Field(
         min_length=1, max_length=4
     )
+    # The competency graph (master prompt 3.3). All optional so older outlines stay valid.
+    # knowledge: facts and ideas; skill: something done; both: an idea you must also apply.
+    category: Literal["knowledge", "skill", "both"] = "knowledge"
+    # Concepts that connect without being required first (contrasts, same idea elsewhere).
+    related: list[Ref] = Field(default_factory=list, max_length=6)
+    # What a learner must show before this counts as demonstrated (prompt 9.2).
+    evidence: list[EvidenceType] = Field(default_factory=list, max_length=5)
+    expected: str = Field(default="", max_length=300)  # the performance that shows it, observable
+    practice: list[PracticeType] = Field(default_factory=list, max_length=5)
 
 
 class Exercise(Model):
@@ -238,6 +298,27 @@ class Experiment(Model):
         return self
 
 
+class Visual(Model):
+    """A typed, interactive element of a lesson: a registered renderer plus validated params.
+    Never code. Checked against ``socrat.engine.renderers`` when the concept loads."""
+
+    renderer: str
+    version: str = "1.0"
+    params: dict = Field(default_factory=dict)
+    purpose: str = Field(min_length=5, max_length=300)
+    fallback_text: str = Field(min_length=10, max_length=4000)
+    alt_text: str = Field(min_length=5, max_length=600)
+
+    @model_validator(mode="after")
+    def registered(self):
+        from socrat.engine import renderers
+
+        problems = renderers.validate_spec(self.model_dump())
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+
 class Concept(Model):
     id: Slug
     title: str = Field(min_length=2, max_length=100)
@@ -253,9 +334,19 @@ class Concept(Model):
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
     prompts: list[Prompt] = Field(default_factory=list, max_length=4)
     exercises: list[Exercise] = Field(default_factory=list, max_length=10)
+    visuals: list[Visual] = Field(default_factory=list, max_length=4)
     experiments: list[Experiment] = Field(default_factory=list, max_length=6)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
+    tasks: list[Task] = Field(default_factory=list, max_length=4)
+    # The order a learner meets this concept's activities (empty: the page's default order):
+    # "lesson", "quiz", "visual:N", or "prompt:", "exercise:", "experiment:", "problem:",
+    # "task:" followed by an id. Every entry must name something this concept has.
+    sequence: list[str] = Field(default_factory=list, max_length=24)
+    # Quiz items a rewrite dropped: never offered again, but still resolvable so open
+    # sessions, placements and stored attempts keep working (catalog/revisions.carry).
+    retired_quiz: list[QuizItem] = Field(default_factory=list, max_length=40)
+    citations: list[Citation] = Field(default_factory=list, max_length=40)
     provenance: Provenance | None = None
     outline: Outline | None = None
     # A draft is being authored: validated and kept in the graph, but never served.
@@ -280,7 +371,27 @@ class Concept(Model):
             ]
             if missing:
                 raise ValueError(f"live concept {self.id} needs {', '.join(missing)}")
+        known = {"lesson", "quiz"} | {f"visual:{i}" for i in range(len(self.visuals))}
+        known |= {f"prompt:{x.id}" for x in self.prompts} | {f"task:{x.id}" for x in self.tasks}
+        known |= {f"exercise:{x.id}" for x in self.exercises}
+        known |= {f"experiment:{x.id}" for x in self.experiments}
+        known |= {f"problem:{x}" for x in self.problems}
+        if unknown := [s for s in self.sequence if s not in known]:
+            raise ValueError(f"concept {self.id} sequence names unknown activities: {unknown}")
+        if len(set(self.sequence)) != len(self.sequence):
+            raise ValueError(f"concept {self.id} sequence repeats an activity")
+        if len({t.id for t in self.tasks}) != len(self.tasks):
+            raise ValueError(f"concept {self.id} task ids must be unique")
         return self
+
+    def quiz_item(self, item_id: str) -> QuizItem:
+        """The quiz item stored under ``item_id`` (current, renamed or retired). A live item
+        wins over a retired one with the same id: a rewrite may bring a question back before
+        ``catalog.revisions.carry`` tidies the retired list."""
+        for q in (*self.quiz, *self.retired_quiz):
+            if q.matches(item_id):
+                return q
+        raise KeyError(f"concept {self.id} has no quiz item {item_id}")
 
 
 class Example(Model):

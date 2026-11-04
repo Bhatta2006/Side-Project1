@@ -97,3 +97,79 @@ PHYSICS_SIMULATE = register(
         },
     )
 )
+
+
+class JudgeCase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected: str = Field(max_length=20_000)
+    stdout: str = Field(default="", max_length=20_000)
+    exit_code: int = 0
+    timed_out: bool = False
+    stderr: str = Field(default="", max_length=2_000)
+
+
+class CodeJudge(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    cases: list[JudgeCase] = Field(min_length=1, max_length=50)
+
+
+def _code_judge(arguments: dict) -> dict:
+    """Verdicts for runs that already happened. Running code is the execution service's job (it
+    isolates, limits and queues it); judging what came back is this deterministic step, with the
+    same comparison the judge uses for learners' submissions."""
+    from socrat.execution.protocol import same_output
+
+    verdicts = []
+    for i, case in enumerate(arguments["cases"]):
+        if case.get("timed_out"):
+            verdict = "time_limit"
+        elif case.get("exit_code", 0) != 0:
+            verdict = "runtime_error"
+        elif same_output(case.get("stdout", ""), case["expected"]):
+            verdict = "accepted"
+        else:
+            verdict = "wrong_answer"
+        verdicts.append(dict(case=i, verdict=verdict))
+    passed = sum(v["verdict"] == "accepted" for v in verdicts)
+    first = next((v["case"] for v in verdicts if v["verdict"] != "accepted"), None)
+    return dict(
+        verdicts=verdicts,
+        passed=passed,
+        total=len(verdicts),
+        score=round(passed / len(verdicts), 4),
+        first_failure=first,
+    )
+
+
+CODE_JUDGE = register(
+    Capability(
+        name="code.judge",
+        summary=(
+            "Judge the outputs of code runs against expected outputs: accepted, wrong_answer, "
+            "runtime_error or time_limit per case, with a pass count. It judges runs that "
+            "already happened; it does not run code."
+        ),
+        input=CodeJudge,
+        run=_code_judge,
+        parameters={
+            "type": "object",
+            "properties": {
+                "cases": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "expected": {"type": "string"},
+                            "stdout": {"type": "string"},
+                            "exit_code": {"type": "integer"},
+                            "timed_out": {"type": "boolean"},
+                        },
+                        "required": ["expected"],
+                    },
+                }
+            },
+            "required": ["cases"],
+        },
+        tutor=False,  # the tutor cannot run code, so it has nothing to judge
+    )
+)

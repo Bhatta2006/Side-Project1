@@ -81,7 +81,7 @@ def question(catalog: Catalog, state: PlacementState) -> QuizItem | None:
     if state.pending is None:
         return None
     concept = catalog.concept(state.pending["concept"])
-    return next(q for q in concept.quiz if q.matches(state.pending["item"]))
+    return concept.quiz_item(state.pending["item"])
 
 
 def seed_of(state: PlacementState) -> str:

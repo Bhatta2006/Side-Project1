@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes';
 import { Lightbulb, Play, SendHorizontal } from 'lucide-react';
 import { api, explain, stream } from '@/lib/api';
 import { runInBrowser, warm, type RunnerStage } from '@/lib/runner';
+import { useLite } from '@/lib/lite';
 import type { TryProblem } from '@/lib/types';
 import CodeEditor from '@/components/code-editor';
 import Markdown from '@/components/markdown';
@@ -42,6 +43,7 @@ function stageLabel(stage: RunnerStage | null) {
 /** One real problem with Soc, before sign-up. Code runs in this browser; nothing is saved. */
 export function TryTutor() {
   const { resolvedTheme } = useTheme();
+  const { lite } = useLite();
   const [problem, setProblem] = useState<TryProblem | null>(null);
   const [failed, setFailed] = useState(false);
   const [code, setCode] = useState('');
@@ -155,7 +157,7 @@ export function TryTutor() {
                   <figure><figcaption className="mb-1 text-[13px] font-semibold">Expected output</figcaption><pre className="code-block text-[13px]!"><code>{problem.examples[0].output}</code></pre></figure>
                 </div>
               </div>
-              <div className="min-h-56 overflow-hidden rounded-[16px] border" onFocus={() => warm('python')}>
+              <div className="min-h-56 overflow-hidden rounded-[16px] border" onFocus={() => { if (!lite) void warm('python'); }}>
                 <CodeEditor
                   language="python"
                   value={code}

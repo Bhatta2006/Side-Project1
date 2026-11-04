@@ -17,7 +17,7 @@ from socrat.catalog.atoms import AtomPack
 from socrat.catalog.projects import Project
 from socrat.catalog.registry import Catalog, CatalogError, build
 from socrat.catalog.schema import Concept, Course, Problem
-from socrat.models import GeneratedConcept, GeneratedCourse, need, now
+from socrat.models import ConceptVersion, GeneratedConcept, GeneratedCourse, need, now
 
 log = logging.getLogger(__name__)
 
@@ -194,6 +194,7 @@ def save_course(
     # Generated atom packs and problems survive an outline save.
     atoms = {cid: old.atoms for cid, old in kept.items()}
     problems = {cid: old.problems for cid, old in kept.items()}
+    released_by = {cid: old.job_id for cid, old in kept.items()}
     for old in kept.values():
         db.delete(old)
     db.flush()
@@ -205,6 +206,7 @@ def save_course(
                 payload=concept.model_dump(mode="json"),
                 atoms=atoms.get(concept.id),
                 problems=problems.get(concept.id),
+                job_id=released_by.get(concept.id),
                 updated_at=stamp,
             )
         )
@@ -225,16 +227,27 @@ def store_concept(
     concept: Concept,
     atoms: AtomPack | None,
     problems: list[Problem] | None = None,
+    reason: str = "update",
+    job_id: str | None = None,
 ) -> None:
     """Replace one concept of a generated course (a release, a new problem, or a quarantine
     back to planned); checked against the whole catalog first. ``problems`` None keeps the
-    concept's problems. No commit; the caller owns it."""
+    concept's problems. The version being replaced is kept in ``concept_versions`` first.
+    No commit; the caller owns it."""
     stored = course(db, course_id)
     row = db.get(GeneratedConcept, (course_id, concept.id))
     if stored is None or row is None:
         raise CatalogError(f"unknown generated concept {course_id}:{concept.id}")
     if problems is None:
         problems = [Problem.model_validate(p) for p in row.problems or []]
+    # Quiz ids from the version being replaced stay resolvable (criterion 15).
+    from socrat.catalog import revisions
+
+    try:
+        previous = Concept.model_validate(row.payload) if row.payload else None
+    except ValueError:
+        previous = None
+    concept = revisions.carry(previous, concept)
     owned = {p["id"] for p in row.problems or []}
     updated = stored.model_copy(
         update={
@@ -244,12 +257,47 @@ def store_concept(
     )
     others = [c for c in courses(db) if c.id != course_id]
     extend(base, [*others, updated])
+    keep_version(db, row, reason)
     row.payload = concept.model_dump(mode="json")
     row.atoms = atoms.model_dump(mode="json") if atoms else None
+    if job_id is not None:
+        row.job_id = job_id
     row.problems = [p.model_dump(mode="json") for p in problems] or None
     row.updated_at = now()
     parent = need(db.get(GeneratedCourse, course_id))
     parent.updated_at = max(now(), parent.updated_at + 1)  # refreshes the merged catalog
+
+
+def keep_version(db: Session, row: GeneratedConcept, reason: str) -> None:
+    """Snapshot a released concept before it is replaced. Planned concepts have no content to
+    keep, and an identical snapshot is not stored twice. No commit."""
+    if row.payload.get("status") != "live":
+        return
+    digest = hashlib.sha256(
+        json.dumps([row.payload, row.atoms, row.problems], sort_keys=True).encode()
+    ).hexdigest()
+    known = db.scalars(
+        select(ConceptVersion.id).where(
+            ConceptVersion.course_id == row.course_id,
+            ConceptVersion.concept_id == row.concept_id,
+            ConceptVersion.digest == digest,
+        )
+    ).first()
+    if known is not None:
+        return
+    provenance = row.payload.get("provenance") or {}
+    db.add(
+        ConceptVersion(
+            course_id=row.course_id,
+            concept_id=row.concept_id,
+            version=int(provenance.get("version", 1)),
+            digest=digest,
+            payload=row.payload,
+            atoms=row.atoms,
+            problems=row.problems,
+            reason=reason[:40],
+        )
+    )
 
 
 def add_problem(db: Session, base: Catalog, course_id: str, concept_id: str, problem: Problem):

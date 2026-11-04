@@ -121,6 +121,12 @@ class Settings(DatabaseSettings):
     openai_api_key_file: str = ""
     openai_model: str = ""
     openai_base_url: str = ""
+    # Compatible endpoints only (ignored for api.openai.com): sent with every call, e.g.
+    # {"thinking": false} for DeepSeek, so a model does not reason for seconds before answering.
+    openai_chat_template_kwargs: dict = Field(default_factory=dict)
+    # Ask OpenAI-compatible endpoints for a JSON object (response_format) on course-generation
+    # calls, so a long outline cannot come back with a stray comma. Off for endpoints without it.
+    openai_json_mode: bool = False
     ai_timeout_seconds: float = Field(default=45, ge=5, le=120)
     ai_daily_messages: int = Field(default=150, ge=1, le=5000)
     ai_reply_tokens: int = Field(default=1500, ge=200, le=8000)
@@ -163,6 +169,9 @@ class Settings(DatabaseSettings):
     # 3D is still being tested: only admin accounts may request it (and Auto never picks it for
     # anyone else). Set false to open 3D to every learner.
     explainer_3d_admin_only: bool = True
+    # Sketches as declarative data played by host code (explainer/sketch.py) instead of a
+    # model-written HTML page with scripts. Off until the owner switches it on.
+    explainer_sketch_declarative: bool = False
     explainer_3d_price_input_per_mtok: float = Field(default=0, ge=0, le=1000)
     explainer_3d_price_output_per_mtok: float = Field(default=0, ge=0, le=1000)
     # Large models think before their first token; the tutor's short timeout is too tight.
@@ -189,10 +198,58 @@ class Settings(DatabaseSettings):
     # Course generation (docs/architecture/course-generation.md). Each agent role may use its
     # own provider, model, effort and prices, e.g. SOCRAT_GEN_ROLES='{"critic": {"provider":
     # "openai", "model": "...", "base_url": "..."}}'; unset keys fall back to SOCRAT_AI_*.
-    gen_roles: dict[str, dict[str, str | float]] = Field(default_factory=dict)
+    # "chat_template_kwargs" (an object) overrides SOCRAT_OPENAI_CHAT_TEMPLATE_KWARGS per role.
+    gen_roles: dict[str, dict[str, str | float | dict]] = Field(default_factory=dict)
+    # Write-check-revise rounds per lesson package. Revisions are targeted edits, so a round
+    # costs little; subjects the model knows less well (a live Kannada course) need more.
+    gen_package_rounds: int = Field(default=3, ge=1, le=8)
     style_engine_enabled: bool = True  # learning styles; admin accounts only while testing
+    # Learner-typed courses ("teach me X"): off until the owner turns it on.
+    learning_requests_enabled: bool = False
+    learning_requests_max_open: int = Field(default=3, ge=1, le=50)
+    # Per learner, per process (see limits.py); 0 turns a limit off.
+    simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
+    diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)
+    gen_visuals: bool = False  # Experience Designer adds typed visuals to generated lessons
+    # Search providers the researcher must choose sources from (coursegen.search.PROVIDERS),
+    # e.g. ["wikipedia", "wikibooks", "arxiv", "open-library"]. Empty: the model names sources from memory
+    # and only the link check guards them.
+    research_providers: list[str] = Field(default_factory=list)
+    # "youtube" in research_providers searches videos and playlists with the YouTube Data API
+    # (a free Google Cloud key; about 100 lessons a day on the free quota).
+    youtube_api_key: SecretStr = SecretStr("")
+    # Read the public captions of the videos the researcher picks and give them to the author
+    # as source text. There is no official API for this (youtube-transcript-api reads the
+    # watch page), so it is off until the owner turns it on.
+    youtube_transcripts: bool = False
+    # Lite mode on slow or metered connections: heavy web parts load only when asked for.
+    lite_mode_enabled: bool = False
+    community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course
+    community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
+    learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)
     gen_runner: bool = True  # run queued generation jobs in the API process (off in tests)
+    # Generation jobs the API process runs at once. With 1 a course's first lessons are written
+    # one after another; with 3-4 the first lesson is not kept waiting behind the others.
+    gen_runner_concurrency: int = Field(default=1, ge=1, le=16)
+    # Admin-published courses: write the first slice at once (learner courses always do).
+    gen_initial_on_publish: bool = False
+    # Split deployment: API with SOCRAT_GEN_RUNNER=false, worker with SOCRAT_WORKER_RUNS_GENERATION=true.
+    # Claims are atomic, so running both is safe too (a job is taken by exactly one process).
+    worker_runs_generation: bool = False
+    worker_generation_concurrency: int = Field(default=1, ge=1, le=16)
+    # The worker touches this file every loop; `python -m socrat.worker --check` fails when stale.
+    worker_heartbeat_file: str = ""
     gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
+    # Critic reviews per outline job. Each "revise" costs a full new outline round; with 1, the
+    # outline revised after the first review is kept without a second review. 0: the critic
+    # still reviews (logged for the owner and the learner) but never asks for a rewrite, so the
+    # blueprint is ready after one round.
+    gen_outline_reviews: int = Field(default=3, ge=0, le=3)
+    # Course Maintainer: scheduled link checks and repairs of released generated courses.
+    maintainer_enabled: bool = False
+    maintainer_batch: int = Field(default=200, ge=1, le=5000)  # links checked per pass
+    maintainer_review_days: int = Field(default=365, ge=30, le=3650)
+    maintainer_replacements: int = Field(default=3, ge=0, le=50)  # researcher calls per pass
     gen_quarantine_reports: int = Field(default=3, ge=1, le=100)  # distinct learners
     ai_tool_rounds: int = Field(default=4, ge=1, le=8)
 

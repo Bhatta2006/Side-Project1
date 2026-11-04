@@ -236,6 +236,23 @@ def test_package_is_revised_by_artifact_then_released(client, published, web):  
     assert held.json()["error"]["code"] == "concept_preparing"
 
 
+def test_a_dead_extra_link_is_dropped_without_a_new_round(client, published, web):  # noqa: F811
+    generate(client, published, "what-is-ml")
+    script = Scripted(
+        author=[lesson(urls=[*GOOD, "https://nowhere.example.com/x"])],
+        quiz=[QUIZ],
+        atoms=[ATOMS],
+        facts=[FACTS_OK],
+        reviewer=[PASS],
+    )
+    assert run(client, script.make, web())
+    assert len(script.prompts["author"]) == 1
+    view = client.get("/api/v1/admin/courses/ai-basics/concepts/what-is-ml", headers=published)
+    assert view.json()["jobs"][0]["state"] == "done"
+    live = generated.merged(default_catalog()).concept("ai-basics:what-is-ml")
+    assert [str(r.url) for r in live.resources] == GOOD
+
+
 def test_a_package_that_never_passes_stays_planned(client, published, web):  # noqa: F811
     generate(client, published, "loss")
     script = Scripted(
@@ -289,3 +306,93 @@ def test_lesson_gates_and_verdict_rules():
     assert not pkg.verdict(FACTS_BAD, PASS)[0]  # an incorrect claim always blocks
     assert not pkg.verdict(None, PASS)[0]  # no fact check, no release
     assert not pkg.verdict(FACTS_OK, PASS | {"scores": SCORES | {"correctness": 4}})[0]
+
+
+IMPRECISE = {
+    "claims": [
+        {
+            "where": "lesson",
+            "claim": "Insurance has a negative expected value (the company must profit)",
+            "verdict": "imprecise",
+            "correction": "Say 'usually has a slightly negative expected value'.",
+        }
+    ]
+}
+
+
+def pkg_lesson_text(draft):
+    """The lesson text as stored: the author's text plus the Sources section, if any."""
+    return draft["lesson"]
+
+
+def _lesson_text(_client, concept):
+    return generated.merged(default_catalog()).concept(f"ai-basics:{concept}").lesson
+
+
+def test_an_imprecise_fact_gets_one_revision_before_release(client, published, web):  # noqa: F811
+    """Found in a live run: a lesson shipped with a sentence the fact checker called imprecise.
+    A package that passes but carries imprecise claims is revised once, then released."""
+    generate(client, published, "what-is-ml")
+    first, second = lesson(), lesson() | {"lesson": lesson()["lesson"] + "\nAdjusted wording.\n"}
+    script = Scripted(
+        author=[first, second],
+        quiz=[QUIZ],
+        atoms=[ATOMS],
+        facts=[IMPRECISE, FACTS_OK],
+        reviewer=[PASS, PASS],
+    )
+    run(client, script.make, web())
+    assert len(script.prompts["author"]) == 2  # exactly one extra round
+    assert "usually has a slightly negative expected value" in script.prompts["author"][1]
+    assert "Adjusted wording." in _lesson_text(client, "what-is-ml")
+    events = [
+        e.get("event")
+        for e in client.get(
+            "/api/v1/admin/courses/ai-basics/concepts/what-is-ml", headers=published
+        ).json()["jobs"][0]["log"]
+    ]
+    assert "polishing" in events and events[-1] == "released"
+
+
+def test_a_polish_round_never_costs_the_lesson_that_already_passed(client, published, web):  # noqa: F811
+    generate(client, published, "what-is-ml")
+    first = lesson()
+    ruined = lesson(size=1)  # the polish draft fails its length gate, twice
+    script = Scripted(
+        author=[first, ruined, ruined],
+        quiz=[QUIZ],
+        atoms=[ATOMS],
+        facts=[IMPRECISE],
+        reviewer=[PASS],
+    )
+    run(client, script.make, web())
+    detail = client.get(
+        "/api/v1/admin/courses/ai-basics/concepts/what-is-ml", headers=published
+    ).json()
+    assert (
+        detail["jobs"][0]["state"] == "done" and detail["jobs"][0]["log"][-1]["event"] == "released"
+    )
+    assert len(script.prompts["author"]) == 3  # the polish round ran, and failed, twice
+    events = [e.get("event") for e in detail["jobs"][0]["log"]]
+    assert "polishing" in events
+    released = _lesson_text(client, "what-is-ml")
+    assert released.startswith(first["lesson"][:200]) and "Adjusted" not in released
+    assert released == pkg_lesson_text(first)
+    learner = login(client, subject="ada", name="Ada")
+    onboard(client, learner, course="ai-basics")
+    label = client.get("/api/v1/concepts/ai-basics:what-is-ml").json()["validation"]["status"]
+    assert label in {"pass_with_warnings", "human_review_required"}  # never "being revised"
+
+
+def test_only_imprecise_claims_ask_for_a_polish_round():
+    assert pkg.imprecise_notes(None) == {"lesson": [], "quiz": [], "atoms": []}
+    assert pkg.imprecise_notes(FACTS_OK) == {"lesson": [], "quiz": [], "atoms": []}
+    assert pkg.imprecise_notes(FACTS_BAD) == {
+        "lesson": [],
+        "quiz": [],
+        "atoms": [],
+    }  # blocking, not polish
+    notes = pkg.imprecise_notes(
+        {"claims": [{"where": "atom:a1", "claim": "x", "verdict": "imprecise", "correction": "y"}]}
+    )
+    assert notes["atoms"] == ["[imprecise] atom:a1: x → y"] and notes["lesson"] == []

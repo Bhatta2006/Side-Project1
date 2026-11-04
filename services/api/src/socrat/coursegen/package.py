@@ -16,7 +16,7 @@ from pydantic import ValidationError
 
 from socrat import harness
 from socrat.catalog import dialect, shape
-from socrat.catalog.atoms import AtomPack
+from socrat.catalog.atoms import Atom, AtomPack, Step
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import (
     Concept,
@@ -26,6 +26,7 @@ from socrat.catalog.schema import (
     Prompt,
     Provenance,
     QuizItem,
+    Task,
 )
 from socrat.coursegen import execute, links
 from socrat.judge.service import normalized
@@ -190,6 +191,15 @@ Score 1-5 each: correctness, depth (worked example traced, why it works, edge ca
 self-checks), continuity (builds on prerequisites, no overlap with siblings),
 misconceptions (each confronted), assessment_alignment (quiz and atoms test the
 objectives), clarity, accessibility (plain language, terms defined, no reliance on colour).
+If "visuals" are present, each must serve a stated objective, its params must make sense for the
+idea, and its fallback_text must teach the same thing without the visual; list any that do not
+under "lesson". Decorative visuals count against clarity.
+
+What a score means, in every dimension: 5 = meets the contract, nothing to fix there; 4 = one
+specific fix needed; 3 = several fixes or one real gap; 2 = a serious problem; 1 = unusable.
+Correctness is 5 when you find no factual error or misleading statement. Any score below 5 must
+come with the exact fix under "lesson", "quiz" or "atoms" (for correctness: the claim and its
+correction), so the author can make it; a lower score with no fix named is not allowed.
 
 Reply with one JSON object only:
 {"scores": {"correctness": 1, "depth": 1, "continuity": 1, "misconceptions": 1,
@@ -209,7 +219,8 @@ STYLE_REVIEW = """
 
 A LEARNING STYLE block is part of the context. Judge depth and clarity against that style,
 not against the reference lesson. Also score "style_fit" 1-5: would the learner described
-find the length, register, tone, examples and rigor right for them? Add "style_fit" to scores."""
+find the length, register, tone, examples and rigor right for them? Add "style_fit" to scores,
+on the same 1-5 meaning, with the fix named when it is below 5."""
 
 EXERCISES = """This course practises in a math workbench that checks answers with a computer
 algebra system. Add "exercises": 3-6 problems the learner solves by typing an answer, easy to
@@ -264,11 +275,44 @@ can apply to any wording, and a model answer that would earn every point:
              "rubric": [{{"criterion": "...", "points": 2, "look_for": "what earns the points"}}],
              "model_answer": "..."}}]"""
 
+TASKS = """This concept is also practised beyond a quiz. Add "tasks": 1-2 of the kinds the
+practice calls for: "reflection" or "case-study" (the learner checks their own work against the
+rubric) or "oral", "performance", "portfolio", "practical" (a person judges the real work; say
+what to record or hand in). Each has a rubric of 2-6 criteria worth 1-4 points. For anything
+physical, "safety" says what to do or avoid; never ask for anything dangerous without a
+qualified person present. Also give "sequence": the order the learner meets this concept's
+activities, using "lesson", "quiz", "visual:0", "prompt:<id>", "task:<id>" (only ids you wrote).
+"tasks": [{{"id": "kebab-case", "kind": "reflection|case-study|oral|performance|portfolio|practical",
+  "prompt": "...", "rubric": [{{"criterion": "...", "points": 2, "look_for": "..."}}], "safety": ""}}],
+"sequence": ["lesson", "quiz", "task:<id>"]"""
+
+DOING = {"performance", "reflection", "discussion", "project", "lab"}
+
+
+def wants_tasks(concept, adapter=None) -> bool:
+    """Tasks are asked for when the competency is practised by doing or reflecting."""
+    practice = set(concept.outline.practice) if concept.outline else set()
+    hands_on = adapter is not None and (
+        adapter.needs_physical_practice or adapter.needs_external_evaluator
+    )
+    return bool(practice & DOING) or hands_on
+
+
 ATOMS_CODE = """Code adapters are allowed on worked, predict and trace atoms:
 "adapters": {{"<language>": {{"code": "complete program", "stdin": ""}}}} with one for each of:
 {languages}. The programs are run and must print the same output in every language;
 learners see that output. At most 25 lines (trace 15, predict 10); Java uses
 "public class Solution"."""
+
+
+# A revision edits, it does not rewrite: in live runs a full rewrite fixed the named problems
+# and brought new ones, so no lesson converged within its rounds.
+REVISE = (
+    "Revise your previous draft. Apply each fix below exactly where it applies and keep every "
+    "other sentence, item and field as it is, word for word. Add no new claims. Where a note says "
+    "a source does not support a claim, remove that marker (or the claim). Reply with the complete "
+    "revised JSON.\nFixes:\n- "
+)
 
 
 def lesson_prompt(ctx: str, reference: Concept | None, draft: dict | None, notes: list[str]) -> str:
@@ -280,7 +324,8 @@ def lesson_prompt(ctx: str, reference: Concept | None, draft: dict | None, notes
     if draft is not None:
         parts.append("Your previous draft:\n" + json.dumps(draft, indent=1))
     if notes:
-        parts.append("Fix all of these in a complete revised reply:\n- " + "\n- ".join(notes))
+        intro = REVISE if draft is not None else "Fix all of these in a complete reply:\n- "
+        parts.append(intro + "\n- ".join(notes))
     return "\n\n".join(parts)
 
 
@@ -291,7 +336,8 @@ def part_prompt(ctx: str, lesson: dict, draft: dict | None, notes: list[str], ex
     if draft is not None:
         parts.append("Your previous draft:\n" + json.dumps(draft, indent=1))
     if notes:
-        parts.append("Fix all of these in a complete revised reply:\n- " + "\n- ".join(notes))
+        intro = REVISE if draft is not None else "Fix all of these in a complete reply:\n- "
+        parts.append(intro + "\n- ".join(notes))
     return "\n\n".join(parts)
 
 
@@ -300,6 +346,46 @@ def quiz_example(reference: Concept | None) -> str:
         return ""
     items = [q.model_dump(mode="json", exclude_none=True) for q in reference.quiz[:2]]
     return "Reference items for quality:\n" + json.dumps(items, indent=1)
+
+
+SHELL_FENCES = {"bash", "sh", "shell", "console", "zsh", "powershell", "ps", "cmd", "terminal"}
+# A style's upper bound is guidance for the author; the gate allows this much over it, since
+# a model cannot count characters and a lesson 10% long is not a reason to discard it. Live runs
+# wrote bite lessons 30-45% over while the reviewer scored their style fit 4, so the reviewer's
+# style_fit (>= 4 to pass) judges the length the learner meets; this only stops a runaway.
+CEILING_SLACK = 1.5
+
+
+def teaching_length(text: str) -> int:
+    """Characters of the lesson itself: the self-check answers in <details> and a trailing
+    sources list are not what the length bounds are about."""
+    body = re.sub(r"<details.*?</details>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    body = re.split(r"^#{1,3}\s*(?:Sources|References|Further reading)\b", body, flags=re.M | re.I)[
+        0
+    ]
+    return len(body.strip())
+
+
+def tidy_lesson(draft: dict, sources: list[dict]) -> dict:
+    """Deterministic repairs instead of a new round: shell commands are fenced as text (they
+    are not course code), and citation markers that match no source are dropped."""
+    text = draft.get("lesson")
+    if not isinstance(text, str):
+        return draft
+    text = re.sub(
+        r"^```([a-zA-Z]+)",
+        lambda m: "```text" if m.group(1).lower() in SHELL_FENCES else m.group(0),
+        text,
+        flags=re.MULTILINE,
+    )
+    if sources:
+        valid = {s["n"] for s in sources}
+        text = re.sub(
+            r"\s?\[(\d{1,2})\]", lambda m: m.group(0) if int(m.group(1)) in valid else "", text
+        )
+    # Lists over their limit keep their first eight instead of failing the round.
+    capped = {k: draft[k][:8] for k in ("key_points", "pitfalls") if isinstance(draft.get(k), list)}
+    return {**draft, **capped, "lesson": text}
 
 
 def check_lesson(
@@ -317,10 +403,12 @@ def check_lesson(
             f"The lesson is {len(text)} characters; this concept needs at least "
             f"{floor}. Add worked examples, reasoning and edge cases, not padding."
         )
-    if ceiling and len(text) > ceiling:
+    taught = teaching_length(text)
+    if ceiling and taught > ceiling * CEILING_SLACK:
         problems.append(
-            f"The lesson is {len(text)} characters; this style allows at most {ceiling}. "
-            "Keep one idea and cut the rest."
+            f"The lesson (without the self-check answers and sources) is {taught} characters, "
+            f"about {taught // 6} words; this style allows at most {ceiling} characters "
+            f"(about {ceiling // 6} words). Keep one idea and cut the rest."
         )
     wanted = style.min_headings() if style is not None else 3
     if len(re.findall(r"^## ", text, re.MULTILINE)) < wanted:
@@ -448,10 +536,11 @@ def build_concept(
     required when the outline assesses by "explain"."""
     problems: dict[str, list[str]] = {"lesson": [], "quiz": []}
     found = quiz.get("quiz")
-    items: list = found if isinstance(found, list) else []
+    # Items past the tenth are dropped rather than failing a whole round (a live run wrote 11).
+    items: list = found[:10] if isinstance(found, list) else []
     if not 4 <= len(items) <= 10:
         problems["quiz"].append(f"Write 5-8 items; got {len(items)}.")
-    parsed = []
+    parsed, broken = [], []
     for raw in items:
         try:
             item = {**raw, "kind": raw.get("kind", "mcq")} if languages else {**raw, "kind": "mcq"}
@@ -475,7 +564,11 @@ def build_concept(
         except (ValidationError, TypeError) as exc:
             where = raw.get("id", "?") if isinstance(raw, dict) else "?"
             detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
-            problems["quiz"].append(f"item {where}: {'; '.join(detail)}")
+            broken.append(f"item {where}: {'; '.join(detail)}")
+    # A malformed item is dropped (never repaired into a question nobody wrote) while the
+    # quiz keeps enough sound items; otherwise it goes back to the author.
+    if len(parsed) < 4:
+        problems["quiz"] += broken
     if len({q.id for q in parsed}) != len(parsed):
         problems["quiz"].append("Quiz item ids must be unique.")
     found = quiz.get("prompts")
@@ -493,6 +586,18 @@ def build_concept(
             problems["quiz"].append(f"prompt {where}: {'; '.join(detail)}")
     if len({x.id for x in prompts}) != len(prompts):
         problems["quiz"].append("Prompt ids must be unique.")
+    tasks: list[Task] = []
+    bad_tasks = []
+    for raw in quiz.get("tasks", []) if isinstance(quiz.get("tasks"), list) else []:
+        try:
+            tasks.append(Task.model_validate(raw))
+        except (ValidationError, TypeError) as exc:
+            where = raw.get("id", "?") if isinstance(raw, dict) else "?"
+            detail = errors_of(exc) if isinstance(exc, ValidationError) else [str(exc)]
+            bad_tasks.append(f"task {where}: {'; '.join(detail)}")
+    if not tasks:  # one sound task is enough; a malformed extra is dropped
+        problems["quiz"] += bad_tasks
+    sequence = [s for s in quiz.get("sequence", []) if isinstance(s, str)][:24]
     exercises: list[Exercise] = []
     if workbench:
         exercises, bad = check_exercises(quiz.get("exercises"))
@@ -501,6 +606,19 @@ def build_concept(
     if lab:
         experiments, bad = check_experiments(quiz.get("experiments"))
         problems["quiz"].extend(bad)
+    # The sequence only orders activities. One naming an activity that is not there (a typo,
+    # or one dropped above as malformed) is left out instead of failing the whole package: a
+    # live run spent all three rounds rewriting the lesson over a quiz-side slip.
+    made = {f"prompt:{x.id}" for x in prompts} | {f"task:{x.id}" for x in tasks}
+    made |= {f"exercise:{x.id}" for x in exercises} | {f"experiment:{x.id}" for x in experiments}
+    # Visuals are drawn after this check, so a "visual:0" the model sequenced is not there yet.
+    made |= {f"visual:{i}" for i in range(len(concept.visuals))}
+    sequence = [
+        s
+        for s in sequence
+        if s in made
+        or s.split(":", 1)[0] not in {"prompt", "task", "exercise", "experiment", "visual"}
+    ]
     if any(problems.values()):
         return None, problems
     try:
@@ -512,6 +630,8 @@ def build_concept(
                 "pitfalls": lesson.get("pitfalls", []),
                 "quiz": parsed,
                 "prompts": prompts,
+                "tasks": tasks,
+                "sequence": sequence,
                 "exercises": exercises,
                 "experiments": experiments,
                 "provenance": Provenance(
@@ -528,13 +648,63 @@ def build_concept(
         return None, {"lesson": detail, "quiz": []}
 
 
+_ATOM_KEYS = set(Atom.model_fields)
+_STEP_KEYS = set(Step.model_fields)
+INTERACTIVE = {"faded", "visualizer", "trace", "predict", "debug", "explanation", "classify"}
+
+
+def tidy_atom(atom):
+    """Deterministic repairs of an atom the model got almost right, instead of a new round:
+    unknown keys dropped, a missing or out-of-range duration set within bounds, a hook cut to
+    its first two sentences, checks too short to be questions dropped, and an interactive
+    atom left without any check (or a micro-lesson without a misconception) shown as a plain
+    concept card. Nothing a learner is graded on is invented."""
+    if not isinstance(atom, dict):
+        return atom
+    out = {k: v for k, v in atom.items() if k in _ATOM_KEYS}
+    if isinstance(out.get("id"), str):  # "Hook_1" or "atom 2" -> a valid kebab-case id
+        slug = re.sub(r"[^a-z0-9]+", "-", out["id"].lower()).strip("-")
+        out["id"] = (slug if slug[:1].isalpha() else f"a-{slug}")[:64] or "atom"
+    seconds = out.get("seconds")
+    out["seconds"] = min(120, max(10, seconds)) if isinstance(seconds, int) else 60
+    if isinstance(out.get("steps"), list):
+        out["steps"] = [
+            {k: v for k, v in s.items() if k in _STEP_KEYS}
+            for s in out["steps"]
+            if isinstance(s, dict) and len(str(s.get("prompt", "")).strip()) >= 5
+        ]
+    if out.get("kind") == "hook" and isinstance(out.get("body"), str):
+        sentences = re.split(r"(?<=[.!?])\s+", out["body"].strip())
+        out["body"] = " ".join(sentences[:2])
+    if not str(out.get("body", "")).strip() and str(out.get("why", "")).strip():
+        out["body"] = out["why"]
+    limit = 80 if out.get("kind") == "pattern" else 120
+    if isinstance(out.get("body"), str) and len(out["body"].split()) > limit:
+        kept: list[str] = []
+        for sentence in re.split(r"(?<=[.!?])\s+", out["body"].strip()):
+            if len(" ".join([*kept, sentence]).split()) > limit:
+                break
+            kept.append(sentence)
+        out["body"] = " ".join(kept) or " ".join(out["body"].split()[:limit])
+    if (out.get("kind") in INTERACTIVE and not out.get("steps")) or (
+        out.get("kind") == "micro" and not out.get("misconception")
+    ):
+        out["kind"] = "concept"
+        out.pop("adapters", None)
+    return out
+
+
 def build_atoms(
     course: Course, concept: Concept, atoms: dict, version: int, languages: Sequence[str] = ()
 ):
     """A draft pack, or (None, problems). ``languages``: code adapters allowed (and needed in
     each of them); their output is filled in by ``run_code``."""
     found = atoms.get("atoms")
-    raw: list = found if isinstance(found, list) else []
+    raw: list = [tidy_atom(a) for a in found[:8]] if isinstance(found, list) else []
+    # An atom with nothing for the learner to read is dropped while enough remain.
+    filled = [a for a in raw if not isinstance(a, dict) or str(a.get("body", "")).strip()]
+    if len(filled) >= 3:
+        raw = filled
     problems: list[str] = []
     if not 3 <= len(raw) <= 8:
         problems.append(f"Write 4-8 atoms; got {len(raw)}.")
@@ -634,6 +804,29 @@ def release_pack(pack: AtomPack, reviewer: str, summary: str) -> AtomPack:
 async def broken_links(lesson: dict, client=None) -> list[str]:
     urls = [r.get("url", "") for r in lesson.get("resources", []) if isinstance(r, dict)]
     return await links.broken(urls, client) if urls else []
+
+
+def imprecise_notes(facts: dict | None) -> dict[str, list[str]]:
+    """Revision notes for fact claims judged imprecise: wording that overstates or leaves a
+    wrong impression, but is not wrong. A package carrying only these passes ``verdict``; it is
+    worth one more round (``jobs.run_package``), not a block. Incorrect claims are not here:
+    they fail the package outright."""
+    notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
+    for claim in (facts or {}).get("claims", []):
+        if not isinstance(claim, dict) or claim.get("verdict") != "imprecise":
+            continue
+        where = str(claim.get("where", "lesson"))
+        target = (
+            "quiz"
+            if where.startswith("quiz")
+            else "atoms"
+            if where.startswith("atom")
+            else "lesson"
+        )
+        notes[target].append(
+            f"[imprecise] {where}: {claim.get('claim', '')} → {claim.get('correction', '')}"
+        )
+    return notes
 
 
 def verdict(
