@@ -17,9 +17,14 @@ from socrat.models import CompanySprint, FocusSprint, LinkedAccount, now
 
 
 def in_a_library_course(request: Request) -> None:
-    """The library belongs to the programming courses; another course's Practice is its own."""
+    """The library belongs to the programming courses; another course's Practice is its own.
+    Public endpoints (stats) stay open: only a signed-in learner in another course is refused."""
     with Session(engine(request)) as db:
-        require_feature(db, user_of(request, db), "library")
+        try:
+            user = user_of(request, db)
+        except HTTPException:
+            return  # not signed in: each endpoint applies its own sign-in rule
+        require_feature(db, user, "library")
 
 
 router = APIRouter(prefix="/api/v1/library", dependencies=[Depends(in_a_library_course)])

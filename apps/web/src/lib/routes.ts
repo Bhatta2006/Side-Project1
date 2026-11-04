@@ -38,6 +38,7 @@ export const NAME = {
   evidence: 'Evidence',
   settings: 'Settings',
   problems: 'Problems',
+  practiceSets: 'Practice sets',
   companies: 'Company questions',
   sprint: 'Focus sprint',
   companySprint: 'Company sprint',
@@ -58,19 +59,22 @@ export const NAV: { key: NavKey; href: string; label: string; owns: string[] }[]
 ];
 
 /**
- * The six destinations for a course. The spine never changes; the Practice slot follows the
- * course: the problem library for the programming courses, and the course's own studio
- * (practice sets written for it, plus its Workbench, Lab or Notebook tools) for every other.
+ * The six destinations, the same for every course. Practice always opens the one Practice page
+ * (practice sets written for the course, then whatever extras it has); a course with its own
+ * studio (Workbench, Lab, Notebook) gives the slot its name.
  */
-export function navItems(shape?: { studio: string; name: string } | null, features?: CourseFeatures | null): typeof NAV {
-  const library = features ? features.library : !shape || shape.studio === 'code';
-  if (library) return NAV;
+export function navItems(shape?: { studio: string; name: string } | null, _features?: CourseFeatures | null): typeof NAV {
   const label = shape && shape.studio !== 'code' ? shape.name : NAME.practice;
   return NAV.map(item => (item.key === 'practice' ? { ...item, href: '/studio', label } : item));
 }
 
-/** Practice in a library course: up to four views, each a real route. */
+/**
+ * Practice is the same page for every course. Practice sets (questions written for the course)
+ * come first everywhere; a programming course adds its problem library and sprints, and DSA
+ * its company questions. Each segment is a real route.
+ */
 export const PRACTICE_SEGMENTS: { href: string; label: string; needs: keyof CourseFeatures }[] = [
+  { href: '/studio', label: NAME.practiceSets, needs: 'drills' },
   { href: '/library', label: NAME.problems, needs: 'library' },
   { href: '/companies', label: NAME.companies, needs: 'companies' },
   { href: '/company-sprint', label: NAME.companySprint, needs: 'companies' },

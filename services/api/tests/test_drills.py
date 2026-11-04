@@ -141,8 +141,9 @@ def test_without_a_model_the_topics_own_concept_checks_are_used(client, monkeypa
         )
 
 
-def test_programming_courses_practise_in_the_library_not_here(client):  # noqa: F811
+def test_programming_courses_get_practice_sets_too_but_only_dsa_company_questions(client):  # noqa: F811
     headers = login(client, subject="ada", name="Ada")
     onboard(client, headers)
-    response = client.get("/api/v1/drills", headers=headers)
-    assert response.status_code == 404 and response.json()["error"]["code"] == "not_in_course"
+    overview = client.get("/api/v1/drills", headers=headers)
+    assert overview.status_code == 200
+    assert all(c["concept"].startswith("zero:") for c in overview.json()["concepts"])

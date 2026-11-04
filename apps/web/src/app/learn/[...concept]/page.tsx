@@ -483,8 +483,9 @@ export default function Lesson() {
               <Section id="judged-heading" title="Practice problems">
                 <p className="text-[15px] text-muted-foreground">No judged problems for this skill yet. The concept check shows what you know; for practice, try the <Link href={`/library?concept=${concept.id}`} className="font-semibold underline underline-offset-4">external problems</Link> or ask Soc.</p>
               </Section>
-            ) : features.drills ? (
-              <Section id="judged-heading" title="Practise this topic">
+            ) : null}
+            {features.drills ? (
+              <Section id="drills-heading" title="Practise this topic">
                 <p className="mb-3 text-[15px] text-muted-foreground">Fresh questions on {concept.title}, written for your course. Answer them one at a time and earn stars.</p>
                 <Button asChild><Link href={`/studio?concept=${encodeURIComponent(concept.id)}`}>Practise {concept.title}</Link></Button>
               </Section>

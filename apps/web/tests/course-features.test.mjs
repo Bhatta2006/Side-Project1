@@ -2,35 +2,29 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { featuresFor, practiceHref } from '../src/lib/course-features.ts';
-import { navItems } from '../src/lib/routes.ts';
+import { PRACTICE_SEGMENTS, navItems } from '../src/lib/routes.ts';
 
-const reading = { studio: 'reading', loop: 'read-reflect', evidence: ['quiz'], tools: [], name: 'Notebook' };
+const reading = { studio: 'reading', loop: 'read-reflect', evidence: ['quiz'], tools: [], name: 'Math Quest' };
 const code = { studio: 'code', loop: 'solve', evidence: ['tests'], tools: ['editor'], name: 'Practice' };
+const tabs = features => PRACTICE_SEGMENTS.filter(s => features[s.needs]).map(s => s.label);
 
-test('company questions belong to DSA alone', () => {
-  assert.equal(featuresFor('dsa', code).companies, true);
-  assert.equal(featuresFor('cp', code).companies, false);
-  assert.equal(featuresFor('zero', code).companies, false);
-  assert.equal(featuresFor('kids-math', reading).companies, false);
+test('every course practises on the same page, with questions written for it', () => {
+  for (const [course, shape] of [['kids-math', reading], ['dsa', code], ['zero', code], ['rust-web', code]]) {
+    const features = featuresFor(course, shape);
+    assert.equal(features.drills, true, course);
+    assert.equal(practiceHref(features), '/studio');
+    assert.equal(navItems(shape, features).find(item => item.key === 'practice').href, '/studio');
+  }
+  assert.equal(navItems(reading).find(item => item.key === 'practice').label, 'Math Quest');
 });
 
-test('a non-code course has no editor, library or Codeforces, and practises with its own sets', () => {
+test('only the extras a course has: company questions in DSA alone', () => {
+  assert.deepEqual(tabs(featuresFor('kids-math', reading)), ['Practice sets']);
+  assert.deepEqual(tabs(featuresFor('zero', code)), ['Practice sets', 'Problems', 'Focus sprint']);
+  assert.deepEqual(tabs(featuresFor('cp', code)), ['Practice sets', 'Problems', 'Focus sprint']);
+  assert.deepEqual(tabs(featuresFor('dsa', code)), ['Practice sets', 'Problems', 'Company questions', 'Company sprint', 'Focus sprint']);
   const math = featuresFor('kids-math', reading);
-  assert.deepEqual(math, { code: false, library: false, companies: false, codeforces: false, drills: true });
-  assert.equal(practiceHref(math), '/studio');
-  const practice = navItems(reading, math).find(item => item.key === 'practice');
-  assert.equal(practice.href, '/studio');
-  assert.equal(practice.label, 'Notebook');
-});
-
-test('the programming courses keep the problem library', () => {
-  const dsa = featuresFor('dsa', code);
-  assert.equal(practiceHref(dsa), '/library');
-  assert.equal(navItems(code, dsa).find(item => item.key === 'practice').href, '/library');
-  // A generated code course has no library: it practises with its own sets under the usual name.
-  const rust = featuresFor('rust-web', code);
-  assert.equal(rust.library, false);
-  assert.deepEqual(navItems(code, rust).find(item => item.key === 'practice'), { ...navItems(code, dsa).find(i => i.key === 'practice'), href: '/studio' });
+  assert.equal(math.code || math.library || math.companies || math.codeforces, false);
 });
 
 test('the API answer wins when it is sent', () => {

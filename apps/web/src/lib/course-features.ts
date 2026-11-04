@@ -17,11 +17,11 @@ export function featuresFor(course: string | null | undefined, shape?: CourseSha
     library,
     companies: code && course === 'dsa',
     codeforces: code && (course === 'dsa' || course === 'cp'),
-    drills: !!course && !library,
+    drills: !!course,
   };
 }
 
-/** Where the Practice slot opens for this course. */
-export function practiceHref(features: CourseFeatures): string {
-  return features.library ? '/library' : '/studio';
+/** Where the Practice slot opens: the same page for every course. */
+export function practiceHref(_features?: CourseFeatures): string {
+  return '/studio';
 }

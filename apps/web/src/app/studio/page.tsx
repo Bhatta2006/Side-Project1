@@ -1,37 +1,37 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { useGuard } from '@/lib/session';
 import { useCourse } from '@/lib/course';
 import { NAME } from '@/lib/routes';
 import { Loading, Page, PageHeader } from '@/components/common';
+import { PracticeNav } from '@/components/socrat/practice-nav';
 import { Badge } from '@/components/ui/badge';
 import { Drills } from '@/components/studio/drills';
 import { EVIDENCE_TEXT, LOOP_TEXT, STUDIOS } from '@/components/studio/registry';
 
 /**
- * Practice for every course that is not practised in the problem library: practice sets
- * written for this course, then the studio's own tools (math workbench, physics lab) if it has
- * them. Nothing from another course (company questions, Codeforces, a code editor) shows here.
+ * Practice, the same page for every course: practice sets written for the learner's course,
+ * then the course's own tools (math workbench, physics lab) if it has them. The tabs above add
+ * only the extras the course has (the problem library in programming courses, company
+ * questions in DSA); nothing from another course shows here.
  */
-function StudioPage() {
+function PracticePage() {
   const allowed = useGuard('active');
   const { shape, features, ready } = useCourse();
-  const router = useRouter();
   const concept = useSearchParams().get('concept') ?? undefined;
-  // Programming courses practise in the library.
-  useEffect(() => { if (allowed && ready && features.library) router.replace('/library'); }, [allowed, ready, features.library, router]);
-  if (!allowed || !ready || features.library) return <Loading variant="article" label="Opening practice" />;
+  if (!allowed || !ready) return <Loading variant="article" label="Opening practice" />;
 
   const studio = shape && shape.studio !== 'code' ? shape : null;
   const Tools = studio && studio.studio !== 'reading' ? STUDIOS[studio.studio] : undefined;
   return (
     <Page>
+      <PracticeNav />
       <PageHeader
         eyebrow={NAME.practice}
-        title={studio?.name ?? NAME.practice}
-        description={studio ? LOOP_TEXT[studio.loop] ?? '' : 'Practise the topics you have opened with questions written for your course.'}
+        title={studio?.name ?? NAME.practiceSets}
+        description={studio ? LOOP_TEXT[studio.loop] ?? '' : 'Fresh questions written for your course, on any topic you have opened.'}
       />
       {studio ? (
         <section aria-labelledby="proof" className="mb-8 grid gap-2">
@@ -52,6 +52,6 @@ function StudioPage() {
   );
 }
 
-export default function Studio() {
-  return <Suspense fallback={<Loading variant="article" label="Opening practice" />}><StudioPage /></Suspense>;
+export default function Practice() {
+  return <Suspense fallback={<Loading variant="article" label="Opening practice" />}><PracticePage /></Suspense>;
 }

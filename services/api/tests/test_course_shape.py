@@ -142,6 +142,6 @@ def test_only_dsa_offers_company_questions_and_only_code_courses_the_library(cli
         )
         features = client.get("/api/v1/auth/status").json()["profile"]["enrollment"]["features"]
         assert features == dict(
-            code=True, library=True, companies=companies, codeforces=codeforces, drills=False
+            code=True, library=True, companies=companies, codeforces=codeforces, drills=True
         ), course
         assert client.get("/api/v1/library/meta", headers=headers).status_code == 200

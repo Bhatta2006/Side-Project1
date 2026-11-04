@@ -33,19 +33,15 @@ interface Step {
 
 /** The Practice step describes the learner's own course's Practice, nothing from another course. */
 function practiceStep(features: CourseFeatures, studio?: string): Step {
-  if (features.library) {
-    return {
-      route: '/library', nav: 'practice', target: 'practice-nav',
-      title: NAME.practice,
-      body: features.companies
-        ? 'Problems from LeetCode, CSES and Codeforces matched to the skills you have unlocked, plus company questions and timed focus sprints.'
-        : 'Problems from LeetCode, CSES and Codeforces matched to the skills you have unlocked, plus timed focus sprints.',
-    };
-  }
+  const extras = features.companies
+    ? ' The tabs above add problems from LeetCode, CSES and Codeforces, company questions and timed sprints.'
+    : features.library
+      ? ' The tabs above add problems from LeetCode, CSES and Codeforces and timed focus sprints.'
+      : '';
   return {
-    route: '/studio', nav: 'practice',
+    route: '/studio', nav: 'practice', target: features.library ? 'practice-nav' : undefined,
     title: studio ?? NAME.practice,
-    body: 'Pick any topic you have opened and Socrat writes fresh practice questions for your course. Earn stars and keep your streak going.',
+    body: `Pick any topic you have opened and Socrat writes fresh practice questions for your course. Earn stars and keep your streak going.${extras}`,
   };
 }
 
@@ -70,7 +66,7 @@ const STEPS: Step[] = [
     title: NAME.skills,
     body: 'Your course roadmap. Lessons teach each skill, then a check or checkpoint proves it before the next one unlocks.',
   },
-  { route: '/library', nav: 'practice', title: NAME.practice, body: '' }, // replaced per course
+  { route: '/studio', nav: 'practice', title: NAME.practice, body: '' }, // replaced per course
   {
     route: '/playground', nav: 'playground', target: 'playground-ask',
     title: NAME.playground,

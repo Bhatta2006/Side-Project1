@@ -420,6 +420,16 @@ export default function TodayPage() {
             {/* Practice: problems picked for you, skills worth learning, and the Playground. */}
             <TabsContent value="practice" className="grid gap-3 sm:gap-4 lg:grid-cols-12 lg:gap-6">
               <div className="grid min-w-0 content-start gap-4 lg:col-span-8">
+                <Link href="/studio" className="paper group flex flex-col gap-2 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
+                  <span className="type-label text-brand">{NAME.practice}</span>
+                  <span className="flex items-end justify-between gap-3">
+                    <span className="grid gap-1">
+                      <span className="font-display text-xl font-semibold tracking-[-0.03em]">Practise what you have learned</span>
+                      <span className="text-[15px] text-muted-foreground">Fresh questions written for your course, on any topic you have opened.</span>
+                    </span>
+                    <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  </span>
+                </Link>
                 {recs?.problems.length ? (
                   <section aria-labelledby="practice-heading" className="min-w-0">
                     <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -439,20 +449,7 @@ export default function TodayPage() {
                       ))}
                     </ul>
                   </section>
-                ) : !library ? (
-                  <Link href="/studio" className="paper group flex flex-col gap-2 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
-                    <span className="type-label text-brand">{NAME.practice}</span>
-                    <span className="flex items-end justify-between gap-3">
-                      <span className="grid gap-1">
-                        <span className="font-display text-xl font-semibold tracking-[-0.03em]">Practise what you have learned</span>
-                        <span className="text-[15px] text-muted-foreground">Fresh questions written for your course, on any topic you have opened.</span>
-                      </span>
-                      <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                    </span>
-                  </Link>
-                ) : (
-                  <p className="rounded-card border border-dashed px-5 py-6 text-[15px] text-muted-foreground">Practice picks appear here once you have studied a skill.</p>
-                )}
+                ) : null}
                 {recs?.topics.length ? (
                   <Card aria-labelledby="learn-next-heading">
                     <div className="px-(--card-spacing)">

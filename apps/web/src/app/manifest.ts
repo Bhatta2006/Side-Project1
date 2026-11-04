@@ -21,7 +21,7 @@ export default function manifest(): MetadataRoute.Manifest {
     shortcuts: [
       { name: 'Today', url: '/today?source=app' },
       { name: 'Skills', url: '/plan?source=app' },
-      { name: 'Practice', url: '/library?source=app' },
+      { name: 'Practice', url: '/studio?source=app' },
     ],
   };
 }

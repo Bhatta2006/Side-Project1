@@ -83,8 +83,9 @@ def effective(course) -> CourseShape:
 
 # The external practice library (LeetCode, CSES, Codeforces), focus sprints and the Codeforces
 # link belong to the hand-authored programming courses; company questions to DSA alone. Every
-# other course practises with questions written for it (socrat.drills), so a children's math
-# course never shows interview banks or a programming-language choice.
+# course, these included, practises with questions written for it (socrat.drills): one
+# Practice page for all, with only the extras a course has, so a children's math course never
+# shows interview banks or a programming-language choice.
 LIBRARY_COURSES = frozenset({"zero", "dsa", "cp"})
 COMPANY_COURSES = frozenset({"dsa"})
 RATED_COURSES = frozenset({"dsa", "cp"})
@@ -100,7 +101,7 @@ def features(course_id: str | None, chosen: CourseShape | None = None) -> dict[s
         library=library,  # external problems, recommendations, focus sprints
         companies=course_id in COMPANY_COURSES and code,  # company questions and sprints
         codeforces=course_id in RATED_COURSES and code,  # the rated handle link
-        drills=course_id is not None and not library,  # questions generated for the course
+        drills=course_id is not None,  # practice sets written for the course, for every course
     )
 
 

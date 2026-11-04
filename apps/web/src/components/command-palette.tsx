@@ -23,7 +23,7 @@ const PAGES: { href: string; label: string; icon: typeof House; keywords: string
   { href: '/today', label: NAME.today, icon: House, keywords: 'home dashboard' },
   { href: '/plan', label: NAME.skills, icon: Route, keywords: 'plan roadmap modules schedule' },
   { href: '/library', label: NAME.problems, icon: SquareCode, keywords: 'practice library', needs: 'library' },
-  { href: '/studio', label: NAME.practice, icon: Sparkles, keywords: 'practice questions quiz drill', needs: 'drills' },
+  { href: '/studio', label: NAME.practiceSets, icon: Sparkles, keywords: 'practice questions quiz drill', needs: 'drills' },
   { href: '/companies', label: NAME.companies, icon: Building2, keywords: 'interview bank', needs: 'companies' },
   { href: '/sprint', label: NAME.sprint, icon: Timer, keywords: 'timer clock', needs: 'library' },
   { href: '/playground', label: NAME.playground, icon: Shapes, keywords: 'visual explain' },

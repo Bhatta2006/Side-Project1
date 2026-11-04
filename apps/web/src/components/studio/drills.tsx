@@ -211,7 +211,7 @@ function QuestionCard({ setId, question, number, total, onAnswered, onNext }: {
   return (
     <section className="paper grid gap-5 rounded-card p-5 sm:p-7" aria-labelledby={`q-${question.index}`}>
       <p className="text-sm font-semibold text-muted-foreground tabular-nums">Question {number} of {total}</p>
-      <h3 id={`q-${question.index}`} className="text-xl font-semibold text-pretty sm:text-2xl">{question.prompt}</h3>
+      <h3 id={`q-${question.index}`} className="text-xl font-semibold whitespace-pre-wrap text-pretty sm:text-2xl">{question.prompt}</h3>
 
       {question.kind === 'choice' ? (
         <div className="grid gap-2 sm:grid-cols-2">
