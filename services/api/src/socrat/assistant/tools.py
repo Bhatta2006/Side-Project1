@@ -21,7 +21,7 @@ from socrat.adaptive import service as adaptive
 from socrat.adaptive.suggest import Draft
 from socrat.assessments import service as assessments
 from socrat.assistant.gateway import ToolSpec
-from socrat.catalog import practice
+from socrat.catalog import practice, shape
 from socrat.catalog.registry import Catalog
 from socrat.learn import service as learn
 from socrat.library import recommend
@@ -302,6 +302,26 @@ def resolve_concept(catalog: Catalog, value: str) -> str | None:
     return best
 
 
+# Tools that only make sense for some courses, and the course feature each needs.
+COURSE_TOOLS = {
+    "recommend_problems": "library",
+    "search_library": "library",
+    "save_problems": "library",
+    "get_codeforces_profile": "codeforces",
+}
+
+
+def course_features(bind: Engine | None, catalog: Catalog, user_id: str) -> dict[str, bool]:
+    if bind is None:  # no database (tool listings in tests): nothing to look up
+        return dict(code=True, library=True, companies=True, codeforces=True, drills=False)
+    with Session(bind) as db:
+        enrollment = learn.active_enrollment(db, user_id)
+        course_id = enrollment.course_id if enrollment else None
+    if course_id is None:  # not enrolled yet: nothing is hidden, the tools report it
+        return dict(code=True, library=True, companies=True, codeforces=True, drills=False)
+    return shape.features_of(catalog, course_id)
+
+
 class Toolbox:
     def __init__(self, bind: Engine, catalog: Catalog, user_id: str, engine_tools: bool = False):
         self.bind = bind
@@ -313,7 +333,12 @@ class Toolbox:
             if engine_tools
             else {}
         )
-        self.specs = TOOLS + [
+        # Only the tools for the learner's own course: a math course has no problem library
+        # and no Codeforces, so Soc cannot pitch LeetCode problems to it.
+        offered = course_features(bind, catalog, user_id)
+        hidden = {name for name, needs in COURSE_TOOLS.items() if not offered[needs]}
+        self.hidden = hidden
+        self.specs = [t for t in TOOLS if t.name not in hidden] + [
             ToolSpec(c.tool_name, c.summary, c.parameters) for c in self.verified.values()
         ]
 
@@ -326,7 +351,7 @@ class Toolbox:
         return await asyncio.to_thread(self._run, name, arguments)
 
     def _run(self, name: str, arguments: dict) -> tuple[str, bool]:
-        handler = getattr(self, f"_{name}", None)
+        handler = None if name in self.hidden else getattr(self, f"_{name}", None)
         if handler is None:
             return f"Unknown tool {name!r}.", True
         with Session(self.bind) as db, db.begin():

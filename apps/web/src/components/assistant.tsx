@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api, explain, stream } from '@/lib/api';
-import { useSession } from '@/lib/session';
+import { useCourse } from '@/lib/course';
 import type { ChatMessage, Proposal, ProposalsView } from '@/lib/types';
 import { ProposalList } from '@/components/socrat/proposals';
 import { ArrowLeft, BookOpen, Check, History, Lightbulb, SendHorizontal, SquarePen, ThumbsDown, ThumbsUp, X } from 'lucide-react';
@@ -67,9 +67,8 @@ const STARTERS_NO_CODE: Record<string, string[]> = {
 
 export default function Assistant({ scope, title, language, context, onSent, openSignal = 0, launcher: showLauncher = true }: Props) {
   const problem = scope.startsWith('problem:');
-  // No shape means a programming course (the field is only sent once studios are on).
-  const studio = useSession().profile?.enrollment?.shape?.studio;
-  const coding = !studio || studio === 'code';
+  // Problem picks and the practice library exist only in the programming courses.
+  const coding = useCourse().features.library;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [ladder, setLadder] = useState<Ladder>({});

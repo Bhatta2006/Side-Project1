@@ -20,8 +20,58 @@ export interface Enrollment {
   weekdays: number[];
   goal: Record<string, string | number>;
   level: string;
-  /** Only sent for accounts the studios are enabled for; absent means a programming course. */
+  /** How the course is practised; absent (an older API) means a programming course. */
   shape?: CourseShape | null;
+  /** What the course's Practice area offers; see useCourse in lib/course.ts. */
+  features?: CourseFeatures;
+}
+
+export interface CourseFeatures {
+  /** A code editor and a programming-language choice. */
+  code: boolean;
+  /** External problems (LeetCode, CSES, Codeforces), recommendations and focus sprints. */
+  library: boolean;
+  /** Company questions and company sprints (DSA only). */
+  companies: boolean;
+  /** The Codeforces handle link. */
+  codeforces: boolean;
+  /** Practice sets written for this course by Socrat. */
+  drills: boolean;
+}
+
+export interface DrillQuestion {
+  index: number;
+  kind: 'choice' | 'number' | 'text';
+  prompt: string;
+  options: string[];
+  hint: string;
+  given?: string;
+  correct?: boolean;
+  expected?: string;
+  explanation?: string;
+}
+
+export interface DrillSummary {
+  id: string;
+  concept: string;
+  title: string;
+  created_at: number;
+  questions: number;
+  answered: number;
+  correct: number;
+}
+
+export interface DrillSet extends DrillSummary {
+  items: DrillQuestion[];
+  /** "checks": no model was available, so the topic's own concept checks were used. */
+  source: 'model' | 'checks';
+}
+
+export interface DrillOverview {
+  course: string;
+  concepts: { concept: string; title: string; locked: boolean }[];
+  sets: DrillSummary[];
+  per_day: number;
 }
 
 export interface Profile {

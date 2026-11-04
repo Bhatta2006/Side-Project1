@@ -1,4 +1,4 @@
-"""Lab API (admins only while the studios are tested)."""
+"""Lab API, for learners whose course is practised in the lab (and admins)."""
 
 import re
 
@@ -12,8 +12,7 @@ from socrat.learn.graded import attempts_today
 from socrat.learn.graded_routes import ATTEMPTS_PER_DAY, graded
 from socrat.learn.routes import active, catalog, engine, user_of
 from socrat.models import Enrollment, need, now
-from socrat.style import access
-from socrat.workbench.routes import CONCEPT
+from socrat.workbench.routes import CONCEPT, studio_allowed
 
 router = APIRouter(prefix="/api/v1/lab")
 
@@ -40,8 +39,8 @@ class Explanation(BaseModel):
     answer: str = Field(min_length=1, max_length=2000)
 
 
-def _allowed(request: Request, user) -> None:
-    if not access.enabled(request.app.state.settings, user):
+def _allowed(request: Request, user, db: Session) -> None:
+    if not studio_allowed(request, db, user, "lab"):
         raise HTTPException(404, "not_found")
 
 
@@ -50,7 +49,7 @@ def index(request: Request):
     """The active course's topics that have experiments, so the studio can offer a choice."""
     with Session(engine(request)) as db:
         user = user_of(request, db)
-        _allowed(request, user)
+        _allowed(request, user, db)
         cat = catalog()
         enrollment = active(db, user)
         locked = learn.locked_concepts(db, cat, enrollment, now())
@@ -74,7 +73,7 @@ def experiments(course: str, concept: str, request: Request):
     qualified = f"{course}:{concept}"
     with Session(engine(request)) as db:
         user = user_of(request, db)
-        _allowed(request, user)
+        _allowed(request, user, db)
         cat = catalog()
         if qualified not in cat.concepts:
             raise HTTPException(404, "not_found")
@@ -100,7 +99,7 @@ def experiments(course: str, concept: str, request: Request):
 def predict(body: Prediction, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
-        _allowed(request, user)
+        _allowed(request, user, db)
         cat = catalog()
         experiment = service.find(cat, body.concept, body.experiment)
         if experiment is None:
@@ -117,7 +116,7 @@ def vary(body: Variation, request: Request):
     """Change any parameters and re-run; only after the learner has predicted."""
     with Session(engine(request)) as db:
         user = user_of(request, db)
-        _allowed(request, user)
+        _allowed(request, user, db)
         cat = catalog()
         experiment = service.find(cat, body.concept, body.experiment)
         if experiment is None:
@@ -142,7 +141,7 @@ async def explain(body: Explanation, request: Request):
     activity = f"lab-explain:{body.concept}:{experiment.id}"
     with Session(engine(request)) as db:
         user = user_of(request, db, write=True)
-        _allowed(request, user)
+        _allowed(request, user, db)
         enrollment = active(db, user)
         learn.require_unlocked(db, cat, enrollment, body.concept, stamp)
         prediction = service.recorded(db, enrollment, body.concept, experiment)

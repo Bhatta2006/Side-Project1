@@ -32,8 +32,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { NAV, navFor, navItems, type NavKey } from '@/lib/routes';
+import { COURSE_ROUTES, NAV, navFor, navItems, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
+import { practiceHref, useCourse } from '@/lib/course';
 import { NavLabel } from '@/components/nav-label';
 import { PLAN_NAME } from '@/lib/plans';
 import { useInstall } from '@/lib/pwa';
@@ -185,6 +186,21 @@ function Momentum() {
   );
 }
 
+/**
+ * A page that belongs to another kind of course (company questions in a children's math
+ * course, the problem library in a Kannada course) sends the learner to their own Practice.
+ */
+function useCourseRoutes(learning: boolean) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { features, ready } = useCourse();
+  useEffect(() => {
+    if (!learning || !ready) return;
+    const foreign = COURSE_ROUTES.find(r => (pathname === r.root || pathname.startsWith(`${r.root}/`)) && !features[r.needs]);
+    if (foreign) router.replace(practiceHref(features));
+  }, [learning, ready, pathname, features, router]);
+}
+
 /** Whether this week's assessment is waiting: shown as a dot on Evidence. */
 function useAssessmentReady(learning: boolean) {
   const pathname = usePathname();
@@ -244,6 +260,7 @@ function PlanCard({ collapsed }: { collapsed: boolean }) {
 /** Desktop: 248 px sidebar, collapsible to a 72 px rail. Tablet: rail only. */
 function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null; collapsed: boolean; onToggle: () => void; ready: boolean }) {
   const { profile } = useSession();
+  const course = useCourse();
   const [mac, setMac] = useState(false);
   useEffect(() => setMac(/Mac|iPhone|iPad/.test(navigator.platform)), []);
   return (
@@ -264,7 +281,7 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
       </div>
       <nav aria-label="Main" className="flex-1 px-3 pt-2">
         <ul className="grid gap-1">
-          {navItems(profile?.enrollment?.shape).map(item => {
+          {navItems(profile?.enrollment?.shape, course.features).map(item => {
             const Icon = iconFor(item, profile?.enrollment?.shape?.studio);
             const current = active === item.key;
             const flagged = ready && item.key === 'evidence';
@@ -339,7 +356,8 @@ function Sidebar({ active, collapsed, onToggle, ready }: { active: NavKey | null
 /** Phone: five destinations. 64 px plus the safe area; active item has a brand pill behind its icon. */
 function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean }) {
   const { profile } = useSession();
-  const mobile = navItems(profile?.enrollment?.shape).filter(item => MOBILE_KEYS.includes(item.key));
+  const course = useCourse();
+  const mobile = navItems(profile?.enrollment?.shape, course.features).filter(item => MOBILE_KEYS.includes(item.key));
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
       <ul className="grid h-16 grid-cols-5">
@@ -411,6 +429,7 @@ export default function Shell({ children }: { children: ReactNode }) {
     try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === 'true'); } catch { /* default expanded */ }
   }, []);
   const ready = useAssessmentReady(learning);
+  useCourseRoutes(learning);
 
   if (!learning) return <MarketingShell>{children}</MarketingShell>;
 

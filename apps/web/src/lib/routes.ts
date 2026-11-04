@@ -1,4 +1,4 @@
-import type { ActivityKind } from './types';
+import type { ActivityKind, CourseFeatures } from './types';
 
 /** Activity ids look like `lesson:zero:variables-and-types`; URLs use path segments. */
 export function activityHref(id: string): string {
@@ -58,21 +58,33 @@ export const NAV: { key: NavKey; href: string; label: string; owns: string[] }[]
 ];
 
 /**
- * The six destinations for a course. The spine never changes; the Practice slot becomes the
- * course's own studio (Workbench, Lab, Notebook) when its shape is not code.
+ * The six destinations for a course. The spine never changes; the Practice slot follows the
+ * course: the problem library for the programming courses, and the course's own studio
+ * (practice sets written for it, plus its Workbench, Lab or Notebook tools) for every other.
  */
-export function navItems(shape?: { studio: string; name: string } | null): typeof NAV {
-  if (!shape || shape.studio === 'code') return NAV;
-  return NAV.map(item => (item.key === 'practice' ? { ...item, href: '/studio', label: shape.name } : item));
+export function navItems(shape?: { studio: string; name: string } | null, features?: CourseFeatures | null): typeof NAV {
+  const library = features ? features.library : !shape || shape.studio === 'code';
+  if (library) return NAV;
+  const label = shape && shape.studio !== 'code' ? shape.name : NAME.practice;
+  return NAV.map(item => (item.key === 'practice' ? { ...item, href: '/studio', label } : item));
 }
 
-/** Practice is one place with four views; each segment is a real route. */
-export const PRACTICE_SEGMENTS = [
-  { href: '/library', label: NAME.problems },
-  { href: '/companies', label: NAME.companies },
-  { href: '/company-sprint', label: NAME.companySprint },
-  { href: '/sprint', label: NAME.sprint },
-] as const;
+/** Practice in a library course: up to four views, each a real route. */
+export const PRACTICE_SEGMENTS: { href: string; label: string; needs: keyof CourseFeatures }[] = [
+  { href: '/library', label: NAME.problems, needs: 'library' },
+  { href: '/companies', label: NAME.companies, needs: 'companies' },
+  { href: '/company-sprint', label: NAME.companySprint, needs: 'companies' },
+  { href: '/sprint', label: NAME.sprint, needs: 'library' },
+];
+
+/** Routes that belong to one kind of course; another course is sent to its own Practice. */
+export const COURSE_ROUTES: { root: string; needs: keyof CourseFeatures }[] = [
+  { root: '/library', needs: 'library' },
+  { root: '/sprint', needs: 'library' },
+  { root: '/companies', needs: 'companies' },
+  { root: '/company-sprint', needs: 'companies' },
+  { root: '/problems', needs: 'code' },
+];
 
 export function navFor(pathname: string): NavKey | null {
   return NAV.find(item => item.owns.some(root => pathname === root || pathname.startsWith(`${root}/`)))?.key ?? null;

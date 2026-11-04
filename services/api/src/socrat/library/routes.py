@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -10,12 +10,19 @@ from socrat import entitlements
 from socrat.catalog import practice
 from socrat.database import record_event
 from socrat.learn import service as learn_service
-from socrat.learn.routes import active, catalog, engine, user_of
+from socrat.learn.routes import active, catalog, engine, require_feature, user_of
 from socrat.library import codeforces, company_sprint, sprints
 from socrat.library import service as library
 from socrat.models import CompanySprint, FocusSprint, LinkedAccount, now
 
-router = APIRouter(prefix="/api/v1/library")
+
+def in_a_library_course(request: Request) -> None:
+    """The library belongs to the programming courses; another course's Practice is its own."""
+    with Session(engine(request)) as db:
+        require_feature(db, user_of(request, db), "library")
+
+
+router = APIRouter(prefix="/api/v1/library", dependencies=[Depends(in_a_library_course)])
 SYNC_COOLDOWN_SECONDS = 600
 
 

@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
 from socrat.database import record_event
 from socrat.learn import achievements
@@ -109,7 +110,8 @@ def evidence(db: Session, catalog: Catalog, user: User, stamp: int) -> dict:
     return dict(
         base,
         course=course.title,
-        language=enrollment.language,
+        # A programming language means nothing on a math or Kannada passport.
+        language=enrollment.language if shape.effective(course).studio == "code" else None,
         mastered=mastered[:SKILL_LIMIT],
         practising=practising[:SKILL_LIMIT],
         counts=dict(

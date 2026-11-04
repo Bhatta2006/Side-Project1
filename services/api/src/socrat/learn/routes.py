@@ -202,11 +202,10 @@ def is_admin(request: Request, user: User) -> bool:
 
 
 def studios_for(request: Request, user: User) -> bool:
-    """Course studios (the dynamic Practice slot) are on for admin accounts only while tested,
-    and for everyone once learners can build their own courses: a learner's Kannada or drawing
-    course must not open on a code editor. Hand-authored code courses look the same either way."""
-    settings = request.app.state.settings
-    return settings.learning_requests_enabled or style_access.enabled(settings, user)
+    """Every learner gets the course's own shape: a children's math or Kannada course must never
+    open on a code editor, company questions or a programming-language choice. Hand-authored
+    code courses have the code shape, so they look the same as before."""
+    return True
 
 
 def profile_view(
@@ -237,6 +236,7 @@ def profile_view(
             goal=enrollment.goal,
             level=enrollment.level_id,
             shape=shape_view(enrollment.course_id) if studios else None,
+            features=shape.features_of(catalog(), enrollment.course_id),
         ),
     )
 
@@ -245,6 +245,14 @@ def shape_view(course_id: str) -> dict:
     course = catalog().courses.get(course_id)
     chosen = shape.effective(course) if course is not None else shape.CODE
     return chosen.model_dump(mode="json") | {"name": chosen.name}
+
+
+def require_feature(db: Session, user: User, feature: str) -> None:
+    """Refuse a Practice view the learner's course does not have (company questions for a math
+    course, say). Without an active course nothing is refused here; other guards apply."""
+    enrollment = learn.active_enrollment(db, user.id)
+    if enrollment is not None and not shape.features_of(catalog(), enrollment.course_id)[feature]:
+        raise HTTPException(404, "not_in_course")
 
 
 # ---------------------------------------------------------------- account
@@ -908,6 +916,7 @@ def companies(request: Request, q: str = "", limit: int = 60):
     index = practice.default_index()
     with Session(engine(request)) as db:
         user = user_of(request, db)
+        require_feature(db, user, "library")
         learner = library.learner_for(
             db, catalog(), user, learn.active_enrollment(db, user.id), now()
         )
@@ -956,6 +965,7 @@ def company(
     cat = catalog()
     with Session(engine(request)) as db:
         user = user_of(request, db)
+        require_feature(db, user, "library")
         entitlements.require(db, user.id, "companies")
         enrollment = learn.active_enrollment(db, user.id)
         states = learn.states_for(db, enrollment) if enrollment else {}

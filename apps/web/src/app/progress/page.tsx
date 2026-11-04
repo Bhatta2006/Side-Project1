@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
+import { useCourse } from '@/lib/course';
+import { cn } from '@/lib/utils';
 import { NAME, PACE_LABEL, conceptHref, formatDate, hours } from '@/lib/routes';
 import type { AssessmentStatus, ProgressView } from '@/lib/types';
 import { ErrorNote, Loading, Page, Ring, StatCard } from '@/components/common';
@@ -33,6 +35,7 @@ type TabId = (typeof TABS)[number];
 
 export default function ProgressPage() {
   const allowed = useGuard('active');
+  const { features } = useCourse();
   const [data, setData] = useState<ProgressView | null>(null);
   const [assessment, setAssessment] = useState<AssessmentStatus | null>(null);
   const [error, setError] = useState('');
@@ -97,13 +100,13 @@ export default function ProgressPage() {
           </div>
         </section>
 
-        <SolvedBoard />
+        {features.library ? <SolvedBoard /> : null}
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
-          <StatCard value={mastered} icon={<StatusIcon status="mastered" size={28} />} label="Skills mastered" hint="Evidence from checks, judged code and reviews passed the mastery threshold." />
+        <div className={cn('grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6', features.code ? 'lg:grid-cols-4' : 'lg:grid-cols-3')}>
+          <StatCard value={mastered} icon={<StatusIcon status="mastered" size={28} />} label="Skills mastered" hint={features.code ? 'Evidence from checks, judged code and reviews passed the mastery threshold.' : 'Evidence from checks and reviews passed the mastery threshold.'} />
           <StatCard value={due} icon={<StatusIcon status="review" size={28} />} label="Reviews due" hint="Spaced reviews that are due now." />
           <StatCard value={weak} icon={<StatusIcon status="needs_practice" size={28} />} label="Need practice" hint="Recent results show these are not holding yet." />
-          <StatCard value={data.solves.independent_solves} label="Problems solved without help" hint={`Accepted with no hints. ${data.solves.assisted_solves} more solved with help.`} />
+          {features.code ? <StatCard value={data.solves.independent_solves} label="Problems solved without help" hint={`Accepted with no hints. ${data.solves.assisted_solves} more solved with help.`} /> : null}
         </div>
 
         <Tabs value={tab} onValueChange={pick} className="gap-5">
@@ -187,7 +190,7 @@ export default function ProgressPage() {
                   })}
                 </ol>
               ) : (
-                <EmptyState as="h3" illustration={false} title="No results yet" className="mt-4 py-6">Finish a concept check or a problem to see results here.</EmptyState>
+                <EmptyState as="h3" illustration={false} title="No results yet" className="mt-4 py-6">{features.code ? 'Finish a concept check or a problem to see results here.' : 'Finish a concept check to see results here.'}</EmptyState>
               )}
             </section>
           </TabsContent>

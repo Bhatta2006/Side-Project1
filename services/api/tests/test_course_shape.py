@@ -93,7 +93,7 @@ def publish_physics(client, admin):  # noqa: F811
     assert client.post("/api/v1/admin/courses/ai-basics/publish", headers=admin).status_code == 200
 
 
-def test_only_admin_accounts_get_the_studio_so_other_learners_see_no_change(client):  # noqa: F811
+def test_every_learner_gets_the_course_shape_and_its_practice_features(client):  # noqa: F811
     client.app.state.settings.admin_subjects = ["boss"]
     admin = login(client, subject="boss", name="Boss")
     publish_physics(client, admin)
@@ -101,11 +101,47 @@ def test_only_admin_accounts_get_the_studio_so_other_learners_see_no_change(clie
     mine = client.get("/api/v1/auth/status").json()["profile"]["enrollment"]
     assert mine["shape"]["studio"] == "lab" and mine["shape"]["name"] == "Physics lab"
 
-    client.app.state.settings.style_engine_enabled = False  # the kill switch
-    assert client.get("/api/v1/auth/status").json()["profile"]["enrollment"]["shape"] is None
+    # The kill switch hides admin tools, never the course's shape: a physics course must not
+    # fall back to a code editor and company questions.
+    client.app.state.settings.style_engine_enabled = False
+    assert (
+        client.get("/api/v1/auth/status").json()["profile"]["enrollment"]["shape"]["studio"]
+        == "lab"
+    )
     client.app.state.settings.style_engine_enabled = True
 
     learner = login(client, subject="ada", name="Ada")
     onboard(client, learner, course="ai-basics")
     theirs = client.get("/api/v1/auth/status").json()["profile"]["enrollment"]
-    assert theirs["course"] == "ai-basics" and theirs["shape"] is None
+    assert theirs["course"] == "ai-basics" and theirs["shape"]["studio"] == "lab"
+    assert theirs["features"] == dict(
+        code=False, library=False, companies=False, codeforces=False, drills=True
+    )
+    # The lab opens for the learner whose course is a lab course.
+    assert client.get("/api/v1/lab", headers=learner).status_code == 200
+    # Another course's practice does not leak in: no library, no company questions.
+    for path in ("/api/v1/library/meta", "/api/v1/companies", "/api/v1/library/company-sprints"):
+        response = client.get(path, headers=learner)
+        assert (
+            response.status_code == 404 and response.json()["error"]["code"] == "not_in_course"
+        ), path
+
+
+def test_only_dsa_offers_company_questions_and_only_code_courses_the_library(client):  # noqa: F811
+    for course, companies, codeforces in (
+        ("zero", False, False),
+        ("dsa", True, True),
+        ("cp", False, True),
+    ):
+        headers = login(client, subject=f"learner-{course}", name="Learner")
+        onboard(
+            client,
+            headers,
+            course=course,
+            level="brand-new" if course == "zero" else "new-to-programming",
+        )
+        features = client.get("/api/v1/auth/status").json()["profile"]["enrollment"]["features"]
+        assert features == dict(
+            code=True, library=True, companies=companies, codeforces=codeforces, drills=False
+        ), course
+        assert client.get("/api/v1/library/meta", headers=headers).status_code == 200

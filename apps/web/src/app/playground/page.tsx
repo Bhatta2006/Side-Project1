@@ -408,7 +408,7 @@ export default function PlaygroundPage() {
               rows={3}
               className="min-h-28"
               aria-describedby="visual-request-help"
-              placeholder="Ask to see anything: how a jet engine works, why a wing lifts, how binary search narrows the range."
+              placeholder="Ask to see anything: how a jet engine works, why a wing lifts, how two fractions add up."
               onChange={event => setPrompt(event.target.value)}
               onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && canGenerate) { event.preventDefault(); void generate(prompt, level, mode); } }}
             />

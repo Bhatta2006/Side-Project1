@@ -1,4 +1,4 @@
-"""Workbench API (admins only while the studios are tested)."""
+"""Workbench API, for learners whose course is practised on the workbench (and admins)."""
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -24,8 +24,19 @@ class Attempt(BaseModel):
     give_up: bool = False
 
 
-def _allowed(request: Request, user) -> None:
-    if not access.enabled(request.app.state.settings, user):
+def studio_allowed(request: Request, db: Session, user, studio: str) -> bool:
+    """A learner whose course is practised in this studio, or an admin testing it."""
+    from socrat.catalog import shape
+
+    if access.enabled(request.app.state.settings, user):
+        return True
+    enrollment = learn.active_enrollment(db, user.id)
+    course = catalog().courses.get(enrollment.course_id) if enrollment else None
+    return course is not None and shape.effective(course).studio == studio
+
+
+def _allowed(request: Request, user, db: Session) -> None:
+    if not studio_allowed(request, db, user, "workbench"):
         raise HTTPException(404, "not_found")
 
 
@@ -35,7 +46,7 @@ def exercises(course: str, concept: str, request: Request):
     qualified = f"{course}:{concept}"
     with Session(engine(request)) as db:
         user = user_of(request, db)
-        _allowed(request, user)
+        _allowed(request, user, db)
         cat = catalog()
         if qualified not in cat.concepts:
             raise HTTPException(404, "not_found")
@@ -51,7 +62,7 @@ def exercises(course: str, concept: str, request: Request):
 def check(body: Attempt, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
-        _allowed(request, user)
+        _allowed(request, user, db)
         cat = catalog()
         exercise = service.find(cat, body.concept, body.exercise)
         enrollment = active(db, user)

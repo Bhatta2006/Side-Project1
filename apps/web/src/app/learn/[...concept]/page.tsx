@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp,
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
+import { useCourse } from '@/lib/course';
 import { useI18n } from '@/lib/i18n';
 import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@/lib/routes';
 import type { ConceptView, Resource } from '@/lib/types';
@@ -198,6 +199,7 @@ function Section({ id, title, children, collapsible = false }: { id: string; tit
 export default function Lesson() {
   const allowed = useGuard('signed-in');
   const { profile } = useSession();
+  const { features } = useCourse();
   const { t } = useI18n();
   const [original, setOriginal] = useState(false);
   const params = useParams<{ concept: string[] }>();
@@ -317,7 +319,7 @@ export default function Lesson() {
             <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
           </Link>
           <h1 className="type-display-m break-words">{concept.title}</h1>
-          <p className="mt-3 text-[15px] font-semibold text-(--card-muted)">Lesson, {LANGUAGE_LABEL[concept.language]}</p>
+          <p className="mt-3 text-[15px] font-semibold text-(--card-muted)">{features.code ? `Lesson, ${LANGUAGE_LABEL[concept.language]}` : 'Lesson'}</p>
         </div>
         <Illustration name="bulb" draw="load" className="pointer-events-none absolute top-1/2 right-6 size-28 -translate-y-1/2 [--illo-line:#fff] sm:size-36 lg:right-10" />
       </header>
@@ -477,13 +479,18 @@ export default function Lesson() {
                   ))}
                 </ul>
               </Section>
-            ) : (
+            ) : features.library ? (
               <Section id="judged-heading" title="Practice problems">
                 <p className="text-[15px] text-muted-foreground">No judged problems for this skill yet. The concept check shows what you know; for practice, try the <Link href={`/library?concept=${concept.id}`} className="font-semibold underline underline-offset-4">external problems</Link> or ask Soc.</p>
               </Section>
-            )}
+            ) : features.drills ? (
+              <Section id="judged-heading" title="Practise this topic">
+                <p className="mb-3 text-[15px] text-muted-foreground">Fresh questions on {concept.title}, written for your course. Answer them one at a time and earn stars.</p>
+                <Button asChild><Link href={`/studio?concept=${encodeURIComponent(concept.id)}`}>Practise {concept.title}</Link></Button>
+              </Section>
+            ) : null}
 
-            {concept.exercises?.length ? (
+            {concept.exercises?.length && features.code ? (
               <Section id="builders-heading" title="Python skill builders" collapsible>
                 <p className="mb-3 text-sm text-muted-foreground">Selected exercises for this skill. Practise the idea before opening the upstream solution; some examples there use older Python syntax.</p>
                 <ul className="grid divide-y">{concept.exercises.map(exercise => <li key={exercise.number} className="py-3"><a href={exercise.url} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">{exercise.title}, exercise {exercise.number}<span className="sr-only">, opens in a new tab</span></a><p className="mt-1 text-sm text-muted-foreground">{exercise.guidance}</p></li>)}</ul>
@@ -491,7 +498,7 @@ export default function Lesson() {
               </Section>
             ) : null}
 
-            {practice.length ? (
+            {practice.length && features.library ? (
               <Section id="more-practice-heading" title="External practice" collapsible>
                 <p className="mb-3 text-sm text-muted-foreground">Picked for your current level from LeetCode, Codeforces, CSES and more, plus two challenges above it. External problems open on the original site. <Link href={`/library?concept=${concept.id}`} className="font-semibold underline underline-offset-4">All problems</Link></p>
                 <ul className="grid divide-y">

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, MessageCircle } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
+import { useCourse } from '@/lib/course';
 import { KIND_LABEL, NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, formatStamp, hours } from '@/lib/routes';
 import type { PlanView, ProjectView, RoadmapItem } from '@/lib/types';
 import { Milestones, PathStyles, WeeklyReviewPanel } from '@/components/socrat/plan-adaptive';
@@ -71,6 +72,7 @@ function Disclosure({ id, title, children, defaultOpen = false }: { id: string; 
 
 export default function PlanPage() {
   const allowed = useGuard('active');
+  const { features } = useCourse();
   const planLocked = usePlanLocks();
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
@@ -124,7 +126,7 @@ export default function PlanPage() {
           <p className="font-hand mb-2 origin-left -rotate-2 text-[22px] text-pen">{NAME.skills}</p>
           <h1 className="type-display-l">Your <span className="hl hl-draw">skills</span></h1>
           <p className="mt-3 max-w-2xl text-base text-muted-foreground">
-            Your roadmap for {FOCUS_LABEL[plan.focus]}, on the {STYLE_LABEL[plan.style]} path. It adapts to your results, and Socrat asks before changing it.
+            Your roadmap{features.code ? ` for ${FOCUS_LABEL[plan.focus]}` : ''}, on the {STYLE_LABEL[plan.style]} path. It adapts to your results, and Socrat asks before changing it.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setPlanChat(n => n + 1)}><MessageCircle data-icon="inline-start" /> Plan with Soc</Button>

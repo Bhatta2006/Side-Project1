@@ -7,6 +7,7 @@ import { Check, Download, LogOut } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useReducedMotion } from '@/lib/motion';
 import { useGuard, useSession } from '@/lib/session';
+import { useCourse } from '@/lib/course';
 import { LANGUAGE_LABEL, NAME, hours } from '@/lib/routes';
 import type { BillingStatus, Course, Language, Profile } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -231,6 +232,7 @@ function Appearance() {
 export default function Settings() {
   const allowed = useGuard('enrolled');
   const { profile, refresh, signOut } = useSession();
+  const { features } = useCourse();
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
   const [name, setName] = useState('');
@@ -328,12 +330,15 @@ export default function Settings() {
                   <FieldLabel htmlFor="settings-name">Name</FieldLabel>
                   <Input id="settings-name" value={name} onChange={e => setName(e.target.value)} maxLength={80} />
                 </Field>
-                <Field>
-                  <FieldLabel htmlFor="settings-language">Language</FieldLabel>
-                  <NativeSelect id="settings-language" className="w-full [&_select]:h-13" value={language} onChange={e => setLanguage(e.target.value as Language)}>
-                    {(course?.languages ?? [language]).map(l => <NativeSelectOption key={l} value={l}>{LANGUAGE_LABEL[l]}</NativeSelectOption>)}
-                  </NativeSelect>
-                </Field>
+                {/* Only a programming course has a programming language to choose. */}
+                {features.code ? (
+                  <Field>
+                    <FieldLabel htmlFor="settings-language">Programming language</FieldLabel>
+                    <NativeSelect id="settings-language" className="w-full [&_select]:h-13" value={language} onChange={e => setLanguage(e.target.value as Language)} disabled={(course?.languages.length ?? 1) < 2}>
+                      {(course?.languages ?? [language]).map(l => <NativeSelectOption key={l} value={l}>{LANGUAGE_LABEL[l]}</NativeSelectOption>)}
+                    </NativeSelect>
+                  </Field>
+                ) : null}
                 <Field>
                   <FieldLabel htmlFor="settings-target">Target date</FieldLabel>
                   <Input id="settings-target" type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} aria-describedby="settings-target-help" />
@@ -365,12 +370,12 @@ export default function Settings() {
 
         <div id="connections" className="scroll-mt-32 grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
           <PlanSection />
-          <CodeforcesLink />
+          {features.codeforces ? <CodeforcesLink /> : null}
           <AppSection />
         </div>
 
         <div id="account" className="scroll-mt-32 grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
-        <Section id="data-heading" title="Your data" description={<>Download everything Socrat stores about you: profile, enrollments, results, code submissions and tutor conversations. How we use it: <a href="/privacy" className="underline underline-offset-4">privacy policy</a> · <a href="/terms" className="underline underline-offset-4">terms</a>.</>}>
+        <Section id="data-heading" title="Your data" description={<>Download everything Socrat stores about you: profile, enrollments, results, your submitted work and tutor conversations. How we use it: <a href="/privacy" className="underline underline-offset-4">privacy policy</a> · <a href="/terms" className="underline underline-offset-4">terms</a>.</>}>
           <div className="flex flex-wrap items-center gap-4">
             <Button variant="outline" onClick={exportData} disabled={exporting === 'busy'} aria-busy={exporting === 'busy'}>
               <Download data-icon="inline-start" /> {exporting === 'busy' ? 'Preparing your export' : 'Download my data'}

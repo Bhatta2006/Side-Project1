@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronRight, Flame } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
+import { useCourse } from '@/lib/course';
 import { useI18n } from '@/lib/i18n';
 import { KIND_LABEL, NAME, PACE_LABEL, activityHref, conceptHref, formatDate } from '@/lib/routes';
 import type { Activity, AssessmentStatus, PlanView, Recommendations, Today } from '@/lib/types';
@@ -126,6 +127,9 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 export default function TodayPage() {
   const allowed = useGuard('active');
+  const course = useCourse();
+  const courseReady = course.ready;
+  const library = course.features.library;
   useEffect(() => { void loadAdapting(); }, []);
   const planLocked = usePlanLocks();
   const { profile, features } = useSession();
@@ -141,11 +145,12 @@ export default function TodayPage() {
   const load = useCallback(() => {
     setError('');
     api.get<Today>('/today').then(setToday).catch(e => setError(explain(e)));
-    api.get<Recommendations>('/library/recommendations?limit=4').then(setRecs).catch(() => undefined);
+    // Problem picks come from the library, which only the programming courses have.
+    if (library) api.get<Recommendations>('/library/recommendations?limit=4').then(setRecs).catch(() => undefined);
     api.get<PlanView>('/plan').then(setPlan).catch(() => undefined);
     api.get<{ current: AssessmentStatus }>('/assessments').then(r => setAssessment(r.current)).catch(() => undefined);
-  }, []);
-  useEffect(() => { if (allowed) load(); }, [allowed, load]);
+  }, [library]);
+  useEffect(() => { if (allowed && courseReady) load(); }, [allowed, courseReady, load]);
   // The open section lives in the URL hash, so a link or a refresh lands where the learner was.
   useEffect(() => {
     const wanted = window.location.hash.slice(1) as TabId;
@@ -434,6 +439,17 @@ export default function TodayPage() {
                       ))}
                     </ul>
                   </section>
+                ) : !library ? (
+                  <Link href="/studio" className="paper group flex flex-col gap-2 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
+                    <span className="type-label text-brand">{NAME.practice}</span>
+                    <span className="flex items-end justify-between gap-3">
+                      <span className="grid gap-1">
+                        <span className="font-display text-xl font-semibold tracking-[-0.03em]">Practise what you have learned</span>
+                        <span className="text-[15px] text-muted-foreground">Fresh questions written for your course, on any topic you have opened.</span>
+                      </span>
+                      <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                    </span>
+                  </Link>
                 ) : (
                   <p className="rounded-card border border-dashed px-5 py-6 text-[15px] text-muted-foreground">Practice picks appear here once you have studied a skill.</p>
                 )}

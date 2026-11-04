@@ -26,6 +26,7 @@ from socrat.assistant.prompts import (
     render_context,
 )
 from socrat.assistant.tools import LABELS
+from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Problem
 from socrat.config import Settings
@@ -172,20 +173,36 @@ def learner_sections(
     level = next(
         (x.label for x in course.levels if x.id == enrollment.level_id), enrollment.level_id
     )
+    offered = shape.features_of(catalog, enrollment.course_id)
+    kind = (
+        "programming"
+        if offered["code"]
+        else f"not programming ({shape.effective(course).studio} studio): no code, no problem "
+        "library, no Codeforces; practice is Socrat's own practice sets at /studio"
+    )
     learner = (
         f"Name: {user.display_name or 'learner'}\n"
         f"Course: {course.title}; self-described level: {level}\n"
+        f"Course kind: {kind}\n"
         f"Goal details: {json.dumps(enrollment.goal) if enrollment.goal else 'none given'}\n"
-        f"Language: {LANGUAGE_NAMES.get(enrollment.language, enrollment.language)}\n"
-        f"Study budget: {enrollment.minutes_per_day} min on {len(enrollment.weekdays)} days/week\n"
+        + (
+            f"Language: {LANGUAGE_NAMES.get(enrollment.language, enrollment.language)}\n"
+            if offered["code"]
+            else ""
+        )
+        + f"Study budget: {enrollment.minutes_per_day} min on {len(enrollment.weekdays)} days/week\n"
         f"Current pace: {plan.pace} ({plan.pace_reason})\n"
         f"Streak: {streak['current']} study days; projected finish {plan.projected_finish}\n"
-        f"Today: {learn.local_day(user, now).isoformat()}\n"
-        f"Practice level: {practice_level['name']} (~{practice_level['rating']}); "
-        f"{len(learner_state.solved)} library problems solved"
+        f"Today: {learn.local_day(user, now).isoformat()}"
+        + (
+            f"\nPractice level: {practice_level['name']} (~{practice_level['rating']}); "
+            f"{len(learner_state.solved)} library problems solved"
+            if offered["library"]
+            else ""
+        )
         + (
             f"\nCodeforces: {account.handle}, rating {account.rating or 'unrated'}"
-            if account
+            if account and offered["codeforces"]
             else ""
         )
     )

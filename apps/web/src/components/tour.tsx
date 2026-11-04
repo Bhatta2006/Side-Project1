@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { NAME, NAV } from '@/lib/routes';
 import { useSession } from '@/lib/session';
+import { useCourse } from '@/lib/course';
+import type { CourseFeatures } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Soc } from '@/components/socrat/illustration';
@@ -29,6 +31,24 @@ interface Step {
   body: string;
 }
 
+/** The Practice step describes the learner's own course's Practice, nothing from another course. */
+function practiceStep(features: CourseFeatures, studio?: string): Step {
+  if (features.library) {
+    return {
+      route: '/library', nav: 'practice', target: 'practice-nav',
+      title: NAME.practice,
+      body: features.companies
+        ? 'Problems from LeetCode, CSES and Codeforces matched to the skills you have unlocked, plus company questions and timed focus sprints.'
+        : 'Problems from LeetCode, CSES and Codeforces matched to the skills you have unlocked, plus timed focus sprints.',
+    };
+  }
+  return {
+    route: '/studio', nav: 'practice',
+    title: studio ?? NAME.practice,
+    body: 'Pick any topic you have opened and Socrat writes fresh practice questions for your course. Earn stars and keep your streak going.',
+  };
+}
+
 const STEPS: Step[] = [
   {
     route: '/today',
@@ -50,11 +70,7 @@ const STEPS: Step[] = [
     title: NAME.skills,
     body: 'Your course roadmap. Lessons teach each skill, then a check or checkpoint proves it before the next one unlocks.',
   },
-  {
-    route: '/library', nav: 'practice', target: 'practice-nav',
-    title: NAME.practice,
-    body: 'Problems from LeetCode, CSES and Codeforces matched to the skills you have unlocked, plus company questions and timed focus sprints.',
-  },
+  { route: '/library', nav: 'practice', title: NAME.practice, body: '' }, // replaced per course
   {
     route: '/playground', nav: 'playground', target: 'playground-ask',
     title: NAME.playground,
@@ -68,7 +84,7 @@ const STEPS: Step[] = [
   {
     route: '/settings', nav: 'settings', target: 'settings-schedule',
     title: NAME.settings,
-    body: 'Your schedule, language and appearance live here. Press Ctrl K (⌘K on a Mac) any time to search everything.',
+    body: 'Your schedule and appearance live here. Press Ctrl K (⌘K on a Mac) any time to search everything.',
   },
   {
     route: '/today', nav: 'today',
@@ -143,7 +159,8 @@ export function Tour() {
   const lastTop = useRef<number | undefined>(undefined);
   const tries = useRef(0);
 
-  const steps = STEPS;
+  const { features, shape } = useCourse();
+  const steps = STEPS.map(step => (step.nav === 'practice' ? practiceStep(features, shape && shape.studio !== 'code' ? shape.name : undefined) : step));
   const step = steps[index];
   const travelling = open && pathname !== step.route;
 
