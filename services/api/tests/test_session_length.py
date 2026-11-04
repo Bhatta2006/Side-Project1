@@ -14,15 +14,18 @@ def test_short_sessions_get_bite_sized_lessons_and_long_ones_keep_depth():
     five = styles.for_session(None, 5)
     assert five is not None and five.format == "bite" and five.session_minutes == 5
     assert five.lesson_bounds() == styles.BITE_RANGE
-    fifteen = styles.for_session(None, 15)
-    assert fifteen is not None and fifteen.format == "bite"
-    hour = styles.for_session(None, 60)
+    ten = styles.for_session(None, 10)
+    assert ten is not None and ten.format == "bite"
+    # A 15-minute or longer session fits a standard lesson: no style is invented for it.
+    assert styles.for_session(None, 15) is None and styles.for_session(None, 60) is None
+    chosen = styles.StyleSpec(name="Warm")
+    hour = styles.for_session(chosen, 60)
     assert hour is not None and hour.format == "standard" and hour.session_minutes == 60
     # A learner who asked for deep lessons keeps them; the session length is still theirs.
     deep = styles.StyleSpec(name="Deep", format="deep")
     kept = styles.for_session(deep, 5)
     assert kept is not None and kept.format == "deep" and kept.session_minutes == 5
-    assert styles.for_session(None, 480).session_minutes == 120  # the schema's ceiling
+    assert styles.for_session(chosen, 480).session_minutes == 120  # the schema's ceiling
 
 
 def test_the_learner_choice_travels_to_the_brief_as_data():

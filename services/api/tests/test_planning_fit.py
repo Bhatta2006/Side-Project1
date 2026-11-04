@@ -49,6 +49,8 @@ def test_a_code_or_lab_course_keeps_its_own_activities():
     physics = tidy(maths_outline() | {"shape": lab}, default_catalog())
     first = physics["modules"][0]["concepts"][0]
     assert "lab" in first["practice"] and "code" not in first["assessment"]
+    # A programming lab is fine in a code course.
+    assert "lab" in code["modules"][0]["concepts"][0]["practice"]
 
 
 def test_authors_see_a_fitted_contract_and_no_code_for_a_maths_course():

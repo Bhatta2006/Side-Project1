@@ -173,7 +173,7 @@ evidence.
 |---|---|---|---|
 | 1 | Planned activities fitted to the studio | Outlines planned a lab or code assessment for maths; the outline is the writer's contract and the reviewer failed the lesson every round (the live run's planning mismatch) | `test_planning_fit.py` |
 | 2 | Unreadable quiz or atoms reply re-asked once inside the round | Each cost one of three rounds and could trigger a lesson rewrite | `test_part_reask.py` |
-| 3 | Session length decides lesson size (bite format at 15 minutes or less) | "5 minutes a day" was a sentence to the writer while the gate demanded 2,000-4,000 characters | `test_session_length.py` |
+| 3 | Session length decides lesson size (bite format at 10 minutes or less, as the presets) | "5 minutes a day" was a sentence to the writer while the gate demanded 2,000-4,000 characters | `test_session_length.py` |
 | 4 | Course from the learner's own notes (pasted text, 20,000 characters; migration 0046) | Wondering's link/PDF input; links not fetched (SSRF risk and network policy), PDFs not parsed | `test_learner_material.py` |
 | 5 | Listen to a lesson with the browser's speech synthesis | Wondering's listen mode; no key, nothing uploaded | `apps/web/tests/speech.test.mjs` |
 | 6 | Account deletion with learning requests | `learning_requests.user_id` has no ON DELETE CASCADE: delete returned 500 and kept the learner's words; requests were also missing from the data export | `test_learner_material.py` |

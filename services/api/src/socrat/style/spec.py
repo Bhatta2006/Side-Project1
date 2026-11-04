@@ -23,7 +23,7 @@ Rigor = Literal["intuitive", "standard", "rigorous"]
 # Lesson length floors in characters, by depth, for the standard format.
 LESSON_FLOOR = {"overview": 2000, "practitioner": 3000, "mastery": 4000}
 BITE_RANGE = (500, 1800)
-BITE_MINUTES = 15  # a stated session this short gets bite-sized lessons
+BITE_MINUTES = 10  # a stated session this short gets bite-sized lessons (as the presets do)
 DEEP_EXTRA = 1000
 
 
@@ -33,6 +33,8 @@ def for_session(spec: "StyleSpec | None", minutes: int | None) -> "StyleSpec | N
     2,000-4,000 character lesson, so lessons failed for being as short as asked."""
     if not minutes:
         return spec
+    if spec is None and minutes > BITE_MINUTES:
+        return None  # a standard lesson fits; no style, so nothing else changes
     return (spec or StyleSpec(name=f"{minutes} minutes a session")).fitted(minutes)
 
 
@@ -61,7 +63,7 @@ class StyleSpec(BaseModel):
         return floor, None
 
     def fitted(self, minutes: int | None) -> "StyleSpec":
-        """This style for a learner who said how long a session is. 15 minutes or less is a
+        """This style for a learner who said how long a session is. 10 minutes or less is a
         bite-sized lesson (one idea per sitting) unless the learner asked for deep lessons;
         the session length is theirs either way."""
         if not minutes:

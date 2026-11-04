@@ -115,12 +115,13 @@ def features_of(catalog, course_id: str | None) -> dict[str, bool]:
 # writer a contract it cannot meet, and the reviewer then fails every round for the missing
 # activity (seen in the first live run). Everything else (quiz, explain, project, worked
 # examples, problem sets, reflection...) can be written in every studio.
-NEEDS_STUDIO = {
-    ("assessment", "code"): "code",
-    ("practice", "lab"): "lab",
+NEEDS_STUDIO: dict[tuple[str, str], frozenset[str]] = {
+    ("assessment", "code"): frozenset({"code"}),
+    # A lab is a simulation in the lab studio, and a programming lab in a code course.
+    ("practice", "lab"): frozenset({"lab", "code"}),
 }
 
 
 def producible(studio: str, field: str, values: list[str]) -> list[str]:
     """``values`` without the activities this studio cannot produce, order kept."""
-    return [v for v in values if NEEDS_STUDIO.get((field, v), studio) == studio]
+    return [v for v in values if studio in NEEDS_STUDIO.get((field, v), frozenset({studio}))]
