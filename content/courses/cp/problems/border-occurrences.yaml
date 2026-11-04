@@ -1,0 +1,83 @@
+id: border-occurrences
+title: Prefixes that close the string
+concepts: [kmp]
+difficulty: hard
+statement: |
+  For a string `s`, call a length `L` (1 ≤ L ≤ |s|) a *closing length* if the prefix of `s`
+  of length `L` is also a suffix of `s`. The whole string always counts (L = |s|).
+
+  For every closing length, in increasing order, print `L` and the number of positions where
+  the prefix of length `L` occurs inside `s` (occurrences may overlap).
+input_format: One line containing the string s.
+output_format: |
+  The first line contains k, the number of closing lengths. Each of the next k lines
+  contains L and the number of occurrences of the prefix of length L.
+constraints:
+  - 1 ≤ |s| ≤ 100000
+  - s consists of lowercase English letters
+examples:
+  - input: "abacaba"
+    output: "3\n1 4\n3 2\n7 1"
+    explanation: The prefixes a, aba and abacaba are also suffixes. "a" occurs 4 times, "aba" twice and the whole string once.
+  - input: "aaa"
+    output: "3\n1 3\n2 2\n3 1"
+hints:
+  - Closing lengths are exactly the borders of s, plus |s| itself. Which array gives you all borders at once?
+  - The prefix function π gives the longest border. Every other border is a border of that border, so follow π[L − 1] repeatedly from L = |s|.
+  - For the counts, every position i ends the prefix of length i + 1 and, through π, also ends every shorter border of that prefix. Add 1 at length i + 1 for every i, then push counts down the π chain from longest to shortest.
+approach: |
+  Compute π in O(n). Let c[L] start at 1 for every L from 1 to n (the prefix of length L
+  ends at its own position). Going from L = n down to 1, add c[L] to c[π[L − 1]] when
+  π[L − 1] > 0: every occurrence of a longer prefix contains an occurrence of its border. The
+  closing lengths are n, π[n − 1], π[π[n − 1] − 1], ... down to 0, printed in increasing order.
+reference: |
+  import sys
+  s = sys.stdin.readline().strip()
+  n = len(s)
+  pi = [0] * n
+  for i in range(1, n):
+      k = pi[i - 1]
+      while k and s[i] != s[k]:
+          k = pi[k - 1]
+      if s[i] == s[k]:
+          k += 1
+      pi[i] = k
+  c = [1] * (n + 1)
+  for L in range(n, 0, -1):
+      if pi[L - 1] > 0:
+          c[pi[L - 1]] += c[L]
+  lens = []
+  L = n
+  while L > 0:
+      lens.append(L)
+      L = pi[L - 1]
+  lens.reverse()
+  print(len(lens))
+  print("\n".join(f"{L} {c[L]}" for L in lens))
+brute: |
+  import sys
+  s = sys.stdin.readline().strip()
+  n = len(s)
+  rows = []
+  for L in range(1, n + 1):
+      if s[:L] == s[n - L:]:
+          occ = sum(1 for i in range(n - L + 1) if s[i:i + L] == s[:L])
+          rows.append(f"{L} {occ}")
+  print(len(rows))
+  print("\n".join(rows))
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          n = rng.randint(1, 14)
+          yield "".join(rng.choice("ab" if rng.random() < 0.7 else "abc") for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "a"
+      yield "abacaba"
+      yield "a" * 100000
+      yield "ab" * 50000
+      yield "abc" * 33333 + "ab"
+      yield "".join(rng.choice("ab") for _ in range(100000))
+      for _ in range(6):
+          base = "".join(rng.choice("abc") for _ in range(rng.randint(1, 6)))
+          yield (base * rng.randint(1, 50))[: rng.randint(1, 200)]

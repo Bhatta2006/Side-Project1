@@ -138,28 +138,147 @@ resources:
     minutes: 25
     level: deep
 quiz:
-  - id: jumps
-    kind: mcq
-    prompt: To jump 13 levels up with binary lifting, which jumps do you take?
-    options: ["2^3, 2^2 and 2^0 (8 + 4 + 1)", "2^4 (16), then 3 single steps back", "2^3 and 2^2 (8 + 4 = 12)", "13 jumps of 2^0, one level each"]
-    answer: 0
-    explanation: 13 is 1101 in binary.
-    difficulty: 2
   - id: distance
     kind: mcq
-    prompt: depth[u] = 7, depth[v] = 5, depth[lca] = 3. Distance between u and v?
-    options: ["6", "12", "2", "4"]
+    prompt: depth[u] = 7, depth[v] = 5 and depth[lca(u, v)] = 3. What is the number of edges on the path
+      between u and v?
+    options:
+    - '6'
+    - '12'
+    - '2'
+    - '4'
     answer: 0
-    explanation: 7 + 5 − 2·3 = 6.
+    explanation: 'dist = depth[u] + depth[v] − 2 · depth[lca] = 7 + 5 − 6 = 6: four edges up from u, two
+      from v.'
     difficulty: 1
   - id: log-size
     kind: mcq
-    prompt: For n = 200,000, what is the smallest safe LOG?
-    options: ["18", "17", "10", "200000"]
+    prompt: For n = 200,000 nodes, what is the smallest LOG such that 2^LOG exceeds any possible depth?
+    options:
+    - '18'
+    - '17'
+    - '10'
+    - '200000'
     answer: 0
-    explanation: 2^17 = 131,072 < 200,000 ≤ 2^18.
+    explanation: 2^17 = 131,072 < 200,000 ≤ 2^18 = 262,144. A chain of 200,000 nodes has depth up to 199,999,
+      which needs 18 bits.
     difficulty: 2
-problems: [tree-distance-queries]
+  - id: kth-output
+    kind: output
+    prompt: The tree is a chain 0 – 1 – 2 – 3 – 4 – 5 – 6 rooted at 0, and the root is its own parent. What
+      does this print?
+    code:
+      python: "par = [0, 0, 1, 2, 3, 4, 5]\nLOG = 3\nup = [par]\nfor j in range(1, LOG):\n    up.append([up[j\
+        \ - 1][up[j - 1][v]] for v in range(7)])\nv, k = 6, 5\nfor j in range(LOG):\n    if k >> j & 1:\n\
+        \        v = up[j][v]\nprint(v)\n"
+      cpp: "int par[7] = {0, 0, 1, 2, 3, 4, 5};\nint LOG = 3;\nvector<vector<int>> up(LOG, vector<int>(7));\n\
+        for (int v = 0; v < 7; v++) up[0][v] = par[v];\nfor (int j = 1; j < LOG; j++)\n    for (int v =\
+        \ 0; v < 7; v++) up[j][v] = up[j - 1][up[j - 1][v]];\nint v = 6, k = 5;\nfor (int j = 0; j < LOG;\
+        \ j++) if (k >> j & 1) v = up[j][v];\ncout << v;\n"
+      java: "int[] par = {0, 0, 1, 2, 3, 4, 5};\nint LOG = 3;\nint[][] up = new int[LOG][7];\nfor (int v\
+        \ = 0; v < 7; v++) up[0][v] = par[v];\nfor (int j = 1; j < LOG; j++)\n    for (int v = 0; v < 7;\
+        \ v++) up[j][v] = up[j - 1][up[j - 1][v]];\nint v = 6, k = 5;\nfor (int j = 0; j < LOG; j++) if\
+        \ ((k >> j & 1) == 1) v = up[j][v];\nSystem.out.println(v);\n"
+    options:
+    - '1'
+    - '0'
+    - '2'
+    - '5'
+    answer: 0
+    explanation: 'k = 5 = 101 in binary: jump 2^0 = 1 level (6 → 5), then 2^2 = 4 levels (5 → 4 → 3 → 2
+      → 1). The 5th ancestor of node 6 is node 1.'
+    difficulty: 3
+  - id: loop-end
+    kind: mcq
+    prompt: After equalising depths, u ≠ v. You lift both while up[j][u] ≠ up[j][v], going from the largest
+      j down to 0. What is the LCA at the end?
+    options:
+    - 'The parent of u: up[0][u]'
+    - u itself, since the loop stops exactly at the LCA
+    - The root, since the loop lifts both nodes to the top of the tree
+    - up[LOG − 1][u], the highest ancestor stored in the table
+    answer: 0
+    explanation: The loop stops u and v just below the LCA, where they are different nodes with the same
+      parent. Returning u itself would be one level too low.
+    difficulty: 3
+  - id: memory
+    kind: mcq
+    prompt: A binary lifting table has LOG = 18 rows and n = 2·10^5 columns of 32-bit integers. How much
+      memory is that?
+    options:
+    - ≈ 14 MB
+    - ≈ 1.4 MB
+    - ≈ 144 MB
+    - ≈ 360 MB
+    answer: 0
+    explanation: 18 · 2·10^5 · 4 bytes = 14.4 MB. Always compute table sizes against the memory limit, especially
+      if you accidentally use 64-bit entries or LOG = 30.
+    difficulty: 3
+  - id: ancestor-case
+    kind: mcq
+    prompt: lca(u, v) is asked where v is an ancestor of u. After lifting u to v's depth you have u == v.
+      Your code skips the 'if u == v return u' check and runs the lifting loop anyway. What does it return?
+    options:
+    - 'The parent of v: one level too high, so the answer is wrong'
+    - 'v itself: the loop correctly leaves two equal nodes unchanged'
+    - It crashes with an index error on the first iteration
+    - The root of the tree, since the loop lifts both nodes all the way up
+    answer: 0
+    explanation: The loop condition up[j][u] ≠ up[j][v] is never true for equal nodes, so nothing moves,
+      and the final step returns up[0][u], the parent. Always handle u == v right after equalising depths.
+    difficulty: 4
+  - id: weighted-overflow
+    kind: mcq
+    prompt: Edge weights are up to 10^9 and n = 2·10^5. You compute dist(u, v) = d[u] + d[v] − 2·d[lca],
+      where d is the weighted depth. What type must d be?
+    options:
+    - '64-bit: a root path can total about 2·10^14'
+    - 32-bit, because each single weight fits in an int
+    - 32-bit unsigned, since distances are never negative
+    - A 32-bit int, provided the final answer is taken modulo 10^9 + 7
+    answer: 0
+    explanation: A chain of 2·10^5 edges of weight 10^9 has weighted depth about 2·10^14. The type depends
+      on the sum along a path, not on single edges.
+    difficulty: 4
+  - id: path-kth
+    kind: mcq
+    prompt: depth[u] = 9, depth[v] = 6 and depth[lca] = 4. You want the node at index 6 (0-indexed) on the
+      path from u to v. How do you find it?
+    options:
+    - 'Index 6 is on v''s side of a 7-edge path: lift v by 7 − 6 = 1 level'
+    - Lift u by 6 levels, since the path starts at u and index 6 is 6 steps in
+    - Lift v by 6 levels, since index 6 counts the steps from v
+    - Lift u by 9 − 6 = 3 levels, using the depth of u minus the index
+    answer: 0
+    explanation: The distance is (9 − 4) + (6 − 4) = 7. Going up from u takes 5 steps to reach the LCA (indices
+      0..5); index 6 is past it, on the way down to v, which is 7 − 6 = 1 step from v.
+    difficulty: 5
+  - id: lifting-table-never-doubles
+    kind: bug
+    prompt: The tree is a chain 0 - 1 - 2 - 3 - 4 - 5 - 6 rooted at 0, so the 5th ancestor of node 6 is
+      node 1. When the lifting table is built, row j is copied from row j - 1 instead of composing it with
+      itself (up[j][v] = up[j-1][up[j-1][v]]). What does the jump print?
+    code:
+      python: "n = 7\nup = [[max(v - 1, 0) for v in range(n)]]\nfor j in range(1, 3):\n    up.append([up[j\
+        \ - 1][v] for v in range(n)])\nu = 6\nfor j in range(3):\n    if 5 >> j & 1:\n        u = up[j][u]\n\
+        print(u)\n"
+      cpp: "int n = 7;\nvector<vector<int>> up(3, vector<int>(n));\nfor (int v = 0; v < n; v++) up[0][v]\
+        \ = max(v - 1, 0);\nfor (int j = 1; j < 3; j++)\n    for (int v = 0; v < n; v++) up[j][v] = up[j\
+        \ - 1][v];\nint u = 6;\nfor (int j = 0; j < 3; j++)\n    if (5 >> j & 1) u = up[j][u];\ncout <<\
+        \ u;\n"
+      java: "int n = 7;\nint[][] up = new int[3][n];\nfor (int v = 0; v < n; v++) up[0][v] = Math.max(v\
+        \ - 1, 0);\nfor (int j = 1; j < 3; j++)\n    for (int v = 0; v < n; v++) up[j][v] = up[j - 1][v];\n\
+        int u = 6;\nfor (int j = 0; j < 3; j++)\n    if ((5 >> j & 1) == 1) u = up[j][u];\nSystem.out.println(u);\n"
+    options:
+    - '4'
+    - '1'
+    - '5'
+    - '0'
+    answer: 0
+    explanation: Row j must hold the 2^j-th ancestor, built as up[j][v] = up[j-1][up[j-1][v]]. Copying the
+      previous row leaves every row at one step, so the 4-step jump moves a single node (from 5 to 4).
+    difficulty: 3
+problems: [tree-distance-queries, path-kth-stop]
 practice_links:
   - title: Company Queries I
     url: https://cses.fi/problemset/task/1687

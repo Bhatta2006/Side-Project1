@@ -134,60 +134,147 @@ resources:
     source: CSES
     minutes: 20
 quiz:
-  - id: divisor-count
-    kind: mcq
-    prompt: How many divisors does 72 = 2^3 · 3^2 have?
-    options: ["12", "24", "6", "10"]
-    answer: 0
-    explanation: (3 + 1)(2 + 1) = 12.
-    difficulty: 2
-  - id: sieve-start
-    kind: mcq
-    prompt: In the sieve, why start crossing out multiples of p at p²?
-    options:
-      - "Smaller multiples were already crossed out by smaller primes"
-      - "p² is always prime, so it is a safe place to start crossing"
-      - "Starting at p² avoids integer overflow for the largest primes"
-      - "Starting at 2p would cross out p itself and break correctness"
-    answer: 0
-    explanation: k·p with k < p has a prime factor smaller than p, so it's already marked.
-    difficulty: 3
-  - id: leftover
-    kind: mcq
-    prompt: After trial division up to √n, the remaining value is 1373 (> 1). What is it?
-    options: ["A prime factor of the original n", "A composite factor still to split", "Always 1 once division has finished", "An error in the trial division loop"]
-    answer: 0
-    explanation: Any composite remainder would have a factor ≤ √n, which would have been divided out.
-    difficulty: 2
   - id: gcd-value
     kind: mcq
     prompt: What is gcd(84, 36)?
-    options: ["12", "6", "4", "36"]
+    options:
+    - '12'
+    - '6'
+    - '4'
+    - '36'
     answer: 0
-    explanation: gcd(84, 36) = gcd(36, 12) = gcd(12, 0) = 12.
+    explanation: '84 = 2²·3·7 and 36 = 2²·3², so the gcd is 2²·3 = 12. Euclid: 84 mod 36 = 12, then 36 mod
+      12 = 0.'
     difficulty: 1
-  - id: sieve-complexity
+  - id: leftover
     kind: mcq
-    prompt: "The sieve of Eratosthenes up to N runs in"
+    prompt: Trial division by every i with i·i ≤ n has finished and the remaining value is 1373 (> 1). What
+      is it?
     options:
-      - "O(N log log N)"
-      - "O(N log N)"
-      - "O(N log² N)"
-      - "O(N √N)"
+    - 'A prime factor of the original n: a composite would have been split already'
+    - A composite factor that still has to be split by some larger divisor
+    - Always 1 once the division loop has run all the way up to √n
+    - 'An error in the loop: the remainder should always have been reduced to 1'
     answer: 0
-    explanation: "Crossing out multiples of each prime p costs N/p; summing over primes gives N log log N."
-    difficulty: 4
-  - id: gcd-lcm
+    explanation: If the leftover were composite it would have a factor at most its own square root, which
+      the loop already removed. At most one prime factor larger than √n can exist.
+    difficulty: 3
+  - id: gcd-trace
+    kind: output
+    prompt: 'What does this print: the gcd, then the number of loop iterations?'
+    code:
+      python: "a, b = 48, 18\nsteps = 0\nwhile b:\n    a, b = b, a % b\n    steps += 1\nprint(a, steps)\n"
+      cpp: "int a = 48, b = 18, steps = 0;\nwhile (b) {\n    int t = a % b;\n    a = b;\n    b = t;\n  \
+        \  steps++;\n}\ncout << a << \" \" << steps;\n"
+      java: "int a = 48, b = 18, steps = 0;\nwhile (b != 0) {\n    int t = a % b;\n    a = b;\n    b = t;\n\
+        \    steps++;\n}\nSystem.out.println(a + \" \" + steps);\n"
+    options:
+    - 6 3
+    - 6 2
+    - 18 3
+    - 6 4
+    answer: 0
+    explanation: '(48, 18) → (18, 12) → (12, 6) → (6, 0): three iterations and the gcd is 6.'
+    difficulty: 3
+  - id: sieve-start
     kind: mcq
-    prompt: "Why compute lcm(a, b) as a // gcd(a, b) * b rather than a * b // gcd(a, b) in C++?"
+    prompt: In the sieve, why can crossing out the multiples of a prime p start at p²?
     options:
-      - "a * b can overflow even when the lcm fits"
-      - "Dividing first is faster, but both are safe"
-      - "gcd must be computed last to be correct"
-      - "The two orders give different answers"
+    - Every k·p with k < p has a smaller prime factor, so it was already crossed out
+    - p² is always prime, so starting there guarantees a safe first crossing
+    - Starting at p² avoids integer overflow for the largest primes in the range
+    - Starting at 2p would cross out p itself and so break correctness
     answer: 0
-    explanation: "Dividing first keeps the intermediate value no larger than the result."
+    explanation: 'k·p with k < p contains the factor k, which has a prime factor below p. Starting at p²
+      also saves work: the inner loop becomes N/p − p steps.'
+    difficulty: 3
+  - id: sieve-bound
+    kind: mcq
+    prompt: You sieve primes up to N = 10^6. The outer loop only has to process primes p up to which value?
+    options:
+    - '1000'
+    - '500000'
+    - '10'
+    - '999999'
+    answer: 0
+    explanation: Every composite ≤ N has a prime factor ≤ √N = 1000, so primes above that start at p² >
+      N and cross out nothing new.
+    difficulty: 3
+  - id: spf-queries
+    kind: mcq
+    prompt: There are 10^5 queries, each asking for the number of divisors of some n ≤ 10^7. Which plan
+      fits comfortably in 1 second?
+    options:
+    - Build a smallest-prime-factor sieve once, then factorise each query in O(log n)
+    - 'Trial-divide each query up to √n: about 3·10^8 steps in total'
+    - Test every number up to n as a divisor for each query
+    - Run a fresh sieve up to n for every query, reusing nothing
+    answer: 0
+    explanation: The sieve costs about 10^7 once. Trial division per query is √(10^7) ≈ 3162 steps, so 3·10^8
+      overall, and a per-query sieve or scan is far worse.
     difficulty: 5
+  - id: lcm-overflow
+    kind: mcq
+    prompt: a = 4·10^9 and b = 6·10^9 in 64-bit signed integers (limit about 9.2·10^18). Which computes
+      lcm(a, b) = 1.2·10^10 correctly?
+    options:
+    - a / gcd(a, b) * b
+    - a * b / gcd(a, b)
+    - a * b % gcd(a, b)
+    - (a + b) / gcd(a, b)
+    answer: 0
+    explanation: a·b = 2.4·10^19 overflows before the division. Dividing first keeps every intermediate
+      value at most the lcm itself.
+    difficulty: 4
+  - id: totient
+    kind: mcq
+    prompt: How many integers in 1..36 are coprime with 36?
+    options:
+    - '12'
+    - '18'
+    - '6'
+    - '24'
+    answer: 0
+    explanation: φ(36) = 36 · (1 − 1/2) · (1 − 1/3) = 12. Only the distinct primes 2 and 3 matter.
+    difficulty: 4
+  - id: trial-overflow
+    kind: mcq
+    languages:
+    - cpp
+    - java
+    prompt: n ≤ 10^12 is stored in a 64-bit variable, and the loop is for (int i = 2; i * i <= n; i++).
+      What is wrong?
+    options:
+    - 'i is a 32-bit int: i * i overflows near i = 46341, long before 10^6'
+    - 'Nothing: i * i <= n is the standard test and i only ever reaches 10^6'
+    - The loop never ends because n is stored in a type larger than int
+    - i * i <= n skips some primes, so the bound must be i <= n / 2 instead
+    answer: 0
+    explanation: Make i a 64-bit type (long long or long). Overflow in the comparison makes the loop misbehave
+      in C++ (undefined behaviour) and Java (wrapped negatives).
+    difficulty: 5
+  - id: loop-bound-strict
+    kind: bug
+    prompt: 9 = 3 * 3 is composite. This primality test loops while i * i < n (strictly less) instead of
+      <=. What does it print for 9?
+    code:
+      python: "def is_prime(n):\n    i = 2\n    while i * i < n:\n        if n % i == 0:\n            return\
+        \ False\n        i += 1\n    return True\nprint(\"prime\" if is_prime(9) else \"composite\")\n"
+      cpp: "auto is_prime = [](int n) {\n    for (int i = 2; i * i < n; i++)\n        if (n % i == 0) return\
+        \ false;\n    return true;\n};\ncout << (is_prime(9) ? \"prime\" : \"composite\");\n"
+      java: "class T {\n    boolean isPrime(int n) {\n        for (int i = 2; i * i < n; i++)\n        \
+        \    if (n % i == 0) return false;\n        return true;\n    }\n}\nSystem.out.println(new T().isPrime(9)\
+        \ ? \"prime\" : \"composite\");\n"
+    options:
+    - prime
+    - composite
+    - invalid
+    - nothing
+    answer: 0
+    explanation: For a perfect square the smallest factor is exactly sqrt(n), so the test must include i
+      * i == n. With < the loop never tries i = 3 for 9, and every square of a prime (4, 9, 25, 49) is declared
+      prime.
+    difficulty: 2
 problems: [prime-count-queries, divisor-counts]
 practice_links:
   - title: Counting Divisors

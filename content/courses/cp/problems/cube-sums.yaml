@@ -1,0 +1,63 @@
+id: cube-sums
+title: Sum of cubes, enormous n
+concepts: [modular-arithmetic]
+difficulty: medium
+statement: |
+  For each of `t` queries, you are given `n`. Print `1³ + 2³ + ... + n³` modulo `10^9 + 7`.
+input_format: |
+  The first line contains t. Each of the next t lines contains one integer n.
+output_format: t lines, one answer per query.
+constraints:
+  - 1 ≤ t ≤ 50000
+  - 1 ≤ n ≤ 10^18
+examples:
+  - input: "3\n1\n3\n10"
+    output: "1\n36\n3025"
+    explanation: 1³ + 2³ + 3³ = 36, and the sum for n = 10 is 55² = 3025.
+hints:
+  - You cannot loop to 10^18. Is there a closed form for the sum of the first n cubes, perhaps related to the sum of the first n numbers?
+  - The sum of cubes is (n(n + 1) / 2)². Where could an intermediate value overflow in a 64-bit integer?
+  - n(n + 1) reaches 10^36. Halve whichever of n and n + 1 is even first, reduce both factors modulo 10^9 + 7, multiply, then square and reduce again.
+approach: |
+  The sum equals T² with T = n(n + 1)/2. Compute T mod p without overflow: divide the even
+  one of n, n + 1 by 2 first, reduce each factor mod p (< 2^30), multiply (< 2^60) and reduce,
+  then square and reduce. O(1) per query. Python big integers hide the overflow; in C++ and
+  Java the order of operations matters.
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  t = int(data[0])
+  M = 10**9 + 7
+  out = []
+  for i in range(t):
+      n = int(data[1 + i])
+      a, b = n, n + 1
+      if a % 2 == 0:
+          a //= 2
+      else:
+          b //= 2
+      T = (a % M) * (b % M) % M
+      out.append(T * T % M)
+  print("\n".join(map(str, out)))
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  t = int(data[0])
+  M = 10**9 + 7
+  print("\n".join(str(sum(i ** 3 for i in range(1, int(data[1 + k]) + 1)) % M) for k in range(t)))
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          t = rng.randint(1, 6)
+          yield f"{t}\n" + "\n".join(str(rng.randint(1, 300)) for _ in range(t))
+generator: |
+  def cases(rng):
+      yield "1\n1"
+      yield "3\n1\n3\n10"
+      yield "4\n1000000000000000000\n999999999999999999\n1000000006\n1000000007"
+      t = 50000
+      yield f"{t}\n" + "\n".join(str(rng.randint(1, 10**18)) for _ in range(t))
+      yield f"{t}\n" + "\n".join(str(rng.randint(1, 10**9)) for _ in range(t))
+      for _ in range(5):
+          t = rng.randint(1, 20)
+          yield f"{t}\n" + "\n".join(str(rng.randint(1, 10**rng.randint(1, 18))) for _ in range(t))

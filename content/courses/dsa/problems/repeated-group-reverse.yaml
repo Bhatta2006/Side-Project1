@@ -1,0 +1,77 @@
+id: repeated-group-reverse
+title: Shuffle machine
+concepts: [linked-lists]
+difficulty: hard
+statement: |
+  A conveyor holds `n` crates in a line, numbered 1 to n from front to back. One pass of the
+  machine reverses every consecutive block of `k` crates, starting from the front. A final
+  block with fewer than `k` crates is left as it is. The machine runs `t` passes in a row.
+  Print the order of the crates afterwards.
+input_format: |
+  One line with n, k and t.
+output_format: The crate numbers after t passes, front to back, separated by spaces.
+constraints:
+  - 1 ≤ n ≤ 200000
+  - 1 ≤ k ≤ n
+  - 1 ≤ t ≤ 10^18
+examples:
+  - input: "5 2 1"
+    output: "2 1 4 3 5"
+    explanation: Blocks (1 2), (3 4) are reversed; the leftover 5 stays.
+  - input: "5 3 2"
+    output: "1 2 3 4 5"
+    explanation: One pass gives 3 2 1 4 5. A second pass reverses the same first block back.
+hints:
+  - Simulating 10^18 passes is impossible, but one pass always applies the same rearrangement of positions.
+  - Compute where each position ends up after a single pass, then you have a permutation. Applying it t times is a question about its cycles.
+  - Split the permutation into cycles. In a cycle of length L, moving t steps is the same as moving t mod L steps, so each element can be placed directly.
+approach: |
+  One pass is a fixed permutation `p`; build it by reversing each full block of the identity.
+  Decompose p into cycles; the crate at position i after t passes is the one t mod L steps
+  along its cycle of length L. O(n) total, and t is only used through t mod L.
+reference: |
+  import sys
+  n, k, t = map(int, sys.stdin.read().split())
+  p = list(range(n))
+  for s in range(0, n - k + 1, k):
+      p[s:s + k] = p[s:s + k][::-1]
+  res = [0] * n
+  seen = [False] * n
+  for i in range(n):
+      if seen[i]:
+          continue
+      cyc = []
+      j = i
+      while not seen[j]:
+          seen[j] = True
+          cyc.append(j)
+          j = p[j]
+      L = len(cyc)
+      for idx, pos in enumerate(cyc):
+          res[pos] = cyc[(idx + t) % L] + 1
+  print(*res)
+brute: |
+  import sys
+  n, k, t = map(int, sys.stdin.read().split())
+  a = list(range(1, n + 1))
+  for _ in range(t):
+      for s in range(0, n - k + 1, k):
+          a[s:s + k] = a[s:s + k][::-1]
+  print(*a)
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          n = rng.randint(1, 12)
+          yield f"{n} {rng.randint(1, n)} {rng.randint(1, 30)}"
+generator: |
+  def cases(rng):
+      yield "5 2 1"
+      yield "5 3 2"
+      yield "1 1 1000000000000000000"
+      yield "200000 1 1000000000000000000"
+      yield "200000 200000 999999999999999999"
+      yield "200000 3 1000000000000000000"
+      yield "199999 7 123456789012345678"
+      for _ in range(6):
+          n = rng.randint(1, 5000)
+          yield f"{n} {rng.randint(1, n)} {rng.randint(1, 10**18)}"

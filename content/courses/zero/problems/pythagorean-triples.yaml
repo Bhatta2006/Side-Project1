@@ -1,0 +1,67 @@
+id: pythagorean-triples
+title: Right-angle triples
+concepts:
+- nested-loops
+difficulty: medium
+statement: |
+  Count the triples of whole numbers (a, b, c) with a < b < c ≤ n for which a² + b² = c². For
+  example (3, 4, 5) and (5, 12, 13).
+input_format: |
+  One integer n.
+output_format: The number of such triples.
+constraints:
+- 1 ≤ n ≤ 3000
+examples:
+- input: '20'
+  output: '6'
+  explanation: (3,4,5), (5,12,13), (6,8,10), (8,15,17), (9,12,15), (12,16,20).
+- input: '4'
+  output: '0'
+hints:
+- Three nested loops over a, b and c are about n³ / 6 steps, far too many for n = 3000.
+- Once a and b are chosen, c is determined by c² = a² + b². You can compute it instead of searching for
+  it.
+- Take c = isqrt(a² + b²) and check c * c == a² + b² and c ≤ n. That leaves two nested loops, about 4.5
+  million steps.
+approach: |
+  Loop a from 1 and b from a + 1; let s = a² + b² and c = isqrt(s). Count when c · c == s and
+  c ≤ n (b < c holds automatically). O(n²). Break the inner loop early when c would already
+  exceed n.
+reference: |
+  from math import isqrt
+  n = int(input())
+  count = 0
+  for a in range(1, n + 1):
+      for b in range(a + 1, n + 1):
+          s = a * a + b * b
+          c = isqrt(s)
+          if c > n:
+              break
+          if c * c == s:
+              count += 1
+  print(count)
+brute: |
+  n = int(input())
+  count = 0
+  for a in range(1, n + 1):
+      for b in range(a + 1, n + 1):
+          for c in range(b + 1, n + 1):
+              if a * a + b * b == c * c:
+                  count += 1
+  print(count)
+small_generator: |
+  def cases(rng):
+      for n in range(1, 40):
+          yield str(n)
+      for _ in range(8):
+          yield str(rng.randint(40, 90))
+generator: |
+  def cases(rng):
+      yield "20"
+      yield "4"
+      yield "1"
+      yield "3000"
+      yield "2999"
+      yield "2000"
+      for _ in range(6):
+          yield str(rng.randint(1, 3000))

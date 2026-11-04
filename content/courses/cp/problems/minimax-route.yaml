@@ -1,0 +1,159 @@
+id: minimax-route
+title: Lightest worst toll
+concepts: [mst]
+difficulty: hard
+statement: |
+  A country has `n` towns and `m` two-way roads. Road `i` joins towns `u` and `v` and charges
+  a toll `w`. A convoy travelling from town `a` to town `b` may choose any route. The
+  *burden* of a route is the **largest** toll on it, and the convoy wants the smallest
+  burden over all routes.
+
+  For each of `q` convoys, print its smallest possible burden. Print `0` when `a = b`, and
+  `-1` when no route exists.
+input_format: |
+  The first line contains n, m and q. Each of the next m lines contains u, v and w. Each of
+  the next q lines contains a and b.
+output_format: q lines, one answer per convoy.
+constraints:
+  - 1 ≤ n, q ≤ 20000
+  - 0 ≤ m ≤ 40000
+  - 1 ≤ u, v, a, b ≤ n; roads may repeat and u may equal v
+  - 1 ≤ w ≤ 10^9
+examples:
+  - input: "4 4 3\n1 2 5\n2 3 3\n3 4 8\n1 4 6\n1 3\n1 4\n2 4"
+    output: "5\n6\n6"
+    explanation: From 1 to 3 the route 1-2-3 has tolls 5 and 3, so the burden is 5. From 1 to 4 the direct road costs 6, while 1-2-3-4 would cost 8.
+  - input: "3 1 2\n1 2 7\n1 1\n1 3"
+    output: "0\n-1"
+hints:
+  - The best route's burden is a threshold. If you only allow roads with toll at most T, which towns are connected?
+  - Add roads in increasing order of toll with a disjoint-set union. The first moment a and b share a component, the toll you just added is the answer.
+  - Answering each query separately is too slow. Keep, for each component, the set of unanswered queries that touch it, and merge the smaller set into the larger one. A query seen from both sides during a merge is answered by the current toll.
+approach: |
+  Process roads by increasing toll with a DSU. Each component stores the ids of unanswered
+  queries having an endpoint in it. When two components merge, walk the smaller set: a query
+  id that is also in the larger set has both endpoints inside the merged component, so its
+  answer is the current toll; otherwise it moves into the larger set. Small-to-large keeps the
+  total set work at O((m + q) log q). Equivalent: build the minimum spanning forest and answer
+  the maximum edge on the tree path with binary lifting.
+reference: |
+  import sys
+  def main():
+      data = sys.stdin.buffer.read().split()
+      n, m, q = int(data[0]), int(data[1]), int(data[2])
+      pos = 3
+      edges = []
+      for _ in range(m):
+          edges.append((int(data[pos + 2]), int(data[pos]) - 1, int(data[pos + 1]) - 1))
+          pos += 3
+      ans = [-1] * q
+      qs = [set() for _ in range(n)]
+      for i in range(q):
+          a, b = int(data[pos]) - 1, int(data[pos + 1]) - 1
+          pos += 2
+          if a == b:
+              ans[i] = 0
+          else:
+              qs[a].add(i)
+              qs[b].add(i)
+      parent = list(range(n))
+      def find(x):
+          while parent[x] != x:
+              parent[x] = parent[parent[x]]
+              x = parent[x]
+          return x
+      edges.sort()
+      for w, u, v in edges:
+          ru, rv = find(u), find(v)
+          if ru == rv:
+              continue
+          if len(qs[ru]) < len(qs[rv]):
+              ru, rv = rv, ru
+          big = qs[ru]
+          for i in qs[rv]:
+              if i in big:
+                  ans[i] = w
+                  big.discard(i)
+              else:
+                  big.add(i)
+          qs[rv] = set()
+          parent[rv] = ru
+      print("\n".join(map(str, ans)))
+  main()
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, m, q = int(data[0]), int(data[1]), int(data[2])
+  pos = 3
+  edges = []
+  for _ in range(m):
+      edges.append((int(data[pos]) - 1, int(data[pos + 1]) - 1, int(data[pos + 2])))
+      pos += 3
+  limits = sorted(set(w for _, _, w in edges))
+  def connected(a, b, t):
+      seen = {a}
+      stack = [a]
+      while stack:
+          x = stack.pop()
+          for u, v, w in edges:
+              if w > t:
+                  continue
+              for p, r in ((u, v), (v, u)):
+                  if p == x and r not in seen:
+                      seen.add(r)
+                      stack.append(r)
+      return b in seen
+  out = []
+  for _ in range(q):
+      a, b = int(data[pos]) - 1, int(data[pos + 1]) - 1
+      pos += 2
+      if a == b:
+          out.append(0)
+          continue
+      res = -1
+      for t in limits:
+          if connected(a, b, t):
+              res = t
+              break
+      out.append(res)
+  print("\n".join(map(str, out)))
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          n = rng.randint(1, 7)
+          m = rng.randint(0, 10)
+          q = rng.randint(1, 6)
+          lines = [f"{n} {m} {q}"]
+          for _ in range(m):
+              lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(1, 6)}")
+          for _ in range(q):
+              lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)}")
+          yield "\n".join(lines)
+generator: |
+  def cases(rng):
+      yield "1 0 1\n1 1"
+      yield "2 3 2\n1 2 1000000000\n1 2 5\n2 2 1\n1 2\n2 1"
+      n, m, q = 20000, 40000, 20000
+      lines = [f"{n} {m} {q}"]
+      for _ in range(m):
+          lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(1, 10**9)}")
+      for _ in range(q):
+          lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)}")
+      yield "\n".join(lines)
+      # A long path: every query spans many merges.
+      lines = [f"{n} {n - 1} {q}"]
+      for i in range(1, n):
+          lines.append(f"{i} {i + 1} {rng.randint(1, 10**9)}")
+      for _ in range(q):
+          lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)}")
+      yield "\n".join(lines)
+      for _ in range(6):
+          n = rng.randint(2, 30)
+          m = rng.randint(0, 3 * n)
+          q = rng.randint(1, 20)
+          lines = [f"{n} {m} {q}"]
+          for _ in range(m):
+              lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)} {rng.randint(1, 50)}")
+          for _ in range(q):
+              lines.append(f"{rng.randint(1, n)} {rng.randint(1, n)}")
+          yield "\n".join(lines)

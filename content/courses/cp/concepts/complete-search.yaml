@@ -111,60 +111,136 @@ resources:
     source: CSES
     minutes: 20
 quiz:
-  - id: perm-feasible
-    kind: mcq
-    prompt: For n ≤ 10, is trying all permutations (with O(n) work each) feasible in C++?
-    options: ["Yes — about 3.6·10^7 operations", "No — about 10^10 operations", "Only for n ≤ 5, about 600 steps", "Only in Python, using itertools"]
-    answer: 0
-    explanation: 10! ≈ 3.6·10^6 permutations × 10 ≈ 3.6·10^7.
-    difficulty: 2
   - id: subset-count
     kind: mcq
-    prompt: How many subsets does mask iterate over for n = 20?
-    options: ["1,048,576", "400", "20", "2,432,902,008,176,640,000"]
+    prompt: How many subsets does a mask loop from 0 to 2^n − 1 visit for n = 20?
+    options:
+    - 1,048,576
+    - '400'
+    - '20'
+    - 2,432,902,008,176,640,000
     answer: 0
-    explanation: 2^20 = 1,048,576.
+    explanation: 2^20 = 1,048,576. The last option is 20!, the count for permutations, not subsets.
     difficulty: 1
+  - id: perm-budget
+    kind: mcq
+    prompt: You try all permutations of n = 9 items and spend O(n) checking each one. About how many basic
+      steps is that?
+    options:
+    - ≈ 3.3·10^6
+    - ≈ 3.6·10^5
+    - ≈ 3.3·10^9
+    - ≈ 8.1·10^1
+    answer: 0
+    explanation: 9! = 362,880 and times 9 is about 3.3·10^6, far below a 10^8 budget. The 3.3·10^9 option
+      is n = 12 territory.
+    difficulty: 2
+  - id: stress
+    kind: mcq
+    prompt: Your fast solution gets Wrong Answer on a hidden test. What is the most effective next step?
+    options:
+    - Compare it with a brute force on thousands of random small inputs
+    - Resubmit it unchanged in case the judge was having trouble
+    - Rewrite the whole solution in another programming language
+    - Test it on bigger arrays, since the bug must be in large cases
+    answer: 0
+    explanation: Most wrong answers show up on tiny cases where a brute force can be trusted, and a small
+      failing input is easy to debug by hand.
+    difficulty: 2
+  - id: subset-sum-output
+    kind: output
+    prompt: How many subsets does this count, and what does it print?
+    code:
+      python: "a = [3, 34, 4, 12, 5, 2]\ncnt = 0\nfor m in range(1 << 6):\n    s = sum(a[i] for i in range(6)\
+        \ if m >> i & 1)\n    if s == 9:\n        cnt += 1\nprint(cnt)\n"
+      cpp: "int a[6] = {3, 34, 4, 12, 5, 2};\nint cnt = 0;\nfor (int m = 0; m < (1 << 6); m++) {\n    int\
+        \ s = 0;\n    for (int i = 0; i < 6; i++) if (m >> i & 1) s += a[i];\n    if (s == 9) cnt++;\n}\n\
+        cout << cnt;\n"
+      java: "int[] a = {3, 34, 4, 12, 5, 2};\nint cnt = 0;\nfor (int m = 0; m < (1 << 6); m++) {\n    int\
+        \ s = 0;\n    for (int i = 0; i < 6; i++) if ((m >> i & 1) == 1) s += a[i];\n    if (s == 9) cnt++;\n\
+        }\nSystem.out.println(cnt);\n"
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: 'The subsets summing to 9 are {4, 5} and {3, 4, 2}. Change the target to 0 and this code
+      would also count the empty subset (mask 0): decide whether that is intended.'
+    difficulty: 3
   - id: mitm
     kind: mcq
     prompt: Meet in the middle improves subset enumeration from O(2^n) to roughly...
-    options: ["O(2^(n/2) · n)", "O(n · 2^(n/4))", "O(n² log n)", "O(2^n / n)"]
+    options:
+    - O(2^(n/2) · n)
+    - O(n · 2^(n/4))
+    - O(n² log n)
+    - O(2^n / n)
     answer: 0
-    explanation: Two halves of 2^(n/2) sums each, combined after sorting.
+    explanation: Enumerate each half's 2^(n/2) sums, sort one side, and look up each sum of the other by
+      binary search or two pointers.
     difficulty: 3
-  - id: stress
+  - id: queens-candidates
     kind: mcq
-    prompt: Your fast solution gets Wrong Answer on a hidden test. What's the most effective next step?
+    prompt: Placing 8 queens with exactly one per row and all columns different, how many candidate placements
+      exist before you check diagonals?
     options:
-      - "Compare it with a brute force on many random small inputs"
-      - "Resubmit it unchanged in case the judge was having trouble"
-      - "Rewrite the whole solution in another programming language"
-      - "Test it on bigger arrays, since the bug must be in large cases"
+    - 40,320
+    - 16,777,216
+    - '64'
+    - 4,426,165,368
     answer: 0
-    explanation: Stress testing finds a tiny counterexample you can trace by hand.
-    difficulty: 2
-  - id: search-bound
-    kind: mcq
-    prompt: "Roughly, what is the largest n for which trying all permutations of n items fits in about 10^8 simple steps?"
-    options:
-      - "n ≈ 11"
-      - "n ≈ 20"
-      - "n ≈ 30"
-      - "n ≈ 100"
-    answer: 0
-    explanation: "11! ≈ 4·10^7 while 12! ≈ 4.8·10^8. Subsets reach n ≈ 25 (2^25 ≈ 3·10^7)."
+    explanation: That is the number of permutations of the columns, 8! = 40,320. 8^8 = 16,777,216 is one
+      queen per row with repeated columns allowed; C(64, 8) = 4,426,165,368 is any 8 squares.
     difficulty: 4
-  - id: meet-in-middle
+  - id: choose-three
     kind: mcq
-    prompt: "Subset sum with n = 40 is too big for 2^40. Meet in the middle runs in about"
+    prompt: Choose exactly 3 of 30 items. Which enumeration visits the fewest candidates while still covering
+      every choice?
     options:
-      - "2^20 · 20 steps"
-      - "2^40 / 2 steps"
-      - "40^2 steps"
-      - "2^39 steps"
+    - Loops i < j < k, which visit C(30, 3) = 4060 triples
+    - All 2^30 subsets, filtered by popcount 3
+    - All 30³ = 27,000 ordered triples, filtered for distinct items
+    - All 30! permutations, taking the first three
     answer: 0
-    explanation: "Enumerate 2^20 sums of each half, sort one list, and binary search or two-pointer it against the other."
+    explanation: Fixing the order i < j < k visits each unordered choice exactly once. Filtering ordered
+      triples visits each choice six times.
+    difficulty: 4
+  - id: pruning-worst
+    kind: mcq
+    prompt: Backtracking subset-sum with positive values stops a branch as soon as the running sum exceeds
+      the target. What does that do to the worst-case bound?
+    options:
+    - It helps on typical inputs, but the worst case is still exponential in n
+    - It reduces the worst case to O(n²)
+    - It reduces the worst case to O(n log n), since it behaves like sorting
+    - It changes nothing at all, including typical runtime
+    answer: 0
+    explanation: 'An adversarial input, such as a huge target no branch can exceed, forces nearly every
+      branch to run. Pruning is a constant-factor tool: still count the worst case before committing.'
     difficulty: 5
+  - id: mask-range-off-by-one
+    kind: bug
+    prompt: Counting the subsets of [1, 2, 3] with sum 6 should give 1 (the full set). This loop runs mask
+      from 0 up to (1 << n) - 2. What does it print?
+    code:
+      python: "a = [1, 2, 3]\nn = 3\ncnt = 0\nfor mask in range((1 << n) - 1):\n    s = sum(a[i] for i in\
+        \ range(n) if mask >> i & 1)\n    if s == 6:\n        cnt += 1\nprint(cnt)\n"
+      cpp: "int a[3] = {1, 2, 3}, n = 3, cnt = 0;\nfor (int mask = 0; mask < (1 << n) - 1; mask++) {\n \
+        \   int s = 0;\n    for (int i = 0; i < n; i++)\n        if (mask >> i & 1) s += a[i];\n    if (s\
+        \ == 6) cnt++;\n}\ncout << cnt;\n"
+      java: "int[] a = {1, 2, 3};\nint n = 3, cnt = 0;\nfor (int mask = 0; mask < (1 << n) - 1; mask++)\
+        \ {\n    int s = 0;\n    for (int i = 0; i < n; i++)\n        if ((mask >> i & 1) == 1) s += a[i];\n\
+        \    if (s == 6) cnt++;\n}\nSystem.out.println(cnt);\n"
+    options:
+    - '0'
+    - '1'
+    - '2'
+    - '3'
+    answer: 0
+    explanation: Masks run from 0 to 2^n - 1 inclusive, so the bound must be mask < (1 << n). Stopping one
+      short drops the mask with all bits set, which is the full set.
+    difficulty: 2
 problems: [apple-split, closest-subset-sum]
 practice_links:
   - title: Apple Division

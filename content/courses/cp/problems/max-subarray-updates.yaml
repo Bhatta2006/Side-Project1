@@ -1,0 +1,140 @@
+id: max-subarray-updates
+title: Best stretch with edits
+concepts: [segment-tree]
+difficulty: hard
+statement: |
+  An array `a` of `n` integers (which may be negative) changes over time. Process `q`
+  operations in order:
+
+  - `1 i x`: set `a[i] = x`.
+  - `2 l r`: print the largest sum of a **non-empty contiguous** part of `a[l..r]`.
+input_format: |
+  The first line contains n and q. The second line contains a[1..n]. Each of the next q lines
+  is one operation.
+output_format: One line per operation of type 2.
+constraints:
+  - 1 ≤ n, q ≤ 50000
+  - −10^9 ≤ a[i], x ≤ 10^9
+  - 1 ≤ i ≤ n and 1 ≤ l ≤ r ≤ n
+examples:
+  - input: "5 4\n2 -4 3 -1 2\n2 1 5\n1 2 10\n2 1 5\n2 4 4"
+    output: "4\n16\n-1"
+    explanation: At first the best stretch is 3 −1 2 = 4. After a[2] = 10 the array is 2 10 3 −1 2, and taking all of it gives 16. The last query covers only a[4] = −1, and a stretch must be non-empty.
+hints:
+  - Kadane's algorithm answers one query in O(r − l). Why is that too slow here, and what must you store so that two halves can be combined?
+  - For a range, store its total sum, its best prefix sum, its best suffix sum and its best sub-stretch. Can you compute these for a parent from its two children?
+  - best(parent) = max(best(left), best(right), suffix(left) + prefix(right)). Use a segment tree with point updates and an O(log n) range query that combines nodes in left-to-right order.
+approach: |
+  Segment tree whose nodes hold (sum, prefix, suffix, best). Merge(L, R) = (L.sum + R.sum,
+  max(L.pre, L.sum + R.pre), max(R.suf, R.sum + L.suf), max(L.best, R.best, L.suf + R.pre)).
+  A point update rebuilds the path to the root. A range query merges O(log n) nodes in order.
+  Use 64-bit sums (up to 5·10^13). O((n + q) log n).
+reference: |
+  import sys
+  def merge(a, b):
+      if a is None:
+          return b
+      if b is None:
+          return a
+      return (a[0] + b[0], max(a[1], a[0] + b[1]), max(b[2], b[0] + a[2]), max(a[3], b[3], a[2] + b[1]))
+  def main():
+      data = sys.stdin.buffer.read().split()
+      n, q = int(data[0]), int(data[1])
+      size = 1
+      while size < n:
+          size *= 2
+      t = [None] * (2 * size)
+      for i in range(n):
+          x = int(data[2 + i])
+          t[size + i] = (x, x, x, x)
+      for i in range(size - 1, 0, -1):
+          t[i] = merge(t[2 * i], t[2 * i + 1])
+      pos = 2 + n
+      out = []
+      for _ in range(q):
+          typ, p, r = int(data[pos]), int(data[pos + 1]), int(data[pos + 2])
+          pos += 3
+          if typ == 1:
+              i = size + p - 1
+              t[i] = (r, r, r, r)
+              i //= 2
+              while i:
+                  t[i] = merge(t[2 * i], t[2 * i + 1])
+                  i //= 2
+          else:
+              lo, hi = p - 1 + size, r + size
+              left = right = None
+              while lo < hi:
+                  if lo & 1:
+                      left = merge(left, t[lo])
+                      lo += 1
+                  if hi & 1:
+                      hi -= 1
+                      right = merge(t[hi], right)
+                  lo //= 2
+                  hi //= 2
+              out.append(merge(left, right)[3])
+      print("\n".join(map(str, out)))
+  main()
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, q = int(data[0]), int(data[1])
+  a = [int(x) for x in data[2:2 + n]]
+  pos = 2 + n
+  out = []
+  for _ in range(q):
+      typ, p, r = int(data[pos]), int(data[pos + 1]), int(data[pos + 2])
+      pos += 3
+      if typ == 1:
+          a[p - 1] = r
+      else:
+          best = max(sum(a[i:j + 1]) for i in range(p - 1, r) for j in range(i, r))
+          out.append(best)
+  print("\n".join(map(str, out)))
+small_generator: |
+  def cases(rng):
+      for _ in range(50):
+          n, q = rng.randint(1, 8), rng.randint(1, 8)
+          lines = [f"{n} {q}", " ".join(str(rng.randint(-9, 9)) for _ in range(n))]
+          has_query = False
+          for _ in range(q):
+              if rng.random() < 0.5:
+                  lines.append(f"1 {rng.randint(1, n)} {rng.randint(-9, 9)}")
+              else:
+                  l = rng.randint(1, n)
+                  lines.append(f"2 {l} {rng.randint(l, n)}")
+                  has_query = True
+          if not has_query:
+              lines.append("2 1 " + str(n))
+              lines[0] = f"{n} {q + 1}"
+          yield "\n".join(lines)
+generator: |
+  def cases(rng):
+      yield "1 1\n-5\n2 1 1"
+      yield "5 4\n2 -4 3 -1 2\n2 1 5\n1 2 10\n2 1 5\n2 4 4"
+      n = q = 50000
+      lines = [f"{n} {q}", " ".join(str(rng.randint(-10**9, 10**9)) for _ in range(n))]
+      for _ in range(q):
+          if rng.random() < 0.5:
+              lines.append(f"1 {rng.randint(1, n)} {rng.randint(-10**9, 10**9)}")
+          else:
+              l = rng.randint(1, n)
+              lines.append(f"2 {l} {rng.randint(l, n)}")
+      yield "\n".join(lines)
+      # All values negative: the best stretch is the single largest element.
+      lines = [f"{n} {q}", " ".join(str(-rng.randint(1, 10**9)) for _ in range(n))]
+      for _ in range(q):
+          lines.append(f"2 1 {rng.randint(1, n)}")
+      yield "\n".join(lines)
+      for _ in range(6):
+          n, q = rng.randint(1, 60), rng.randint(1, 60)
+          lines = [f"{n} {q}", " ".join(str(rng.randint(-50, 50)) for _ in range(n))]
+          for _ in range(q - 1):
+              if rng.random() < 0.4:
+                  lines.append(f"1 {rng.randint(1, n)} {rng.randint(-50, 50)}")
+              else:
+                  l = rng.randint(1, n)
+                  lines.append(f"2 {l} {rng.randint(l, n)}")
+          lines.append(f"2 1 {n}")
+          yield "\n".join(lines)

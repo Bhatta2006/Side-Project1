@@ -1018,118 +1018,157 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: take-or-skip
-  kind: mcq
-  prompt: What makes a problem 0/1 knapsack rather than unbounded?
-  options:
-  - "Each item can be used at most once"
-  - "Each item can be reused any number of times"
-  - "Items can be split into fractional parts"
-  - "There is no capacity limit on the knapsack"
-  answer: 0
-  explanation: 0/1 means take once or skip; reuse is the unbounded family.
-  difficulty: 1
-- id: greedy-ratio
-  kind: mcq
-  prompt: Weights 1 3 4 5, values 1 4 5 7, capacity 7. Greedy by value per weight gets 8. What is the
-    best?
-  options:
-  - '9'
-  - '8'
-  - '10'
-  - '12'
-  answer: 0
-  explanation: 'Weights 3 and 4 fill the bag exactly: 4 + 5 = 9.'
-  difficulty: 2
-- id: backwards-why
-  kind: mcq
-  prompt: Why does the one-row 0/1 knapsack loop capacity from W down?
-  options:
-  - "So dp[c − w] still holds the value from before this item"
-  - "Because looping downwards is faster than looping upwards"
-  - "To sort the items by weight while filling the table"
-  - "So the final answer ends up stored in dp[0] at the end"
-  answer: 0
-  explanation: Going down reads cells not yet updated for this item, so it is used once.
-  difficulty: 3
-- id: forward-output
-  kind: output
-  prompt: Items (w 2, v 3) and (w 3, v 4), capacity 4. What does this print?
-  code:
-    python: |
-      w, v, W = [2, 3], [3, 4], 4
-      dp = [0] * (W + 1)
-      for i in range(2):
-          for c in range(w[i], W + 1):
-              dp[c] = max(dp[c], dp[c - w[i]] + v[i])
-      print(dp[W])
-    cpp: |
-      int w[] = {2, 3}, v[] = {3, 4}, W = 4;
-      vector<int> dp(W + 1, 0);
-      for (int i = 0; i < 2; i++)
-          for (int c = w[i]; c <= W; c++)
-              dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
-      cout << dp[W];
-    java: |
-      int[] w = {2, 3}, v = {3, 4};
-      int W = 4;
-      int[] dp = new int[W + 1];
-      for (int i = 0; i < 2; i++)
-          for (int c = w[i]; c <= W; c++)
-              dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
-      System.out.print(dp[W]);
-  options:
-  - '6'
-  - '4'
-  - '3'
-  - '7'
-  answer: 0
-  explanation: 'The forward loop takes the weight-2 item twice: 3 + 3 = 6. The correct 0/1 answer is 4.'
-  difficulty: 4
-- id: subset-base
-  kind: mcq
-  prompt: In subset sum, what must can[0] be before any number is processed?
-  options:
-  - "true, because the empty subset sums to 0"
-  - "false, because no number has been used yet"
-  - "true only when 0 appears in the input"
-  - "It does not matter; it is overwritten later"
-  answer: 0
-  explanation: Every reachable sum is built on top of the empty subset.
-  difficulty: 2
-- id: equal-partition-odd
-  kind: mcq
-  prompt: Numbers 1 2 4 sum to 7. Can they be split into two equal-sum halves?
-  options:
-  - "No: an odd total can never split evenly"
-  - "Yes: {1, 2, 4} on one side and nothing"
-  - "Yes: {4} on one side and {1, 2} on the other"
-  - "Only if the numbers are sorted first"
-  answer: 0
-  explanation: Equal halves need an even total; 7 is odd.
-  difficulty: 2
-- id: count-zeros
-  kind: mcq
-  prompt: How many subsets of 0 0 1 sum to 1?
-  options:
-  - '4'
-  - '1'
-  - '2'
-  - '3'
-  answer: 0
-  explanation: 'Each 0 can be in or out (2 × 2), each with the 1: 4.'
-  difficulty: 4
-- id: difference-transform
-  kind: mcq
-  prompt: Numbers sum to 10. You want partitions whose sums differ by 4. Which subset sum do you count?
-  options:
-  - '7'
-  - '4'
-  - '3'
-  - '6'
-  answer: 0
-  explanation: s1 − (10 − s1) = 4 gives s1 = (10 + 4) / 2 = 7.
-  difficulty: 5
+  - id: take-or-skip
+    kind: mcq
+    prompt: What makes a problem 0/1 knapsack rather than unbounded?
+    options:
+    - Each item can be used at most once
+    - Each item can be reused any number of times
+    - Items can be split into fractional parts
+    - There is no capacity limit on the knapsack
+    answer: 0
+    explanation: 0/1 means take once or skip; reuse is the unbounded family.
+    difficulty: 1
+  - id: greedy-ratio
+    kind: mcq
+    prompt: Weights 1 3 4 5, values 1 4 5 7, capacity 7. Greedy by value per weight gets 8. What is the
+      best?
+    options:
+    - '9'
+    - '8'
+    - '10'
+    - '12'
+    answer: 0
+    explanation: 'Weights 3 and 4 fill the bag exactly: 4 + 5 = 9.'
+    difficulty: 2
+  - id: backwards-why
+    kind: mcq
+    prompt: Why does the one-row 0/1 knapsack loop capacity from W down?
+    options:
+    - So dp[c − w] still holds the value from before this item
+    - Because looping downwards is faster than looping upwards
+    - To sort the items by weight while filling the table
+    - So the final answer ends up stored in dp[0] at the end
+    answer: 0
+    explanation: Going down reads cells not yet updated for this item, so it is used once.
+    difficulty: 3
+  - id: forward-output
+    kind: output
+    prompt: Items (w 2, v 3) and (w 3, v 4), capacity 4. What does this print?
+    code:
+      python: "w, v, W = [2, 3], [3, 4], 4\ndp = [0] * (W + 1)\nfor i in range(2):\n    for c in range(w[i],\
+        \ W + 1):\n        dp[c] = max(dp[c], dp[c - w[i]] + v[i])\nprint(dp[W])\n"
+      cpp: "int w[2] = {2, 3}, v[2] = {3, 4}, W = 4;\nvector<int> dp(W + 1, 0);\nfor (int i = 0; i < 2;\
+        \ i++)\n    for (int c = w[i]; c <= W; c++)\n        dp[c] = max(dp[c], dp[c - w[i]] + v[i]);\n\
+        cout << dp[W];\n"
+      java: "int[] w = {2, 3}, v = {3, 4};\nint W = 4;\nint[] dp = new int[W + 1];\nfor (int i = 0; i <\
+        \ 2; i++)\n    for (int c = w[i]; c <= W; c++)\n        dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);\n\
+        System.out.println(dp[W]);\n"
+    options:
+    - '6'
+    - '4'
+    - '3'
+    - '7'
+    answer: 0
+    explanation: 'The forward loop takes the weight-2 item twice: 3 + 3 = 6. The correct 0/1 answer is 4.'
+    difficulty: 4
+  - id: count-zeros
+    kind: mcq
+    prompt: How many subsets of 0 0 1 sum to 1?
+    options:
+    - '4'
+    - '1'
+    - '2'
+    - '3'
+    answer: 0
+    explanation: 'Each 0 can be in or out (2 × 2), each with the 1: 4.'
+    difficulty: 4
+  - id: difference-transform
+    kind: mcq
+    prompt: Numbers sum to 10. You want partitions whose sums differ by 4. Which subset sum do you count?
+    options:
+    - '7'
+    - '4'
+    - '3'
+    - '6'
+    answer: 0
+    explanation: s1 − (10 − s1) = 4 gives s1 = (10 + 4) / 2 = 7.
+    difficulty: 5
+  - id: row-output
+    kind: output
+    prompt: 'Items (weight, value): (2, 3), (3, 4), (4, 5) and capacity 5. This one-row 0/1 knapsack prints
+      the whole table at the end. What does it print?'
+    code:
+      python: "w = [2, 3, 4]\nv = [3, 4, 5]\nW = 5\ndp = [0] * (W + 1)\nfor i in range(3):\n    for c in\
+        \ range(W, w[i] - 1, -1):\n        dp[c] = max(dp[c], dp[c - w[i]] + v[i])\nprint(*dp)\n"
+      cpp: "int w[3] = {2, 3, 4}, v[3] = {3, 4, 5}, W = 5;\nvector<int> dp(W + 1, 0);\nfor (int i = 0; i\
+        \ < 3; i++)\n    for (int c = W; c >= w[i]; c--)\n        dp[c] = max(dp[c], dp[c - w[i]] + v[i]);\n\
+        for (int c = 0; c <= W; c++) cout << dp[c] << (c < W ? \" \" : \"\");\n"
+      java: "int[] w = {2, 3, 4}, v = {3, 4, 5};\nint W = 5;\nint[] dp = new int[W + 1];\nfor (int i = 0;\
+        \ i < 3; i++)\n    for (int c = W; c >= w[i]; c--)\n        dp[c] = Math.max(dp[c], dp[c - w[i]]\
+        \ + v[i]);\nStringBuilder sb = new StringBuilder();\nfor (int c = 0; c <= W; c++) sb.append(dp[c]).append(\"\
+        \ \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 0 0 3 4 5 7
+    - 0 0 3 4 4 7
+    - 0 0 3 3 5 7
+    - 0 0 3 4 5 8
+    answer: 0
+    explanation: After the first two items the table is 0 0 3 4 4 7. The third item (weight 4, value 5)
+      improves capacity 4 from 4 to 5 but cannot beat 7 at capacity 5, where taking items one and two is
+      better than item three plus nothing. Each dp[c] is the best value for capacity exactly up to c.
+    difficulty: 3
+  - id: equal-split
+    kind: mcq
+    prompt: Can the numbers 1, 5, 11 and 5 be split into two groups with equal sums?
+    options:
+    - 'Yes: 11 on one side and 1 + 5 + 5 on the other'
+    - 'No: the total is odd, so no equal split can exist'
+    - 'Yes: 1 + 11 on one side and 5 + 5 on the other'
+    - 'No: no subset adds up to 12, which half of the total needs'
+    answer: 0
+    explanation: 'The total is 22, so each side must sum to 11. That is a subset-sum question: can some
+      subset reach 11? Yes, the single number 11 (and also 1 + 5 + 5). If the total were odd the answer
+      would be immediately no.'
+    difficulty: 3
+  - id: two-budgets
+    kind: mcq
+    prompt: Each of 100 items has a weight and a volume. The bag allows total weight up to 1,000 and total
+      volume up to 500. About how many table cells does the one-table 0/1 DP over both budgets have, and
+      about how many updates in total?
+    options:
+    - About 5 x 10^5 cells, and about 5 x 10^7 updates
+    - About 1,500 cells, and about 1.5 x 10^5 updates
+    - About 5 x 10^5 cells, and about 5 x 10^5 updates
+    - About 5 x 10^7 cells, and about 5 x 10^9 updates
+    answer: 0
+    explanation: 'The state is (weight used, volume used): 1,001 x 501 is about 5 x 10^5 cells. Each item
+      may update every cell once, so 100 items cost about 5 x 10^7 operations, which is fine. Both budget
+      loops must run downwards so that an item is still used at most once.'
+    difficulty: 4
+  - id: can-zero-false
+    kind: bug
+    prompt: 'Subset sum: can the numbers 2 and 3 make the target 5? They obviously can. This table forgot
+      to set can[0] = True before processing the numbers. What does it print?'
+    code:
+      python: "nums = [2, 3]\ntarget = 5\ncan = [False] * (target + 1)\nfor x in nums:\n    for s in range(target,\
+        \ x - 1, -1):\n        if can[s - x]:\n            can[s] = True\nprint(\"yes\" if can[target] else\
+        \ \"no\")\n"
+      cpp: "int nums[2] = {2, 3};\nint target = 5;\nvector<bool> can(target + 1, false);\nfor (int x : nums)\n\
+        \    for (int s = target; s >= x; s--)\n        if (can[s - x]) can[s] = true;\ncout << (can[target]\
+        \ ? \"yes\" : \"no\");\n"
+      java: "int[] nums = {2, 3};\nint target = 5;\nboolean[] can = new boolean[target + 1];\nfor (int x\
+        \ : nums)\n    for (int s = target; s >= x; s--)\n        if (can[s - x]) can[s] = true;\nSystem.out.println(can[target]\
+        \ ? \"yes\" : \"no\");\n"
+    options:
+    - 'no'
+    - 'yes'
+    - yes twice
+    - nothing
+    answer: 0
+    explanation: Every reachable sum grows from an earlier reachable sum, and the first one is the empty
+      set with sum 0. Without can[0] = True nothing is ever reachable, so every answer is no.
+    difficulty: 2
 problems:
 - exact-change-festival
 - fair-teams

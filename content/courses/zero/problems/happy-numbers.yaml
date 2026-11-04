@@ -1,0 +1,89 @@
+id: happy-numbers
+title: Happy or stuck?
+concepts:
+- while-loops
+difficulty: medium
+statement: |
+  Replace a number by the sum of the squares of its digits, and repeat. For some numbers the
+  process reaches 1 (those are called happy), for others it falls into a loop and never reaches 1.
+  For each test number print `HAPPY` or `STUCK`. For example 19 → 82 → 68 → 100 → 1.
+input_format: |
+  The first line contains T. Each of the next T lines contains one number.
+output_format: One line per test case.
+constraints:
+- 1 ≤ T ≤ 2000
+- 1 ≤ n ≤ 10^18
+examples:
+- input: '3
+
+    19
+
+    2
+
+    1'
+  output: 'HAPPY
+
+    STUCK
+
+    HAPPY'
+- input: '1
+
+    7'
+  output: HAPPY
+  explanation: 7 → 49 → 97 → 130 → 10 → 1.
+hints:
+- 'Loop until the number is 1, but be careful: for some numbers the loop would never end. How can you
+  notice that you are going round in a circle?'
+- Remember every value that has already appeared. If a value appears a second time, the sequence is stuck
+  in a cycle.
+- After one step the number is at most 18 · 81 = 1458, so the sequence stays tiny and a set of seen values
+  is cheap.
+approach: |
+  Repeat n = digit-square-sum(n) while n != 1 and n has not been seen; add each value to a set.
+  Reaching 1 is HAPPY, repeating a value is STUCK. Values shrink below 1500 after the first
+  step, so each case takes a few dozen steps.
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  t = int(data[0])
+  out = []
+  for x in data[1:1 + t]:
+      n = int(x)
+      seen = set()
+      while n != 1 and n not in seen:
+          seen.add(n)
+          n = sum(int(d) ** 2 for d in str(n))
+      out.append("HAPPY" if n == 1 else "STUCK")
+  print("\n".join(out))
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  t = int(data[0])
+  for x in data[1:1 + t]:
+      n = int(x)
+      for _ in range(2000):
+          if n == 1:
+              break
+          s = 0
+          while n > 0:
+              s += (n % 10) ** 2
+              n //= 10
+          n = s
+      print("HAPPY" if n == 1 else "STUCK")
+small_generator: |
+  def cases(rng):
+      for _ in range(30):
+          t = rng.randint(1, 6)
+          yield f"{t}\n" + "\n".join(str(rng.randint(1, 300)) for _ in range(t))
+generator: |
+  def cases(rng):
+      yield "3\n19\n2\n1"
+      yield "1\n7"
+      yield "1\n1000000000000000000"
+      yield "2\n999999999999999999\n4"
+      t = 2000
+      yield f"{t}\n" + "\n".join(str(rng.randint(1, 10**18)) for _ in range(t))
+      yield f"{t}\n" + "\n".join(str(i) for i in range(1, t + 1))
+      for _ in range(4):
+          t = rng.randint(1, 200)
+          yield f"{t}\n" + "\n".join(str(rng.randint(1, 10**rng.randint(1, 18))) for _ in range(t))

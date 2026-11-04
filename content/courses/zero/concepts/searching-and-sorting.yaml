@@ -580,108 +580,244 @@ resources:
   minutes: 10
   level: deep
 quiz:
-- id: lin-not-found
-  kind: mcq
-  prompt: When do you know that x is not in an unsorted list?
-  options:
-  - Only after checking every element
-  - As soon as one element differs
-  - After checking the first element
-  - When the list has odd length
-  answer: 0
-  explanation: Any later element could be x.
-  difficulty: 1
-- id: lin-first
-  kind: mcq
-  prompt: 4 2 7 2 9 and x = 2. What index does the linear search with break print?
-  options:
-  - '1'
-  - '3'
-  - '2'
-  - '-1'
-  answer: 0
-  explanation: The first 2 is at index 1.
-  difficulty: 1
-- id: bin-needs-sorted
-  kind: mcq
-  prompt: Which list can binary search be used on?
-  options:
-  - 1 3 5 7 9
-  - 5 1 4 2 8
-  - 9 3 7 1
-  - Any list
-  answer: 0
-  explanation: It needs the values in order.
-  difficulty: 2
-- id: bin-looks
-  kind: mcq
-  prompt: 1 3 5 7 9 11 and x = 7. Which indexes does binary search look at?
-  options:
-  - 2, 4, then 3
-  - 0, 1, 2, 3
-  - 3 only
-  - 5, 4, 3
-  answer: 0
-  explanation: mid = 2 (5 < 7), mid = 4 (9 > 7), mid = 3.
-  difficulty: 2
-- id: bin-lo-mid
-  kind: mcq
-  prompt: The search moves lo = mid instead of lo = mid + 1. What can happen?
-  options:
-  - "With lo and hi next to each other, mid stays the same and the loop never ends"
-  - "The search becomes faster, because it skips checking the middle element twice"
-  - "It finds the last copy of x instead of the first, which is still a valid answer"
-  - "Nothing changes, because mid is always rounded up so lo still moves forward"
-  answer: 0
-  explanation: a[mid] was already checked, so skip it.
-  difficulty: 3
-- id: one-pass
-  kind: mcq
-  prompt: After one bubble pass over 5 1 4 2 8, what is the list?
-  options:
-  - 1 4 2 5 8
-  - 1 2 4 5 8
-  - 1 5 4 2 8
-  - 5 4 2 1 8
-  answer: 0
-  explanation: Each out-of-order neighbour pair is swapped once.
-  difficulty: 3
-- id: two-passes
-  kind: mcq
-  prompt: After two bubble passes, what is 4 3 2 1?
-  options:
-  - 2 1 3 4
-  - 1 2 3 4
-  - 3 2 1 4
-  - 3 4 2 1
-  answer: 0
-  explanation: Each pass puts the next-largest value in place.
-  difficulty: 4
-- id: sort-cost
-  kind: mcq
-  prompt: About how many comparisons does bubble sort make on a reversed list of 1000 values?
-  options:
-  - About 500 000
-  - About 1000
-  - About 10 000
-  - About 20
-  answer: 0
-  explanation: (n − 1) + (n − 2) + … + 1 ≈ n² / 2.
-  difficulty: 4
-- id: key-tie
-  kind: mcq
-  prompt: Sorting pear fig apple kiwi date by length, then alphabetically. What comes second?
-  options:
-  - date
-  - pear
-  - kiwi
-  - apple
-  answer: 0
-  explanation: fig, then the four-letter words date, kiwi, pear.
-  difficulty: 5
+  - id: linear-first-match
+    kind: output
+    prompt: Linear search looks at each item in turn and stops at the first match, or reports -1 if there
+      is none. What is printed for the values 2 and 5 in the list [4, 2, 7, 2, 9]?
+    code:
+      python: "a = [4, 2, 7, 2, 9]\nfor x in (2, 5):\n    pos = -1\n    for i in range(len(a)):\n      \
+        \  if a[i] == x:\n            pos = i\n            break\n    print(pos, end=\" \")\n"
+      cpp: "vector<int> a = {4, 2, 7, 2, 9};\nfor (int x : {2, 5}) {\n    int pos = -1;\n    for (int i\
+        \ = 0; i < (int)a.size(); i++)\n        if (a[i] == x) { pos = i; break; }\n    cout << pos << \"\
+        \ \";\n}\n"
+      java: "int[] a = {4, 2, 7, 2, 9};\nfor (int x : new int[]{2, 5}) {\n    int pos = -1;\n    for (int\
+        \ i = 0; i < a.length; i++)\n        if (a[i] == x) { pos = i; break; }\n    System.out.print(pos\
+        \ + \" \");\n}\n"
+    options:
+    - 1 -1
+    - 3 -1
+    - 1 0
+    - 2 -1
+    answer: 0
+    explanation: 2 first appears at position 1 (the break stops the search before position 3). 5 is nowhere
+      in the list, so the answer -1 is only known after looking at every item.
+    difficulty: 1
+  - id: binary-visits
+    kind: output
+    prompt: Binary search checks the middle of the remaining range, then discards the half that cannot contain
+      the target. Which positions does it look at while searching for 7 in [1, 3, 5, 7, 9, 11]?
+    code:
+      python: "a = [1, 3, 5, 7, 9, 11]\nlo, hi = 0, len(a) - 1\nwhile lo <= hi:\n    mid = (lo + hi) //\
+        \ 2\n    print(mid, end=\" \")\n    if a[mid] == 7:\n        break\n    if a[mid] < 7:\n       \
+        \ lo = mid + 1\n    else:\n        hi = mid - 1\n"
+      cpp: "vector<int> a = {1, 3, 5, 7, 9, 11};\nint lo = 0, hi = a.size() - 1;\nwhile (lo <= hi) {\n \
+        \   int mid = (lo + hi) / 2;\n    cout << mid << \" \";\n    if (a[mid] == 7) break;\n    if (a[mid]\
+        \ < 7) lo = mid + 1;\n    else hi = mid - 1;\n}\n"
+      java: "int[] a = {1, 3, 5, 7, 9, 11};\nint lo = 0, hi = a.length - 1;\nwhile (lo <= hi) {\n    int\
+        \ mid = (lo + hi) / 2;\n    System.out.print(mid + \" \");\n    if (a[mid] == 7) break;\n    if\
+        \ (a[mid] < 7) lo = mid + 1;\n    else hi = mid - 1;\n}\n"
+    options:
+    - 2 4 3
+    - '3'
+    - 2 3
+    - 0 1 2 3
+    answer: 0
+    explanation: First mid = 2 (value 5 < 7), so the left half is dropped. Next mid = 4 (value 9 > 7), so
+      the right part is dropped. The last position left is 3, which holds 7. Three looks instead of four.
+    difficulty: 3
+  - id: unsorted-binary-search
+    kind: bug
+    prompt: Binary search assumes the list is in order. Here the list is NOT sorted and the target 3 is
+      really present. What does the search print?
+    code:
+      python: "a = [5, 1, 9, 3, 7]\nlo, hi, pos = 0, len(a) - 1, -1\nwhile lo <= hi:\n    mid = (lo + hi)\
+        \ // 2\n    if a[mid] == 3:\n        pos = mid\n        break\n    if a[mid] < 3:\n        lo =\
+        \ mid + 1\n    else:\n        hi = mid - 1\nprint(\"not found\" if pos == -1 else f\"found at {pos}\"\
+        )\n"
+      cpp: "vector<int> a = {5, 1, 9, 3, 7};\nint lo = 0, hi = a.size() - 1, pos = -1;\nwhile (lo <= hi)\
+        \ {\n    int mid = (lo + hi) / 2;\n    if (a[mid] == 3) { pos = mid; break; }\n    if (a[mid] <\
+        \ 3) lo = mid + 1;\n    else hi = mid - 1;\n}\nif (pos == -1) cout << \"not found\"; else cout <<\
+        \ \"found at \" << pos;\n"
+      java: "int[] a = {5, 1, 9, 3, 7};\nint lo = 0, hi = a.length - 1, pos = -1;\nwhile (lo <= hi) {\n\
+        \    int mid = (lo + hi) / 2;\n    if (a[mid] == 3) { pos = mid; break; }\n    if (a[mid] < 3) lo\
+        \ = mid + 1;\n    else hi = mid - 1;\n}\nSystem.out.println(pos == -1 ? \"not found\" : \"found\
+        \ at \" + pos);\n"
+    options:
+    - not found
+    - found at 3
+    - found at 1
+    - found at 4
+    answer: 0
+    explanation: The middle value 9 is bigger than 3, so the search throws away the right side, which is
+      exactly where the 3 is. It then misses it and reports -1. Binary search is only correct on sorted
+      data.
+    difficulty: 4
+  - id: lo-equals-mid
+    kind: mcq
+    prompt: In this binary search, when a[mid] < x the code sets `lo = mid` instead of `lo = mid + 1`. What
+      can go wrong?
+    options:
+    - When lo and mid are the same position nothing changes, so the loop can repeat forever
+    - The search steps over the target and wrongly returns -1 at the end
+    - It finds the target but then returns a wrong position for it
+    - Nothing goes wrong, because the two versions are really equivalent
+    answer: 0
+    explanation: With lo = 3 and hi = 4, mid is 3, and setting lo = mid keeps lo at 3, so the range never
+      shrinks. Moving past the position that was just rejected (mid + 1) guarantees progress.
+    difficulty: 3
+    code:
+      python: "while lo <= hi:\n    mid = (lo + hi) // 2\n    if a[mid] < x:\n        lo = mid\n    else:\n\
+        \        hi = mid - 1\n"
+      cpp: "while (lo <= hi) {\n    int mid = (lo + hi) / 2;\n    if (a[mid] < x) lo = mid;\n    else hi\
+        \ = mid - 1;\n}\n"
+      java: "while (lo <= hi) {\n    int mid = (lo + hi) / 2;\n    if (a[mid] < x) lo = mid;\n    else hi\
+        \ = mid - 1;\n}\n"
+  - id: one-bubble-pass
+    kind: output
+    prompt: One pass of bubble sort compares neighbours left to right and swaps them if they are out of
+      order. What is the list after one pass over [5, 1, 4, 2, 8]?
+    code:
+      python: "a = [5, 1, 4, 2, 8]\nfor i in range(len(a) - 1):\n    if a[i] > a[i + 1]:\n        a[i],\
+        \ a[i + 1] = a[i + 1], a[i]\nprint(*a)\n"
+      cpp: "vector<int> a = {5, 1, 4, 2, 8};\nfor (int i = 0; i + 1 < (int)a.size(); i++)\n    if (a[i]\
+        \ > a[i + 1]) swap(a[i], a[i + 1]);\nfor (int x : a) cout << x << \" \";\n"
+      java: "int[] a = {5, 1, 4, 2, 8};\nfor (int i = 0; i + 1 < a.length; i++)\n    if (a[i] > a[i + 1])\
+        \ { int t = a[i]; a[i] = a[i + 1]; a[i + 1] = t; }\nfor (int x : a) System.out.print(x + \" \");\n"
+    options:
+    - 1 4 2 5 8
+    - 1 2 4 5 8
+    - 1 5 4 2 8
+    - 5 1 4 2 8
+    answer: 0
+    explanation: The 5 is carried all the way along (past 1, 4 and 2) until it meets the 8. One pass moves
+      the largest value so far to its place, but the others are only partly sorted.
+    difficulty: 3
+  - id: two-bubble-passes
+    kind: output
+    prompt: After two full passes of bubble sort, the two largest values are in place. What is the list
+      after two passes over [4, 3, 2, 1]?
+    code:
+      python: "a = [4, 3, 2, 1]\nfor _ in range(2):\n    for i in range(len(a) - 1):\n        if a[i] >\
+        \ a[i + 1]:\n            a[i], a[i + 1] = a[i + 1], a[i]\nprint(*a)\n"
+      cpp: "vector<int> a = {4, 3, 2, 1};\nfor (int p = 0; p < 2; p++)\n    for (int i = 0; i + 1 < (int)a.size();\
+        \ i++)\n        if (a[i] > a[i + 1]) swap(a[i], a[i + 1]);\nfor (int x : a) cout << x << \" \";\n"
+      java: "int[] a = {4, 3, 2, 1};\nfor (int p = 0; p < 2; p++)\n    for (int i = 0; i + 1 < a.length;\
+        \ i++)\n        if (a[i] > a[i + 1]) { int t = a[i]; a[i] = a[i + 1]; a[i + 1] = t; }\nfor (int\
+        \ x : a) System.out.print(x + \" \");\n"
+    options:
+    - 2 1 3 4
+    - 1 2 3 4
+    - 3 2 1 4
+    - 2 3 1 4
+    answer: 0
+    explanation: Pass one gives 3 2 1 4, pass two gives 2 1 3 4. The 4 and the 3 are home, but the front
+      is still unsorted, so a reversed list needs about n passes.
+    difficulty: 3
+  - id: swap-count
+    kind: output
+    prompt: Counting how many swaps bubble sort performs on [3, 1, 2] (this equals the number of pairs that
+      are out of order). What is printed?
+    code:
+      python: "a = [3, 1, 2]\nswaps = 0\nfor _ in range(len(a)):\n    for i in range(len(a) - 1):\n    \
+        \    if a[i] > a[i + 1]:\n            a[i], a[i + 1] = a[i + 1], a[i]\n            swaps += 1\n\
+        print(swaps)\n"
+      cpp: "vector<int> a = {3, 1, 2};\nint swaps = 0;\nfor (int p = 0; p < 3; p++)\n    for (int i = 0;\
+        \ i + 1 < 3; i++)\n        if (a[i] > a[i + 1]) { swap(a[i], a[i + 1]); swaps++; }\ncout << swaps;\n"
+      java: "int[] a = {3, 1, 2};\nint swaps = 0;\nfor (int p = 0; p < 3; p++)\n    for (int i = 0; i +\
+        \ 1 < 3; i++)\n        if (a[i] > a[i + 1]) { int t = a[i]; a[i] = a[i + 1]; a[i + 1] = t; swaps++;\
+        \ }\nSystem.out.println(swaps);\n"
+    options:
+    - '2'
+    - '3'
+    - '1'
+    - '6'
+    answer: 0
+    explanation: The out-of-order pairs are (3, 1) and (3, 2), and each swap fixes exactly one such pair.
+      So the answer is 2, no matter how the swaps are ordered.
+    difficulty: 3
+  - id: sort-by-two-keys
+    kind: output
+    prompt: Words are sorted by length first, and alphabetically when the lengths tie. What is printed?
+    code:
+      python: 'w = ["pear", "fig", "apple", "kiwi", "date"]
+
+        w.sort(key=lambda s: (len(s), s))
+
+        print(*w)
+
+        '
+      cpp: "vector<string> w = {\"pear\", \"fig\", \"apple\", \"kiwi\", \"date\"};\nsort(w.begin(), w.end(),\
+        \ [](const string& a, const string& b) {\n    if (a.size() != b.size()) return a.size() < b.size();\n\
+        \    return a < b;\n});\nfor (auto& s : w) cout << s << \" \";\n"
+      java: 'String[] w = {"pear", "fig", "apple", "kiwi", "date"};
+
+        Arrays.sort(w, (a, b) -> a.length() != b.length() ? a.length() - b.length() : a.compareTo(b));
+
+        for (String s : w) System.out.print(s + " ");
+
+        '
+    options:
+    - fig date kiwi pear apple
+    - fig pear kiwi date apple
+    - apple date fig kiwi pear
+    - fig kiwi pear date apple
+    answer: 0
+    explanation: fig (3) is shortest, the three 4-letter words follow in alphabetical order (date, kiwi,
+      pear), and apple (5) comes last. The second key only matters when the first key ties.
+    difficulty: 4
+  - id: stable-sort
+    kind: output
+    prompt: A stable sort keeps items with equal keys in their original order. The pairs are sorted by number
+      only. What are the letters, in order, after sorting?
+    code:
+      python: 'p = [(2, "b"), (1, "x"), (2, "a")]
+
+        p.sort(key=lambda t: t[0])
+
+        print(*[t[1] for t in p])
+
+        '
+      cpp: 'vector<pair<int, string>> p = {{2, "b"}, {1, "x"}, {2, "a"}};
+
+        stable_sort(p.begin(), p.end(), [](const pair<int, string>& a, const pair<int, string>& b) { return
+        a.first < b.first; });
+
+        for (auto& t : p) cout << t.second << " ";
+
+        '
+      java: 'String[][] p = {{"2", "b"}, {"1", "x"}, {"2", "a"}};
+
+        Arrays.sort(p, (a, b) -> a[0].compareTo(b[0]));
+
+        for (String[] t : p) System.out.print(t[1] + " ");
+
+        '
+    options:
+    - x b a
+    - x a b
+    - b x a
+    - a b x
+    answer: 0
+    explanation: Both pairs with key 2 stay in their original order (b before a), after the single pair
+      with key 1. Stability lets you sort by one key and keep an earlier ordering as the tie-break.
+    difficulty: 5
+  - id: bubble-cost
+    kind: mcq
+    prompt: Bubble sort makes (n - 1) + (n - 2) + ... + 1 comparisons when run in full. About how many is
+      that for 1000 values?
+    options:
+    - 499,500
+    - 1,000
+    - 10,000
+    - 1,000,000
+    answer: 0
+    explanation: The total is n(n - 1) / 2 = 999,000 / 2 = 499,500, which grows with the square of n. For
+      a million values that would be hundreds of billions, which is why faster sorts exist.
+    difficulty: 4
 problems:
 - exam-ranking
 - swap-count
+- first-not-smaller
 practice_links:
 - title: Binary Search
   url: https://leetcode.com/problems/binary-search/

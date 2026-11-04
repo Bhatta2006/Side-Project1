@@ -1,0 +1,73 @@
+id: longest-collatz-start
+title: The longest staircase
+concepts:
+- for-loops
+difficulty: medium
+statement: |
+  From a number x, repeat: if x is even halve it, otherwise replace it by 3x + 1, until x is 1.
+  The number of steps this takes is the chain length of the starting number (1 has length 0).
+  Among all starting numbers from 1 to `n`, find the one with the longest chain. If there is a
+  tie, take the smaller start. Print the start and its chain length.
+input_format: |
+  One integer n.
+output_format: 'Two integers: the best starting number and its number of steps.'
+constraints:
+- 1 ≤ n ≤ 30000
+examples:
+- input: '10'
+  output: 9 19
+  explanation: 9 takes 19 steps; every other start up to 10 takes fewer.
+- input: '1'
+  output: 1 0
+hints:
+- Write a loop that counts the steps for one number, then run it for every start from 1 to n.
+- Keep the best chain length found so far together with its start. Update only when a chain is strictly
+  longer, so that ties keep the smaller start.
+- Values inside a chain can grow far above n, but Python integers are fine; in C++ and Java use a 64-bit
+  integer.
+approach: |
+  A for loop over the starts, with a while loop that counts the steps for each. Track the best
+  (length, start) and replace it only on a strictly longer chain. About 3 million steps in
+  total for n = 30000.
+reference: |
+  n = int(input())
+  best_len, best_start = -1, 1
+  for s in range(1, n + 1):
+      x, steps = s, 0
+      while x != 1:
+          x = x // 2 if x % 2 == 0 else 3 * x + 1
+          steps += 1
+      if steps > best_len:
+          best_len, best_start = steps, s
+  print(best_start, best_len)
+brute: |
+  n = int(input())
+  cache = {1: 0}
+
+  def length(x):
+      if x not in cache:
+          cache[x] = 1 + length(x // 2 if x % 2 == 0 else 3 * x + 1)
+      return cache[x]
+
+  import sys
+  sys.setrecursionlimit(100000)
+  lens = [(length(s), -s) for s in range(1, n + 1)]
+  best = max(lens)
+  print(-best[1], best[0])
+small_generator: |
+  def cases(rng):
+      for n in range(1, 40):
+          yield str(n)
+      for _ in range(10):
+          yield str(rng.randint(40, 800))
+generator: |
+  def cases(rng):
+      yield "10"
+      yield "1"
+      yield "30000"
+      yield "29999"
+      yield "27"
+      yield "26"
+      yield "28"
+      for _ in range(6):
+          yield str(rng.randint(1, 30000))

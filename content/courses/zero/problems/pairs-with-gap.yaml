@@ -1,0 +1,66 @@
+id: pairs-with-gap
+title: Pairs with a fixed gap
+concepts:
+- problem-solving
+difficulty: medium
+statement: |
+  Count the pairs of positions (i, j) with i < j for which the numbers differ by exactly `k`,
+  that is |a[i] - a[j]| = k. Equal values at different positions count as different pairs.
+input_format: |
+  The first line contains n and k. The second line contains the n numbers.
+output_format: The number of pairs.
+constraints:
+- 1 ≤ n ≤ 100000
+- 1 ≤ k ≤ 10^9
+- 0 ≤ a[i] ≤ 10^9
+examples:
+- input: '5 2
+
+    1 3 5 3 1'
+  output: '6'
+  explanation: 'Pairs of values (1,3) twice per 3 and per 1: 1-3 (2x2=4) and 3-5 (2x1=2).'
+- input: '3 5
+
+    4 4 4'
+  output: '0'
+hints:
+- Comparing every pair is n² / 2 = 5·10^9 checks. Think about which single value would pair with a given
+  x.
+- A pair with gap k has values (v, v + k). If you know how many times each value occurs, you can count
+  all pairs of those two values at once.
+- Store the counts in a map. Then the answer is the sum over all values v of count[v] · count[v + k].
+  The count can be about 5·10^9, so use a 64-bit integer.
+approach: |
+  Count occurrences of each value in a dictionary. Because k ≥ 1, each pair is counted once as
+  (smaller, larger): answer = sum over v of count[v] · count[v + k]. O(n).
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  cnt = {}
+  for x in map(int, data[2:2 + n]):
+      cnt[x] = cnt.get(x, 0) + 1
+  print(sum(c * cnt.get(v + k, 0) for v, c in cnt.items()))
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = list(map(int, data[2:2 + n]))
+  print(sum(1 for i in range(n) for j in range(i + 1, n) if abs(a[i] - a[j]) == k))
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          n = rng.randint(1, 10)
+          yield f"{n} {rng.randint(1, 4)}\n" + " ".join(str(rng.randint(0, 8)) for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "5 2\n1 3 5 3 1"
+      yield "3 5\n4 4 4"
+      n = 100000
+      yield f"{n} 1\n" + " ".join(str(rng.randint(0, 10**9)) for _ in range(n))
+      yield f"{n} 1\n" + " ".join(str(i % 2) for i in range(n))
+      yield f"{n} 1000000000\n" + " ".join(str(rng.choice([0, 10**9])) for _ in range(n))
+      yield f"{n} 3\n" + " ".join(str(rng.randint(0, 20)) for _ in range(n))
+      for _ in range(4):
+          n = rng.randint(1, 400)
+          yield f"{n} {rng.randint(1, 30)}\n" + " ".join(str(rng.randint(0, 60)) for _ in range(n))

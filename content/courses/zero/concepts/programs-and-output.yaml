@@ -181,82 +181,267 @@ resources:
 quiz:
   - id: order-of-output
     kind: output
-    prompt: What does this program print?
+    prompt: Lines run from top to bottom. What does this program print (shown on one line here, as the lines
+      are joined)?
     code:
-      python: |
-        print("B")
+      python: 'print("B")
+
         print("A")
-      cpp: |
-        std::cout << "B" << "\n";
-        std::cout << "A" << "\n";
-      java: |
-        System.out.println("B");
+
+        print("C")
+
+        '
+      cpp: 'cout << "B" << endl;
+
+        cout << "A" << endl;
+
+        cout << "C" << endl;
+
+        '
+      java: 'System.out.println("B");
+
         System.out.println("A");
-    options: ["B then A on separate lines", "A then B on separate lines", "BA on one line", "Nothing"]
+
+        System.out.println("C");
+
+        '
+    options:
+    - B A C
+    - A B C
+    - C A B
+    - B C A
     answer: 0
-    explanation: Instructions run top to bottom, so B is printed first, then A, each on its own line.
+    explanation: A program does exactly what its lines say, in the order they are written. It never sorts
+      or reorders your output.
     difficulty: 1
   - id: quotes-vs-math
     kind: output
-    prompt: What is printed?
+    prompt: One of these prints text exactly as written, the other calculates. What is printed (lines joined)?
     code:
-      python: print("4 * 2")
-      cpp: std::cout << "4 * 2" << "\n";
-      java: System.out.println("4 * 2");
-    options: ["4 * 2", "8", "42", "An error"]
-    answer: 0
-    explanation: Everything inside quotes is text, printed exactly as written. No calculation happens.
-    difficulty: 1
-  - id: comment-ignored
-    kind: mcq
-    prompt: What does the computer do with a comment?
-    options: ["Ignores it completely", "Prints it", "Runs it as code", "Saves it to a file"]
-    answer: 0
-    explanation: Comments exist only for human readers. The computer skips them.
-    difficulty: 1
-  - id: precise-instructions
-    languages: [python]
-    kind: mcq
-    prompt: You wrote `prnt("hi")` instead of `print("hi")` in Python. What happens?
+      python: 'print("4 * 2")
+
+        print(4 * 2)
+
+        '
+      cpp: 'cout << "4 * 2" << endl;
+
+        cout << 4 * 2 << endl;
+
+        '
+      java: 'System.out.println("4 * 2");
+
+        System.out.println(4 * 2);
+
+        '
     options:
-      - "The program stops with an error because prnt is unknown"
-      - "Python guesses you meant print and runs it anyway"
-      - "It prints hi, since only the brackets really matter"
-      - "It prints nothing but carries on to the next line"
+    - 4 * 2 8
+    - 8 8
+    - 4 * 2 4 * 2
+    - 8 4 * 2
     answer: 0
-    explanation: Computers do exactly what you write. An unknown name is an error, not a guess.
+    explanation: Inside quotes the characters are just text and are shown unchanged. Without quotes, 4 *
+      2 is an expression and the computer evaluates it to 8.
+    difficulty: 1
+  - id: comment-line
+    kind: output
+    prompt: Comments are notes for people; the computer skips them. What is printed (lines joined)?
+    code:
+      python: 'print("A")
+
+        # print("B")
+
+        print("C")
+
+        '
+      cpp: 'cout << "A" << endl;
+
+        // cout << "B" << endl;
+
+        cout << "C" << endl;
+
+        '
+      java: 'System.out.println("A");
+
+        // System.out.println("B");
+
+        System.out.println("C");
+
+        '
+    options:
+    - A C
+    - A B C
+    - B
+    - A
+    answer: 0
+    explanation: Everything after the comment marker on that line is ignored, so the B line never runs.
+      Commenting out a line is a quick way to switch it off while debugging.
     difficulty: 2
-  - id: print-sep-end
+  - id: escaped-quote
     kind: output
-    prompt: "What does this program print?"
+    prompt: A quote inside text must be escaped with a backslash so it is not mistaken for the end of the
+      text. What is printed?
     code:
-      python: |
-        print("a", "b", sep="-", end="!")
-        print("c")
+      python: 'print("He said \"hi\"")
+
+        '
+      cpp: 'cout << "He said \"hi\"";
+
+        '
+      java: 'System.out.println("He said \"hi\"");
+
+        '
     options:
-      - "a-b!c"
-      - "a-b!\nc"
-      - "a b!c"
-      - "a-b\n!c"
+    - He said "hi"
+    - He said \"hi\"
+    - He said hi
+    - He said "hi
     answer: 0
-    explanation: "sep goes between the arguments and end replaces the newline, so the second print continues on the same line: a-b!c."
+    explanation: The backslash tells the language that the next quote is part of the text. It is consumed
+      while reading, so only the quote itself is printed.
+    difficulty: 3
+  - id: sum-label
+    kind: output
+    prompt: A label and a calculation are printed together. What is printed?
+    code:
+      python: 'print("Sum:", 3 + 4)
+
+        '
+      cpp: 'cout << "Sum: " << 3 + 4;
+
+        '
+      java: 'System.out.println("Sum: " + (3 + 4));
+
+        '
+    options:
+    - 'Sum: 7'
+    - 'Sum: 34'
+    - 'Sum: 3 + 4'
+    - '7'
+    answer: 0
+    explanation: The addition is worked out first, giving 7, and then that number is printed after the label.
+    difficulty: 2
+  - id: java-concat-order
+    kind: output
+    languages:
+    - java
+    prompt: In Java, + works left to right, and text on its left turns everything after it into text too.
+      What is printed?
+    code:
+      java: 'System.out.println("Sum: " + 3 + 4);
+
+        System.out.println(3 + 4 + " is the sum");
+
+        '
+    options:
+    - 'Sum: 34 7 is the sum'
+    - 'Sum: 7 7 is the sum'
+    - 'Sum: 34 34 is the sum'
+    - 'Sum: 7 34 is the sum'
+    answer: 0
+    explanation: 'In the first line, "Sum: " + 3 is already text, so + 4 just glues on a 4. In the second
+      line, 3 + 4 happens first (both numbers) and only then is the text attached. Brackets control this.'
     difficulty: 4
-  - id: print-order
+  - id: sep-and-end
     kind: output
-    prompt: "What is the exact output?"
+    languages:
+    - python
+    prompt: print can be told what to put between items and after the line. What is printed?
     code:
-      python: |
-        x = 3
-        print("x", x, "x" * x)
+      python: 'print("a", "b", sep="-", end="!")
+
+        print("c")
+
+        '
     options:
-      - "x 3 xxx"
-      - "3 3 9"
-      - "x3xxx"
-      - "x 3 x3"
+    - a-b!c
+    - a b!c
+    - a-b! c
+    - a-b c
     answer: 0
-    explanation: "print separates arguments with a space; \"x\" * 3 repeats the text three times."
-    difficulty: 5
-problems: [echo-reading, ticket-stub]
+    explanation: sep replaces the space between a and b with a dash, and end replaces the usual newline
+      with an exclamation mark, so the next print continues on the same line.
+    difficulty: 3
+  - id: print-vs-println
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: Printing without a line break keeps going on the same line. What is printed (lines joined)?
+    code:
+      cpp: 'cout << "a";
+
+        cout << "b" << endl;
+
+        cout << "c";
+
+        '
+      java: 'System.out.print("a");
+
+        System.out.print("b");
+
+        System.out.println();
+
+        System.out.print("c");
+
+        '
+    options:
+    - ab c
+    - a b c
+    - abc
+    - a b
+    answer: 0
+    explanation: Nothing moves to a new line until you ask for it, so a and b share a line. The line break
+      comes after b, so c starts on the next line.
+    difficulty: 3
+  - id: misspelled-print
+    kind: mcq
+    languages:
+    - python
+    prompt: In Python you wrote `prnt("hi")` instead of `print("hi")`. What happens?
+    options:
+    - The program stops with a NameError because prnt is unknown
+    - Python guesses you meant print and shows hi
+    - It prints hi, since only the brackets really matter
+    - It silently skips the line and carries on
+    answer: 0
+    explanation: Computers need exact names. Python reports that prnt is not defined and stops at that line;
+      it never tries to guess what you meant.
+    difficulty: 2
+    code:
+      python: 'print("start")
+
+        prnt("hi")
+
+        print("end")
+
+        '
+  - id: missing-semicolon
+    kind: mcq
+    languages:
+    - cpp
+    - java
+    prompt: The program below is missing a semicolon after the first output statement. What happens?
+    options:
+    - It fails to compile, so nothing at all is printed
+    - It prints start, then stops with an error
+    - It prints start and end, ignoring the mistake
+    - It prints end only, skipping the faulty line
+    answer: 0
+    explanation: C++ and Java check the whole program before running it. A syntax error is caught at that
+      stage, so the program never starts and even the first line produces no output.
+    difficulty: 2
+    code:
+      cpp: 'cout << "start"
+
+        cout << "end";
+
+        '
+      java: 'System.out.println("start")
+
+        System.out.println("end");
+
+        '
+problems: [echo-reading, ticket-stub, receipt-lines]
 practice_links:
   - title: Hello World (try printing different messages)
     url: https://pythontutor.com/

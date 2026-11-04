@@ -523,125 +523,153 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: states
-  kind: mcq
-  prompt: What does the stock state machine need to know at the end of each day, for at most k trades?
-  options:
-  - "Whether you hold a share, and how many buys you have used"
-  - "Every price seen so far, so you can pick the best buy day"
-  - "Only the day of the last sale, since profits add up after it"
-  - "The total number of days the price rose, counted from day one"
-  answer: 0
-  explanation: The future depends only on what you hold and how many trades are left.
-  difficulty: 1
-- id: unlimited
-  kind: mcq
-  prompt: Prices 1 3 2 5, unlimited trades. What is the best profit?
-  options:
-  - '5'
-  - '4'
-  - '3'
-  - '2'
-  answer: 0
-  explanation: 'Sum of rises: (3 − 1) + (5 − 2) = 5.'
-  difficulty: 2
-- id: hold-init
-  kind: mcq
-  prompt: What should hold[t] be before the first day?
-  options:
-  - Minus infinity
-  - '0'
-  - The first price
-  - t
-  answer: 0
-  explanation: You cannot hold a share you never bought; 0 would let you sell it for free.
-  difficulty: 2
-- id: buy-index
-  kind: mcq
-  prompt: Why does a buy read cash[t − 1] and not cash[t]?
-  options:
-  - "A buy starts a new transaction, so it comes from a state with one fewer used"
-  - "Because t − 1 is a smaller index, so the table is filled in increasing order"
-  - "To avoid an index error when t is the largest transaction count allowed"
-  - "It makes no difference; cash[t] and cash[t − 1] hold the same value then"
-  answer: 0
-  explanation: Reading cash[t] would let you buy without using up a transaction.
-  difficulty: 3
-- id: runs-greedy
-  kind: mcq
-  prompt: Prices 1 2 4 2 5 7 2 4 9 0, at most 2 trades. Keeping the two biggest rising runs gives 12. What
-    is the best?
-  options:
-  - '13'
-  - '12'
-  - '15'
-  - '14'
-  answer: 0
-  explanation: Merge 1→7 (6) and take 2→9 (7).
-  difficulty: 4
-- id: fee
-  kind: mcq
-  prompt: With a transaction fee, where is it subtracted?
-  options:
-  - "Once per trade, for example when selling"
-  - "Once on every day that you hold a share"
-  - "Twice per trade, on the buy and the sell"
-  - "Only once, on the very last trade made"
-  answer: 0
-  explanation: Each completed trade pays the fee once.
-  difficulty: 3
-- id: cooldown
-  kind: mcq
-  prompt: With a one-day cooldown after selling, a buy on day d uses which cash?
-  options:
-  - The cash at the end of day d − 2
-  - The cash at the end of day d − 1
-  - The cash at the end of day d
-  - Zero
-  answer: 0
-  explanation: If you sold on day d − 1, you must rest on day d.
-  difficulty: 4
-- id: k-output
-  kind: output
-  prompt: What does this print?
-  code:
-    python: |
-      p, k = [3, 2, 6, 5, 0, 3], 2
-      cash, hold = [0] * (k + 1), [-10**9] * (k + 1)
-      for price in p:
-          for t in range(k, 0, -1):
-              cash[t] = max(cash[t], hold[t] + price)
-              hold[t] = max(hold[t], cash[t - 1] - price)
-      print(cash[k])
-    cpp: |
-      vector<int> p = {3, 2, 6, 5, 0, 3};
-      int k = 2;
-      vector<int> cash(k + 1, 0), hold(k + 1, -1000000000);
-      for (int price : p)
-          for (int t = k; t >= 1; t--) {
-              cash[t] = max(cash[t], hold[t] + price);
-              hold[t] = max(hold[t], cash[t - 1] - price);
-          }
-      cout << cash[k];
-    java: |
-      int[] p = {3, 2, 6, 5, 0, 3};
-      int k = 2;
-      int[] cash = new int[k + 1], hold = new int[k + 1];
-      java.util.Arrays.fill(hold, -1000000000);
-      for (int price : p)
-          for (int t = k; t >= 1; t--) {
-              cash[t] = Math.max(cash[t], hold[t] + price);
-              hold[t] = Math.max(hold[t], cash[t - 1] - price);
-          }
-      System.out.print(cash[k]);
-  options:
-  - '7'
-  - '4'
-  - '6'
-  - '9'
-  answer: 0
-  explanation: Buy at 2, sell at 6 (+4); buy at 0, sell at 3 (+3).
-  difficulty: 5
+  - id: states
+    kind: mcq
+    prompt: What does the stock state machine need to know at the end of each day, for at most k trades?
+    options:
+    - Whether you hold a share, and how many buys you have used
+    - Every price seen so far, so you can pick the best buy day
+    - Only the day of the last sale, since profits add up after it
+    - The total number of days the price rose, counted from day one
+    answer: 0
+    explanation: The future depends only on what you hold and how many trades are left.
+    difficulty: 1
+  - id: unlimited
+    kind: mcq
+    prompt: Prices 1 3 2 5, unlimited trades. What is the best profit?
+    options:
+    - '5'
+    - '4'
+    - '3'
+    - '2'
+    answer: 0
+    explanation: 'Sum of rises: (3 − 1) + (5 − 2) = 5.'
+    difficulty: 2
+  - id: buy-index
+    kind: mcq
+    prompt: Why does a buy read cash[t − 1] and not cash[t]?
+    options:
+    - A buy starts a new transaction, so it comes from a state with one fewer used
+    - Because t − 1 is a smaller index, so the table is filled in increasing order
+    - To avoid an index error when t is the largest transaction count allowed
+    - It makes no difference; cash[t] and cash[t − 1] hold the same value then
+    answer: 0
+    explanation: Reading cash[t] would let you buy without using up a transaction.
+    difficulty: 3
+  - id: fee
+    kind: mcq
+    prompt: With a transaction fee, where is it subtracted?
+    options:
+    - Once per trade, for example when selling
+    - Once on every day that you hold a share
+    - Twice per trade, on the buy and the sell
+    - Only once, on the very last trade made
+    answer: 0
+    explanation: Each completed trade pays the fee once.
+    difficulty: 3
+  - id: runs-greedy
+    kind: mcq
+    prompt: Prices 1 2 4 2 5 7 2 4 9 0, at most 2 trades. Keeping the two biggest rising runs gives 12.
+      What is the best?
+    options:
+    - '13'
+    - '12'
+    - '15'
+    - '14'
+    answer: 0
+    explanation: Merge 1→7 (6) and take 2→9 (7).
+    difficulty: 4
+  - id: cooldown
+    kind: mcq
+    prompt: With a one-day cooldown after selling, a buy on day d uses which cash?
+    options:
+    - The cash at the end of day d − 2
+    - The cash at the end of day d − 1
+    - The cash at the end of day d
+    - Zero
+    answer: 0
+    explanation: If you sold on day d − 1, you must rest on day d.
+    difficulty: 4
+  - id: k-output
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "p, k = [3, 2, 6, 5, 0, 3], 2\ncash, hold = [0] * (k + 1), [-10**9] * (k + 1)\nfor price in\
+        \ p:\n    for t in range(k, 0, -1):\n        cash[t] = max(cash[t], hold[t] + price)\n        hold[t]\
+        \ = max(hold[t], cash[t - 1] - price)\nprint(cash[k])\n"
+      cpp: "vector<int> p = {3, 2, 6, 5, 0, 3};\nint k = 2;\nvector<int> cash(k + 1, 0), hold(k + 1, -1000000000);\n\
+        for (int price : p)\n    for (int t = k; t >= 1; t--) {\n        cash[t] = max(cash[t], hold[t]\
+        \ + price);\n        hold[t] = max(hold[t], cash[t - 1] - price);\n    }\ncout << cash[k];\n"
+      java: "int[] p = {3, 2, 6, 5, 0, 3};\nint k = 2;\nint[] cash = new int[k + 1], hold = new int[k +\
+        \ 1];\nArrays.fill(hold, -1_000_000_000);\nfor (int price : p)\n    for (int t = k; t >= 1; t--)\
+        \ {\n        cash[t] = Math.max(cash[t], hold[t] + price);\n        hold[t] = Math.max(hold[t],\
+        \ cash[t - 1] - price);\n    }\nSystem.out.println(cash[k]);\n"
+    options:
+    - '7'
+    - '4'
+    - '6'
+    - '9'
+    answer: 0
+    explanation: Buy at 2, sell at 6 (+4); buy at 0, sell at 3 (+3).
+    difficulty: 5
+  - id: cooldown-output
+    kind: output
+    prompt: After selling you must rest one day before buying again. This three-state DP runs over the prices
+      1, 2, 3, 0, 2. What does it print?
+    code:
+      python: "prices = [1, 2, 3, 0, 2]\nhold, sold, rest = -10 ** 9, 0, 0\nfor p in prices:\n    prev_sold\
+        \ = sold\n    sold = hold + p\n    hold = max(hold, rest - p)\n    rest = max(rest, prev_sold)\n\
+        print(max(sold, rest))\n"
+      cpp: "vector<int> prices = {1, 2, 3, 0, 2};\nint hold = -1000000000, sold = 0, rest = 0;\nfor (int\
+        \ p : prices) {\n    int prevSold = sold;\n    sold = hold + p;\n    hold = max(hold, rest - p);\n\
+        \    rest = max(rest, prevSold);\n}\ncout << max(sold, rest);\n"
+      java: "int[] prices = {1, 2, 3, 0, 2};\nint hold = -1_000_000_000, sold = 0, rest = 0;\nfor (int p\
+        \ : prices) {\n    int prevSold = sold;\n    sold = hold + p;\n    hold = Math.max(hold, rest -\
+        \ p);\n    rest = Math.max(rest, prevSold);\n}\nSystem.out.println(Math.max(sold, rest));\n"
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: 'The best plan is buy at 1, sell at 2, rest on day 3, buy at 0 and sell at 2, for 1 + 2
+      = 3. A buy may only come from the rest state, which is entered one day after a sale: that is how the
+      cooldown is encoded in the transitions, without a day-two-ago lookup.'
+    difficulty: 4
+  - id: fee-numeric
+    kind: mcq
+    prompt: Prices are [1, 3, 2, 8, 4, 9] and every completed trade (buy and sell together) costs a fee
+      of 2. With unlimited trades, what is the best total profit?
+    options:
+    - '8'
+    - '10'
+    - '6'
+    - '7'
+    answer: 0
+    explanation: 'Buy at 1, sell at 8 (+7 - 2), buy at 4, sell at 9 (+5 - 2): 5 + 3 = 8. Summing every daily
+      rise would overcount, because each small trade would pay its own fee. The fee is subtracted once per
+      trade, in the sell transition.'
+    difficulty: 4
+  - id: hold-starts-at-zero
+    kind: bug
+    prompt: 'Prices only fall: 5, 4, 3. The best profit is 0 (never trade). This state machine starts hold
+      at 0, as if you owned a stock you got for free. What profit does it print?'
+    code:
+      python: "prices = [5, 4, 3]\ncash, hold = 0, 0\nfor p in prices:\n    cash, hold = max(cash, hold\
+        \ + p), max(hold, cash - p)\nprint(cash)\n"
+      cpp: "int prices[3] = {5, 4, 3};\nint cash = 0, hold = 0;\nfor (int p : prices) {\n    int nc = max(cash,\
+        \ hold + p), nh = max(hold, cash - p);\n    cash = nc;\n    hold = nh;\n}\ncout << cash;\n"
+      java: "int[] prices = {5, 4, 3};\nint cash = 0, hold = 0;\nfor (int p : prices) {\n    int nc = Math.max(cash,\
+        \ hold + p), nh = Math.max(hold, cash - p);\n    cash = nc;\n    hold = nh;\n}\nSystem.out.println(cash);\n"
+    options:
+    - '5'
+    - '0'
+    - '3'
+    - '2'
+    answer: 0
+    explanation: A hold of 0 means 'I already own one stock that cost nothing', so selling it on day one
+      earns 5. Before the first buy, the 'holding' state is impossible and must start at minus infinity.
+    difficulty: 3
 problems:
 - warehouse-trading
 - rest-days

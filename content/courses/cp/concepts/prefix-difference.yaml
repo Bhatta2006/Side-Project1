@@ -116,24 +116,185 @@ resources:
 quiz:
   - id: diff-update
     kind: mcq
-    prompt: To add 5 to positions 3..7 with a difference array, you do...
-    options: ["diff[3] += 5, diff[8] −= 5", "diff[3] += 5, diff[7] −= 5", "diff[3..7] += 5", "diff[8] += 5"]
+    prompt: To add 5 to positions 3..7 (1-indexed) with a difference array, you do...
+    options:
+    - diff[3] += 5 and diff[8] −= 5
+    - diff[3] += 5 and diff[7] −= 5
+    - diff[3..7] += 5 one by one
+    - diff[8] += 5 only
     answer: 0
-    explanation: Start adding at 3 and cancel right after 7.
+    explanation: The −5 must land one past the range, where the running sum should drop back. Writing it
+      at 7 would leave position 7 without the +5.
+    difficulty: 1
+  - id: prefix-output
+    kind: output
+    prompt: What does this print for the 0-indexed range [1, 3]?
+    code:
+      python: "a = [2, 5, 1, 4]\np = [0]\nfor x in a:\n    p.append(p[-1] + x)\nl, r = 1, 3\nprint(p[r +\
+        \ 1] - p[l])\n"
+      cpp: 'int a[4] = {2, 5, 1, 4};
+
+        int p[5] = {0};
+
+        for (int i = 0; i < 4; i++) p[i + 1] = p[i] + a[i];
+
+        int l = 1, r = 3;
+
+        cout << p[r + 1] - p[l];
+
+        '
+      java: 'int[] a = {2, 5, 1, 4};
+
+        int[] p = new int[5];
+
+        for (int i = 0; i < 4; i++) p[i + 1] = p[i] + a[i];
+
+        int l = 1, r = 3;
+
+        System.out.println(p[r + 1] - p[l]);
+
+        '
+    options:
+    - '10'
+    - '12'
+    - '6'
+    - '11'
+    answer: 0
+    explanation: p = [0, 2, 7, 8, 12]. p[4] − p[1] = 12 − 2 = 10, which is 5 + 1 + 4. Using p[r] − p[l]
+      would give 6 and drop the last element.
     difficulty: 2
-  - id: twod
-    kind: mcq
-    prompt: Which term is added back in the 2D rectangle query?
-    options: ["P[r1−1][c1−1]", "P[r2][c1−1]", "P[r1−1][c2]", "P[r1][c1]"]
+  - id: diff-output
+    kind: output
+    prompt: 'Two range additions are applied to five zeros (1-indexed): add 2 to [1, 3] and add −1 to [2,
+      4]. What does this print?'
+    code:
+      python: "n = 5\nd = [0] * (n + 2)\nfor l, r, v in [(1, 3, 2), (2, 4, -1)]:\n    d[l] += v\n    d[r\
+        \ + 1] -= v\nrun = 0\nout = []\nfor i in range(1, n + 1):\n    run += d[i]\n    out.append(run)\n\
+        print(*out)\n"
+      cpp: 'int n = 5;
+
+        vector<int> d(n + 2, 0);
+
+        int ops[2][3] = {{1, 3, 2}, {2, 4, -1}};
+
+        for (auto& o : ops) { d[o[0]] += o[2]; d[o[1] + 1] -= o[2]; }
+
+        int run = 0;
+
+        for (int i = 1; i <= n; i++) { run += d[i]; cout << run << (i < n ? " " : ""); }
+
+        '
+      java: 'int n = 5;
+
+        int[] d = new int[n + 2];
+
+        int[][] ops = {{1, 3, 2}, {2, 4, -1}};
+
+        for (int[] o : ops) { d[o[0]] += o[2]; d[o[1] + 1] -= o[2]; }
+
+        int run = 0;
+
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 1; i <= n; i++) { run += d[i]; sb.append(run).append(i < n ? " " : ""); }
+
+        System.out.println(sb);
+
+        '
+    options:
+    - 2 1 1 -1 0
+    - 2 2 2 -1 0
+    - 2 1 1 -1 -1
+    - 2 3 3 1 0
     answer: 0
-    explanation: The top-left corner region is subtracted twice, so it's added back once.
+    explanation: The prefix sums of d give position by position 2, 2−1, 2−1, −1, 0. The second update ends
+      at 4, so position 5 returns to 0.
     difficulty: 3
-  - id: choose
+  - id: interleaved
     kind: mcq
-    prompt: Range additions and range-sum queries are interleaved. Which structure?
-    options: ["A Fenwick or segment tree", "Prefix sums", "A difference array alone", "A hash map"]
+    prompt: 'There are 2·10^5 operations, mixed in any order: ''add v to every element of [l, r]'' and ''print
+      the sum of [l, r]''. What is the right tool?'
+    options:
+    - Two Fenwick trees (or a lazy segment tree), O(log n) per operation
+    - One difference array, rebuilt with prefix sums before every query
+    - A plain prefix-sum array, updated in place on each addition
+    - A hash map of changed positions
     answer: 0
-    explanation: Prefix sums and difference arrays assume all updates come before all queries (or vice versa).
+    explanation: Rebuilding after each update costs O(n) per query, 4·10^10 in total. A difference array
+      only works when all updates come before all queries.
+    difficulty: 3
+  - id: array-bounds
+    kind: mcq
+    prompt: A range update has r = n, and your code does diff[r + 1] −= v on an array declared with size
+      n + 1 (indices 0..n). What happens?
+    options:
+    - 'It writes one past the end: undefined behaviour or an exception; allocate n + 2'
+    - 'Nothing happens: the write lands in a spare slot, which is always safe'
+    - The update is silently ignored in every language, so the output is unchanged
+    - The prefix sums come out right, since that index is never read afterwards
+    answer: 0
+    explanation: Index n + 1 does not exist. Many solutions pass the samples and then fail on the first
+      test where some range ends at n, so size the array n + 2.
+    difficulty: 3
+  - id: mod-subarrays
+    kind: mcq
+    prompt: How many non-empty subarrays of [4, 5, 0, −2, −3, 1] have a sum divisible by 5?
+    options:
+    - '7'
+    - '5'
+    - '6'
+    - '9'
+    answer: 0
+    explanation: Two prefix sums with the same remainder mod 5 delimit a subarray divisible by 5. Count
+      equal remainders with a hash map in O(n), and remember to take negative remainders into [0, 5).
+    difficulty: 5
+  - id: xor-diff
+    kind: mcq
+    prompt: You must apply 'xor every element of [l, r] with v' many times, then print the final array.
+      What is the difference-array update?
+    options:
+    - d[l] ^= v and d[r + 1] ^= v, then take a running XOR
+    - d[l] += v and d[r + 1] −= v, then take a running sum
+    - d[l] ^= v only, then take a running XOR
+    - d[r] ^= v and d[l] ^= v, then take a running sum
+    answer: 0
+    explanation: XOR is its own inverse, so the cancelling update has the same form as the starting one.
+      The running XOR flips the range on at l and off again at r + 1.
+    difficulty: 4
+  - id: twod-diff
+    kind: mcq
+    prompt: To add v to every cell of the rectangle rows r1..r2, columns c1..c2 with a 2D difference array
+      D, you add +v at (r1, c1). Which update makes the four-corner pattern correct?
+    options:
+    - −v at (r1, c2+1) and (r2+1, c1), and +v at (r2+1, c2+1)
+    - −v at (r2, c2) only, which closes the rectangle at its far corner
+    - −v at (r1, c2+1), (r2+1, c1) and (r2+1, c2+1), with no positive correction
+    - +v at all four corners, so every border cell is counted exactly once
+    answer: 0
+    explanation: The two negative strips each remove the area to the right and below, which removes the
+      bottom-right region twice, so it needs +v at (r2+1, c2+1). This is inclusion–exclusion again.
+    difficulty: 5
+  - id: missing-closing-decrement
+    kind: bug
+    prompt: Add 2 to positions 1..3 (0-indexed) of five zeros, using a difference array. The final array
+      should be 0 2 2 2 0. The update writes diff[l] += v and forgets diff[r + 1] -= v. What does it print
+      after the prefix sums?
+    code:
+      python: "n = 5\ndiff = [0] * (n + 1)\nl, r, v = 1, 3, 2\ndiff[l] += v\na = []\nrun = 0\nfor i in range(n):\n\
+        \    run += diff[i]\n    a.append(run)\nprint(*a)\n"
+      cpp: "int n = 5;\nvector<int> diff(n + 1, 0);\nint l = 1, r = 3, v = 2;\ndiff[l] += v;\nint run =\
+        \ 0;\nfor (int i = 0; i < n; i++) {\n    run += diff[i];\n    cout << run << \" \";\n}\n"
+      java: "int n = 5;\nint[] diff = new int[n + 1];\nint l = 1, r = 3, v = 2;\ndiff[l] += v;\nint run\
+        \ = 0;\nfor (int i = 0; i < n; i++) {\n    run += diff[i];\n    System.out.print(run + \" \");\n\
+        }\n"
+    options:
+    - 0 2 2 2 2
+    - 0 2 2 2 0
+    - 0 2 2 0 0
+    - 2 2 2 2 2
+    answer: 0
+    explanation: The prefix sum carries the +2 to the end of the array, because nothing cancels it. The
+      closing diff[r + 1] -= v ends the effect right after position r.
     difficulty: 2
 problems: [range-add]
 practice_links:

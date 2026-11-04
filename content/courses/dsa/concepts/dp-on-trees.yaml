@@ -771,96 +771,164 @@ resources:
   minutes: 40
   level: deep
 quiz:
-- id: take-skip
-  kind: mcq
-  prompt: In rob-or-skip, what is take[x]?
-  options:
-  - val[x] + skip of both children
-  - val[x] + take of both children
-  - val[x] + the larger of take and skip of each child
-  - val[x] only
-  answer: 0
-  explanation: Robbing x forbids robbing its children.
-  difficulty: 1
-- id: levels
-  kind: mcq
-  prompt: Tree 10 → 1 → 1 → 10 (a chain) plus a second child 1 of the root. Alternating levels gives 12.
-    What is the best?
-  options:
-  - '20'
-  - '12'
-  - '21'
-  - '11'
-  answer: 0
-  explanation: The root and the last 10 are not adjacent.
-  difficulty: 2
-- id: order
-  kind: mcq
-  prompt: In which order are the nodes filled?
-  options:
-  - "Children before parents, such as reverse BFS order"
-  - "Root first, then its children, as in BFS order"
-  - "By node value, smallest first, then the larger ones"
-  - "Any order, since each node is only visited once"
-  answer: 0
-  explanation: A node reads its children's states.
-  difficulty: 2
-- id: chain
-  kind: mcq
-  prompt: A chain 1 → 2 → 3 with values 2, 7, 9. What is the most money?
-  options:
-  - '11'
-  - '9'
-  - '16'
-  - '18'
-  answer: 0
-  explanation: Nodes 1 and 3.
-  difficulty: 3
-- id: blocked
-  kind: mcq
-  prompt: A child cannot join its parent's path because of the label rule. What happens to the child's
-    subtree?
-  options:
-  - "It is still solved; paths inside it still count"
-  - "It is skipped entirely, with all of its paths"
-  - "Its labels are changed so it can join the path"
-  - "The whole answer becomes 0 from that point on"
-  answer: 0
-  explanation: The best path may lie wholly inside that subtree.
-  difficulty: 3
-- id: three-states
-  kind: mcq
-  prompt: Why does binary tree cameras need three states?
-  options:
-  - "A node can be covered by itself, by a child, or still need its parent"
-  - "Because each node has two children, and each child needs its own state"
-  - "Two states always suffice; the third only speeds up the recursion"
-  - "To count the leaves separately, since leaves can never hold a camera"
-  answer: 0
-  explanation: The third state lets the parent take responsibility.
-  difficulty: 4
-- id: cameras
-  kind: mcq
-  prompt: A chain of 5 nodes. How many cameras are needed?
-  options:
-  - '2'
-  - '3'
-  - '1'
-  - '5'
-  answer: 0
-  explanation: Cameras on nodes 2 and 4 cover everything.
-  difficulty: 4
-- id: root
-  kind: mcq
-  prompt: Which root states may form the answer for cameras?
-  options:
-  - "cam and cov only"
-  - "All three states"
-  - "unc and cov only"
-  - "cam only, always"
-  answer: 0
-  explanation: The root has no parent to cover it.
-  difficulty: 5
+  - id: take-skip
+    kind: mcq
+    prompt: In rob-or-skip, what is take[x]?
+    options:
+    - val[x] + skip of both children
+    - val[x] + take of both children
+    - val[x] + the larger of take and skip of each child
+    - val[x] only
+    answer: 0
+    explanation: Robbing x forbids robbing its children.
+    difficulty: 1
+  - id: levels
+    kind: mcq
+    prompt: Tree 10 → 1 → 1 → 10 (a chain) plus a second child 1 of the root. Alternating levels gives 12.
+      What is the best?
+    options:
+    - '20'
+    - '12'
+    - '21'
+    - '11'
+    answer: 0
+    explanation: The root and the last 10 are not adjacent.
+    difficulty: 2
+  - id: chain
+    kind: mcq
+    prompt: A chain 1 → 2 → 3 with values 2, 7, 9. What is the most money?
+    options:
+    - '11'
+    - '9'
+    - '16'
+    - '18'
+    answer: 0
+    explanation: Nodes 1 and 3.
+    difficulty: 3
+  - id: blocked
+    kind: mcq
+    prompt: A child cannot join its parent's path because of the label rule. What happens to the child's
+      subtree?
+    options:
+    - It is still solved; paths inside it still count
+    - It is skipped entirely, with all of its paths
+    - Its labels are changed so it can join the path
+    - The whole answer becomes 0 from that point on
+    answer: 0
+    explanation: The best path may lie wholly inside that subtree.
+    difficulty: 3
+  - id: three-states
+    kind: mcq
+    prompt: Why does binary tree cameras need three states?
+    options:
+    - A node can be covered by itself, by a child, or still need its parent
+    - Because each node has two children, and each child needs its own state
+    - Two states always suffice; the third only speeds up the recursion
+    - To count the leaves separately, since leaves can never hold a camera
+    answer: 0
+    explanation: The third state lets the parent take responsibility.
+    difficulty: 4
+  - id: cameras
+    kind: mcq
+    prompt: A chain of 5 nodes. How many cameras are needed?
+    options:
+    - '2'
+    - '3'
+    - '1'
+    - '5'
+    answer: 0
+    explanation: Cameras on nodes 2 and 4 cover everything.
+    difficulty: 4
+  - id: root
+    kind: mcq
+    prompt: Which root states may form the answer for cameras?
+    options:
+    - cam and cov only
+    - All three states
+    - unc and cov only
+    - cam only, always
+    answer: 0
+    explanation: The root has no parent to cover it.
+    difficulty: 5
+  - id: rob-tree-output
+    kind: output
+    prompt: A tree has values 3, 2, 3, 3, 1 at nodes 0 to 4. Node 0 has children 1 and 2, node 1 has child
+      3, and node 2 has child 4. Adjacent nodes cannot both be taken. What does this DP print?
+    code:
+      python: "val = [3, 2, 3, 3, 1]\nch = [[1, 2], [3], [4], [], []]\ndef go(u):\n    take, skip = val[u],\
+        \ 0\n    for v in ch[u]:\n        t, s = go(v)\n        take += s\n        skip += max(t, s)\n \
+        \   return take, skip\nprint(max(go(0)))\n"
+      cpp: "int val[5] = {3, 2, 3, 3, 1};\nvector<vector<int>> ch = {{1, 2}, {3}, {4}, {}, {}};\nfunction<pair<int,\
+        \ int>(int)> go = [&](int u) {\n    int take = val[u], skip = 0;\n    for (int v : ch[u]) {\n  \
+        \      pair<int, int> r = go(v);\n        take += r.second;\n        skip += max(r.first, r.second);\n\
+        \    }\n    return make_pair(take, skip);\n};\npair<int, int> r = go(0);\ncout << max(r.first, r.second);\n"
+      java: "class T {\n    int[] val = {3, 2, 3, 3, 1};\n    int[][] ch = {{1, 2}, {3}, {4}, {}, {}};\n\
+        \    int[] go(int u) {\n        int take = val[u], skip = 0;\n        for (int v : ch[u]) {\n  \
+        \          int[] r = go(v);\n            take += r[1];\n            skip += Math.max(r[0], r[1]);\n\
+        \        }\n        return new int[]{take, skip};\n    }\n}\nint[] r = new T().go(0);\nSystem.out.println(Math.max(r[0],\
+        \ r[1]));\n"
+    options:
+    - '7'
+    - '6'
+    - '9'
+    - '5'
+    answer: 0
+    explanation: 'Take the root (3) plus the two grandchildren, 3 and 1: total 7. Skipping the root gives
+      max(2, 3) + max(3, 1) = 6. Each call returns a pair (best if this node is taken, best if skipped)
+      so a parent can combine children without any further search.'
+    difficulty: 4
+  - id: diameter-output
+    kind: output
+    prompt: 'On the same tree (edges 0-1, 0-2, 1-3, 2-4), this DP returns each node''s height and records
+      the longest path through each node. What does it print: the diameter measured in edges?'
+    code:
+      python: "ch = [[1, 2], [3], [4], [], []]\nbest = 0\ndef go(u):\n    global best\n    b1 = b2 = 0\n\
+        \    for v in ch[u]:\n        h = go(v) + 1\n        if h > b1:\n            b2, b1 = b1, h\n  \
+        \      elif h > b2:\n            b2 = h\n    best = max(best, b1 + b2)\n    return b1\ngo(0)\nprint(best)\n"
+      cpp: "vector<vector<int>> ch = {{1, 2}, {3}, {4}, {}, {}};\nint best = 0;\nfunction<int(int)> go =\
+        \ [&](int u) -> int {\n    int b1 = 0, b2 = 0;\n    for (int v : ch[u]) {\n        int h = go(v)\
+        \ + 1;\n        if (h > b1) { b2 = b1; b1 = h; }\n        else if (h > b2) b2 = h;\n    }\n    best\
+        \ = max(best, b1 + b2);\n    return b1;\n};\ngo(0);\ncout << best;\n"
+      java: "class T {\n    int[][] ch = {{1, 2}, {3}, {4}, {}, {}};\n    int best = 0;\n    int go(int\
+        \ u) {\n        int b1 = 0, b2 = 0;\n        for (int v : ch[u]) {\n            int h = go(v) +\
+        \ 1;\n            if (h > b1) { b2 = b1; b1 = h; }\n            else if (h > b2) b2 = h;\n     \
+        \   }\n        best = Math.max(best, b1 + b2);\n        return b1;\n    }\n}\nT t = new T();\nt.go(0);\n\
+        System.out.println(t.best);\n"
+    options:
+    - '4'
+    - '3'
+    - '5'
+    - '2'
+    answer: 0
+    explanation: The longest path is 3 - 1 - 0 - 2 - 4, which has 4 edges. At every node the best path bending
+      there uses its two tallest child arms, while only the tallest arm is passed up to the parent (the
+      return value). Mixing those two up is the classic bug in path problems.
+    difficulty: 3
+  - id: skip-forces-child-take
+    kind: bug
+    prompt: 'House robber on a tree: neighbours cannot both be robbed. The tree is a chain of four houses
+      worth 2, 1, 1, 2 (the best is 4, robbing the two ends). When a node is skipped, this code forces its
+      child to be taken instead of choosing the better of take and skip. What does it print?'
+    code:
+      python: "val = [2, 1, 1, 2]\nch = [[1], [2], [3], []]\ndef go(u):\n    t, s = val[u], 0\n    for v\
+        \ in ch[u]:\n        tv, sv = go(v)\n        t += sv\n        s += tv\n    return t, s\nprint(max(go(0)))\n"
+      cpp: "int val[4] = {2, 1, 1, 2};\nvector<vector<int>> ch = {{1}, {2}, {3}, {}};\nfunction<pair<int,\
+        \ int>(int)> go = [&](int u) -> pair<int, int> {\n    int t = val[u], s = 0;\n    for (int v : ch[u])\
+        \ {\n        auto r = go(v);\n        t += r.second;\n        s += r.first;\n    }\n    return {t,\
+        \ s};\n};\nauto r = go(0);\ncout << max(r.first, r.second);\n"
+      java: "class T {\n    int[] val = {2, 1, 1, 2};\n    int[][] ch = {{1}, {2}, {3}, {}};\n    int[]\
+        \ go(int u) {\n        int t = val[u], s = 0;\n        for (int v : ch[u]) {\n            int[]\
+        \ r = go(v);\n            t += r[1];\n            s += r[0];\n        }\n        return new int[]{t,\
+        \ s};\n    }\n}\nint[] r = new T().go(0);\nSystem.out.println(Math.max(r[0], r[1]));\n"
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '6'
+    answer: 0
+    explanation: A skipped node leaves its child FREE to be taken or skipped, so it should add max(take,
+      skip) of the child. Forcing 'take' loses the ends-only solution and gives 3 instead of 4.
+    difficulty: 4
 problems:
 - watchtowers
 - street-lamps

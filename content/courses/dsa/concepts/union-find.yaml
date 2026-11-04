@@ -149,35 +149,186 @@ resources:
     source: VisuAlgo
     minutes: 10
 quiz:
-  - id: same-group
+  - id: set-count
     kind: mcq
-    prompt: How does DSU decide whether a and b are in the same group?
-    options: ["find(a) == find(b)", "parent[a] == parent[b]", "a == b", "size[a] == size[b]"]
+    prompt: Ten nodes start in separate sets. You run union(1, 2), union(3, 4), union(2, 4) and then union(1,
+      3). How many sets remain?
+    options:
+    - '7'
+    - '6'
+    - '8'
+    - '5'
     answer: 0
-    explanation: Two elements share a group exactly when they have the same root.
+    explanation: The first three unions each merge two different sets, taking 10 down to 7. The last union
+      joins nodes that are already in the same set (1, 2, 3 and 4 are all connected), so it changes nothing.
+      Only unions that actually merge reduce the count.
     difficulty: 1
-  - id: cycle
-    kind: mcq
-    prompt: Processing undirected edges with DSU, union(u, v) returns false. What does that mean?
-    options: ["Edge (u, v) closes a cycle", "u and v are both isolated", "The DSU's parents are broken", "u and v are the same node"]
+  - id: dsu-output
+    kind: output
+    prompt: 'Six nodes start separate, and the unions (0,1), (2,3), (1,3), (1,2), (4,5) are applied in order.
+      What does this print: the number of sets, then how many unions joined nodes that were already together?'
+    code:
+      python: "parent = list(range(6))\ndef find(x):\n    while parent[x] != x:\n        parent[x] = parent[parent[x]]\n\
+        \        x = parent[x]\n    return x\ncomps, extra = 6, 0\nfor a, b in [(0, 1), (2, 3), (1, 3),\
+        \ (1, 2), (4, 5)]:\n    ra, rb = find(a), find(b)\n    if ra == rb:\n        extra += 1\n    else:\n\
+        \        parent[ra] = rb\n        comps -= 1\nprint(comps, extra)\n"
+      cpp: "int parent[6];\nfor (int i = 0; i < 6; i++) parent[i] = i;\nauto find = [&](int x) {\n    while\
+        \ (parent[x] != x) {\n        parent[x] = parent[parent[x]];\n        x = parent[x];\n    }\n  \
+        \  return x;\n};\nint comps = 6, extra = 0;\nint ops[5][2] = {{0, 1}, {2, 3}, {1, 3}, {1, 2}, {4,\
+        \ 5}};\nfor (auto& op : ops) {\n    int ra = find(op[0]), rb = find(op[1]);\n    if (ra == rb) extra++;\n\
+        \    else { parent[ra] = rb; comps--; }\n}\ncout << comps << \" \" << extra;\n"
+      java: "class DSU {\n    int[] parent = new int[6];\n    DSU() { for (int i = 0; i < 6; i++) parent[i]\
+        \ = i; }\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n\
+        \            x = parent[x];\n        }\n        return x;\n    }\n}\nDSU d = new DSU();\nint comps\
+        \ = 6, extra = 0;\nint[][] ops = {{0, 1}, {2, 3}, {1, 3}, {1, 2}, {4, 5}};\nfor (int[] op : ops)\
+        \ {\n    int ra = d.find(op[0]), rb = d.find(op[1]);\n    if (ra == rb) extra++;\n    else { d.parent[ra]\
+        \ = rb; comps--; }\n}\nSystem.out.println(comps + \" \" + extra);\n"
+    options:
+    - 2 1
+    - 2 0
+    - 3 1
+    - 1 1
     answer: 0
-    explanation: u and v were already connected, so adding the edge creates a cycle.
+    explanation: '(0,1), (2,3), (1,3) and (4,5) each merge two sets, leaving 6 - 4 = 2 sets: {0,1,2,3} and
+      {4,5}. The union (1,2) finds both nodes already together, so it is counted as ''extra''. In a graph
+      such an edge is exactly one that closes a cycle.'
     difficulty: 2
-  - id: union-components
-    former_ids: [components]
+  - id: why-optimise
     kind: mcq
-    prompt: n nodes, then 5 successful unions. How many components remain?
-    options: ["n − 5", "n", "5", "n + 5"]
+    prompt: What goes wrong if a union-find uses neither union by size nor path compression?
+    options:
+    - A chain of unions can build a path-shaped tree, so a single find can cost O(n)
+    - The structure stops working, because roots could not be told apart from other nodes
+    - It is only needed for correctness when the same union is applied to the same pair twice
+    - They reduce the memory of the parent array from O(n) down to O(log n) in total
     answer: 0
-    explanation: Each successful union merges two components into one.
-    difficulty: 1
-  - id: optimisations
-    kind: mcq
-    prompt: Which pair of optimisations makes DSU nearly constant time?
-    options: ["Path compression and union by size/rank", "Sorting the edges and hashing the nodes", "Recursion on find with memoized parents", "Binary search over a heap of root sizes"]
-    answer: 0
-    explanation: Together they bound the amortised cost by the inverse Ackermann function.
+    explanation: The answers are always correct; only the speed suffers. Linking a long tree under a single
+      node, again and again, creates a chain, so each find walks the whole chain. The two optimisations
+      together make the amortised cost per operation grow like the inverse Ackermann function.
     difficulty: 2
+  - id: kruskal-weight
+    kind: mcq
+    prompt: A graph has 4 vertices and the weighted edges (0,1,1), (1,2,2), (0,2,3), (2,3,4) and (1,3,5).
+      What is the weight of its minimum spanning tree, found with union-find in Kruskal's algorithm?
+    options:
+    - '7'
+    - '8'
+    - '10'
+    - '6'
+    answer: 0
+    explanation: 'Edges in sorted order: 1 joins 0 and 1, 2 joins 1 and 2, 3 would join 0 and 2, which are
+      already connected (so it is skipped), 4 joins 2 and 3, and the tree is complete: 1 + 2 + 4 = 7. Union-find
+      is what answers ''are these two already connected?'' in near constant time.'
+    difficulty: 3
+  - id: redundant-edge
+    kind: mcq
+    prompt: A tree on 5 nodes had one extra edge added. The edges, in order, are [1, 2], [2, 3], [3, 4],
+      [1, 4] and [1, 5]. Processing them in order with union-find, which edge closes the cycle?
+    options:
+    - '[1, 4]'
+    - '[3, 4]'
+    - '[1, 5]'
+    - '[2, 3]'
+    answer: 0
+    explanation: By the time [1, 4] arrives, nodes 1 and 4 are already connected through 2 and 3, so find(1)
+      equals find(4). That is the first edge that fails to merge two sets, and for a tree plus one edge
+      it is the answer.
+    difficulty: 3
+  - id: py-recursive-find
+    kind: mcq
+    languages:
+    - python
+    prompt: A Python union-find uses a recursive find with path compression, but always attaches the first
+      root under the second (no union by size). After the unions (0,1), (1,2), ..., (99998, 99999), what
+      happens on find(0)?
+    options:
+    - It exceeds the recursion limit, since the tree is a chain 100,000 deep; use a loop or union by size
+    - It returns instantly, since path compression has already flattened the tree during the unions
+    - It returns 99999 after 17 steps, since the chain was balanced by the union operations
+    - It returns 0, because the first root becomes the representative of the merged set
+    answer: 0
+    explanation: Each union finds both roots (cheap here) and hangs the old root under the new one, building
+      0 -> 1 -> 2 -> ... -> 99999. The first find(0) recurses 100,000 times. An iterative find (path halving),
+      or union by size, avoids the deep chain.
+    difficulty: 3
+  - id: halving-output
+    kind: output
+    prompt: 'The parent array is a chain: 5 points to 4, 4 to 3, and so on down to the root 0. This find
+      uses path halving, and find(5) is called once. What does it print for the parent array afterwards?'
+    code:
+      python: "parent = [0, 0, 1, 2, 3, 4]\nx = 5\nwhile parent[x] != x:\n    parent[x] = parent[parent[x]]\n\
+        \    x = parent[x]\nprint(*parent)\n"
+      cpp: "int parent[6] = {0, 0, 1, 2, 3, 4};\nint x = 5;\nwhile (parent[x] != x) {\n    parent[x] = parent[parent[x]];\n\
+        \    x = parent[x];\n}\nfor (int i = 0; i < 6; i++) cout << parent[i] << (i < 5 ? \" \" : \"\");\n"
+      java: "int[] parent = {0, 0, 1, 2, 3, 4};\nint x = 5;\nwhile (parent[x] != x) {\n    parent[x] = parent[parent[x]];\n\
+        \    x = parent[x];\n}\nStringBuilder sb = new StringBuilder();\nfor (int i = 0; i < 6; i++) sb.append(parent[i]).append(\"\
+        \ \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 0 0 1 1 3 3
+    - 0 0 0 0 0 0
+    - 0 0 1 2 3 3
+    - 0 0 0 1 2 3
+    answer: 0
+    explanation: 'Each step points the current node at its grandparent and then jumps there: 5 gets parent
+      3, then 3 gets parent 1, then 1 is already next to the root. Every other node on the path is now half
+      as deep. Full path compression would give 0 0 0 0 0 0, but halving needs only a single pass and no
+      recursion.'
+    difficulty: 4
+  - id: islands-two
+    kind: mcq
+    prompt: Land cells are added one at a time to an empty grid, and after each addition you must report
+      the number of islands. What is the efficient approach?
+    options:
+    - 'Use a union-find over cells: each new land cell adds one island, and each merge with a land neighbour
+      removes one'
+    - Rerun a full flood fill after every addition, which costs O(rows * columns) each time, the best possible
+    - Keep a counter that only increases, since new land can never join two islands that already exist
+    - Sort the added cells by coordinate first, so the islands can be counted with a single scan at the
+      end
+    answer: 0
+    explanation: 'Union-find supports exactly the operation that grows over time: merging. Each addition
+      does at most four finds and four unions, so k additions cost near O(k) in total instead of O(k * rows
+      * columns).'
+    difficulty: 4
+  - id: offline-reverse
+    kind: mcq
+    prompt: Edges are removed one by one from a graph, and after each removal you need the number of connected
+      components. How can union-find help, given that it cannot split a set?
+    options:
+    - 'Process the removals in reverse as additions: start from the final graph and union the edges back
+      in'
+    - Give the structure a delete operation that splits one set into two as each edge is removed
+    - Rebuild the structure from scratch after every removal, the only approach that can work here
+    - Ignore the removals and count the components once at the start, since removing never changes them
+    answer: 0
+    explanation: 'Union-find only merges. Reversing time turns deletions into insertions: build the graph
+      that remains after all removals, record its component count, then add the removed edges back in reverse
+      order, recording the count each time. Reading the records backwards gives the answers.'
+    difficulty: 5
+  - id: union-without-find
+    kind: bug
+    prompt: After union(1, 2) and union(1, 3), nodes 1, 2 and 3 are all connected. This union just sets
+      parent[a] = b, without first finding the roots of a and b. What does 'is 1 connected to 2?' print?
+    code:
+      python: "p = list(range(4))\ndef find(x):\n    while p[x] != x:\n        x = p[x]\n    return x\n\
+        def union(a, b):\n    p[a] = b\nunion(1, 2)\nunion(1, 3)\nprint(\"yes\" if find(1) == find(2) else\
+        \ \"no\")\n"
+      cpp: "int p[4] = {0, 1, 2, 3};\nauto find = [&](int x) {\n    while (p[x] != x) x = p[x];\n    return\
+        \ x;\n};\nauto uni = [&](int a, int b) { p[a] = b; };\nuni(1, 2);\nuni(1, 3);\ncout << (find(1)\
+        \ == find(2) ? \"yes\" : \"no\");\n"
+      java: "class T {\n    int[] p = {0, 1, 2, 3};\n    int find(int x) {\n        while (p[x] != x) x\
+        \ = p[x];\n        return x;\n    }\n    void union(int a, int b) {\n        p[a] = b;\n    }\n\
+        }\nT t = new T();\nt.union(1, 2);\nt.union(1, 3);\nSystem.out.println(t.find(1) == t.find(2) ? \"\
+        yes\" : \"no\");\n"
+    options:
+    - 'no'
+    - 'yes'
+    - yes via 3
+    - crash
+    answer: 0
+    explanation: 'The second union overwrites parent[1], which cut node 1 away from its first partner 2.
+      Union must join the ROOTS: parent[find(a)] = find(b), so existing links in either set are preserved.'
+    difficulty: 3
 problems: [online-components, shared-cables]
 practice_links:
   - title: Redundant Connection
