@@ -131,3 +131,13 @@ cleanup and downgrade) and the existing migration tests.
 `AGENTS.md` asks agents to work on `feat/universal-engine`. This session was assigned
 `ccr-410653a4-72kc43` and pushes only there; it contains `feat/universal-engine` merged in. The
 owner decides whether to merge it into `feat/universal-engine` or open a pull request.
+
+## 6. Test results for this pass
+
+- Full API suite: **938 passed, 30 skipped, 5 failed** (20 min). The 5 failures fail the same way
+  on the code before this pass (`c3b9c03`) and are environmental here: four need a sandboxed
+  Chromium this container cannot start (`test_explainer.py` x3, `test_sketch_spec.py`), and
+  `test_resource_search.py::test_researcher_may_only_choose_search_results_and_keeps_their_provenance`
+  also fails on the old code (cause not investigated).
+- Ruff, ruff format and mypy (205 files): clean. Web typecheck: clean. Web unit tests: 10 passed.
+- Not run: the Playwright end-to-end, visual and accessibility suites; any live model.
