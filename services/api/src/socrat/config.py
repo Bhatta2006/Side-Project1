@@ -203,6 +203,12 @@ class Settings(DatabaseSettings):
     # Write-check-revise rounds per lesson package. Revisions are targeted edits, so a round
     # costs little; subjects the model knows less well (a live Kannada course) need more.
     gen_package_rounds: int = Field(default=3, ge=1, le=8)
+    # What blocks a lesson is a defect: a deterministic gate that fails, a fact-check claim marked
+    # `incorrect`, or a review that could not be read. The reviewer's 1 to 5 rubric scores are a
+    # signal, noisy with a cheap model, so a score below target (5 for correctness, 4 for the
+    # rest) is a visible warning. Only a score below this floor blocks, as a sign the lesson is
+    # seriously weak. Raise it as stronger models arrive.
+    gen_score_floor: int = Field(default=3, ge=2, le=5)
     style_engine_enabled: bool = True  # learning styles; admin accounts only while testing
     # Learner-typed courses ("teach me X"): off until the owner turns it on.
     learning_requests_enabled: bool = False

@@ -830,10 +830,12 @@ def imprecise_notes(facts: dict | None) -> dict[str, list[str]]:
 
 
 def verdict(
-    facts: dict | None, review: dict | None, style: bool = False
+    facts: dict | None, review: dict | None, style: bool = False, floor: int = 3
 ) -> tuple[bool, dict[str, list[str]], dict]:
     """Pass/fail from the fact claims and rubric, plus revision notes by artifact.
-    ``style``: the course has a learning style, so style_fit is scored and must be ≥ 4."""
+    ``style``: the course has a learning style, so style_fit is scored too. A lesson passes when
+    nothing is defective: no ``incorrect`` claim and every rubric score at or above ``floor``.
+    Scores under target but at the floor are warnings (see validation), not blockers."""
     dimensions = (*DIMENSIONS, STYLE_DIMENSION) if style else DIMENSIONS
     notes: dict[str, list[str]] = {"lesson": [], "quiz": [], "atoms": []}
     blocking = False
@@ -860,10 +862,5 @@ def verdict(
             scores[dim] = 0
     for target in notes:
         notes[target] += [str(n) for n in (review or {}).get(target, []) if n][:10]
-    passed = (
-        not blocking
-        and facts is not None
-        and scores["correctness"] == 5
-        and all(scores[d] >= 4 for d in dimensions)
-    )
+    passed = not blocking and facts is not None and all(scores[d] >= floor for d in dimensions)
     return passed, notes, scores

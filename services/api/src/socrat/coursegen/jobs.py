@@ -26,6 +26,7 @@ import asyncio
 import hashlib
 import json
 import logging
+from typing import Any
 
 from sqlalchemy import CursorResult, Engine, func, or_, select, update
 from sqlalchemy.orm import Session
@@ -213,9 +214,11 @@ async def run_outline(
             continue
         previous = skeleton_of(reply.data)
         outline = reply.data
-        early = None  # the critic's review of the skeleton, run while the details are written
+        early: roles.Reply | None = (
+            None  # the critic's review of the skeleton, run while the details are written
+        )
         if needs_detail(outline):
-            work = [_detail(engine, settings, brief, outline, issues, make)]
+            work: list[Any] = [_detail(engine, settings, brief, outline, issues, make)]
             if reviews < max(1, settings.gen_outline_reviews):
                 reviews += 1
                 work.append(
@@ -517,9 +520,9 @@ async def run_package(
     from socrat.engine import design
 
     adapter = design.adapter_for(course, brief.adapter)
-    bar = {d: (5 if d == "correctness" else 4) for d in pkg.DIMENSIONS}
+    bar = dict.fromkeys(pkg.DIMENSIONS, settings.gen_score_floor)
     if brief.style is not None:
-        bar[pkg.STYLE_DIMENSION] = 4
+        bar[pkg.STYLE_DIMENSION] = settings.gen_score_floor
     findings: list[validation.Finding] = []
 
     def report(round_: int, status: str, found: list[validation.Finding]) -> None:
@@ -790,7 +793,9 @@ async def run_package(
                 6000,
             ),
         )
-        passed, notes, scores = pkg.verdict(facts.data, review.data, style is not None)
+        passed, notes, scores = pkg.verdict(
+            facts.data, review.data, style is not None, settings.gen_score_floor
+        )
         status, findings = validation.assess(
             [], facts.data, review.data, scores, bar, adapter, brief.safety
         )

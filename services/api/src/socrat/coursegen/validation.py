@@ -75,6 +75,18 @@ def _review(review: dict | None, scores: dict, bar: dict[str, int]) -> list[Find
         for dim, need in bar.items()
         if scores.get(dim, 0) < need
     ]
+    for dim, need in bar.items():  # not blocked, but under target: say so
+        goal = 5 if dim == "correctness" else 4
+        got = scores.get(dim, 0)
+        if need <= got < goal:
+            out.append(
+                Finding(
+                    "reviewer",
+                    "warning",
+                    dim,
+                    f"Scored {got} of 5, target {goal}; released under the current floor.",
+                )
+            )
     for target in ("lesson", "quiz", "atoms"):
         out += [
             Finding("reviewer", "warning", target, str(n)[:500])

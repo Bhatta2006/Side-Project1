@@ -115,7 +115,7 @@ ATOMS = {
 }
 SCORES = {d: 5 for d in pkg.DIMENSIONS}
 PASS = {"scores": SCORES, "summary": "Deep and correct.", "lesson": [], "quiz": [], "atoms": []}
-SHALLOW = PASS | {"scores": SCORES | {"depth": 3}, "lesson": ["Trace the example step by step."]}
+SHALLOW = PASS | {"scores": SCORES | {"depth": 2}, "lesson": ["Trace the example step by step."]}
 FACTS_OK = {
     "claims": [{"where": "lesson", "claim": "Models learn from data", "verdict": "correct"}]
 }
@@ -266,7 +266,7 @@ def test_a_package_that_never_passes_stays_planned(client, published, web):  # n
     detail = client.get("/api/v1/admin/courses/ai-basics/concepts/loss", headers=published).json()
     assert detail["jobs"][0]["state"] == "failed"
     assert detail["concept"]["status"] == "planned" and detail["atoms"] is None
-    assert detail["jobs"][0]["output"]["scores"]["depth"] == 3  # the last draft is kept
+    assert detail["jobs"][0]["output"]["scores"]["depth"] == 2  # the last draft is kept
 
 
 def test_generation_needs_a_published_outline_and_planned_concepts(client, published):  # noqa: F811
@@ -305,7 +305,41 @@ def test_lesson_gates_and_verdict_rules():
     assert passed and notes == {"lesson": [], "quiz": [], "atoms": []}
     assert not pkg.verdict(FACTS_BAD, PASS)[0]  # an incorrect claim always blocks
     assert not pkg.verdict(None, PASS)[0]  # no fact check, no release
-    assert not pkg.verdict(FACTS_OK, PASS | {"scores": SCORES | {"correctness": 4}})[0]
+    assert not pkg.verdict(FACTS_OK, PASS | {"scores": SCORES | {"correctness": 2}})[0]
+
+
+def test_the_gate_blocks_on_defects_and_treats_scores_as_warnings():
+    four = PASS | {"scores": SCORES | {"correctness": 4}}
+    three = PASS | {"scores": SCORES | {"correctness": 3, "depth": 3}}
+    two = PASS | {"scores": SCORES | {"clarity": 2}}
+    assert pkg.verdict(FACTS_OK, four)[0]  # not perfect, but no defect found
+    assert pkg.verdict(FACTS_OK, three)[0]  # at the floor: released with warnings
+    assert not pkg.verdict(FACTS_OK, two)[0]  # below the floor: a serious problem
+    assert not pkg.verdict(FACTS_BAD, PASS)[0]  # a wrong claim always blocks
+    assert not pkg.verdict(FACTS_OK, None)[0]  # an unusable review is not a pass
+    assert not pkg.verdict(None, PASS)[0]  # no fact check, no release
+    assert not pkg.verdict(FACTS_OK, three, floor=4)[0]  # the floor is adjustable
+
+
+def test_scores_below_target_are_visible_warnings_not_blockers():
+    from socrat.coursegen import validation
+    from socrat.engine import domains
+
+    bar = dict.fromkeys(pkg.DIMENSIONS, 3)
+    review = PASS | {"scores": SCORES | {"correctness": 4, "depth": 3}}
+    scores = pkg.verdict(FACTS_OK, review)[2]
+    status, findings = validation.assess(
+        [], FACTS_OK, review, scores, bar, domains.ADAPTERS["math-science"], []
+    )
+    assert status == "pass_with_warnings"
+    warned = {f.where for f in findings if f.severity == "warning"}
+    assert {"correctness", "depth"} <= warned
+    assert not any(f.severity == "blocking" for f in findings)
+    low = PASS | {"scores": SCORES | {"clarity": 2}}
+    status, findings = validation.assess(
+        [], FACTS_OK, low, pkg.verdict(FACTS_OK, low)[2], bar, domains.ADAPTERS["math-science"], []
+    )
+    assert status == "needs_revision"
 
 
 IMPRECISE = {

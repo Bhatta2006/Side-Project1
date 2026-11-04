@@ -465,7 +465,8 @@ def _tidy_shape(given: dict, adapter: str = "") -> None:
     if given.get("loop") not in allowed["loops"]:
         given["loop"] = next(loop for loop in _LOOP_FIRST if loop in allowed["loops"])
     for name, most, fallback in (("evidence", 4, ["quiz"]), ("tools", 3, [])):
-        values = given.get(name) if isinstance(given.get(name), list) else []
+        raw = given.get(name)
+        values = raw if isinstance(raw, list) else []
         kept = list(dict.fromkeys(v for v in values if v in allowed[name]))[:most]
         given[name] = kept or fallback
 

@@ -31,17 +31,20 @@ from socrat.engine import benchmark
 from socrat.models import Base, GenerationJob
 
 
-async def run(only: str | None, dry: bool) -> list[dict]:
+async def run(only: str | None, dry: bool, roles: dict | None = None) -> list[dict]:
     chosen = [r for r in benchmark.REQUESTS if only in (None, r[0])]
     if dry:
         return [dict(id=i, request=text, adapter=a) for i, text, a in chosen]
     settings = Settings()
-    engine = make_engine(settings.database_url)
+    if roles is not None:  # replaces SOCRAT_GEN_ROLES from the environment for this run
+        settings = settings.model_copy(update={"gen_roles": roles})
+    engine = make_engine(settings.database_url_value)
     Base.metadata.create_all(engine)
     base = default_catalog()
     reports = []
     for case, text, expected in chosen:
         parsed, source = await intents.parse(engine, settings, text)
+        parsed = intents.apply_adapter(parsed, text)  # as the learner request route does
         course_id = intents.slug(parsed.subject, "bench", case)
         brief = intents.to_brief(parsed, course_id, 5.0)
         with Session(engine) as db, db.begin():
@@ -70,8 +73,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--only")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--gen-roles", help="JSON replacing SOCRAT_GEN_ROLES for this run")
     args = parser.parse_args()
-    print(json.dumps(asyncio.run(run(args.only, args.dry_run)), indent=2))
+    print(
+        json.dumps(
+            asyncio.run(
+                run(args.only, args.dry_run, json.loads(args.gen_roles) if args.gen_roles else None)
+            ),
+            indent=2,
+        )
+    )
     return 0
 
 

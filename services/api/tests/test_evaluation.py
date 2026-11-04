@@ -20,13 +20,16 @@ from socrat.models import Enrollment, Evidence, GenerationJob
 DAY = 86_400
 
 
-def test_the_five_archetypes_are_covered_and_classified_to_their_domain():
+def test_the_eight_archetypes_are_covered_and_classified_to_their_domain():
     assert {r[0] for r in benchmark.REQUESTS} == {
         "children-math",
         "university-physics",
         "programming",
         "electrical",
         "music",
+        "language-speaking",
+        "visual-creative",
+        "professional-communication",
     }
     for case, text, expected in benchmark.REQUESTS:
         assert domains.classify(text).id == expected, case

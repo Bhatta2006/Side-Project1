@@ -15,6 +15,7 @@ is untrusted data: cleaned, capped, and paraphrased by the author, never copied.
 
 import asyncio
 import re
+from typing import Any
 
 import httpx
 
@@ -72,7 +73,7 @@ async def search(client: httpx.AsyncClient, query: str, limit: int, key: str) ->
         title, about = clean(info.get("title", ""), 160), clean(info.get("description", ""))
         if not title or not wanted & (_words(title) | _words(about)):
             continue  # not about this lesson, however popular
-        common = {
+        common: dict[str, Any] = {
             "title": title,
             "snippet": about,
             "provider": "youtube",

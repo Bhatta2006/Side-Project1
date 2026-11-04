@@ -16,7 +16,8 @@ from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Course
 from socrat.engine import assessments, domains, renderers
 
-# The five archetypes the prompt names, phrased as a learner would.
+# The archetypes the prompts name (five from the first, eight subjects in all), phrased as a
+# learner would.
 REQUESTS = (
     ("children-math", "I am 8 and want to get good at fractions with games", "math-science"),
     (
@@ -27,6 +28,23 @@ REQUESTS = (
     ("programming", "Prepare me for competitive programming interviews in Python", "software"),
     ("electrical", "Teach me electrical engineering through practical experiments", "electronics"),
     ("music", "Teach me Carnatic music and help me understand ragas", "music"),
+    # Added for master prompt 2 (19.4). Language learning and workplace communication have no
+    # dedicated adapter yet, so they run on the general one; the benchmark keeps that visible.
+    (
+        "language-speaking",
+        "I want to become confident speaking English for job interviews, twenty minutes daily",
+        "general",
+    ),
+    (
+        "visual-creative",
+        "I know Blender basics. Teach me animation and rigging through practical projects",
+        "animation-movement",
+    ),
+    (
+        "professional-communication",
+        "Teach me business communication: writing clear emails and running meetings",
+        "general",
+    ),
 )
 
 HUMAN_REVIEW = (
