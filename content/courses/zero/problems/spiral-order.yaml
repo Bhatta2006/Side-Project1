@@ -1,0 +1,102 @@
+id: spiral-order
+title: Spiral walk
+concepts:
+- grids
+difficulty: hard
+statement: |
+  A grid of numbers is read in a spiral: start at the top-left corner, go right along the top row,
+  then down the last column, then left along the bottom row, then up the first column, and keep
+  spiralling inwards until every cell has been visited once. Print the numbers in the order
+  visited.
+input_format: |
+  The first line contains n and m (rows and columns). Each of the next n lines has m integers.
+output_format: All n · m numbers in spiral order, separated by spaces, on one line.
+constraints:
+- 1 ≤ n, m ≤ 500
+- 0 ≤ value ≤ 99
+examples:
+- input: '3 3
+
+    1 2 3
+
+    4 5 6
+
+    7 8 9'
+  output: 1 2 3 6 9 8 7 4 5
+- input: '1 4
+
+    5 6 7 8'
+  output: 5 6 7 8
+  explanation: A single row is just read from left to right.
+hints:
+- 'Keep four borders: top, bottom, left and right. Walk the outer ring, then shrink every border by one.'
+- After walking the top row, the top border moves down; after the right column, the right border moves
+  left; and so on.
+- 'Single rows and single columns are the tricky cases: before walking the bottom row or the left column,
+  check that the borders still have not crossed, or you will visit cells twice.'
+approach: |
+  Maintain top, bottom, left, right. Loop while top ≤ bottom and left ≤ right: walk the top row
+  left to right, then the right column downward; if top < bottom walk the bottom row backwards;
+  if left < right walk the left column upwards; shrink all borders. O(n · m).
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  n, m = int(data[0]), int(data[1])
+  g = [data[2 + r * m: 2 + (r + 1) * m] for r in range(n)]
+  top, bot, left, right = 0, n - 1, 0, m - 1
+  out = []
+  while top <= bot and left <= right:
+      for c in range(left, right + 1):
+          out.append(g[top][c])
+      for r in range(top + 1, bot + 1):
+          out.append(g[r][right])
+      if top < bot:
+          for c in range(right - 1, left - 1, -1):
+              out.append(g[bot][c])
+      if left < right:
+          for r in range(bot - 1, top, -1):
+              out.append(g[r][left])
+      top += 1
+      bot -= 1
+      left += 1
+      right -= 1
+  print(" ".join(out))
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, m = int(data[0]), int(data[1])
+  g = [data[2 + r * m: 2 + (r + 1) * m] for r in range(n)]
+  seen = [[False] * m for _ in range(n)]
+  dr, dc = [0, 1, 0, -1], [1, 0, -1, 0]
+  r = c = d = 0
+  out = []
+  for _ in range(n * m):
+      out.append(g[r][c])
+      seen[r][c] = True
+      nr, nc = r + dr[d], c + dc[d]
+      if not (0 <= nr < n and 0 <= nc < m) or seen[nr][nc]:
+          d = (d + 1) % 4
+          nr, nc = r + dr[d], c + dc[d]
+      r, c = nr, nc
+  print(" ".join(out))
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          n, m = rng.randint(1, 6), rng.randint(1, 6)
+          rows = [" ".join(str(rng.randint(0, 99)) for _ in range(m)) for _ in range(n)]
+          yield f"{n} {m}\n" + "\n".join(rows)
+generator: |
+  def cases(rng):
+      yield "3 3\n1 2 3\n4 5 6\n7 8 9"
+      yield "1 4\n5 6 7 8"
+      yield "4 1\n1\n2\n3\n4"
+      yield "1 1\n7"
+      yield "2 2\n1 2\n3 4"
+      n = m = 500
+      yield f"{n} {m}\n" + "\n".join(" ".join(str(rng.randint(0, 99)) for _ in range(m)) for _ in range(n))
+      yield "1 500\n" + " ".join(str(rng.randint(0, 99)) for _ in range(500))
+      yield "500 1\n" + "\n".join(str(rng.randint(0, 99)) for _ in range(500))
+      yield "300 450\n" + "\n".join(" ".join(str(rng.randint(0, 99)) for _ in range(450)) for _ in range(300))
+      for _ in range(4):
+          n, m = rng.randint(1, 40), rng.randint(1, 40)
+          yield f"{n} {m}\n" + "\n".join(" ".join(str(rng.randint(0, 99)) for _ in range(m)) for _ in range(n))

@@ -807,106 +807,155 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: bitmask-size
-  kind: mcq
-  prompt: Assignment of n workers to n jobs with bitmask DP. How many states are there?
-  options:
-  - "2^n"
-  - "n!"
-  - "n²"
-  - "n·2"
-  answer: 0
-  explanation: One state per set of taken jobs; the worker is popcount(mask).
-  difficulty: 1
-- id: bitmask-order
-  kind: mcq
-  prompt: Why can the masks be filled in increasing numeric order?
-  options:
-  - Adding a bit always gives a larger number
-  - Because masks are sorted by popcount
-  - Any order works for minimum problems
-  - It is only a convention
-  answer: 0
-  explanation: Every transition goes from a mask to a strictly larger one.
-  difficulty: 2
-- id: greedy-assign
-  kind: mcq
-  prompt: Costs 9 2 7 / 6 4 3 / 5 8 1. Each worker taking the cheapest free job costs 10. What is the
-    best?
-  options:
-  - '9'
-  - '10'
-  - '8'
-  - '7'
-  answer: 0
-  explanation: Worker 0 → job 1, worker 1 → job 0, worker 2 → job 2 = 2 + 6 + 1.
-  difficulty: 3
-- id: game-diff
-  kind: mcq
-  prompt: In the removal game, diff[i][j] is the best (mover − other). What does taking a[i] give?
-  options:
-  - a[i] − diff[i+1][j]
-  - a[i] + diff[i+1][j]
-  - diff[i+1][j] − a[i]
-  - a[i]
-  answer: 0
-  explanation: After the move, the opponent is the mover on the rest.
-  difficulty: 3
-- id: game-value
-  kind: mcq
-  prompt: Removal game on 4 5 1 3. What does the first player score?
-  options:
-  - '8'
-  - '7'
-  - '9'
-  - '5'
-  answer: 0
-  explanation: Take 3 first; greedy (take 4) ends with 7.
-  difficulty: 4
-- id: state-machine
-  kind: mcq
-  prompt: Counting records with fewer than 2 A's and no 3 L's in a row. What is the state?
-  options:
-  - "(A's so far, L's at the end)"
-  - "The number of A's so far only"
-  - "The whole record written so far"
-  - "The last letter of the record only"
-  answer: 0
-  explanation: Those are exactly what the two rules look back at.
-  difficulty: 3
-- id: records
-  kind: mcq
-  prompt: How many attendance records of length 2 are allowed?
-  options:
-  - '8'
-  - '9'
-  - '7'
-  - '6'
-  answer: 0
-  explanation: All 9 except AA.
-  difficulty: 2
-- id: tight
-  kind: mcq
-  prompt: In digit DP, what does the tight flag mean?
-  options:
-  - "The digits so far equal N's prefix, so the next digit is limited by N"
-  - "The digit sum chosen so far is already larger than the allowed total"
-  - "The number built so far has no leading zeros, so it is a real number"
-  - "The digit at the current position is 9, so the next one must carry"
-  answer: 0
-  explanation: Without it, the count includes numbers larger than N.
-  difficulty: 4
-- id: tight-count
-  kind: mcq
-  prompt: Numbers from 1 to 23 with digit sum 5. How many?
-  options:
-  - '3'
-  - '6'
-  - '2'
-  - '5'
-  answer: 0
-  explanation: 5, 14 and 23. Ignoring tight would count 32, 41 and 50 too.
-  difficulty: 5
+  - id: bitmask-size
+    kind: mcq
+    prompt: Assignment of n workers to n jobs with bitmask DP. How many states are there?
+    options:
+    - 2^n
+    - n!
+    - n²
+    - n·2
+    answer: 0
+    explanation: One state per set of taken jobs; the worker is popcount(mask).
+    difficulty: 1
+  - id: bitmask-order
+    kind: mcq
+    prompt: Why can the masks be filled in increasing numeric order?
+    options:
+    - Adding a bit always gives a larger number
+    - Because masks are sorted by popcount
+    - Any order works for minimum problems
+    - It is only a convention
+    answer: 0
+    explanation: Every transition goes from a mask to a strictly larger one.
+    difficulty: 2
+  - id: greedy-assign
+    kind: mcq
+    prompt: Costs 9 2 7 / 6 4 3 / 5 8 1. Each worker taking the cheapest free job costs 10. What is the
+      best?
+    options:
+    - '9'
+    - '10'
+    - '8'
+    - '7'
+    answer: 0
+    explanation: Worker 0 → job 1, worker 1 → job 0, worker 2 → job 2 = 2 + 6 + 1.
+    difficulty: 3
+  - id: game-diff
+    kind: mcq
+    prompt: In the removal game, diff[i][j] is the best (mover − other). What does taking a[i] give?
+    options:
+    - a[i] − diff[i+1][j]
+    - a[i] + diff[i+1][j]
+    - diff[i+1][j] − a[i]
+    - a[i]
+    answer: 0
+    explanation: After the move, the opponent is the mover on the rest.
+    difficulty: 3
+  - id: state-machine
+    kind: mcq
+    prompt: Counting records with fewer than 2 A's and no 3 L's in a row. What is the state?
+    options:
+    - (A's so far, L's at the end)
+    - The number of A's so far only
+    - The whole record written so far
+    - The last letter of the record only
+    answer: 0
+    explanation: Those are exactly what the two rules look back at.
+    difficulty: 3
+  - id: game-value
+    kind: mcq
+    prompt: Removal game on 4 5 1 3. What does the first player score?
+    options:
+    - '8'
+    - '7'
+    - '9'
+    - '5'
+    answer: 0
+    explanation: Take 3 first; greedy (take 4) ends with 7.
+    difficulty: 4
+  - id: tight
+    kind: mcq
+    prompt: In digit DP, what does the tight flag mean?
+    options:
+    - The digits so far equal N's prefix, so the next digit is limited by N
+    - The digit sum chosen so far is already larger than the allowed total
+    - The number built so far has no leading zeros, so it is a real number
+    - The digit at the current position is 9, so the next one must carry
+    answer: 0
+    explanation: Without it, the count includes numbers larger than N.
+    difficulty: 4
+  - id: tight-count
+    kind: mcq
+    prompt: Numbers from 1 to 23 with digit sum 5. How many?
+    options:
+    - '3'
+    - '6'
+    - '2'
+    - '5'
+    answer: 0
+    explanation: 5, 14 and 23. Ignoring tight would count 32, 41 and 50 too.
+    difficulty: 5
+  - id: assign-output
+    kind: output
+    prompt: Three workers must each take a different job, with the costs cost[worker][job] below. This bitmask
+      DP decides which worker takes the next job by counting the bits already used. What does it print?
+    code:
+      python: "cost = [[9, 2, 7], [6, 4, 3], [5, 8, 1]]\nn = 3\nINF = 10 ** 9\ndp = [INF] * (1 << n)\ndp[0]\
+        \ = 0\nfor mask in range(1 << n):\n    w = bin(mask).count(\"1\")\n    if w >= n:\n        continue\n\
+        \    for j in range(n):\n        if not (mask >> j) & 1:\n            nm = mask | (1 << j)\n   \
+        \         dp[nm] = min(dp[nm], dp[mask] + cost[w][j])\nprint(dp[(1 << n) - 1])\n"
+      cpp: "int cost[3][3] = {{9, 2, 7}, {6, 4, 3}, {5, 8, 1}};\nint n = 3;\nvector<int> dp(1 << n, 1000000000);\n\
+        dp[0] = 0;\nfor (int mask = 0; mask < (1 << n); mask++) {\n    int w = __builtin_popcount(mask);\n\
+        \    if (w >= n) continue;\n    for (int j = 0; j < n; j++)\n        if (!((mask >> j) & 1)) {\n\
+        \            int nm = mask | (1 << j);\n            dp[nm] = min(dp[nm], dp[mask] + cost[w][j]);\n\
+        \        }\n}\ncout << dp[(1 << n) - 1];\n"
+      java: "int[][] cost = {{9, 2, 7}, {6, 4, 3}, {5, 8, 1}};\nint n = 3;\nint[] dp = new int[1 << n];\n\
+        Arrays.fill(dp, 1_000_000_000);\ndp[0] = 0;\nfor (int mask = 0; mask < (1 << n); mask++) {\n   \
+        \ int w = Integer.bitCount(mask);\n    if (w >= n) continue;\n    for (int j = 0; j < n; j++)\n\
+        \        if (((mask >> j) & 1) == 0) {\n            int nm = mask | (1 << j);\n            dp[nm]\
+        \ = Math.min(dp[nm], dp[mask] + cost[w][j]);\n        }\n}\nSystem.out.println(dp[(1 << n) - 1]);\n"
+    options:
+    - '9'
+    - '10'
+    - '8'
+    - '7'
+    answer: 0
+    explanation: 'Worker 0 takes job 1 (2), worker 1 takes job 0 (6) and worker 2 takes job 2 (1): total
+      9. A worker who simply takes the cheapest free job in turn pays 10. The mask says which jobs are used,
+      so the number of set bits tells which worker is next, and the state is not (worker, mask) but just
+      mask.'
+    difficulty: 4
+  - id: missing-empty-submask
+    kind: bug
+    prompt: This should count ALL submasks of mask = 5 (binary 101), which are 5, 4, 1 and the empty set
+      0, so 4 in total. What does the loop count?
+    code:
+      python: "mask = 5\ncount = 0\nsub = mask\nwhile sub > 0:\n    count += 1\n    sub = (sub - 1) & mask\n\
+        print(count)\n"
+      cpp: 'int mask = 5, count = 0;
+
+        for (int sub = mask; sub > 0; sub = (sub - 1) & mask) count++;
+
+        cout << count;
+
+        '
+      java: 'int mask = 5, count = 0;
+
+        for (int sub = mask; sub > 0; sub = (sub - 1) & mask) count++;
+
+        System.out.println(count);
+
+        '
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '5'
+    answer: 0
+    explanation: The condition sub > 0 stops before the empty submask is processed. Handle sub = 0 separately
+      after the loop (or use a do-while that tests after the body).
+    difficulty: 3
 problems:
 - lab-partners
 - two-coin-take

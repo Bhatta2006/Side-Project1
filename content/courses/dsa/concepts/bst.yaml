@@ -133,36 +133,200 @@ resources:
 quiz:
   - id: inorder-sorted
     kind: mcq
-    prompt: What does an inorder traversal of a BST produce?
-    options: ["The keys in increasing order", "The keys level by level", "The keys in insertion order", "The root last"]
-    answer: 0
-    explanation: Left (smaller), node, right (larger) at every level gives sorted order.
-    difficulty: 1
-  - id: validate-trap
-    kind: mcq
-    prompt: Root 10, left child 5, and 5 has a right child 12. Is this a valid BST?
+    prompt: The values 5, 3, 8, 1, 4 are inserted into an empty binary search tree in that order. What does
+      an inorder traversal print?
     options:
-      - No — 12 is in 10's left subtree but larger than 10
-      - Yes, because 12 > 5
-      - Yes, every parent-child pair is ordered
-      - It depends on insertion order
+    - 1 3 4 5 8
+    - 5 3 1 4 8
+    - 1 4 3 8 5
+    - 5 3 8 1 4
     answer: 0
-    explanation: Every key in the left subtree of 10 must be less than 10.
+    explanation: Inorder visits left subtree, node, right subtree, and the BST rule puts smaller keys on
+      the left, so the output is always sorted whatever the insertion order. Preorder here would be 5 3
+      1 4 8.
+    difficulty: 1
+  - id: search-steps
+    kind: output
+    prompt: 'The BST holds 5 (root), 3 and 8 below it, then 1 and 4 under the 3. Arrays store the shape
+      (-1 means no child). What does this search for 7 print: nodes visited, then whether it was found?'
+    code:
+      python: "val = [5, 3, 8, 1, 4]\nL = [1, 3, -1, -1, -1]\nR = [2, 4, -1, -1, -1]\nt = 7\ni, steps, found\
+        \ = 0, 0, 0\nwhile i != -1:\n    steps += 1\n    if val[i] == t:\n        found = 1\n        break\n\
+        \    i = L[i] if t < val[i] else R[i]\nprint(steps, found)\n"
+      cpp: "int val[5] = {5, 3, 8, 1, 4};\nint L[5] = {1, 3, -1, -1, -1};\nint R[5] = {2, 4, -1, -1, -1};\n\
+        int t = 7, i = 0, steps = 0, found = 0;\nwhile (i != -1) {\n    steps++;\n    if (val[i] == t) {\
+        \ found = 1; break; }\n    i = t < val[i] ? L[i] : R[i];\n}\ncout << steps << \" \" << found;\n"
+      java: "int[] val = {5, 3, 8, 1, 4};\nint[] L = {1, 3, -1, -1, -1};\nint[] R = {2, 4, -1, -1, -1};\n\
+        int t = 7, i = 0, steps = 0, found = 0;\nwhile (i != -1) {\n    steps++;\n    if (val[i] == t) {\
+        \ found = 1; break; }\n    i = t < val[i] ? L[i] : R[i];\n}\nSystem.out.println(steps + \" \" +\
+        \ found);\n"
+    options:
+    - 2 0
+    - 3 0
+    - 2 1
+    - 1 0
+    answer: 0
+    explanation: 7 is greater than 5, so go right to 8. 7 is less than 8 and 8 has no left child, so the
+      search ends after two nodes without finding it. Each comparison discards a whole subtree, which is
+      why a search costs the height of the tree.
+    difficulty: 2
+  - id: ceil-output
+    kind: output
+    prompt: 'Nodes are stored in arrays: 8 is the root with children 3 and 10; 3 has children 1 and 6; 10
+      has a right child 14. What does this query print?'
+    code:
+      python: "val = [8, 3, 10, 1, 6, 14]\nL = [1, 3, -1, -1, -1, -1]\nR = [2, 4, 5, -1, -1, -1]\nt = 11\n\
+        i = 0\nbest = -1\nwhile i != -1:\n    if val[i] >= t:\n        best = val[i]\n        i = L[i]\n\
+        \    else:\n        i = R[i]\nprint(best)\n"
+      cpp: "int val[6] = {8, 3, 10, 1, 6, 14};\nint L[6] = {1, 3, -1, -1, -1, -1};\nint R[6] = {2, 4, 5,\
+        \ -1, -1, -1};\nint t = 11, i = 0, best = -1;\nwhile (i != -1) {\n    if (val[i] >= t) { best =\
+        \ val[i]; i = L[i]; }\n    else i = R[i];\n}\ncout << best;\n"
+      java: "int[] val = {8, 3, 10, 1, 6, 14};\nint[] L = {1, 3, -1, -1, -1, -1};\nint[] R = {2, 4, 5, -1,\
+        \ -1, -1};\nint t = 11, i = 0, best = -1;\nwhile (i != -1) {\n    if (val[i] >= t) { best = val[i];\
+        \ i = L[i]; }\n    else i = R[i];\n}\nSystem.out.println(best);\n"
+    options:
+    - '14'
+    - '10'
+    - '8'
+    - '-1'
+    answer: 0
+    explanation: This finds the smallest stored value that is at least t. 8 and 10 are both too small, so
+      the walk goes right twice and stops at 14. Whenever a node qualifies it is remembered and the search
+      moves left to look for something smaller that still qualifies.
     difficulty: 3
-  - id: sorted-insert
+  - id: java-ceiling
     kind: mcq
-    prompt: Inserting 1, 2, 3, ..., n into a plain BST makes search cost...
-    options: ["O(n)", "O(log n)", "O(1)", "O(n log n)"]
+    languages:
+    - java
+    prompt: A TreeSet<Integer> named ts holds up to 100,000 values. Which call returns the smallest value
+      that is at least x in O(log n)?
+    options:
+    - ts.ceiling(x), which returns null when no such value exists
+    - ts.higher(x), which skips x itself when x is present in the set
+    - ts.floor(x), which returns the smallest value that is at least x
+    - ts.first(), which returns the nearest value above x in the set
     answer: 0
-    explanation: Each key becomes the right child of the previous one, forming a chain.
-    difficulty: 2
-  - id: lca
+    explanation: 'ceiling is the lower-bound query: smallest element greater than or equal to x. higher
+      is strictly greater, floor is the largest element at most x, and first is just the minimum of the
+      set. HashSet has no ordered queries at all.'
+    difficulty: 3
+  - id: successor-delete
     kind: mcq
-    prompt: In a BST, both target keys are larger than the current node's key. Where is their lowest common ancestor?
-    options: ["In the right subtree", "In the left subtree", "At the current node", "At the root always"]
+    prompt: The root 8 has left child 3 and right child 12. 12 has a left child 10, and 10 has a left child
+      9 (a leaf). You delete the root by copying up its inorder successor. Which value replaces it?
+    options:
+    - '9'
+    - '10'
+    - '12'
+    - '3'
     answer: 0
-    explanation: Both keys live in the right subtree, so their split point is there too.
-    difficulty: 2
+    explanation: 'The successor is the smallest value in the right subtree: go right once, then left as
+      far as possible. Copy 9 into the root, then delete the old 9 node, which is a leaf and so easy to
+      remove. Copying the predecessor (the largest value on the left, 3) would work too.'
+    difficulty: 4
+  - id: bounds-output
+    kind: output
+    prompt: 'Nodes: 20 is the root with children 10 and 30; 30 has a left child 15. This range-based validator
+      prints 1 for a valid BST. What does it print?'
+    code:
+      python: "val = [20, 10, 30, 15]\nL = [1, -1, 3, -1]\nR = [2, -1, -1, -1]\ndef ok(i, lo, hi):\n   \
+        \ if i == -1:\n        return True\n    if not (lo < val[i] < hi):\n        return False\n    return\
+        \ ok(L[i], lo, val[i]) and ok(R[i], val[i], hi)\nprint(1 if ok(0, float(\"-inf\"), float(\"inf\"\
+        )) else 0)\n"
+      cpp: "int val[4] = {20, 10, 30, 15};\nint L[4] = {1, -1, 3, -1};\nint R[4] = {2, -1, -1, -1};\nfunction<bool(int,\
+        \ long long, long long)> ok = [&](int i, long long lo, long long hi) -> bool {\n    if (i == -1)\
+        \ return true;\n    if (!(lo < val[i] && val[i] < hi)) return false;\n    return ok(L[i], lo, val[i])\
+        \ && ok(R[i], val[i], hi);\n};\ncout << (ok(0, LLONG_MIN, LLONG_MAX) ? 1 : 0);\n"
+      java: "class T {\n    int[] val = {20, 10, 30, 15};\n    int[] L = {1, -1, 3, -1};\n    int[] R =\
+        \ {2, -1, -1, -1};\n    boolean ok(int i, long lo, long hi) {\n        if (i == -1) return true;\n\
+        \        if (!(lo < val[i] && val[i] < hi)) return false;\n        return ok(L[i], lo, val[i]) &&\
+        \ ok(R[i], val[i], hi);\n    }\n}\nSystem.out.println(new T().ok(0, Long.MIN_VALUE, Long.MAX_VALUE)\
+        \ ? 1 : 0);\n"
+    options:
+    - '0'
+    - '1'
+    - '2'
+    - '-1'
+    answer: 0
+    explanation: At node 15 the allowed range is (20, 30), because it hangs to the left of 30 but to the
+      right of 20. 15 is outside it, so the whole tree is rejected even though 15 is smaller than its own
+      parent 30.
+    difficulty: 4
+  - id: py-no-tree
+    kind: mcq
+    languages:
+    - python
+    prompt: You keep a sorted Python list and use bisect.insort for 100,000 inserts mixed with queries for
+      the smallest value at least x. What is the cost profile?
+    options:
+    - Queries are O(log n) with bisect_left, but each insort shifts elements, so inserts are O(n)
+    - Everything is O(log n), because insort finds the right position by binary search
+    - Queries are O(n) but inserts are O(log n), since a list has to be scanned to answer
+    - Both are O(1) on average, because a Python list is stored as a hash table inside
+    answer: 0
+    explanation: Finding the position is logarithmic, but inserting into the middle of a list moves everything
+      after it. That is still fast for 100,000 items thanks to memmove, yet it grows quadratically. The
+      standard library has no balanced tree, so very large inputs need another approach such as a heap,
+      offline sorting, or a third-party sorted container.
+    difficulty: 4
+  - id: kth-size
+    kind: mcq
+    prompt: Every BST node stores the size of its subtree. The left subtree of the current node has 4 nodes
+      and you want the 6th smallest value in this subtree. You go right. Which rank do you look for there?
+    options:
+    - '1'
+    - '2'
+    - '5'
+    - '6'
+    answer: 0
+    explanation: The 4 left nodes and the current node itself are all smaller than the target, which accounts
+      for 5 ranks. The target is therefore the 6 - 4 - 1 = 1st smallest value of the right subtree. This
+      gives a k-th smallest query in O(h).
+    difficulty: 4
+  - id: cpp-lower-bound
+    kind: mcq
+    languages:
+    - cpp
+    prompt: A std::set<int> named s holds up to 100,000 values and you answer many queries for the smallest
+      value at least x. Which call is really O(log n)?
+    options:
+    - s.lower_bound(x), the member function that walks the tree directly
+    - lower_bound(s.begin(), s.end(), x), since the generic algorithm is a binary search
+    - find_if(s.begin(), s.end(), [&](int v) { return v >= x; }), which stops at the first match
+    - s.find(x), which returns the next larger value when x itself is missing
+    answer: 0
+    explanation: The generic std::lower_bound needs random-access iterators to jump, and set iterators only
+      step one node at a time, so it takes O(n). The member function uses the tree structure. find returns
+      end() when x is absent, and find_if scans linearly.
+    difficulty: 5
+  - id: parent-child-only
+    kind: bug
+    prompt: The root is 10, its left child is 5, and 5 has a right child 15. This validator only compares
+      each node with its direct children. What does it print? (The tree is NOT a valid BST, as 15 is on
+      the left of 10.)
+    code:
+      python: "val = [10, 5, 15]\nL = [1, -1, -1]\nR = [-1, 2, -1]\ndef ok(u):\n    if u == -1:\n      \
+        \  return True\n    if L[u] != -1 and val[L[u]] >= val[u]:\n        return False\n    if R[u] !=\
+        \ -1 and val[R[u]] <= val[u]:\n        return False\n    return ok(L[u]) and ok(R[u])\nprint(\"\
+        valid\" if ok(0) else \"invalid\")\n"
+      cpp: "int val[3] = {10, 5, 15}, L[3] = {1, -1, -1}, R[3] = {-1, 2, -1};\nfunction<bool(int)> ok =\
+        \ [&](int u) -> bool {\n    if (u == -1) return true;\n    if (L[u] != -1 && val[L[u]] >= val[u])\
+        \ return false;\n    if (R[u] != -1 && val[R[u]] <= val[u]) return false;\n    return ok(L[u]) &&\
+        \ ok(R[u]);\n};\ncout << (ok(0) ? \"valid\" : \"invalid\");\n"
+      java: "class T {\n    int[] val = {10, 5, 15}, L = {1, -1, -1}, R = {-1, 2, -1};\n    boolean ok(int\
+        \ u) {\n        if (u == -1) return true;\n        if (L[u] != -1 && val[L[u]] >= val[u]) return\
+        \ false;\n        if (R[u] != -1 && val[R[u]] <= val[u]) return false;\n        return ok(L[u])\
+        \ && ok(R[u]);\n    }\n}\nSystem.out.println(new T().ok(0) ? \"valid\" : \"invalid\");\n"
+    options:
+    - valid
+    - invalid
+    - no output
+    - an error
+    answer: 0
+    explanation: Each node looks fine next to its children, but the 15 breaks the rule for the root 10,
+      which needs EVERY value in its left subtree to be smaller. Pass down an allowed range (low, high)
+      instead of comparing only neighbours.
+    difficulty: 3
 problems: [bst-validate, shorter-to-the-right]
 practice_links:
   - title: Validate Binary Search Tree

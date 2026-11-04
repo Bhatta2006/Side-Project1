@@ -154,86 +154,272 @@ resources:
     minutes: 120
     level: intro
 quiz:
-  - id: first-true-branch
+  - id: pass-boundary
     kind: output
-    prompt: With x = 50, what is printed?
+    prompt: A student needs at least 50 to pass. What is printed?
     code:
-      python: |
-        if x > 10:
-            print("A")
-        elif x > 40:
-            print("B")
-        else:
-            print("C")
-      cpp: |
-        if (x > 10) cout << "A";
-        else if (x > 40) cout << "B";
-        else cout << "C";
-      java: |
-        if (x > 10) System.out.println("A");
-        else if (x > 40) System.out.println("B");
-        else System.out.println("C");
-    options: ["A", "B", "A and B", "C"]
+      python: "score = 50\nif score >= 50:\n    print(\"pass\")\nelse:\n    print(\"fail\")\n"
+      cpp: 'int score = 50;
+
+        if (score >= 50) cout << "pass";
+
+        else cout << "fail";
+
+        '
+      java: 'int score = 50;
+
+        if (score >= 50) System.out.println("pass");
+
+        else System.out.println("fail");
+
+        '
+    options:
+    - pass
+    - fail
+    - pass fail
+    - Nothing
     answer: 0
-    explanation: The first true condition wins. 50 > 10 is true, so A prints and the rest is skipped.
+    explanation: '>= includes the boundary value itself, so exactly 50 passes. With > the same score would
+      fail, which is the classic off-by-one in conditions.'
+    difficulty: 1
+  - id: first-match-wins
+    kind: output
+    prompt: In an if / else-if chain only the first branch whose condition is true runs. What is printed?
+    code:
+      python: "x = 15\nif x > 5:\n    print(\"big\")\nelif x > 10:\n    print(\"huge\")\nelse:\n    print(\"\
+        small\")\n"
+      cpp: 'int x = 15;
+
+        if (x > 5) cout << "big";
+
+        else if (x > 10) cout << "huge";
+
+        else cout << "small";
+
+        '
+      java: 'int x = 15;
+
+        if (x > 5) System.out.println("big");
+
+        else if (x > 10) System.out.println("huge");
+
+        else System.out.println("small");
+
+        '
+    options:
+    - big
+    - huge
+    - big huge
+    - small
+    answer: 0
+    explanation: x > 5 is true, so that branch runs and the rest of the chain is skipped, even though x
+      > 10 would also be true. Put the most specific test first.
     difficulty: 2
-  - id: equals-operator
-    kind: mcq
-    prompt: Which operator asks "are these two values equal?"
-    options: ["==", "=", "!=", "=>"]
-    answer: 0
-    explanation: Double equals compares. Single equals assigns.
-    difficulty: 1
-  - id: boundary
-    kind: mcq
-    prompt: A rule says "passing score is 50 or more". Which condition is correct?
-    options: ["score >= 50", "score > 50", "score == 50", "score <= 50"]
-    answer: 0
-    explanation: '"50 or more" includes 50 itself, so use >=. A score of exactly 50 is the boundary to test.'
-    difficulty: 1
-  - id: else-meaning
-    kind: mcq
-    prompt: When does the `else` block run?
-    options:
-      - "When none of the conditions above it were true"
-      - "Always, right after the if block has finished"
-      - "Only when the if condition above it is true"
-      - "Whenever the last elif condition alone is false"
-    answer: 0
-    explanation: else is the fallback that catches every case the earlier conditions did not.
-    difficulty: 1
-  - id: elif-order
+  - id: separate-ifs
     kind: output
-    prompt: "What does this print for score = 85?"
+    prompt: These are two separate if statements, not a chain. What is printed?
     code:
-      python: |
-        score = 85
-        if score >= 50:
-            print("pass")
-        elif score >= 80:
-            print("merit")
-        else:
-            print("fail")
+      python: "x = 15\nif x > 5:\n    print(\"big\")\nif x > 10:\n    print(\"huge\")\n"
+      cpp: 'int x = 15;
+
+        if (x > 5) cout << "big" << endl;
+
+        if (x > 10) cout << "huge" << endl;
+
+        '
+      java: 'int x = 15;
+
+        if (x > 5) System.out.println("big");
+
+        if (x > 10) System.out.println("huge");
+
+        '
     options:
-      - "pass"
-      - "merit"
-      - "pass and merit"
-      - "fail"
+    - big huge
+    - big
+    - huge
+    - Nothing
     answer: 0
-    explanation: "Only the first true branch runs. 85 >= 50 is checked first, so the merit branch is never reached; put the stricter test first."
+    explanation: Each if is checked on its own, so both conditions are true and both lines print. The else-if
+      form is what makes the choices exclusive.
+    difficulty: 3
+  - id: adult-boundary
+    kind: output
+    prompt: A cinema lets in anyone older than 18 for the late show. What is printed for someone who is
+      exactly 18?
+    code:
+      python: "age = 18\nif age > 18:\n    print(\"adult\")\nelse:\n    print(\"minor\")\n"
+      cpp: 'int age = 18;
+
+        if (age > 18) cout << "adult";
+
+        else cout << "minor";
+
+        '
+      java: 'int age = 18;
+
+        if (age > 18) System.out.println("adult");
+
+        else System.out.println("minor");
+
+        '
+    options:
+    - minor
+    - adult
+    - adult minor
+    - Nothing
+    answer: 0
+    explanation: '> 18 is false for exactly 18, so the else branch runs. If the rule is ''at least 18'',
+      the code must say >=. Always test the boundary value by hand.'
+    difficulty: 2
+  - id: leap-year
+    kind: output
+    prompt: A year is a leap year if it divides by 4, except centuries, which must divide by 400. This tests
+      1900 and then 2000. What is printed?
+    code:
+      python: "for y in (1900, 2000):\n    leap = y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)\n    print(\"\
+        leap\" if leap else \"common\")\n"
+      cpp: "for (int y : {1900, 2000}) {\n    bool leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);\n\
+        \    cout << (leap ? \"leap\" : \"common\") << endl;\n}\n"
+      java: "for (int y : new int[]{1900, 2000}) {\n    boolean leap = y % 4 == 0 && (y % 100 != 0 || y\
+        \ % 400 == 0);\n    System.out.println(leap ? \"leap\" : \"common\");\n}\n"
+    options:
+    - common leap
+    - leap leap
+    - leap common
+    - common common
+    answer: 0
+    explanation: '1900 divides by 4 and by 100 but not by 400, so it is common. 2000 divides by 400, so
+      it is a leap year. The brackets matter: without them && would bind tighter than ||.'
     difficulty: 4
-  - id: dangling-if
-    kind: mcq
-    prompt: "A grading rule is: under 40 fail, 40 to 69 pass, 70 or more distinction. Which chain is correct for every whole-number score?"
+  - id: ordering-bug
+    kind: bug
+    prompt: This FizzBuzz check should print FizzBuzz for 15, but it does not. What does it print for 15?
+    code:
+      python: "n = 15\nif n % 3 == 0:\n    print(\"Fizz\")\nelif n % 5 == 0:\n    print(\"Buzz\")\nelif\
+        \ n % 15 == 0:\n    print(\"FizzBuzz\")\nelse:\n    print(n)\n"
+      cpp: 'int n = 15;
+
+        if (n % 3 == 0) cout << "Fizz";
+
+        else if (n % 5 == 0) cout << "Buzz";
+
+        else if (n % 15 == 0) cout << "FizzBuzz";
+
+        else cout << n;
+
+        '
+      java: 'int n = 15;
+
+        if (n % 3 == 0) System.out.println("Fizz");
+
+        else if (n % 5 == 0) System.out.println("Buzz");
+
+        else if (n % 15 == 0) System.out.println("FizzBuzz");
+
+        else System.out.println(n);
+
+        '
     options:
-      - "if s >= 70: D  elif s >= 40: P  else: F"
-      - "if s >= 40: P  elif s >= 70: D  else: F"
-      - "if s < 70: P  elif s < 40: F  else: D"
-      - "if s > 40: P  elif s > 70: D  else: F"
+    - Fizz
+    - FizzBuzz
+    - Buzz
+    - '15'
     answer: 0
-    explanation: "Test the highest band first so each score lands in exactly one band; the other chains misplace 70+ or 40."
-    difficulty: 5
-problems: [grade-letter, max-of-three, museum-ticket]
+    explanation: 15 divides by 3, so the first branch wins and the n % 15 test is never reached. The most
+      specific condition has to come first in a chain.
+    difficulty: 4
+  - id: guard-first
+    kind: output
+    prompt: The first test protects the second from dividing by zero. What is printed?
+    code:
+      python: "x = 0\nif x != 0 and 10 // x > 1:\n    print(\"big\")\nelse:\n    print(\"skip\")\n"
+      cpp: 'int x = 0;
+
+        if (x != 0 && 10 / x > 1) cout << "big";
+
+        else cout << "skip";
+
+        '
+      java: 'int x = 0;
+
+        if (x != 0 && 10 / x > 1) System.out.println("big");
+
+        else System.out.println("skip");
+
+        '
+    options:
+    - skip
+    - big
+    - 'Error: division by zero'
+    - Nothing
+    answer: 0
+    explanation: The and stops as soon as the left side is false, so the division is never attempted. Put
+      the safety check on the left, and the risky one on the right.
+    difficulty: 3
+  - id: python-truthiness
+    kind: output
+    languages:
+    - python
+    prompt: In Python, empty and zero values count as false in a condition, and everything else counts as
+      true. What is printed?
+    code:
+      python: "for v in (0, \"\", [], \"0\"):\n    print(\"yes\" if v else \"no\", end=\" \")\n"
+    options:
+    - no no no yes
+    - no no no no
+    - yes yes yes yes
+    - no yes no yes
+    answer: 0
+    explanation: 0, the empty string and the empty list are false. The text "0" is a non-empty string, so
+      it is true. This is why `if items:` is a common way to test for a non-empty list.
+    difficulty: 4
+  - id: assignment-in-condition
+    kind: output
+    languages:
+    - cpp
+    prompt: A single = inside the brackets assigns instead of comparing, and C++ accepts it. What is printed?
+    code:
+      cpp: 'int x = 0;
+
+        if (x = 5) cout << "yes ";
+
+        cout << x;
+
+        '
+    options:
+    - yes 5
+    - '0'
+    - yes 0
+    - '5'
+    answer: 0
+    explanation: x = 5 stores 5 in x, and the value of that expression is 5, which counts as true. The condition
+      both changed x and passed. Use == to compare. (Python and Java reject this form.)
+    difficulty: 4
+  - id: java-string-compare
+    kind: output
+    languages:
+    - java
+    prompt: In Java, == on two objects asks whether they are the very same object, not whether the text
+      matches. What is printed?
+    code:
+      java: 'String a = new String("hi");
+
+        String b = new String("hi");
+
+        System.out.println((a == b) + " " + a.equals(b));
+
+        '
+    options:
+    - false true
+    - true true
+    - true false
+    - false false
+    answer: 0
+    explanation: Two separately created Strings are different objects even with the same letters, so ==
+      is false. equals compares the characters and is what you almost always want.
+    difficulty: 4
+problems: [grade-letter, max-of-three, museum-ticket, triangle-type]
 practice_links:
   - title: Watermelon
     url: https://codeforces.com/problemset/problem/4/A

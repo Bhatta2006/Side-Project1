@@ -1,0 +1,65 @@
+id: square-of-primes
+title: Exactly three divisors
+concepts:
+- math-on-numbers
+difficulty: medium
+statement: |
+  Some numbers have exactly three divisors; 4 has 1, 2 and 4, and 9 has 1, 3 and 9. Count how many
+  whole numbers from 1 to `n` have exactly three divisors.
+input_format: |
+  One integer n.
+output_format: The count of numbers in 1..n with exactly three divisors.
+constraints:
+- 1 ≤ n ≤ 10^12
+examples:
+- input: '10'
+  output: '2'
+  explanation: 4 and 9.
+- input: '1'
+  output: '0'
+hints:
+- Counting divisors of every number up to 10^12 is hopeless. What do numbers with exactly three divisors
+  have in common?
+- If the divisors are 1, d and n, then d must be prime and n = d · d. They are exactly the squares of
+  primes.
+- So you need the number of primes p with p² ≤ n, that is the primes up to sqrt(n) ≤ 10^6. A sieve finds
+  them quickly.
+approach: |
+  A number has exactly three divisors only when it is p² for a prime p. Count the primes up to
+  isqrt(n) with a sieve of Eratosthenes (limit 10^6). O(sqrt(n) log log n).
+reference: |
+  from math import isqrt
+  n = int(input())
+  m = isqrt(n)
+  sieve = bytearray([1]) * (m + 1)
+  for i in range(min(2, m + 1)):
+      sieve[i] = 0
+  for i in range(2, isqrt(m) + 1):
+      if sieve[i]:
+          sieve[i * i::i] = bytearray(len(range(i * i, m + 1, i)))
+  print(sum(sieve))
+brute: |
+  n = int(input())
+  count = 0
+  for x in range(1, n + 1):
+      d = sum(1 for i in range(1, x + 1) if x % i == 0)
+      if d == 3:
+          count += 1
+  print(count)
+small_generator: |
+  def cases(rng):
+      for n in range(1, 60):
+          yield str(n)
+      for _ in range(15):
+          yield str(rng.randint(60, 1200))
+generator: |
+  def cases(rng):
+      yield "10"
+      yield "1"
+      yield "4"
+      yield "9"
+      yield str(10**12)
+      yield str(10**12 - 1)
+      yield str(999983 ** 2)
+      for _ in range(6):
+          yield str(rng.randint(1, 10**12))

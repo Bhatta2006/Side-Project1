@@ -163,70 +163,204 @@ resources:
     source: Harvard CS50
     minutes: 120
 quiz:
-  - id: return-ends
+  - id: return-value
     kind: output
-    prompt: What does f(5) return?
+    prompt: A function returns a value to the line that called it. What is printed?
     code:
-      python: |
-        def f(n):
-            if n > 3:
-                return "big"
-            return "small"
-      cpp: |
-        string f(int n) {
-            if (n > 3) return "big";
-            return "small";
-        }
-      java: |
-        static String f(int n) {
-            if (n > 3) return "big";
-            return "small";
-        }
-    options: ["big", "small", "big then small", "Nothing"]
+      python: "def add(a, b):\n    return a + b\nprint(add(2, 3) * 2)\n"
+      cpp: 'auto add = [](int a, int b) { return a + b; };
+
+        cout << add(2, 3) * 2;
+
+        '
+      java: "class T {\n    int add(int a, int b) { return a + b; }\n}\nSystem.out.println(new T().add(2,\
+        \ 3) * 2);\n"
+    options:
+    - '10'
+    - '5'
+    - '7'
+    - '12'
     answer: 0
-    explanation: The first return runs and ends the function, so the second return is never reached.
+    explanation: add(2, 3) gives 5 back to the expression, and then it is multiplied by 2. The call itself
+      behaves like the value it returns.
     difficulty: 1
-  - id: print-vs-return
-    kind: mcq
-    prompt: Why is `total = add(2, 3) * 10` broken if add prints its result instead of returning it?
-    options:
-      - add gives no value back to multiply
-      - print is slower than return
-      - add cannot take two parameters
-      - It works fine either way
-    answer: 0
-    explanation: Printing only shows text. Without return, the caller gets no value (None / void) to use.
-    difficulty: 2
-  - id: sqrt-bound
-    kind: mcq
-    prompt: Why may a primality check stop testing divisors once d * d > n?
-    options:
-      - "Any divisor above √n pairs with one below √n that was already tested"
-      - "No number has a divisor larger than its own square root, so none remain"
-      - "Testing past √n would also work but gives only an approximate answer"
-      - "Only even numbers can have divisors above √n, and those were ruled out"
-    answer: 0
-    explanation: Divisors come in pairs (d, n/d); one of each pair is at most √n.
-    difficulty: 3
-  - id: call-value
+  - id: argument-order
     kind: output
-    prompt: What is printed?
+    prompt: Arguments are matched to parameters by position. What is printed?
     code:
-      python: |
-        def double(x):
-            return x * 2
-        print(double(double(3)) + 1)
-      cpp: |
-        int dbl(int x) { return x * 2; }
-        // in main:
-        cout << dbl(dbl(3)) + 1;
-      java: |
-        static int dbl(int x) { return x * 2; }
-        // in main:
-        System.out.println(dbl(dbl(3)) + 1);
-    options: ["13", "7", "12", "10"]
+      python: "def sub(a, b):\n    return a - b\nprint(sub(10, 3), sub(3, 10))\n"
+      cpp: 'auto sub = [](int a, int b) { return a - b; };
+
+        cout << sub(10, 3) << " " << sub(3, 10);
+
+        '
+      java: "class T {\n    int sub(int a, int b) { return a - b; }\n}\nT t = new T();\nSystem.out.println(t.sub(10,\
+        \ 3) + \" \" + t.sub(3, 10));\n"
+    options:
+    - 7 -7
+    - 7 7
+    - -7 7
+    - 13 13
     answer: 0
-    explanation: The inner call gives 6, the outer call gives 12, plus 1 is 13.
+    explanation: The first argument always goes to a and the second to b, so swapping them swaps the roles.
+      For subtraction that flips the sign.
+    difficulty: 2
+  - id: nested-calls
+    kind: output
+    prompt: The inner call runs first, and its result is passed to the outer one. g doubles a number and
+      f adds 1. What is printed for f(g(2)) and g(f(2))?
+    code:
+      python: "def f(x):\n    return x + 1\ndef g(x):\n    return x * 2\nprint(f(g(2)), g(f(2)))\n"
+      cpp: 'auto f = [](int x) { return x + 1; };
+
+        auto g = [](int x) { return x * 2; };
+
+        cout << f(g(2)) << " " << g(f(2));
+
+        '
+      java: "class T {\n    int f(int x) { return x + 1; }\n    int g(int x) { return x * 2; }\n}\nT t =\
+        \ new T();\nSystem.out.println(t.f(t.g(2)) + \" \" + t.g(t.f(2)));\n"
+    options:
+    - 5 6
+    - 6 5
+    - 5 5
+    - 6 6
+    answer: 0
+    explanation: 'f(g(2)): g gives 4, then f gives 5. g(f(2)): f gives 3, then g gives 6. The order of nesting
+      matters.'
+    difficulty: 2
+  - id: return-inside-loop
+    kind: output
+    prompt: A return leaves the function immediately, even from inside a loop. What is printed?
+    code:
+      python: "def first_even(a):\n    for x in a:\n        if x % 2 == 0:\n            return x\n    return\
+        \ -1\nprint(first_even([3, 5, 6, 8]), first_even([1, 3]))\n"
+      cpp: "auto first_even = [](vector<int> a) {\n    for (int x : a)\n        if (x % 2 == 0) return x;\n\
+        \    return -1;\n};\ncout << first_even({3, 5, 6, 8}) << \" \" << first_even({1, 3});\n"
+      java: "class T {\n    int firstEven(int[] a) {\n        for (int x : a)\n            if (x % 2 ==\
+        \ 0) return x;\n        return -1;\n    }\n}\nT t = new T();\nSystem.out.println(t.firstEven(new\
+        \ int[]{3, 5, 6, 8}) + \" \" + t.firstEven(new int[]{1, 3}));\n"
+    options:
+    - 6 -1
+    - 6 8
+    - 8 -1
+    - -1 -1
+    answer: 0
+    explanation: The first call stops at 6 and never looks at 8. The second finds nothing, so it falls through
+      to the final return. Always decide what a function gives back when nothing matches.
+    difficulty: 3
+  - id: count-evens
+    kind: output
+    prompt: A small yes/no function is used as the test in a loop. What is printed?
+    code:
+      python: "def is_even(n):\n    return n % 2 == 0\ncount = 0\nfor x in [4, 7, 10, 3, 8]:\n    if is_even(x):\n\
+        \        count += 1\nprint(count)\n"
+      cpp: "auto is_even = [](int n) { return n % 2 == 0; };\nint count = 0;\nfor (int x : {4, 7, 10, 3,\
+        \ 8})\n    if (is_even(x)) count++;\ncout << count;\n"
+      java: "class T {\n    boolean isEven(int n) { return n % 2 == 0; }\n}\nT t = new T();\nint count =\
+        \ 0;\nfor (int x : new int[]{4, 7, 10, 3, 8})\n    if (t.isEven(x)) count++;\nSystem.out.println(count);\n"
+    options:
+    - '3'
+    - '2'
+    - '5'
+    - '4'
+    answer: 0
+    explanation: 4, 10 and 8 are even. Giving a condition a name keeps the loop easy to read, and the function
+      can be reused.
+    difficulty: 2
+  - id: parameter-copy
+    kind: output
+    prompt: The function changes its own copy of the number. What is printed?
+    code:
+      python: "def inc(x):\n    x = x + 1\na = 5\ninc(a)\nprint(a)\n"
+      cpp: 'auto inc = [](int x) { x = x + 1; };
+
+        int a = 5;
+
+        inc(a);
+
+        cout << a;
+
+        '
+      java: "class T {\n    void inc(int x) { x = x + 1; }\n}\nint a = 5;\nnew T().inc(a);\nSystem.out.println(a);\n"
+    options:
+    - '5'
+    - '6'
+    - Error
+    - '0'
+    answer: 0
+    explanation: The parameter x is a separate variable that starts as a copy of a. Changing it inside the
+      function does not touch the caller's a. To get a new value out, return it.
+    difficulty: 3
+  - id: cpp-reference
+    kind: output
+    languages:
+    - cpp
+    prompt: Putting & after the type makes the parameter another name for the caller's variable, not a copy.
+      What is printed?
+    code:
+      cpp: 'auto inc = [](int& x) { x = x + 1; };
+
+        int a = 5;
+
+        inc(a);
+
+        cout << a;
+
+        '
+    options:
+    - '6'
+    - '5'
+    - Error
+    - '0'
+    answer: 0
+    explanation: With int&, x is the caller's a, so the change is visible after the call. This is how a
+      C++ function can change more than one thing without returning.
+    difficulty: 4
+  - id: no-return-python
+    kind: output
+    languages:
+    - python
+    prompt: A function that only prints gives back the special value None. What is printed?
+    code:
+      python: "def show(x):\n    print(x)\ny = show(5)\nprint(y)\n"
+    options:
+    - 5 None
+    - 5 5
+    - None None
+    - '5'
+    answer: 0
+    explanation: Printing is a side effect, not a result. Without a return statement the function hands
+      back None, so y holds None.
+    difficulty: 3
+  - id: print-instead-of-return
+    kind: mcq
+    languages:
+    - python
+    prompt: This function prints the sum instead of returning it. What happens when the last line runs?
+    options:
+    - It prints 3, then fails because None cannot be added to 1
+    - It prints 3 and then also prints 4 on the next line
+    - It prints 4 only, since the print inside is ignored
+    - It prints 3 and then the program ends normally
+    answer: 0
+    explanation: add(1, 2) prints 3 and returns None, so the expression is None + 1, which is a TypeError.
+      If a result is going to be used, return it.
+    difficulty: 4
+    code:
+      python: "def add(a, b):\n    print(a + b)\nprint(add(1, 2) + 1)\n"
+  - id: variable-inside
+    kind: mcq
+    prompt: A function creates a variable called total for its own calculation. After the function has finished,
+      can the code that called it read total?
+    options:
+    - No, total only exists while the function runs
+    - Yes, any variable stays available everywhere afterwards
+    - Yes, but only on the line directly after the call
+    - Only if the function prints it
+    answer: 0
+    explanation: 'Variables made inside a function are local: they are created at the call and discarded
+      at the end. To pass the result outwards, return it.'
     difficulty: 2
 problems: [prime-check, gcd-function]
 practice_links:

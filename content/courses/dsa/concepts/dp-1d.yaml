@@ -152,34 +152,171 @@ resources:
     minutes: 40
     level: deep
 quiz:
-  - id: components
+  - id: climb-ways
     kind: mcq
-    prompt: Which is NOT one of the four decisions of a DP solution?
-    options: ["Choosing a sorting algorithm", "Defining the state", "Writing the transition", "Setting base cases"]
+    prompt: A staircase has 6 steps and you climb 1 or 2 stairs at a time. In how many distinct ways can
+      you reach the top?
+    options:
+    - '13'
+    - '8'
+    - '12'
+    - '21'
     answer: 0
-    explanation: State, transition, base cases and the final answer define a DP.
+    explanation: 'The last move was a 1-step or a 2-step, so ways(n) = ways(n - 1) + ways(n - 2): 1, 2,
+      3, 5, 8, 13 for n = 1 to 6. It is Fibonacci, and the state is simply ''ways to stand on stair i''.'
     difficulty: 1
-  - id: robber
-    kind: mcq
-    prompt: For house robber with a = [2, 7, 9, 3, 1], what is the maximum loot?
-    options: ["12", "11", "10", "13"]
+  - id: robber-output
+    kind: output
+    prompt: Houses hold [6, 1, 2, 7, 3] and neighbours cannot both be robbed. This rolling-variable solution
+      prints the best loot. What is it?
+    code:
+      python: "nums = [6, 1, 2, 7, 3]\nprev2 = prev1 = 0\nfor x in nums:\n    prev2, prev1 = prev1, max(prev1,\
+        \ prev2 + x)\nprint(prev1)\n"
+      cpp: "int nums[5] = {6, 1, 2, 7, 3};\nint prev2 = 0, prev1 = 0;\nfor (int x : nums) {\n    int cur\
+        \ = max(prev1, prev2 + x);\n    prev2 = prev1;\n    prev1 = cur;\n}\ncout << prev1;\n"
+      java: "int[] nums = {6, 1, 2, 7, 3};\nint prev2 = 0, prev1 = 0;\nfor (int x : nums) {\n    int cur\
+        \ = Math.max(prev1, prev2 + x);\n    prev2 = prev1;\n    prev1 = cur;\n}\nSystem.out.println(prev1);\n"
+    options:
+    - '13'
+    - '16'
+    - '12'
+    - '10'
     answer: 0
-    explanation: Rob houses with 2, 9 and 1 for 12.
+    explanation: 'Rob the first and fourth houses: 6 + 7 = 13. Each step chooses between skipping this house
+      (keep prev1) or robbing it (prev2 + x). Greedily grabbing the largest value 7 and its best compatible
+      partner would give less.'
     difficulty: 2
-  - id: overlap
+  - id: perfect-squares
     kind: mcq
-    prompt: What makes a problem a good fit for DP rather than plain recursion?
-    options: ["Overlapping subproblems", "Input that is sorted", "A small input alphabet", "Many negative numbers"]
+    prompt: What is the fewest perfect squares (1, 4, 9, ...) that add up to 12?
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '5'
     answer: 0
-    explanation: DP pays off when the same subproblems would otherwise be solved repeatedly.
-    difficulty: 2
-  - id: coins
+    explanation: 4 + 4 + 4 uses three squares. Taking the largest square first (9 + 1 + 1 + 1) uses four,
+      so greedy fails again. The DP is dp[n] = 1 + min over k of dp[n - k*k].
+    difficulty: 3
+  - id: lis-output
+    kind: output
+    prompt: dp[i] is meant to hold the length of the longest increasing subsequence ending at index i. What
+      does this print?
+    code:
+      python: "a = [10, 9, 2, 5, 3, 7, 101, 18]\ndp = [1] * len(a)\nfor i in range(len(a)):\n    for j in\
+        \ range(i):\n        if a[j] < a[i]:\n            dp[i] = max(dp[i], dp[j] + 1)\nprint(*dp)\n"
+      cpp: "int a[8] = {10, 9, 2, 5, 3, 7, 101, 18};\nint dp[8];\nfor (int i = 0; i < 8; i++) {\n    dp[i]\
+        \ = 1;\n    for (int j = 0; j < i; j++)\n        if (a[j] < a[i]) dp[i] = max(dp[i], dp[j] + 1);\n\
+        }\nfor (int i = 0; i < 8; i++) cout << dp[i] << (i < 7 ? \" \" : \"\");\n"
+      java: "int[] a = {10, 9, 2, 5, 3, 7, 101, 18};\nint[] dp = new int[8];\nfor (int i = 0; i < 8; i++)\
+        \ {\n    dp[i] = 1;\n    for (int j = 0; j < i; j++)\n        if (a[j] < a[i]) dp[i] = Math.max(dp[i],\
+        \ dp[j] + 1);\n}\nStringBuilder sb = new StringBuilder();\nfor (int i = 0; i < 8; i++) sb.append(dp[i]).append(\"\
+        \ \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 1 1 1 2 2 3 4 4
+    - 1 1 1 2 3 3 4 4
+    - 1 1 1 2 2 3 5 4
+    - 1 1 1 2 2 3 4 5
+    answer: 0
+    explanation: The 7 can extend the chain 2, 5 or the chain 2, 3, so its best length is 3. 101 extends
+      that to 4, and 18 also reaches 4. The answer to the whole problem is max(dp), not dp[n - 1], because
+      the best subsequence may end anywhere.
+    difficulty: 4
+  - id: decode-zeros
     kind: mcq
-    prompt: In min-coins DP, dp[x] = min over coins c of dp[x − c] + 1. What is dp[0]?
-    options: ["0", "1", "∞", "−1"]
+    prompt: With A = 1 through Z = 26, in how many ways can the digit string "2101" be decoded into letters?
+    options:
+    - '1'
+    - '2'
+    - '3'
+    - '0'
     answer: 0
-    explanation: Zero coins make amount zero; it is the base case all others build on.
-    difficulty: 1
+    explanation: Only 2 | 10 | 1 works. A 0 can never stand alone, so it must join the digit before it as
+      10 or 20; splitting 21 | 01 or 2 | 1 | 01 fails. Handling the zero cases explicitly is what the DP
+      transition is really about.
+    difficulty: 4
+  - id: circular-robber
+    kind: mcq
+    prompt: The houses [2, 3, 2] stand in a circle, so the first and last are neighbours. What is the most
+      you can rob?
+    options:
+    - '3'
+    - '4'
+    - '5'
+    - '2'
+    answer: 0
+    explanation: 'The straight-line answer would be 4 (first and last), which is illegal on a circle. Solve
+      the line twice, once without the first house and once without the last, and take the larger result:
+      both runs give 3 here.'
+    difficulty: 4
+  - id: tails-rule
+    kind: mcq
+    prompt: In the O(n log n) longest-increasing-subsequence method with a tails array, which rule gives
+      STRICTLY increasing rather than non-decreasing?
+    options:
+    - Replace the first tail that is at least x, so a tail equal to x is overwritten
+    - Replace the first tail that is greater than x, so a tail equal to x is kept
+    - Always append x, and then sort the tails array to keep it in increasing order
+    - Replace the last tail with x, since only the longest subsequence matters in the end
+    answer: 0
+    explanation: tails[k] is the smallest possible last value of an increasing subsequence of length k +
+      1. For strict increase an equal value cannot extend a subsequence, so it overwrites an equal tail
+      (lower bound). For non-decreasing sequences the equal value may extend, so replace the first tail
+      that is strictly greater (upper bound).
+    difficulty: 5
+  - id: mod-python
+    kind: mcq
+    languages:
+    - python
+    prompt: With MOD = 10**9 + 7, what does (3 - 5) % MOD evaluate to in Python?
+    options:
+    - '1000000005'
+    - '1000000002'
+    - '1000000009'
+    - '-2'
+    answer: 0
+    explanation: Python's % takes the sign of the divisor, so the result is always in 0..MOD-1 and subtracting
+      inside a modulus is safe. The same line gives -2 in C++ and Java, which is a classic porting bug in
+      counting DPs.
+    difficulty: 3
+  - id: mod-cj
+    kind: mcq
+    languages:
+    - cpp
+    - java
+    prompt: With int MOD = 1000000007, what does the expression (3 - 5) % MOD evaluate to?
+    options:
+    - '-2'
+    - '1000000005'
+    - '2'
+    - '0'
+    answer: 0
+    explanation: The remainder takes the sign of the dividend, so a negative difference stays negative and
+      can leak into a later dp value. After subtracting, normalise with ((a - b) % MOD + MOD) % MOD.
+    difficulty: 3
+  - id: min-coins-zero-init
+    kind: bug
+    prompt: The fewest coins to make 3 with only a 2-coin is impossible (the answer should be -1). This
+      table starts every entry at 0 instead of 'infinity'. What does it print for dp[3]?
+    code:
+      python: "coins = [2]\namount = 3\ndp = [0] * (amount + 1)\nfor a in range(1, amount + 1):\n    for\
+        \ c in coins:\n        if a >= c:\n            dp[a] = min(dp[a], dp[a - c] + 1)\nprint(dp[amount])\n"
+      cpp: "vector<int> coins = {2};\nint amount = 3;\nvector<int> dp(amount + 1, 0);\nfor (int a = 1; a\
+        \ <= amount; a++)\n    for (int c : coins)\n        if (a >= c) dp[a] = min(dp[a], dp[a - c] + 1);\n\
+        cout << dp[amount];\n"
+      java: "int[] coins = {2};\nint amount = 3;\nint[] dp = new int[amount + 1];\nfor (int a = 1; a <=\
+        \ amount; a++)\n    for (int c : coins)\n        if (a >= c) dp[a] = Math.min(dp[a], dp[a - c] +\
+        \ 1);\nSystem.out.println(dp[amount]);\n"
+    options:
+    - '0'
+    - '-1'
+    - '1'
+    - '2'
+    answer: 0
+    explanation: min with a starting 0 can never become larger, so every amount is reported as 0 coins.
+      Minimum tables must start at a huge value (infinity) for 'not reachable yet', with dp[0] = 0 as the
+      only exception.
+    difficulty: 3
 problems: [house-robber, min-coins]
 practice_links:
   - title: Climbing Stairs

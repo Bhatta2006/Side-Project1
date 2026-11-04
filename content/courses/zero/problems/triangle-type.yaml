@@ -1,0 +1,112 @@
+id: triangle-type
+title: What kind of triangle?
+concepts:
+- conditionals
+difficulty: medium
+statement: |
+  For each test case, three side lengths are given. Print one word describing the shape:
+
+  - `invalid` if it cannot be a triangle. A side must be positive, and the two shorter sides must
+    add up to MORE than the longest (a flat triangle also counts as invalid);
+  - otherwise `equilateral` (all sides equal), `isosceles` (exactly two equal) or `scalene` (all
+    different);
+  - if the triangle has a right angle, add ` right` after the word (for example `scalene right`).
+input_format: |
+  The first line contains T. Each of the next T lines contains three integers a, b and c.
+output_format: One line per test case.
+constraints:
+- 1 ≤ T ≤ 40000
+- -10^9 ≤ a, b, c ≤ 10^9
+examples:
+- input: '4
+
+    3 4 5
+
+    2 2 2
+
+    1 2 3
+
+    5 5 8'
+  output: 'scalene right
+
+    equilateral
+
+    invalid
+
+    isosceles'
+  explanation: 1 + 2 is not more than 3, so that one is flat and invalid.
+- input: '1
+
+    0 4 4'
+  output: invalid
+hints:
+- Sort the three sides first. Then you only need to compare the two small ones against the largest.
+- 'Check validity before anything else: all sides positive and smaller + middle > largest. Only then decide
+  the kind.'
+- A right angle means smaller² + middle² == largest². The squares reach 2·10^18, so use a 64-bit type
+  in C++ and Java.
+approach: |
+  Sort the sides as x ≤ y ≤ z. It is invalid when x ≤ 0 or x + y ≤ z. Otherwise name the kind by
+  counting equal sides, and append ` right` when x² + y² == z². O(1) per case.
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  t = int(data[0])
+  out = []
+  for i in range(t):
+      x, y, z = sorted(map(int, data[1 + 3 * i: 4 + 3 * i]))
+      if x <= 0 or x + y <= z:
+          out.append("invalid")
+          continue
+      if x == y == z:
+          name = "equilateral"
+      elif x == y or y == z:
+          name = "isosceles"
+      else:
+          name = "scalene"
+      if x * x + y * y == z * z:
+          name += " right"
+      out.append(name)
+  print("\n".join(out))
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  t = int(data[0])
+  for i in range(t):
+      a, b, c = map(int, data[1 + 3 * i: 4 + 3 * i])
+      ok = a > 0 and b > 0 and c > 0 and a + b > c and a + c > b and b + c > a
+      if not ok:
+          print("invalid")
+          continue
+      distinct = len({a, b, c})
+      name = {1: "equilateral", 2: "isosceles", 3: "scalene"}[distinct]
+      sq = sorted([a * a, b * b, c * c])
+      if sq[0] + sq[1] == sq[2]:
+          name += " right"
+      print(name)
+small_generator: |
+  def cases(rng):
+      for _ in range(40):
+          t = rng.randint(1, 8)
+          rows = [" ".join(str(rng.randint(-2, 8)) for _ in range(3)) for _ in range(t)]
+          yield f"{t}\n" + "\n".join(rows)
+generator: |
+  def cases(rng):
+      yield "4\n3 4 5\n2 2 2\n1 2 3\n5 5 8"
+      yield "1\n0 4 4"
+      yield "3\n-3 4 5\n10 10 10\n7 7 7"
+      yield "2\n1000000000 1000000000 1000000000\n999999999 1000000000 1000000000"
+      t = 40000
+      rows = []
+      for _ in range(t):
+          k = rng.randint(1, 10**9)
+          m = rng.choice([1, 2, 3, 4, 5])
+          if m == 1:
+              rows.append(f"{k} {k} {k}")
+          elif m == 2:
+              rows.append(f"{3 * (k % 300000 + 1)} {4 * (k % 300000 + 1)} {5 * (k % 300000 + 1)}")
+          elif m == 3:
+              rows.append(f"{k} {k} {rng.randint(1, k)}")
+          else:
+              rows.append(f"{rng.randint(-10**9, 10**9)} {rng.randint(1, 10**9)} {rng.randint(1, 10**9)}")
+      yield f"{t}\n" + "\n".join(rows)

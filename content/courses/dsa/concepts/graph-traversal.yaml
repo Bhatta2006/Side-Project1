@@ -175,42 +175,230 @@ resources:
     minutes: 20
     level: deep
 quiz:
-  - id: bfs-shortest
-    kind: mcq
-    prompt: Why does BFS find shortest paths in an unweighted graph?
-    options:
-      - "It visits nodes in order of increasing distance from the start"
-      - "It explores the deepest path first, then backs up to shorter ones"
-      - "It sorts the edges by weight before visiting any neighbour"
-      - "It visits every possible path and keeps the shortest one found"
-    answer: 0
-    explanation: The queue processes all distance-d nodes before any distance-(d+1) node.
-    difficulty: 2
-  - id: complexity
-    kind: mcq
-    prompt: What is the time complexity of BFS with adjacency lists?
-    options: ["O(V + E)", "O(V²)", "O(E log V)", "O(V × E)"]
-    answer: 0
-    explanation: Each node is dequeued once and each edge examined a constant number of times.
-    difficulty: 1
   - id: components
     kind: mcq
-    prompt: How do you count connected components?
+    prompt: A graph has 5 nodes, numbered 1 to 5, and the edges 1-2, 2-3 and 4-5. How many connected components
+      does it have?
     options:
-      - "Start a new BFS/DFS from each unvisited node and count the starts"
-      - "Count the edges, since each edge joins two components into one"
-      - "Run one BFS from node 1 and count the nodes it fails to reach"
-      - "Count the nodes with no neighbours, since each starts a component"
+    - '2'
+    - '3'
+    - '1'
+    - '5'
     answer: 0
-    explanation: Each fresh start discovers exactly one new component.
+    explanation: Nodes 1, 2, 3 form one component and nodes 4, 5 form another. Each edge that joins two
+      different components reduces the count by one, so 5 nodes minus 3 useful edges leaves 2. A traversal
+      started from every unvisited node counts them directly.
     difficulty: 1
-  - id: mark-time
-    kind: mcq
-    prompt: In BFS, when should a node be marked visited?
-    options: ["When it is added to the queue", "When it is removed from the queue", "After all neighbours are processed", "Never"]
+  - id: bfs-dfs-order
+    kind: output
+    prompt: 'The directed graph has the edges 1 -> 2, 1 -> 3, 2 -> 4 and 3 -> 4, with neighbours visited
+      in the order listed. What does this print: the BFS order, a bar, then the recursive DFS order?'
+    code:
+      python: "from collections import deque\ng = {1: [2, 3], 2: [4], 3: [4], 4: []}\nbfs = []\nseen = {1}\n\
+        q = deque([1])\nwhile q:\n    u = q.popleft()\n    bfs.append(u)\n    for v in g[u]:\n        if\
+        \ v not in seen:\n            seen.add(v)\n            q.append(v)\ndfs = []\nseen = set()\ndef\
+        \ go(u):\n    seen.add(u)\n    dfs.append(u)\n    for v in g[u]:\n        if v not in seen:\n  \
+        \          go(v)\ngo(1)\nprint(*bfs, \"|\", *dfs)\n"
+      cpp: "vector<vector<int>> g = {{}, {2, 3}, {4}, {4}, {}};\nvector<int> bfs, dfs;\nvector<bool> seen(5,\
+        \ false);\nqueue<int> q;\nq.push(1);\nseen[1] = true;\nwhile (!q.empty()) {\n    int u = q.front();\n\
+        \    q.pop();\n    bfs.push_back(u);\n    for (int v : g[u])\n        if (!seen[v]) { seen[v] =\
+        \ true; q.push(v); }\n}\nfill(seen.begin(), seen.end(), false);\nfunction<void(int)> go = [&](int\
+        \ u) {\n    seen[u] = true;\n    dfs.push_back(u);\n    for (int v : g[u])\n        if (!seen[v])\
+        \ go(v);\n};\ngo(1);\nfor (int x : bfs) cout << x << \" \";\ncout << \"|\";\nfor (int x : dfs) cout\
+        \ << \" \" << x;\n"
+      java: "class T {\n    List<List<Integer>> g = List.of(List.of(), List.of(2, 3), List.of(4), List.of(4),\
+        \ List.of());\n    boolean[] seen = new boolean[5];\n    StringBuilder dfs = new StringBuilder();\n\
+        \    void go(int u) {\n        seen[u] = true;\n        dfs.append(\" \").append(u);\n        for\
+        \ (int v : g.get(u))\n            if (!seen[v]) go(v);\n    }\n}\nT t = new T();\nStringBuilder\
+        \ bfs = new StringBuilder();\nDeque<Integer> q = new ArrayDeque<>();\nboolean[] seen = new boolean[5];\n\
+        q.add(1);\nseen[1] = true;\nwhile (!q.isEmpty()) {\n    int u = q.poll();\n    bfs.append(u).append(\"\
+        \ \");\n    for (int v : t.g.get(u))\n        if (!seen[v]) { seen[v] = true; q.add(v); }\n}\nt.go(1);\n\
+        System.out.println(bfs + \"|\" + t.dfs);\n"
+    options:
+    - 1 2 3 4 | 1 2 4 3
+    - 1 2 3 4 | 1 2 3 4
+    - 1 3 2 4 | 1 3 4 2
+    - 1 2 4 3 | 1 2 3 4
     answer: 0
-    explanation: Marking on enqueue prevents the same node being queued multiple times.
+    explanation: 'BFS finishes a whole level before the next: 1, then 2 and 3, then 4. DFS goes as deep
+      as possible first: 1, 2, 4, and only then backs up to 3. Node 4 is skipped the second time because
+      it is already marked as seen.'
     difficulty: 2
+  - id: islands-output
+    kind: output
+    prompt: Cells connect to their four side neighbours (not diagonals). What does this flood fill print
+      for the grid?
+    code:
+      python: "g = [\"11000\", \"11000\", \"00100\", \"00011\"]\nR, C = 4, 5\nseen = [[False] * C for _\
+        \ in range(R)]\ncount = 0\nfor r in range(R):\n    for c in range(C):\n        if g[r][c] == \"\
+        1\" and not seen[r][c]:\n            count += 1\n            seen[r][c] = True\n            stack\
+        \ = [(r, c)]\n            while stack:\n                x, y = stack.pop()\n                for\
+        \ dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n                    nx, ny = x + dx, y + dy\n \
+        \                   if 0 <= nx < R and 0 <= ny < C and g[nx][ny] == \"1\" and not seen[nx][ny]:\n\
+        \                        seen[nx][ny] = True\n                        stack.append((nx, ny))\nprint(count)\n"
+      cpp: "vector<string> g = {\"11000\", \"11000\", \"00100\", \"00011\"};\nint R = 4, C = 5;\nvector<vector<bool>>\
+        \ seen(R, vector<bool>(C, false));\nint dx[4] = {1, -1, 0, 0}, dy[4] = {0, 0, 1, -1};\nint count\
+        \ = 0;\nfor (int r = 0; r < R; r++)\n    for (int c = 0; c < C; c++) {\n        if (g[r][c] != '1'\
+        \ || seen[r][c]) continue;\n        count++;\n        seen[r][c] = true;\n        stack<pair<int,\
+        \ int>> st;\n        st.push({r, c});\n        while (!st.empty()) {\n            pair<int, int>\
+        \ p = st.top();\n            st.pop();\n            for (int d = 0; d < 4; d++) {\n            \
+        \    int nx = p.first + dx[d], ny = p.second + dy[d];\n                if (nx >= 0 && nx < R &&\
+        \ ny >= 0 && ny < C && g[nx][ny] == '1' && !seen[nx][ny]) {\n                    seen[nx][ny] =\
+        \ true;\n                    st.push({nx, ny});\n                }\n            }\n        }\n \
+        \   }\ncout << count;\n"
+      java: "String[] g = {\"11000\", \"11000\", \"00100\", \"00011\"};\nint R = 4, C = 5;\nboolean[][]\
+        \ seen = new boolean[R][C];\nint[] dx = {1, -1, 0, 0}, dy = {0, 0, 1, -1};\nint count = 0;\nfor\
+        \ (int r = 0; r < R; r++)\n    for (int c = 0; c < C; c++) {\n        if (g[r].charAt(c) != '1'\
+        \ || seen[r][c]) continue;\n        count++;\n        seen[r][c] = true;\n        Deque<int[]> st\
+        \ = new ArrayDeque<>();\n        st.push(new int[]{r, c});\n        while (!st.isEmpty()) {\n  \
+        \          int[] p = st.pop();\n            for (int d = 0; d < 4; d++) {\n                int nx\
+        \ = p[0] + dx[d], ny = p[1] + dy[d];\n                if (nx >= 0 && nx < R && ny >= 0 && ny < C\
+        \ && g[nx].charAt(ny) == '1' && !seen[nx][ny]) {\n                    seen[nx][ny] = true;\n   \
+        \                 st.push(new int[]{nx, ny});\n                }\n            }\n        }\n   \
+        \ }\nSystem.out.println(count);\n"
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '5'
+    answer: 0
+    explanation: The islands are the 2 x 2 block, the single cell in row 2, and the pair in the last row.
+      The single cell and the pair touch only diagonally, so they stay separate. With eight-way connectivity
+      the answer would be 2. Marking a cell as seen when it is pushed (not popped) keeps each cell on the
+      stack at most once.
+    difficulty: 3
+  - id: mark-on-pop
+    kind: mcq
+    prompt: A BFS marks a node as visited when it is popped from the queue instead of when it is pushed.
+      What is the consequence?
+    options:
+    - Many copies of one node can sit in the queue at once, so work and memory grow with the number of edges
+    - Nothing at all changes, since a node that was already processed is always skipped when it is popped
+    - The search finds longer paths, since a node can be reached through its parents more than once
+    - The search loops forever, because every node is pushed again each time it is popped from the queue
+    answer: 0
+    explanation: A node with many already-discovered neighbours gets pushed once per neighbour before the
+      first copy is popped. The results are still correct if you skip stale pops, but the queue can reach
+      O(E) entries on a dense graph. Marking at push time keeps it at O(V).
+    difficulty: 3
+  - id: py-depth
+    kind: mcq
+    languages:
+    - python
+    prompt: A recursive DFS runs on a graph that is a single path of 100,000 nodes. With default settings,
+      what happens?
+    options:
+    - It stops with a RecursionError after about a thousand nested calls, so use an explicit stack
+    - It finishes correctly, since Python gives each call frame space on the heap as needed
+    - It finishes correctly but slowly, since deep recursion is rewritten as a loop by the interpreter
+    - It silently returns a wrong result once the depth passes the limit of the call stack
+    answer: 0
+    explanation: CPython caps recursion depth near 1000 and does not optimise tail calls. Raising the limit
+      helps up to the point where the real C stack overflows and the process crashes, so deep graphs should
+      use an iterative DFS with a list as the stack.
+    difficulty: 3
+  - id: cycle-detect
+    kind: mcq
+    prompt: In a DFS on a DIRECTED graph, you reach a node that is already marked visited. When does that
+      prove a cycle?
+    options:
+    - Only when that node is still on the current recursion path, not merely finished earlier
+    - Always, since reaching any node twice means that some path comes back around to it
+    - Never, since cycles in directed graphs can only be found by a breadth-first search
+    - Only when the node is the parent of the current node, as for undirected graphs
+    answer: 0
+    explanation: 'In a directed graph two different routes may reach a finished node without any cycle (a
+      forward or cross edge). Track three states: unvisited, in progress (on the stack), and done. A cycle
+      exists exactly when an edge leads to an in-progress node.'
+    difficulty: 4
+  - id: grid-bfs-output
+    kind: output
+    prompt: In the grid, 0 is open and 1 is a wall. This BFS finds the fewest moves from the top-left to
+      the bottom-right cell using four-way moves. What does it print?
+    code:
+      python: "from collections import deque\ng = [[0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 0]]\nR, C = 3,\
+        \ 4\ndist = [[-1] * C for _ in range(R)]\ndist[0][0] = 0\nq = deque([(0, 0)])\nwhile q:\n    x,\
+        \ y = q.popleft()\n    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n        nx, ny = x + dx,\
+        \ y + dy\n        if 0 <= nx < R and 0 <= ny < C and g[nx][ny] == 0 and dist[nx][ny] == -1:\n  \
+        \          dist[nx][ny] = dist[x][y] + 1\n            q.append((nx, ny))\nprint(dist[2][3])\n"
+      cpp: "int g[3][4] = {{0, 0, 1, 0}, {0, 1, 0, 0}, {0, 0, 0, 0}};\nint R = 3, C = 4;\nint dist[3][4];\n\
+        for (int i = 0; i < R; i++) for (int j = 0; j < C; j++) dist[i][j] = -1;\nint dx[4] = {1, -1, 0,\
+        \ 0}, dy[4] = {0, 0, 1, -1};\ndist[0][0] = 0;\nqueue<pair<int, int>> q;\nq.push({0, 0});\nwhile\
+        \ (!q.empty()) {\n    pair<int, int> p = q.front();\n    q.pop();\n    for (int d = 0; d < 4; d++)\
+        \ {\n        int nx = p.first + dx[d], ny = p.second + dy[d];\n        if (nx >= 0 && nx < R &&\
+        \ ny >= 0 && ny < C && g[nx][ny] == 0 && dist[nx][ny] == -1) {\n            dist[nx][ny] = dist[p.first][p.second]\
+        \ + 1;\n            q.push({nx, ny});\n        }\n    }\n}\ncout << dist[2][3];\n"
+      java: "int[][] g = {{0, 0, 1, 0}, {0, 1, 0, 0}, {0, 0, 0, 0}};\nint R = 3, C = 4;\nint[][] dist =\
+        \ new int[R][C];\nfor (int[] row : dist) Arrays.fill(row, -1);\nint[] dx = {1, -1, 0, 0}, dy = {0,\
+        \ 0, 1, -1};\ndist[0][0] = 0;\nDeque<int[]> q = new ArrayDeque<>();\nq.add(new int[]{0, 0});\nwhile\
+        \ (!q.isEmpty()) {\n    int[] p = q.poll();\n    for (int d = 0; d < 4; d++) {\n        int nx =\
+        \ p[0] + dx[d], ny = p[1] + dy[d];\n        if (nx >= 0 && nx < R && ny >= 0 && ny < C && g[nx][ny]\
+        \ == 0 && dist[nx][ny] == -1) {\n            dist[nx][ny] = dist[p[0]][p[1]] + 1;\n            q.add(new\
+        \ int[]{nx, ny});\n        }\n    }\n}\nSystem.out.println(dist[2][3]);\n"
+    options:
+    - '5'
+    - '4'
+    - '6'
+    - '-1'
+    answer: 0
+    explanation: 'The only way past the walls is down the left column, along the bottom row and to the corner:
+      five moves. BFS reaches cells in order of distance, so the first time a cell is discovered its distance
+      is already the shortest. The -1 marks ''not reached yet'' and doubles as the visited flag.'
+    difficulty: 4
+  - id: multi-source
+    kind: mcq
+    prompt: Several cells start rotten, and each minute rot spreads to the four neighbours. You want the
+      minute at which every reachable cell is rotten. What is the standard approach?
+    options:
+    - Put every rotten cell in the queue at distance 0 and run a single BFS over the grid
+    - Run a separate BFS from each rotten cell and take the largest finishing time among them
+    - Run a DFS from each rotten cell, since a DFS reaches every cell however far away it is
+    - Run a BFS from the healthy cells only, since the rotten cells can never be search starts
+    answer: 0
+    explanation: One BFS whose first level contains all the sources assigns each cell its distance to the
+      nearest source, in O(cells). Separate searches would need a minimum (not a maximum) across them and
+      cost a full pass each.
+    difficulty: 4
+  - id: state-space
+    kind: mcq
+    prompt: In a maze, some cells hold keys that open matching doors, and you want the fewest moves to the
+      exit. What must the BFS's visited set be keyed on?
+    options:
+    - The pair (cell, set of keys held), since the same cell with different keys is a different situation
+    - The cell alone, since arriving at a cell earlier is always at least as good as arriving later
+    - The set of keys alone, since only the keys decide which doors can be opened from then on
+    - The number of moves made so far, since BFS orders the cells by how many moves they took
+    answer: 0
+    explanation: 'The graph being searched is the graph of states, not of cells. Reaching a cell without
+      the red key and reaching it with the key are different nodes: the second may open doors the first
+      cannot. Visiting by cell alone would wrongly prune the path that went back for a key.'
+    difficulty: 5
+  - id: visited-on-pop-count
+    kind: bug
+    prompt: A BFS on the graph 0 -> 1, 0 -> 2, 1 -> 3, 2 -> 3 should process each of the 4 nodes once. This
+      version marks a node as seen only when it is POPPED from the queue. How many nodes does it process?
+    code:
+      python: "adj = {0: [1, 2], 1: [3], 2: [3], 3: []}\nseen = set()\nq = [0]\nprocessed = 0\nwhile q:\n\
+        \    u = q.pop(0)\n    seen.add(u)\n    processed += 1\n    for v in adj[u]:\n        if v not in\
+        \ seen:\n            q.append(v)\nprint(processed)\n"
+      cpp: "vector<vector<int>> adj = {{1, 2}, {3}, {3}, {}};\nset<int> seen;\nqueue<int> q;\nq.push(0);\n\
+        int processed = 0;\nwhile (!q.empty()) {\n    int u = q.front();\n    q.pop();\n    seen.insert(u);\n\
+        \    processed++;\n    for (int v : adj[u])\n        if (!seen.count(v)) q.push(v);\n}\ncout <<\
+        \ processed;\n"
+      java: "int[][] adj = {{1, 2}, {3}, {3}, {}};\nSet<Integer> seen = new HashSet<>();\nDeque<Integer>\
+        \ q = new ArrayDeque<>();\nq.add(0);\nint processed = 0;\nwhile (!q.isEmpty()) {\n    int u = q.poll();\n\
+        \    seen.add(u);\n    processed++;\n    for (int v : adj[u])\n        if (!seen.contains(v)) q.add(v);\n\
+        }\nSystem.out.println(processed);\n"
+    options:
+    - '5'
+    - '4'
+    - '3'
+    - '6'
+    answer: 0
+    explanation: Node 3 is reached from both 1 and 2 before either of its copies is popped, so it enters
+      the queue twice and is processed twice. Mark a node the moment it is PUSHED, so it can never be queued
+      again.
+    difficulty: 3
 problems: [count-islands, fewest-hops, wall-breaker]
 practice_links:
   - title: Number of Islands

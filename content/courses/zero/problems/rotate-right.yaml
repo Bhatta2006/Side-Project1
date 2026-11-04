@@ -1,0 +1,64 @@
+id: rotate-right
+title: Many spins of the carousel
+concepts:
+- lists
+difficulty: medium
+statement: |
+  Items sit in a circle-like line. One move takes the last item and puts it at the front. Perform
+  `k` moves and print the resulting order.
+input_format: |
+  The first line contains n and k. The second line contains n integers.
+output_format: The list after k moves, separated by spaces.
+constraints:
+- 1 ≤ n ≤ 60000
+- 0 ≤ k ≤ 10^18
+- '|value| ≤ 10^9'
+examples:
+- input: '5 2
+
+    1 2 3 4 5'
+  output: 4 5 1 2 3
+- input: '3 3
+
+    7 8 9'
+  output: 7 8 9
+  explanation: After exactly n moves every item is back where it started.
+hints:
+- Doing the move k times is impossible when k is 10^18. After how many moves does the list look the same
+  as before?
+- n moves bring the list back to the start, so only k mod n matters.
+- With r = k % n, the answer is the last r items followed by the first n - r items.
+approach: |
+  Let r = k mod n. The final list is a[n - r:] followed by a[:n - r]. O(n).
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = data[2:2 + n]
+  r = k % n
+  print(" ".join(a[n - r:] + a[:n - r]))
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n, k = int(data[0]), int(data[1])
+  a = data[2:2 + n]
+  for _ in range(k):
+      a.insert(0, a.pop())
+  print(" ".join(a))
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          n = rng.randint(1, 8)
+          yield f"{n} {rng.randint(0, 30)}\n" + " ".join(str(rng.randint(-9, 9)) for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "5 2\n1 2 3 4 5"
+      yield "3 3\n7 8 9"
+      yield "1 1000000000000000000\n5"
+      n = 60000
+      yield f"{n} {10**18}\n" + " ".join(str(rng.randint(-10**9, 10**9)) for _ in range(n))
+      yield f"{n} {10**18 - 1}\n" + " ".join(str(i) for i in range(n))
+      yield f"{n} 0\n" + " ".join(str(i) for i in range(n))
+      for _ in range(5):
+          n = rng.randint(1, 3000)
+          yield f"{n} {rng.randint(0, 10**18)}\n" + " ".join(str(rng.randint(-10**9, 10**9)) for _ in range(n))

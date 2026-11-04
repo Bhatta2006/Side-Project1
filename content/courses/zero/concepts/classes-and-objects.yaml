@@ -151,36 +151,211 @@ resources:
     minutes: 40
     languages: [cpp]
 quiz:
-  - id: own-copy
-    kind: mcq
-    prompt: Two Account objects are created and money is deposited into the first. What happens to the second's balance?
-    options: ["It is unchanged", "It increases too", "It becomes zero", "It causes an error"]
-    answer: 0
-    explanation: Each object has its own attributes.
-    difficulty: 1
-  - id: constructor
-    kind: mcq
-    prompt: What is a constructor for?
-    options: ["Initialising a new object's data", "Freeing an object's memory when done", "Printing an object in a readable form", "Comparing two objects field by field"]
-    answer: 0
-    explanation: The constructor runs when an object is created and sets its starting state.
-    difficulty: 1
-  - id: encapsulation
-    kind: mcq
-    prompt: Why route every balance change through a deposit method?
+  - id: separate-objects
+    kind: output
+    prompt: Each object keeps its own copy of the data. What is printed?
+    code:
+      python: "class Counter:\n    def __init__(self):\n        self.n = 0\n    def inc(self):\n       \
+        \ self.n += 1\na = Counter()\nb = Counter()\na.inc()\na.inc()\nb.inc()\nprint(a.n, b.n)\n"
+      cpp: "struct Counter {\n    int n = 0;\n    void inc() { n++; }\n};\nCounter a, b;\na.inc();\na.inc();\n\
+        b.inc();\ncout << a.n << \" \" << b.n;\n"
+      java: "class Counter {\n    int n = 0;\n    void inc() { n++; }\n}\nCounter a = new Counter();\nCounter\
+        \ b = new Counter();\na.inc();\na.inc();\nb.inc();\nSystem.out.println(a.n + \" \" + b.n);\n"
     options:
-      - "Initialising a new object's data"
-      - "Freeing an object's memory when done"
-      - "Printing an object in a readable form"
-      - "Comparing two objects field by field"
+    - 2 1
+    - 3 3
+    - 1 2
+    - 2 2
     answer: 0
-    explanation: Encapsulation keeps the invariant in one place so no caller can break it.
+    explanation: a and b are two independent objects built from the same class, so inc() on one never touches
+      the other's n.
     difficulty: 2
-  - id: self-this
-    kind: mcq
-    prompt: Inside a method, what does self (Python) or this (C++/Java) refer to?
-    options: ["The object the method was called on", "The class itself", "The first parameter passed in", "The program"]
+  - id: constructor-area
+    kind: output
+    prompt: A constructor receives starting values when the object is created. What is printed?
+    code:
+      python: "class Rect:\n    def __init__(self, w, h):\n        self.w = w\n        self.h = h\n    def\
+        \ area(self):\n        return self.w * self.h\nprint(Rect(3, 4).area())\n"
+      cpp: "struct Rect {\n    int w, h;\n    Rect(int w, int h) : w(w), h(h) {}\n    int area() { return\
+        \ w * h; }\n};\ncout << Rect(3, 4).area();\n"
+      java: "class Rect {\n    int w, h;\n    Rect(int w, int h) { this.w = w; this.h = h; }\n    int area()\
+        \ { return w * h; }\n}\nSystem.out.println(new Rect(3, 4).area());\n"
+    options:
+    - '12'
+    - '7'
+    - '34'
+    - '0'
     answer: 0
-    explanation: a.deposit(50) runs deposit with self/this bound to a.
-    difficulty: 1
-problems: [bank-ledger]
+    explanation: 'The constructor stores 3 and 4 in the object, and the method area() reads them back and
+      multiplies: 12.'
+    difficulty: 2
+  - id: method-changes-state
+    kind: output
+    prompt: Methods can change the object they belong to. What is printed?
+    code:
+      python: "class Account:\n    def __init__(self, balance):\n        self.balance = balance\n    def\
+        \ deposit(self, amount):\n        self.balance += amount\n    def withdraw(self, amount):\n    \
+        \    self.balance -= amount\nacct = Account(100)\nacct.deposit(50)\nacct.withdraw(30)\nprint(acct.balance)\n"
+      cpp: "struct Account {\n    int balance;\n    Account(int b) : balance(b) {}\n    void deposit(int\
+        \ amount) { balance += amount; }\n    void withdraw(int amount) { balance -= amount; }\n};\nAccount\
+        \ acct(100);\nacct.deposit(50);\nacct.withdraw(30);\ncout << acct.balance;\n"
+      java: "class Account {\n    int balance;\n    Account(int b) { balance = b; }\n    void deposit(int\
+        \ amount) { balance += amount; }\n    void withdraw(int amount) { balance -= amount; }\n}\nAccount\
+        \ acct = new Account(100);\nacct.deposit(50);\nacct.withdraw(30);\nSystem.out.println(acct.balance);\n"
+    options:
+    - '120'
+    - '130'
+    - '80'
+    - '100'
+    answer: 0
+    explanation: 100 + 50 - 30 = 120. The object remembers the balance between method calls; that remembered
+      data is its state.
+    difficulty: 2
+  - id: guarded-withdraw
+    kind: output
+    prompt: The method refuses a withdrawal larger than the balance. What is printed (balance after each
+      of two withdrawals of 70, starting from 100)?
+    code:
+      python: "class Account:\n    def __init__(self, balance):\n        self.balance = balance\n    def\
+        \ withdraw(self, amount):\n        if amount <= self.balance:\n            self.balance -= amount\n\
+        acct = Account(100)\nacct.withdraw(70)\nfirst = acct.balance\nacct.withdraw(70)\nprint(first, acct.balance)\n"
+      cpp: "struct Account {\n    int balance;\n    Account(int b) : balance(b) {}\n    void withdraw(int\
+        \ amount) { if (amount <= balance) balance -= amount; }\n};\nAccount acct(100);\nacct.withdraw(70);\n\
+        int first = acct.balance;\nacct.withdraw(70);\ncout << first << \" \" << acct.balance;\n"
+      java: "class Account {\n    int balance;\n    Account(int b) { balance = b; }\n    void withdraw(int\
+        \ amount) { if (amount <= balance) balance -= amount; }\n}\nAccount acct = new Account(100);\nacct.withdraw(70);\n\
+        int first = acct.balance;\nacct.withdraw(70);\nSystem.out.println(first + \" \" + acct.balance);\n"
+    options:
+    - 30 30
+    - 30 -40
+    - 100 100
+    - 30 0
+    answer: 0
+    explanation: The first withdrawal succeeds (100 → 30). The second is larger than the 30 left, so the
+      check blocks it and the balance stays 30. Methods are the place to protect an object's rules.
+    difficulty: 3
+  - id: students-average
+    kind: output
+    prompt: Objects can be kept in a list and processed in a loop. What is printed (the best score, then
+      the average, rounded down)?
+    code:
+      python: "class Student:\n    def __init__(self, name, score):\n        self.name = name\n        self.score\
+        \ = score\ngroup = [Student(\"Ann\", 80), Student(\"Bo\", 95), Student(\"Cy\", 71)]\nbest = max(s.score\
+        \ for s in group)\nprint(best, sum(s.score for s in group) // len(group))\n"
+      cpp: "struct Student {\n    string name;\n    int score;\n};\nvector<Student> group = {{\"Ann\", 80},\
+        \ {\"Bo\", 95}, {\"Cy\", 71}};\nint best = 0, sum = 0;\nfor (auto& s : group) { best = max(best,\
+        \ s.score); sum += s.score; }\ncout << best << \" \" << sum / (int)group.size();\n"
+      java: "class Student {\n    String name;\n    int score;\n    Student(String name, int score) { this.name\
+        \ = name; this.score = score; }\n}\nStudent[] group = {new Student(\"Ann\", 80), new Student(\"\
+        Bo\", 95), new Student(\"Cy\", 71)};\nint best = 0, sum = 0;\nfor (Student s : group) { best = Math.max(best,\
+        \ s.score); sum += s.score; }\nSystem.out.println(best + \" \" + sum / group.length);\n"
+    options:
+    - 95 82
+    - 95 83
+    - 71 82
+    - 80 82
+    answer: 0
+    explanation: The best score is 95 and the total is 246; divided by 3 that is exactly 82. Notice the
+      object groups a name and a score, which two separate lists could easily get out of step.
+    difficulty: 3
+  - id: same-object-pyjava
+    kind: output
+    languages:
+    - python
+    - java
+    prompt: Assigning one object variable to another does not copy the object; both names point at the same
+      object. What is printed?
+    code:
+      python: "class P:\n    def __init__(self, x):\n        self.x = x\na = P(1)\nb = a\nb.x = 9\nprint(a.x)\n"
+      java: "class P {\n    int x;\n    P(int x) { this.x = x; }\n}\nP a = new P(1);\nP b = a;\nb.x = 9;\n\
+        System.out.println(a.x);\n"
+    options:
+    - '9'
+    - '1'
+    - '0'
+    - Error
+    answer: 0
+    explanation: There is a single object with two names. Changing it through b is visible through a. To
+      make an independent copy you must create a new object.
+    difficulty: 4
+  - id: struct-copy-cpp
+    kind: output
+    languages:
+    - cpp
+    prompt: In C++ an object stored directly in a variable is copied by assignment. What is printed?
+    code:
+      cpp: 'struct P { int x; };
+
+        P a{1};
+
+        P b = a;
+
+        b.x = 9;
+
+        cout << a.x;
+
+        '
+    options:
+    - '1'
+    - '9'
+    - '0'
+    - Error
+    answer: 0
+    explanation: b is a separate copy of a, so changing it leaves a alone. (With pointers or references
+      the picture would be the same as in Java.)
+    difficulty: 4
+  - id: forgot-this
+    kind: output
+    languages:
+    - java
+    prompt: The constructor's parameter has the same name as the field, so inside it the name x means the
+      parameter. What is printed?
+    code:
+      java: "class P {\n    int x;\n    P(int x) { x = x; }\n}\nSystem.out.println(new P(7).x);\n"
+    options:
+    - '0'
+    - '7'
+    - Error
+    - 'null'
+    answer: 0
+    explanation: x = x assigns the parameter to itself and never touches the field, which stays at its default
+      0. Write this.x = x to store the value in the object.
+    difficulty: 5
+  - id: missing-self
+    kind: mcq
+    languages:
+    - python
+    prompt: This constructor forgets `self.` when storing the value. What happens when the last line runs?
+    options:
+    - It fails with an AttributeError, since the object has no attribute x
+    - It prints 7, because the value was stored in the object anyway
+    - It prints 0, the default value that every new number attribute gets
+    - It prints None, because nothing was stored by the constructor
+    answer: 0
+    explanation: x = x inside __init__ only creates a local variable that vanishes when the constructor
+      ends. The object itself never receives an attribute called x.
+    difficulty: 5
+    code:
+      python: "class P:\n    def __init__(self, x):\n        x = x\nprint(P(7).x)\n"
+  - id: private-members
+    kind: mcq
+    languages:
+    - cpp
+    - java
+    prompt: A class marks its balance field private. Code outside the class then reads acct.balance directly.
+      What happens?
+    options:
+    - 'It does not compile: private members can only be used inside the class'
+    - It works fine and prints 100, since the field is in the same program
+    - It compiles, but crashes with an error at the moment it runs
+    - It compiles and always prints 0 instead of the stored balance
+    answer: 0
+    explanation: private hides the field from outside code, so the only way in is through the class's own
+      methods. That lets the class guarantee rules such as 'balance never goes negative'.
+    difficulty: 3
+    code:
+      cpp: "class Account {\n    int balance = 100;\npublic:\n    int get() { return balance; }\n};\nAccount\
+        \ acct;\ncout << acct.balance;\n"
+      java: "class Account {\n    private int balance = 100;\n    int get() { return balance; }\n}\nAccount\
+        \ acct = new Account();\nSystem.out.println(acct.balance);\n"
+problems: [bank-ledger, tiny-bank]

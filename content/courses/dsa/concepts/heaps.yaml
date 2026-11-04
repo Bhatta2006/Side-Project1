@@ -129,35 +129,180 @@ resources:
     source: Tech Interview Handbook
     minutes: 10
 quiz:
-  - id: pop-cost
+  - id: pop-twice
     kind: mcq
-    prompt: What does popping the minimum from a binary heap of n items cost?
-    options: ["O(log n)", "O(1)", "O(n)", "O(n log n)"]
+    prompt: A min-heap receives the values 5, 3, 8, 1, 4. You then pop twice. What is the second value popped?
+    options:
+    - '3'
+    - '1'
+    - '4'
+    - '5'
     answer: 0
-    explanation: The replacement element sifts down one path of a complete tree, about log n levels.
+    explanation: 'A min-heap always releases its smallest remaining value, so pops come out in sorted order:
+      1 first, then 3. The internal array is not sorted, only the root is guaranteed to be the minimum.'
     difficulty: 1
+  - id: array-index
+    kind: mcq
+    prompt: A binary heap is stored in a 0-indexed array. Where are the children of index 4, and where is
+      the parent of index 10?
+    options:
+    - children 9 and 10; parent 4
+    - children 8 and 9; parent 5
+    - children 9 and 10; parent 5
+    - children 8 and 10; parent 4
+    answer: 0
+    explanation: For index i the children are 2i + 1 and 2i + 2, and the parent is (i - 1) // 2. The complete-tree
+      shape is what lets a heap live in a plain array with no pointers.
+    difficulty: 2
+  - id: py-max-heap
+    kind: mcq
+    languages:
+    - python
+    prompt: Python's heapq is a min-heap only. You need to pop the largest of 4, 9 and 2 first. Which approach
+      works?
+    options:
+    - Push the negated values and negate them again when you pop
+    - Call heapq.heapify(h, reverse=True) to build the heap in descending order
+    - Call heapq.heappop(h, reverse=True) so that it takes the largest element
+    - Push the values as they are and read h[-1], the last item, as the largest
+    answer: 0
+    explanation: heapq has no comparator or reverse option, so max-heap behaviour comes from negating numbers
+      (or wrapping items in a tuple of (-priority, item)). The last item of the heap list is just some leaf,
+      not the maximum.
+    difficulty: 2
   - id: cpp-default
     kind: mcq
-    prompt: In C++, std::priority_queue<int> by default returns...
-    options: ["The largest element first", "The smallest element first", "Elements in insertion order", "A random element"]
+    languages:
+    - cpp
+    prompt: std::priority_queue<int> pq receives 4, 9 and 2. What does pq.top() return, and how do you get
+      the smallest instead?
+    options:
+    - 9, because it is a max-heap by default; use greater<int> as the comparator for a min-heap
+    - 2, because it is a min-heap by default; use less<int> as the comparator for a max-heap
+    - 4, because it returns the first value inserted; use greater<int> to return the last
+    - 9, because it is a max-heap by default; call pq.reverse() before reading the smallest
     answer: 0
-    explanation: C++ defaults to a max-heap; use greater<int> for a min-heap.
+    explanation: 'priority_queue is a max-heap unless told otherwise: priority_queue<int, vector<int>, greater<int>>
+      flips it. There is no reverse member. The most common mistake is assuming the Python or Java default.'
     difficulty: 2
-  - id: topk
+  - id: java-comparator
     kind: mcq
-    prompt: To track the k largest values of a stream, which heap do you keep?
-    options: ["A min-heap of size k", "A max-heap of all values", "A min-heap of all values", "A max-heap of size k"]
+    languages:
+    - java
+    prompt: PriorityQueue is a min-heap by default. Someone makes it a max-heap with new PriorityQueue<>((a,
+      b) -> b - a). What is the trap?
+    options:
+    - The subtraction can overflow for extreme values, giving the wrong order; use Integer.compare(b, a)
+      or Collections.reverseOrder()
+    - The lambda is rejected at compile time, because a comparator must return a boolean instead of an int
+    - It works for every input, since integer subtraction is always safe when both operands are int values
+    - It sorts the elements into descending order inside the queue's internal array right away on each insert
     answer: 0
-    explanation: The min-heap's root is the weakest of the top k, so it's the one to evict.
+    explanation: 'Subtracting can wrap around: for a = Integer.MIN_VALUE and b = 1 the difference is positive
+      although a is smaller. The comparator then breaks the heap''s ordering on inputs that include very
+      large or very negative values.'
     difficulty: 3
-  - id: children
+  - id: heapify-cost
     kind: mcq
-    prompt: In a 0-indexed array heap, where are the children of index 3?
-    options: ["7 and 8", "6 and 7", "4 and 5", "1 and 2"]
+    prompt: You already have an array of n values and turn it into a heap by sifting nodes down, starting
+      from the last parent. What does this cost?
+    options:
+    - O(n), because most nodes sit near the leaves and sift only a very short distance
+    - O(n log n), because each of the n elements may sift down through log n levels
+    - O(log n), because only the root has to move to restore the heap property
+    - O(n^2), because every pair of elements has to be compared at least once
     answer: 0
-    explanation: Children are at 2i + 1 = 7 and 2i + 2 = 8.
-    difficulty: 2
-problems: [kth-largest-stream]
+    explanation: Half the nodes are leaves and sift zero levels, a quarter sift at most one, an eighth at
+      most two, and so on. The sum n/2 * 0 + n/4 * 1 + n/8 * 2 + ... converges to O(n). Pushing n elements
+      one at a time costs O(n log n) in the worst case.
+    difficulty: 3
+  - id: two-heaps
+    kind: mcq
+    prompt: A running-median structure keeps a max-heap for the lower half and a min-heap for the upper
+      half, with equal sizes. The stream is 5, 15, 1, 3. Which values are at the top of the two heaps?
+    options:
+    - 3 and 5
+    - 1 and 15
+    - 5 and 15
+    - 3 and 15
+    answer: 0
+    explanation: Sorted, the stream is 1, 3, 5, 15. The lower half {1, 3} has maximum 3 at its heap top,
+      and the upper half {5, 15} has minimum 5. For an even count the median is the average of the two tops,
+      here 4.
+    difficulty: 4
+  - id: ties-output
+    kind: output
+    prompt: 'Three tasks (priority, letter) are pushed: (2, b), (1, z), (1, a). The queue orders by priority,
+      then by letter. What does this code print as it pops them all?'
+    code:
+      python: "import heapq\nh = []\nfor p, c in [(2, \"b\"), (1, \"z\"), (1, \"a\")]:\n    heapq.heappush(h,\
+        \ (p, c))\nout = []\nwhile h:\n    out.append(heapq.heappop(h)[1])\nprint(*out)\n"
+      cpp: "priority_queue<pair<int, char>, vector<pair<int, char>>, greater<pair<int, char>>> h;\nh.push({2,\
+        \ 'b'});\nh.push({1, 'z'});\nh.push({1, 'a'});\nwhile (!h.empty()) {\n    cout << h.top().second\
+        \ << (h.size() > 1 ? \" \" : \"\");\n    h.pop();\n}\n"
+      java: 'PriorityQueue<int[]> h = new PriorityQueue<>((x, y) -> x[0] != y[0] ? Integer.compare(x[0],
+        y[0]) : Integer.compare(x[1], y[1]));
+
+        h.add(new int[]{2, ''b''});
+
+        h.add(new int[]{1, ''z''});
+
+        h.add(new int[]{1, ''a''});
+
+        StringBuilder sb = new StringBuilder();
+
+        while (!h.isEmpty()) sb.append((char) h.poll()[1]).append(" ");
+
+        System.out.println(sb.toString().trim());
+
+        '
+    options:
+    - a z b
+    - z a b
+    - b z a
+    - a b z
+    answer: 0
+    explanation: Both priority-1 tasks come before the priority-2 task, and the tie between them falls to
+      the second field, where 'a' is smaller than 'z'. In Python, a tie on the first field makes the heap
+      compare the second, which raises a TypeError if those items cannot be ordered (for example objects
+      or dicts); add a counter as a tie-breaker.
+    difficulty: 4
+  - id: sorted-pushes
+    kind: mcq
+    prompt: You push the values 1, 2, 3, ..., n into an empty MIN-heap one at a time, first in increasing
+      order and then, in a fresh heap, in decreasing order. Which is cheaper overall?
+    options:
+    - 'Increasing order: each new value is no smaller than its parent, so nothing sifts up and the total
+      is O(n)'
+    - 'Decreasing order: each new value lands at the root straight away, so it needs no comparisons at all'
+    - They cost the same, because sift-up always compares against all log n ancestors of the new node
+    - Increasing order is the costlier one, since the heap has to be rebuilt from scratch on every push
+    answer: 0
+    explanation: Sift-up stops as soon as the parent is not larger. For increasing input that happens immediately,
+      so n pushes cost O(n). Decreasing input makes every new value climb all the way to the root, giving
+      the O(n log n) worst case. The heap's cost depends on the data order, not just on n.
+    difficulty: 5
+  - id: kth-largest-off-by-one
+    kind: bug
+    prompt: The 3rd largest of [4, 1, 7, 3, 8, 5] is 5. This keeps a min-heap and pops the smallest as soon
+      as the heap size reaches k (instead of when it exceeds k). What does it print as the top?
+    code:
+      python: "import heapq\na = [4, 1, 7, 3, 8, 5]\nk = 3\nh = []\nfor x in a:\n    heapq.heappush(h, x)\n\
+        \    if len(h) >= k:\n        heapq.heappop(h)\nprint(h[0])\n"
+      cpp: "int a[6] = {4, 1, 7, 3, 8, 5};\nint k = 3;\npriority_queue<int, vector<int>, greater<int>> pq;\n\
+        for (int x : a) {\n    pq.push(x);\n    if ((int)pq.size() >= k) pq.pop();\n}\ncout << pq.top();\n"
+      java: "int[] a = {4, 1, 7, 3, 8, 5};\nint k = 3;\nPriorityQueue<Integer> pq = new PriorityQueue<>();\n\
+        for (int x : a) {\n    pq.add(x);\n    if (pq.size() >= k) pq.poll();\n}\nSystem.out.println(pq.peek());\n"
+    options:
+    - '7'
+    - '5'
+    - '8'
+    - '3'
+    answer: 0
+    explanation: The heap never holds more than k - 1 = 2 values, so its top is the 2nd largest (7). Pop
+      only when the size EXCEEDS k, so exactly the k largest remain and the top is the k-th largest.
+    difficulty: 3
+problems: [kth-largest-stream, running-median]
 practice_links:
   - title: Kth Largest Element in a Stream
     url: https://leetcode.com/problems/kth-largest-element-in-a-stream/

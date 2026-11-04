@@ -141,58 +141,155 @@ resources:
 quiz:
   - id: two-sum-complexity
     kind: mcq
-    prompt: Two Sum with a hash map runs in what time?
-    options: ["O(n)", "O(n²)", "O(n log n)", "O(1)"]
-    answer: 0
-    explanation: One pass, with an O(1) average lookup per element.
-    difficulty: 1
-  - id: anagram-key
-    kind: mcq
-    prompt: To group anagrams, which key works for every word?
-    options: ["The word's letters sorted", "The word's length alone", "The word's first letter", "The word spelled reversed"]
-    answer: 0
-    explanation: Anagrams have exactly the same sorted letters, so they share that key.
-    difficulty: 2
-  - id: check-before-insert
-    kind: mcq
-    prompt: In Two Sum, why check for target − x before inserting x?
+    prompt: Two Sum with a hash map (for each x, look up target − x, then store x). What are its time and
+      extra space?
     options:
-      - "The word's letters sorted"
-      - "The word's length alone"
-      - "The word's first letter"
-      - "The word spelled reversed"
+    - O(n) time and O(n) extra space
+    - O(n²) time and O(1) extra space, the same as brute force
+    - O(n log n) time, because every lookup costs a log factor
+    - O(1) time, because a hash lookup is constant
     answer: 0
-    explanation: If target = 2x, inserting first would let x match itself.
+    explanation: One pass with O(1) average lookups is O(n) time. The price is the map, which can hold up
+      to n entries.
+    difficulty: 1
+  - id: two-sum-trace
+    kind: output
+    prompt: What does this one-pass Two Sum print?
+    code:
+      python: "nums = [3, 2, 4]\ntarget = 6\nseen = {}\nfor i, x in enumerate(nums):\n    if target - x\
+        \ in seen:\n        print(seen[target - x], i)\n        break\n    seen[x] = i\n"
+      cpp: "vector<int> nums = {3, 2, 4};\nint target = 6;\nunordered_map<int, int> seen;\nfor (int i =\
+        \ 0; i < (int)nums.size(); i++) {\n    int x = nums[i];\n    if (seen.count(target - x)) {\n   \
+        \     cout << seen[target - x] << \" \" << i;\n        break;\n    }\n    seen[x] = i;\n}\n"
+      java: "int[] nums = {3, 2, 4};\nint target = 6;\nMap<Integer, Integer> seen = new HashMap<>();\nfor\
+        \ (int i = 0; i < nums.length; i++) {\n    int x = nums[i];\n    if (seen.containsKey(target - x))\
+        \ {\n        System.out.println(seen.get(target - x) + \" \" + i);\n        break;\n    }\n    seen.put(x,\
+        \ i);\n}\n"
+    options:
+    - 1 2
+    - 0 0
+    - 0 2
+    - No output
+    answer: 0
+    explanation: At i = 0, 6 − 3 = 3 is not stored yet, so 3 is stored. At i = 1, 4 is not stored. At i
+      = 2, 6 − 4 = 2 is stored at index 1, so it prints 1 2. The 3 at index 0 never pairs with itself.
     difficulty: 2
-  - id: counting-array
+  - id: insert-first
     kind: mcq
-    prompt: You must count lowercase letters in a string. What is the simplest O(1)-space structure?
-    options: ["An array of 26 counters", "A sorted list", "A hash map of strings", "A 2D grid"]
+    prompt: A variant inserts x into the map first and then checks for target − x. With nums = [3] and target
+      = 6, what happens?
+    options:
+    - It pairs the element with itself and reports a pair that does not exist
+    - It correctly reports that no pair exists, because 3 + 3 would need two copies
+    - It raises a KeyError or equivalent, because the map is still empty at that point
+    - It reports indexes 0 and 1, even though the array has only one element
     answer: 0
-    explanation: With a fixed small key range, index = letter − 'a' into a 26-slot array.
-    difficulty: 2
+    explanation: Checking before inserting guarantees the stored partner came from an earlier index. Inserting
+      first lets x match itself whenever 2x = target.
+    difficulty: 3
+  - id: consecutive
+    kind: mcq
+    prompt: Longest run of consecutive integers (in any order) in [100, 4, 200, 1, 3, 2], using a set? What
+      length, and why is the set method O(n)?
+    options:
+    - 4 (1, 2, 3, 4); start counting only from numbers whose predecessor is absent
+    - 3 (2, 3, 4); a run must begin with the smallest number in the set
+    - 4 (1, 2, 3, 4); sort first and sweep, which is O(n) for sorted input
+    - 6; every number belongs to the run in some order
+    answer: 0
+    explanation: Starting only at numbers with no x − 1 in the set means each run is walked once, so the
+      total work is O(n). Sorting would cost O(n log n).
+    difficulty: 3
   - id: hash-worst-case
     kind: mcq
-    prompt: "When can a hash-set lookup take O(n) time?"
+    prompt: When can a single hash-set lookup take O(n) time?
     options:
-      - "When many keys collide in the same bucket"
-      - "Whenever the keys being looked up are strings"
-      - "After the set has been sorted into key order"
-      - "Never; a hash lookup is always O(1) time"
+    - When many keys collide into one bucket, for example with a weak or attacked hash
+    - Whenever the keys are strings, since comparing two strings costs linear time
+    - Right after the set has been iterated in sorted order once, which breaks hashing
+    - 'Never: hash lookups are O(1) in the worst case as well as on average'
     answer: 0
-    explanation: "O(1) is the expected cost; with heavy collisions (bad hashing or adversarial keys) a lookup may scan many entries."
+    explanation: O(1) is the average case under good hashing. Heavy collisions chain or probe through many
+      entries. This is why contest solutions sometimes avoid unordered_map on adversarial inputs.
     difficulty: 4
-  - id: two-sum-one-pass
+  - id: bucket-topk
     kind: mcq
-    prompt: "One-pass pair sum with a hash set: for each x you check whether target - x is in the set, then add x. Why add x only after checking?"
+    prompt: You must list the k most frequent values in an array of n numbers in O(n) time. What is the
+      standard trick?
     options:
-      - "So x is not paired with itself"
-      - "To keep the set in sorted order"
-      - "Because adding first is slower"
-      - "It makes no difference at all"
+    - Count with a hash map, then bucket values by frequency (counts are at most n) and read from the top
+    - Sort the values by frequency, which is O(n) when the values are small integers
+    - Keep a heap of all n values and pop k times, which costs O(n) in total
+    - Run two nested loops over the distinct values, which is O(n) when k is small
     answer: 0
-    explanation: "If you add x first and target = 2x, the check would wrongly find x as its own partner."
+    explanation: Frequencies lie in 1..n, so an array of n buckets sorts them without comparisons. A size-k
+      heap gives O(n log k), which is also fine but not linear.
     difficulty: 5
+  - id: key-python
+    kind: mcq
+    languages:
+    - python
+    prompt: Which of these can be used as a dictionary key (or put in a set) in Python?
+    options:
+    - A tuple of integers such as (3, 4)
+    - A list of integers such as [3, 4]
+    - A set of integers such as {3, 4}
+    - 'A dict such as {3: 4}'
+    answer: 0
+    explanation: Keys must be hashable, which means immutable. Lists, sets and dicts can change after insertion,
+      so Python raises TypeError. Convert a list to a tuple (or a sorted tuple for set-like keys).
+    difficulty: 2
+  - id: key-java
+    kind: mcq
+    languages:
+    - java
+    prompt: In Java, map is a HashMap<int[], Integer>. After map.put(new int[]{1, 2}, 7), what does map.get(new
+      int[]{1, 2}) return?
+    options:
+    - 'null: arrays use identity-based hashCode and equals, so a new array never matches'
+    - 7, because the two arrays hold equal contents and HashMap compares contents
+    - It throws a ClassCastException, because int[] is not Comparable
+    - 0, the default value for int, because the key was not found
+    answer: 0
+    explanation: Arrays do not override equals or hashCode. Use a List<Integer>, a record, or encode the
+      pair into a long or a string for the key.
+    difficulty: 3
+  - id: key-cpp
+    kind: mcq
+    languages:
+    - cpp
+    prompt: Why does unordered_map<pair<int,int>, int> m; fail to compile in standard C++?
+    options:
+    - 'std::hash has no pair specialisation: use map, encode into a long long, or write a hash'
+    - A pair can never be used as a key in any C++ map type, ordered or not
+    - unordered_map accepts only integer keys, so pairs of any kind are rejected
+    - pair<int,int> needs a user-declared virtual destructor before it can be hashed
+    answer: 0
+    explanation: std::map works because pair has operator<. For unordered_map you must provide a hash, for
+      instance combining the two ints into one 64-bit value.
+    difficulty: 3
+  - id: sum-key-collision
+    kind: bug
+    prompt: A programmer groups anagrams by using the SUM of the letter codes as the dictionary key. The
+      words are 'ad' and 'bc', which are NOT anagrams. How many groups does this print?
+    code:
+      python: "words = [\"ad\", \"bc\"]\ngroups = {}\nfor w in words:\n    key = sum(ord(c) for c in w)\n\
+        \    groups.setdefault(key, []).append(w)\nprint(len(groups))\n"
+      cpp: "map<int, vector<string>> groups;\nfor (string w : {\"ad\", \"bc\"}) {\n    int key = 0;\n  \
+        \  for (char c : w) key += c;\n    groups[key].push_back(w);\n}\ncout << groups.size();\n"
+      java: "Map<Integer, List<String>> groups = new HashMap<>();\nfor (String w : new String[]{\"ad\",\
+        \ \"bc\"}) {\n    int key = 0;\n    for (char c : w.toCharArray()) key += c;\n    groups.computeIfAbsent(key,\
+        \ k -> new ArrayList<>()).add(w);\n}\nSystem.out.println(groups.size());\n"
+    options:
+    - '1'
+    - '2'
+    - '0'
+    - '4'
+    answer: 0
+    explanation: 'a + d = 97 + 100 = 197 and b + c = 98 + 99 = 197, so different letter sets collide on
+      the same sum. A key must be unique to the anagram class: use the sorted letters, or a tuple of 26
+      letter counts.'
+    difficulty: 3
 problems: [valid-anagram, top-k-frequent, consecutive-run]
 practice_links:
   - title: Two Sum

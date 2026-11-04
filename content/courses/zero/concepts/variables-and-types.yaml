@@ -144,100 +144,312 @@ resources:
 quiz:
   - id: reassign
     kind: output
-    prompt: What is printed?
+    prompt: Follow the value of x line by line. What is printed?
     code:
-      python: |
-        x = 3
+      python: 'x = 3
+
         x = x * 2
+
         x = x + 1
+
         print(x)
-      cpp: |
-        int x = 3;
+
+        '
+      cpp: 'int x = 3;
+
         x = x * 2;
+
         x = x + 1;
-        std::cout << x;
-      java: |
-        int x = 3;
+
+        cout << x;
+
+        '
+      java: 'int x = 3;
+
         x = x * 2;
+
         x = x + 1;
+
         System.out.println(x);
-    options: ["7", "3", "6", "4"]
+
+        '
+    options:
+    - '7'
+    - '3'
+    - '6'
+    - '4'
     answer: 0
-    explanation: x becomes 3, then 3*2 = 6, then 6+1 = 7. Each assignment replaces the old value.
+    explanation: 'Each line replaces x with a new value computed from the old one: 3, then 6, then 7. The
+      right side is worked out first using the current x, and only then stored.'
     difficulty: 1
   - id: swap-trace
     kind: output
-    prompt: Trace carefully. What are a and b at the end?
+    prompt: This is meant to swap a and b. What is printed?
     code:
-      python: |
-        a = 5
+      python: 'a = 5
+
         b = 9
+
         a = b
+
         b = a
-      cpp: |
-        int a = 5, b = 9;
+
+        print(a, b)
+
+        '
+      cpp: 'int a = 5, b = 9;
+
         a = b;
+
         b = a;
-      java: |
-        int a = 5, b = 9;
+
+        cout << a << " " << b;
+
+        '
+      java: 'int a = 5, b = 9;
+
         a = b;
+
         b = a;
-    options: ["a = 9, b = 9", "a = 9, b = 5", "a = 5, b = 9", "a = 5, b = 5"]
+
+        System.out.println(a + " " + b);
+
+        '
+    options:
+    - 9 9
+    - 9 5
+    - 5 9
+    - 5 5
     answer: 0
-    explanation: After a = b, a is 9. Then b = a copies 9 into b. The original 5 is lost — swapping needs a temporary variable.
+    explanation: After a = b, the old 5 is gone, so b = a copies 9 again. A swap needs somewhere to keep
+      the old value before overwriting it.
     difficulty: 2
-  - id: type-of-text
-    kind: mcq
-    prompt: Which value is text (a string)?
-    options: ['"42"', "42", "4.2", "true"]
+  - id: swap-temp
+    kind: output
+    prompt: This swap keeps the old value in a helper variable first. What is printed?
+    code:
+      python: 'a = 5
+
+        b = 9
+
+        t = a
+
+        a = b
+
+        b = t
+
+        print(a, b)
+
+        '
+      cpp: 'int a = 5, b = 9;
+
+        int t = a;
+
+        a = b;
+
+        b = t;
+
+        cout << a << " " << b;
+
+        '
+      java: 'int a = 5, b = 9;
+
+        int t = a;
+
+        a = b;
+
+        b = t;
+
+        System.out.println(a + " " + b);
+
+        '
+    options:
+    - 9 5
+    - 9 9
+    - 5 9
+    - 5 5
     answer: 0
-    explanation: Quotes make it text. "42" is two characters, not a number you can do arithmetic with.
-    difficulty: 1
-  - id: declared-type
-    kind: mcq
-    prompt: In a language where you declare a variable's type, such as `int count`, what can count hold?
-    options: ["Only whole numbers", "Any value", "Only text", "Only true or false"]
+    explanation: t remembers 5 before a is overwritten with 9, then b receives the remembered 5. Three assignments,
+      in this order, are what make a swap safe.
+    difficulty: 2
+  - id: copy-then-change
+    kind: output
+    prompt: b is set from a, and then a changes. What is printed?
+    code:
+      python: 'a = 5
+
+        b = a
+
+        a = a + 1
+
+        print(a, b)
+
+        '
+      cpp: 'int a = 5;
+
+        int b = a;
+
+        a = a + 1;
+
+        cout << a << " " << b;
+
+        '
+      java: 'int a = 5;
+
+        int b = a;
+
+        a = a + 1;
+
+        System.out.println(a + " " + b);
+
+        '
+    options:
+    - 6 5
+    - 6 6
+    - 5 5
+    - 5 6
     answer: 0
-    explanation: A declared type is a promise. An int variable can only store whole numbers.
-    difficulty: 1
+    explanation: b = a copies the value 5 at that moment. It does not link the two names, so changing a
+      later leaves b alone.
+    difficulty: 3
+  - id: text-plus-text
+    kind: output
+    prompt: Both values are text, not numbers. What is printed?
+    code:
+      python: 'a = "5"
+
+        b = "5"
+
+        print(a + b)
+
+        '
+      cpp: 'string a = "5", b = "5";
+
+        cout << a + b;
+
+        '
+      java: 'String a = "5";
+
+        String b = "5";
+
+        System.out.println(a + b);
+
+        '
+    options:
+    - '55'
+    - '10'
+    - '25'
+    - Error
+    answer: 0
+    explanation: Quotes make these text, and + on text joins the pieces, so you get 55. To add them as numbers
+      you would first convert them to whole numbers.
+    difficulty: 2
   - id: equals-meaning
     kind: mcq
-    prompt: What does `total = total + price` do?
+    prompt: What does the line `total = total + price` do?
     options:
-      - "Adds price to the current total and stores the result in total"
-      - "Checks whether total is equal to total plus price, giving True or False"
-      - "Causes an error because total appears on both sides of the equals sign"
-      - "Creates a second variable called total, leaving the first one unchanged"
+    - Adds price to the current total and stores the result back in total
+    - Checks whether total equals total plus price, giving true or false
+    - Fails, because total appears on both sides of the equals sign
+    - Creates a second variable that is also called total
     answer: 0
-    explanation: The right side is evaluated using the old total, then the result replaces it.
+    explanation: = is an instruction to store, not a question. The right side is calculated with the old
+      total, and the answer replaces it.
     difficulty: 1
-  - id: int-division-types
-    languages: [python]
-    kind: mcq
-    prompt: "In Python, which expression has the value 2 and type int?"
-    options:
-      - "7 // 3"
-      - "7 / 3"
-      - "6 / 3"
-      - "int(\"2.0\")"
-    answer: 0
-    explanation: "// is whole-number division (int). / always gives a float, and int(\"2.0\") raises an error because the text is not a whole number."
-    difficulty: 4
-  - id: rebinding
+  - id: float-compare
     kind: output
-    prompt: "What does this print?"
+    prompt: Decimals are stored in binary, so some of them are only approximately right. What is printed?
     code:
-      python: |
-        a = 5
-        b = a
-        a = a + 1
-        print(a, b)
+      python: 'print("equal" if 0.1 + 0.2 == 0.3 else "different")
+
+        '
+      cpp: 'cout << (0.1 + 0.2 == 0.3 ? "equal" : "different");
+
+        '
+      java: 'System.out.println(0.1 + 0.2 == 0.3 ? "equal" : "different");
+
+        '
     options:
-      - "6 5"
-      - "6 6"
-      - "5 5"
-      - "5 6"
+    - different
+    - equal
+    - Error
+    - Nothing
     answer: 0
-    explanation: "b = a copies the current value 5 into b; changing a afterwards does not change b."
-    difficulty: 5
+    explanation: 0.1 and 0.2 have no exact binary form, so their sum is a hair above 0.3. Comparing decimals
+      with == is unreliable; compare whether they are close enough instead.
+    difficulty: 4
+  - id: python-division-kinds
+    kind: output
+    languages:
+    - python
+    prompt: Python has two kinds of division. What is printed?
+    code:
+      python: 'print(7 / 2, 7 // 2)
+
+        '
+    options:
+    - 3.5 3
+    - 3 3
+    - 3.5 3.5
+    - 3 3.5
+    answer: 0
+    explanation: / always gives a decimal result in Python, while // throws away the fraction and gives
+      a whole number.
+    difficulty: 3
+  - id: int-truncation
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: Here both numbers are whole numbers, and the result is stored in an int. What is printed?
+    code:
+      cpp: 'int x = 7 / 2;
+
+        cout << x;
+
+        '
+      java: 'int x = 7 / 2;
+
+        System.out.println(x);
+
+        '
+    options:
+    - '3'
+    - '3.5'
+    - '4'
+    - Error
+    answer: 0
+    explanation: Whole number divided by whole number stays a whole number, and the fraction is dropped,
+      so 7 / 2 is 3. Writing 7.0 / 2 is what would give 3.5.
+    difficulty: 3
+  - id: char-arithmetic
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: A character is really a small number underneath. What is printed by these two lines?
+    code:
+      cpp: 'char c = ''a'';
+
+        c++;
+
+        cout << c << " " << (''a'' + 1);
+
+        '
+      java: 'char c = ''a'';
+
+        c++;
+
+        System.out.println(c + " " + (''a'' + 1));
+
+        '
+    options:
+    - b 98
+    - b b
+    - 98 98
+    - a 98
+    answer: 0
+    explanation: c++ moves the character to the next code, which is 'b'. But 'a' + 1 is arithmetic, so it
+      turns into the number 98 (the code of 'a' is 97).
+    difficulty: 4
 problems: [next-counter, temperature-converter]

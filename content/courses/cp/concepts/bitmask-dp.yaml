@@ -127,25 +127,147 @@ resources:
 quiz:
   - id: states
     kind: mcq
-    prompt: TSP bitmask DP with n = 15 has how many (mask, last) states?
-    options: ["2^15 · 15 ≈ 4.9·10^5", "15! ≈ 1.3·10^12", "15² = 225 states", "2^15 ≈ 3.3·10^4"]
+    prompt: TSP bitmask DP with n = 15 cities has dp[mask][last]. How many states is that?
+    options:
+    - 2^15 · 15 ≈ 4.9·10^5
+    - 15! ≈ 1.3·10^12, one state per ordering
+    - 15² = 225, one state per pair of cities
+    - 2^15 ≈ 3.3·10^4, one state per subset only
     answer: 0
-    explanation: Every subset paired with every possible last city.
+    explanation: There are 2^15 visited-sets and 15 choices for the last city. Replacing 15! orderings with
+      2^n · n states is the whole point.
     difficulty: 2
   - id: order
     kind: mcq
-    prompt: Why can masks be processed in increasing numeric order?
-    options: ["Transitions only add bits, so the next mask is always larger", "Masks in numeric order are also sorted by their popcount", "The order is arbitrary; any order of masks gives the answer", "Increasing order lets the table reuse less of its memory"]
+    prompt: Why can the masks be processed in plain increasing numeric order?
+    options:
+    - Every transition adds a bit, so the new mask is numerically larger than the old one
+    - Masks in numeric order are also sorted by popcount, so smaller subsets always come first
+    - 'The order is arbitrary: any order of masks gives the answer if each mask is visited once'
+    - Increasing order lets the table reuse less memory because earlier rows can be discarded
     answer: 0
-    explanation: mask | (1 << u) > mask whenever u is not in mask.
+    explanation: Adding a bit to a mask strictly increases its value, so every predecessor has already been
+      finished. Note popcount order is not the same as numeric order, but numeric order is enough.
     difficulty: 2
   - id: assignment
     kind: mcq
-    prompt: In the assignment DP, which person is assigned next from state mask?
-    options: ["Person number popcount(mask)", "The last person in the input", "Any person not yet assigned", "Person number mask itself"]
+    prompt: In the assignment DP (dp[mask] = best cost when the tasks in mask are given to the first popcount(mask)
+      people), which person receives the next task?
+    options:
+    - Person number popcount(mask)
+    - The last person in the input
+    - Any person not yet assigned
+    - Person number mask
     answer: 0
-    explanation: popcount(mask) people have already been assigned, in order.
+    explanation: The mask tells you how many people are already served, so the next person is determined
+      by it. That is what keeps the state at 2^n instead of 2^n · n.
     difficulty: 3
+  - id: assign-output
+    kind: output
+    prompt: cost[i][j] is the cost of giving task j to person i. What does this print?
+    code:
+      python: "cost = [[3, 1], [2, 4]]\nINF = 10**9\ndp = [INF] * 4\ndp[0] = 0\nfor mask in range(4):\n\
+        \    p = bin(mask).count(\"1\")\n    if p == 2:\n        continue\n    for j in range(2):\n    \
+        \    if not (mask >> j) & 1:\n            nm = mask | (1 << j)\n            dp[nm] = min(dp[nm],\
+        \ dp[mask] + cost[p][j])\nprint(dp[3])\n"
+      cpp: "int cost[2][2] = {{3, 1}, {2, 4}};\nint INF = 1000000000;\nvector<int> dp(4, INF);\ndp[0] =\
+        \ 0;\nfor (int mask = 0; mask < 4; mask++) {\n    int p = __builtin_popcount(mask);\n    if (p ==\
+        \ 2) continue;\n    for (int j = 0; j < 2; j++) if (!((mask >> j) & 1)) {\n        int nm = mask\
+        \ | (1 << j);\n        dp[nm] = min(dp[nm], dp[mask] + cost[p][j]);\n    }\n}\ncout << dp[3];\n"
+      java: "int[][] cost = {{3, 1}, {2, 4}};\nint INF = 1000000000;\nint[] dp = new int[4];\nArrays.fill(dp,\
+        \ INF);\ndp[0] = 0;\nfor (int mask = 0; mask < 4; mask++) {\n    int p = Integer.bitCount(mask);\n\
+        \    if (p == 2) continue;\n    for (int j = 0; j < 2; j++) if (((mask >> j) & 1) == 0) {\n    \
+        \    int nm = mask | (1 << j);\n        dp[nm] = Math.min(dp[nm], dp[mask] + cost[p][j]);\n    }\n\
+        }\nSystem.out.println(dp[3]);\n"
+    options:
+    - '3'
+    - '7'
+    - '5'
+    - '4'
+    answer: 0
+    explanation: Person 0 takes task 1 (cost 1) and person 1 takes task 0 (cost 2), total 3. The other assignment
+      costs 3 + 4 = 7.
+    difficulty: 3
+  - id: tsp-ops
+    kind: mcq
+    prompt: TSP DP tries every (mask, last) state with every next city. For n = 20, about how many transitions
+      is that?
+    options:
+    - ≈ 4·10^8
+    - ≈ 4·10^5
+    - ≈ 2·10^18
+    - ≈ 10^6
+    answer: 0
+    explanation: '2^20 masks · 20 last cities · 20 next cities ≈ 4.2·10^8: heavy but feasible in C++ in
+      a couple of seconds, hopeless in plain Python.'
+    difficulty: 4
+  - id: tsp-memory
+    kind: mcq
+    prompt: dp[mask][last] for n = 20 stores 32-bit integers. How much memory is the table?
+    options:
+    - 80 MB
+    - 8 MB
+    - 800 MB
+    - 1 MB
+    answer: 0
+    explanation: '2^20 · 20 · 4 bytes = 80 MiB, which fits a 256 MB limit. With 64-bit values it would be
+      160 MiB: check the limit before choosing the type.'
+    difficulty: 4
+  - id: submask-limit
+    kind: mcq
+    prompt: A subset-partition DP loops over all submasks of every mask (3^n). What is the largest n that
+      stays within about 5·10^8 steps?
+    options:
+    - '18'
+    - '20'
+    - '16'
+    - '22'
+    answer: 0
+    explanation: 3^18 ≈ 3.9·10^8 fits, while 3^20 ≈ 3.5·10^9 does not. Compare with 2^n · n, which still
+      works for n = 20.
+    difficulty: 5
+  - id: hamilton-bitset
+    kind: mcq
+    prompt: You only need to know whether a Hamiltonian path exists. How can the usual dp[mask][last] table
+      shrink?
+    options:
+    - 'Store for each mask a bitmask of possible last cities: 2^n integers, O(2^n · n) time'
+    - Store only the masks with exactly n/2 bits set and rebuild the rest by symmetry
+    - 'It cannot shrink: existence needs every (mask, last) pair stored as its own boolean'
+    - Store the best path cost instead of a boolean, which needs fewer states than yes/no
+    answer: 0
+    explanation: For a yes/no answer, 'last ∈ set' is one bit. Packing those bits into a word turns an inner
+      loop over cities into bit operations.
+    difficulty: 5
+  - id: assignment-reuses-task
+    kind: bug
+    prompt: 'Two people, two tasks, profit[i][j] = what person i earns from task j: rows (3, 1) and (3,
+      1). Each task may be used once, so the best total is 3 + 1 = 4. This mask DP forgets to skip a task
+      that is already in the mask. What does it print?'
+    code:
+      python: "profit = [[3, 1], [3, 1]]\nn = 2\ndp = [-1] * (1 << n)\ndp[0] = 0\nfor mask in range(1 <<\
+        \ n):\n    if dp[mask] < 0:\n        continue\n    i = bin(mask).count(\"1\")\n    if i >= n:\n\
+        \        continue\n    for j in range(n):\n        nm = mask | (1 << j)\n        dp[nm] = max(dp[nm],\
+        \ dp[mask] + profit[i][j])\nprint(dp[(1 << n) - 1])\n"
+      cpp: "int profit[2][2] = {{3, 1}, {3, 1}};\nint n = 2;\nvector<int> dp(1 << n, -1);\ndp[0] = 0;\n\
+        for (int mask = 0; mask < (1 << n); mask++) {\n    if (dp[mask] < 0) continue;\n    int i = __builtin_popcount(mask);\n\
+        \    if (i >= n) continue;\n    for (int j = 0; j < n; j++) {\n        int nm = mask | (1 << j);\n\
+        \        dp[nm] = max(dp[nm], dp[mask] + profit[i][j]);\n    }\n}\ncout << dp[(1 << n) - 1];\n"
+      java: "int[][] profit = {{3, 1}, {3, 1}};\nint n = 2;\nint[] dp = new int[1 << n];\nArrays.fill(dp,\
+        \ -1);\ndp[0] = 0;\nfor (int mask = 0; mask < (1 << n); mask++) {\n    if (dp[mask] < 0) continue;\n\
+        \    int i = Integer.bitCount(mask);\n    if (i >= n) continue;\n    for (int j = 0; j < n; j++)\
+        \ {\n        int nm = mask | (1 << j);\n        dp[nm] = Math.max(dp[nm], dp[mask] + profit[i][j]);\n\
+        \    }\n}\nSystem.out.println(dp[(1 << n) - 1]);\n"
+    options:
+    - '7'
+    - '4'
+    - '6'
+    - '8'
+    answer: 0
+    explanation: 'Person 1 is assigned task 0 again, since mask | bit leaves the mask unchanged, and dp[1]
+      grows from 3 to 6 using its own value. The transition needs ''if mask >> j & 1: continue'' before
+      adding task j.'
+    difficulty: 4
 problems: [shortest-tour]
 practice_links:
   - title: Hamiltonian Flights

@@ -1,0 +1,155 @@
+id: fire-escape
+title: Warehouse fire drill
+concepts: [graph-techniques]
+difficulty: hard
+statement: |
+  A warehouse is an `R × C` grid. `#` is a wall, `.` is a free cell, `P` is your starting
+  cell and `F` is a cell that is on fire at minute 0 (there may be many).
+
+  Each minute happens in two steps. First you move to a side-adjacent free cell (you may not
+  walk through walls or into `F` cells that are still burning). Then the fire spreads: every
+  free cell that shares a side with a burning cell catches fire. If you are standing on a
+  burning cell after the spread, you are caught.
+
+  You escape the moment you stand on a border cell of the grid and are not caught. Print the
+  minimum number of minutes needed to escape, or `IMPOSSIBLE`. If `P` is already on the
+  border, the answer is `0`.
+input_format: |
+  The first line contains R and C. Each of the next R lines contains a string of C characters.
+output_format: One integer, or the word IMPOSSIBLE.
+constraints:
+  - 1 ≤ R, C ≤ 500
+  - Exactly one P; any number of F (possibly none)
+examples:
+  - input: "3 5\n#.###\n#P..F\n#####"
+    output: "1"
+    explanation: Step up into the border cell above P. The fire needs 4 minutes to get there.
+  - input: "3 6\n######\n#P..F.\n######"
+    output: "IMPOSSIBLE"
+    explanation: The only exit is behind the fire, which also moves one cell per minute.
+hints:
+  - Fire does not care about you. How can you compute, for every cell, the minute the fire reaches it?
+  - Start one BFS from every fire cell at once. Cells it never reaches get infinite time.
+  - Now BFS for yourself, but you may enter a cell at minute t only if the fire arrives there strictly later than t. The first border cell you reach gives the answer.
+approach: |
+  Multi-source BFS from all fire cells gives fire[cell] (infinity if unreachable). A second BFS
+  from P moves to a neighbour at time t + 1 only when the cell is free and fire[cell] > t + 1.
+  The first time a border cell is dequeued, print its time. If P itself is on the border the
+  answer is 0. O(R · C).
+reference: |
+  import sys
+  from collections import deque
+  def main():
+      data = sys.stdin.read().split()
+      R, C = int(data[0]), int(data[1])
+      g = data[2:2 + R]
+      INF = 10 ** 9
+      fire = [[INF] * C for _ in range(R)]
+      dq = deque()
+      start = None
+      for i in range(R):
+          for j in range(C):
+              ch = g[i][j]
+              if ch == "F":
+                  fire[i][j] = 0
+                  dq.append((i, j))
+              elif ch == "P":
+                  start = (i, j)
+      while dq:
+          i, j = dq.popleft()
+          for a, b in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+              if 0 <= a < R and 0 <= b < C and g[a][b] != "#" and fire[a][b] == INF:
+                  fire[a][b] = fire[i][j] + 1
+                  dq.append((a, b))
+      dist = [[-1] * C for _ in range(R)]
+      si, sj = start
+      dist[si][sj] = 0
+      dq.append((si, sj))
+      while dq:
+          i, j = dq.popleft()
+          if i in (0, R - 1) or j in (0, C - 1):
+              print(dist[i][j])
+              return
+          t = dist[i][j] + 1
+          for a, b in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+              if 0 <= a < R and 0 <= b < C and g[a][b] != "#" and dist[a][b] < 0 and fire[a][b] > t:
+                  dist[a][b] = t
+                  dq.append((a, b))
+      print("IMPOSSIBLE")
+  main()
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  R, C = int(data[0]), int(data[1])
+  g = data[2:2 + R]
+  burning = {(i, j) for i in range(R) for j in range(C) if g[i][j] == "F"}
+  here = {(i, j) for i in range(R) for j in range(C) if g[i][j] == "P"}
+  def border(p):
+      return p[0] in (0, R - 1) or p[1] in (0, C - 1)
+  def nbrs(p):
+      i, j = p
+      return [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]
+  ans = None
+  if any(border(p) for p in here):
+      ans = 0
+  t = 0
+  while ans is None and here and t <= R * C + 2:
+      t += 1
+      moved = set()
+      for p in here:
+          for a, b in nbrs(p):
+              if 0 <= a < R and 0 <= b < C and g[a][b] != "#" and (a, b) not in burning:
+                  moved.add((a, b))
+      spread = set(burning)
+      for p in burning:
+          for a, b in nbrs(p):
+              if 0 <= a < R and 0 <= b < C and g[a][b] != "#":
+                  spread.add((a, b))
+      burning = spread
+      here = {p for p in moved if p not in burning}
+      if any(border(p) for p in here):
+          ans = t
+  print("IMPOSSIBLE" if ans is None else ans)
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          R, C = rng.randint(1, 6), rng.randint(1, 6)
+          cells = [[rng.choice("..#") for _ in range(C)] for _ in range(R)]
+          free = [(i, j) for i in range(R) for j in range(C)]
+          rng.shuffle(free)
+          pi, pj = free.pop()
+          cells[pi][pj] = "P"
+          for _ in range(rng.randint(0, min(3, len(free)))):
+              i, j = free.pop()
+              cells[i][j] = "F"
+          yield f"{R} {C}\n" + "\n".join("".join(r) for r in cells)
+generator: |
+  def cases(rng):
+      yield "1 1\nP"
+      yield "3 5\n#.###\n#P..F\n#####"
+      yield "3 6\n######\n#P..F.\n######"
+      R = C = 500
+      # An open arena with the person in the centre and fire in a corner.
+      g = [["."] * C for _ in range(R)]
+      g[250][250] = "P"
+      g[0][0] = "F"
+      yield f"{R} {C}\n" + "\n".join("".join(r) for r in g)
+      # A serpentine corridor: long paths for both BFS runs.
+      g = [["#"] * C for _ in range(R)]
+      for i in range(1, R - 1, 2):
+          for j in range(1, C - 1):
+              g[i][j] = "."
+          if i + 2 < R - 1:
+              g[i + 1][1 if (i // 2) % 2 else C - 2] = "."
+      g[1][1] = "P"
+      g[R - 2][C - 2] = "F"
+      yield f"{R} {C}\n" + "\n".join("".join(r) for r in g)
+      for _ in range(6):
+          R, C = rng.randint(5, 40), rng.randint(5, 40)
+          cells = [[rng.choice("...#") for _ in range(C)] for _ in range(R)]
+          cells[rng.randrange(R)][rng.randrange(C)] = "P"
+          for _ in range(rng.randint(0, 4)):
+              i, j = rng.randrange(R), rng.randrange(C)
+              if cells[i][j] != "P":
+                  cells[i][j] = "F"
+          yield f"{R} {C}\n" + "\n".join("".join(r) for r in cells)

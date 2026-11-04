@@ -143,38 +143,202 @@ resources:
     minutes: 40
     level: deep
 quiz:
-  - id: negative
+  - id: unweighted
     kind: mcq
-    prompt: Why does Dijkstra fail with negative edge weights?
+    prompt: Every edge has weight 1 and you want the fewest edges from a source to every other node. Which
+      algorithm is the simplest correct choice?
     options:
-      - "A settled node might later be reached more cheaply through a negative edge"
-      - "Binary heaps cannot store negative keys, so those entries are lost"
-      - "It runs forever, because each negative edge keeps lowering distances"
-      - "It only fails on undirected graphs, where edges are used both ways"
+    - BFS with a plain queue, in O(V + E) time
+    - Dijkstra with a heap, the only correct choice, in O(E log V) time
+    - Bellman-Ford, the only method that handles equal weights, in O(V * E)
+    - DFS, which explores every path to its end and keeps the shortest one
     answer: 0
-    explanation: The "closest node is final" argument relies on detours never getting cheaper.
-    difficulty: 3
-  - id: structure
-    kind: mcq
-    prompt: Which data structure picks the next node in Dijkstra?
-    options: ["A min-heap keyed by tentative distance", "A FIFO queue", "A stack", "A sorted array rebuilt each step"]
-    answer: 0
-    explanation: The heap gives the closest unsettled node in O(log V).
+    explanation: BFS visits nodes in order of their distance in edges, so the first time it reaches a node
+      is the shortest. A heap or repeated relaxation would also work but costs more for no benefit. DFS
+      finds some path, not the shortest one.
     difficulty: 1
-  - id: stale
+  - id: negative-edges
     kind: mcq
-    prompt: Popped (d, u) has d > dist[u]. What should happen?
-    options: ["Skip it — it's an outdated entry", "Update dist[u] to d, then relax", "Stop the algorithm; u is done", "Push it back with distance dist[u]"]
+    prompt: Edge weights can be negative, but the graph has no negative cycle. Which algorithm gives correct
+      shortest distances from a source?
+    options:
+    - Bellman-Ford, which relaxes every edge V - 1 times in O(V * E)
+    - Dijkstra's algorithm, which stays correct whenever no negative cycle exists
+    - BFS with a queue, since negative weights shift every path by the same amount
+    - Prim's algorithm, since it returns the cheapest tree rooted at the source
     answer: 0
-    explanation: A shorter distance for u was already found and processed.
+    explanation: Dijkstra's greedy step assumes that once a node is the closest unfinished one its distance
+      is final, which a later negative edge can break. Bellman-Ford makes no such assumption. A trick that
+      adds a constant to every weight does not work, because paths with more edges shift by more.
     difficulty: 2
-  - id: unit-weights
-    kind: mcq
-    prompt: Every edge weighs exactly 1. What is the simplest correct algorithm?
-    options: ["BFS", "Dijkstra with a heap", "Bellman–Ford", "Floyd–Warshall"]
+  - id: dijkstra-output
+    kind: output
+    prompt: The undirected graph has edges 0-1 (weight 4), 0-2 (1), 2-1 (2), 1-3 (1) and 2-3 (5). What does
+      this Dijkstra print for the distances from node 0?
+    code:
+      python: "import heapq\ng = {0: [(1, 4), (2, 1)], 1: [(0, 4), (2, 2), (3, 1)], 2: [(0, 1), (1, 2),\
+        \ (3, 5)], 3: [(1, 1), (2, 5)]}\ndist = [10 ** 9] * 4\ndist[0] = 0\nh = [(0, 0)]\nwhile h:\n   \
+        \ d, u = heapq.heappop(h)\n    if d > dist[u]:\n        continue\n    for v, w in g[u]:\n      \
+        \  if d + w < dist[v]:\n            dist[v] = d + w\n            heapq.heappush(h, (d + w, v))\n\
+        print(*dist)\n"
+      cpp: "vector<vector<pair<int, int>>> g(4);\nauto add = [&](int a, int b, int w) { g[a].push_back({b,\
+        \ w}); g[b].push_back({a, w}); };\nadd(0, 1, 4); add(0, 2, 1); add(2, 1, 2); add(1, 3, 1); add(2,\
+        \ 3, 5);\nvector<int> dist(4, 1000000000);\ndist[0] = 0;\npriority_queue<pair<int, int>, vector<pair<int,\
+        \ int>>, greater<pair<int, int>>> pq;\npq.push({0, 0});\nwhile (!pq.empty()) {\n    pair<int, int>\
+        \ top = pq.top();\n    pq.pop();\n    int d = top.first, u = top.second;\n    if (d > dist[u]) continue;\n\
+        \    for (auto& e : g[u])\n        if (d + e.second < dist[e.first]) {\n            dist[e.first]\
+        \ = d + e.second;\n            pq.push({dist[e.first], e.first});\n        }\n}\nfor (int i = 0;\
+        \ i < 4; i++) cout << dist[i] << (i < 3 ? \" \" : \"\");\n"
+      java: "List<List<int[]>> g = new ArrayList<>();\nfor (int i = 0; i < 4; i++) g.add(new ArrayList<>());\n\
+        int[][] edges = {{0, 1, 4}, {0, 2, 1}, {2, 1, 2}, {1, 3, 1}, {2, 3, 5}};\nfor (int[] e : edges)\
+        \ {\n    g.get(e[0]).add(new int[]{e[1], e[2]});\n    g.get(e[1]).add(new int[]{e[0], e[2]});\n\
+        }\nint[] dist = new int[4];\nArrays.fill(dist, 1_000_000_000);\ndist[0] = 0;\nPriorityQueue<int[]>\
+        \ pq = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));\npq.add(new int[]{0, 0});\nwhile\
+        \ (!pq.isEmpty()) {\n    int[] top = pq.poll();\n    int d = top[0], u = top[1];\n    if (d > dist[u])\
+        \ continue;\n    for (int[] e : g.get(u))\n        if (d + e[1] < dist[e[0]]) {\n            dist[e[0]]\
+        \ = d + e[1];\n            pq.add(new int[]{dist[e[0]], e[0]});\n        }\n}\nStringBuilder sb\
+        \ = new StringBuilder();\nfor (int i = 0; i < 4; i++) sb.append(dist[i]).append(\" \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 0 3 1 4
+    - 0 4 1 5
+    - 0 3 1 5
+    - 0 3 3 4
     answer: 0
-    explanation: Unit weights make BFS order equal to distance order — no heap needed.
-    difficulty: 1
+    explanation: 'The direct edge 0-1 costs 4, but 0 -> 2 -> 1 costs 1 + 2 = 3, and node 3 is best reached
+      through node 1: 3 + 1 = 4 (via 2 directly it would be 6). The check d > dist[u] throws away stale
+      heap entries that were queued before a shorter route was found.'
+    difficulty: 3
+  - id: bellman-rounds
+    kind: mcq
+    prompt: A graph has 6 vertices and no negative cycle. After how many full rounds of relaxing every edge
+      are the Bellman-Ford distances guaranteed to be final?
+    options:
+    - '5'
+    - '6'
+    - '3'
+    - '1'
+    answer: 0
+    explanation: A shortest path without a cycle has at most V - 1 = 5 edges, and round k makes sure every
+      shortest path of k edges is correct. If a further round (the sixth) still improves some distance,
+      a negative cycle is reachable.
+    difficulty: 3
+  - id: negcycle-output
+    kind: output
+    prompt: The directed edges are 0->1 (weight 1), 1->2 (-1) and 2->0 (-1), and every distance starts at
+      0 (as if from a virtual source). After V - 1 relaxation rounds, this checks whether any edge can still
+      improve. What does it print?
+    code:
+      python: "edges = [(0, 1, 1), (1, 2, -1), (2, 0, -1)]\ndist = [0, 0, 0]\nfor _ in range(2):\n    for\
+        \ u, v, w in edges:\n        if dist[u] + w < dist[v]:\n            dist[v] = dist[u] + w\nprint(1\
+        \ if any(dist[u] + w < dist[v] for u, v, w in edges) else 0)\n"
+      cpp: "int edges[3][3] = {{0, 1, 1}, {1, 2, -1}, {2, 0, -1}};\nint dist[3] = {0, 0, 0};\nfor (int round\
+        \ = 0; round < 2; round++)\n    for (auto& e : edges)\n        if (dist[e[0]] + e[2] < dist[e[1]])\
+        \ dist[e[1]] = dist[e[0]] + e[2];\nint again = 0;\nfor (auto& e : edges)\n    if (dist[e[0]] + e[2]\
+        \ < dist[e[1]]) again = 1;\ncout << again;\n"
+      java: "int[][] edges = {{0, 1, 1}, {1, 2, -1}, {2, 0, -1}};\nint[] dist = {0, 0, 0};\nfor (int round\
+        \ = 0; round < 2; round++)\n    for (int[] e : edges)\n        if (dist[e[0]] + e[2] < dist[e[1]])\
+        \ dist[e[1]] = dist[e[0]] + e[2];\nint again = 0;\nfor (int[] e : edges)\n    if (dist[e[0]] + e[2]\
+        \ < dist[e[1]]) again = 1;\nSystem.out.println(again);\n"
+    options:
+    - '1'
+    - '0'
+    - '2'
+    - '3'
+    answer: 0
+    explanation: The cycle 0 -> 1 -> 2 -> 0 has total weight 1 - 1 - 1 = -1, so every trip around lowers
+      the distances further. After the V - 1 rounds an edge can still be relaxed, which is exactly the signal
+      for a negative cycle (the print is 1 for 'yes').
+    difficulty: 3
+  - id: count-shortest
+    kind: mcq
+    prompt: In the unweighted directed graph with edges 0->1, 0->2, 1->3, 2->3, 3->4, 3->5, 4->6 and 5->6,
+      how many different shortest paths lead from 0 to 6?
+    options:
+    - '4'
+    - '2'
+    - '8'
+    - '6'
+    answer: 0
+    explanation: There are two choices at the first split (via 1 or 2) and two at the second (via 4 or 5),
+      giving 2 * 2 = 4 shortest paths. A BFS that also keeps count[v] += count[u] whenever dist[v] = dist[u]
+      + 1 computes this in O(V + E).
+    difficulty: 3
+  - id: floyd-order
+    kind: mcq
+    prompt: In Floyd-Warshall, which of the three nested loops must be the outermost one, and why?
+    options:
+    - k, the intermediate vertex, since after round k the table is correct for paths through vertices up
+      to k
+    - i, the source vertex, since each source's whole row has to be finished before the next one starts
+    - j, the target vertex, since each column is completed before the next target is started on
+    - Any order works, because the three loops just visit every triple of vertices exactly once
+    answer: 0
+    explanation: 'The recurrence is dist[k][i][j] = best path from i to j using only intermediates 0..k.
+      Putting k inside breaks that meaning: it would read entries that have not yet been improved by all
+      earlier intermediates, and some shortest paths are missed.'
+    difficulty: 4
+  - id: lazy-deletion
+    kind: mcq
+    prompt: A heap-based Dijkstra pops (d, u) and processes u straight away, without comparing d to dist[u].
+      What is the effect?
+    options:
+    - Results stay correct, but stale entries are reprocessed, which can push the running time far past
+      O((V + E) log V)
+    - Results become wrong, since a stale entry overwrites the better distance that was found earlier
+    - The algorithm loops forever, since a stale entry is pushed again every time that it is popped
+    - Distances of unreachable nodes become zero instead of staying at infinity after the search ends
+    answer: 0
+    explanation: A stale entry has d larger than dist[u], so its relaxations never improve anything and
+      the answers stay right. Without the skip check, though, each stale copy still scans all of u's edges,
+      which can multiply the work on graphs with many improvements.
+    difficulty: 4
+  - id: at-most-k-stops
+    kind: mcq
+    prompt: 'Flights (from, to, price): 0->1 100, 1->2 100, 0->2 500, 1->3 600, 2->3 200. What is the cheapest
+      price from 0 to 3 that uses at most 1 intermediate stop?'
+    options:
+    - '700'
+    - '400'
+    - '600'
+    - '500'
+    answer: 0
+    explanation: The unrestricted cheapest route 0 -> 1 -> 2 -> 3 costs 400 but uses two stops. With one
+      stop allowed both 0 -> 1 -> 3 and 0 -> 2 -> 3 cost 700. Plain Dijkstra over nodes would return 400;
+      use Bellman-Ford limited to k + 1 rounds on a copy of the distances, or Dijkstra over (node, stops
+      used).
+    difficulty: 5
+  - id: dijkstra-negative-edge
+    kind: bug
+    prompt: 'Edges: 0 -> 1 (weight 2), 0 -> 2 (weight 3) and 2 -> 1 (weight -2). The shortest distance to
+      node 1 is 1 (through node 2). This Dijkstra never revisits a node after it is finalised. What does
+      it print for dist[1]?'
+    code:
+      python: "import heapq\ng = {0: [(1, 2), (2, 3)], 1: [], 2: [(1, -2)]}\ndist = [10**9] * 3\ndist[0]\
+        \ = 0\ndone = set()\npq = [(0, 0)]\nwhile pq:\n    d, u = heapq.heappop(pq)\n    if u in done:\n\
+        \        continue\n    done.add(u)\n    for v, w in g[u]:\n        if v not in done and d + w <\
+        \ dist[v]:\n            dist[v] = d + w\n            heapq.heappush(pq, (dist[v], v))\nprint(dist[1])\n"
+      cpp: "vector<vector<pair<int, int>>> g = {{{1, 2}, {2, 3}}, {}, {{1, -2}}};\nvector<int> dist(3, 1000000000),\
+        \ done(3, 0);\ndist[0] = 0;\npriority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int,\
+        \ int>>> pq;\npq.push({0, 0});\nwhile (!pq.empty()) {\n    int d = pq.top().first, u = pq.top().second;\n\
+        \    pq.pop();\n    if (done[u]) continue;\n    done[u] = 1;\n    for (auto& e : g[u])\n       \
+        \ if (!done[e.first] && d + e.second < dist[e.first]) {\n            dist[e.first] = d + e.second;\n\
+        \            pq.push({dist[e.first], e.first});\n        }\n}\ncout << dist[1];\n"
+      java: "int[][][] g = {{{1, 2}, {2, 3}}, {}, {{1, -2}}};\nint[] dist = {1000000000, 1000000000, 1000000000};\n\
+        boolean[] done = new boolean[3];\ndist[0] = 0;\nPriorityQueue<int[]> pq = new PriorityQueue<>((a,\
+        \ b) -> a[0] - b[0]);\npq.add(new int[]{0, 0});\nwhile (!pq.isEmpty()) {\n    int[] top = pq.poll();\n\
+        \    int d = top[0], u = top[1];\n    if (done[u]) continue;\n    done[u] = true;\n    for (int[]\
+        \ e : g[u])\n        if (!done[e[0]] && d + e[1] < dist[e[0]]) {\n            dist[e[0]] = d + e[1];\n\
+        \            pq.add(new int[]{dist[e[0]], e[0]});\n        }\n}\nSystem.out.println(dist[1]);\n"
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '-2'
+    answer: 0
+    explanation: Node 1 is finalised with distance 2 before the route through node 2 is seen. Dijkstra assumes
+      a finalised distance can never improve, which is false once an edge has negative weight. Use Bellman-Ford
+      in that case.
+    difficulty: 4
 problems: [cheapest-routes, deadline-tolls]
 practice_links:
   - title: Network Delay Time

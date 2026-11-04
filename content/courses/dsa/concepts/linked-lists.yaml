@@ -165,43 +165,215 @@ resources:
     source: Tech Interview Handbook
     minutes: 10
 quiz:
-  - id: insert-order
+  - id: head-insert
     kind: mcq
-    prompt: To insert node x after node p, which assignment must come first?
-    options: ["x.next = p.next", "p.next = x", "p.next.next = x", "x = p.next"]
+    prompt: A singly linked list keeps only a head pointer. Which operation takes constant time?
+    options:
+    - Inserting a new node at the head of the list
+    - Inserting a new node at the tail of the list
+    - Reading the value stored at index k of it
+    - Deleting the last node of the whole list
     answer: 0
-    explanation: If you set p.next = x first, the reference to the rest of the list is lost.
-    difficulty: 2
-  - id: access-cost
-    kind: mcq
-    prompt: What does it cost to read the k-th element of a singly linked list?
-    options: ["O(k)", "O(1)", "O(log k)", "O(n²)"]
-    answer: 0
-    explanation: You must follow k pointers from the head.
+    explanation: At the head you only create a node and repoint head. Reaching the tail or index k needs
+      a walk from the head, and deleting the last node needs its predecessor, which also means a walk. A
+      tail pointer would fix insertion at the end, but not deletion.
     difficulty: 1
-  - id: cycle
-    kind: mcq
-    prompt: How do fast and slow pointers detect a cycle?
+  - id: middle-output
+    kind: output
+    prompt: A six-node list 1 -> 2 -> 3 -> 4 -> 5 -> 6 is built and this slow/fast scan runs. What does
+      it print?
+    code:
+      python: "class Node:\n    def __init__(self, v, nxt=None):\n        self.v = v\n        self.next\
+        \ = nxt\nhead = None\nfor v in [6, 5, 4, 3, 2, 1]:\n    head = Node(v, head)\nslow = fast = head\n\
+        while fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\nprint(slow.v)\n"
+      cpp: "struct Node {\n    int v;\n    Node* next;\n    Node(int v, Node* n) : v(v), next(n) {}\n};\n\
+        Node* head = nullptr;\nfor (int v : {6, 5, 4, 3, 2, 1}) head = new Node(v, head);\nNode *slow =\
+        \ head, *fast = head;\nwhile (fast && fast->next) {\n    slow = slow->next;\n    fast = fast->next->next;\n\
+        }\ncout << slow->v;\n"
+      java: "class Node {\n    int v;\n    Node next;\n    Node(int v, Node next) { this.v = v; this.next\
+        \ = next; }\n}\nNode head = null;\nfor (int v : new int[]{6, 5, 4, 3, 2, 1}) head = new Node(v,\
+        \ head);\nNode slow = head, fast = head;\nwhile (fast != null && fast.next != null) {\n    slow\
+        \ = slow.next;\n    fast = fast.next.next;\n}\nSystem.out.println(slow.v);\n"
     options:
-      - "If a cycle exists, the fast pointer eventually meets the slow pointer"
-      - "The slow pointer reaches null first, which proves there is a cycle"
-      - "Both pointers reach the middle node at the same time in a cycle"
-      - "They count the nodes and compare the count with the list's length"
+    - '4'
+    - '3'
+    - '5'
+    - '6'
     answer: 0
-    explanation: Inside a cycle the gap shrinks by one each step, so they must meet.
+    explanation: With an even number of nodes this loop stops on the second of the two middle nodes. Slow
+      moves 1 -> 2 -> 3 -> 4 while fast goes 1 -> 3 -> 5 -> null. To get the first middle instead, test
+      fast.next and fast.next.next in the loop condition.
     difficulty: 2
-  - id: dummy
-    kind: mcq
-    prompt: Why use a dummy head node?
+  - id: nth-from-end
+    kind: output
+    prompt: The list is 1 -> 2 -> 3 -> 4 -> 5 and a dummy node sits in front of the head. What does this
+      code print after it removes the 2nd node from the end?
+    code:
+      python: "class Node:\n    def __init__(self, v, nxt=None):\n        self.v = v\n        self.next\
+        \ = nxt\nhead = None\nfor v in [5, 4, 3, 2, 1]:\n    head = Node(v, head)\ndummy = Node(0, head)\n\
+        lead = trail = dummy\nfor _ in range(2):\n    lead = lead.next\nwhile lead.next:\n    lead = lead.next\n\
+        \    trail = trail.next\ntrail.next = trail.next.next\nout = []\ncur = dummy.next\nwhile cur:\n\
+        \    out.append(cur.v)\n    cur = cur.next\nprint(*out)\n"
+      cpp: "struct Node {\n    int v;\n    Node* next;\n    Node(int v, Node* n) : v(v), next(n) {}\n};\n\
+        Node* head = nullptr;\nfor (int v : {5, 4, 3, 2, 1}) head = new Node(v, head);\nNode* dummy = new\
+        \ Node(0, head);\nNode *lead = dummy, *trail = dummy;\nfor (int k = 0; k < 2; k++) lead = lead->next;\n\
+        while (lead->next) {\n    lead = lead->next;\n    trail = trail->next;\n}\ntrail->next = trail->next->next;\n\
+        for (Node* cur = dummy->next; cur; cur = cur->next) cout << cur->v << (cur->next ? \" \" : \"\"\
+        );\n"
+      java: "class Node {\n    int v;\n    Node next;\n    Node(int v, Node next) { this.v = v; this.next\
+        \ = next; }\n}\nNode head = null;\nfor (int v : new int[]{5, 4, 3, 2, 1}) head = new Node(v, head);\n\
+        Node dummy = new Node(0, head);\nNode lead = dummy, trail = dummy;\nfor (int k = 0; k < 2; k++)\
+        \ lead = lead.next;\nwhile (lead.next != null) {\n    lead = lead.next;\n    trail = trail.next;\n\
+        }\ntrail.next = trail.next.next;\nStringBuilder sb = new StringBuilder();\nfor (Node cur = dummy.next;\
+        \ cur != null; cur = cur.next) sb.append(cur.v).append(\" \");\nSystem.out.println(sb.toString().trim());\n"
     options:
-      - "So operations at the front of the list need no special case"
-      - "To make every traversal of the list run in fewer steps"
-      - "To store the length of the list in its value field"
-      - "Because Java requires every list to start with one"
+    - 1 2 3 5
+    - 1 2 4 5
+    - 1 3 4 5
+    - 1 2 3 4
     answer: 0
-    explanation: Every real node then has a predecessor, so insert/delete logic is uniform.
-    difficulty: 2
-problems: [playlist-editor]
+    explanation: Lead gets a two-node head start, so when it reaches the last node trail stands just before
+      the target, node 4. Because the dummy sits before the head, removing the head itself needs no special
+      case.
+    difficulty: 3
+  - id: java-get
+    kind: mcq
+    languages:
+    - java
+    prompt: A java.util.LinkedList<Integer> holds 100,000 numbers. A loop runs for (int i = 0; i < list.size();
+      i++) sum += list.get(i). What is the total cost?
+    options:
+    - O(n^2) in total, because each get(i) walks node by node from one end of the list
+    - O(n) in total, because get(i) jumps straight to the node at index i in the list
+    - O(n log n) in total, because LinkedList keeps its nodes in a balanced search tree
+    - O(1) per call, because size() caches the address of every node held in the list
+    answer: 0
+    explanation: A linked list has no index arithmetic, so get(i) traverses up to n/2 nodes. Use an iterator
+      or an enhanced for loop for one linear pass, or choose ArrayList when you need random access.
+    difficulty: 3
+  - id: py-pop-front
+    kind: mcq
+    languages:
+    - python
+    prompt: A queue is processed with 200,000 operations. How does list.pop(0) compare with collections.deque.popleft()?
+    options:
+    - pop(0) is O(n) because every remaining element shifts left, while popleft() is O(1)
+    - Both are O(1), since CPython implements its lists as linked lists internally
+    - pop(0) is O(1) but popleft() is O(n), since a deque rebuilds its blocks on a pop
+    - Both are O(n), because moving the front of any queue needs a scan of the structure
+    answer: 0
+    explanation: A Python list is a dynamic array, so removing from the front moves every later element.
+      A deque is a doubly linked list of blocks and pops from either end in constant time. This is one of
+      the most common hidden quadratic costs in BFS code.
+    difficulty: 3
+  - id: partial-reverse
+    kind: output
+    prompt: This code reverses the nodes at positions 2 to 4 of 1 -> 2 -> 3 -> 4 -> 5 using a dummy node.
+      What does it print?
+    code:
+      python: "class Node:\n    def __init__(self, v, nxt=None):\n        self.v = v\n        self.next\
+        \ = nxt\nhead = None\nfor v in [5, 4, 3, 2, 1]:\n    head = Node(v, head)\ndummy = Node(0, head)\n\
+        prev = dummy\nfor _ in range(1):\n    prev = prev.next\ncur = prev.next\nfor _ in range(2):\n  \
+        \  nxt = cur.next\n    cur.next = nxt.next\n    nxt.next = prev.next\n    prev.next = nxt\nout =\
+        \ []\nnode = dummy.next\nwhile node:\n    out.append(node.v)\n    node = node.next\nprint(*out)\n"
+      cpp: "struct Node {\n    int v;\n    Node* next;\n    Node(int v, Node* n) : v(v), next(n) {}\n};\n\
+        Node* head = nullptr;\nfor (int v : {5, 4, 3, 2, 1}) head = new Node(v, head);\nNode* dummy = new\
+        \ Node(0, head);\nNode* prev = dummy;\nfor (int k = 0; k < 1; k++) prev = prev->next;\nNode* cur\
+        \ = prev->next;\nfor (int k = 0; k < 2; k++) {\n    Node* nxt = cur->next;\n    cur->next = nxt->next;\n\
+        \    nxt->next = prev->next;\n    prev->next = nxt;\n}\nfor (Node* node = dummy->next; node; node\
+        \ = node->next) cout << node->v << (node->next ? \" \" : \"\");\n"
+      java: "class Node {\n    int v;\n    Node next;\n    Node(int v, Node next) { this.v = v; this.next\
+        \ = next; }\n}\nNode head = null;\nfor (int v : new int[]{5, 4, 3, 2, 1}) head = new Node(v, head);\n\
+        Node dummy = new Node(0, head);\nNode prev = dummy;\nfor (int k = 0; k < 1; k++) prev = prev.next;\n\
+        Node cur = prev.next;\nfor (int k = 0; k < 2; k++) {\n    Node nxt = cur.next;\n    cur.next = nxt.next;\n\
+        \    nxt.next = prev.next;\n    prev.next = nxt;\n}\nStringBuilder sb = new StringBuilder();\nfor\
+        \ (Node node = dummy.next; node != null; node = node.next) sb.append(node.v).append(\" \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 1 4 3 2 5
+    - 1 3 2 4 5
+    - 1 2 5 4 3
+    - 5 4 3 2 1
+    answer: 0
+    explanation: cur stays pinned on node 2 while each following node is moved to the front of the segment,
+      right after prev. After two moves the segment 2, 3, 4 reads 4, 3, 2. Every step rewires exactly three
+      pointers, so it is one pass with no extra memory.
+    difficulty: 4
+  - id: cpp-splice
+    kind: mcq
+    languages:
+    - cpp
+    prompt: std::list<int> a and b exist, and it is an iterator to one element of a. What does b.splice(b.begin(),
+      a, it) cost, and what happens to it?
+    options:
+    - 'O(1): the node is relinked into b with no copy, and it stays valid, now pointing into b'
+    - 'O(n): every element of a is scanned, and it is invalidated by the move into b'
+    - 'O(1): but the element is copied into b, and it keeps pointing to the old node in a'
+    - 'O(log n): the lists are ordered trees, and it is invalidated by the move into b'
+    answer: 0
+    explanation: 'splice relinks the existing node, so no allocation and no copy occur, and references and
+      iterators to the element remain valid. This is the real advantage of a linked list over a vector:
+      stable iterators and O(1) moves once you hold a position.'
+    difficulty: 4
+  - id: lru-why
+    kind: mcq
+    prompt: An LRU cache uses a hash map from key to node plus a doubly linked list ordered by recency.
+      Why a doubly linked list rather than a singly linked one?
+    options:
+    - Removing a node found through the map in O(1) needs its predecessor, which a doubly linked list stores
+    - A singly linked list cannot be walked at all, so the doubly linked one is the only option here
+    - The map keeps its keys sorted by recency, and the list is only there to count how many entries exist
+    - Doubly linked lists need less memory per node than singly linked ones, which matters for a cache
+    answer: 0
+    explanation: On a hit you must unlink the node from the middle and move it to the front. With only a
+      next pointer you would have to search for the predecessor, which is O(n). Keeping prev makes get and
+      put O(1) in total.
+    difficulty: 4
+  - id: meeting-time
+    kind: mcq
+    prompt: A list has 3 nodes before a cycle of length 4 (the cycle starts at the node 3 steps from the
+      head). Slow moves 1 node and fast moves 2 per step, both starting at the head. After how many steps
+      do they first meet?
+    options:
+    - '4'
+    - '3'
+    - '7'
+    - '8'
+    answer: 0
+    explanation: At step 3 slow just enters the cycle while fast is already 3 nodes ahead of it inside.
+      The gap closes by one per step, so they meet when the gap would be 4 - 3 = 1 step further, at step
+      4, one node past the entry. This offset is why resetting one pointer to the head and moving both one
+      step at a time finds the entry node.
+    difficulty: 5
+  - id: remove-nth-whole-list
+    kind: bug
+    prompt: Remove the 3rd node from the end of 1 -> 2 -> 3. That is the head, so the list should become
+      2 -> 3. This code has no dummy node and stops its fast pointer with 'while fast and fast.next'. What
+      does it print?
+    code:
+      python: "class N:\n    def __init__(self, v, nx=None):\n        self.v = v\n        self.nx = nx\n\
+        \nhead = N(1, N(2, N(3)))\nn = 3\nfast = slow = head\nfor _ in range(n):\n    fast = fast.nx\nwhile\
+        \ fast and fast.nx:\n    fast = fast.nx\n    slow = slow.nx\nslow.nx = slow.nx.nx\nout = []\np =\
+        \ head\nwhile p:\n    out.append(p.v)\n    p = p.nx\nprint(*out)\n"
+      cpp: "struct N {\n    int v;\n    N* nx;\n};\nN* head = new N{1, new N{2, new N{3, nullptr}}};\nint\
+        \ n = 3;\nN* fast = head;\nN* slow = head;\nfor (int i = 0; i < n; i++) fast = fast->nx;\nwhile\
+        \ (fast && fast->nx) {\n    fast = fast->nx;\n    slow = slow->nx;\n}\nslow->nx = slow->nx->nx;\n\
+        for (N* p = head; p; p = p->nx) cout << p->v << \" \";\n"
+      java: "class T {\n    int v;\n    T nx;\n    T(int v, T nx) {\n        this.v = v;\n        this.nx\
+        \ = nx;\n    }\n}\nT head = new T(1, new T(2, new T(3, null)));\nint n = 3;\nT fast = head, slow\
+        \ = head;\nfor (int i = 0; i < n; i++) fast = fast.nx;\nwhile (fast != null && fast.nx != null)\
+        \ {\n    fast = fast.nx;\n    slow = slow.nx;\n}\nslow.nx = slow.nx.nx;\nfor (T p = head; p != null;\
+        \ p = p.nx) System.out.print(p.v + \" \");\n"
+    options:
+    - 1 3
+    - 2 3
+    - 1 2
+    - 1 2 3
+    answer: 0
+    explanation: When n equals the length, fast falls off the list after n steps, and slow is still at the
+      head. The head must be removed itself, which is why a dummy node in front (slow starting at the dummy)
+      removes the special case.
+    difficulty: 4
+problems: [playlist-editor, repeated-group-reverse]
 practice_links:
   - title: Reverse Linked List
     url: https://leetcode.com/problems/reverse-linked-list/

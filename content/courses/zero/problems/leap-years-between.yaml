@@ -1,0 +1,55 @@
+id: leap-years-between
+title: Leap years in a range
+concepts:
+- boolean-logic
+difficulty: medium
+statement: |
+  A year is a leap year if it is divisible by 4, except that years divisible by 100 are not leap
+  years unless they are also divisible by 400. Count the leap years from `a` to `b`, both
+  included.
+input_format: |
+  One line with two integers a and b.
+output_format: The number of leap years y with a ≤ y ≤ b.
+constraints:
+- 1 ≤ a ≤ b ≤ 10^18
+examples:
+- input: 1 10
+  output: '2'
+  explanation: Only 4 and 8 are leap years.
+- input: 1900 2000
+  output: '25'
+  explanation: 1904, 1908, ..., 2000 are leap years; 1900 is not.
+hints:
+- Checking every year is impossible when the range holds 10^18 numbers. Can you count the multiples of
+  4 without visiting them?
+- The multiples of 4 up to n number n // 4. Multiples of 100 must be removed, but multiples of 400 must
+  be added back.
+- Let f(n) = n // 4 - n // 100 + n // 400, the leap years from 1 to n. The answer is f(b) - f(a - 1).
+approach: |
+  Count with division instead of looping. Up to n there are n // 4 multiples of 4, of which
+  n // 100 are centuries (not leap) and n // 400 of those are leap again. So f(n) = n // 4 -
+  n // 100 + n // 400 and the answer is f(b) - f(a - 1). O(1).
+reference: |
+  a, b = map(int, input().split())
+  f = lambda n: n // 4 - n // 100 + n // 400
+  print(f(b) - f(a - 1))
+brute: |
+  a, b = map(int, input().split())
+  print(sum(1 for y in range(a, b + 1) if y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)))
+small_generator: |
+  def cases(rng):
+      for _ in range(80):
+          a = rng.randint(1, 3000)
+          yield f"{a} {a + rng.randint(0, 900)}"
+generator: |
+  def cases(rng):
+      yield "1 10"
+      yield "1900 2000"
+      yield "1 1"
+      yield "2000 2000"
+      yield "1900 1900"
+      yield "1 1000000000000000000"
+      yield "999999999999999999 1000000000000000000"
+      for _ in range(6):
+          a = rng.randint(1, 10**18)
+          yield f"{a} {rng.randint(a, 10**18)}"

@@ -45,5 +45,5 @@ def test_neutral_prose_and_explicit_tags_still_work():
 
 def test_the_reported_question_no_longer_reaches_cpp_learners():
     concept = default_catalog().concept("zero:operators-and-expressions")
-    root = next(q for q in concept.quiz if q.id == "float-root")
-    assert not root.fits("cpp") and root.fits("python")
+    wrap = next(q for q in concept.quiz if q.id == "backwards-wrap-python")
+    assert not wrap.fits("cpp") and not wrap.fits("java") and wrap.fits("python")

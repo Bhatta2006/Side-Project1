@@ -155,74 +155,181 @@ resources:
     minutes: 10
     level: deep
 quiz:
-  - id: base-case
-    kind: mcq
-    prompt: What happens if a recursive function has no reachable base case?
-    options: ["Infinite recursion until a stack overflow", "It returns 0 once there is nothing left", "It runs once and then stops by itself", "The compiler adds a base case for you"]
-    answer: 0
-    explanation: Without a stopping point, calls pile up on the call stack until it overflows.
-    difficulty: 1
-  - id: trace
+  - id: factorial
     kind: output
-    prompt: What does f(4) return?
+    prompt: factorial(n) is n times factorial(n - 1), stopping at 1. What is printed?
     code:
-      python: |
-        def f(n):
-            if n == 0:
-                return 0
-            return n + f(n - 1)
-      cpp: |
-        int f(int n) {
-            if (n == 0) return 0;
-            return n + f(n - 1);
-        }
-      java: |
-        static int f(int n) {
-            if (n == 0) return 0;
-            return n + f(n - 1);
-        }
-    options: ["10", "4", "24", "0"]
-    answer: 0
-    explanation: 4 + 3 + 2 + 1 + 0 = 10.
-    difficulty: 2
-  - id: order
-    kind: output
-    prompt: What is printed by g(3)?
-    code:
-      python: |
-        def g(n):
-            if n == 0:
-                return
-            g(n - 1)
-            print(n)
-      cpp: |
-        void g(int n) {
-            if (n == 0) return;
-            g(n - 1);
-            cout << n << "\n";
-        }
-      java: |
-        static void g(int n) {
-            if (n == 0) return;
-            g(n - 1);
-            System.out.println(n);
-        }
-    options: ["1 2 3 (one per line)", "3 2 1 (one per line)", "3", "Nothing"]
-    answer: 0
-    explanation: Each call recurses before printing, so the deepest call (n=1) prints first.
-    difficulty: 3
-  - id: memo
-    kind: mcq
-    prompt: Why is ways(n) = ways(n-1) + ways(n-2) slow without memoization?
+      python: "def fact(n):\n    if n <= 1:\n        return 1\n    return n * fact(n - 1)\nprint(fact(5))\n"
+      cpp: "function<int(int)> fact = [&](int n) -> int {\n    if (n <= 1) return 1;\n    return n * fact(n\
+        \ - 1);\n};\ncout << fact(5);\n"
+      java: "class T {\n    int fact(int n) {\n        if (n <= 1) return 1;\n        return n * fact(n\
+        \ - 1);\n    }\n}\nSystem.out.println(new T().fact(5));\n"
     options:
-      - "The same subproblems are recomputed an exponential number of times"
-      - "Adding two big numbers together is slow when n grows past about 30"
-      - "Every recursive call is slow, no matter what the function computes"
-      - "It uses too little memory, so the computer cannot cache the results"
+    - '120'
+    - '720'
+    - '125'
+    - '110'
     answer: 0
-    explanation: ways(n-2) is computed inside ways(n-1) and again directly; repeats multiply at every level.
+    explanation: 5 * 4 * 3 * 2 * 1 = 120. Each call waits for the smaller one to finish, and the base case
+      n <= 1 is where the chain of waiting ends.
+    difficulty: 1
+  - id: before-and-after
+    kind: output
+    prompt: Work done before the recursive call happens on the way down; work done after it happens on the
+      way back up. What is printed?
+    code:
+      python: "def f(n):\n    if n == 0:\n        return\n    print(n, end=\" \")\n    f(n - 1)\n    print(n,\
+        \ end=\" \")\nf(3)\n"
+      cpp: "function<void(int)> f = [&](int n) {\n    if (n == 0) return;\n    cout << n << \" \";\n   \
+        \ f(n - 1);\n    cout << n << \" \";\n};\nf(3);\n"
+      java: "class T {\n    void f(int n) {\n        if (n == 0) return;\n        System.out.print(n + \"\
+        \ \");\n        f(n - 1);\n        System.out.print(n + \" \");\n    }\n}\nnew T().f(3);\n"
+    options:
+    - 3 2 1 1 2 3
+    - 3 2 1
+    - 1 2 3 3 2 1
+    - 3 3 2 2 1 1
+    answer: 0
+    explanation: The first print runs on each call before diving deeper (3, 2, 1). When n reaches 0 the
+      calls start returning, and the second print runs in reverse order (1, 2, 3).
     difficulty: 3
-problems: [power-recursive, stairs-ways]
+  - id: fib-value
+    kind: output
+    prompt: Each Fibonacci number is the sum of the two before it, starting 0, 1. What is printed for fib(6)?
+    code:
+      python: "def fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\nprint(fib(6))\n"
+      cpp: "function<int(int)> fib = [&](int n) -> int {\n    if (n < 2) return n;\n    return fib(n - 1)\
+        \ + fib(n - 2);\n};\ncout << fib(6);\n"
+      java: "class T {\n    int fib(int n) {\n        if (n < 2) return n;\n        return fib(n - 1) +\
+        \ fib(n - 2);\n    }\n}\nSystem.out.println(new T().fib(6));\n"
+    options:
+    - '8'
+    - '13'
+    - '5'
+    - '6'
+    answer: 0
+    explanation: The sequence is 0, 1, 1, 2, 3, 5, 8, so fib(6) = 8. Two base cases are needed because each
+      call depends on two earlier values.
+    difficulty: 3
+  - id: fib-call-count
+    kind: mcq
+    prompt: The plain recursive fib(n) = fib(n - 1) + fib(n - 2) (with fib(0) = 0, fib(1) = 1) is used to
+      compute fib(5). How many calls to fib happen in total, counting the first one?
+    options:
+    - '15'
+    - '5'
+    - '8'
+    - '10'
+    answer: 0
+    explanation: Every call that is not a base case makes two more calls, and the same smaller values are
+      recomputed again and again (fib(3) is computed twice, fib(2) three times). The total grows about as
+      fast as fib itself, which is why remembering results helps.
+    difficulty: 4
+  - id: missing-base-case
+    kind: mcq
+    prompt: A recursive function calls itself with n - 1 each time, but has no base case that stops it.
+      What happens when it runs?
+    options:
+    - The calls never stop and the program crashes with a stack overflow or recursion error
+    - It stops by itself as soon as n becomes zero, then returns normally
+    - It returns 0 after a few calls, once the numbers get small enough
+    - It runs just once and then the program ends without any problem
+    answer: 0
+    explanation: Each call waits on the stack for the next one, and nothing ever returns, so the stack fills
+      until the program is stopped. Every recursive function needs a base case that returns without calling
+      itself.
+    difficulty: 2
+  - id: digit-sum-rec
+    kind: output
+    prompt: The digit sum of a number is its last digit plus the digit sum of the rest. What is printed
+      for 1234?
+    code:
+      python: "def ds(n):\n    if n == 0:\n        return 0\n    return n % 10 + ds(n // 10)\nprint(ds(1234))\n"
+      cpp: "function<int(int)> ds = [&](int n) -> int {\n    if (n == 0) return 0;\n    return n % 10 +\
+        \ ds(n / 10);\n};\ncout << ds(1234);\n"
+      java: "class T {\n    int ds(int n) {\n        if (n == 0) return 0;\n        return n % 10 + ds(n\
+        \ / 10);\n    }\n}\nSystem.out.println(new T().ds(1234));\n"
+    options:
+    - '10'
+    - '1234'
+    - '4'
+    - '24'
+    answer: 0
+    explanation: 4 + ds(123) = 4 + 3 + ds(12) = ... = 4 + 3 + 2 + 1 + 0 = 10. The input shrinks every call,
+      and the 0 case ends the chain.
+    difficulty: 3
+  - id: gcd-rec
+    kind: output
+    prompt: 'Euclid''s method: the gcd of a and b is the gcd of b and the remainder of a divided by b, until
+      b is 0. What is printed for 48 and 18?'
+    code:
+      python: "def gcd(a, b):\n    if b == 0:\n        return a\n    return gcd(b, a % b)\nprint(gcd(48,\
+        \ 18))\n"
+      cpp: "function<int(int, int)> gcd = [&](int a, int b) -> int {\n    if (b == 0) return a;\n    return\
+        \ gcd(b, a % b);\n};\ncout << gcd(48, 18);\n"
+      java: "class T {\n    int gcd(int a, int b) {\n        if (b == 0) return a;\n        return gcd(b,\
+        \ a % b);\n    }\n}\nSystem.out.println(new T().gcd(48, 18));\n"
+    options:
+    - '6'
+    - '18'
+    - '12'
+    - '3'
+    answer: 0
+    explanation: (48, 18) → (18, 12) → (12, 6) → (6, 0), which returns 6. The pair shrinks quickly each
+      step, so it finishes in very few calls.
+    difficulty: 3
+  - id: reverse-text
+    kind: output
+    prompt: Reverse a word by putting the first letter after the reversed rest. What is printed?
+    code:
+      python: "def rev(s):\n    if s == \"\":\n        return \"\"\n    return rev(s[1:]) + s[0]\nprint(rev(\"\
+        abc\"))\n"
+      cpp: "function<string(string)> rev = [&](string s) -> string {\n    if (s.empty()) return \"\";\n\
+        \    return rev(s.substr(1)) + s[0];\n};\ncout << rev(\"abc\");\n"
+      java: "class T {\n    String rev(String s) {\n        if (s.isEmpty()) return \"\";\n        return\
+        \ rev(s.substring(1)) + s.charAt(0);\n    }\n}\nSystem.out.println(new T().rev(\"abc\"));\n"
+    options:
+    - cba
+    - abc
+    - bca
+    - cab
+    answer: 0
+    explanation: rev("abc") = rev("bc") + a = (rev("c") + b) + a = (c + b) + a. The first letter is added
+      last, because the rest finishes first.
+    difficulty: 4
+  - id: wrong-base-case
+    kind: mcq
+    prompt: 'factorial is written with `if n == 1: return 1` as its only base case, and is then called with
+      factorial(0). What happens?'
+    options:
+    - It never reaches 1, because n goes 0, -1, -2 and so on, so it crashes
+    - It returns 1, because zero factorial is defined as one in maths
+    - It returns 0 straight away, because the first number is 0
+    - It prints an error message first and then returns the value 1
+    answer: 0
+    explanation: n == 1 is never true when counting down from 0, so the recursion runs away. Using n <=
+      1 (or testing 0 as well) makes the base case catch every starting value.
+    difficulty: 4
+  - id: step-by-two
+    kind: output
+    prompt: This function steps down by 2 and stops at zero or below. What is printed for 7 and for 8?
+    code:
+      python: "def total(n):\n    if n <= 0:\n        return 0\n    return n + total(n - 2)\nprint(total(7),\
+        \ total(8))\n"
+      cpp: "function<int(int)> total = [&](int n) -> int {\n    if (n <= 0) return 0;\n    return n + total(n\
+        \ - 2);\n};\ncout << total(7) << \" \" << total(8);\n"
+      java: "class T {\n    int total(int n) {\n        if (n <= 0) return 0;\n        return n + total(n\
+        \ - 2);\n    }\n}\nT t = new T();\nSystem.out.println(t.total(7) + \" \" + t.total(8));\n"
+    options:
+    - 16 20
+    - 28 36
+    - 7 8
+    - 12 20
+    answer: 0
+    explanation: '7 + 5 + 3 + 1 = 16 and 8 + 6 + 4 + 2 = 20. Using <= 0 for the base case matters: stepping
+      by 2 from 7 lands on 1 and then -1, which never equals 0.'
+    difficulty: 3
+problems: [power-recursive, stairs-ways, decode-ways]
 practice_links:
   - title: Climbing Stairs
     url: https://leetcode.com/problems/climbing-stairs/

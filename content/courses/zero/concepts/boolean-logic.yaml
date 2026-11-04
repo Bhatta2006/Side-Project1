@@ -132,59 +132,240 @@ resources:
     minutes: 10
     languages: [java]
 quiz:
-  - id: and-or
-    kind: mcq
-    prompt: "If A is true and B is false, what are (A and B) and (A or B)?"
-    options: ["false and true", "true and false", "true and true", "false and false"]
+  - id: and-or-precedence
+    kind: output
+    prompt: and binds tighter than or, like multiplication over addition. With a true, b false and c false,
+      what is printed (T means true, F means false)?
+    code:
+      python: 'a, b, c = True, False, False
+
+        print("T" if a or b and c else "F", "T" if (a or b) and c else "F")
+
+        '
+      cpp: 'bool a = true, b = false, c = false;
+
+        cout << (a || b && c ? "T" : "F") << " " << ((a || b) && c ? "T" : "F");
+
+        '
+      java: 'boolean a = true, b = false, c = false;
+
+        System.out.println((a || b && c ? "T" : "F") + " " + ((a || b) && c ? "T" : "F"));
+
+        '
+    options:
+    - T F
+    - T T
+    - F F
+    - F T
     answer: 0
-    explanation: and needs both true (so false); or needs at least one (so true).
-    difficulty: 1
-  - id: de-morgan
-    kind: mcq
-    prompt: Which is equivalent to not (x > 5 and y > 5)?
-    options: ["x <= 5 or y <= 5", "x <= 5 and y <= 5", "x > 5 or y > 5", "x < 5 and y < 5"]
-    answer: 0
-    explanation: Negate each part (> becomes <=) and flip and to or.
+    explanation: Without brackets, b and c is worked out first (false), then a or false is true. With brackets,
+      (a or b) is true but and c makes it false. Add brackets whenever you mix them.
     difficulty: 3
-  - id: range-check
-    kind: mcq
-    prompt: Which condition means "x is from 1 to 10 inclusive" in every language?
-    options: ["x >= 1 and x <= 10", "x >= 1 or x <= 10", "x > 1 and x < 10", "1 <= x or x <= 10"]
-    answer: 0
-    explanation: Both bounds must hold, so join two comparisons with and, using >= and <= for inclusive.
-    difficulty: 2
-  - id: short-circuit
-    kind: mcq
-    prompt: "In `count != 0 and total / count > 2`, what happens when count is 0?"
+  - id: de-morgan
+    kind: output
+    prompt: De Morgan's law says the opposite of 'a and b' is 'not a, or not b'. With a true and b false,
+      what is printed?
+    code:
+      python: 'a, b = True, False
+
+        print("T" if not (a and b) else "F", "T" if (not a) or (not b) else "F")
+
+        '
+      cpp: 'bool a = true, b = false;
+
+        cout << (!(a && b) ? "T" : "F") << " " << ((!a) || (!b) ? "T" : "F");
+
+        '
+      java: 'boolean a = true, b = false;
+
+        System.out.println((!(a && b) ? "T" : "F") + " " + ((!a) || (!b) ? "T" : "F"));
+
+        '
     options:
-      - "The division is skipped and the whole condition is false"
-      - "The division runs first and the program stops with an error"
-      - "Python treats the division by zero as 0, so the condition is true"
-      - "Both sides are evaluated and the result is False either way"
+    - T T
+    - T F
+    - F T
+    - F F
     answer: 0
-    explanation: Because the left side is false, and already knows the answer and never evaluates the right side.
-    difficulty: 2
-  - id: negate-both
+    explanation: a and b is false, so its opposite is true. And (not a) or (not b) is false or true, which
+      is also true. The two forms always agree, whatever the inputs.
+    difficulty: 3
+  - id: opposite-condition
     kind: mcq
-    prompt: "Which expression is equivalent to not (a and b)?"
+    prompt: Which condition is true exactly when `age >= 18` is false?
     options:
-      - "(not a) or (not b)"
-      - "(not a) and (not b)"
-      - "not a and b"
-      - "a or b"
+    - age < 18
+    - age <= 18
+    - age > 18
+    - age != 18
     answer: 0
-    explanation: "De Morgan's law: not (a and b) is true when at least one of a, b is false."
+    explanation: The opposite of 'at least 18' is 'less than 18'. Using <= would wrongly include 18 in both
+      cases, and the two conditions must never overlap or leave a gap.
+    difficulty: 2
+  - id: inclusive-range
+    kind: output
+    prompt: Is 10 inside the range 1 to 10 when both ends are allowed, and when the upper end is not? What
+      is printed?
+    code:
+      python: 'x = 10
+
+        print("T" if x >= 1 and x <= 10 else "F", "T" if x >= 1 and x < 10 else "F")
+
+        '
+      cpp: 'int x = 10;
+
+        cout << (x >= 1 && x <= 10 ? "T" : "F") << " " << (x >= 1 && x < 10 ? "T" : "F");
+
+        '
+      java: 'int x = 10;
+
+        System.out.println((x >= 1 && x <= 10 ? "T" : "F") + " " + (x >= 1 && x < 10 ? "T" : "F"));
+
+        '
+    options:
+    - T F
+    - T T
+    - F F
+    - F T
+    answer: 0
+    explanation: <= keeps the upper end in, < leaves it out. A range check needs both a lower and an upper
+      test joined by and.
+    difficulty: 2
+  - id: triangle-valid
+    kind: output
+    prompt: Three sticks form a triangle only if every pair is longer than the third. What is printed for
+      sides 3, 4 and 8?
+    code:
+      python: 'a, b, c = 3, 4, 8
+
+        ok = a + b > c and a + c > b and b + c > a
+
+        print("triangle" if ok else "no triangle")
+
+        '
+      cpp: 'int a = 3, b = 4, c = 8;
+
+        bool ok = a + b > c && a + c > b && b + c > a;
+
+        cout << (ok ? "triangle" : "no triangle");
+
+        '
+      java: 'int a = 3, b = 4, c = 8;
+
+        boolean ok = a + b > c && a + c > b && b + c > a;
+
+        System.out.println(ok ? "triangle" : "no triangle");
+
+        '
+    options:
+    - no triangle
+    - a triangle
+    - an error
+    - no output
+    answer: 0
+    explanation: 3 + 4 = 7 is not greater than 8, so the first test fails and the whole and is false. All
+      three conditions must hold, and one failure is enough to reject.
+    difficulty: 3
+  - id: negated-range
+    kind: output
+    prompt: This asks for values that are NOT strictly between 5 and 10. What is printed for 5 and for 7?
+    code:
+      python: "for x in (5, 7):\n    print(\"out\" if not (x > 5 and x < 10) else \"in\", end=\" \")\n"
+      cpp: "for (int x : {5, 7})\n    cout << (!(x > 5 && x < 10) ? \"out\" : \"in\") << \" \";\n"
+      java: "for (int x : new int[]{5, 7})\n    System.out.print((!(x > 5 && x < 10) ? \"out\" : \"in\"\
+        ) + \" \");\n"
+    options:
+    - out in
+    - in out
+    - out out
+    - in in
+    answer: 0
+    explanation: '5 is not greater than 5, so it falls outside the open range, while 7 is inside. Negating
+      a range check turns the and into an or on the outside: x <= 5 or x >= 10.'
     difficulty: 4
-  - id: guard-first
-    languages: [python]
-    kind: mcq
-    prompt: "xs may be empty. Which condition is safe to evaluate?"
+  - id: not-equal-booleans
+    kind: output
+    prompt: Comparing two true/false values with != tells you whether they differ. What is printed for the
+      pairs (true, true) and (true, false)?
+    code:
+      python: "for a, b in ((True, True), (True, False)):\n    print(\"T\" if a != b else \"F\", end=\"\
+        \ \")\n"
+      cpp: 'bool p[2][2] = {{true, true}, {true, false}};
+
+        for (auto& q : p) cout << (q[0] != q[1] ? "T" : "F") << " ";
+
+        '
+      java: 'boolean[][] p = {{true, true}, {true, false}};
+
+        for (boolean[] q : p) System.out.print((q[0] != q[1] ? "T" : "F") + " ");
+
+        '
     options:
-      - "len(xs) > 0 and xs[0] == 5"
-      - "xs[0] == 5 and len(xs) > 0"
-      - "xs[0] == 5 or len(xs) > 0"
-      - "None of them"
+    - F T
+    - T F
+    - T T
+    - F F
     answer: 0
-    explanation: "and stops at the first false operand, so the length check must come first to protect xs[0]."
+    explanation: Two equal values do not differ, so the first is false; true against false does differ.
+      This 'exactly one of them' test is called exclusive or.
+    difficulty: 3
+  - id: python-chain
+    kind: output
+    languages:
+    - python
+    prompt: Python allows a chained comparison that reads like maths. What is printed for x = 20 and then
+      x = 5?
+    code:
+      python: "for x in (20, 5):\n    print(\"T\" if 1 < x < 10 else \"F\", end=\" \")\n"
+    options:
+    - F T
+    - T T
+    - T F
+    - F F
+    answer: 0
+    explanation: 1 < x < 10 means both 1 < x and x < 10, so 20 fails the second test and 5 passes both.
+      Other languages do not allow this form.
+    difficulty: 3
+  - id: cpp-chain-trap
+    kind: output
+    languages:
+    - cpp
+    prompt: In C++, `1 < x < 10` compiles but does not mean what it looks like. What is printed for x =
+      20?
+    code:
+      cpp: 'int x = 20;
+
+        cout << (1 < x < 10 ? "in range" : "out of range");
+
+        '
+    options:
+    - in range
+    - out of range
+    - Compile error
+    - Nothing
+    answer: 0
+    explanation: 1 < x is evaluated first and gives 1 (true). Then 1 < 10 is true again, so the whole thing
+      is always true. You must write x > 1 && x < 10.
     difficulty: 5
-problems: [leap-year, club-entry]
+  - id: or-default
+    kind: output
+    languages:
+    - python
+    prompt: In Python, `or` gives back the first value that is true, which makes it handy for a fallback.
+      What is printed?
+    code:
+      python: 'name = ""
+
+        print(name or "guest", 0 or 7, 3 and 4)
+
+        '
+    options:
+    - guest 7 4
+    - guest 0 3
+    - True True True
+    - ''''' 7 3'
+    answer: 0
+    explanation: An empty string is false, so or moves on to "guest". For and, if the left value is true
+      the result is the right value, 4. The operators return a value, not just True or False.
+    difficulty: 5
+problems: [leap-year, club-entry, leap-years-between]

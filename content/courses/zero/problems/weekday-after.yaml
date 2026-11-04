@@ -1,0 +1,58 @@
+id: weekday-after
+title: Which day will it be?
+concepts:
+- operators-and-expressions
+difficulty: medium
+statement: |
+  Days of the week are numbered 0 to 6, where 0 is Monday and 6 is Sunday. Today is day `d`. What
+  day of the week is it `n` days from now? A negative `n` means that many days in the past.
+input_format: |
+  One line with d and n.
+output_format: The weekday number (0 to 6) after n days.
+constraints:
+- 0 ≤ d ≤ 6
+- -10^18 ≤ n ≤ 10^18
+examples:
+- input: 0 10
+  output: '3'
+  explanation: Monday plus 10 days is a Thursday.
+- input: 2 -5
+  output: '4'
+  explanation: Going 5 days back from Wednesday lands on Friday.
+hints:
+- A week repeats every 7 days, so only the remainder of n divided by 7 matters.
+- For a negative n, many languages give a negative remainder (C++ and Java). The result must be between
+  0 and 6.
+- Compute ((d + n) % 7 + 7) % 7. In Python plain (d + n) % 7 is already fine.
+approach: |
+  The answer is (d + n) modulo 7, normalised into 0..6. In C++ and Java, the remainder of a
+  negative number is negative, so add 7 and take the remainder again. O(1).
+reference: |
+  d, n = map(int, input().split())
+  print((d + n) % 7)
+brute: |
+  d, n = map(int, input().split())
+  step = 1 if n >= 0 else -1
+  for _ in range(abs(n)):
+      d += step
+      if d == 7:
+          d = 0
+      if d == -1:
+          d = 6
+  print(d)
+small_generator: |
+  def cases(rng):
+      for _ in range(80):
+          yield f"{rng.randint(0, 6)} {rng.randint(-40, 40)}"
+generator: |
+  def cases(rng):
+      yield "0 10"
+      yield "2 -5"
+      yield "6 1"
+      yield "0 -1"
+      yield "3 0"
+      yield f"0 {-10**18}"
+      yield f"6 {10**18}"
+      yield f"3 {-10**18 + 3}"
+      for _ in range(6):
+          yield f"{rng.randint(0, 6)} {rng.randint(-10**18, 10**18)}"
