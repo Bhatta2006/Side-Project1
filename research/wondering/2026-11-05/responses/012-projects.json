@@ -1,0 +1,39 @@
+{
+ "id": "<id-4>",
+ "user_id": "<id-1>",
+ "name": "Fraction Game Quest",
+ "description": "Level up your math skills by tackling exciting puzzle quests where you will compare, add, and subtract fractions like a pro.\n\n* **Comparing different fractions** using visual game-style challenges\n* **Adding fractions together** with matching and different denominators\n* **Subtracting fraction amounts** like sharing pizza power-ups\n* **Solving fraction puzzles** to level up math confidence",
+ "created_at": "2026-11-05T02:37:13.796574+00:00",
+ "updated_at": "2026-11-05T02:37:19.267+00:00",
+ "deleted_at": null,
+ "last_reviewed_at": null,
+ "mindmap": null,
+ "outline": null,
+ "study_notes": null,
+ "dictionary": null,
+ "source_id": null,
+ "library_source_id": null,
+ "cover_image_path": null,
+ "personalize_metadata": {
+  "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+  "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+  "contentLanguage": "en",
+  "learningGoalSummary": {
+   "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+   "summary": "Compare, add, and subtract fractions through fun game challenges."
+  },
+  "lessonDepthPreference": "standard",
+  "generationModelProfile": "quality",
+  "personalizationEnabled": true
+ },
+ "course_intro": {
+  "intro": "Level up your math skills by tackling exciting puzzle quests where you will compare, add, and subtract fractions like a pro.",
+  "achievements": "* **Comparing different fractions** using visual game-style challenges\n* **Adding fractions together** with matching and different denominators\n* **Subtracting fraction amounts** like sharing pizza power-ups\n* **Solving fraction puzzles** to level up math confidence"
+ },
+ "hidden_from_profile": false,
+ "podcast_custom_prompt": null,
+ "podcast_settings": null,
+ "archived_at": null,
+ "library_material_created_at": null,
+ "last_opened_at": null
+}

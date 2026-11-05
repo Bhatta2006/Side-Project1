@@ -1,0 +1,176 @@
+[
+ {
+  "id": "<id-6>",
+  "user_id": "<id-1>",
+  "node_id": "<id-5>",
+  "practices": [
+   "<id-13>",
+   "<id-14>",
+   "<id-15>",
+   "<id-16>",
+   "<id-17>",
+   "<id-18>"
+  ],
+  "status": "planned",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:38:02.329+00:00",
+  "total_practices": 6,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "What do the top and bottom numbers in a fraction secretly tell you?",
+   "name": "Fraction Parts",
+   "meaning": "Knowing the numerator and denominator lets you read any fraction, not just halves and quarters.",
+   "generation": {
+    "pages": {
+     "promptId": "lessonPagesJoint",
+     "promptHash": "5dcc85db3e1d",
+     "requestGroupId": "<id-49>"
+    },
+    "practices": {
+     "model": "anthropic:claude-opus-5-5",
+     "promptId": "practices",
+     "promptHash": "e7f8941ba4a1",
+     "requestGroupId": "<id-49>",
+     "contentLanguage": "en"
+    },
+    "stampedAt": "2026-11-05T02:38:01.983Z",
+    "modelProfile": "quality",
+    "requestGroupId": "<id-49>",
+    "contentLanguage": "en"
+   },
+   "generation_experiments": {
+    "joint-lesson-generation": {
+     "variant": "joint_opus",
+     "flag_key": "joint-lesson-generation",
+     "assigned_at": "2026-11-05T02:37:26.763Z",
+     "fallback_used": false,
+     "assignment_source": "quality_profile"
+    }
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 0,
+  "generation_phase": "saving",
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-5>",
+   "name": "Fraction Parts",
+   "type": "Lesson",
+   "content": {
+    "pages": [
+     {
+      "content": "What do the top and bottom numbers in a fraction secretly tell you? Each one has its own job.\n\nEvery fraction has two parts. There is one number on top of a line and one number below it.\n\n{{interactive:lesson-compare-toggle data='{\"title\":\"Top number vs bottom number\",\"left\":{\"label\":\"Numerator (top)\",\"points\":[\"Sits above the line\",\"How many parts you have\"]},\"right\":{\"label\":\"Denominator (bottom)\",\"points\":[\"Sits below the line\",\"How many equal parts in the whole\"]}}'}}\n\nThe bottom number is the **denominator**. It tells how many equal parts the whole is split into.\n\nThe top number is the **numerator**. It tells how many of those parts you have. Read them together and you can read any fraction.",
+      "heading": "Two Numbers, One Line"
+     },
+     {
+      "content": "Start at the bottom. The denominator counts the equal pieces that make up one whole thing.\n\nIf a pizza, a health bar, or a treasure map is cut into **8 equal pieces**, the denominator is **8**.\n\n![A pizza cut into 8 equal slices](https://mvhwfzawowaxyivkmjdv.supabase.co/storage/v1/object/public/lesson-illustrations/2026/11/1793846276552-af50549c.png)\n\n*Count all 8 equal slices in the whole pizza: that total is the denominator, the number that goes on the bottom.*\n\nIt does not matter what the object is. Count the equal pieces in the whole, and that count goes on the bottom.\n\nTip: count *every* piece, including the ones you do not have.",
+      "heading": "The Denominator Splits the Whole"
+     },
+     {
+      "content": "Now the top. The numerator tells how many of those equal parts you have, are using, or are counting.\n\nSay you have collected **5** of the **8** pieces of a treasure map. The numerator is 5.\n\n![A treasure map in 8 equal pieces, 5 collected](https://mvhwfzawowaxyivkmjdv.supabase.co/storage/v1/object/public/lesson-illustrations/2026/11/1793846277665-a38dd4ee.png)\n\n*Five bright pieces are collected out of 8 equal pieces, so the fraction of the map you have is 5/8.*\n\nPut the top over the bottom and you get $$\\frac{5}{8}$$, which means 5 out of 8 equal parts.\n\nThe bottom is the whole. The top is your share of it.",
+      "heading": "The Numerator Counts Your Parts"
+     },
+     {
+      "content": "You already know halves and quarters. They follow the same rule.\n\n**1/2** means the whole is split into 2 equal parts and you have 1 of them. **1/4** means 4 equal parts and you have 1.\n\nThe same rule works for every fraction, like **3/5**, **7/10**, or **2/3**.\n\n{{interactive:lesson-table data='{\"title\":\"One rule, every fraction\",\"columns\":[\"Fraction\",\"Equal parts (bottom)\",\"Parts you have (top)\"],\"rows\":[[\"1/2\",\"2\",\"1\"],[\"1/4\",\"4\",\"1\"],[\"3/5\",\"5\",\"3\"],[\"7/10\",\"10\",\"7\"],[\"2/3\",\"3\",\"2\"]]}'}}\n\nBottom number: parts in the whole. Top number: parts you have. Check each one in the table.",
+      "heading": "Halves, Quarters, and Beyond"
+     },
+     {
+      "content": "Imagine a game hero whose health bar is split into **8 equal blocks**, and **5 blocks** are still glowing.\n\nShould the hero fight the next boss or grab a potion first? Reading the fraction answers it.\n\n{{interactive:lesson-stepper data='{\"title\":\"Health bar to fraction\",\"steps\":[{\"label\":\"Count the whole\",\"text\":\"The bar has 8 equal blocks, so the denominator is 8.\"},{\"label\":\"Count what\\u0027s left\",\"text\":\"5 blocks still glow, so the numerator is 5.\"},{\"label\":\"Write it\",\"text\":\"Put 5 over 8 to get 5/8, or 5 out of 8 equal parts.\"},{\"label\":\"Decide\",\"text\":\"5/8 is more than 4/8, one half, so the hero can fight the boss.\"}]}'}}\n\nCount the whole bar for the bottom number. Count the glowing blocks for the top number.\n\nSince 5/8 is more than 4/8, which is one half, the hero has more than half health and can take on the boss.",
+      "heading": "Reading a Hero's Health Bar"
+     },
+     {
+      "content": "The parts must be **equal** for the fraction to make sense.\n\n{{interactive:wondering-lens data='{\"title\":\"Is 1 of 2 always one half?\",\"body\":\"Picture a bar split into 2 pieces, one big and one tiny. You hold 1 of the 2 pieces, yet is that really one half? Think about why the rule says the parts must be equal.\"}'}}\n\nA **bigger denominator** means the whole is cut into more pieces, so each piece is smaller. A quarter piece is smaller than a half piece.\n\nA **bigger numerator**, with the same denominator, means you have more of those pieces. That is why 5/8 is more than 4/8.",
+      "heading": "Equal Parts and Piece Size"
+     },
+     {
+      "content": "Knowing the numerator and denominator is your power-up.\n\nSpot it in any fraction. The bottom number tells how many equal parts are in the whole. The top number tells how many of those parts you have.\n\nTo explain it to a friend, try this: *the bottom splits, the top counts*.\n\n{{interactive:pyramid-visualization data='{\"title\":\"Level up with fractions\",\"levels\":[{\"id\":\"level-0\",\"label\":\"Compare, add, subtract\",\"description\":\"The game challenges coming next.\"},{\"id\":\"level-1\",\"label\":\"Read any fraction\",\"description\":\"Like 5/8, 3/5, 7/10, or 2/3.\"},{\"id\":\"level-2\",\"label\":\"Numerator and denominator\",\"description\":\"Top counts your parts, bottom splits the whole.\"}],\"footer\":\"Each level rests on the one below.\"}'}}\n\nThis skill lets you read any fraction and gets you ready for game challenges where you compare, add, and subtract fractions.",
+      "heading": "Your Fraction Power-Up"
+     }
+    ],
+    "concepts": [
+     {
+      "name": "Numerator and Denominator",
+      "scenario": "Imagine a game hero whose health bar is split into 8 equal blocks, and 5 blocks are still glowing. The player has to read the hero's health as a fraction to decide whether it is safe to fight the next boss or better to grab a potion first.",
+      "description": "The bottom number (denominator) tells how many equal parts the whole is split into. The top number (numerator) tells how many of those parts you have. Knowing both lets you read any fraction, not only halves and quarters.",
+      "workedExample": "Step 1: Count the equal blocks in the whole bar. There are 8, so the denominator (bottom number) is 8. Step 2: Count the glowing blocks you still have. There are 5, so the numerator (top number) is 5. Step 3: Put the top number over the bottom number to get 5/8, which means 5 out of 8 equal parts. Since 5/8 is more than 4/8 (one half), the hero has more than half health and can take on the boss."
+     }
+    ],
+    "keywords": [
+     {
+      "name": "Fraction",
+      "description": "A number with one number over a line and one below, showing parts of a whole."
+     },
+     {
+      "name": "Numerator",
+      "description": "The top number of a fraction; how many equal parts you have."
+     },
+     {
+      "name": "Denominator",
+      "description": "The bottom number of a fraction; how many equal parts the whole is split into."
+     },
+     {
+      "name": "Equal parts",
+      "description": "Pieces of a whole that are all the same size."
+     },
+     {
+      "name": "Whole",
+      "description": "The complete object, like a pizza or health bar, before you count its parts."
+     }
+    ],
+    "sourceContent": "Fraction Game Quest, Power Up: Fraction Parts. What do the top and bottom numbers in a fraction secretly tell you? Every fraction has two parts, one number on top of a line and one number below it. The bottom number is the denominator. It tells you how many equal parts the whole is split into. If a pizza, a health bar, or a treasure map is cut into 8 equal pieces, the denominator is 8. The top number is the numerator. It tells you how many of those equal parts you have, are using, or are counting. If you have collected 5 of the 8 pieces, the numerator is 5, and the fraction is 5/8. You already know halves and quarters. One half, 1/2, means the whole is split into 2 equal parts and you have 1 of them. One quarter, 1/4, means the whole is split into 4 equal parts and you have 1 of them. The same rule works for every fraction, like 3/5, 7/10, or 2/3. The parts must be equal for the fraction to make sense. A bigger denominator means the whole is cut into more pieces, so each piece is smaller. A bigger numerator, with the same denominator, means you have more of those pieces. Knowing the numerator and denominator is your power-up: it lets you read any fraction and gets you ready for game challenges where you compare, add, and subtract fractions.",
+    "followUpQuestions": [
+     "What if my numerator is bigger than the denominator, like 9/8 health blocks?",
+     "Why does a bigger denominator make each piece smaller if the number is bigger?",
+     "If pizza slices aren't cut equally, can I still call my slice 1/8?"
+    ],
+    "generatedLessonDepth": "standard"
+   },
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-9>",
+    "difficulty": "beginner",
+    "lessonIndex": 0,
+    "sectionIndex": 0,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "practices": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:58.972212+00:00"
+  }
+ }
+]

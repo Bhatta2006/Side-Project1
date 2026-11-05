@@ -1,0 +1,88 @@
+{
+ "type": "lesson_plan",
+ "courseTitle": "Fraction Game Quest",
+ "sections": [
+  {
+   "name": "Power Up",
+   "lessons": [
+    {
+     "name": "Fraction Parts",
+     "hook": "What do the top and bottom numbers in a fraction secretly tell you?",
+     "meaning": "Knowing the numerator and denominator lets you read any fraction, not just halves and quarters."
+    },
+    {
+     "name": "Pizza Slices",
+     "hook": "Would you rather have 1/3 or 1/8 of a pizza?",
+     "meaning": "Seeing fractions as pieces of a whole helps you picture how big they really are."
+    },
+    {
+     "name": "Equal Fractions",
+     "hook": "How can 2/4 and 1/2 be the exact same amount?",
+     "meaning": "Spotting equal fractions is the secret key for comparing, adding, and subtracting."
+    }
+   ]
+  },
+  {
+   "name": "Fraction Battles",
+   "lessons": [
+    {
+     "name": "Same Bottoms",
+     "hook": "In a battle between 3/8 and 5/8, who wins?",
+     "meaning": "When the denominators match, you can compare fractions just by looking at the top numbers."
+    },
+    {
+     "name": "Same Tops",
+     "hook": "Why does 1/2 beat 1/10 even though 10 is bigger?",
+     "meaning": "This shows that more pieces means smaller pieces, a key fraction idea."
+    },
+    {
+     "name": "Benchmark Half",
+     "hook": "Can you tell if 3/7 is bigger or smaller than one half in a flash?",
+     "meaning": "Using 1/2 as a checkpoint helps you compare fractions quickly in your head."
+    },
+    {
+     "name": "Boss Battle",
+     "hook": "Can you rank four tricky fractions from smallest to biggest?",
+     "meaning": "Putting your comparing skills together makes you ready for any fraction challenge."
+    }
+   ]
+  },
+  {
+   "name": "Adding Quests",
+   "lessons": [
+    {
+     "name": "Add Same",
+     "hook": "If you collect 2/5 of a treasure map and then 1/5 more, how much do you have?",
+     "meaning": "Adding fractions with the same denominator is the first step to fraction adding."
+    },
+    {
+     "name": "Add Different",
+     "hook": "How do you add 1/2 and 1/4 when the pieces are different sizes?",
+     "meaning": "Making the pieces the same size lets you add any two fractions."
+    }
+   ]
+  },
+  {
+   "name": "Subtracting Quests",
+   "lessons": [
+    {
+     "name": "Subtract Same",
+     "hook": "Your health bar is at 7/8 and a monster takes 3/8, so what's left?",
+     "meaning": "Subtracting fractions with the same denominator helps you find what's left over."
+    },
+    {
+     "name": "Subtract Different",
+     "hook": "If you had 3/4 of a cake and ate 1/2, how much remains?",
+     "meaning": "Matching denominators first lets you subtract any fractions with confidence."
+    },
+    {
+     "name": "Final Quest",
+     "hook": "Can you beat the final level by mixing comparing, adding, and subtracting?",
+     "meaning": "Using every skill together proves you've mastered the fraction game."
+    }
+   ]
+  }
+ ],
+ "stage": "outline",
+ "lessonPlanId": "<id-3>"
+}

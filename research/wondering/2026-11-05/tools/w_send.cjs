@@ -1,0 +1,22 @@
+const { chromium } = require('playwright');
+(async () => {
+  const [out, label, also, wait] = process.argv.slice(2);
+  const browser = await chromium.connectOverCDP('http://127.0.0.1:9223');
+  const page = browser.contexts()[0].pages()[0];
+  if (also) await page.getByRole('button', { name: also, exact: true }).last().click().catch(() => page.getByText(also, { exact: true }).last().click());
+  const icons = page.locator('button:visible').filter({ hasText: /^\s*$/ });
+  console.log('icon-only buttons:', await icons.count());
+  const send = icons.last();
+  const labels = await page.locator('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')).filter(Boolean));
+  console.log('aria labels:', JSON.stringify(labels.slice(-8)));
+  const t0 = Date.now();
+  await send.click();
+  await page.waitForTimeout(Number(wait || 25000));
+  await page.screenshot({ path: `${out}/${label}.png`, fullPage: true });
+  console.log('url:', page.url(), '| waited ms:', Date.now() - t0);
+  const main = await page.locator('main').first().innerText().catch(() => page.locator('body').innerText());
+  console.log(main.slice(-1400).replace(/\n+/g, ' | '));
+  const btns = await page.locator('button').evaluateAll(els => els.map(e => e.innerText.trim()).filter(t => t && t.length < 60));
+  console.log('buttons:', JSON.stringify([...new Set(btns)].slice(-20)));
+  await browser.close();
+})().catch(e => { console.error(e.message); process.exit(1); });

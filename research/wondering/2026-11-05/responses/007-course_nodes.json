@@ -1,0 +1,362 @@
+[
+ {
+  "id": "<id-5>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Fraction Parts",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-9>",
+   "difficulty": "beginner",
+   "lessonIndex": 0,
+   "sectionIndex": 0,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-20>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Pizza Slices",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-9>",
+   "difficulty": "beginner",
+   "lessonIndex": 1,
+   "sectionIndex": 0,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-21>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Equal Fractions",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-9>",
+   "difficulty": "beginner",
+   "lessonIndex": 2,
+   "sectionIndex": 0,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-22>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Same Bottoms",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-10>",
+   "difficulty": "beginner",
+   "lessonIndex": 0,
+   "sectionIndex": 1,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-23>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Same Tops",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-10>",
+   "difficulty": "beginner",
+   "lessonIndex": 1,
+   "sectionIndex": 1,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-24>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Benchmark Half",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-10>",
+   "difficulty": "beginner",
+   "lessonIndex": 2,
+   "sectionIndex": 1,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-25>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Boss Battle",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-10>",
+   "difficulty": "beginner",
+   "lessonIndex": 3,
+   "sectionIndex": 1,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-26>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Add Same",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-11>",
+   "difficulty": "beginner",
+   "lessonIndex": 0,
+   "sectionIndex": 2,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-27>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Add Different",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-11>",
+   "difficulty": "beginner",
+   "lessonIndex": 1,
+   "sectionIndex": 2,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-28>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Subtract Same",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-12>",
+   "difficulty": "beginner",
+   "lessonIndex": 0,
+   "sectionIndex": 3,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-29>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Subtract Different",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-12>",
+   "difficulty": "beginner",
+   "lessonIndex": 1,
+   "sectionIndex": 3,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-30>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Final Quest",
+  "content": {
+   "concepts": [],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-12>",
+   "difficulty": "beginner",
+   "lessonIndex": 2,
+   "sectionIndex": 3,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.197621+00:00",
+  "updated_at": "2026-11-05T02:37:14.197621+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ }
+]

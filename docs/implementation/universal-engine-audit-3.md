@@ -247,6 +247,9 @@ the analysis files stay in the scratch folder, not in this repository.
 
 ## 9. Wondering, signed in: how a course and its practice are actually generated
 
+The full record (every recorded call, the responses, screenshots, static findings and the
+scripts used) is in `research/wondering/2026-11-05/`; start with its `README.md`.
+
 Run on 2026-11-05 with the owner's own Wondering account (one-time email code, isolated headless
 browser profile deleted afterwards). One test course was created ("Teach me fractions, I am 10
 and like games"). A recorder logged their backend calls: timings, paths, statuses and response

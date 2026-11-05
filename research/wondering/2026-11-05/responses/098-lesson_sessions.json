@@ -1,0 +1,69 @@
+{
+ "status": "generating",
+ "course_nodes": {
+  "content": {
+   "pages": [
+    {
+     "content": "Imagine your game character is low on health. A pizza power-up appears, and you get to pick a slice.\n\nWould you rather have **1/3** or **1/8** of the pizza?\n\n{{interactive:wondering-lens data='{\"title\":\"Does a bigger number mean a bigger slice?\",\"body\":\"8 is a bigger number than 3. But is 1/8 of a pizza bigger than 1/3 of a pizza? Make your guess now, then check it as you read on.\"}'}}\n\nThe bigger slice gives more health points. So which one is bigger?\n\nLots of players see the 8 and think 1/8 must win. Let us find out by picturing the pizza.",
+     "heading": "The Pizza Health Boost"
+    },
+    {
+     "content": "A **fraction** names part of a whole that has been cut into **equal pieces**.\n\nThe bottom number is the **denominator**. It tells how many equal pieces the whole is split into.\n\nThe top number is the **numerator**. It tells how many of those pieces you have.\n\n{{interactive:lesson-compare-toggle data='{\"title\":\"Two numbers, two jobs\",\"left\":{\"label\":\"Numerator (top)\",\"points\":[\"How many pieces you have\"]},\"right\":{\"label\":\"Denominator (bottom)\",\"points\":[\"How many equal pieces the whole is split into\"]}}'}}\n\nIn 1/3, the 3 says the pizza has 3 equal slices. The 1 says you get one of them.",
+     "heading": "Top Number, Bottom Number"
+    },
+    {
+     "content": "You already know some fractions. **1/2** means one of 2 equal pieces.\n\n**1/4** means one of 4 equal pieces.\n\nThe same idea works for any fraction. **1/3** means 1 of 3 equal slices. **1/8** means 1 of 8 equal slices.\n\n{{interactive:lesson-table data='{\"title\":\"Same idea, any fraction\",\"columns\":[\"Fraction\",\"Whole cut into\",\"You get\"],\"rows\":[[\"1/2\",\"2 equal pieces\",\"1 piece\"],[\"1/4\",\"4 equal pieces\",\"1 piece\"],[\"1/3\",\"3 equal slices\",\"1 slice\"],[\"1/8\",\"8 equal slices\",\"1 slice\"]]}'}}\n\nCheck the bottom number to see how the pizza is cut.",
+     "heading": "Halves and Quarters You Know"
+    },
+    {
+     "content": "Suppose you take one pizza and cut it into **3 equal slices**.\n\nYou grab 1 of those slices. That is **1/3** of the pizza.\n\n{{interactive:lesson-stepper data='{\"title\":\"Making 1/3\",\"steps\":[{\"label\":\"Start whole\",\"text\":\"Begin with one whole pizza.\"},{\"label\":\"Cut into 3\",\"text\":\"Cut it into 3 equal slices.\"},{\"label\":\"Take 1\",\"text\":\"Grab 1 of those slices.\"},{\"label\":\"Name it\",\"text\":\"You have 1 out of 3 equal slices, which is 1/3.\"}]}'}}\n\nWith only 3 slices sharing the whole pizza, each slice is big. Picture a wide, chunky slice.\n\nThe slices must be equal. A fraction always counts equal pieces.",
+     "heading": "Building 1/3, Step by Step"
+    },
+    {
+     "content": "Now imagine the **same-size pizza**, cut into **8 equal slices**.\n\nYou take 1 slice. That is **1/8** of the pizza.\n\nThe pizza did not grow. The same amount of pizza is now shared by 8 slices instead of 3.\n\nSo every slice gets much **thinner**.\n\n![Two same-size pizzas, one cut into 3 slices and one cut into 8 slices](https://mvhwfzawowaxyivkmjdv.supabase.co/storage/v1/object/public/lesson-illustrations/2026/11/1793846456728-3b4eebff.png)\n\n*Both pizzas are the same size, but the left one has 3 slices and the right one has 8, so the highlighted slice on the right is much thinner.*",
+     "heading": "Now Cut It Into 8"
+    },
+    {
+     "content": "Put the two slices next to each other. The slice from the pizza cut into 3 is much bigger.\n\nSo **1/3 is bigger than 1/8**.\n\n{{interactive:comparison-visualization data='{\"title\":\"1/3 vs 1/8\",\"items\":[{\"id\":\"item-0\",\"label\":\"1/3\",\"attributes\":{\"Whole cut into\":\"3 equal slices\",\"Slice size\":\"Big and wide\",\"Health refill\":\"More health\"},\"details\":{\"Slice size\":\"Only 3 slices share the pizza, so each one gets a lot.\"}},{\"id\":\"item-1\",\"label\":\"1/8\",\"attributes\":{\"Whole cut into\":\"8 equal slices\",\"Slice size\":\"Much thinner\",\"Health refill\":\"Less health\"},\"details\":{\"Slice size\":\"The same pizza is shared by 8 slices, so each one is smaller.\"}}],\"commonFeatures\":[\"Same-size pizza\",\"You take 1 slice\"]}'}}\n\nPick 1/3 and you fill more of your health bar. Your guess from the start? Now you can check it.\n\nRemember: more equal cuts in the same pizza make each slice smaller.",
+     "heading": "The Bigger Slice Wins"
+    },
+    {
+     "content": "Drawing or imagining the whole and its pieces is your **first power-up**.\n\nIt lets you see how big a fraction really is before you do any comparing, adding, or subtracting.\n\n{{interactive:pyramid-visualization data='{\"title\":\"Level up with fractions\",\"levels\":[{\"id\":\"level-0\",\"label\":\"Compare, add, subtract\",\"description\":\"The fraction moves you will learn next.\"},{\"id\":\"level-1\",\"label\":\"Picture the pieces\",\"description\":\"Draw or imagine the whole and its equal pieces.\"}],\"footer\":\"Picturing the pieces comes first, and everything else builds on it.\"}'}}\n\nWhen you meet a fraction, ask: How many equal pieces is the whole cut into? How many do I have?\n\nThen picture it. You will spot the bigger slice fast.",
+     "heading": "Your First Power-Up"
+    }
+   ],
+   "concepts": [
+    {
+     "name": "Fractions as pieces of a whole",
+     "scenario": "Would you rather have 1/3 or 1/8 of a pizza? Imagine your game character needs pizza to refill a health bar, and the bigger slice gives more health points.",
+     "description": "A fraction tells how many equal pieces you get (top number) out of how many equal pieces the whole is cut into (bottom number). Picturing the pieces shows how big a fraction really is.",
+     "workedExample": "Imagine cutting one pizza into 3 equal slices and taking 1 of them: that's 1/3. Now cut the same-size pizza into 8 equal slices and take 1: that's 1/8. Cutting into 8 makes each slice much thinner than cutting into 3. So 1/3 is the bigger slice, and choosing it fills more of your health bar."
+    }
+   ],
+   "keywords": [
+    {
+     "name": "Fraction",
+     "description": "A number that names part of a whole cut into equal pieces."
+    },
+    {
+     "name": "Numerator",
+     "description": "The top number of a fraction; how many pieces you have."
+    },
+    {
+     "name": "Denominator",
+     "description": "The bottom number of a fraction; how many equal pieces the whole is split into."
+    },
+    {
+     "name": "Equal pieces",
+     "description": "Parts of a whole that are all exactly the same size."
+    },
+    {
+     "name": "Whole",
+     "description": "The complete thing, like one entire pizza, before it is cut."
+    }
+   ],
+   "sourceContent": "Lesson 1, Pizza Slices (Power Up). Hook: Would you rather have 1/3 or 1/8 of a pizza? Meaning: Seeing fractions as pieces of a whole helps you picture how big they really are. A fraction names part of a whole that has been cut into equal pieces. The bottom number, called the denominator, tells how many equal pieces the whole is split into. The top number, called the numerator, tells how many of those pieces you have. You already know halves and quarters: 1/2 means one of 2 equal pieces, and 1/4 means one of 4 equal pieces. The same idea works for any fraction. 1/3 means the pizza is cut into 3 equal slices and you get 1 of them. 1/8 means the pizza is cut into 8 equal slices and you get 1 of them. When you picture the pizza, you can see that the slices in a pizza cut into 3 are much bigger than the slices in a pizza cut into 8. Drawing or imagining the whole and its pieces is your first power-up: it lets you see how big a fraction really is before you do any comparing, adding, or subtracting.",
+   "generatedLessonDepth": "standard"
+  }
+ }
+}

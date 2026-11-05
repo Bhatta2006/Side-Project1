@@ -1,0 +1,23 @@
+[
+ {
+  "id": "<id-4>",
+  "name": "Fraction Game Quest",
+  "created_at": "2026-11-05T02:37:13.796574+00:00",
+  "archived_at": null,
+  "cover_image_path": "user/<id-4>.png",
+  "personalize_metadata": {
+   "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+   "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+   "contentLanguage": "en",
+   "learningGoalSummary": {
+    "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "summary": "Compare, add, and subtract fractions through fun game challenges."
+   },
+   "lessonDepthPreference": "standard",
+   "generationModelProfile": "quality",
+   "personalizationEnabled": true
+  },
+  "source_links": null,
+  "source_files": null
+ }
+]

@@ -1,0 +1,10 @@
+{
+ "coverImagePath": "user/<id-4>.png",
+ "publicUrl": "https://mvhwfzawowaxyivkmjdv.supabase.co/storage/v1/object/public/course-covers/user/<id-4>.png",
+ "palette": "original",
+ "objects": {
+  "object_1": "A glowing arcade joystick base featuring two chunky neon numbers stacked vertically as the shaft. (represents The secret meaning of top and bottom fraction numbers.)",
+  "object_2": "Two semi-transparent glowing pizza slices with grid lines floating side by side for comparison. (represents Comparing fractions.)",
+  "object_3": "A glowing arcade score-tally screen showing two fraction blocks merging into one total block. (represents Adding and subtracting fractions.)"
+ }
+}

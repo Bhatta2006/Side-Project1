@@ -1,0 +1,26 @@
+{
+ "type": "lesson_plan",
+ "sections": [
+  {
+   "name": "Power Up",
+   "lessons": [
+    {
+     "name": "Fraction Parts",
+     "hook": "What do the top and bottom numbers in a fraction secretly tell you?",
+     "meaning": "Knowing the numerator and denominator lets you read any fraction, not just halves and quarters.",
+     "concepts": [
+      {
+       "name": "Numerator and Denominator",
+       "description": "The bottom number (denominator) tells how many equal parts the whole is split into. The top number (numerator) tells how many of those parts you have. Knowing both lets you read any fraction, not only halves and quarters.",
+       "scenario": "Imagine a game hero whose health bar is split into 8 equal blocks, and 5 blocks are still glowing. The player has to read the hero's health as a fraction to decide whether it is safe to fight the next boss or better to grab a potion first.",
+       "workedExample": "Step 1: Count the equal blocks in the whole bar. There are 8, so the denominator (bottom number) is 8. Step 2: Count the glowing blocks you still have. There are 5, so the numerator (top number) is 5. Step 3: Put the top number over the bottom number to get 5/8, which means 5 out of 8 equal parts. Since 5/8 is more than 4/8 (one half), the hero has more than half health and can take on the boss."
+      }
+     ],
+     "sourceContent": "Fraction Game Quest, Power Up: Fraction Parts. What do the top and bottom numbers in a fraction secretly tell you? Every fraction has two parts, one number on top of a line and one number below it. The bottom number is the denominator. It tells you how many equal parts the whole is split into. If a pizza, a health bar, or a treasure map is cut into 8 equal pieces, the denominator is 8. The top number is the numerator. It tells you how many of those equal parts you have, are using, or are counting. If you have collected 5 of the 8 pieces, the numerator is 5, and the fraction is 5/8. You already know halves and quarters. One half, 1/2, means the whole is split into 2 equal parts and you have 1 of them. One quarter, 1/4, means the whole is split into 4 equal parts and you have 1 of them. The same rule works for every fraction, like 3/5, 7/10, or 2/3. The parts must be equal for the fraction to make sense. A bigger denominator means the whole is cut into more pieces, so each piece is smaller. A bigger numerator, with the same denominator, means you have more of those pieces. Knowing the numerator and denominator is your power-up: it lets you read any fraction and gets you ready for game challenges where you compare, add, and subtract fractions."
+    }
+   ]
+  }
+ ],
+ "stage": "detailed",
+ "lessonPlanId": "<id-3>"
+}

@@ -1,0 +1,21 @@
+{
+ "node_id": "<id-5>",
+ "course_nodes": {
+  "metadata": {
+   "sectionId": "<id-9>",
+   "difficulty": "beginner",
+   "lessonIndex": 0,
+   "sectionIndex": 0,
+   "practiceTypes": [
+    "mcq",
+    "pool_cloze",
+    "binary_choice",
+    "drag_order_steps"
+   ],
+   "targetPracticeCount": {
+    "max": 8,
+    "min": 4
+   }
+  }
+ }
+}

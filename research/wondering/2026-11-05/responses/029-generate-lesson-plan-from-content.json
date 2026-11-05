@@ -1,0 +1,182 @@
+{
+ "type": "lesson_plan",
+ "sections": [
+  {
+   "name": "Power Up",
+   "lessons": [
+    {
+     "name": "Pizza Slices",
+     "hook": "Would you rather have 1/3 or 1/8 of a pizza?",
+     "meaning": "Seeing fractions as pieces of a whole helps you picture how big they really are.",
+     "concepts": [
+      {
+       "name": "Fractions as pieces of a whole",
+       "description": "A fraction tells how many equal pieces you get (top number) out of how many equal pieces the whole is cut into (bottom number). Picturing the pieces shows how big a fraction really is.",
+       "scenario": "Would you rather have 1/3 or 1/8 of a pizza? Imagine your game character needs pizza to refill a health bar, and the bigger slice gives more health points.",
+       "workedExample": "Imagine cutting one pizza into 3 equal slices and taking 1 of them: that's 1/3. Now cut the same-size pizza into 8 equal slices and take 1: that's 1/8. Cutting into 8 makes each slice much thinner than cutting into 3. So 1/3 is the bigger slice, and choosing it fills more of your health bar."
+      }
+     ],
+     "sourceContent": "Lesson 1, Pizza Slices (Power Up). Hook: Would you rather have 1/3 or 1/8 of a pizza? Meaning: Seeing fractions as pieces of a whole helps you picture how big they really are. A fraction names part of a whole that has been cut into equal pieces. The bottom number, called the denominator, tells how many equal pieces the whole is split into. The top number, called the numerator, tells how many of those pieces you have. You already know halves and quarters: 1/2 means one of 2 equal pieces, and 1/4 means one of 4 equal pieces. The same idea works for any fraction. 1/3 means the pizza is cut into 3 equal slices and you get 1 of them. 1/8 means the pizza is cut into 8 equal slices and you get 1 of them. When you picture the pizza, you can see that the slices in a pizza cut into 3 are much bigger than the slices in a pizza cut into 8. Drawing or imagining the whole and its pieces is your first power-up: it lets you see how big a fraction really is before you do any comparing, adding, or subtracting."
+    },
+    {
+     "name": "Equal Fractions",
+     "hook": "How can 2/4 and 1/2 be the exact same amount?",
+     "meaning": "Spotting equal fractions is the secret key for comparing, adding, and subtracting.",
+     "concepts": [
+      {
+       "name": "Equivalent fractions",
+       "description": "Different fractions can name the exact same amount. If you multiply or divide the top and bottom by the same number, you get an equal fraction.",
+       "scenario": "How can 2/4 and 1/2 be the exact same amount? Imagine two players each grab part of a power bar: one takes 2/4 and the other takes 1/2, and they argue about who got more.",
+       "workedExample": "Imagine a power bar split into 2 equal parts, with 1 part shaded: that's 1/2. Now split each of those parts in half, so there are 4 parts, and 2 of them are shaded: that's 2/4. The shaded amount didn't change at all. Multiplying the top and bottom of 1/2 by 2 gives 2/4, so the two fractions are equal and neither player got more."
+      }
+     ],
+     "sourceContent": "Lesson 2, Equal Fractions (Power Up). Hook: How can 2/4 and 1/2 be the exact same amount? Meaning: Spotting equal fractions is the secret key for comparing, adding, and subtracting. Equal fractions, also called equivalent fractions, are different-looking fractions that stand for the same amount of the whole. You already know that two quarters make a half, so 2/4 and 1/2 cover the same space. Here is why: if you cut every piece of a half into 2 smaller pieces, the whole now has 4 pieces, and the part you had now covers 2 of them. The amount stayed the same; only the number of cuts changed. That's the rule: multiply (or divide) the top number and the bottom number by the same number, and you get an equal fraction. For example, 1/2 = 2/4 = 4/8, and 3/6 can be simplified back to 1/2 by dividing the top and bottom by 3. Spotting equal fractions is a secret key you will use again and again in the quests that come next."
+    }
+   ]
+  },
+  {
+   "name": "Fraction Battles",
+   "lessons": [
+    {
+     "name": "Same Bottoms",
+     "hook": "In a battle between 3/8 and 5/8, who wins?",
+     "meaning": "When the denominators match, you can compare fractions just by looking at the top numbers.",
+     "concepts": [
+      {
+       "name": "Comparing with same denominators",
+       "description": "When two fractions have the same bottom number, the pieces are the same size, so the fraction with the bigger top number is larger.",
+       "scenario": "In a battle between 3/8 and 5/8, who wins? Imagine two heroes collecting shield pieces from shields cut into 8 equal parts, and the hero with more shield wins the round.",
+       "workedExample": "Both fractions have denominator 8, so every piece is the same size, one-eighth. Hero A has 3 of those pieces and Hero B has 5. Since 5 is more than 3, 5/8 is greater than 3/8. Hero B wins the battle, written as 5/8 > 3/8."
+      }
+     ],
+     "sourceContent": "Lesson 3, Same Bottoms (Fraction Battles). Hook: In a battle between 3/8 and 5/8, who wins? Meaning: When the denominators match, you can compare fractions just by looking at the top numbers. The bottom number, the denominator, tells what size each piece is. When two fractions have the same denominator, their pieces are exactly the same size. That makes the battle easy: you only need to count how many pieces each fraction has, and the top number tells you that. In 3/8 versus 5/8, both are made of eighths. 3/8 is three eighths and 5/8 is five eighths. Five pieces of the same size are more than three pieces of that size, so 5/8 wins. We write it as 5/8 > 3/8. This trick works for any fractions with matching bottoms: 2/5 < 4/5, and 7/10 > 3/10. Just check that the denominators really match before you compare the tops."
+    },
+    {
+     "name": "Same Tops",
+     "hook": "Why does 1/2 beat 1/10 even though 10 is bigger?",
+     "meaning": "This shows that more pieces means smaller pieces, a key fraction idea.",
+     "concepts": [
+      {
+       "name": "Comparing with same numerators",
+       "description": "When two fractions have the same top number, the one with the smaller bottom number is bigger, because cutting the whole into fewer pieces makes each piece larger.",
+       "scenario": "Why does 1/2 beat 1/10 even though 10 is bigger? Imagine a treasure chest of gold split between 2 players, and an identical chest split between 10 players. Which single share is bigger?",
+       "workedExample": "Both fractions have numerator 1, so each player gets one share. The first chest is split into 2 equal parts, so each share is 1/2. The second chest is split into 10 equal parts, so each share is 1/10, which is much smaller. More pieces means smaller pieces, so 1/2 > 1/10 and the player in the 2-player game gets more gold."
+      }
+     ],
+     "sourceContent": "Lesson 4, Same Tops (Fraction Battles). Hook: Why does 1/2 beat 1/10 even though 10 is bigger? Meaning: This shows that more pieces means smaller pieces, a key fraction idea. It's easy to think a bigger bottom number means a bigger fraction, but the opposite is true when the top numbers match. The denominator tells how many equal pieces the whole is cut into. The more pieces you cut the same whole into, the smaller each piece becomes. Splitting something between 2 players gives each player a big half. Splitting the same thing between 10 players gives each player a tiny tenth. So when two fractions have the same top number, you have the same number of pieces, and the fraction with the smaller denominator has the bigger pieces. That means 1/2 > 1/10, 3/4 > 3/8, and 2/3 > 2/9. Remember: more pieces means smaller pieces."
+    },
+    {
+     "name": "Benchmark Half",
+     "hook": "Can you tell if 3/7 is bigger or smaller than one half in a flash?",
+     "meaning": "Using 1/2 as a checkpoint helps you compare fractions quickly in your head.",
+     "concepts": [
+      {
+       "name": "Using 1/2 as a benchmark",
+       "description": "Compare a fraction to one half by checking whether the top number is more or less than half of the bottom number. This lets you size up fractions quickly in your head.",
+       "scenario": "Can you tell if 3/7 is bigger or smaller than one half in a flash? Imagine a speed round in a game where you have 3 seconds to say whether 3/7 is above or below the halfway mark.",
+       "workedExample": "Find half of the bottom number: half of 7 is 3.5. So 3.5/7 would be exactly one half. The top number is 3, which is less than 3.5. That means 3/7 is a little less than 1/2, and you beat the speed round by answering \"smaller.\""
+      }
+     ],
+     "sourceContent": "Lesson 5, Benchmark Half (Fraction Battles). Hook: Can you tell if 3/7 is bigger or smaller than one half in a flash? Meaning: Using 1/2 as a checkpoint helps you compare fractions quickly in your head. A benchmark is a checkpoint you already know well, and one half is a great one. A fraction equals one half when its top number is exactly half of its bottom number, like 2/4, 3/6, or 5/10. To check any fraction, find half of the bottom number and compare it to the top number. If the top is bigger than that half, the fraction is more than 1/2. If the top is smaller, the fraction is less than 1/2. For 3/7, half of 7 is 3.5. Since 3 is less than 3.5, 3/7 is less than one half. For 5/8, half of 8 is 4, and 5 is more than 4, so 5/8 is more than one half. This checkpoint also helps in battles: if one fraction is below 1/2 and the other is above, the one above wins right away."
+    },
+    {
+     "name": "Boss Battle",
+     "hook": "Can you rank four tricky fractions from smallest to biggest?",
+     "meaning": "Putting your comparing skills together makes you ready for any fraction challenge.",
+     "concepts": [
+      {
+       "name": "Ordering fractions with combined strategies",
+       "description": "Rank several fractions by using all your tools together: the benchmark 1/2, same denominators, same numerators, and equal fractions.",
+       "scenario": "Can you rank four tricky fractions from smallest to biggest? Imagine a boss battle where you must line up 3/8, 5/8, 1/2, and 3/4 from smallest to biggest to unlock the treasure gate.",
+       "workedExample": "Use the benchmark first: 3/8 is below 1/2 because 3 is less than 4, while 5/8 and 3/4 are above 1/2. Next, compare 5/8 and 3/4 by making them equal-bottom fractions: 3/4 = 6/8, and 6/8 > 5/8. That gives the order 3/8, 1/2, 5/8, 3/4, which defeats the boss and opens the gate."
+      }
+     ],
+     "sourceContent": "Lesson 6, Boss Battle (Fraction Battles). Hook: Can you rank four tricky fractions from smallest to biggest? Meaning: Putting your comparing skills together makes you ready for any fraction challenge. In a boss battle you need every power-up you have collected. When you rank a group of fractions, start by sorting them into teams with the benchmark half: which fractions are below 1/2 and which are above? Then settle each team's battles with the right tool. If two fractions have the same bottom number, compare the tops. If they have the same top number, remember that the smaller bottom means bigger pieces. If neither number matches, rewrite one fraction as an equal fraction so the bottoms match, then compare. Finally, line them all up from smallest to biggest and double-check each neighbor pair. Putting these strategies together lets you take on any fraction ranking challenge with confidence."
+    }
+   ]
+  },
+  {
+   "name": "Adding Quests",
+   "lessons": [
+    {
+     "name": "Add Same",
+     "hook": "If you collect 2/5 of a treasure map and then 1/5 more, how much do you have?",
+     "meaning": "Adding fractions with the same denominator is the first step to fraction adding.",
+     "concepts": [
+      {
+       "name": "Adding same-size pieces",
+       "description": "When two fractions have the same denominator, the pieces are the same size. You add the top numbers (numerators) and keep the bottom number (denominator) the same.",
+       "scenario": "You collect 2/5 of a treasure map, then find 1/5 more. You need to know how much of the map you have before you can head to the treasure.",
+       "workedExample": "Both fractions are fifths, so every map piece is the same size. Add the tops: 2 pieces + 1 piece = 3 pieces. Keep the bottom as 5, because the pieces are still fifths. You now have 3/5 of the treasure map, so you still need 2/5 more to finish it."
+      }
+     ],
+     "sourceContent": "Adding Quests: Add Same. If you collect 2/5 of a treasure map and then 1/5 more, how much do you have? Adding fractions with the same denominator is the first step to fraction adding. The denominator, the bottom number, tells you how many equal pieces the whole map is cut into. Here it is cut into 5 pieces, called fifths. The numerator, the top number, tells you how many of those pieces you have. Since 2/5 and 1/5 are both made of fifths, every piece is the same size, so you can just count them up: 2 fifths plus 1 fifth makes 3 fifths. The bottom number stays 5 because the size of the pieces didn't change. You only collected more of them. Remember the rule for this quest: when the bottoms match, add the tops and keep the bottom."
+    },
+    {
+     "name": "Add Different",
+     "hook": "How do you add 1/2 and 1/4 when the pieces are different sizes?",
+     "meaning": "Making the pieces the same size lets you add any two fractions.",
+     "concepts": [
+      {
+       "name": "Matching pieces before adding",
+       "description": "To add fractions with different denominators, first rewrite one or both so they share a common denominator. This makes the pieces the same size, and then you add the numerators.",
+       "scenario": "In a quest, you need to add 1/2 and 1/4 of a power bar, but the pieces are different sizes. You need the total to find out how full your power bar is.",
+       "workedExample": "Halves and quarters are different sizes, so you can't add the tops yet. One half is the same as two quarters, so 1/2 = 2/4. Now both fractions are quarters: 2/4 + 1/4 = 3/4. Your power bar is 3/4 full."
+      }
+     ],
+     "sourceContent": "Adding Quests: Add Different. How do you add 1/2 and 1/4 when the pieces are different sizes? Making the pieces the same size lets you add any two fractions. A half is a big piece and a quarter is a smaller piece, so counting 1 piece plus 1 piece would give a wrong answer. The trick is to find a denominator that both fractions can use. Quarters work here, because 2 quarters fill exactly the same space as 1 half. So rewrite 1/2 as 2/4. You haven't changed how much you have. You've only cut it into smaller, matching pieces. Once both fractions use the same denominator, use the same move as in the first quest: add the tops and keep the bottom. Your adding steps: check the bottoms, make them match if they don't, then add the tops."
+    }
+   ]
+  },
+  {
+   "name": "Subtracting Quests",
+   "lessons": [
+    {
+     "name": "Subtract Same",
+     "hook": "Your health bar is at 7/8 and a monster takes 3/8, so what's left?",
+     "meaning": "Subtracting fractions with the same denominator helps you find what's left over.",
+     "concepts": [
+      {
+       "name": "Subtracting same-size pieces",
+       "description": "When two fractions have the same denominator, subtract the numerators and keep the denominator. The answer shows how much is left.",
+       "scenario": "Your health bar is at 7/8, and a monster attack takes away 3/8. You need to know how much health is left so you can decide whether to keep fighting or drink a potion.",
+       "workedExample": "Both amounts are eighths, so the pieces are the same size. Subtract the tops: 7 pieces − 3 pieces = 4 pieces. Keep the bottom as 8. You have 4/8 health left, which is the same as 1/2, so your health bar is half full."
+      }
+     ],
+     "sourceContent": "Subtracting Quests: Subtract Same. Your health bar is at 7/8 and a monster takes 3/8, so what's left? Subtracting fractions with the same denominator helps you find what's left over. Picture your health bar split into 8 equal pieces, with 7 of them glowing. The monster's attack knocks out 3 of those pieces. Since every piece is an eighth, you can just take the pieces away: 7 eighths minus 3 eighths leaves 4 eighths. The bottom number stays 8 because the pieces are still the same size. There are just fewer of them now. Subtracting works like adding in reverse: when the bottoms match, subtract the tops and keep the bottom. Gamers use this all the time to work out how much health, energy, or ammo they have left after something gets used up."
+    },
+    {
+     "name": "Subtract Different",
+     "hook": "If you had 3/4 of a cake and ate 1/2, how much remains?",
+     "meaning": "Matching denominators first lets you subtract any fractions with confidence.",
+     "concepts": [
+      {
+       "name": "Matching pieces before subtracting",
+       "description": "To subtract fractions with different denominators, first rewrite them so they share a common denominator. Then subtract the numerators.",
+       "scenario": "You had 3/4 of a cake and ate 1/2 of the whole cake. You need to find out how much cake is left.",
+       "workedExample": "Quarters and halves are different sizes, so first make them match. One half is the same as two quarters, so 1/2 = 2/4. Now subtract the quarters: 3/4 − 2/4 = 1/4. You have 1/4 of the cake left."
+      }
+     ],
+     "sourceContent": "Subtracting Quests: Subtract Different. If you had 3/4 of a cake and ate 1/2, how much remains? Matching denominators first lets you subtract any fractions with confidence. The cake you have is measured in quarters, but the amount you ate is measured in halves. You can't take 1 piece away from 3 pieces when the pieces are different sizes. So change the half into quarters: 1 half fills the same space as 2 quarters. Now both amounts are quarters, and you can take 2 quarters away from 3 quarters. The bottom number stays 4. Your subtracting steps: check the bottoms, make them match if they don't, then subtract the tops and keep the bottom. Matching the denominators first works for any pair of fractions you need to subtract."
+    },
+    {
+     "name": "Final Quest",
+     "hook": "Can you beat the final level by mixing comparing, adding, and subtracting?",
+     "meaning": "Using every skill together proves you've mastered the fraction game.",
+     "concepts": [
+      {
+       "name": "Combining fraction skills",
+       "description": "A multi-step problem can mix adding, subtracting, and comparing. Make the denominators match, do each step in order, and then compare your result with the goal.",
+       "scenario": "Imagine a final level where the boss door opens only if your energy is more than 1/2. You start with 1/4 energy, pick up a 1/2 energy boost, then a trap drains 1/8.",
+       "workedExample": "Imagine using eighths for everything: 1/4 = 2/8 and 1/2 = 4/8. Add the boost: 2/8 + 4/8 = 6/8. Subtract the trap: 6/8 − 1/8 = 5/8. Compare: 1/2 is 4/8, and 5/8 is more than 4/8, so the boss door opens."
+      }
+     ],
+     "sourceContent": "Subtracting Quests: Final Quest. Can you beat the final level by mixing comparing, adding, and subtracting? Using every skill together proves you've mastered the fraction game. In the final quest, one fraction step isn't enough. You might gain energy, lose some to a trap, and then need to check whether you have enough to pass a door. Use a game plan. First, choose one denominator that every fraction in the problem can switch to. Next, follow the events in order: add when you gain something and subtract when you lose something, keeping the bottom number the same each time. Finally, compare your result with the goal. When both fractions have the same denominator, the one with the bigger top is larger. Taking it one step at a time keeps the final level from getting confusing, and every step uses moves you already learned."
+    }
+   ]
+  }
+ ],
+ "stage": "detailed",
+ "lessonPlanId": "<id-3>",
+ "persistedLessonDetails": 11
+}

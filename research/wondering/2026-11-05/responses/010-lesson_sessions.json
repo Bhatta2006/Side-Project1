@@ -1,0 +1,134 @@
+[
+ {
+  "id": "<id-45>",
+  "user_id": "<id-1>",
+  "node_id": "<id-41>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Power Up in a practical scenario before the section review.",
+   "name": "Power Up",
+   "appliedLesson": {
+    "sectionId": "<id-9>",
+    "sectionName": "Power Up",
+    "sectionIndex": 0
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 3,
+  "generation_phase": null,
+  "lesson_summary": null
+ },
+ {
+  "id": "<id-46>",
+  "user_id": "<id-1>",
+  "node_id": "<id-42>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Fraction Battles in a practical scenario before the section review.",
+   "name": "Fraction Battles",
+   "appliedLesson": {
+    "sectionId": "<id-10>",
+    "sectionName": "Fraction Battles",
+    "sectionIndex": 1
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 8,
+  "generation_phase": null,
+  "lesson_summary": null
+ },
+ {
+  "id": "<id-47>",
+  "user_id": "<id-1>",
+  "node_id": "<id-43>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Adding Quests in a practical scenario before the section review.",
+   "name": "Adding Quests",
+   "appliedLesson": {
+    "sectionId": "<id-11>",
+    "sectionName": "Adding Quests",
+    "sectionIndex": 2
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 11,
+  "generation_phase": null,
+  "lesson_summary": null
+ },
+ {
+  "id": "<id-48>",
+  "user_id": "<id-1>",
+  "node_id": "<id-44>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Subtracting Quests in a practical scenario before the section review.",
+   "name": "Subtracting Quests",
+   "appliedLesson": {
+    "sectionId": "<id-12>",
+    "sectionName": "Subtracting Quests",
+    "sectionIndex": 3
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 15,
+  "generation_phase": null,
+  "lesson_summary": null
+ }
+]

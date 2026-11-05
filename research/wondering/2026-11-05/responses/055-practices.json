@@ -1,0 +1,204 @@
+[
+ {
+  "id": "<id-17>",
+  "bit_id": "<id-83>",
+  "type": "mcq",
+  "question": "Mia and Leo have two pizzas that are the same size. Mia cuts hers into 3 equal slices. Leo cuts his into 8 equal slices. Whose single slice is bigger?",
+  "answer": "Mia's, because her pizza is cut into fewer pieces",
+  "options": {
+   "choices": [
+    {
+     "id": "a",
+     "text": "Mia's, because her pizza is cut into fewer pieces",
+     "isCorrect": true
+    },
+    {
+     "id": "b",
+     "text": "Leo's, because 8 is a bigger number than 3",
+     "isCorrect": false
+    },
+    {
+     "id": "c",
+     "text": "They are the same, because both slices are one piece",
+     "isCorrect": false
+    }
+   ],
+   "allowMultiple": false
+  },
+  "created_at": "2026-11-05T02:38:02.156139+00:00",
+  "updated_at": "2026-11-05T02:38:02.156139+00:00",
+  "explanation": "A bigger denominator means the whole is cut into more pieces, so each piece is smaller. That makes 1/3 a bigger slice than 1/8. The 8 is a bigger number, but it means smaller slices.",
+  "node_id": "<id-5>",
+  "project_id": "<id-4>",
+  "archived_at": null,
+  "keyword_definitions": [],
+  "favorited_at_session": null
+ },
+ {
+  "id": "<id-14>",
+  "bit_id": "<id-83>",
+  "type": "pool_cloze",
+  "question": "In the fraction 7/10, the {{c1::denominator}} is 10 because the whole is split into 10 equal parts. The {{c2::numerator}} is 7 because you have 7 of those parts.",
+  "answer": "In the fraction 7/10, the denominator is 10 because the whole is split into 10 equal parts. The numerator is 7 because you have 7 of those parts.",
+  "options": {
+   "clozes": [
+    {
+     "id": "c1",
+     "answer": "denominator"
+    },
+    {
+     "id": "c2",
+     "answer": "numerator"
+    }
+   ]
+  },
+  "created_at": "2026-11-05T02:38:02.156139+00:00",
+  "updated_at": "2026-11-05T02:38:02.156139+00:00",
+  "explanation": "The denominator is the bottom number. It counts the equal parts in the whole. The numerator is the top number. It counts the parts you have.",
+  "node_id": "<id-5>",
+  "project_id": "<id-4>",
+  "archived_at": null,
+  "keyword_definitions": [],
+  "favorited_at_session": null
+ },
+ {
+  "id": "<id-16>",
+  "bit_id": "<id-83>",
+  "type": "binary_choice",
+  "question": "A chocolate bar breaks into 4 pieces of very different sizes, and you take 1 piece. Can you say you have 1/4 of the bar?",
+  "answer": "No, because the 4 pieces are not equal",
+  "options": {
+   "choices": [
+    {
+     "id": "a",
+     "text": "No, because the 4 pieces are not equal",
+     "isCorrect": true
+    },
+    {
+     "id": "b",
+     "text": "Yes, because there are 4 pieces and you have 1",
+     "isCorrect": false
+    }
+   ],
+   "allowMultiple": false
+  },
+  "created_at": "2026-11-05T02:38:02.156139+00:00",
+  "updated_at": "2026-11-05T02:38:02.156139+00:00",
+  "explanation": "A fraction only makes sense when the parts are equal. These 4 pieces are not equal, so 1 piece is not 1/4 of the bar.",
+  "node_id": "<id-5>",
+  "project_id": "<id-4>",
+  "archived_at": null,
+  "keyword_definitions": [],
+  "favorited_at_session": null
+ },
+ {
+  "id": "<id-13>",
+  "bit_id": "<id-83>",
+  "type": "binary_choice",
+  "question": "In the fraction 3/5, the bottom number 5 tells {blank}",
+  "answer": "how many equal parts the whole is split into",
+  "options": {
+   "choices": [
+    {
+     "id": "a",
+     "text": "how many equal parts the whole is split into",
+     "isCorrect": true
+    },
+    {
+     "id": "b",
+     "text": "how many of the parts you have",
+     "isCorrect": false
+    }
+   ],
+   "allowMultiple": false
+  },
+  "created_at": "2026-11-05T02:38:02.156139+00:00",
+  "updated_at": "2026-11-05T02:38:02.156139+00:00",
+  "explanation": "The bottom number shows how many equal parts the whole is split into, which is 5 here. The top number, 3, shows how many of those parts you have.",
+  "node_id": "<id-5>",
+  "project_id": "<id-4>",
+  "archived_at": null,
+  "keyword_definitions": [],
+  "favorited_at_session": null
+ },
+ {
+  "id": "<id-18>",
+  "bit_id": "<id-83>",
+  "type": "mcq",
+  "question": "Imagine a game hero whose health bar is split into 8 equal blocks, and 5 blocks are still glowing. What fraction shows the hero's health, and is it more than half?",
+  "answer": "5/8, which is more than half",
+  "options": {
+   "choices": [
+    {
+     "id": "a",
+     "text": "5/8, which is more than half",
+     "isCorrect": true
+    },
+    {
+     "id": "b",
+     "text": "5/8, which is less than half",
+     "isCorrect": false
+    },
+    {
+     "id": "c",
+     "text": "3/8, which is less than half",
+     "isCorrect": false
+    },
+    {
+     "id": "d",
+     "text": "8/5, which is more than half",
+     "isCorrect": false
+    }
+   ],
+   "allowMultiple": false
+  },
+  "created_at": "2026-11-05T02:38:02.156139+00:00",
+  "updated_at": "2026-11-05T02:38:02.156139+00:00",
+  "explanation": "The bar has 8 equal blocks, so the denominator is 8. There are 5 glowing blocks, so the numerator is 5, which gives 5/8. Half of 8 blocks is 4/8, and 5/8 is more than 4/8, so the hero has more than half health.",
+  "node_id": "<id-5>",
+  "project_id": "<id-4>",
+  "archived_at": null,
+  "keyword_definitions": [],
+  "favorited_at_session": null
+ },
+ {
+  "id": "<id-15>",
+  "bit_id": "<id-83>",
+  "type": "mcq",
+  "question": "A treasure map is cut into 6 equal pieces. You have found 4 of them. What fraction of the map do you have?",
+  "answer": "4/6",
+  "options": {
+   "choices": [
+    {
+     "id": "a",
+     "text": "4/6",
+     "isCorrect": true
+    },
+    {
+     "id": "b",
+     "text": "6/4",
+     "isCorrect": false
+    },
+    {
+     "id": "c",
+     "text": "2/6",
+     "isCorrect": false
+    },
+    {
+     "id": "d",
+     "text": "4/10",
+     "isCorrect": false
+    }
+   ],
+   "allowMultiple": false
+  },
+  "created_at": "2026-11-05T02:38:02.156139+00:00",
+  "updated_at": "2026-11-05T02:38:02.156139+00:00",
+  "explanation": "The whole has 6 equal pieces, so 6 goes on the bottom. You have 4, so 4 goes on top: 4/6. 2/6 counts the pieces you are still missing, and 6/4 puts the numbers upside down.",
+  "node_id": "<id-5>",
+  "project_id": "<id-4>",
+  "archived_at": null,
+  "keyword_definitions": [],
+  "favorited_at_session": null
+ }
+]

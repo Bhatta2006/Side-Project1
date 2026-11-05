@@ -1,0 +1,1144 @@
+[
+ {
+  "id": "<id-6>",
+  "user_id": "<id-1>",
+  "node_id": "<id-5>",
+  "practices": [
+   "<id-13>",
+   "<id-14>",
+   "<id-15>",
+   "<id-16>",
+   "<id-17>",
+   "<id-18>"
+  ],
+  "status": "planned",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:38:02.329+00:00",
+  "total_practices": 6,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "What do the top and bottom numbers in a fraction secretly tell you?",
+   "name": "Fraction Parts",
+   "meaning": "Knowing the numerator and denominator lets you read any fraction, not just halves and quarters.",
+   "generation": {
+    "pages": {
+     "promptId": "lessonPagesJoint",
+     "promptHash": "5dcc85db3e1d",
+     "requestGroupId": "<id-49>"
+    },
+    "practices": {
+     "model": "anthropic:claude-opus-5-5",
+     "promptId": "practices",
+     "promptHash": "e7f8941ba4a1",
+     "requestGroupId": "<id-49>",
+     "contentLanguage": "en"
+    },
+    "stampedAt": "2026-11-05T02:38:01.983Z",
+    "modelProfile": "quality",
+    "requestGroupId": "<id-49>",
+    "contentLanguage": "en"
+   },
+   "generation_experiments": {
+    "joint-lesson-generation": {
+     "variant": "joint_opus",
+     "flag_key": "joint-lesson-generation",
+     "assigned_at": "2026-11-05T02:37:26.763Z",
+     "fallback_used": false,
+     "assignment_source": "quality_profile"
+    }
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 0,
+  "generation_phase": "saving",
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-5>",
+   "name": "Fraction Parts",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-9>",
+    "difficulty": "beginner",
+    "lessonIndex": 0,
+    "sectionIndex": 0,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:58.972212+00:00"
+  }
+ },
+ {
+  "id": "<id-19>",
+  "user_id": "<id-1>",
+  "node_id": "<id-20>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Would you rather have 1/3 or 1/8 of a pizza?",
+   "name": "Pizza Slices",
+   "meaning": "Seeing fractions as pieces of a whole helps you picture how big they really are."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 1,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-20>",
+   "name": "Pizza Slices",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-9>",
+    "difficulty": "beginner",
+    "lessonIndex": 1,
+    "sectionIndex": 0,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:38.986238+00:00"
+  }
+ },
+ {
+  "id": "<id-31>",
+  "user_id": "<id-1>",
+  "node_id": "<id-21>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "How can 2/4 and 1/2 be the exact same amount?",
+   "name": "Equal Fractions",
+   "meaning": "Spotting equal fractions is the secret key for comparing, adding, and subtracting."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 2,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-21>",
+   "name": "Equal Fractions",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-9>",
+    "difficulty": "beginner",
+    "lessonIndex": 2,
+    "sectionIndex": 0,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.129782+00:00"
+  }
+ },
+ {
+  "id": "<id-45>",
+  "user_id": "<id-1>",
+  "node_id": "<id-41>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Power Up in a practical scenario before the section review.",
+   "name": "Power Up",
+   "appliedLesson": {
+    "sectionId": "<id-9>",
+    "sectionName": "Power Up",
+    "sectionIndex": 0
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 3,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-41>",
+   "name": "Power Up",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-9>",
+    "sectionIndex": 0,
+    "isAppliedLesson": true
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.600038+00:00",
+   "updated_at": "2026-11-05T02:37:14.600038+00:00"
+  }
+ },
+ {
+  "id": "<id-32>",
+  "user_id": "<id-1>",
+  "node_id": "<id-22>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "In a battle between 3/8 and 5/8, who wins?",
+   "name": "Same Bottoms",
+   "meaning": "When the denominators match, you can compare fractions just by looking at the top numbers."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 4,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-22>",
+   "name": "Same Bottoms",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-10>",
+    "difficulty": "beginner",
+    "lessonIndex": 0,
+    "sectionIndex": 1,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.142314+00:00"
+  }
+ },
+ {
+  "id": "<id-33>",
+  "user_id": "<id-1>",
+  "node_id": "<id-23>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Why does 1/2 beat 1/10 even though 10 is bigger?",
+   "name": "Same Tops",
+   "meaning": "This shows that more pieces means smaller pieces, a key fraction idea."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 5,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-23>",
+   "name": "Same Tops",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-10>",
+    "difficulty": "beginner",
+    "lessonIndex": 1,
+    "sectionIndex": 1,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.131242+00:00"
+  }
+ },
+ {
+  "id": "<id-34>",
+  "user_id": "<id-1>",
+  "node_id": "<id-24>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Can you tell if 3/7 is bigger or smaller than one half in a flash?",
+   "name": "Benchmark Half",
+   "meaning": "Using 1/2 as a checkpoint helps you compare fractions quickly in your head."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 6,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-24>",
+   "name": "Benchmark Half",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-10>",
+    "difficulty": "beginner",
+    "lessonIndex": 2,
+    "sectionIndex": 1,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.119664+00:00"
+  }
+ },
+ {
+  "id": "<id-35>",
+  "user_id": "<id-1>",
+  "node_id": "<id-25>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Can you rank four tricky fractions from smallest to biggest?",
+   "name": "Boss Battle",
+   "meaning": "Putting your comparing skills together makes you ready for any fraction challenge."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 7,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-25>",
+   "name": "Boss Battle",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-10>",
+    "difficulty": "beginner",
+    "lessonIndex": 3,
+    "sectionIndex": 1,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.137953+00:00"
+  }
+ },
+ {
+  "id": "<id-46>",
+  "user_id": "<id-1>",
+  "node_id": "<id-42>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Fraction Battles in a practical scenario before the section review.",
+   "name": "Fraction Battles",
+   "appliedLesson": {
+    "sectionId": "<id-10>",
+    "sectionName": "Fraction Battles",
+    "sectionIndex": 1
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 8,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-42>",
+   "name": "Fraction Battles",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-10>",
+    "sectionIndex": 1,
+    "isAppliedLesson": true
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.600038+00:00",
+   "updated_at": "2026-11-05T02:37:14.600038+00:00"
+  }
+ },
+ {
+  "id": "<id-36>",
+  "user_id": "<id-1>",
+  "node_id": "<id-26>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "If you collect 2/5 of a treasure map and then 1/5 more, how much do you have?",
+   "name": "Add Same",
+   "meaning": "Adding fractions with the same denominator is the first step to fraction adding."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 9,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-26>",
+   "name": "Add Same",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-11>",
+    "difficulty": "beginner",
+    "lessonIndex": 0,
+    "sectionIndex": 2,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.117243+00:00"
+  }
+ },
+ {
+  "id": "<id-37>",
+  "user_id": "<id-1>",
+  "node_id": "<id-27>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "How do you add 1/2 and 1/4 when the pieces are different sizes?",
+   "name": "Add Different",
+   "meaning": "Making the pieces the same size lets you add any two fractions."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 10,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-27>",
+   "name": "Add Different",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-11>",
+    "difficulty": "beginner",
+    "lessonIndex": 1,
+    "sectionIndex": 2,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.124946+00:00"
+  }
+ },
+ {
+  "id": "<id-47>",
+  "user_id": "<id-1>",
+  "node_id": "<id-43>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Adding Quests in a practical scenario before the section review.",
+   "name": "Adding Quests",
+   "appliedLesson": {
+    "sectionId": "<id-11>",
+    "sectionName": "Adding Quests",
+    "sectionIndex": 2
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 11,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-43>",
+   "name": "Adding Quests",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-11>",
+    "sectionIndex": 2,
+    "isAppliedLesson": true
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.600038+00:00",
+   "updated_at": "2026-11-05T02:37:14.600038+00:00"
+  }
+ },
+ {
+  "id": "<id-38>",
+  "user_id": "<id-1>",
+  "node_id": "<id-28>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Your health bar is at 7/8 and a monster takes 3/8, so what's left?",
+   "name": "Subtract Same",
+   "meaning": "Subtracting fractions with the same denominator helps you find what's left over."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 12,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-28>",
+   "name": "Subtract Same",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-12>",
+    "difficulty": "beginner",
+    "lessonIndex": 0,
+    "sectionIndex": 3,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:39.133401+00:00"
+  }
+ },
+ {
+  "id": "<id-39>",
+  "user_id": "<id-1>",
+  "node_id": "<id-29>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "If you had 3/4 of a cake and ate 1/2, how much remains?",
+   "name": "Subtract Different",
+   "meaning": "Matching denominators first lets you subtract any fractions with confidence."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 13,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-29>",
+   "name": "Subtract Different",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-12>",
+    "difficulty": "beginner",
+    "lessonIndex": 1,
+    "sectionIndex": 3,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:38.982342+00:00"
+  }
+ },
+ {
+  "id": "<id-40>",
+  "user_id": "<id-1>",
+  "node_id": "<id-30>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.392454+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Can you beat the final level by mixing comparing, adding, and subtracting?",
+   "name": "Final Quest",
+   "meaning": "Using every skill together proves you've mastered the fraction game."
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 14,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-30>",
+   "name": "Final Quest",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-12>",
+    "difficulty": "beginner",
+    "lessonIndex": 2,
+    "sectionIndex": 3,
+    "practiceTypes": [
+     "mcq",
+     "pool_cloze",
+     "binary_choice",
+     "drag_order_steps"
+    ],
+    "targetPracticeCount": {
+     "max": 8,
+     "min": 4
+    }
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.197621+00:00",
+   "updated_at": "2026-11-05T02:37:38.984279+00:00"
+  }
+ },
+ {
+  "id": "<id-48>",
+  "user_id": "<id-1>",
+  "node_id": "<id-44>",
+  "practices": [],
+  "status": "pending_generation",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:37:14.740661+00:00",
+  "total_practices": 0,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "Apply the key ideas from Subtracting Quests in a practical scenario before the section review.",
+   "name": "Subtracting Quests",
+   "appliedLesson": {
+    "sectionId": "<id-12>",
+    "sectionName": "Subtracting Quests",
+    "sectionIndex": 3
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.740661+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 15,
+  "generation_phase": null,
+  "lesson_summary": null,
+  "projects": {
+   "id": "<id-4>",
+   "name": "Fraction Game Quest",
+   "deleted_at": null,
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  },
+  "course_nodes": {
+   "id": "<id-44>",
+   "name": "Subtracting Quests",
+   "type": "Lesson",
+   "user_id": "<id-1>",
+   "metadata": {
+    "sectionId": "<id-12>",
+    "sectionIndex": 3,
+    "isAppliedLesson": true
+   },
+   "course_id": null,
+   "created_at": "2026-11-05T02:37:14.600038+00:00",
+   "updated_at": "2026-11-05T02:37:14.600038+00:00"
+  }
+ }
+]

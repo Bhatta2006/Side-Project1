@@ -1,0 +1,200 @@
+{
+ "mindMap": {
+  "title": "Fraction Game Quest",
+  "root": {
+   "id": "fraction-fundamentals-0",
+   "label": "Fraction Fundamentals",
+   "lessonNodeIds": [
+    "<id-5>",
+    "<id-20>",
+    "<id-21>",
+    "<id-41>",
+    "<id-22>",
+    "<id-23>",
+    "<id-24>",
+    "<id-25>",
+    "<id-42>",
+    "<id-26>",
+    "<id-27>",
+    "<id-43>",
+    "<id-28>",
+    "<id-29>",
+    "<id-30>",
+    "<id-44>"
+   ],
+   "children": [
+    {
+     "id": "power-up-0-0",
+     "label": "Power Up",
+     "lessonNodeIds": [
+      "<id-5>",
+      "<id-20>",
+      "<id-21>",
+      "<id-41>"
+     ],
+     "colorIndex": 1,
+     "children": [
+      {
+       "id": "fraction-parts-0-0-0",
+       "label": "Fraction Parts",
+       "lessonNodeIds": [
+        "<id-5>"
+       ],
+       "colorIndex": 1,
+       "children": []
+      },
+      {
+       "id": "pizza-slices-0-0-1",
+       "label": "Pizza Slices",
+       "lessonNodeIds": [
+        "<id-20>"
+       ],
+       "colorIndex": 1,
+       "children": []
+      },
+      {
+       "id": "equal-fractions-0-0-2",
+       "label": "Equal Fractions",
+       "lessonNodeIds": [
+        "<id-21>",
+        "<id-41>"
+       ],
+       "colorIndex": 1,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "fraction-battles-0-1",
+     "label": "Fraction Battles",
+     "lessonNodeIds": [
+      "<id-22>",
+      "<id-23>",
+      "<id-24>",
+      "<id-25>",
+      "<id-42>"
+     ],
+     "colorIndex": 1,
+     "children": [
+      {
+       "id": "same-bottoms-tops-0-1-0",
+       "label": "Same Bottoms & Tops",
+       "lessonNodeIds": [
+        "<id-22>",
+        "<id-23>"
+       ],
+       "colorIndex": 1,
+       "children": []
+      },
+      {
+       "id": "benchmark-half-0-1-1",
+       "label": "Benchmark Half",
+       "lessonNodeIds": [
+        "<id-24>"
+       ],
+       "colorIndex": 1,
+       "children": []
+      },
+      {
+       "id": "boss-battle-0-1-2",
+       "label": "Boss Battle",
+       "lessonNodeIds": [
+        "<id-25>",
+        "<id-42>"
+       ],
+       "colorIndex": 1,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "adding-quests-0-2",
+     "label": "Adding Quests",
+     "lessonNodeIds": [
+      "<id-26>",
+      "<id-27>",
+      "<id-43>"
+     ],
+     "colorIndex": 2,
+     "children": [
+      {
+       "id": "add-same-0-2-0",
+       "label": "Add Same",
+       "lessonNodeIds": [
+        "<id-26>"
+       ],
+       "colorIndex": 2,
+       "children": []
+      },
+      {
+       "id": "add-different-0-2-1",
+       "label": "Add Different",
+       "lessonNodeIds": [
+        "<id-27>",
+        "<id-43>"
+       ],
+       "colorIndex": 2,
+       "children": []
+      }
+     ]
+    },
+    {
+     "id": "subtracting-quests-0-3",
+     "label": "Subtracting Quests",
+     "lessonNodeIds": [
+      "<id-28>",
+      "<id-29>",
+      "<id-30>",
+      "<id-44>"
+     ],
+     "colorIndex": 3,
+     "children": [
+      {
+       "id": "subtract-same-0-3-0",
+       "label": "Subtract Same",
+       "lessonNodeIds": [
+        "<id-28>"
+       ],
+       "colorIndex": 3,
+       "children": []
+      },
+      {
+       "id": "subtract-different-0-3-1",
+       "label": "Subtract Different",
+       "lessonNodeIds": [
+        "<id-29>"
+       ],
+       "colorIndex": 3,
+       "children": []
+      },
+      {
+       "id": "final-quest-0-3-2",
+       "label": "Final Quest",
+       "lessonNodeIds": [
+        "<id-30>",
+        "<id-44>"
+       ],
+       "colorIndex": 3,
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  "metadata": {
+   "version": "2026-04-course-mind-map-v5",
+   "createdAt": "2026-11-05T02:37:44.374Z",
+   "language": "en",
+   "projectId": "<id-4>",
+   "projectName": "Fraction Game Quest",
+   "lessonCount": 16,
+   "sectionCount": 4,
+   "practiceCount": 0,
+   "knowledgeCardCount": 0,
+   "sourceFingerprint": "6039d4646fd2c5798ac9f6ceec896cdeab260befe1531355c0e2d4c44e676158",
+   "personalizationEnabled": true,
+   "hasLearnerSnapshot": false,
+   "hasProjectSnapshot": false
+  }
+ }
+}

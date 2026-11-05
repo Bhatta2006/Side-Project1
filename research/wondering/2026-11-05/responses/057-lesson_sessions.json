@@ -1,0 +1,66 @@
+[
+ {
+  "id": "<id-6>",
+  "user_id": "<id-1>",
+  "node_id": "<id-5>",
+  "practices": [
+   "<id-13>",
+   "<id-14>",
+   "<id-15>",
+   "<id-16>",
+   "<id-17>",
+   "<id-18>"
+  ],
+  "status": "planned",
+  "started_at": null,
+  "completed_at": null,
+  "last_activity_at": "2026-11-05T02:38:02.329+00:00",
+  "total_practices": 6,
+  "accuracy_rate": null,
+  "total_time_seconds": 0,
+  "points_earned": 0,
+  "session_config": {
+   "hook": "What do the top and bottom numbers in a fraction secretly tell you?",
+   "name": "Fraction Parts",
+   "meaning": "Knowing the numerator and denominator lets you read any fraction, not just halves and quarters.",
+   "generation": {
+    "pages": {
+     "promptId": "lessonPagesJoint",
+     "promptHash": "5dcc85db3e1d",
+     "requestGroupId": "<id-49>"
+    },
+    "practices": {
+     "model": "anthropic:claude-opus-5-5",
+     "promptId": "practices",
+     "promptHash": "e7f8941ba4a1",
+     "requestGroupId": "<id-49>",
+     "contentLanguage": "en"
+    },
+    "stampedAt": "2026-11-05T02:38:01.983Z",
+    "modelProfile": "quality",
+    "requestGroupId": "<id-49>",
+    "contentLanguage": "en"
+   },
+   "progress_model": "independent",
+   "generation_experiments": {
+    "joint-lesson-generation": {
+     "variant": "joint_opus",
+     "flag_key": "joint-lesson-generation",
+     "assigned_at": "2026-11-05T02:37:26.763Z",
+     "fallback_used": false,
+     "assignment_source": "quality_profile"
+    }
+   }
+  },
+  "created_at": "2026-11-05T02:37:14.392454+00:00",
+  "correct_practices": null,
+  "incorrect_practices": null,
+  "project_id": "<id-4>",
+  "session_type": "new",
+  "practice_time_seconds": 0,
+  "user_note": null,
+  "path_order": 0,
+  "generation_phase": "saving",
+  "lesson_summary": null
+ }
+]

@@ -1,0 +1,2 @@
+data: {"type":"result","result":{"type":"goal_suggestion","message":"Great choice! We'll start from halves and quarters, then use fun games to learn how to compare fractions and how to add and subtract them.","suggestedName":"Fraction Game Quest","suggestedGoal":"Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games","suggestedGoalSummary":"Compare, add, and subtract fractions through fun game challenges.","suggestedBackground":"10-year-old student who knows halves and quarters and loves games"}}
+

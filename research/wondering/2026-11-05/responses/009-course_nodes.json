@@ -1,0 +1,130 @@
+[
+ {
+  "id": "<id-41>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Power Up",
+  "content": {
+   "concepts": [
+    {
+     "name": "Fraction Parts",
+     "description": "Key topic from \"Power Up\""
+    },
+    {
+     "name": "Pizza Slices",
+     "description": "Key topic from \"Power Up\""
+    },
+    {
+     "name": "Equal Fractions",
+     "description": "Key topic from \"Power Up\""
+    }
+   ],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-9>",
+   "sectionIndex": 0,
+   "isAppliedLesson": true
+  },
+  "created_at": "2026-11-05T02:37:14.600038+00:00",
+  "updated_at": "2026-11-05T02:37:14.600038+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-42>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Fraction Battles",
+  "content": {
+   "concepts": [
+    {
+     "name": "Same Bottoms",
+     "description": "Key topic from \"Fraction Battles\""
+    },
+    {
+     "name": "Same Tops",
+     "description": "Key topic from \"Fraction Battles\""
+    },
+    {
+     "name": "Benchmark Half",
+     "description": "Key topic from \"Fraction Battles\""
+    },
+    {
+     "name": "Boss Battle",
+     "description": "Key topic from \"Fraction Battles\""
+    }
+   ],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-10>",
+   "sectionIndex": 1,
+   "isAppliedLesson": true
+  },
+  "created_at": "2026-11-05T02:37:14.600038+00:00",
+  "updated_at": "2026-11-05T02:37:14.600038+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-43>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Adding Quests",
+  "content": {
+   "concepts": [
+    {
+     "name": "Add Same",
+     "description": "Key topic from \"Adding Quests\""
+    },
+    {
+     "name": "Add Different",
+     "description": "Key topic from \"Adding Quests\""
+    }
+   ],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-11>",
+   "sectionIndex": 2,
+   "isAppliedLesson": true
+  },
+  "created_at": "2026-11-05T02:37:14.600038+00:00",
+  "updated_at": "2026-11-05T02:37:14.600038+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ },
+ {
+  "id": "<id-44>",
+  "course_id": null,
+  "type": "Lesson",
+  "name": "Subtracting Quests",
+  "content": {
+   "concepts": [
+    {
+     "name": "Subtract Same",
+     "description": "Key topic from \"Subtracting Quests\""
+    },
+    {
+     "name": "Subtract Different",
+     "description": "Key topic from \"Subtracting Quests\""
+    },
+    {
+     "name": "Final Quest",
+     "description": "Key topic from \"Subtracting Quests\""
+    }
+   ],
+   "sourceContent": ""
+  },
+  "metadata": {
+   "sectionId": "<id-12>",
+   "sectionIndex": 3,
+   "isAppliedLesson": true
+  },
+  "created_at": "2026-11-05T02:37:14.600038+00:00",
+  "updated_at": "2026-11-05T02:37:14.600038+00:00",
+  "practices": null,
+  "user_id": "<id-1>"
+ }
+]

@@ -1,0 +1,18 @@
+[
+ {
+  "projects": {
+   "personalize_metadata": {
+    "learningGoal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+    "backgroundLevel": "10-year-old student who knows halves and quarters and loves games",
+    "contentLanguage": "en",
+    "learningGoalSummary": {
+     "goal": "Learn to compare fractions and to add and subtract them, through fun game-style challenges for a 10-year-old who loves games",
+     "summary": "Compare, add, and subtract fractions through fun game challenges."
+    },
+    "lessonDepthPreference": "standard",
+    "generationModelProfile": "quality",
+    "personalizationEnabled": true
+   }
+  }
+ }
+]
