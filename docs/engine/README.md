@@ -142,6 +142,8 @@ whole revision round.
 | `SOCRAT_YOUTUBE_TRANSCRIPTS` | Video captions as the author's source text (reads the public watch page; no official API) | owner decision | false |
 | `SOCRAT_EXPLAINER_SKETCH_DECLARATIVE` | Sketches as data, no model code | after checking a few generated sketches | set false; old and new sketches both still play |
 | `SOCRAT_LITE_MODE_ENABLED` | Data-use choice and lite mode | any time | set false |
+| `SOCRAT_GEN_MARKED_ANSWERS` | Quiz and atom writers mark the right option instead of giving its index (`coursegen/keyed.py`; replies in either form are always parsed) | at the next live run, comparing fact-checker `incorrect` quiz claims off and on | set false |
+| `SOCRAT_GEN_APPLIED_LESSONS` | Learner courses end each module with a planned "Apply" lesson (`coursegen/applied.py`) | after reading a few generated ones | set false; existing ones stay as planned lessons |
 | `SOCRAT_GEN_INITIAL_ON_PUBLISH` | Admin-published courses write their first slice at once | any time | set false |
 | `SOCRAT_WORKER_RUNS_GENERATION` | Generation in the worker | see `docs/operations/api-worker-split.md` | as there |
 

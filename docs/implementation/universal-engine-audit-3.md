@@ -298,3 +298,32 @@ first lessons released in 10 minutes.
 5. Lessons are short pages with at most about one component each, from a small generic set.
 6. They trade verification for speed: no fact-check or review round is visible in the client.
    Socrat's gates catch errors theirs may ship; keep them, but make each one cheaper to pass.
+
+Also in the record, not listed above: every section ends with an **applied lesson**
+(`isAppliedLesson`, "Apply the key ideas from <section> in a practical scenario before the
+section review"), then a section review and a live challenge (`13-course.png`); lessons carry
+`keywords` (tap-to-define terms) and three `followUpQuestions`; the outline shows its size and
+time ("12 lessons, ~1 hr total, ~3 days at 20 min daily goal").
+
+## 10. Third pass: two ideas from the signed-in record, adopted (2026-11-05)
+
+The owner chose two of four proposals (the other two, key terms with follow-up questions and a
+time estimate on the outline, are not built).
+
+| Change | Why | Where | Flag (off) |
+|---|---|---|---|
+| **The right option is marked in the item.** Quiz and atom writers may mark the correct option (`{"text", "correct"}`, `isCorrect` also read) or copy its text, instead of giving an index; code derives the stored index. Every form is parsed whatever the flag; the flag changes only what the writer is asked for (and turns the reference example into the same form). Flag, copied text and index must agree; two marks, no mark, a text that matches no option, or two options that differ only in case or a closing full stop are refused with a message the writer can act on. An atom check whose key is unclear is dropped (never guessed); a quiz item is dropped while 4 sound ones remain, as before | An index next to a list can point at the wrong option and nothing in the item shows it (point 3 above). Learners already see options in a per-session order (`learn.sessions.option_order`), so the writer no longer "varies the correct position" | `coursegen/keyed.py`, `package.QUIZ_MARKED`/`ATOMS_MARKED`, `build_concept`, `tidy_atom` | `SOCRAT_GEN_MARKED_ANSWERS` |
+| **An "Apply" lesson closes each module of a learner's course.** Built by code after the critic: one planned concept per module of two or more concepts, last in the module, depending on the module's concepts nothing else there builds on, objectives "choose which idea fits", "combine them on one realistic problem", "explain why", assessed by quiz and a rubric-graded explanation. Idempotent; a reused outline has them taken out and added again only when this course gets them; admin courses never get them | Lessons one idea at a time never make the learner choose between ideas or use two together (Wondering's applied lesson) | `coursegen/applied.py`, `jobs._with_applied`, `jobs._reuse` | `SOCRAT_GEN_APPLIED_LESSONS` |
+
+Honest limits. The applied lesson's quiz and explanation are evidence for that lesson only:
+Socrat's transfer checks are judged problems (`learn/transfers.py`), so it does not add transfer
+evidence to the module's earlier concepts, although its outline names transfer as what it should
+demand. It adds one lesson per module to generation cost (about one more for every three to five
+lessons). Neither change has run against a live model; the marked form's effect on key errors
+is a hypothesis to measure in the next live run (compare `incorrect` quiz claims from the fact
+checker with the flag off and on).
+
+Tests: `test_marked_answers.py` (12: every form, each refusal, prompts and example, atom checks,
+a package released with derived indexes) and `test_applied_lessons.py` (5: placement,
+prerequisites, graph checks unchanged, idempotent and reversible, learner course on, off by
+default, admin course never).

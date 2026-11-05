@@ -28,7 +28,7 @@ from socrat.catalog.schema import (
     QuizItem,
     Task,
 )
-from socrat.coursegen import execute, links
+from socrat.coursegen import execute, keyed, links
 from socrat.coursegen.intent import material_block
 from socrat.judge.service import normalized
 from socrat.style import spec as styles
@@ -198,6 +198,18 @@ Reply with one JSON object only:
             "why": "optional", "seconds": 60,
             "steps": [{"state": "...", "prompt": "...", "options": ["..."], "answer": 0,
                        "explanation": "..."}]}]}"""
+
+# With ``gen_marked_answers`` the writer marks the right option itself instead of giving its
+# index (coursegen/keyed.py derives the index), so the key cannot point at the wrong option.
+# Learners see options in a per-session order, so the writer no longer places the answer.
+MARKED = '"options": [{"text": "...", "correct": true}, {"text": "...", "correct": false}]'
+QUIZ_MARKED = QUIZ.replace(
+    "; vary the correct position.", "; mark exactly one option correct."
+).replace('"options": ["..."], "answer": 0,', MARKED + ",")
+ATOMS_MARKED = ATOMS.replace(
+    "2-6 distinct options, the answer index and an explanation",
+    "2-6 distinct options with exactly one marked correct, and an explanation",
+).replace('"options": ["..."], "answer": 0,\n', MARKED + ",\n")
 
 FACTS = """You are the Fact Checker for Socrat. Check every substantive technical claim in
 the package: lesson statements, worked-example numbers, code behaviour, quiz answer keys and
@@ -373,10 +385,12 @@ def part_prompt(ctx: str, lesson: dict, draft: dict | None, notes: list[str], ex
     return "\n\n".join(parts)
 
 
-def quiz_example(reference: Concept | None) -> str:
+def quiz_example(reference: Concept | None, marked: bool = False) -> str:
     if reference is None or not reference.quiz:
         return ""
     items = [q.model_dump(mode="json", exclude_none=True) for q in reference.quiz[:2]]
+    if marked:  # the example must show the form the writer is asked for
+        items = [keyed.marked(i) for i in items]
     return "Reference items for quality:\n" + json.dumps(items, indent=1)
 
 
@@ -577,6 +591,7 @@ def build_concept(
     parsed, broken = [], []
     for raw in items:
         try:
+            raw = keyed.settle(raw) if isinstance(raw, dict) else raw
             item = {**raw, "kind": raw.get("kind", "mcq")} if languages else {**raw, "kind": "mcq"}
             if item["kind"] not in {"mcq", "output"}:
                 raise TypeError(f"kind {item['kind']} is not allowed; use mcq or output")
@@ -702,11 +717,16 @@ def tidy_atom(atom):
     seconds = out.get("seconds")
     out["seconds"] = min(120, max(10, seconds)) if isinstance(seconds, int) else 60
     if isinstance(out.get("steps"), list):
-        out["steps"] = [
-            {k: v for k, v in s.items() if k in _STEP_KEYS}
-            for s in out["steps"]
-            if isinstance(s, dict) and len(str(s.get("prompt", "")).strip()) >= 5
-        ]
+        steps = []
+        for s in out["steps"]:
+            if not isinstance(s, dict) or len(str(s.get("prompt", "")).strip()) < 5:
+                continue
+            try:  # the right option may be marked in the step; code derives the index
+                s = keyed.settle(s)
+            except TypeError:
+                continue  # a check whose key is unclear is dropped, never guessed
+            steps.append({k: v for k, v in s.items() if k in _STEP_KEYS})
+        out["steps"] = steps
     if out.get("kind") == "hook" and isinstance(out.get("body"), str):
         sentences = re.split(r"(?<=[.!?])\s+", out["body"].strip())
         out["body"] = " ".join(sentences[:2])

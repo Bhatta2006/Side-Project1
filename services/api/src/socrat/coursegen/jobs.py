@@ -199,8 +199,10 @@ async def run_outline(
         stored = generated.course(db, brief.id)
         fresh = not job.input.get("revise") and not job.input.get("notes")
         reusable = reusable_outline(db, job_id, job.input["brief"]) if fresh else None
-    if reusable is not None and await _reuse(engine, base, job_id, brief, owner, *reusable):
-        return
+    if reusable is not None:
+        source_id, architect = reusable
+        if await _reuse(engine, base, job_id, brief, owner, source_id, architect, settings):
+            return
     if brief.style is None and brief.style_request.strip():
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
         brief = brief.model_copy(update={"style": spec})
@@ -338,11 +340,26 @@ async def run_outline(
             error="No valid outline after all rounds; see the log.",
         )
         return
+    best = _with_applied(engine, settings, job_id, best, owner)
     with Session(engine) as db, db.begin():
         generated.save_course(db, base, best, status="review", brief=brief.model_dump(mode="json"))
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
+
+
+def _with_applied(engine: Engine, settings: Settings, job_id: str, course, owner: str | None):
+    """A learner's course gains an "Apply" lesson closing each module (``gen_applied_lessons``).
+    Added by code after the critic, so the critic judged the architect's plan alone."""
+    if not settings.gen_applied_lessons or owner is None:
+        return course
+    from socrat.coursegen import applied
+
+    widened = applied.add(course)
+    added = [c.id for c in widened.concepts if c.id not in {x.id for x in course.concepts}]
+    if added:
+        _note(engine, job_id, {"role": "system", "event": "applied_lessons", "concepts": added})
+    return widened
 
 
 def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, list[str]]:
@@ -459,16 +476,22 @@ async def _reuse(
     owner: str | None,
     source_id: str,
     architect: dict,
+    settings: Settings | None = None,
 ) -> bool:
     """Save the earlier outline under this brief's id without a model call. False (and
-    nothing saved) when it no longer validates against today's catalog."""
+    nothing saved) when it no longer validates against today's catalog. Applied lessons are
+    not part of the architect's plan: they are taken out of the source and added again only
+    if this course gets them."""
+    from socrat.coursegen import applied
 
     with Session(engine) as db:
         source = generated.course(db, source_id)
     if source is None:
         return False
     try:
-        course = to_course(brief, from_course(source))
+        course = to_course(brief, from_course(applied.remove(source)))
+        if settings is not None:
+            course = _with_applied(engine, settings, job_id, course, owner)
         with Session(engine) as db, db.begin():
             generated.save_course(
                 db, base, course, status="review", brief=brief.model_dump(mode="json")
@@ -731,7 +754,7 @@ async def run_package(
         pending = {}
         asked: dict[str, tuple[str, str, int]] = {}  # part -> (system, prompt, tokens)
         if "quiz" in redo or quiz is None:
-            example = pkg.quiz_example(reference)
+            example = pkg.quiz_example(reference, settings.gen_marked_answers)
             if code:
                 example += "\n\n" + pkg.QUIZ_CODE.format(languages=", ".join(code))
             if concept.outline and "explain" in concept.outline.assessment:
@@ -743,12 +766,14 @@ async def run_package(
             if pkg.wants_tasks(concept, adapter):
                 example += "\n\n" + pkg.TASKS.format()
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
-            asked["quiz"] = (pkg.QUIZ + note, prompt, 6000)
+            quiz_rules = pkg.QUIZ_MARKED if settings.gen_marked_answers else pkg.QUIZ
+            asked["quiz"] = (quiz_rules + note, prompt, 6000)
             pending["quiz"] = ask("quiz", *asked["quiz"])
         if "atoms" in redo or atoms is None:
             extra = pkg.ATOMS_CODE.format(languages=", ".join(code)) if code else ""
             prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], extra)
-            asked["atoms"] = (pkg.ATOMS + note, prompt, 8000)
+            atom_rules = pkg.ATOMS_MARKED if settings.gen_marked_answers else pkg.ATOMS
+            asked["atoms"] = (atom_rules + note, prompt, 8000)
             pending["atoms"] = ask("atoms", *asked["atoms"])
         replies = dict(zip(pending, await asyncio.gather(*pending.values()), strict=True))
         # A quiz or atoms reply that is not readable JSON is re-asked once, at once and alone,

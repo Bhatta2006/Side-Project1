@@ -217,6 +217,12 @@ class Settings(DatabaseSettings):
     simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
     diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)
     gen_visuals: bool = False  # Experience Designer adds typed visuals to generated lessons
+    # Quiz and atom writers mark the right option in the item instead of giving its index
+    # (coursegen/keyed.py). Replies in either form are always accepted; this changes the ask.
+    gen_marked_answers: bool = False
+    # Learner courses end every module with a planned "Apply" lesson that uses the module's
+    # ideas together in a new situation (coursegen/applied.py).
+    gen_applied_lessons: bool = False
     # Search providers the researcher must choose sources from (coursegen.search.PROVIDERS),
     # e.g. ["wikipedia", "wikibooks", "arxiv", "open-library"]. Empty: the model names sources from memory
     # and only the link check guards them.
