@@ -36,6 +36,15 @@ decision recorded: sketches become declarative (flag `explainer_sketch_declarati
 switched). Every role is still only exercised with hand-written replies; a live-model run of
 `scripts/dev/benchmark.py` is the first thing to do with a key.
 
+**Update 2026-11-05 (Wondering ideas and calm lessons, section 4.11).** Answers are marked inside
+quiz items, an Apply lesson closes each module, lessons read one page at a time with a recap
+page, the AI and sources information moved to a ★ footnote at the end, and page size is worked
+out per learner (`style/pages.py`). Three new flags, all off: `gen_marked_answers`,
+`gen_applied_lessons`, `gen_lesson_pages` (the pager itself is on for every lesson). What is left
+is in section 6, "Experience plan". Full API suite after this work: 988 passed, 24 skipped
+(26 min). On this machine pytest needs `--basetemp` pointing at a
+folder you own, or every test using a temp folder errors at setup (421 errors, no failures).
+
 ---
 
 ## 1. What the owner wants (do not re-ask these)
@@ -314,6 +323,37 @@ downgrades; the downgrade test is `tests/test_quiz_runtime_tables.py` (add new t
   worker has no AI settings, so do not enable generation there without adding them.
 - Tests: `tests/test_worker_split.py` (5). **Not exercised on a real Compose stack.**
 
+### 4.11 Wondering ideas and calm lessons (`ea3c983`, `9a1512b`, `33fd9a5`, 2026-11-05)
+Source: the signed-in Wondering record (`research/wondering/2026-11-05/`, audit in
+`universal-engine-audit-3.md` section 10) and the owner's notes on text overload. Plan:
+`docs/implementation/experience-plan.md` (phases A to D, owner decisions in its section 9).
+- **Answers marked in the item** (`coursegen/keyed.py`, flag `gen_marked_answers`): quiz items and
+  atom checks mark the right option; code derives the index and drops an item whose key is
+  unclear. Both forms are always parsed. 12 tests.
+- **Apply lesson per module** (`coursegen/applied.py`, flag `gen_applied_lessons`): code adds an
+  application lesson after each module of a learner's course, depending on up to four of its
+  concepts. 5 tests. It writes **no transfer evidence** yet (owner decision 4 in the plan).
+- **Lessons one page at a time** (web, not flagged; the owner approved it and "Show the whole
+  lesson on one page" is the way back): `components/lesson-pages.tsx`, `lib/pages.ts`. Each `## `
+  section is a page; visuals and tasks are pages in the planned order; the last page is a recap
+  (key reminders, two pitfalls, feel controls, Mark as read, concept check). `<details>` answers
+  render as a reveal (`components/markdown.tsx`). The old "Your path through this lesson" box,
+  the side column reminders and the finish section were folded into the pager.
+- **★ About this lesson** (owner approved): how it was written, checked, translated and sourced,
+  and why it is taught this way, moved from the top of the lesson to `#about-lesson` after it; a
+  ★ link by the title jumps there. The course brief's safety notes stay above page 1
+  (`ConceptView.safety`, `learn/views._safety`).
+- **Page size per learner** (`style/pages.py`, flag `gen_lesson_pages`). Owner's rule: no fixed
+  sizes and not only "kids" or "university"; length and style follow the learner. A page
+  profile (words per page, pages per sitting, ideas per page, check rhythm, page elements) is
+  computed from register, starting and target level, approach, theory or practice balance,
+  minutes per day, accessibility, depth and rigor. It goes into the author's prompt and
+  `package.check_lesson` checks the draft against it instead of the character floor.
+  `Brief.learner` carries the learner's picks. 5 API tests, 4 web tests.
+- Browser check (offline API, Programming from Zero, `programs-and-output`): 8 pages, arrow keys
+  and focus, recap, ★ link and footnote, the one-page toggle, no sideways scroll at 375 px.
+  **Not run:** the Playwright suites, any lesson written by a live model under `gen_lesson_pages`.
+
 ## 5. Reports
 
 ### 5.1 Test and tooling results
@@ -326,6 +366,7 @@ downgrades; the downgrade test is `tests/test_quiz_runtime_tables.py` (add new t
 | After slice 9b | `test_worker_split`, `test_production_runtime`, `test_staging_contract`, `test_foundation` (18 + 15 tests) pass; full suite not re-run |
 | Load test (9a) | 25 learners p95 85 ms; 100 learners p95 295 ms; 0 errors; single laptop process, SQLite |
 | Browser | `tests/e2e/visuals.spec.ts` passes on desktop and mobile Chromium |
+| 2026-11-05, after section 4.11 | **988 passed, 24 skipped (25m51s)**; ruff, mypy (208 files), web typecheck clean; web unit tests 20 pass; Playwright suites not run |
 
 Tests added on this branch: `test_learning_requests.py` (slices 1 to 3, community, perks, pause and
 resume), `test_diagnostic.py`, `test_engine_registry.py` (adapters, renderers, `code.judge`,
@@ -380,6 +421,25 @@ latency and translation quality are therefore **unmeasured**. This is the bigges
 ## 6. Remaining work, in the order I recommend
 
 Items marked KEY need something from the owner.
+
+### Experience plan (calm lessons, fast courses, honest practice): started 2026-11-05
+Done: phase A1-A2 core (pager, recap, footnote), C2 page profiles (flagged), D1 marked answers
+(flagged), the Apply lesson (flagged). Left, in this order (details in `experience-plan.md`):
+1. Run the Playwright suites (`visuals`, `learner-journey`, `layout`, `accessibility`, `keyboard`
+   and the visual config) against the paged lesson; the visual baselines for the lesson page
+   will need updating on purpose. Add the A4 check (at most 120 words above the first Next).
+2. A1 remainder: atom checks between pages, swipe on phones, the per-page "Simpler / Another
+   example / Go deeper" toolbar, resources and practice folded into the recap.
+3. B-UI1 plan on `/new` (names, chips, Request changes, details disclosure), B-UI3 Today with one
+   Continue card.
+4. C2 remainder and A3: `terms` and `follow_ups` in the author's contract, terms on tap,
+   follow-up chips; one visual per page.
+5. C3, C1: fewer models in a row, plan skeleton first. KEY: a live-model key to measure.
+6. D1 true-or-false and fill-the-gap kinds, C4 practice menu per lesson, B-UI2 course path.
+7. KEY D2-D4: practice evidence at a lower weight, one review across courses, transfer evidence
+   from the Apply lesson (owner decisions 3 to 5).
+8. A live-model run with `gen_marked_answers`, `gen_applied_lessons` and `gen_lesson_pages` on,
+   then a person reading the lessons, before any of the three flags is turned on by default.
 
 ### Slice 9: scale (Phase 7). Started (9a done, 2026-11-02), remainder below
 Done in 9a: per-learner sliding-window limits on `POST /engine/simulate` and diagnostic creation
