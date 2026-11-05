@@ -30,6 +30,7 @@ evidence behind them.
 | `static/script-manifest.json` | Address, size and SHA-256 of every script captured (the scripts themselves are not stored here, see below) |
 | `static/rea-evidence.txt` | REA evidence identifiers for the page capture and the script export |
 | `tools/` | The scripts used: browser steps, recorder and this export |
+| `archive/` | Unredacted originals and the whole session workspace (see below) |
 
 ## Timeline of the signed-in run
 
@@ -113,10 +114,15 @@ Status polls of lesson rows (every 2 s, 54 in all) are left out of the table; th
   placeholders (`<id-1>`, `<id-2>`...) so links between files still line up, the email by
   `<email>`, the name by `<name>`. The account chip and the email line are covered in the
   screenshots.
-- Wondering's own JavaScript (about 5 MB) and the full REA page capture are **not** in the
-  repository: storing a competitor's code here is a copyright risk. `static/script-manifest.json`
-  lists each file's address and checksum, so a later copy can be checked against it. The full
-  unredacted archive was handed to the owner as a download on 2026-11-05.
+- `archive/` holds the **unredacted** originals, committed at the owner's request on 2026-11-05:
+  - `wondering-full-record-2026-11-05.zip`: raw network captures and responses, the full REA page
+    capture, Wondering's JavaScript as served to the browser, original screenshots, tools.
+  - `session-workspace-2026-11-05.zip`: everything else produced in the session (probe scripts,
+    patches, browser and server logs, the REA setup plan, all background test-run outputs).
+  Both contain the account email and ids and a competitor's code: keep this repository private.
+  Left out on purpose: the browser profile (cookies and cache) and the downloaded REA package
+  (reinstall with `npx -y rea-agents@6.8.0`).
+- `static/script-manifest.json` lists each script's address and checksum.
 - Not observed: Wondering's server code, prompts, models, validators and retry logic. Their
   terms of service may restrict automated access; this was one light, read-only session on the
   owner's own account.
