@@ -120,6 +120,16 @@ Those stay Socrat's strength (section 6).
 - Self-check questions inside `<details>` become the last check page instead of a block of
   text.
 
+**Built 2026-11-05** (`components/lesson-pages.tsx`, `lib/pages.ts`): pages per `## ` section,
+dot progress, Back and Next, arrow keys, focus to the page heading, the one-page setting
+(remembered per device), visuals and tasks as their own pages in the planned order, and a recap
+page (key reminders, two pitfalls, feel controls, Mark as read, concept check). `<details>`
+answers now render as a "Show the answer" reveal instead of literal tags. The pager is not behind
+a flag (the owner approved it, and the one-page setting is the way back); a lesson with no `## `
+sections stays one scroll. **Not built yet:** atom checks between pages, swipe on phones, the
+per-page "Simpler / Another example / Go deeper" toolbar (Explain it differently stays below
+the lesson), resources and practice folded into the recap, the 120-word Playwright check.
+
 ### A2. What moves off the reading path
 
 | Today (above or around the lesson) | Moves to |
@@ -204,7 +214,9 @@ can be a star at the end of each lesson.
   else moves to the footnote.
 - The course card and the course plan keep their one-line "Made by AI" label (the community
   and moderation rules rely on it), small and without a warning icon.
-- Needs the owner's confirmation (section 9) because it changes an honesty label.
+- Needs the owner's confirmation (section 9) because it changes an honesty label. *Approved and
+  built 2026-11-05:* the ★ link in the title, the footnote section `#about-lesson`, and the
+  brief's safety notes (`ConceptView.safety`, from `learn/views._safety`) shown above page 1.
 
 ---
 
@@ -222,14 +234,30 @@ is allowed. The learner's "Request changes" is a real review step; the critic st
 
 ### C2. Lesson pages as the contract (B1 in generation terms)
 
-The author returns `pages: [{heading, body}]` instead of one `lesson` string:
-5-8 pages for standard, 3-4 for bite, 8-12 for deep; each page 400-1,000 characters; at most one
-visual per page; page 1 opens with a question the learner answers before reading; plus
-`terms: [{term, definition}]` and `follow_ups: [3 questions]`. Code checks every number; terms
-not found in the text are dropped; the page count replaces the character floor. The stored
-`lesson` stays the pages joined with `## ` headings, so every reader of `Concept.lesson`
-(translation, fact check, tutor, search) keeps working. Old lessons need no migration.
-Behind flag `gen_lesson_pages`.
+**Owner's correction (2026-11-05):** pages must not be short, and their size must follow the
+learner, not a fixed band for "kids" or "university". There are no fixed numbers in the
+contract: `style/pages.py` works out a **page profile** for each learner from everything the
+brief knows (age register, starting and target level, approach, theory or practice balance,
+minutes per day, accessibility needs) and the style spec (depth, rigor, session minutes):
+
+- words per page, from a base per register scaled by each of those (a young child gets a few
+  sentences, an adult beginner a few short paragraphs, a rigorous university course a long page);
+- how many pages fit the sitting at a study reading pace and the reading share of the session;
+- how many new ideas per page (1 to 3) and how often a check comes (every page or every two);
+- which page elements suit the learner: stories and picture words for young children; worked
+  examples, compare tables, hidden answers (`<details>`), formulas, derivations and step lists
+  as the learner grows. The web already renders each as its own box.
+
+Examples the tests pin (ranges, not targets): a 5-year-old, 10 minutes: about 30-50 words a
+page, 3-5 pages, one idea each. An adult intermediate, 30 minutes: about 230-350 words, 4-6
+pages. A rigorous university hour: about 420-600 words, 5-7 pages, up to three ideas.
+
+The author still returns one `lesson` string with one `## ` heading per page, so every reader of
+`Concept.lesson` (translation, fact check, tutor, search) keeps working and old lessons need no
+migration. The profile goes into the author's prompt (`pages.block`) and code checks the draft
+against it with slack (`pages.check`, replacing the character floor). Behind flag
+`gen_lesson_pages`, off by default. **Not built yet:** `terms` and `follow_ups` (A3), one visual
+per page, the opening question check.
 
 ### C3. Fewer models in a row
 
@@ -316,8 +344,9 @@ Needs the owner's yes, because it changes what counts as mastery.
 ## 9. Decisions only the owner can make
 
 1. **Approve the direction** for the lesson page (pages, what moves off the reading path, the
-   one-page setting) before any page is edited.
-2. **Trust footnote**: move the AI-generated notice to the ★ footnote at the end, keeping the
+   one-page setting) before any page is edited. *Approved 2026-11-05, with page size decided per
+   learner (C2).*
+2. **Trust footnote** (*approved 2026-11-05*): move the AI-generated notice to the ★ footnote at the end, keeping the
    one-line safety note at the front for hazardous and high-stakes subjects, and the small
    "Made by AI" label on course cards.
 3. **Practice that counts** (D2): may practice-set items write `retrieval` evidence at a lower

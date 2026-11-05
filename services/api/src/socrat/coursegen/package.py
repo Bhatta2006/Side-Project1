@@ -435,12 +435,21 @@ def tidy_lesson(draft: dict, sources: list[dict]) -> dict:
 
 
 def check_lesson(
-    concept: Concept, course: Course, draft: dict, style: styles.StyleSpec | None = None
+    concept: Concept,
+    course: Course,
+    draft: dict,
+    style: styles.StyleSpec | None = None,
+    paging=None,
 ) -> list[str]:
-    """Deterministic lesson gates; links are checked separately (network)."""
+    """Deterministic lesson gates; links are checked separately (network). With ``paging`` (a
+    ``style.pages.PageProfile``) the learner's page sizes replace the length and heading rules."""
     problems = []
     depth = concept.outline.depth if concept.outline else "practitioner"
     text = str(draft.get("lesson", ""))
+    if paging is not None:
+        from socrat.style import pages
+
+        return [*pages.check(text, paging), *_common_lesson_checks(course, text)]
     floor, ceiling = MIN_LESSON[depth], None
     if style is not None and style.format != "standard":
         floor, ceiling = style.lesson_bounds()
@@ -459,6 +468,11 @@ def check_lesson(
     wanted = style.min_headings() if style is not None else 3
     if len(re.findall(r"^## ", text, re.MULTILINE)) < wanted:
         problems.append(f"Use at least {wanted} '## ' section heading{'s' if wanted > 1 else ''}.")
+    return problems + _common_lesson_checks(course, text)
+
+
+def _common_lesson_checks(course: Course, text: str) -> list[str]:
+    problems = []
     fences = set(re.findall(r"^```([a-zA-Z+#]*)", text, re.MULTILINE)) - {""}
     # A course without code (maths, a language, drawing) gets no program listings at all.
     code = shape.effective(course).studio == "code"

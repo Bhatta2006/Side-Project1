@@ -595,6 +595,13 @@ async def run_package(
 
     # The Pedagogical Strategist's plan, from the evidence library (deterministic).
     ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, 'unknown', adapter))}"
+    # Lesson pages sized for this learner (style/pages.py), decided by code from the request.
+    paging = None
+    if settings.gen_lesson_pages:
+        from socrat.style import pages
+
+        paging = pages.profile(brief.learner or pages.learner_of(None, style), style)
+        ctx = f"{ctx}\n\n{pages.block(paging)}"
     reference = pkg.gold(base) if style is None or style.shows_reference() else None
     note = pkg.STYLE_NOTE if style else ""
     cited: list[dict] = []
@@ -720,7 +727,7 @@ async def run_package(
                     for r in lesson.get("resources", [])
                     if isinstance(r, dict) and r.get("url") in verified
                 ]
-            issues = pkg.check_lesson(concept, course, lesson, style)
+            issues = pkg.check_lesson(concept, course, lesson, style, paging)
             issues += research.check(str(lesson.get("lesson", "")), cited)
             # A dead link is dropped, not a reason for a new round, while the live ones and the
             # researcher's sources still make the two a lesson needs.

@@ -223,6 +223,9 @@ class Settings(DatabaseSettings):
     # Learner courses end every module with a planned "Apply" lesson that uses the module's
     # ideas together in a new situation (coursegen/applied.py).
     gen_applied_lessons: bool = False
+    # Lessons are written as pages sized for the learner (style/pages.py); the page gate
+    # replaces the character floor and ceiling.
+    gen_lesson_pages: bool = False
     # Search providers the researcher must choose sources from (coursegen.search.PROVIDERS),
     # e.g. ["wikipedia", "wikibooks", "arxiv", "open-library"]. Empty: the model names sources from memory
     # and only the link check guards them.

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Course, EvidenceType, Language, PracticeType, Ref, Slug
+from socrat.style import pages
 from socrat.style import spec as styles
 
 
@@ -44,6 +45,9 @@ class Brief(BaseModel):
     adapter: str = Field(default="", max_length=40)
     # Safety notes from the request; a lesson in such a course needs a person to confirm it.
     safety: list[str] = Field(default_factory=list, max_length=10)
+    # Who reads the course, from the learner's request (style/pages.py sizes lesson pages from
+    # it). None for admin briefs: the style alone decides.
+    learner: pages.Learner | None = None
 
 
 def to_course(brief: Brief, outline: dict) -> Course:
@@ -309,7 +313,11 @@ def brief_text(brief: Brief) -> str:
     material (if any) as a separate block marked as data."""
     from socrat.coursegen.intent import material_block
 
-    head = "Brief:\n" + brief.model_dump_json(indent=2, exclude={"budget_usd", "material"})
+    # The learner profile sizes lesson pages; the architect already reads the same facts in
+    # the audience and notes, so it is left out rather than said twice.
+    head = "Brief:\n" + brief.model_dump_json(
+        indent=2, exclude={"budget_usd", "material", "learner"}
+    )
     notes = material_block(brief.material, 12000) if brief.material.strip() else ""
     return f"{head}\n\nBuild the course around this material:\n{notes}" if notes else head
 

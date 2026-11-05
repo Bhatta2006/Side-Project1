@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from socrat.catalog.schema import Language
 from socrat.coursegen.outline import Brief
+from socrat.style import pages
 
 Level = Literal["none", "beginner", "intermediate", "advanced", "expert"]
 Approach = Literal[
@@ -336,6 +337,7 @@ def to_brief(intent: Intent, course_id: str, budget_usd: float, material: str = 
         research=True,
         adapter=adapter.id,
         safety=[n[:300] for n in intent.safety_notes][:10],
+        learner=pages.learner_of(intent, None),
     )
 
 

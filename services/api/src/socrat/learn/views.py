@@ -387,6 +387,20 @@ def _validation(db: Session, qualified: str, concept) -> dict | None:
     return None if row is None else {k: row[k] for k in ("status", "label", "reviewer")}
 
 
+def _safety(db: Session, qualified: str, concept) -> list[str]:
+    """The course's safety notes (high-stakes advice, hazardous practice) for a generated
+    lesson. The lesson page shows these before the first page; every other note about how the
+    lesson was made sits in its "About this lesson" footnote."""
+    if not (concept.provenance and concept.provenance.author == AI_AUTHOR):
+        return []
+    from socrat.models import GeneratedCourse
+
+    row = db.get(GeneratedCourse, qualified.split(":", 1)[0])
+    brief = (row.brief or {}) if row is not None else {}
+    notes = brief.get("safety") if isinstance(brief, dict) else None
+    return [str(n)[:300] for n in notes][:4] if isinstance(notes, list) else []
+
+
 def concept_view(
     db: Session,
     catalog: Catalog,
@@ -447,6 +461,7 @@ def concept_view(
         ),
         # How the generated lesson was checked: pass, with warnings, or still needs a person.
         validation=_validation(db, qualified, concept),
+        safety=_safety(db, qualified, concept),
         attribution=concept.provenance.attribution_md if concept.provenance else "",
         exercises=resources.selected(qualified, language, "exercises"),
         prompts=graded.prompt_views(db, enrollment, qualified, concept),

@@ -20,7 +20,20 @@ type Block =
   | { type: 'list'; ordered: boolean; items: string[] }
   | { type: 'quote'; text: string }
   | { type: 'table'; head: string[]; rows: string[][] }
+  | { type: 'reveal'; summary: string; text: string }
   | { type: 'rule' };
+
+/** Text between the tags of a <details> block, as text only: no markup is ever rendered. */
+function detailsBlock(raw: string): { summary: string; text: string } {
+  const summary = raw.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i)?.[1]?.trim() ?? '';
+  const text = raw
+    .replace(/<summary[^>]*>[\s\S]*?<\/summary>/i, ' ')
+    .replace(/<\/?details[^>]*>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+  return { summary: summary.replace(/<[^>]+>/g, ''), text };
+}
 
 function cells(line: string): string[] {
   return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
@@ -42,6 +55,16 @@ export function parse(source: string): Block[] {
       continue;
     }
     if (!line.trim()) { i++; continue; }
+    // Generated lessons keep self-check answers in <details>; they become a reveal, not raw tags.
+    if (/^\s*<details/i.test(line)) {
+      const body: string[] = [];
+      while (i < lines.length) {
+        body.push(lines[i]);
+        if (/<\/details>/i.test(lines[i++])) break;
+      }
+      blocks.push({ type: 'reveal', ...detailsBlock(body.join('\n')) });
+      continue;
+    }
     const heading = line.match(/^(#{1,6})\s+(.*)$/);
     if (heading) { blocks.push({ type: 'heading', level: heading[1].length, text: heading[2] }); i++; continue; }
     if (/^\s*(---|\*\*\*|___)\s*$/.test(line)) { blocks.push({ type: 'rule' }); i++; continue; }
@@ -210,6 +233,15 @@ export default function Markdown({ source, language, className = '', rich = fals
               <tbody>{b.rows.map((row, r) => <tr key={r}>{row.map((c, n) => <td key={n}>{text(c)}</td>)}</tr>)}</tbody>
             </table>
           </div>
+        );
+      case 'reveal':
+        return (
+          <details key={index} className="answer-reveal">
+            <summary>{b.summary ? text(b.summary) : 'Show the answer'}</summary>
+            <div className="mt-2 grid gap-2">
+              {b.text.split(/\n\s*\n/).map((para, n) => <p key={n}>{text(para.replace(/\s+/g, ' '))}</p>)}
+            </div>
+          </details>
         );
       case 'rule':
         return <hr key={index} />;
