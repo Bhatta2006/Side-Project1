@@ -147,3 +147,104 @@ def test_programming_courses_get_practice_sets_too_but_only_dsa_company_question
     overview = client.get("/api/v1/drills", headers=headers)
     assert overview.status_code == 200
     assert all(c["concept"].startswith("zero:") for c in overview.json()["concepts"])
+
+
+ARRANGED = {
+    "questions": [
+        {
+            "kind": "order",
+            "prompt": "Put the steps of adding fractions in order.",
+            "sequence": [
+                "Find a common denominator",
+                "Rewrite each fraction",
+                "Add the numerators",
+            ],
+            "hint": "What must match first?",
+            "explanation": "Parts must be the same size before you can count them together.",
+        },
+        {
+            "kind": "match",
+            "prompt": "Match each fraction to its decimal.",
+            "pairs": [["1/2", "0.5"], ["1/4", "0.25"], ["3/4", "0.75"]],
+            "explanation": "Divide the top by the bottom.",
+        },
+        {
+            "kind": "number",
+            "prompt": "What is 1/2 + 1/2?",
+            "answer": "1",
+            "explanation": "Two halves make one whole.",
+        },
+        {"kind": "order", "prompt": "Too short", "sequence": ["a", "b"], "explanation": "x"},
+        {
+            "kind": "match",
+            "prompt": "Same right side twice",
+            "pairs": [["a", "x"], ["b", "x"], ["c", "y"]],
+            "explanation": "x",
+        },
+    ]
+}
+
+
+def test_order_and_match_questions_are_built_shuffled_and_graded_by_the_key():
+    kept = service.parse(json.dumps(ARRANGED))
+    # The two malformed arrangements are dropped, the sound ones kept.
+    assert [q["kind"] for q in kept] == ["order", "match", "number"]
+    order, match, _ = kept
+    steps = ARRANGED["questions"][0]["sequence"]
+    assert sorted(order["options"]) == sorted(steps) and order["options"] != steps
+    assert order["answer"] == " → ".join(steps)
+    # The key maps each position of the correct sequence to its place among the shown options.
+    right = ",".join(str(order["options"].index(s)) for s in steps)
+    assert service.correct(order, right)
+    assert not service.correct(order, "0,1,2" if right != "0,1,2" else "2,1,0")
+    for bad in ("", "0,1", "0,0,1", "0,1,9", "a,b,c", "0,1,2,3"):
+        assert service.picks(bad, order) is None and not service.correct(order, bad)
+
+    assert match["lefts"] == ["1/2", "1/4", "3/4"]
+    pairs = {"1/2": "0.5", "1/4": "0.25", "3/4": "0.75"}
+    mine = ",".join(str(match["options"].index(pairs[left])) for left in match["lefts"])
+    assert service.correct(match, mine)
+    swapped = mine.split(",")
+    swapped[0], swapped[1] = swapped[1], swapped[0]
+    assert not service.correct(match, ",".join(swapped))
+
+
+def test_the_shuffle_is_stable_and_never_hands_over_the_answer():
+    items = ["one", "two", "three"]
+    assert service.shuffled(items, "q") == service.shuffled(items, "q")
+    for seed in map(str, range(200)):
+        assert service.shuffled(items, seed) != items
+    assert service.shuffled(["a", "b"], "x") != ["a", "b"]
+
+
+def test_an_arranged_question_is_answered_once_and_never_leaks_its_key(client, monkeypatch):  # noqa: F811
+    monkeypatch.setattr("socrat.drills.routes.require_feature", lambda *a: None)
+    monkeypatch.setattr(
+        "socrat.drills.routes.make_provider", lambda settings: Scripted(json.dumps(ARRANGED))
+    )
+    headers = login(client, subject="nia", name="Nia")
+    onboard(client, headers)
+    _, concept = _first_open_concept(client, headers)
+    body = client.post("/api/v1/drills", json={"concept": concept}, headers=headers).json()
+    assert [q["kind"] for q in body["items"]] == ["order", "match", "number"]
+    shown = json.dumps(body)
+    for secret in ('"key"', '"sequence"', '"pairs"', "Find a common denominator → "):
+        assert secret not in shown, secret
+    assert body["items"][1]["lefts"] == ["1/2", "1/4", "3/4"]
+
+    url = f"/api/v1/drills/{body['id']}/answers"
+    order = body["items"][0]["options"]
+    steps = ARRANGED["questions"][0]["sequence"]
+    invalid = client.post(url, json={"question": 0, "answer": "0,0,1"}, headers=headers)
+    assert invalid.status_code == 404  # not counted as an answer
+    right = ",".join(str(order.index(s)) for s in steps)
+    done = client.post(url, json={"question": 0, "answer": right}, headers=headers).json()
+    assert done["correct"] is True and done["expected"] == " → ".join(steps)
+    again = client.post(url, json={"question": 0, "answer": right}, headers=headers)
+    assert again.status_code == 409
+    wrong = client.post(url, json={"question": 1, "answer": "0,1,2"}, headers=headers).json()
+    assert wrong["expected"] == "1/2 = 0.5; 1/4 = 0.25; 3/4 = 0.75"
+    # "0,1,2" can never be right for a match: the shuffle never leaves the answer in place.
+    assert wrong["correct"] is False
+    reread = client.get(f"/api/v1/drills/{body['id']}", headers=headers).json()
+    assert reread["answered"] == 2 and reread["correct"] == 1

@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Flame, Lightbulb, Loader2, Lock, RotateCcw, Sparkles, Star, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronUp, Flame, Lightbulb, Loader2, Lock, RotateCcw, Sparkles, Star, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
+import { answerToPicks, matchReady, move, picksToAnswer } from '@/lib/arrange';
 import type { DrillOverview, DrillQuestion, DrillSet } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading } from '@/components/common';
@@ -213,7 +214,11 @@ function QuestionCard({ setId, question, number, total, onAnswered, onNext }: {
       <p className="text-sm font-semibold text-muted-foreground tabular-nums">Question {number} of {total}</p>
       <h3 id={`q-${question.index}`} className="text-xl font-semibold whitespace-pre-wrap text-pretty sm:text-2xl">{question.prompt}</h3>
 
-      {question.kind === 'choice' ? (
+      {question.kind === 'order' ? (
+        <OrderQuestion question={question} locked={busy || answered} busy={busy} onCheck={picks => void send(picksToAnswer(picks))} />
+      ) : question.kind === 'match' ? (
+        <MatchQuestion question={question} locked={busy || answered} busy={busy} onCheck={picks => void send(picksToAnswer(picks))} />
+      ) : question.kind === 'choice' ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {question.options.map(option => {
             const picked = question.given === option;
@@ -266,5 +271,68 @@ function QuestionCard({ setId, question, number, total, onAnswered, onNext }: {
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** Put the steps in order with up and down buttons (keyboard and touch friendly, no dragging). */
+function OrderQuestion({ question, locked, busy, onCheck }: { question: DrillQuestion; locked: boolean; busy: boolean; onCheck: (picks: number[]) => void }) {
+  const [order, setOrder] = useState(() => question.options.map((_, i) => i));
+  const answered = question.correct !== undefined;
+  const shown = answered ? answerToPicks(question.given) ?? order : order;
+  return (
+    <div className="grid gap-3">
+      <ol className="grid gap-2" aria-label="Steps, in your order">
+        {shown.map((optionIndex, position) => (
+          <li key={optionIndex} className="flex items-center gap-2 rounded-[16px] border-2 bg-card px-3 py-2">
+            <span className="grid size-7 flex-none place-items-center rounded-full bg-raised text-sm font-bold tabular-nums" aria-hidden="true">{position + 1}</span>
+            <span className="min-w-0 flex-1 text-[17px] font-medium">{question.options[optionIndex]}</span>
+            {!locked ? (
+              <span className="flex flex-none gap-1">
+                <Button type="button" variant="outline" size="icon" aria-label={`Move "${question.options[optionIndex]}" up`} disabled={position === 0} onClick={() => setOrder(o => move(o, position, -1))}><ChevronUp /></Button>
+                <Button type="button" variant="outline" size="icon" aria-label={`Move "${question.options[optionIndex]}" down`} disabled={position === shown.length - 1} onClick={() => setOrder(o => move(o, position, 1))}><ChevronDown /></Button>
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+      {!answered ? (
+        <div><Button size="lg" disabled={busy} onClick={() => onCheck(order)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : null} Check my order</Button></div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Pair each item on the left with its partner: one native select per item. */
+function MatchQuestion({ question, locked, busy, onCheck }: { question: DrillQuestion; locked: boolean; busy: boolean; onCheck: (picks: number[]) => void }) {
+  const lefts = question.lefts ?? [];
+  const [picks, setPicks] = useState<(number | null)[]>(() => lefts.map(() => null));
+  const answered = question.correct !== undefined;
+  const given = answered ? answerToPicks(question.given) : null;
+  const value = (i: number) => (given ? given[i] : picks[i]);
+  return (
+    <div className="grid gap-3">
+      <ul className="grid gap-2">
+        {lefts.map((left, i) => (
+          <li key={left} className="grid gap-1.5 rounded-[16px] border-2 bg-card px-3 py-2.5 sm:grid-cols-[1fr_1fr] sm:items-center sm:gap-3">
+            <span className="text-[17px] font-medium">{left}</span>
+            <NativeSelect
+              aria-label={`Partner for ${left}`}
+              value={value(i) ?? ''}
+              disabled={locked}
+              onChange={e => setPicks(p => p.map((x, j) => (j === i ? (e.target.value === '' ? null : Number(e.target.value)) : x)))}
+            >
+              <NativeSelectOption value="">Choose…</NativeSelectOption>
+              {question.options.map((option, k) => <NativeSelectOption key={option} value={k}>{option}</NativeSelectOption>)}
+            </NativeSelect>
+          </li>
+        ))}
+      </ul>
+      {!answered ? (
+        <div className="grid gap-1.5">
+          <div><Button size="lg" disabled={busy || !matchReady(picks)} onClick={() => matchReady(picks) && onCheck(picks)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : null} Check my matches</Button></div>
+          {picks.every(p => p !== null) && !matchReady(picks) ? <p className="text-[13px] text-muted-foreground" role="status">Each partner can be used once.</p> : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

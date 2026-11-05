@@ -10,7 +10,9 @@ A set is stored as an ``ActivityRecord`` (``drill:<id>``) that is never complete
 progress, streaks and achievements, which read completed records, never count it.
 """
 
+import hashlib
 import json
+import random
 import re
 import secrets
 from datetime import UTC, datetime
@@ -33,17 +35,34 @@ KEEP = 20  # sets listed in the history
 
 
 class Question(BaseModel):
+    """One graded question. ``order`` (put the steps in order) and ``match`` (pair each item with
+    its partner) are graded by comparing the learner's picks, as option indexes, with ``key``,
+    which stays on the server until the question is answered."""
+
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
-    kind: Literal["choice", "number", "text"]
+    kind: Literal["choice", "number", "text", "order", "match"]
     prompt: str = Field(min_length=3, max_length=600)
-    options: list[str] = Field(default_factory=list, max_length=5)
-    answer: str = Field(min_length=1, max_length=120)
+    options: list[str] = Field(default_factory=list, max_length=6)
+    answer: str = Field(default="", max_length=240)
     accept: list[str] = Field(default_factory=list, max_length=6)
     hint: str = Field(default="", max_length=300)
     explanation: str = Field(min_length=3, max_length=800)
+    # order: the steps in their correct order. match: [left, right] pairs.
+    sequence: list[str] = Field(default_factory=list, max_length=6)
+    pairs: list[list[str]] = Field(default_factory=list, max_length=5)
+    # Built here, never taken from a reply: what the learner sees to the left of each choice
+    # (match), and the correct option index for each position (order) or left item (match).
+    lefts: list[str] = Field(default_factory=list, max_length=5)
+    key: list[int] = Field(default_factory=list, max_length=6)
 
     @model_validator(mode="after")
     def gradable(self):
+        if self.kind in ("order", "match"):
+            self._build_arranged()
+            return self
+        self.sequence, self.pairs, self.lefts, self.key = [], [], [], []
+        if not self.answer:
+            raise ValueError("a question needs an answer")
         if self.kind == "choice":
             if not 2 <= len(self.options) <= 5 or len(set(self.options)) != len(self.options):
                 raise ValueError("a choice question needs 2-5 distinct options")
@@ -54,6 +73,50 @@ class Question(BaseModel):
         if self.kind == "number" and number(self.answer) is None:
             raise ValueError("a number question needs a numeric answer")
         return self
+
+    def _build_arranged(self) -> None:
+        """Options (shuffled), the key and a readable answer for an order or match question."""
+        if self.kind == "order":
+            items = [s.strip() for s in self.sequence]
+            if not 3 <= len(items) <= 6 or not all(items) or len(set(items)) != len(items):
+                raise ValueError("an order question needs 3-6 distinct, non-empty steps")
+            self.options = shuffled(items, self.prompt)
+            self.key = [self.options.index(s) for s in items]
+            self.answer = " → ".join(items)[:240]
+            self.lefts = []
+        else:
+            made = [
+                [str(x).strip() for x in p[:2]]
+                for p in self.pairs
+                if isinstance(p, list) and len(p) >= 2
+            ]
+            lefts, rights = [p[0] for p in made], [p[1] for p in made]
+            if (
+                not 3 <= len(made) <= 5
+                or not all(lefts)
+                or not all(rights)
+                or len(set(lefts)) != len(lefts)
+                or len(set(rights)) != len(rights)
+            ):
+                raise ValueError("a match question needs 3-5 pairs, each side distinct")
+            self.options = shuffled(rights, self.prompt)
+            self.lefts = lefts
+            self.key = [self.options.index(r) for r in rights]
+            self.answer = "; ".join(f"{left} = {right}" for left, right in made)[:240]
+        self.accept = []
+
+
+def shuffled(items: list[str], seed: str) -> list[str]:
+    """The items in an order that is stable for this question and never already the answer."""
+    rng = random.Random(hashlib.sha256(seed.encode()).digest())
+    out = list(items)
+    for _ in range(8):
+        rng.shuffle(out)
+        if out != items:
+            break
+    else:
+        out = out[1:] + out[:1]  # the shuffle kept landing on the answer
+    return out
 
 
 class Drafted(BaseModel):
@@ -73,9 +136,17 @@ Reply with JSON only, no prose and no code fences, in exactly this shape:
    "hint": "a nudge that does not give the answer", "explanation": "why the answer is right"},
   {"kind": "number", "prompt": "...", "answer": "12", "hint": "...", "explanation": "..."},
   {"kind": "text", "prompt": "...", "answer": "a word or short phrase", "accept": ["other correct spellings"],
+   "hint": "...", "explanation": "..."},
+  {"kind": "order", "prompt": "Put these steps in order: ...", "sequence": ["first", "second", "third"],
+   "hint": "...", "explanation": "..."},
+  {"kind": "match", "prompt": "Match each ... to its ...", "pairs": [["left 1", "right 1"], ["left 2", "right 2"], ["left 3", "right 3"]],
    "hint": "...", "explanation": "..."}
 ]}
-Rules: write {count} questions, easiest first, mixing the kinds that suit the subject. A
+Rules: write {count} questions, easiest first, mixing the kinds that suit the subject: use at
+most one "order" and one "match" question, and only where the topic really has steps in a fixed
+order or pairs that belong together. An "order" has 3-6 steps given in their CORRECT order (it is
+shuffled for the learner); a "match" has 3-5 pairs with every left item and every right item
+different (the right side is shuffled). A
 "number" answer is a plain number or fraction (no units in the answer; say the unit in the
 prompt). A "text" answer is at most three words with every acceptable variant in "accept".
 Every question has exactly one correct answer. Check each answer before you reply."""
@@ -93,8 +164,25 @@ def normal(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", "", text.casefold())).strip()
 
 
+def picks(given: str, question: dict) -> list[int] | None:
+    """The learner's option indexes for an order or match answer ("2,0,1"), or None when the
+    text is not a valid pick for this question (wrong count, out of range, a step used twice)."""
+    try:
+        chosen = [int(x) for x in given.split(",")]
+    except ValueError:
+        return None
+    n = len(question["options"])
+    if len(chosen) != len(question["key"]) or any(not 0 <= c < n for c in chosen):
+        return None
+    if len(set(chosen)) != len(chosen):
+        return None
+    return chosen
+
+
 def correct(question: dict, given: str) -> bool:
     kind = question["kind"]
+    if kind in ("order", "match"):
+        return picks(given, question) == question["key"]
     if kind == "choice":
         return given.strip() == question["answer"]
     if kind == "number":
@@ -219,6 +307,8 @@ def view(record: ActivityRecord) -> dict:
     for index, q in enumerate(outcome["questions"]):
         item = dict(index=index, kind=q["kind"], prompt=q["prompt"], options=q["options"])
         item["hint"] = q.get("hint", "")
+        if q["kind"] == "match":
+            item["lefts"] = q["lefts"]  # the key itself is never sent before the answer
         if (given := answers.get(str(index))) is not None:
             item |= dict(
                 given=given["given"],
@@ -296,6 +386,8 @@ def answer(record: ActivityRecord, index: int, given: str, stamp: int) -> dict:
     question = questions[index]
     if question["kind"] == "choice" and given not in question["options"]:
         raise LookupError("not one of the options")
+    if question["kind"] in ("order", "match") and picks(given, question) is None:
+        raise LookupError("not a valid arrangement")
     right = correct(question, given)
     answers[str(index)] = dict(given=given, correct=right, at=stamp)
     outcome["answers"] = answers

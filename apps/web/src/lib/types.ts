@@ -41,9 +41,11 @@ export interface CourseFeatures {
 
 export interface DrillQuestion {
   index: number;
-  kind: 'choice' | 'number' | 'text';
+  kind: 'choice' | 'number' | 'text' | 'order' | 'match';
   prompt: string;
   options: string[];
+  /** match: the fixed items on the left; the learner picks a partner from `options` for each. */
+  lefts?: string[];
   hint: string;
   given?: string;
   correct?: boolean;

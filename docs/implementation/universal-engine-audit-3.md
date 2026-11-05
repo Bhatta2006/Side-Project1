@@ -196,3 +196,51 @@ Full API suite: **952 passed, 30 skipped, 5 failed** (20 min); the 5 are the sam
 failures listed in section 6. The first full run of this pass found two rules too broad (lab
 practice in code courses, bite lessons at 15 minutes); both were narrowed and the run repeated.
 Ruff, ruff format, mypy (205 files), web typecheck and the web unit tests (13) are clean.
+
+## 8. Wondering, analysed with REA (static, signed out)
+
+Run on 2026-11-05 after the owner allowed `wondering.app`. Method: headless Chromium opened the
+public landing page; REA (`rea-agents` 6.8.0) captured it passively (`inspect_web_page`, no
+clicks, no script execution), exported the 37 scripts it loaded (`export_web_scripts`, including
+the 4.3 MB main bundle) and the bundle was read as data. Evidence: capture
+`ev_ec4b721c8068a926606785ffc1d0ff24463c6ed747dc9c296ada0a389643534a`, export
+`ev_e1c60c83d007a58d16c02d020dad8ea789feed8dccf70eb9cd781b20630f1725`.
+
+**Not done, deliberately:** no account was created, no login, no call to their backend, and no
+generation was timed. So their prompts, models and server logic are unknown, and "how fast" is
+inferred from the client, not measured. The bundle is the signed-out app shell; it names what the
+client calls, not what the server does.
+
+### Observed (from shipped client code)
+
+| Area | Observation |
+|---|---|
+| Stack | A single-page app (Vite-built bundles, Lingui for translations) on **Supabase** (Postgres tables, RPCs, edge functions), with PostHog, Sentry and Rive animations; the bundle also mentions Capacitor, so a mobile wrapper is likely (inferred) |
+| Data model | `projects` (a course) with `course_nodes` (sections, lessons), `lesson_sessions`, `lesson_plans`, `practices`, `user_practice_progress`, `lesson_assessment_attempts`, `knowledge_cards`, `learner_memory_items/state/snapshots`, `teacher_memory`, `course_learning_preferences`, `deep_research_course_runs`, `lesson_podcast_episodes`, `lesson_videos`, `xp_events`, `friend_streaks` |
+| Creation pipeline (edge function names) | `course-creation-chat` (clarifying chat) → `learning-sources` / `search-learning-sources` → `generate-course-outline` → `generate-course-mind-map`, `generate-course-cover` → `generate-lesson-plan-from-content` → `generate-lesson-pages` (per lesson) → `check-understanding` (per-page tutor) → `process-lesson-insights`, `extract-learner-memory`, `manage-learner-memory` → `recommend-next-courses`; also `start-deep-research-course`, `lesson-video` |
+| Speed | The client logs "Course creation complete: N nodes (M lessons), K sessions created": the skeleton is built at once; lesson pages are generated per lesson, with the **next lesson prepared ahead** (setting text: "Your next lesson is prepared ahead of time… uses your daily lesson limit"). Daily and monthly limits are enforced (course, chat and lesson counters, HTTP 429) |
+| Practice types | `flashcard`, `mcq`, `binary_choice`, `cloze`, `pool_cloze`, `drag_order_steps`, `matching_pairs`, `open_ended_explanation`, `compare_contrast`, and `visual` with kinds such as `graph_trace`, `number_line`, `coordinate_plane`, `piano_keys`, `chess_move`, `map_select`, `chart_select`, `tap_select`, `text_select`, `figure_label`, `diagram_recall`. Two types, open explanation and compare and contrast, are marked asynchronously graded (the review queue excludes them); for the others the client's answer record carries a correct/incorrect flag, so they appear to be checked locally (inferred) |
+| Capability negotiation | The client sends the visual practice kinds it can render (`visualPracticeKinds`), so the generator only produces kinds the client supports. This is the pattern behind our first-run planning bug and its fix (section 7) |
+| Spaced review | Practice items carry FSRS scheduling (`due`, `scheduled_days`); one **global review across all courses**, sessions of 8 (quick 4), interleaved by course |
+| Tutor and memory | The tutor is shown what the learner did on visual practice (`describeVisualAttempt`); a persistent learner memory and "teacher memory" exist |
+| Other | "Dive deeper" and "applied" lessons on demand, course language revision guards on writes (`update_*_if_language_current`), a figure library of **only 7** hand-built interactive figures placed on showcase lessons (each with a `useWhen` rule), feature flags (e.g. new practice types are still off) |
+
+### Compared with Socrat, and what was adopted
+
+| Their idea | Socrat now | Action |
+|---|---|---|
+| Non-multiple-choice practice graded by code (order the steps, match pairs) | Practice sets had choice, number, text | **Adopted:** `order` and `match` kinds, graded on the server against a key that stays server-side until answered; options shuffled per question and never left in the answer position; keyboard and phone friendly (buttons and selects, no dragging); tested in the API, unit tests and a real browser |
+| Capability negotiation between generator and renderer | Fitted outline to studio (section 7), renderer registry | Already covered; the same principle now also holds for practice kinds |
+| Lessons generated lazily with the next one prepared ahead | Prefetch keeps three lessons ahead; first lesson first | Already covered |
+| FSRS across all courses | Own spaced scheduler; `GET /reviews?scope=all` | Already covered; practice sets do not feed it (owner decision, see section 4) |
+| Short sessions | Fitted lesson size to session length (section 7) | Done |
+| Podcasts, video, XP, friend streaks, "dive deeper", persistent learner memory, link/PDF import | Not present | Not adopted: need speech/video providers and keys, social features and privacy decisions, or a larger design |
+
+Where Socrat is stronger by design: verified practice (judge, CAS workbench, lab simulations),
+graded evidence with honest labels, per-course isolation, and depth on request.
+
+### Reliability and licensing
+
+Everything in the Observed table comes from the signed-out client code and is as reliable as that
+is. Their code, prompts and figure descriptions were read for ideas only; none was copied, and
+the analysis files stay in the scratch folder, not in this repository.
