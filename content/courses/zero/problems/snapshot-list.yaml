@@ -1,0 +1,126 @@
+id: snapshot-list
+title: Save and load
+concepts:
+- scope-and-mutation
+difficulty: medium
+statement: |
+  You edit a list of numbers that starts empty. Commands:
+
+  - `add x`: append x to the current list;
+  - `save k`: store a copy of the current list as slot k (replacing any earlier slot k);
+  - `load k`: make the current list equal to what slot k held when it was saved (do nothing if the
+    slot was never saved);
+  - `print`: print the current list on one line, separated by spaces (an empty line if empty).
+
+  A saved slot must never change afterwards, even if you keep editing the current list, and
+  loading must not link the current list to the slot.
+input_format: |
+  The first line contains q. Each of the next q lines holds one command.
+output_format: One line for each print command.
+constraints:
+- 1 ≤ q ≤ 2000
+- 0 ≤ k ≤ 9
+- '|x| ≤ 10^9'
+examples:
+- input: '8
+
+    add 1
+
+    add 2
+
+    save 0
+
+    add 3
+
+    print
+
+    load 0
+
+    print
+
+    add 9'
+  output: '1 2 3
+
+    1 2'
+- input: '6
+
+    add 5
+
+    save 1
+
+    load 1
+
+    add 6
+
+    load 1
+
+    print'
+  output: '5'
+  explanation: After load, adding 6 must not alter slot 1, so loading again gives 5.
+hints:
+- 'What does saving a list really store: the list itself, or a copy of its contents at that moment?'
+- In Python, plain assignment makes two names for the SAME list, so adding through one shows through the
+  other. Copy it (list(a) or a[:]).
+- Copy on save and also copy on load. Slots are at most 10, the list at most 2000 long, so copying is
+  cheap.
+approach: |
+  Keep the current list and 10 slots. `save` stores a copy, `load` makes a fresh copy of the slot
+  into the current list. Without those copies, later edits would leak into the saved slot. O(q ·
+  length).
+reference: |
+  import sys
+  lines = sys.stdin.read().split("\n")
+  q = int(lines[0])
+  cur, slots, out = [], {}, []
+  for line in lines[1:1 + q]:
+      p = line.split()
+      if p[0] == "add":
+          cur.append(int(p[1]))
+      elif p[0] == "save":
+          slots[int(p[1])] = list(cur)
+      elif p[0] == "load":
+          if int(p[1]) in slots:
+              cur = list(slots[int(p[1])])
+      else:
+          out.append(" ".join(map(str, cur)))
+  print("\n".join(out))
+brute: |
+  import sys, copy
+  lines = sys.stdin.read().split("\n")
+  q = int(lines[0])
+  cur, slots, out = [], [None] * 10, []
+  for line in lines[1:1 + q]:
+      p = line.split()
+      if p[0] == "add":
+          cur = cur + [int(p[1])]
+      elif p[0] == "save":
+          slots[int(p[1])] = copy.deepcopy(cur)
+      elif p[0] == "load":
+          s = slots[int(p[1])]
+          if s is not None:
+              cur = copy.deepcopy(s)
+      else:
+          out.append(" ".join(str(v) for v in cur))
+  print("\n".join(out))
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          q = rng.randint(1, 16)
+          rows = []
+          for _ in range(q):
+              c = rng.choice(["add", "add", "save", "load", "print"])
+              rows.append("print" if c == "print" else f"{c} {rng.randint(0, 3)}" if c != "add" else f"add {rng.randint(-5, 5)}")
+          yield f"{q}\n" + "\n".join(rows)
+generator: |
+  def cases(rng):
+      yield "8\nadd 1\nadd 2\nsave 0\nadd 3\nprint\nload 0\nprint\nadd 9"
+      yield "6\nadd 5\nsave 1\nload 1\nadd 6\nload 1\nprint"
+      yield "1\nprint"
+      yield "3\nload 4\nadd 1\nprint"
+      for _ in range(8):
+          q = 2000
+          rows = []
+          for _ in range(q):
+              c = rng.choice(["add", "add", "add", "save", "load", "print"])
+              rows.append("print" if c == "print" else f"{c} {rng.randint(0, 9)}" if c != "add" else f"add {rng.randint(-10**9, 10**9)}")
+          yield f"{q}\n" + "\n".join(rows)

@@ -121,24 +121,142 @@ resources:
 quiz:
   - id: formula
     kind: mcq
-    prompt: With prefix hashes h and powers pw, the hash of s[l:r] is...
-    options: ["(h[r] − h[l]·pw[r − l]) mod M", "(h[r] − h[l]·pw[l]) mod M", "(h[r] − h[l]) · pw[r − l] mod M", "(h[r] + h[l]·pw[r − l]) mod M"]
+    prompt: With prefix hashes h (h[i+1] = h[i]·B + s[i]) and powers pw of the base, the hash of s[l:r]
+      (r exclusive) is...
+    options:
+    - (h[r] − h[l]·pw[r − l]) mod M
+    - (h[r] − h[l]·pw[l]) mod M
+    - (h[r] − h[l]) · pw[r − l] mod M
+    - (h[r] + h[l]·pw[r − l]) mod M
     answer: 0
-    explanation: Shift h[l] up by r − l positions before subtracting it from h[r].
+    explanation: h[r] contains the prefix s[0:l] shifted left by r − l positions, so subtract h[l] multiplied
+      by B^(r−l). Then the remaining digits are the substring's own.
     difficulty: 2
   - id: collisions
     kind: mcq
-    prompt: Why use two moduli (or 2^61 − 1)?
-    options: ["To make accidental and adversarial collisions negligible", "To make each hash computation run roughly twice as fast", "To support uppercase letters as well as lowercase ones", "Because a single modulus gives incorrect hashes for long strings"]
+    prompt: Why use two moduli, or the single modulus 2^61 − 1, instead of one 32-bit prime?
+    options:
+    - To push the collision probability low enough that accidental and adversarial collisions are negligible
+    - To make each hash computation run roughly twice as fast on long strings
+    - To support uppercase letters as well as lowercase ones in the same string
+    - Because a single modulus produces incorrect hashes for strings longer than about 30 characters
     answer: 0
-    explanation: Many comparisons with a ~10^9 modulus make a false match likely (birthday paradox).
+    explanation: Equal strings always have equal hashes; the risk is two different strings sharing one.
+      A modulus near 10^9 leaves that risk too high once you compare many pairs.
     difficulty: 2
-  - id: zero-code
-    kind: mcq
-    prompt: Why avoid mapping 'a' to 0 in a polynomial hash?
-    options: ['"a" and "aa" would both hash to 0', "It's slower", "Zero is not allowed modulo a prime", "It changes the base"]
+  - id: hash-output
+    kind: output
+    prompt: Letters map to a = 1, b = 2, with base B = 10 and modulus 10^9 + 7. What does this print for
+      the two halves of 'abab'?
+    code:
+      python: "s = \"abab\"\nB, M = 10, 10**9 + 7\nh = [0]\npw = [1]\nfor ch in s:\n    h.append((h[-1]\
+        \ * B + ord(ch) - 96) % M)\n    pw.append(pw[-1] * B % M)\ndef sub(l, r):\n    return (h[r] - h[l]\
+        \ * pw[r - l]) % M\nprint(sub(0, 2), sub(2, 4))\n"
+      cpp: "string s = \"abab\";\nlong long B = 10, M = 1000000007LL;\nvector<long long> h(1, 0), pw(1,\
+        \ 1);\nfor (char ch : s) {\n    h.push_back((h.back() * B + ch - 'a' + 1) % M);\n    pw.push_back(pw.back()\
+        \ * B % M);\n}\nauto sub = [&](int l, int r) { return ((h[r] - h[l] * pw[r - l]) % M + M) % M; };\n\
+        cout << sub(0, 2) << \" \" << sub(2, 4);\n"
+      java: "String s = \"abab\";\nlong B = 10, M = 1_000_000_007L;\nlong[] h = new long[5], pw = new long[5];\n\
+        pw[0] = 1;\nfor (int i = 0; i < 4; i++) {\n    h[i + 1] = (h[i] * B + s.charAt(i) - 'a' + 1) % M;\n\
+        \    pw[i + 1] = pw[i] * B % M;\n}\nlong x = ((h[2] - h[0] * pw[2]) % M + M) % M;\nlong y = ((h[4]\
+        \ - h[2] * pw[2]) % M + M) % M;\nSystem.out.println(x + \" \" + y);\n"
+    options:
+    - 12 12
+    - 12 21
+    - 21 12
+    - 1212 12
     answer: 0
-    explanation: Leading zeros vanish, so strings of a's of different lengths collide.
+    explanation: '''ab'' hashes to 1·10 + 2 = 12, and so does the second ''ab'', because the formula removes
+      everything before position 2. Equal hashes mean the two substrings are (almost surely) equal.'
+    difficulty: 3
+  - id: random-base
+    kind: mcq
+    prompt: Why do contest solutions pick the hash base randomly at run time instead of a fixed constant
+      like 31?
+    options:
+    - A fixed, known base lets someone craft inputs where many strings collide
+    - A random base makes each hash computation faster than a fixed constant
+    - A fixed base only works for lowercase letters and breaks on digits
+    - The formula is only valid modulo a prime if the base is chosen at random
+    answer: 0
+    explanation: With a hidden random base, the collision probability holds for every possible input, not
+      just average ones. A fixed base can be attacked, which is how many solutions are hacked on open judges.
+    difficulty: 3
+  - id: birthday
+    kind: mcq
+    prompt: You compare 10^6 different strings using a single hash modulo 10^9 + 7. About how many colliding
+      pairs do you expect (pairs ≈ n² / 2, each colliding with probability 1/M)?
+    options:
+    - ≈ 500
+    - ≈ 0.0005
+    - ≈ 5
+    - ≈ 10^6
+    answer: 0
+    explanation: 'n²/2 = 5·10^11 pairs times 10^−9 is about 500 collisions. Comparing many strings makes
+      one small modulus unsafe: use 2^61 − 1 or two moduli.'
+    difficulty: 5
+  - id: mulmod
+    kind: mcq
+    prompt: You hash modulo 2^61 − 1. The product of two residues can be as large as about 2^122. How do
+      you multiply them correctly?
+    options:
+    - Use a 128-bit product (e.g. __int128) and reduce, or split into smaller pieces
+    - Multiply in 64-bit; the overflow wraps around correctly modulo 2^61 − 1
+    - Use a double, which holds values up to 10^38 with exact integer precision
+    - 'Reduce the base first: after that it never needs a wide multiplication'
+    answer: 0
+    explanation: 64-bit wraparound reduces modulo 2^64, not modulo 2^61 − 1. The special form 2^61 − 1 allows
+      a fast reduction from the 128-bit product, but you must first compute that product. Python integers
+      do it natively.
+    difficulty: 4
+  - id: binary-length
+    kind: mcq
+    prompt: To find the longest substring that occurs at least twice, you binary search the length L and
+      check with hashes. Why is that search valid?
+    options:
+    - A repeated substring of length L implies one of every shorter length (trim a character)
+    - Substrings are always stored sorted by length, so the first match is the longest
+    - Longer substrings always have smaller hash values, so the order is monotonic
+    - Hash collisions make the check monotonic, which is exactly what the search needs
+    answer: 0
+    explanation: 'Trimming one end of a repeated substring gives a repeated substring one shorter, so ''a
+      repeat of length L exists'' is monotonic. Each check hashes n − L + 1 substrings into a set: O(n),
+      so O(n log n) in total.'
+    difficulty: 4
+  - id: mod-2-64
+    kind: mcq
+    prompt: Some solutions rely on unsigned 64-bit overflow (hashing modulo 2^64) to avoid writing % at
+      all. What is wrong with that?
+    options:
+    - Thue–Morse strings collide for any base, so it can be hacked deterministically
+    - 'Nothing is wrong: it is the fastest and safest choice available for hashing'
+    - Unsigned overflow is undefined behaviour, so the program may crash outright
+    - It only breaks when the input string contains digits or punctuation
+    answer: 0
+    explanation: Hashing modulo a power of two is broken by the Thue–Morse construction regardless of the
+      base. Use a prime modulus such as 2^61 − 1 instead. (Unsigned overflow itself is well defined.)
+    difficulty: 5
+  - id: a-maps-to-zero
+    kind: bug
+    prompt: A polynomial hash maps each letter to its offset from 'a' (so 'a' = 0, 'b' = 1) with base 31
+      and modulus 10^9 + 7. Are the hashes of 'a' and 'aa' equal? Run it.
+    code:
+      python: "MOD = 10**9 + 7\ndef h(s):\n    v = 0\n    for c in s:\n        v = (v * 31 + (ord(c) - ord(\"\
+        a\"))) % MOD\n    return v\nprint(\"same\" if h(\"a\") == h(\"aa\") else \"different\")\n"
+      cpp: "const long long MOD = 1000000007;\nauto h = [&](const string& s) {\n    long long v = 0;\n \
+        \   for (char c : s) v = (v * 31 + (c - 'a')) % MOD;\n    return v;\n};\ncout << (h(\"a\") == h(\"\
+        aa\") ? \"same\" : \"different\");\n"
+      java: "class T {\n    long h(String s) {\n        long v = 0;\n        for (char c : s.toCharArray())\
+        \ v = (v * 31 + (c - 'a')) % 1_000_000_007L;\n        return v;\n    }\n}\nT t = new T();\nSystem.out.println(t.h(\"\
+        a\") == t.h(\"aa\") ? \"same\" : \"different\");\n"
+    options:
+    - same
+    - different
+    - error
+    - unsure
+    answer: 0
+    explanation: 'Leading zero letters add nothing: ''a'', ''aa'' and ''aaa'' all hash to 0, exactly like
+      leading zeros in a number. Map letters to 1..26 so no letter contributes zero.'
     difficulty: 3
 problems: [repeated-substring]
 practice_links:

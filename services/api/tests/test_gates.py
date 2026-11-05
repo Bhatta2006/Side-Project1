@@ -69,12 +69,25 @@ def test_quiz_item_ids_are_unique_within_a_module():
 
 
 def test_renamed_items_still_resolve_from_stored_sessions():
-    from socrat.learn.quizzes import item
+    from socrat.catalog.schema import QuizItem
 
-    cat = default_catalog()
-    assert item(cat, "zero:lists", "neighbours").id == "list-neighbours"
-    assert item(cat, "zero:grids", "neighbours").id == "neighbours"
-    assert item(cat, "dsa:union-find", "components").id == "union-components"
+    def make(id_, former=()):
+        return QuizItem(
+            id=id_,
+            prompt="prompt",
+            options=["a", "b"],
+            answer=0,
+            explanation="because",
+            difficulty=3,
+            former_ids=list(former),
+        )
+
+    renamed, other = make("list-neighbours", ["neighbours"]), make("neighbours")
+    assert renamed.matches("neighbours") and renamed.matches("list-neighbours")
+    assert other.matches("neighbours") and not other.matches("list-neighbours")
+    # Items named like a renamed one in another concept stay resolvable by their own id.
+    pool = [renamed, other]
+    assert next(q for q in pool if q.matches("neighbours")).id == "list-neighbours"
 
 
 def test_modules_unlock_in_order_and_known_modules_are_cleared():

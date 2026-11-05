@@ -108,55 +108,140 @@ resources:
 quiz:
   - id: turn-right
     kind: mcq
-    prompt: With directions 0=N, 1=E, 2=S, 3=W, how do you turn left?
-    options: ["d = (d + 3) % 4", "d = (d + 1) % 4", "d = d - 1", "d = (d + 2) % 4"]
-    answer: 0
-    explanation: Turning left is three right turns; +3 avoids negative values with %.
-    difficulty: 2
-  - id: simultaneous
-    kind: mcq
-    prompt: In Game of Life–style updates, why use a second grid?
+    prompt: Directions are numbered 0=N, 1=E, 2=S, 3=W, and a right turn is d = (d + 1) % 4. Which update
+      turns LEFT?
     options:
-      - "All cells must update from the same previous state"
-      - "A second grid makes each step run noticeably faster"
-      - "Two grids use less memory than one grid with flags"
-      - "The judge requires the input grid to stay unchanged"
+    - d = (d + 3) % 4
+    - d = (d - 1) % 4 in C++ or Java
+    - d = (d + 2) % 4
+    - d = d - 1
     answer: 0
-    explanation: Updating in place would let early cells' new values affect later cells in the same step.
-    difficulty: 2
-  - id: huge-steps
-    kind: mcq
-    prompt: A deterministic process has at most 1000 possible states. You need its state after 10^18 steps. Approach?
+    explanation: Adding 3 is the same as subtracting 1 but never goes negative. In C++ and Java, (d - 1)
+      % 4 gives -1 when d = 0, which breaks array indexing.
+    difficulty: 1
+  - id: walk-output
+    kind: output
+    prompt: A robot starts at (0, 0) facing north (dy = +1). What does this print?
+    code:
+      python: "dx = [0, 1, 0, -1]\ndy = [1, 0, -1, 0]\nx = y = d = 0\nfor c in \"FFRFFLF\":\n    if c ==\
+        \ \"F\":\n        x += dx[d]\n        y += dy[d]\n    elif c == \"R\":\n        d = (d + 1) % 4\n\
+        \    else:\n        d = (d + 3) % 4\nprint(x, y)\n"
+      cpp: "int dx[4] = {0, 1, 0, -1}, dy[4] = {1, 0, -1, 0};\nint x = 0, y = 0, d = 0;\nfor (char c : string(\"\
+        FFRFFLF\")) {\n    if (c == 'F') { x += dx[d]; y += dy[d]; }\n    else if (c == 'R') d = (d + 1)\
+        \ % 4;\n    else d = (d + 3) % 4;\n}\ncout << x << \" \" << y;\n"
+      java: "int[] dx = {0, 1, 0, -1}, dy = {1, 0, -1, 0};\nint x = 0, y = 0, d = 0;\nfor (char c : \"FFRFFLF\"\
+        .toCharArray()) {\n    if (c == 'F') { x += dx[d]; y += dy[d]; }\n    else if (c == 'R') d = (d\
+        \ + 1) % 4;\n    else d = (d + 3) % 4;\n}\nSystem.out.println(x + \" \" + y);\n"
     options:
-      - "Detect the cycle (it must repeat within 1001 steps) and use modulo"
-      - "Simulate all 10^18 steps with a tight loop and fast input/output"
-      - "Binary search on the step number at which the state stops changing"
-      - "It is impossible, since 10^18 steps can never be computed in time"
+    - 2 3
+    - 3 2
+    - 0 5
+    - 2 5
     answer: 0
-    explanation: By the pigeonhole principle a state repeats quickly; the rest is periodic.
+    explanation: FF goes to (0,2). R faces east. FF goes to (2,2). L faces north again. F ends at (2,3).
+    difficulty: 2
+  - id: front-erase
+    kind: mcq
+    prompt: A queue simulation removes the front element of a dynamic array (vector.erase(begin), list.pop(0),
+      ArrayList.remove(0)) once per customer, for 10^6 customers. What is the total cost?
+    options:
+    - 'About n²/2 = 5·10^11 element moves: too slow, use a deque or a head index'
+    - O(n) in total, since each removal is a single operation on the array
+    - O(n log n), because the array re-balances itself after each removal
+    - O(1) per removal, because the array knows where its own front is
+    answer: 0
+    explanation: Removing from the front shifts every remaining element. Keep an integer head pointer into
+      the array, or use a real deque.
     difficulty: 3
-  - id: simulate-size
+  - id: fixed-point
     kind: mcq
-    prompt: "A simulation runs for up to 10^18 steps but the state repeats with a short cycle. The usual technique is"
+    prompt: A process starts at x = 0 and repeats x = (x·x + 1) mod 7. What is x after 10^18 steps?
     options:
-      - "detect the cycle and skip whole cycles"
-      - "simulate step by step, but much faster"
-      - "use floating point to jump ahead in time"
-      - "binary search on the number of steps"
+    - '5'
+    - '0'
+    - '1'
+    - '2'
     answer: 0
-    explanation: "Record when each state was first seen; once a state repeats, jump ahead by multiples of the cycle length."
+    explanation: The sequence is 0, 1, 2, 5, 5, 5, ... Since 5·5 + 1 = 26 ≡ 5 (mod 7), it reaches a fixed
+      point after three steps. Find the repeat, then skip ahead.
+    difficulty: 3
+  - id: state-count
+    kind: mcq
+    prompt: A robot on a 50 × 50 grid has a position, one of 4 facing directions and a carrying flag (yes
+      or no). At most how many distinct states can the simulation visit?
+    options:
+    - '20000'
+    - '5000'
+    - '2500'
+    - '10000'
+    answer: 0
+    explanation: 2500 positions · 4 directions · 2 flag values = 20000. A deterministic process must therefore
+      repeat a state within 20001 steps, which bounds any cycle search.
     difficulty: 4
-  - id: order-of-updates
-    kind: mcq
-    prompt: "Updating a grid in place for a Game-of-Life step gives wrong results because"
+  - id: in-place-shift
+    kind: output
+    prompt: The intent is to shift every element one place to the right. What does this actually print?
+    code:
+      python: "a = [1, 0, 0, 0]\nfor i in range(1, 4):\n    a[i] = a[i - 1]\nprint(*a)\n"
+      cpp: 'int a[4] = {1, 0, 0, 0};
+
+        for (int i = 1; i < 4; i++) a[i] = a[i - 1];
+
+        cout << a[0] << " " << a[1] << " " << a[2] << " " << a[3];
+
+        '
+      java: 'int[] a = {1, 0, 0, 0};
+
+        for (int i = 1; i < 4; i++) a[i] = a[i - 1];
+
+        System.out.println(a[0] + " " + a[1] + " " + a[2] + " " + a[3]);
+
+        '
     options:
-      - "later cells read neighbours that were already updated this step"
-      - "the grid is too large to update in a single pass of the loops"
-      - "the neighbour counts overflow the integers used to store them"
-      - "the edges of the grid wrap around and count cells on both sides"
+    - 1 1 1 1
+    - 0 1 0 0
+    - 1 0 0 0
+    - 0 0 0 1
     answer: 0
-    explanation: "Every cell must see the previous generation; write into a second grid (or encode old and new states)."
+    explanation: Each write is read by the next iteration, so the 1 smears across the whole array. Iterate
+      from the right, or copy into a second array.
     difficulty: 5
+  - id: cycle-pigeonhole
+    kind: mcq
+    prompt: A deterministic process has 28 possible states. You simulate step by step and record the first
+      step at which each state is seen. By which step is a repeated state guaranteed?
+    options:
+    - Step 28 (the 29th state visited must repeat)
+    - Step 14
+    - Step 27 at the latest, never later
+    - It may never repeat
+    answer: 0
+    explanation: By pigeonhole, 29 visited states (steps 0..28) cannot all be different when there are only
+      28 states. From the first repeat you know the cycle start and length.
+    difficulty: 5
+  - id: update-in-place
+    kind: bug
+    prompt: Each cell becomes (left neighbour XOR right neighbour), where missing neighbours count as 0,
+      and all cells must change at the same time. Starting from 1 0 0 0 one step should give 0 1 0 0. This
+      code overwrites the same array while it reads it. What does it print?
+    code:
+      python: "a = [1, 0, 0, 0]\nn = len(a)\nfor i in range(n):\n    left = a[i - 1] if i > 0 else 0\n \
+        \   right = a[i + 1] if i < n - 1 else 0\n    a[i] = left ^ right\nprint(*a)\n"
+      cpp: "int a[4] = {1, 0, 0, 0};\nint n = 4;\nfor (int i = 0; i < n; i++) {\n    int left = i > 0 ?\
+        \ a[i - 1] : 0;\n    int right = i < n - 1 ? a[i + 1] : 0;\n    a[i] = left ^ right;\n}\nfor (int\
+        \ x : a) cout << x << \" \";\n"
+      java: "int[] a = {1, 0, 0, 0};\nint n = 4;\nfor (int i = 0; i < n; i++) {\n    int left = i > 0 ?\
+        \ a[i - 1] : 0;\n    int right = i < n - 1 ? a[i + 1] : 0;\n    a[i] = left ^ right;\n}\nfor (int\
+        \ x : a) System.out.print(x + \" \");\n"
+    options:
+    - 0 0 0 0
+    - 0 1 0 0
+    - 1 0 0 0
+    - 0 1 1 0
+    answer: 0
+    explanation: Cell 0 becomes 0 first, and then cell 1 reads that NEW 0 as its left neighbour instead
+      of the old 1, so the 1 vanishes. Build the next state in a separate array (or copy the old one first).
+    difficulty: 3
 problems: [robot-walk, lift-log]
 practice_links:
   - title: Beautiful Matrix

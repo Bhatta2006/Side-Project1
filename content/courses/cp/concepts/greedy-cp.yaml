@@ -123,27 +123,168 @@ resources:
     minutes: 20
     level: deep
 quiz:
-  - id: boats
-    kind: mcq
-    prompt: Weights [1, 2, 2, 3], limit 3, at most two per boat. Minimum boats?
-    options: ["3", "2", "4", "1"]
-    answer: 0
-    explanation: "Pairs: (3), (1, 2), (2) — 3 boats; no arrangement does better."
-    difficulty: 2
-  - id: multiset-erase
-    kind: mcq
-    prompt: In C++, how do you remove ONE copy of x from a multiset s?
-    options: ["s.erase(s.find(x))", "s.erase(x)", "s.erase(s.count(x))", "s.remove(s.find(x))"]
-    answer: 0
-    explanation: erase(value) removes all copies; erase(iterator) removes exactly one.
-    difficulty: 3
   - id: proof
     kind: mcq
-    prompt: Your greedy passes the samples. Best way to gain confidence before submitting?
-    options: ["Stress-test against a brute force on random small cases", "Submit it and see whether the hidden tests pass", "Add comments explaining why each step is greedy", "Run the samples again with the optimiser enabled"]
+    prompt: Your greedy passes every sample. What is the best way to gain confidence before submitting?
+    options:
+    - Stress-test it against a brute force on many random small cases
+    - Submit and see whether the hidden tests pass
+    - Add comments explaining why each step is greedy
+    - Run the samples again with optimisation turned on
     answer: 0
-    explanation: Random small tests quickly expose wrong greedy orderings.
+    explanation: Greedy solutions are usually wrong on a tiny input the samples missed. Brute-force comparison
+      finds it in minutes.
     difficulty: 1
+  - id: interval-output
+    kind: output
+    prompt: This greedy picks non-overlapping intervals. What does it print?
+    code:
+      python: "iv = [(1, 4), (3, 5), (0, 6), (5, 7), (3, 9), (5, 9), (6, 10), (8, 11), (8, 12), (2, 14),\
+        \ (12, 16)]\niv.sort(key=lambda t: t[1])\nend = -1\ncnt = 0\nfor s, e in iv:\n    if s >= end:\n\
+        \        cnt += 1\n        end = e\nprint(cnt)\n"
+      cpp: 'vector<pair<int,int>> iv = {{1,4},{3,5},{0,6},{5,7},{3,9},{5,9},{6,10},{8,11},{8,12},{2,14},{12,16}};
+
+        sort(iv.begin(), iv.end(), [](auto& a, auto& b) { return a.second < b.second; });
+
+        int end = -1, cnt = 0;
+
+        for (auto& p : iv) if (p.first >= end) { cnt++; end = p.second; }
+
+        cout << cnt;
+
+        '
+      java: 'int[][] iv = {{1,4},{3,5},{0,6},{5,7},{3,9},{5,9},{6,10},{8,11},{8,12},{2,14},{12,16}};
+
+        Arrays.sort(iv, (a, b) -> a[1] - b[1]);
+
+        int end = -1, cnt = 0;
+
+        for (int[] p : iv) if (p[0] >= end) { cnt++; end = p[1]; }
+
+        System.out.println(cnt);
+
+        '
+    options:
+    - '4'
+    - '3'
+    - '5'
+    - '6'
+    answer: 0
+    explanation: 'Sorted by end time it takes (1,4), then (5,7), then (8,11), then (12,16): four intervals,
+      which is optimal.'
+    difficulty: 3
+  - id: start-rule-fails
+    kind: mcq
+    prompt: Maximise the number of non-overlapping intervals among (1,10), (2,3), (4,5). Which greedy rule
+      goes wrong?
+    options:
+    - 'Earliest start first: it takes (1,10), blocking the other two, so 1 instead of 2'
+    - 'Earliest end first: it takes only (2,3) and then finds (4,5) blocked by it'
+    - 'Shortest interval first: it takes only one interval because every pair overlaps'
+    - 'None of them: every sensible rule gives 2 on this input'
+    answer: 0
+    explanation: Earliest-end-first is the one provably correct rule (exchange argument). Earliest-start
+      lets one long interval swallow many short ones.
+    difficulty: 3
+  - id: tickets
+    kind: mcq
+    prompt: Tickets cost [2, 3, 5, 8]. Buyers arrive with budgets 5, 2, 9, and each takes the most expensive
+      remaining ticket they can afford. What do the three buyers pay, in order?
+    options:
+    - 5, 2, 8
+    - 5, 2, 3
+    - 2, 3, 8
+    - 3, 2, 8
+    answer: 0
+    explanation: Budget 5 buys the 5, budget 2 buys the 2, budget 9 buys the 8. A sorted multiset with upper_bound
+      finds 'largest not above b' in O(log n); a plain list scan would be O(n) per buyer.
+    difficulty: 3
+  - id: cpp-multiset-erase
+    kind: mcq
+    languages:
+    - cpp
+    prompt: How do you remove exactly ONE copy of x from a multiset s?
+    options:
+    - s.erase(s.find(x))
+    - s.erase(x)
+    - s.erase(s.count(x))
+    - s.remove(s.find(x))
+    answer: 0
+    explanation: erase(value) deletes every copy. erase(iterator) removes a single element, so find first
+      and check it is not end().
+    difficulty: 3
+  - id: coin-fail
+    kind: mcq
+    prompt: Coins are {1, 3, 4} and the target is 6. How many coins does 'always take the largest coin that
+      fits' use, and what is optimal?
+    options:
+    - Greedy uses 3 coins (4 + 1 + 1); the optimum is 2 (3 + 3)
+    - Greedy uses 2 coins (3 + 3) and matches the optimum
+    - Greedy uses 3 coins (4 + 1 + 1) and that is also the optimum
+    - Greedy uses 4 coins and the optimum is 2
+    answer: 0
+    explanation: Greedy coin change is only safe for special systems such as {1, 5, 10, 25}. For arbitrary
+      coins use DP.
+    difficulty: 4
+  - id: weighted-order
+    kind: mcq
+    prompt: Jobs (time, weight) are A = (3, 3), B = (2, 1), C = (1, 2). You minimise the sum of weight ×
+      completion time. Which order is best?
+    options:
+    - C, A, B
+    - A, B, C
+    - B, A, C
+    - C, B, A
+    answer: 0
+    explanation: 'Sort by time ÷ weight ascending (the adjacent-swap exchange argument): C = 0.5, A = 1,
+      B = 2. The cost is 2·1 + 3·4 + 1·6 = 20, which no other order beats.'
+    difficulty: 4
+  - id: rope-merge
+    kind: mcq
+    prompt: You repeatedly merge two ropes, paying the sum of their lengths. Ropes are [4, 3, 2, 6]. What
+      is the minimum total cost?
+    options:
+    - '29'
+    - '30'
+    - '32'
+    - '24'
+    answer: 0
+    explanation: 'Always merge the two shortest: 2 + 3 = 5, then 4 + 5 = 9, then 6 + 9 = 15. Total 5 + 9
+      + 15 = 29. A min-heap does each step in O(log n).'
+    difficulty: 4
+  - id: deadlines
+    kind: mcq
+    prompt: Each job takes one unit of time. Jobs (deadline, profit) are (2, 100), (1, 19), (2, 27), (1,
+      25), (3, 15). Each must finish by its deadline. What is the maximum total profit?
+    options:
+    - '142'
+    - '152'
+    - '127'
+    - '186'
+    answer: 0
+    explanation: 'Take the three jobs with deadlines 2, 2, 3 and profits 100, 27, 15: schedule them in slots
+      1, 2, 3. A fourth job cannot fit because only three time slots exist before the latest deadline.'
+    difficulty: 5
+  - id: boats-strict-less
+    kind: bug
+    prompt: Three people weigh 2, 2 and 2, a boat carries at most 3 and at most two people, so 3 boats are
+      needed. This two-pointer loop runs while i < j (not i <= j). How many boats does it count?
+    code:
+      python: "w = [2, 2, 2]\nlimit = 3\ni, j = 0, len(w) - 1\nboats = 0\nwhile i < j:\n    if w[i] + w[j]\
+        \ <= limit:\n        i += 1\n    j -= 1\n    boats += 1\nprint(boats)\n"
+      cpp: "int w[3] = {2, 2, 2};\nint limit = 3, i = 0, j = 2, boats = 0;\nwhile (i < j) {\n    if (w[i]\
+        \ + w[j] <= limit) i++;\n    j--;\n    boats++;\n}\ncout << boats;\n"
+      java: "int[] w = {2, 2, 2};\nint limit = 3, i = 0, j = 2, boats = 0;\nwhile (i < j) {\n    if (w[i]\
+        \ + w[j] <= limit) i++;\n    j--;\n    boats++;\n}\nSystem.out.println(boats);\n"
+    options:
+    - '2'
+    - '3'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: When the pointers meet (i == j) one person is still unassigned and needs their own boat.
+      The loop must continue while i <= j.
+    difficulty: 2
 problems: [ticket-matching]
 practice_links:
   - title: Ferris Wheel

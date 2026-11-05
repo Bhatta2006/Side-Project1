@@ -768,131 +768,166 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: reuse-cue
-  kind: mcq
-  prompt: What makes a knapsack problem unbounded?
-  options:
-  - Each item can be taken any number of times
-  - Each item can be taken at most once
-  - Items can be split into fractions
-  - There are two budgets
-  answer: 0
-  explanation: Unlimited copies is the unbounded family; once each is 0/1.
-  difficulty: 1
-- id: rod-greedy
-  kind: mcq
-  prompt: Pieces of length 1 2 3 4 sell for 1 5 8 9. A rod of length 4 can be cut freely. Greedy by price
-    per length gets 9. What is the best?
-  options:
-  - '10'
-  - '9'
-  - '8'
-  - '12'
-  answer: 0
-  explanation: Two pieces of length 2 give 5 + 5 = 10.
-  difficulty: 2
-- id: forward-why
-  kind: mcq
-  prompt: Why does the one-row unbounded knapsack loop capacity from w up to W?
-  options:
-  - "So dp[c − w] may already include this item, allowing reuse"
-  - "Because looping upwards is faster than looping downwards"
-  - "So each item is used at most once across the whole table"
-  - "So the final answer ends up stored in dp[0] at the end"
-  answer: 0
-  explanation: Forwards reads cells already updated for this item, so it can be taken again.
-  difficulty: 3
-- id: backward-output
-  kind: output
-  prompt: Pieces of length 1 and 2 with prices 1 and 5, rod length 4. What does this print?
-  code:
-    python: |
-      w, v, W = [1, 2], [1, 5], 4
-      dp = [0] * (W + 1)
-      for i in range(2):
-          for c in range(W, w[i] - 1, -1):
-              dp[c] = max(dp[c], dp[c - w[i]] + v[i])
-      print(dp[W])
-    cpp: |
-      int w[] = {1, 2}, v[] = {1, 5}, W = 4;
-      vector<int> dp(W + 1, 0);
-      for (int i = 0; i < 2; i++)
-          for (int c = W; c >= w[i]; c--)
-              dp[c] = max(dp[c], dp[c - w[i]] + v[i]);
-      cout << dp[W];
-    java: |
-      int[] w = {1, 2}, v = {1, 5};
-      int W = 4;
-      int[] dp = new int[W + 1];
-      for (int i = 0; i < 2; i++)
-          for (int c = W; c >= w[i]; c--)
-              dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);
-      System.out.print(dp[W]);
-  options:
-  - '6'
-  - '10'
-  - '4'
-  - '5'
-  answer: 0
-  explanation: 'The backwards loop uses each piece once: 5 + 1 = 6. Reusing the length-2 piece would give
-    10.'
-  difficulty: 4
-- id: min-init
-  kind: mcq
-  prompt: In fewest coins, what should dp[a] start at for a > 0?
-  options:
-  - "Infinity, meaning not reachable yet"
-  - "0, meaning no coins are needed"
-  - "a, as if paid with coins of 1"
-  - "1, meaning one coin is enough"
-  answer: 0
-  explanation: Starting at 0 makes every minimum 0; infinity marks totals not yet reached.
-  difficulty: 2
-- id: greedy-coins
-  kind: mcq
-  prompt: Coins 1 3 4, amount 6. How many coins does the fewest-coins DP give?
-  options:
-  - '2'
-  - '3'
-  - '1'
-  - '6'
-  answer: 0
-  explanation: 3 + 3. Largest-first takes 4 + 1 + 1, which is three coins.
-  difficulty: 2
-- id: loop-order-count
-  kind: mcq
-  prompt: You count ways to make an amount and 1 + 2 and 2 + 1 should count once. Which loop goes outside?
-  options:
-  - The coins
-  - The amount
-  - Either; the result is the same
-  - Neither; use a 2D table
-  answer: 0
-  explanation: Coins outer builds each multiset in one fixed order, so it counts combinations.
-  difficulty: 3
-- id: orders-count
-  kind: mcq
-  prompt: Coins 1 2 3, amount 4. How many ordered sequences of coins sum to 4?
-  options:
-  - '7'
-  - '4'
-  - '6'
-  - '8'
-  answer: 0
-  explanation: 1111, 112, 121, 211, 22, 13 and 31.
-  difficulty: 4
-- id: exact-ribbon
-  kind: mcq
-  prompt: A ribbon of length 7 must be cut completely into pieces of length 5 or 2. What should dp[c] start
-    at for c > 0, when maximising pieces?
-  options:
-  - "Minus infinity (unreachable)"
-  - "0 pieces (nothing cut yet)"
-  - "c / 2 pieces (all of length 2)"
-  - "1 piece (the whole ribbon)"
-  answer: 0
-  explanation: Exactly 7 means leftover ribbon is not allowed; zeros would accept 2 + 2 + 2 with 1 left.
-  difficulty: 5
+  - id: reuse-cue
+    kind: mcq
+    prompt: What makes a knapsack problem unbounded?
+    options:
+    - Each item can be taken any number of times
+    - Each item can be taken at most once
+    - Items can be split into fractions
+    - There are two budgets
+    answer: 0
+    explanation: Unlimited copies is the unbounded family; once each is 0/1.
+    difficulty: 1
+  - id: rod-greedy
+    kind: mcq
+    prompt: Pieces of length 1 2 3 4 sell for 1 5 8 9. A rod of length 4 can be cut freely. Greedy by price
+      per length gets 9. What is the best?
+    options:
+    - '10'
+    - '9'
+    - '8'
+    - '12'
+    answer: 0
+    explanation: Two pieces of length 2 give 5 + 5 = 10.
+    difficulty: 2
+  - id: greedy-coins
+    kind: mcq
+    prompt: Coins 1 3 4, amount 6. How many coins does the fewest-coins DP give?
+    options:
+    - '2'
+    - '3'
+    - '1'
+    - '6'
+    answer: 0
+    explanation: 3 + 3. Largest-first takes 4 + 1 + 1, which is three coins.
+    difficulty: 2
+  - id: forward-why
+    kind: mcq
+    prompt: Why does the one-row unbounded knapsack loop capacity from w up to W?
+    options:
+    - So dp[c − w] may already include this item, allowing reuse
+    - Because looping upwards is faster than looping downwards
+    - So each item is used at most once across the whole table
+    - So the final answer ends up stored in dp[0] at the end
+    answer: 0
+    explanation: Forwards reads cells already updated for this item, so it can be taken again.
+    difficulty: 3
+  - id: backward-output
+    kind: output
+    prompt: Pieces of length 1 and 2 with prices 1 and 5, rod length 4. What does this print?
+    code:
+      python: "w, v, W = [1, 2], [1, 5], 4\ndp = [0] * (W + 1)\nfor i in range(2):\n    for c in range(W,\
+        \ w[i] - 1, -1):\n        dp[c] = max(dp[c], dp[c - w[i]] + v[i])\nprint(dp[W])\n"
+      cpp: "int w[2] = {1, 2}, v[2] = {1, 5}, W = 4;\nvector<int> dp(W + 1, 0);\nfor (int i = 0; i < 2;\
+        \ i++)\n    for (int c = W; c >= w[i]; c--)\n        dp[c] = max(dp[c], dp[c - w[i]] + v[i]);\n\
+        cout << dp[W];\n"
+      java: "int[] w = {1, 2}, v = {1, 5};\nint W = 4;\nint[] dp = new int[W + 1];\nfor (int i = 0; i <\
+        \ 2; i++)\n    for (int c = W; c >= w[i]; c--)\n        dp[c] = Math.max(dp[c], dp[c - w[i]] + v[i]);\n\
+        System.out.println(dp[W]);\n"
+    options:
+    - '6'
+    - '10'
+    - '4'
+    - '5'
+    answer: 0
+    explanation: 'The backwards loop uses each piece once: 5 + 1 = 6. Reusing the length-2 piece would give
+      10.'
+    difficulty: 4
+  - id: orders-count
+    kind: mcq
+    prompt: Coins 1 2 3, amount 4. How many ordered sequences of coins sum to 4?
+    options:
+    - '7'
+    - '4'
+    - '6'
+    - '8'
+    answer: 0
+    explanation: 1111, 112, 121, 211, 22, 13 and 31.
+    difficulty: 4
+  - id: exact-ribbon
+    kind: mcq
+    prompt: A ribbon of length 7 must be cut completely into pieces of length 5 or 2. What should dp[c]
+      start at for c > 0, when maximising pieces?
+    options:
+    - Minus infinity (unreachable)
+    - 0 pieces (nothing cut yet)
+    - c / 2 pieces (all of length 2)
+    - 1 piece (the whole ribbon)
+    answer: 0
+    explanation: Exactly 7 means leftover ribbon is not allowed; zeros would accept 2 + 2 + 2 with 1 left.
+    difficulty: 5
+  - id: combos-output
+    kind: output
+    prompt: This counts combinations of the coins 2, 5, 3 and 6 that make 10 (order does not matter). What
+      does it print?
+    code:
+      python: "coins = [2, 5, 3, 6]\namount = 10\ndp = [1] + [0] * amount\nfor c in coins:\n    for a in\
+        \ range(c, amount + 1):\n        dp[a] += dp[a - c]\nprint(dp[amount])\n"
+      cpp: "int coins[4] = {2, 5, 3, 6};\nint amount = 10;\nvector<int> dp(amount + 1, 0);\ndp[0] = 1;\n\
+        for (int c : coins)\n    for (int a = c; a <= amount; a++)\n        dp[a] += dp[a - c];\ncout <<\
+        \ dp[amount];\n"
+      java: "int[] coins = {2, 5, 3, 6};\nint amount = 10;\nint[] dp = new int[amount + 1];\ndp[0] = 1;\n\
+        for (int c : coins)\n    for (int a = c; a <= amount; a++)\n        dp[a] += dp[a - c];\nSystem.out.println(dp[amount]);\n"
+    options:
+    - '5'
+    - '17'
+    - '10'
+    - '8'
+    answer: 0
+    explanation: The combinations are 2+2+2+2+2, 2+2+3+3, 2+2+6, 5+5 and 2+3+5. With the amount in the outer
+      loop the same table would count ordered sequences, giving 17. Putting the coins outermost means each
+      coin is 'decided' once, which removes permutations.
+    difficulty: 4
+  - id: unreachable-output
+    kind: output
+    prompt: Coins are 5 and 7. This fewest-coins table marks amounts that cannot be paid with -1. What does
+      it print for the amounts 8 and 12?
+    code:
+      python: "coins = [5, 7]\nINF = 10 ** 9\ndef solve(a):\n    dp = [0] + [INF] * a\n    for x in range(1,\
+        \ a + 1):\n        for c in coins:\n            if x >= c:\n                dp[x] = min(dp[x], dp[x\
+        \ - c] + 1)\n    return dp[a] if dp[a] < INF else -1\nprint(solve(8), solve(12))\n"
+      cpp: "int coins[2] = {5, 7};\nconst int INF = 1000000000;\nauto solve = [&](int a) {\n    vector<int>\
+        \ dp(a + 1, INF);\n    dp[0] = 0;\n    for (int x = 1; x <= a; x++)\n        for (int c : coins)\n\
+        \            if (x >= c) dp[x] = min(dp[x], dp[x - c] + 1);\n    return dp[a] < INF ? dp[a] : -1;\n\
+        };\ncout << solve(8) << \" \" << solve(12);\n"
+      java: "class T {\n    int[] coins = {5, 7};\n    int solve(int a) {\n        int INF = 1_000_000_000;\n\
+        \        int[] dp = new int[a + 1];\n        Arrays.fill(dp, INF);\n        dp[0] = 0;\n       \
+        \ for (int x = 1; x <= a; x++)\n            for (int c : coins)\n                if (x >= c) dp[x]\
+        \ = Math.min(dp[x], dp[x - c] + 1);\n        return dp[a] < INF ? dp[a] : -1;\n    }\n}\nT t = new\
+        \ T();\nSystem.out.println(t.solve(8) + \" \" + t.solve(12));\n"
+    options:
+    - -1 2
+    - 2 2
+    - -1 3
+    - 0 2
+    answer: 0
+    explanation: 8 cannot be written as 5a + 7b, so it stays at INF and is reported as -1. 12 is 5 + 7,
+      two coins. If unreachable cells were initialised to 0 instead of INF, dp[8] would wrongly report 0
+      coins; the large sentinel also must not overflow when 1 is added to it.
+    difficulty: 3
+  - id: amount-outside-counts-orders
+    kind: bug
+    prompt: Counting the ways to make 3 from the coins 1 and 2, where 1 + 2 and 2 + 1 are the SAME way,
+      gives 2. This table loops over the amounts on the outside and the coins on the inside. What does it
+      print?
+    code:
+      python: "coins = [1, 2]\namount = 3\ndp = [1] + [0] * amount\nfor a in range(1, amount + 1):\n   \
+        \ for c in coins:\n        if a >= c:\n            dp[a] += dp[a - c]\nprint(dp[amount])\n"
+      cpp: "int coins[2] = {1, 2};\nint amount = 3;\nvector<int> dp(amount + 1, 0);\ndp[0] = 1;\nfor (int\
+        \ a = 1; a <= amount; a++)\n    for (int c : coins)\n        if (a >= c) dp[a] += dp[a - c];\ncout\
+        \ << dp[amount];\n"
+      java: "int[] coins = {1, 2};\nint amount = 3;\nint[] dp = new int[amount + 1];\ndp[0] = 1;\nfor (int\
+        \ a = 1; a <= amount; a++)\n    for (int c : coins)\n        if (a >= c) dp[a] += dp[a - c];\nSystem.out.println(dp[amount]);\n"
+    options:
+    - '3'
+    - '2'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: With the amount on the outside, 1 + 2 and 2 + 1 are both counted, so the code counts ordered
+      sequences (3) instead of combinations (2). For combinations the coin loop must be the outer one.
+    difficulty: 4
 problems:
 - ride-tokens
 - bundle-count

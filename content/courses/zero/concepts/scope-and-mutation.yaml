@@ -151,54 +151,231 @@ resources:
     minutes: 15
     languages: [cpp]
 quiz:
-  - id: number-param
+  - id: local-shadows-outer
     kind: output
-    prompt: What is printed?
+    prompt: The function makes its OWN variable x. What is printed?
     code:
-      python: |
-        def change(x):
-            x = x + 10
-        n = 5
-        change(n)
-        print(n)
-      cpp: |
-        void change(int x) { x = x + 10; }
-        int n = 5;
-        change(n);
-        cout << n;
-      java: |
-        static void change(int x) { x = x + 10; }
-        int n = 5;
-        change(n);
-        System.out.println(n);
-    options: ["5", "15", "10", "An error"]
-    answer: 0
-    explanation: The parameter is a separate copy of the number. Changing it does not affect n.
-    difficulty: 2
-  - id: list-param
-    kind: mcq
-    prompt: In Python or Java, a function sets nums[0] = 0 on the list/array it received. What happens to the caller's list?
-    options: ["Its first element becomes 0", "Nothing; only a copy changed", "The whole list is deleted", "The caller gets a new list"]
-    answer: 0
-    explanation: The function received a reference to the same list, so content changes are visible to the caller.
-    difficulty: 2
-  - id: cpp-ref
-    kind: mcq
-    prompt: In C++, what does the & in `void f(vector<int>& v)` mean?
+      python: "x = 10\ndef f():\n    x = 5\nf()\nprint(x)\n"
+      cpp: 'int x = 10;
+
+        auto f = [&]() { int x = 5; };
+
+        f();
+
+        cout << x;
+
+        '
+      java: "class T {\n    int x = 10;\n    void f() { int x = 5; }\n}\nT t = new T();\nt.f();\nSystem.out.println(t.x);\n"
     options:
-      - "Its first element becomes 0"
-      - "Nothing; only a copy changed"
-      - "The whole list is deleted"
-      - "The caller gets a new list"
+    - '10'
+    - '5'
+    - '15'
+    - Error
     answer: 0
-    explanation: "The & declares a reference parameter. Add const if the function should not modify it."
+    explanation: Assigning inside the function creates a new local variable that hides the outer one only
+      while the function runs. The outer x is untouched.
     difficulty: 2
-  - id: alias
-    languages: [python]
+  - id: outer-changed
     kind: output
-    prompt: "In Python: a = [1, 2]; b = a; b.append(3); print(len(a)). What is printed?"
-    options: ["3", "2", "1", "An error"]
+    prompt: This time the function is told to work on the OUTER variable. What is printed?
+    code:
+      python: "x = 10\ndef f():\n    global x\n    x = 5\nf()\nprint(x)\n"
+      cpp: 'int x = 10;
+
+        auto f = [&]() { x = 5; };
+
+        f();
+
+        cout << x;
+
+        '
+      java: "class T {\n    int x = 10;\n    void f() { x = 5; }\n}\nT t = new T();\nt.f();\nSystem.out.println(t.x);\n"
+    options:
+    - '5'
+    - '10'
+    - '15'
+    - Error
     answer: 0
-    explanation: b = a does not copy; both names refer to one list, which now has three elements.
+    explanation: global (Python), a reference capture (C++) or a field (Java) makes the function write to
+      the shared variable. Changing shared state from inside functions is powerful, and also makes bugs
+      hard to trace.
     difficulty: 3
-problems: []
+  - id: swap-fails
+    kind: output
+    prompt: A helper function swaps its two parameters. What is printed after calling it on x and y?
+    code:
+      python: "def swap(a, b):\n    a, b = b, a\nx, y = 1, 2\nswap(x, y)\nprint(x, y)\n"
+      cpp: 'auto swap2 = [](int a, int b) { int t = a; a = b; b = t; };
+
+        int x = 1, y = 2;
+
+        swap2(x, y);
+
+        cout << x << " " << y;
+
+        '
+      java: "class T {\n    void swap(int a, int b) { int t = a; a = b; b = t; }\n}\nint x = 1, y = 2;\n\
+        new T().swap(x, y);\nSystem.out.println(x + \" \" + y);\n"
+    options:
+    - 1 2
+    - 2 1
+    - 2 2
+    - 1 1
+    answer: 0
+    explanation: The parameters are copies of the numbers, so swapping the copies changes nothing outside.
+      A number-swapping helper needs to return both values, or work on a container.
+    difficulty: 3
+  - id: text-param
+    kind: output
+    prompt: Text cannot be changed in place, so adding to the parameter makes a new text. What is printed?
+    code:
+      python: "def shout(s):\n    s = s + \"!\"\nword = \"hi\"\nshout(word)\nprint(word)\n"
+      cpp: 'auto shout = [](string s) { s += "!"; };
+
+        string word = "hi";
+
+        shout(word);
+
+        cout << word;
+
+        '
+      java: "class T {\n    void shout(String s) { s = s + \"!\"; }\n}\nString word = \"hi\";\nnew T().shout(word);\n\
+        System.out.println(word);\n"
+    options:
+    - hi
+    - hi!
+    - '!'
+    - Error
+    answer: 0
+    explanation: The function's s is a separate variable that is rebound to a new string. The caller's word
+      still refers to the original. To get the new text, return it.
+    difficulty: 3
+  - id: loop-variable-lives-python
+    kind: output
+    languages:
+    - python
+    prompt: A Python for loop does not have its own scope, so its variable is still there afterwards. What
+      is printed?
+    code:
+      python: "for i in range(3):\n    pass\nprint(i)\n"
+    options:
+    - '2'
+    - '3'
+    - '0'
+    - Error
+    answer: 0
+    explanation: i keeps the last value it was given by the loop, 2. This is handy, but also means a loop
+      variable can accidentally overwrite an earlier variable of the same name.
+    difficulty: 4
+  - id: loop-variable-declared-outside
+    kind: output
+    languages:
+    - cpp
+    - java
+    prompt: When the counter is declared before the loop, it survives it, and holds the value that made
+      the condition fail. What is printed?
+    code:
+      cpp: 'int i;
+
+        for (i = 0; i < 3; i++) {}
+
+        cout << i;
+
+        '
+      java: 'int i;
+
+        for (i = 0; i < 3; i++) {}
+
+        System.out.println(i);
+
+        '
+    options:
+    - '3'
+    - '2'
+    - '0'
+    - Error
+    answer: 0
+    explanation: The loop only stops when i reaches 3, and that value remains. If i had been declared inside
+      the for brackets, it would not exist after the loop.
+    difficulty: 4
+  - id: list-changed-by-function
+    kind: output
+    languages:
+    - python
+    - java
+    prompt: The function receives a reference to the SAME list, so adding to it changes the caller's list.
+      What is printed?
+    code:
+      python: "def add_one(lst):\n    lst.append(1)\na = [5, 6, 7]\nadd_one(a)\nprint(len(a))\n"
+      java: "class T {\n    void addOne(ArrayList<Integer> lst) { lst.add(1); }\n}\nArrayList<Integer> a\
+        \ = new ArrayList<>(List.of(5, 6, 7));\nnew T().addOne(a);\nSystem.out.println(a.size());\n"
+    options:
+    - '4'
+    - '3'
+    - '1'
+    - Error
+    answer: 0
+    explanation: Unlike a number, a list is not copied when passed. The function changes the one real list,
+      so the caller sees the extra item. This is called mutation.
+    difficulty: 4
+  - id: vector-by-value-cpp
+    kind: output
+    languages:
+    - cpp
+    prompt: A C++ vector passed to a function is copied, unless the parameter is a reference. What is printed?
+    code:
+      cpp: 'auto add_one = [](vector<int> v) { v.push_back(1); };
+
+        vector<int> a = {5, 6, 7};
+
+        add_one(a);
+
+        cout << a.size();
+
+        '
+    options:
+    - '3'
+    - '4'
+    - '1'
+    - Error
+    answer: 0
+    explanation: The function worked on its own copy, which is thrown away at the end. Writing vector<int>&
+      v would let it change the caller's vector.
+    difficulty: 4
+  - id: reassign-vs-mutate
+    kind: output
+    languages:
+    - python
+    - java
+    prompt: The function does not change the list's contents; it points its own parameter at a brand new
+      list. What is printed?
+    code:
+      python: "def reset(lst):\n    lst = [9, 9, 9]\na = [1, 2, 3]\nreset(a)\nprint(a[0])\n"
+      java: "class T {\n    void reset(int[] arr) { arr = new int[]{9, 9, 9}; }\n}\nint[] a = {1, 2, 3};\n\
+        new T().reset(a);\nSystem.out.println(a[0]);\n"
+    options:
+    - '1'
+    - '9'
+    - '3'
+    - Error
+    answer: 0
+    explanation: Assigning to the parameter only re-points the function's own name. Changing an item (lst[0]
+      = 9) would have been visible outside, but replacing the whole list is not.
+    difficulty: 5
+  - id: mutable-default
+    kind: output
+    languages:
+    - python
+    prompt: A default value is created ONCE, when the function is defined, and then reused. What is printed?
+    code:
+      python: "def add(x, lst=[]):\n    lst.append(x)\n    return len(lst)\nprint(add(1), add(2))\n"
+    options:
+    - 1 2
+    - 1 1
+    - 2 2
+    - Error
+    answer: 0
+    explanation: Both calls share the same default list, so the second call sees the item from the first.
+      Use lst=None and create a fresh list inside the function.
+    difficulty: 5
+problems: [snapshot-list]

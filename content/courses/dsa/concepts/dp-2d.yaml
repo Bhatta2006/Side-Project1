@@ -143,38 +143,207 @@ resources:
     source: Tech Interview Handbook
     minutes: 10
 quiz:
-  - id: lcs-match
-    kind: mcq
-    prompt: In LCS, if a[i−1] == b[j−1], then dp[i][j] equals...
-    options: ["dp[i−1][j−1] + 1", "max(dp[i−1][j], dp[i][j−1])", "dp[i−1][j] + 1", "0"]
-    answer: 0
-    explanation: A matching character extends the LCS of both shorter prefixes.
-    difficulty: 2
-  - id: lcs-value
-    kind: mcq
-    prompt: What is the LCS length of "abcde" and "ace"?
-    options: ["3", "2", "5", "1"]
-    answer: 0
-    explanation: '"ace" itself is a subsequence of both.'
-    difficulty: 1
-  - id: knapsack-direction
-    kind: mcq
-    prompt: In 1D 0/1 knapsack, why iterate capacity from high to low?
-    options:
-      - So each item is used at most once
-      - It is faster
-      - To find the minimum
-      - Low-to-high causes overflow
-    answer: 0
-    explanation: Going upward would reuse the current item's own updated values — unbounded knapsack.
-    difficulty: 3
   - id: grid-paths
     kind: mcq
-    prompt: Moving only right or down, how many paths cross an open 3 × 3 grid of cells from corner to corner?
-    options: ["6", "9", "3", "4"]
+    prompt: Moving only right or down, how many different paths cross an open 3 x 3 grid of cells from the
+      top-left corner to the bottom-right corner?
+    options:
+    - '6'
+    - '9'
+    - '3'
+    - '4'
     answer: 0
-    explanation: 2 rights and 2 downs in any order — C(4, 2) = 6.
+    explanation: 'Each path is 2 moves right and 2 moves down in some order: C(4, 2) = 6. In DP form, paths(i,
+      j) = paths(i - 1, j) + paths(i, j - 1), with the first row and column all 1.'
+    difficulty: 1
+  - id: lcs-output
+    kind: output
+    prompt: This fills an LCS table for two strings. What does it print?
+    code:
+      python: "a = \"AGGTAB\"\nb = \"GXTXAYB\"\ndp = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]\nfor\
+        \ i in range(1, len(a) + 1):\n    for j in range(1, len(b) + 1):\n        if a[i - 1] == b[j - 1]:\n\
+        \            dp[i][j] = dp[i - 1][j - 1] + 1\n        else:\n            dp[i][j] = max(dp[i - 1][j],\
+        \ dp[i][j - 1])\nprint(dp[len(a)][len(b)])\n"
+      cpp: "string a = \"AGGTAB\", b = \"GXTXAYB\";\nvector<vector<int>> dp(a.size() + 1, vector<int>(b.size()\
+        \ + 1, 0));\nfor (size_t i = 1; i <= a.size(); i++)\n    for (size_t j = 1; j <= b.size(); j++)\n\
+        \        if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;\n        else dp[i][j] = max(dp[i\
+        \ - 1][j], dp[i][j - 1]);\ncout << dp[a.size()][b.size()];\n"
+      java: "String a = \"AGGTAB\", b = \"GXTXAYB\";\nint[][] dp = new int[a.length() + 1][b.length() +\
+        \ 1];\nfor (int i = 1; i <= a.length(); i++)\n    for (int j = 1; j <= b.length(); j++)\n      \
+        \  if (a.charAt(i - 1) == b.charAt(j - 1)) dp[i][j] = dp[i - 1][j - 1] + 1;\n        else dp[i][j]\
+        \ = Math.max(dp[i - 1][j], dp[i][j - 1]);\nSystem.out.println(dp[a.length()][b.length()]);\n"
+    options:
+    - '4'
+    - '3'
+    - '5'
+    - '2'
+    answer: 0
+    explanation: 'The longest common subsequence is G, T, A, B: length 4. dp[i][j] is the answer for the
+      first i characters of a and the first j of b: on a match extend the diagonal, otherwise take the better
+      of dropping one character from either string.'
     difficulty: 2
+  - id: obstacle-output
+    kind: output
+    prompt: The grid has an obstacle (1) in the centre and you may only move right or down. What does this
+      path counter print?
+    code:
+      python: "grid = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]\nn = m = 3\ndp = [[0] * m for _ in range(n)]\ndp[0][0]\
+        \ = 1\nfor i in range(n):\n    for j in range(m):\n        if grid[i][j] == 1:\n            dp[i][j]\
+        \ = 0\n        elif i or j:\n            dp[i][j] = (dp[i - 1][j] if i else 0) + (dp[i][j - 1] if\
+        \ j else 0)\nprint(dp[2][2])\n"
+      cpp: "int grid[3][3] = {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}};\nint dp[3][3] = {};\ndp[0][0] = 1;\nfor\
+        \ (int i = 0; i < 3; i++)\n    for (int j = 0; j < 3; j++) {\n        if (grid[i][j] == 1) dp[i][j]\
+        \ = 0;\n        else if (i || j) dp[i][j] = (i ? dp[i - 1][j] : 0) + (j ? dp[i][j - 1] : 0);\n \
+        \   }\ncout << dp[2][2];\n"
+      java: "int[][] grid = {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}};\nint[][] dp = new int[3][3];\ndp[0][0] =\
+        \ 1;\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 3; j++) {\n        if (grid[i][j] ==\
+        \ 1) dp[i][j] = 0;\n        else if (i > 0 || j > 0) dp[i][j] = (i > 0 ? dp[i - 1][j] : 0) + (j\
+        \ > 0 ? dp[i][j - 1] : 0);\n    }\nSystem.out.println(dp[2][2]);\n"
+    options:
+    - '2'
+    - '6'
+    - '4'
+    - '0'
+    answer: 0
+    explanation: An obstacle simply contributes zero paths. The open 3 x 3 grid has 6 paths, and the 4 that
+      cross the centre cell are removed, leaving the one along the top and right edge and the one along
+      the left and bottom edge.
+    difficulty: 2
+  - id: knapsack-direction
+    kind: output
+    prompt: A 1D knapsack table has ONE item (weight 2, value 3) and capacity 6, but the capacity loop runs
+      upwards. What does this print?
+    code:
+      python: "W = 6\nw, v = 2, 3\ndp = [0] * (W + 1)\nfor c in range(w, W + 1):\n    dp[c] = max(dp[c],\
+        \ dp[c - w] + v)\nprint(dp[W])\n"
+      cpp: 'int W = 6, w = 2, v = 3;
+
+        vector<int> dp(W + 1, 0);
+
+        for (int c = w; c <= W; c++) dp[c] = max(dp[c], dp[c - w] + v);
+
+        cout << dp[W];
+
+        '
+      java: 'int W = 6, w = 2, v = 3;
+
+        int[] dp = new int[W + 1];
+
+        for (int c = w; c <= W; c++) dp[c] = Math.max(dp[c], dp[c - w] + v);
+
+        System.out.println(dp[W]);
+
+        '
+    options:
+    - '9'
+    - '3'
+    - '6'
+    - '12'
+    answer: 0
+    explanation: 'Going upwards, dp[c - w] has already been updated by this same item, so the item is counted
+      again and again: 3 copies for a value of 9. That is the unbounded knapsack. For 0/1 knapsack the capacity
+      loop must run from high to low so each item is used at most once.'
+    difficulty: 3
+  - id: edit-distance
+    kind: mcq
+    prompt: What is the edit distance (single-character insert, delete or replace) between "kitten" and
+      "sitting"?
+    options:
+    - '3'
+    - '2'
+    - '4'
+    - '5'
+    answer: 0
+    explanation: 'Replace k with s, replace e with i, then insert g: three edits. dp[i][j] is the distance
+      between the first i letters of one word and the first j of the other. On a mismatch it is 1 plus the
+      best of delete (up), insert (left) or replace (diagonal).'
+    difficulty: 3
+  - id: min-path-sum
+    kind: mcq
+    prompt: The grid of costs is [[1, 3, 1], [1, 5, 1], [4, 2, 1]]. Moving only right or down from the top-left
+      to the bottom-right, what is the cheapest total?
+    options:
+    - '7'
+    - '8'
+    - '9'
+    - '6'
+    answer: 0
+    explanation: The path 1, 3, 1, 1, 1 costs 7. Each cell's best cost is its own value plus the cheaper
+      of the cell above or the cell to the left. The 5 in the middle is avoided, which a left-to-right greedy
+      pick of the smaller next step would also do here, but not in general.
+    difficulty: 3
+  - id: knapsack-numeric
+    kind: mcq
+    prompt: 'Items (weight, value): (1, 1), (3, 4), (4, 5), (5, 7) and a capacity of 7. Each item may be
+      used once. What is the largest total value?'
+    options:
+    - '9'
+    - '8'
+    - '10'
+    - '7'
+    answer: 0
+    explanation: Taking (3, 4) and (4, 5) fills the capacity exactly for 9. Picking by best ratio takes
+      (5, 7) first (ratio 1.4) and then only (1, 1) fits, for 8. That is why 0/1 knapsack needs a table
+      over capacities instead of a greedy rule.
+    difficulty: 4
+  - id: reconstruct-lcs
+    kind: mcq
+    prompt: You have the filled LCS table and want to print one actual longest common subsequence. How do
+      you recover it?
+    options:
+    - 'Walk back from dp[n][m]: on a match step diagonally and keep the character, otherwise move toward
+      the larger neighbour'
+    - Walk from dp[0][0] and keep every character where the table value increases along the diagonal
+    - Re-run the algorithm with each character removed and keep the characters whose removal lowers the
+      length
+    - Sort the characters of both strings and keep those present in both sorted lists, in sorted order
+    answer: 0
+    explanation: The table records lengths, so the walk-back re-derives which transition produced each value.
+      Characters are collected in reverse order, so reverse the result at the end. This costs O(n + m) extra
+      time but needs the full table.
+    difficulty: 4
+  - id: distinct-subseq
+    kind: mcq
+    prompt: In how many different ways can the word "rabbit" be formed as a subsequence of "rabbbit", where
+      different positions count as different ways?
+    options:
+    - '3'
+    - '1'
+    - '2'
+    - '6'
+    answer: 0
+    explanation: 'Any one of the three b''s can be skipped, giving 3 ways. The table is dp[i][j] = ways
+      to form the first j letters of the target from the first i letters of the source: dp[i-1][j] (skip
+      this letter), plus dp[i-1][j-1] when the letters match (use it).'
+    difficulty: 5
+  - id: blocked-start
+    kind: bug
+    prompt: Counting right-or-down paths through a 2 x 2 grid where 1 marks an obstacle. The START cell
+      is blocked, so the true answer is 0. The programmer seeds dp[0][0] = 1 without looking at the grid.
+      What does it print?
+    code:
+      python: "g = [[1, 0], [0, 0]]\nn = m = 2\ndp = [[0] * m for _ in range(n)]\ndp[0][0] = 1\nfor i in\
+        \ range(n):\n    for j in range(m):\n        if (i, j) == (0, 0):\n            continue\n      \
+        \  if g[i][j] == 1:\n            dp[i][j] = 0\n        else:\n            dp[i][j] = (dp[i - 1][j]\
+        \ if i else 0) + (dp[i][j - 1] if j else 0)\nprint(dp[n - 1][m - 1])\n"
+      cpp: "int g[2][2] = {{1, 0}, {0, 0}};\nint n = 2, m = 2;\nint dp[2][2] = {};\ndp[0][0] = 1;\nfor (int\
+        \ i = 0; i < n; i++)\n    for (int j = 0; j < m; j++) {\n        if (i == 0 && j == 0) continue;\n\
+        \        if (g[i][j] == 1) dp[i][j] = 0;\n        else dp[i][j] = (i ? dp[i - 1][j] : 0) + (j ?\
+        \ dp[i][j - 1] : 0);\n    }\ncout << dp[n - 1][m - 1];\n"
+      java: "int[][] g = {{1, 0}, {0, 0}};\nint n = 2, m = 2;\nint[][] dp = new int[2][2];\ndp[0][0] = 1;\n\
+        for (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++) {\n        if (i == 0 && j == 0) continue;\n\
+        \        if (g[i][j] == 1) dp[i][j] = 0;\n        else dp[i][j] = (i > 0 ? dp[i - 1][j] : 0) + (j\
+        \ > 0 ? dp[i][j - 1] : 0);\n    }\nSystem.out.println(dp[n - 1][m - 1]);\n"
+    options:
+    - '2'
+    - '0'
+    - '1'
+    - '4'
+    answer: 0
+    explanation: 'The blocked start is treated as open, so both neighbours inherit one path and the end
+      sees 2. Special cells (start and end) need the obstacle test too: dp[0][0] = 1 only when the cell
+      is free.'
+    difficulty: 3
 problems: [lcs-length, grid-paths, crypt-descent]
 practice_links:
   - title: Unique Paths

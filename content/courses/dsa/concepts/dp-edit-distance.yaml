@@ -922,121 +922,170 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: three-ops
-  kind: mcq
-  prompt: Which operations does the classic edit distance allow?
-  options:
-  - "Insert, delete and replace one character"
-  - "Only inserting and deleting single characters"
-  - "Swapping any two adjacent characters only"
-  - "Deleting a whole word or inserting one"
-  answer: 0
-  explanation: Levenshtein distance uses insert, delete and replace.
-  difficulty: 1
-- id: base-column
-  kind: mcq
-  prompt: What is dp[3][0], the cost of turning a 3-character prefix into the empty string?
-  options:
-  - '3'
-  - '0'
-  - '1'
-  - '4'
-  answer: 0
-  explanation: Delete all three characters.
-  difficulty: 2
-- id: horse
-  kind: mcq
-  prompt: The LCS shortcut n + m − 2·LCS gives 4 for horse → ros. What is the edit distance?
-  options:
-  - '3'
-  - '4'
-  - '2'
-  - '5'
-  answer: 0
-  explanation: A replace fixes h → r in one step instead of two.
-  difficulty: 2
-- id: equal-chars
-  kind: mcq
-  prompt: a[i−1] == b[j−1]. What is dp[i][j]?
-  options:
-  - dp[i−1][j−1]
-  - dp[i−1][j−1] + 1
-  - 1 + min of the three neighbours
-  - '0'
-  answer: 0
-  explanation: Equal last characters need no edit.
-  difficulty: 3
-- id: distinct-count
-  kind: mcq
-  prompt: In how many ways does bag appear as a subsequence of babgbag?
-  options:
-  - '5'
-  - '3'
-  - '1'
-  - '7'
-  answer: 0
-  explanation: Count the choices of b, a and g positions in order; the table gives 5.
-  difficulty: 4
-- id: wildcard-star
-  kind: mcq
-  prompt: For wildcard matching, p[j−1] is *. What is match[i][j]?
-  options:
-  - "match[i][j−1] or match[i−1][j]"
-  - "match[i−1][j−1] only, as for ?"
-  - "match[i][j−2] or match[i−1][j]"
-  - "Always true, as * matches anything"
-  answer: 0
-  explanation: The star matches nothing, or it also swallows s[i−1].
-  difficulty: 4
-- id: interleave-greedy
-  kind: mcq
-  prompt: Why do two pointers fail for interleaving strings?
-  options:
-  - "When both strings offer the same next character, the choice matters later"
-  - "Because s3 may be longer than s1 and s2 together, so pointers run out"
-  - "They never fail; two pointers are enough whenever the lengths add up"
-  - "Because both strings must be sorted first for two pointers to work"
-  answer: 0
-  explanation: aabcc, dbbca, aadbbcbcac needs the b from s2 where greedy takes it from s1.
-  difficulty: 5
-- id: palindrome-count
-  kind: output
-  prompt: What does this print?
-  code:
-    python: |
-      s = "aaa"
-      n, count = len(s), 0
-      for centre in range(2 * n - 1):
-          lo, hi = centre // 2, (centre + 1) // 2
-          while lo >= 0 and hi < n and s[lo] == s[hi]:
-              count += 1
-              lo -= 1
-              hi += 1
-      print(count)
-    cpp: |
-      string s = "aaa";
-      int n = s.size(), count = 0;
-      for (int centre = 0; centre < 2 * n - 1; centre++) {
-          int lo = centre / 2, hi = (centre + 1) / 2;
-          while (lo >= 0 && hi < n && s[lo] == s[hi]) { count++; lo--; hi++; }
-      }
-      cout << count;
-    java: |
-      String s = "aaa";
-      int n = s.length(), count = 0;
-      for (int centre = 0; centre < 2 * n - 1; centre++) {
-          int lo = centre / 2, hi = (centre + 1) / 2;
-          while (lo >= 0 && hi < n && s.charAt(lo) == s.charAt(hi)) { count++; lo--; hi++; }
-      }
-      System.out.print(count);
-  options:
-  - '6'
-  - '3'
-  - '4'
-  - '5'
-  answer: 0
-  explanation: a, a, a, aa, aa and aaa.
-  difficulty: 4
+  - id: three-ops
+    kind: mcq
+    prompt: Which operations does the classic edit distance allow?
+    options:
+    - Insert, delete and replace one character
+    - Only inserting and deleting single characters
+    - Swapping any two adjacent characters only
+    - Deleting a whole word or inserting one
+    answer: 0
+    explanation: Levenshtein distance uses insert, delete and replace.
+    difficulty: 1
+  - id: horse
+    kind: mcq
+    prompt: The LCS shortcut n + m − 2·LCS gives 4 for horse → ros. What is the edit distance?
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '5'
+    answer: 0
+    explanation: A replace fixes h → r in one step instead of two.
+    difficulty: 2
+  - id: distinct-count
+    kind: mcq
+    prompt: In how many ways does bag appear as a subsequence of babgbag?
+    options:
+    - '5'
+    - '3'
+    - '1'
+    - '7'
+    answer: 0
+    explanation: Count the choices of b, a and g positions in order; the table gives 5.
+    difficulty: 4
+  - id: wildcard-star
+    kind: mcq
+    prompt: For wildcard matching, p[j−1] is *. What is match[i][j]?
+    options:
+    - match[i][j−1] or match[i−1][j]
+    - match[i−1][j−1] only, as for ?
+    - match[i][j−2] or match[i−1][j]
+    - Always true, as * matches anything
+    answer: 0
+    explanation: The star matches nothing, or it also swallows s[i−1].
+    difficulty: 4
+  - id: palindrome-count
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "s = \"aaa\"\nn, count = len(s), 0\nfor centre in range(2 * n - 1):\n    lo, hi = centre //\
+        \ 2, (centre + 1) // 2\n    while lo >= 0 and hi < n and s[lo] == s[hi]:\n        count += 1\n \
+        \       lo -= 1\n        hi += 1\nprint(count)\n"
+      cpp: "string s = \"aaa\";\nint n = s.size(), count = 0;\nfor (int centre = 0; centre < 2 * n - 1;\
+        \ centre++) {\n    int lo = centre / 2, hi = (centre + 1) / 2;\n    while (lo >= 0 && hi < n &&\
+        \ s[lo] == s[hi]) {\n        count++;\n        lo--;\n        hi++;\n    }\n}\ncout << count;\n"
+      java: "String s = \"aaa\";\nint n = s.length(), count = 0;\nfor (int centre = 0; centre < 2 * n -\
+        \ 1; centre++) {\n    int lo = centre / 2, hi = (centre + 1) / 2;\n    while (lo >= 0 && hi < n\
+        \ && s.charAt(lo) == s.charAt(hi)) {\n        count++;\n        lo--;\n        hi++;\n    }\n}\n\
+        System.out.println(count);\n"
+    options:
+    - '6'
+    - '3'
+    - '4'
+    - '5'
+    answer: 0
+    explanation: a, a, a, aa, aa and aaa.
+    difficulty: 4
+  - id: interleave-greedy
+    kind: mcq
+    prompt: Why do two pointers fail for interleaving strings?
+    options:
+    - When both strings offer the same next character, the choice matters later
+    - Because s3 may be longer than s1 and s2 together, so pointers run out
+    - They never fail; two pointers are enough whenever the lengths add up
+    - Because both strings must be sorted first for two pointers to work
+    answer: 0
+    explanation: aabcc, dbbca, aadbbcbcac needs the b from s2 where greedy takes it from s1.
+    difficulty: 5
+  - id: flaw-lawn-output
+    kind: output
+    prompt: This computes the edit distance (insert, delete, replace, each costing 1) between two words.
+      What does it print?
+    code:
+      python: "a, b = \"flaw\", \"lawn\"\nn, m = len(a), len(b)\ndp = [[0] * (m + 1) for _ in range(n +\
+        \ 1)]\nfor i in range(n + 1):\n    dp[i][0] = i\nfor j in range(m + 1):\n    dp[0][j] = j\nfor i\
+        \ in range(1, n + 1):\n    for j in range(1, m + 1):\n        if a[i - 1] == b[j - 1]:\n       \
+        \     dp[i][j] = dp[i - 1][j - 1]\n        else:\n            dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j\
+        \ - 1], dp[i - 1][j - 1])\nprint(dp[n][m])\n"
+      cpp: "string a = \"flaw\", b = \"lawn\";\nint n = a.size(), m = b.size();\nvector<vector<int>> dp(n\
+        \ + 1, vector<int>(m + 1, 0));\nfor (int i = 0; i <= n; i++) dp[i][0] = i;\nfor (int j = 0; j <=\
+        \ m; j++) dp[0][j] = j;\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++)\n      \
+        \  if (a[i - 1] == b[j - 1]) dp[i][j] = dp[i - 1][j - 1];\n        else dp[i][j] = 1 + min(dp[i\
+        \ - 1][j], min(dp[i][j - 1], dp[i - 1][j - 1]));\ncout << dp[n][m];\n"
+      java: "String a = \"flaw\", b = \"lawn\";\nint n = a.length(), m = b.length();\nint[][] dp = new int[n\
+        \ + 1][m + 1];\nfor (int i = 0; i <= n; i++) dp[i][0] = i;\nfor (int j = 0; j <= m; j++) dp[0][j]\
+        \ = j;\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++)\n        if (a.charAt(i -\
+        \ 1) == b.charAt(j - 1)) dp[i][j] = dp[i - 1][j - 1];\n        else dp[i][j] = 1 + Math.min(dp[i\
+        \ - 1][j], Math.min(dp[i][j - 1], dp[i - 1][j - 1]));\nSystem.out.println(dp[n][m]);\n"
+    options:
+    - '2'
+    - '3'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: 'Delete the f (flaw becomes law) and insert an n at the end (law becomes lawn): two edits.
+      A pure replace-based alignment would cost 4, and the table finds the cheaper mix of deletes and inserts.
+      The first row and column are the base cases: turning a prefix into the empty string costs its length.'
+    difficulty: 3
+  - id: weighted-edit
+    kind: mcq
+    prompt: 'Edits have different prices: insert costs 1, delete costs 2 and replace costs 3. What is the
+      cheapest way to turn "ab" into "ba"?'
+    options:
+    - '3'
+    - '6'
+    - '2'
+    - '4'
+    answer: 0
+    explanation: 'Delete the first ''a'' (cost 2) and insert an ''a'' at the end (cost 1): 3 in total. Replacing
+      both letters would cost 6. With weights, the transition is min(dp[i-1][j] + delete, dp[i][j-1] + insert,
+      dp[i-1][j-1] + replace), and ties between operations can no longer be broken by intuition.'
+    difficulty: 4
+  - id: rolling-trap
+    kind: mcq
+    prompt: An edit-distance solution keeps only one row of the table, updated left to right. Which value
+      must be saved in a temporary variable before it is overwritten?
+    options:
+    - The old dp[j], which becomes the diagonal dp[i - 1][j - 1] for the next column of the same row
+    - The new dp[j - 1], which is only ever needed to print the final answer at the end of the loop
+    - The first entry dp[0], which the base case must restore before each new row of the table starts
+    - Nothing at all, because replacing a character never needs the diagonal cell of the table
+    answer: 0
+    explanation: Replace reads the diagonal cell dp[i-1][j-1]. With one row, the diagonal for the next column
+      is the old dp[j], which the current assignment is about to overwrite. Save it in a variable first
+      and use it one step later. This is the same trick as in the maximal-square rolling array.
+    difficulty: 4
+  - id: no-replace-operation
+    kind: bug
+    prompt: The edit distance from 'ab' to 'cb' is 1 (replace a with c). This table only allows insert and
+      delete when letters differ. What does it print?
+    code:
+      python: "s, t = \"ab\", \"cb\"\nn, m = len(s), len(t)\ndp = [[0] * (m + 1) for _ in range(n + 1)]\n\
+        for i in range(n + 1):\n    dp[i][0] = i\nfor j in range(m + 1):\n    dp[0][j] = j\nfor i in range(1,\
+        \ n + 1):\n    for j in range(1, m + 1):\n        if s[i - 1] == t[j - 1]:\n            dp[i][j]\
+        \ = dp[i - 1][j - 1]\n        else:\n            dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1])\n\
+        print(dp[n][m])\n"
+      cpp: "string s = \"ab\", t = \"cb\";\nint n = s.size(), m = t.size();\nvector<vector<int>> dp(n +\
+        \ 1, vector<int>(m + 1, 0));\nfor (int i = 0; i <= n; i++) dp[i][0] = i;\nfor (int j = 0; j <= m;\
+        \ j++) dp[0][j] = j;\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++) {\n       \
+        \ if (s[i - 1] == t[j - 1]) dp[i][j] = dp[i - 1][j - 1];\n        else dp[i][j] = 1 + min(dp[i -\
+        \ 1][j], dp[i][j - 1]);\n    }\ncout << dp[n][m];\n"
+      java: "String s = \"ab\", t = \"cb\";\nint n = s.length(), m = t.length();\nint[][] dp = new int[n\
+        \ + 1][m + 1];\nfor (int i = 0; i <= n; i++) dp[i][0] = i;\nfor (int j = 0; j <= m; j++) dp[0][j]\
+        \ = j;\nfor (int i = 1; i <= n; i++)\n    for (int j = 1; j <= m; j++) {\n        if (s.charAt(i\
+        \ - 1) == t.charAt(j - 1)) dp[i][j] = dp[i - 1][j - 1];\n        else dp[i][j] = 1 + Math.min(dp[i\
+        \ - 1][j], dp[i][j - 1]);\n    }\nSystem.out.println(dp[n][m]);\n"
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '0'
+    answer: 0
+    explanation: Without the replace option (dp[i-1][j-1] + 1), changing one letter costs a delete plus
+      an insert, which is 2. The third neighbour of the recurrence is easy to forget.
+    difficulty: 3
 problems:
 - typo-costs
 - wildcard-sightings

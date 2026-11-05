@@ -1,0 +1,66 @@
+id: max-xor-pair
+title: Strongest handshake
+concepts: [bit-manipulation]
+difficulty: hard
+statement: |
+  There are `n` players with power levels `a[i]`. Two different players shake hands with
+  strength equal to the XOR of their powers. Find the largest strength any pair can reach.
+input_format: |
+  The first line contains n. The second line contains n integers.
+output_format: The maximum of a[i] XOR a[j] over all i ≠ j.
+constraints:
+  - 2 ≤ n ≤ 100000
+  - 0 ≤ a[i] < 2^30
+examples:
+  - input: "5\n3 10 5 25 2"
+    output: "28"
+    explanation: 5 XOR 25 = 28, and no other pair beats it.
+  - input: "2\n7 7"
+    output: "0"
+hints:
+  - Trying every pair is 2·10^10 operations. Decide the answer one bit at a time, from the top, instead.
+  - Suppose the best answer so far uses the top b bits. To test whether the next bit can also be 1, look at the top-(b+1)-bit prefixes of all numbers.
+  - A candidate `cand` is reachable when some prefix p in the set has `cand ^ p` also in the set. That is a hash lookup, so each bit costs O(n).
+approach: |
+  Build the answer greedily from bit 29 down. Keep a set of every number's prefix at the
+  current length. Try to set the next answer bit: the candidate is reachable when two prefixes
+  XOR to it, checked as `cand ^ p in prefixes`. Keep the bit if it works. 30 rounds of O(n),
+  so about 6·10^6 operations.
+reference: |
+  import sys
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  a = list(map(int, data[1:1 + n]))
+  ans = 0
+  for b in range(29, -1, -1):
+      pre = {x >> b for x in a}
+      cand = (ans << 1) | 1
+      ans <<= 1
+      if any((cand ^ p) in pre for p in pre):
+          ans = cand
+  print(ans)
+brute: |
+  import sys
+  data = sys.stdin.read().split()
+  n = int(data[0])
+  a = list(map(int, data[1:1 + n]))
+  print(max(a[i] ^ a[j] for i in range(n) for j in range(i + 1, n)))
+small_generator: |
+  def cases(rng):
+      for _ in range(60):
+          n = rng.randint(2, 9)
+          hi = rng.choice([3, 15, 255, 2**30 - 1])
+          yield f"{n}\n" + " ".join(str(rng.randint(0, hi)) for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "5\n3 10 5 25 2"
+      yield "2\n7 7"
+      yield "2\n0 0"
+      yield "2\n0 1073741823"
+      n = 100000
+      yield f"{n}\n" + " ".join(str(rng.randint(0, 2**30 - 1)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(rng.randint(0, 3)) for _ in range(n))
+      yield f"{n}\n" + " ".join(str(2**29 + rng.randint(0, 5)) for _ in range(n))
+      for _ in range(5):
+          n = rng.randint(2, 3000)
+          yield f"{n}\n" + " ".join(str(rng.randint(0, 2**30 - 1)) for _ in range(n))

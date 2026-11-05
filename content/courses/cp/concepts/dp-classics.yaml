@@ -153,33 +153,168 @@ resources:
 quiz:
   - id: knap-order
     kind: mcq
-    prompt: In 1D 0/1 knapsack, the capacity loop must run...
-    options: ["From W down to w", "From w up to W", "In any order", "Only once"]
+    prompt: In 1D 0/1 knapsack, for each item of weight w the capacity loop must run...
+    options:
+    - From W down to w
+    - From w up to W
+    - In any order
+    - Only once
     answer: 0
-    explanation: Downwards ensures dp[c − w] still refers to the previous item round.
+    explanation: Going downwards means dp[c − w] still holds the value from before this item. Going upwards
+      reuses the item and turns it into unbounded knapsack.
+    difficulty: 2
+  - id: lis-len
+    kind: mcq
+    prompt: What is the length of the longest strictly increasing subsequence of [10, 9, 2, 5, 3, 7, 101,
+      18]?
+    options:
+    - '4'
+    - '3'
+    - '5'
+    - '8'
+    answer: 0
+    explanation: One longest choice is 2, 5, 7, 101 (or 2, 3, 7, 18). A subsequence need not be contiguous.
     difficulty: 2
   - id: combos
     kind: mcq
-    prompt: Counting unordered coin combinations (1+2 same as 2+1) needs which loop order?
-    options: ["Coins outer, sum inner", "Sum outer, coins inner", "Either", "Recursion only"]
+    prompt: Counting coin combinations where 1 + 2 and 2 + 1 are the same needs which loop order?
+    options:
+    - Coins on the outer loop, sums on the inner loop
+    - Sums on the outer loop, coins on the inner loop
+    - Either order gives the same count
+    - Recursion only
     answer: 0
-    explanation: Coins-outer adds coins in a fixed order, so each multiset is counted once.
+    explanation: With coins outer, each coin type is introduced once, so a combination is built in one fixed
+      order. Sums outer counts every ordering.
     difficulty: 3
-  - id: lis-len
-    kind: mcq
-    prompt: LIS length of [10, 9, 2, 5, 3, 7, 101, 18]?
-    options: ["4", "3", "5", "8"]
+  - id: combos-output
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "coins = [1, 2, 5]\nways = [1, 0, 0, 0, 0, 0]\nfor c in coins:\n    for s in range(c, 6):\n\
+        \        ways[s] += ways[s - c]\nprint(ways[5])\n"
+      cpp: "int coins[3] = {1, 2, 5};\nint ways[6] = {1, 0, 0, 0, 0, 0};\nfor (int c : coins)\n    for (int\
+        \ s = c; s <= 5; s++) ways[s] += ways[s - c];\ncout << ways[5];\n"
+      java: "int[] coins = {1, 2, 5};\nint[] ways = {1, 0, 0, 0, 0, 0};\nfor (int c : coins)\n    for (int\
+        \ s = c; s <= 5; s++) ways[s] += ways[s - c];\nSystem.out.println(ways[5]);\n"
+    options:
+    - '4'
+    - '9'
+    - '3'
+    - '5'
     answer: 0
-    explanation: For example 2, 3, 7, 18.
-    difficulty: 2
-  - id: lis-strict
-    kind: mcq
-    prompt: For a strictly increasing LIS with tails, which search is correct?
-    options: ["lower_bound (first ≥ x)", "upper_bound (first > x)", "Linear scan only", "Binary search for exact x"]
-    answer: 0
-    explanation: Replacing the first tail ≥ x prevents equal values from extending a strict sequence.
+    explanation: The combinations of 1, 2, 5 that sum to 5 are 5; 2+2+1; 2+1+1+1; 1+1+1+1+1, so 4.
     difficulty: 3
-problems: [book-shop, lis-length]
+  - id: orders-output
+    kind: output
+    prompt: The loops are now swapped. What does this print?
+    code:
+      python: "coins = [1, 2, 5]\nways = [1, 0, 0, 0, 0, 0]\nfor s in range(1, 6):\n    for c in coins:\n\
+        \        if s >= c:\n            ways[s] += ways[s - c]\nprint(ways[5])\n"
+      cpp: "int coins[3] = {1, 2, 5};\nint ways[6] = {1, 0, 0, 0, 0, 0};\nfor (int s = 1; s <= 5; s++)\n\
+        \    for (int c : coins)\n        if (s >= c) ways[s] += ways[s - c];\ncout << ways[5];\n"
+      java: "int[] coins = {1, 2, 5};\nint[] ways = {1, 0, 0, 0, 0, 0};\nfor (int s = 1; s <= 5; s++)\n\
+        \    for (int c : coins)\n        if (s >= c) ways[s] += ways[s - c];\nSystem.out.println(ways[5]);\n"
+    options:
+    - '9'
+    - '4'
+    - '5'
+    - '13'
+    answer: 0
+    explanation: 'With sums on the outside, 1+2 and 2+1 are counted separately. This counts ordered sequences:
+      1, 1, 2, 3, 5, then 5 + 3 + 1 = 9 for sum 5.'
+    difficulty: 5
+  - id: forward-bug
+    kind: output
+    prompt: This 0/1 knapsack has one item (weight 2, value 3) and capacity 6. What does it print?
+    code:
+      python: "W = 6\ndp = [0] * (W + 1)\nfor w, v in [(2, 3)]:\n    for c in range(w, W + 1):\n       \
+        \ dp[c] = max(dp[c], dp[c - w] + v)\nprint(dp[W])\n"
+      cpp: 'int W = 6;
+
+        vector<int> dp(W + 1, 0);
+
+        int w = 2, v = 3;
+
+        for (int c = w; c <= W; c++) dp[c] = max(dp[c], dp[c - w] + v);
+
+        cout << dp[W];
+
+        '
+      java: 'int W = 6;
+
+        int[] dp = new int[W + 1];
+
+        int w = 2, v = 3;
+
+        for (int c = w; c <= W; c++) dp[c] = Math.max(dp[c], dp[c - w] + v);
+
+        System.out.println(dp[W]);
+
+        '
+    options:
+    - '9'
+    - '3'
+    - '6'
+    - '0'
+    answer: 0
+    explanation: 'The upward loop lets dp[2], dp[4] and dp[6] each reuse the same item, so it is taken three
+      times. The correct 0/1 answer is 3: iterate c from W down to w.'
+    difficulty: 4
+  - id: weight-type
+    kind: mcq
+    prompt: 0/1 knapsack with n = 100 items, each value up to 10^9. In which type should the dp values be
+      stored?
+    options:
+    - '64-bit: the total can reach 10^11'
+    - '32-bit: each value fits in an int'
+    - '32-bit unsigned: totals are non-negative'
+    - Floating point
+    answer: 0
+    explanation: A single value fits in 32 bits, but the maximum total is 100 · 10^9 = 10^11. Check the
+      sum of the answer, not each input.
+    difficulty: 3
+  - id: big-weights
+    kind: mcq
+    prompt: n = 100 items, weights up to 10^9, capacity up to 10^9, but every value is at most 1000. A table
+      over capacities is far too large. Which DP is feasible?
+    options:
+    - dp[v] = minimum weight needed to reach total value v, with v up to 10^5
+    - dp[c] = best value at capacity c, with c up to 10^9, using a compressed 100-row array
+    - 'A DP over subsets of items: 2^100 states, but memoised so most are never visited'
+    - 'No DP can solve it: knapsack is NP-hard, so only greedy approximations remain'
+    answer: 0
+    explanation: 'Swap the roles: the value total is at most 100 · 1000 = 10^5. Then 100 items · 10^5 values
+      is 10^7 steps. Pick the dimension that the constraints keep small.'
+    difficulty: 5
+  - id: tails-upper-bound
+    kind: bug
+    prompt: The longest STRICTLY increasing subsequence of [2, 2, 2] is 1. This tails-array solution moves
+      past every tail that is less than OR EQUAL to x (an upper bound). What does it print?
+    code:
+      python: "a = [2, 2, 2]\ntails = []\nfor x in a:\n    lo, hi = 0, len(tails)\n    while lo < hi:\n\
+        \        mid = (lo + hi) // 2\n        if tails[mid] <= x:\n            lo = mid + 1\n        else:\n\
+        \            hi = mid\n    if lo == len(tails):\n        tails.append(x)\n    else:\n        tails[lo]\
+        \ = x\nprint(len(tails))\n"
+      cpp: "int a[3] = {2, 2, 2};\nvector<int> tails;\nfor (int x : a) {\n    int lo = 0, hi = tails.size();\n\
+        \    while (lo < hi) {\n        int mid = (lo + hi) / 2;\n        if (tails[mid] <= x) lo = mid\
+        \ + 1;\n        else hi = mid;\n    }\n    if (lo == (int)tails.size()) tails.push_back(x);\n  \
+        \  else tails[lo] = x;\n}\ncout << tails.size();\n"
+      java: "int[] a = {2, 2, 2};\nint[] tails = new int[3];\nint len = 0;\nfor (int x : a) {\n    int lo\
+        \ = 0, hi = len;\n    while (lo < hi) {\n        int mid = (lo + hi) / 2;\n        if (tails[mid]\
+        \ <= x) lo = mid + 1;\n        else hi = mid;\n    }\n    tails[lo] = x;\n    if (lo == len) len++;\n\
+        }\nSystem.out.println(len);\n"
+    options:
+    - '3'
+    - '1'
+    - '2'
+    - '0'
+    answer: 0
+    explanation: With <= the equal 2 is appended after the existing 2, so equal values count as 'increasing'.
+      This is the NON-DECREASING answer. For strict LIS, find the first tail >= x (a lower bound) and overwrite
+      it.
+    difficulty: 4
+problems: [book-shop, lis-length, light-backpack]
 practice_links:
   - title: Book Shop
     url: https://cses.fi/problemset/task/1158

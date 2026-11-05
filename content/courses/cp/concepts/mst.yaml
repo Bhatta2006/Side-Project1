@@ -128,26 +128,152 @@ resources:
 quiz:
   - id: edges
     kind: mcq
-    prompt: An MST of a connected graph with 50 nodes has how many edges?
-    options: ["49", "50", "51", "It depends"]
+    prompt: A minimum spanning tree of a connected graph with 50 nodes has how many edges?
+    options:
+    - '49'
+    - '50'
+    - '51'
+    - It depends on the weights
     answer: 0
-    explanation: Every spanning tree on n nodes has exactly n − 1 edges.
+    explanation: Any spanning tree of n nodes has n − 1 edges, whatever the weights are.
     difficulty: 1
   - id: kruskal-skip
     kind: mcq
-    prompt: In Kruskal, when is an edge skipped?
-    options: ["When both ends are already in the same component", "When it is the most expensive edge left in the list", "When one of its ends is a leaf of the current tree", "Never; Kruskal adds every edge once it is sorted"]
+    prompt: While running Kruskal over the sorted edges, when is an edge skipped?
+    options:
+    - When both its endpoints are already in the same component
+    - When it is the most expensive edge left in the list
+    - When one of its endpoints is a leaf of the tree built so far
+    - 'Never: Kruskal adds every edge once it is sorted'
     answer: 0
-    explanation: Adding it would create a cycle without connecting anything new.
-    difficulty: 1
+    explanation: Adding such an edge would close a cycle. The DSU find on both endpoints is exactly this
+      test.
+    difficulty: 2
   - id: maximum
     kind: mcq
-    prompt: How do you get a maximum spanning tree with Kruskal?
-    options: ["Sort edges in descending order", "Negate the node numbers first", "Use BFS from the heaviest edge", "It's impossible with Kruskal"]
+    prompt: How do you get a MAXIMUM spanning tree with Kruskal?
+    options:
+    - Sort the edges in descending order of weight
+    - Negate the node numbers first
+    - Start from the heaviest edge with a BFS
+    - It is impossible with Kruskal
     answer: 0
-    explanation: The same greedy with the opposite order maximises the total.
+    explanation: 'Only the order of consideration changes: take the heaviest edge that does not close a
+      cycle first. The cut and cycle arguments work for either direction.'
     difficulty: 2
-problems: [road-repair]
+  - id: kruskal-output
+    kind: output
+    prompt: Edges are given as (weight, u, v) on 4 nodes. What does this Kruskal run print?
+    code:
+      python: "edges = [(4, 0, 1), (1, 0, 2), (2, 1, 2), (5, 1, 3), (8, 2, 3)]\nedges.sort()\np = list(range(4))\n\
+        def find(x):\n    while p[x] != x:\n        p[x] = p[p[x]]\n        x = p[x]\n    return x\ntotal\
+        \ = 0\nfor w, a, b in edges:\n    ra, rb = find(a), find(b)\n    if ra != rb:\n        p[ra] = rb\n\
+        \        total += w\nprint(total)\n"
+      cpp: "vector<array<int,3>> edges = {{4,0,1},{1,0,2},{2,1,2},{5,1,3},{8,2,3}};\nsort(edges.begin(),\
+        \ edges.end());\nint p[4] = {0, 1, 2, 3};\nfunction<int(int)> find = [&](int x) { return p[x] ==\
+        \ x ? x : p[x] = find(p[x]); };\nint total = 0;\nfor (auto& e : edges) {\n    int ra = find(e[1]),\
+        \ rb = find(e[2]);\n    if (ra != rb) { p[ra] = rb; total += e[0]; }\n}\ncout << total;\n"
+      java: "int[][] edges = {{4,0,1},{1,0,2},{2,1,2},{5,1,3},{8,2,3}};\nArrays.sort(edges, (x, y) -> x[0]\
+        \ - y[0]);\nint[] p = {0, 1, 2, 3};\nint total = 0;\nfor (int[] e : edges) {\n    int ra = e[1],\
+        \ rb = e[2];\n    while (p[ra] != ra) ra = p[ra];\n    while (p[rb] != rb) rb = p[rb];\n    if (ra\
+        \ != rb) { p[ra] = rb; total += e[0]; }\n}\nSystem.out.println(total);\n"
+    options:
+    - '8'
+    - '7'
+    - '12'
+    - '20'
+    answer: 0
+    explanation: 'Sorted: (1: 0–2) taken, (2: 1–2) taken, (4: 0–1) skipped because 0 and 1 are already connected,
+      (5: 1–3) taken, (8: 2–3) skipped. Total 1 + 2 + 5 = 8.'
+    difficulty: 3
+  - id: forest-edges
+    kind: mcq
+    prompt: A graph has 10 nodes that form 3 connected components. Kruskal builds a minimum spanning forest.
+      How many edges does it take?
+    options:
+    - '7'
+    - '9'
+    - '8'
+    - '10'
+    answer: 0
+    explanation: Each component of size s contributes s − 1 edges, so the total is n − c = 10 − 3 = 7.
+    difficulty: 3
+  - id: negative-weights
+    kind: mcq
+    prompt: Does Kruskal's algorithm still give a minimum spanning tree if some edge weights are negative?
+    options:
+    - 'Yes: it only compares weights and never adds them along a path'
+    - 'No: negative edges can create negative cycles and break the algorithm'
+    - Only if all the weights are negative
+    - Only if you first add a constant to all weights, then subtract it afterwards
+    answer: 0
+    explanation: 'An MST minimises the total over exactly n − 1 edges, so negative weights are harmless.
+      Shortest paths are different: there, negative edges break Dijkstra.'
+    difficulty: 3
+  - id: minimax-path
+    kind: mcq
+    prompt: For two nodes u and v, you want the path whose largest edge is as small as possible. Where is
+      that path?
+    options:
+    - The path between u and v inside the minimum spanning tree
+    - The shortest path by total weight between u and v in the graph
+    - The path with the fewest edges, found with a plain BFS
+    - It cannot be found without trying every path between u and v
+    answer: 0
+    explanation: By the cycle property, the MST path between two nodes minimises the maximum edge. With
+      LCA or binary lifting you can answer such queries on the tree in O(log n).
+    difficulty: 4
+  - id: dense-prim
+    kind: mcq
+    prompt: A dense graph has n = 5000 nodes and about n²/2 = 1.25·10^7 edges, given as an adjacency matrix.
+      Which approach fits best?
+    options:
+    - Prim in O(n²) ≈ 2.5·10^7, with no heap
+    - 'Kruskal: sorting 1.25·10^7 edges with a DSU'
+    - Both are equally fast and need the same memory
+    - Floyd–Warshall, then pick the cheapest edges
+    answer: 0
+    explanation: Prim without a heap scans a distance array n times, so O(n²) = 2.5·10^7 and no edge list
+      is built. Kruskal would sort 1.25·10^7 edges and store them all.
+    difficulty: 4
+  - id: new-edge
+    kind: mcq
+    prompt: You already have an MST. A new edge (u, v, w) is added to the graph. How do you update the MST?
+    options:
+    - Find the heaviest edge on the tree path u → v; if it exceeds w, swap it for the new edge
+    - Rebuild the whole MST with Kruskal from scratch, the only correct way to do it
+    - 'Add the new edge to the tree as well: a minimum spanning tree may contain a cycle'
+    - Discard the new edge, since a spanning tree already exists and is minimal
+    answer: 0
+    explanation: The new edge closes exactly one cycle (the tree path plus itself). By the cycle property
+      the heaviest edge on that cycle cannot be in the MST, so only that edge needs to be removed.
+    difficulty: 5
+  - id: kruskal-forgot-union
+    kind: bug
+    prompt: 'A graph on 4 nodes has edges (weight, u, v): (1, 0, 1), (2, 1, 2), (3, 0, 2) and (4, 2, 3).
+      Its minimum spanning tree weighs 7. This Kruskal tests find(u) != find(v) but never performs the union.
+      What total does it print?'
+    code:
+      python: "edges = [(1, 0, 1), (2, 1, 2), (3, 0, 2), (4, 2, 3)]\np = list(range(4))\ndef find(x):\n\
+        \    while p[x] != x:\n        x = p[x]\n    return x\ntotal = 0\nfor w, u, v in sorted(edges):\n\
+        \    if find(u) != find(v):\n        total += w\nprint(total)\n"
+      cpp: "vector<array<int, 3>> edges = {{1, 0, 1}, {2, 1, 2}, {3, 0, 2}, {4, 2, 3}};\nint p[4] = {0,\
+        \ 1, 2, 3};\nauto find = [&](int x) {\n    while (p[x] != x) x = p[x];\n    return x;\n};\nsort(edges.begin(),\
+        \ edges.end());\nint total = 0;\nfor (auto& e : edges)\n    if (find(e[1]) != find(e[2])) total\
+        \ += e[0];\ncout << total;\n"
+      java: "int[][] edges = {{1, 0, 1}, {2, 1, 2}, {3, 0, 2}, {4, 2, 3}};\nint[] p = {0, 1, 2, 3};\nint\
+        \ total = 0;\nfor (int[] e : edges) {\n    int a = e[1], b = e[2];\n    while (p[a] != a) a = p[a];\n\
+        \    while (p[b] != b) b = p[b];\n    if (a != b) total += e[0];\n}\nSystem.out.println(total);\n"
+    options:
+    - '10'
+    - '7'
+    - '12'
+    - '13'
+    answer: 0
+    explanation: Without the union, every node stays its own set, so find(u) != find(v) is always true and
+      even the cycle edge (3, 0, 2) is taken. After accepting an edge you must join the two sets.
+    difficulty: 3
+problems: [road-repair, minimax-route]
 practice_links:
   - title: Road Reparation
     url: https://cses.fi/problemset/task/1675

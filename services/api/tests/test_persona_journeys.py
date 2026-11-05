@@ -121,7 +121,7 @@ def walk(client, headers, clock, policy, max_steps=900, max_days=120):  # noqa: 
             row = next(
                 c for m in progress["modules"] for c in m["concepts"] if c["id"] == nxt["concept"]
             )
-            assert row["next_review"] is None or row["next_review"] <= clock["t"], nxt
+            assert row["next_review"] is None or row["next_review"] <= clock["t"], repr(nxt)
         if kind in SELF_KINDS:
             r = client.post(f"/api/v1/activities/{nxt['id']}/complete", headers=headers)
             assert r.status_code == 200, (nxt, r.text)
@@ -267,15 +267,15 @@ def test_a_missed_check_is_not_done_and_socrat_reteaches_before_a_fresh_check(cl
 def test_a_mixed_learner_misses_first_tries_and_still_finishes(client, clock):  # noqa: F811
     headers = login(client, subject="mixed")
     onboard(client, headers)
-    first_try: set[str] = set()
+    misses: dict[str, int] = {}
 
     def mixed(activity, question, _log):
-        # Every concept check is missed once, then passed; everything else goes right.
+        # Every concept check is missed on its first try (two wrong answers fail a 4-of-5 pass
+        # mark however long the check is), then passed; everything else goes right.
         if activity["kind"] != "quiz":
             return True
-        if question is not None and activity["id"] not in first_try:
-            if question is not None:
-                first_try.add(activity["id"])
+        if question is not None and misses.get(activity["id"], 0) < 2:
+            misses[activity["id"]] = misses.get(activity["id"], 0) + 1
             return False
         return True
 

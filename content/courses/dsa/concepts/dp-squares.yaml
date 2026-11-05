@@ -655,83 +655,187 @@ resources:
   minutes: 45
   level: deep
 quiz:
-- id: square-state
-  kind: mcq
-  prompt: What does dp[i][j] mean for maximal square?
-  options:
-  - The side of the largest all-ones square with bottom-right corner (i, j)
-  - The number of ones above (i, j)
-  - The area of the largest square in the whole grid so far
-  - Whether cell (i, j) is 1
-  answer: 0
-  explanation: Fixing the corner makes the square a single number.
-  difficulty: 1
-- id: square-cell
-  kind: mcq
-  prompt: The cell is 1; up = 2, left = 3, up-left = 1. What is dp[i][j]?
-  options:
-  - '2'
-  - '3'
-  - '4'
-  - '1'
-  answer: 0
-  explanation: 1 + min(2, 3, 1) = 2.
-  difficulty: 2
-- id: diagonal
-  kind: mcq
-  prompt: Grid rows 101 / 001 / 011. Without the diagonal neighbour the code prints 4. What is right?
-  options:
-  - '1'
-  - '4'
-  - '2'
-  - '0'
-  answer: 0
-  explanation: The middle cell is 0, so no 2 × 2 square exists.
-  difficulty: 3
-- id: count
-  kind: mcq
-  prompt: A cell has dp = 3. How many all-ones squares have it as their bottom-right corner?
-  options:
-  - '3'
-  - '9'
-  - '1'
-  - '14'
-  answer: 0
-  explanation: Sides 1, 2 and 3.
-  difficulty: 3
-- id: histogram
-  kind: mcq
-  prompt: Column heights for a row are built how?
-  options:
-  - Height + 1 if the cell is 1, else 0
-  - The number of ones in the whole column
-  - The row's index
-  - The largest square ending there
-  answer: 0
-  explanation: Heights count consecutive ones ending at this row.
-  difficulty: 2
-- id: rectangle
-  kind: mcq
-  prompt: Anchor grid 10100 / 10111 / 11111 / 10010. What is the largest all-ones rectangle?
-  options:
-  - '6'
-  - '4'
-  - '8'
-  - '5'
-  answer: 0
-  explanation: Rows 2–3, columns 3–5.
-  difficulty: 4
-- id: why-not-dp
-  kind: mcq
-  prompt: Why can't one number per cell describe the largest rectangle ending there?
-  options:
-  - "A rectangle has two free sides, and the best pair can change for later cells"
-  - "Every rectangle is a square, so one side length per cell would be enough"
-  - "It can; take the minimum of the same three neighbours, as for squares"
-  - "Storing areas per cell overflows 32-bit integers for large grids"
-  answer: 0
-  explanation: Use row histograms and the monotonic stack instead.
-  difficulty: 5
+  - id: square-state
+    kind: mcq
+    prompt: In the maximal-square DP, what does dp[i][j] mean?
+    options:
+    - The side of the largest all-ones square whose bottom-right corner is cell (i, j)
+    - The number of ones found in the column above cell (i, j), counting from the top
+    - The area of the largest all-ones square found anywhere in the grid so far
+    - Whether cell (i, j) holds a one, stored as 1 for yes and 0 for no
+    answer: 0
+    explanation: Anchoring the state to a corner is what makes the transition local. The answer to the whole
+      problem is the maximum over all cells, and the area is that side squared.
+    difficulty: 1
+  - id: square-cell
+    kind: mcq
+    prompt: The current cell holds 1. The dp value above it is 2, to its left is 3, and diagonally up-left
+      is 1. What is dp[i][j]?
+    options:
+    - '2'
+    - '3'
+    - '4'
+    - '1'
+    answer: 0
+    explanation: dp[i][j] = 1 + min(up, left, up-left) = 1 + 1 = 2. The weakest of the three neighbouring
+      squares limits how far the new square can reach.
+    difficulty: 2
+  - id: histogram-height
+    kind: mcq
+    prompt: To find the largest all-ones rectangle you build, for each row, a histogram of column heights.
+      How is each height updated when moving down one row?
+    options:
+    - Add one if the cell is 1, otherwise reset the height to zero
+    - Set it to the count of ones in that whole column, wherever they are
+    - Set it to the index of the row that is currently being processed
+    - Set it to the side of the largest square that ends in that cell
+    answer: 0
+    explanation: The height of a column in row r is the number of consecutive ones ending at row r. A zero
+      breaks the run, so it resets. Each row then becomes a largest-rectangle-in-a-histogram problem.
+    difficulty: 2
+  - id: squares-output
+    kind: output
+    prompt: This computes dp over a grid of characters and prints the area of the largest all-ones square,
+      then the sum of all dp values. What does it print?
+    code:
+      python: "g = [\"1101\", \"1111\", \"0111\"]\nn, m = 3, 4\ndp = [[0] * m for _ in range(n)]\nbest =\
+        \ total = 0\nfor i in range(n):\n    for j in range(m):\n        if g[i][j] == \"1\":\n        \
+        \    if i == 0 or j == 0:\n                dp[i][j] = 1\n            else:\n                dp[i][j]\
+        \ = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])\n            best = max(best, dp[i][j])\n\
+        \            total += dp[i][j]\nprint(best * best, total)\n"
+      cpp: "string g[3] = {\"1101\", \"1111\", \"0111\"};\nint n = 3, m = 4;\nint dp[3][4] = {};\nint best\
+        \ = 0, total = 0;\nfor (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++)\n        if (g[i][j]\
+        \ == '1') {\n            if (i == 0 || j == 0) dp[i][j] = 1;\n            else dp[i][j] = 1 + min(dp[i\
+        \ - 1][j], min(dp[i][j - 1], dp[i - 1][j - 1]));\n            best = max(best, dp[i][j]);\n    \
+        \        total += dp[i][j];\n        }\ncout << best * best << \" \" << total;\n"
+      java: "String[] g = {\"1101\", \"1111\", \"0111\"};\nint n = 3, m = 4;\nint[][] dp = new int[n][m];\n\
+        int best = 0, total = 0;\nfor (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++)\n       \
+        \ if (g[i].charAt(j) == '1') {\n            if (i == 0 || j == 0) dp[i][j] = 1;\n            else\
+        \ dp[i][j] = 1 + Math.min(dp[i - 1][j], Math.min(dp[i][j - 1], dp[i - 1][j - 1]));\n           \
+        \ best = Math.max(best, dp[i][j]);\n            total += dp[i][j];\n        }\nSystem.out.println(best\
+        \ * best + \" \" + total);\n"
+    options:
+    - 4 13
+    - 2 13
+    - 4 12
+    - 9 13
+    answer: 0
+    explanation: 'The largest square has side 2, so its area is 4. The dp values are 1 1 0 1 / 1 2 1 1 /
+      0 1 2 2, and their sum 13 counts every all-ones square in the grid: each cell with value k is the
+      corner of exactly k squares (sides 1 to k).'
+    difficulty: 3
+  - id: all-squares
+    kind: mcq
+    prompt: A 3 x 3 grid is entirely ones. How many all-ones squares of any size does it contain?
+    options:
+    - '14'
+    - '9'
+    - '13'
+    - '15'
+    answer: 0
+    explanation: 'There are 9 squares of side 1, 4 of side 2 and 1 of side 3. The dp table for this grid
+      is 1 1 1 / 1 2 2 / 1 2 3, and its sum 14 matches: a cell with value k is the bottom-right corner of
+      k squares.'
+    difficulty: 3
+  - id: rolling-output
+    kind: output
+    prompt: This maximal-square solution keeps only a single row of dp plus a saved diagonal value. What
+      side length does it print for the grid below?
+    code:
+      python: "g = [\"1111\", \"1111\", \"1110\", \"1111\"]\nm = 4\ndp = [0] * (m + 1)\nbest = 0\nfor row\
+        \ in g:\n    prev = 0\n    for j in range(1, m + 1):\n        tmp = dp[j]\n        if row[j - 1]\
+        \ == \"1\":\n            dp[j] = 1 + min(dp[j], dp[j - 1], prev)\n            best = max(best, dp[j])\n\
+        \        else:\n            dp[j] = 0\n        prev = tmp\nprint(best)\n"
+      cpp: "string g[4] = {\"1111\", \"1111\", \"1110\", \"1111\"};\nint m = 4;\nvector<int> dp(m + 1, 0);\n\
+        int best = 0;\nfor (int r = 0; r < 4; r++) {\n    int prev = 0;\n    for (int j = 1; j <= m; j++)\
+        \ {\n        int tmp = dp[j];\n        if (g[r][j - 1] == '1') {\n            dp[j] = 1 + min(dp[j],\
+        \ min(dp[j - 1], prev));\n            best = max(best, dp[j]);\n        } else dp[j] = 0;\n    \
+        \    prev = tmp;\n    }\n}\ncout << best;\n"
+      java: "String[] g = {\"1111\", \"1111\", \"1110\", \"1111\"};\nint m = 4;\nint[] dp = new int[m +\
+        \ 1];\nint best = 0;\nfor (String row : g) {\n    int prev = 0;\n    for (int j = 1; j <= m; j++)\
+        \ {\n        int tmp = dp[j];\n        if (row.charAt(j - 1) == '1') {\n            dp[j] = 1 +\
+        \ Math.min(dp[j], Math.min(dp[j - 1], prev));\n            best = Math.max(best, dp[j]);\n     \
+        \   } else dp[j] = 0;\n        prev = tmp;\n    }\n}\nSystem.out.println(best);\n"
+    options:
+    - '3'
+    - '4'
+    - '2'
+    - '1'
+    answer: 0
+    explanation: 'Before dp[j] is overwritten it holds the cell above, which becomes the diagonal for the
+      cell to the right: that is why tmp saves it. The 3 x 3 block in the top-left corner is the largest
+      square; the 0 in row 3 stops a 4 x 4 square.'
+    difficulty: 4
+  - id: rectangle-grid
+    kind: mcq
+    prompt: The grid rows are 10100 / 10111 / 11111 / 10010. What is the area of the largest rectangle that
+      contains only ones?
+    options:
+    - '6'
+    - '4'
+    - '8'
+    - '5'
+    answer: 0
+    explanation: 'Rows 1 and 2, columns 2 to 4, form a 2 x 3 block of ones: area 6. Row by row, the histogram
+      heights are 1 0 1 0 0, then 2 0 2 1 1, then 3 1 3 2 2, and the largest rectangle in the third histogram
+      is 6.'
+    difficulty: 4
+  - id: histogram-largest
+    kind: mcq
+    prompt: The bar heights of a histogram are [2, 1, 5, 6, 2, 3]. What is the area of the largest rectangle
+      that fits under the bars?
+    options:
+    - '10'
+    - '12'
+    - '9'
+    - '8'
+    answer: 0
+    explanation: The bars 5 and 6 together give a rectangle of height 5 and width 2, area 10. A monotonic
+      stack finds the nearest shorter bar on each side of every bar in O(n), so each row of the grid costs
+      O(m).
+    difficulty: 4
+  - id: why-not-dp
+    kind: mcq
+    prompt: Why can't a single number per cell, like the square side, describe the largest all-ones rectangle
+      ending at that cell?
+    options:
+    - A rectangle has two free sides, and the best pair of sides can change for the cells that follow it
+    - Every rectangle is a square, so one side length per cell would already be enough to describe it
+    - 'It can: take the minimum of the same three neighbours, exactly as is done for the squares'
+    - Storing areas per cell overflows 32-bit integers for large grids, so a pair is needed instead
+    answer: 0
+    explanation: A 1 x 5 and a 5 x 1 rectangle ending at a cell have the same area but extend to different
+      later cells, so no single value captures what a future cell needs. That is why rectangles use per-row
+      histograms and a stack instead of a one-number-per-cell DP.
+    difficulty: 5
+  - id: no-diagonal-neighbour
+    kind: bug
+    prompt: The grid rows are 101, 001 and 011. Its largest all-ones square has area 1. The dp below computes
+      1 + min(up, left) and forgets the diagonal neighbour. What area does it print?
+    code:
+      python: "g = [\"101\", \"001\", \"011\"]\nn, m = 3, 3\ndp = [[0] * m for _ in range(n)]\nbest = 0\n\
+        for i in range(n):\n    for j in range(m):\n        if g[i][j] == \"1\":\n            if i == 0\
+        \ or j == 0:\n                dp[i][j] = 1\n            else:\n                dp[i][j] = 1 + min(dp[i\
+        \ - 1][j], dp[i][j - 1])\n            best = max(best, dp[i][j])\nprint(best * best)\n"
+      cpp: "string g[3] = {\"101\", \"001\", \"011\"};\nint n = 3, m = 3, best = 0;\nint dp[3][3] = {};\n\
+        for (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++)\n        if (g[i][j] == '1') {\n  \
+        \          if (i == 0 || j == 0) dp[i][j] = 1;\n            else dp[i][j] = 1 + min(dp[i - 1][j],\
+        \ dp[i][j - 1]);\n            best = max(best, dp[i][j]);\n        }\ncout << best * best;\n"
+      java: "String[] g = {\"101\", \"001\", \"011\"};\nint n = 3, m = 3, best = 0;\nint[][] dp = new int[3][3];\n\
+        for (int i = 0; i < n; i++)\n    for (int j = 0; j < m; j++)\n        if (g[i].charAt(j) == '1')\
+        \ {\n            if (i == 0 || j == 0) dp[i][j] = 1;\n            else dp[i][j] = 1 + Math.min(dp[i\
+        \ - 1][j], dp[i][j - 1]);\n            best = Math.max(best, dp[i][j]);\n        }\nSystem.out.println(best\
+        \ * best);\n"
+    options:
+    - '4'
+    - '1'
+    - '2'
+    - '9'
+    answer: 0
+    explanation: Cell (2,2) has ones above and to the left, but the cell diagonally up-left is 0, so no
+      real 2 x 2 square exists. Without the diagonal term the code believes in a square of side 2 and prints
+      4.
+    difficulty: 3
 problems:
 - solar-squares
 - meadow-fence

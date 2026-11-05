@@ -146,34 +146,203 @@ resources:
     minutes: 20
     level: deep
 quiz:
-  - id: exists
+  - id: when-exists
     kind: mcq
-    prompt: When does a directed graph have a topological order?
-    options: ["Exactly when it has no directed cycle", "Always", "Only when it is connected", "Only when every node has an edge"]
+    prompt: Which statement about topological orderings of a directed graph is true?
+    options:
+    - An order exists exactly when the graph contains no directed cycle
+    - Every directed graph has at least one valid topological ordering
+    - An order exists only when the graph is shaped like a tree or a forest
+    - A graph with a short cycle still has an order, as long as the cycle is small
     answer: 0
-    explanation: A cycle would require some node to come before itself.
+    explanation: An order puts every edge u -> v with u before v. A cycle would require each of its nodes
+      to come before itself, which is impossible. Acyclic graphs (DAGs) always have at least one valid order,
+      and often many.
     difficulty: 1
-  - id: start
+  - id: kahn-cycle
     kind: mcq
-    prompt: Kahn's algorithm starts with which nodes?
-    options: ["Nodes with in-degree 0", "Nodes with out-degree 0", "Node 1 only", "The node with most edges"]
+    prompt: Kahn's algorithm finishes with an empty queue after outputting only 4 of the graph's 6 nodes.
+      What does this tell you?
+    options:
+    - The 2 unprinted nodes lie on a cycle or behind one, so no topological order exists
+    - The graph is disconnected, so the 2 missing nodes form a separate component
+    - The algorithm has a bug, since it should always output every node in the graph
+    - The missing nodes had the largest labels, so a second pass would output them in order
     answer: 0
-    explanation: Nothing must come before an in-degree-0 node, so it can go first.
-    difficulty: 1
-  - id: cycle-detect
-    kind: mcq
-    prompt: Kahn's algorithm outputs 7 of 10 nodes and the queue empties. What does that mean?
-    options: ["The remaining 3 nodes involve a cycle", "The graph is split into two components", "There is a bug in the queue handling", "Three nodes have no edges at all"]
-    answer: 0
-    explanation: Nodes on (or behind) a cycle never reach in-degree 0.
+    explanation: A node is only released when all its prerequisites are done. Nodes on a cycle wait on each
+      other forever, and anything that depends on them waits too, so their in-degrees never reach zero.
+      Comparing the output length with n is the standard cycle check.
     difficulty: 2
-  - id: lexi
+  - id: reverse-postorder
     kind: mcq
-    prompt: How do you get the lexicographically smallest topological order?
-    options: ["Use a min-heap instead of a FIFO queue", "Sort the final order after Kahn's finishes", "Use DFS and take nodes in finishing order", "Reverse every edge, then run Kahn's again"]
+    prompt: Why does reversing the order in which a DFS finishes (post-order) nodes give a valid topological
+      order?
+    options:
+    - A node finishes only after everything reachable from it has finished, so reversed it comes before
+      all of those
+    - DFS visits the nodes in increasing label order, and reversing that gives decreasing labels
+    - The reversed order lists the nodes with the most outgoing edges first, which is always safe
+    - Finishing times are sorted by in-degree, and reversing them puts the sources at the front
     answer: 0
-    explanation: Always choosing the smallest available node produces the smallest order; sorting afterwards breaks validity.
+    explanation: For an edge u -> v, v finishes before u (v is either explored inside u's call, or was already
+      finished). So in the reversed list u comes before v, which is exactly the ordering rule. This works
+      only on acyclic graphs.
     difficulty: 3
+  - id: count-orders
+    kind: mcq
+    prompt: A project has 6 tasks. Task 3 needs tasks 0 and 1 done first, task 4 needs task 2, and task
+      5 needs tasks 3 and 4. How many different valid orders exist?
+    options:
+    - '20'
+    - '12'
+    - '24'
+    - '30'
+    answer: 0
+    explanation: 'Task 5 must be last. Of the other five tasks, the orders of {0, 1, 3} (3 last) and {2,
+      4} (4 last) are each constrained, and they can be interleaved freely: C(5, 2) * 2 = 20. Many valid
+      orders is normal, and that is why problems often ask for the lexicographically smallest.'
+    difficulty: 3
+  - id: semesters
+    kind: mcq
+    prompt: Courses 0 to 5 have prerequisites 0->2, 1->2, 2->3, 1->4, 3->5 and 4->5. You may take any number
+      of courses in a semester if their prerequisites were passed in earlier semesters. What is the fewest
+      semesters needed?
+    options:
+    - '4'
+    - '3'
+    - '6'
+    - '5'
+    answer: 0
+    explanation: 'The longest prerequisite chain is 0 -> 2 -> 3 -> 5 (or 1 -> 2 -> 3 -> 5): four courses
+      that must be taken one after another. The minimum number of semesters equals the length of the longest
+      path in the DAG, computed level by level during Kahn''s algorithm.'
+    difficulty: 3
+  - id: kahn-output
+    kind: output
+    prompt: The graph has 6 nodes and the edges 5->2, 5->0, 4->0, 4->1, 2->3, 3->1 (neighbours in the order
+      added). What does this Kahn's algorithm print?
+    code:
+      python: "from collections import deque\nn = 6\nadj = [[] for _ in range(n)]\nfor u, v in [(5, 2),\
+        \ (5, 0), (4, 0), (4, 1), (2, 3), (3, 1)]:\n    adj[u].append(v)\nindeg = [0] * n\nfor u in range(n):\n\
+        \    for v in adj[u]:\n        indeg[v] += 1\nq = deque(i for i in range(n) if indeg[i] == 0)\n\
+        order = []\nwhile q:\n    u = q.popleft()\n    order.append(u)\n    for v in adj[u]:\n        indeg[v]\
+        \ -= 1\n        if indeg[v] == 0:\n            q.append(v)\nprint(*order)\n"
+      cpp: "int n = 6;\nvector<vector<int>> adj(n);\nint e[6][2] = {{5, 2}, {5, 0}, {4, 0}, {4, 1}, {2,\
+        \ 3}, {3, 1}};\nfor (auto& p : e) adj[p[0]].push_back(p[1]);\nvector<int> indeg(n, 0);\nfor (int\
+        \ u = 0; u < n; u++)\n    for (int v : adj[u]) indeg[v]++;\nqueue<int> q;\nfor (int i = 0; i < n;\
+        \ i++) if (indeg[i] == 0) q.push(i);\nvector<int> order;\nwhile (!q.empty()) {\n    int u = q.front();\n\
+        \    q.pop();\n    order.push_back(u);\n    for (int v : adj[u])\n        if (--indeg[v] == 0) q.push(v);\n\
+        }\nfor (size_t i = 0; i < order.size(); i++) cout << order[i] << (i + 1 < order.size() ? \" \" :\
+        \ \"\");\n"
+      java: "int n = 6;\nList<List<Integer>> adj = new ArrayList<>();\nfor (int i = 0; i < n; i++) adj.add(new\
+        \ ArrayList<>());\nint[][] e = {{5, 2}, {5, 0}, {4, 0}, {4, 1}, {2, 3}, {3, 1}};\nfor (int[] p :\
+        \ e) adj.get(p[0]).add(p[1]);\nint[] indeg = new int[n];\nfor (int u = 0; u < n; u++)\n    for (int\
+        \ v : adj.get(u)) indeg[v]++;\nDeque<Integer> q = new ArrayDeque<>();\nfor (int i = 0; i < n; i++)\
+        \ if (indeg[i] == 0) q.add(i);\nStringBuilder sb = new StringBuilder();\nwhile (!q.isEmpty()) {\n\
+        \    int u = q.poll();\n    sb.append(u).append(\" \");\n    for (int v : adj.get(u))\n        if\
+        \ (--indeg[v] == 0) q.add(v);\n}\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 4 5 2 0 3 1
+    - 5 4 2 0 3 1
+    - 4 5 0 2 3 1
+    - 4 5 2 3 0 1
+    answer: 0
+    explanation: Nodes 4 and 5 start with in-degree zero, in that order. Finishing 5 releases 2 and then
+      0 (the order of its adjacency list), then 2 releases 3, 0 has nothing to release, and 3 finally releases
+      1. A different adjacency order would give a different but equally valid result.
+    difficulty: 3
+  - id: postorder-output
+    kind: output
+    prompt: Same graph as the edges 5->2, 5->0, 4->0, 4->1, 2->3, 3->1. This DFS records nodes as they finish
+      and prints the reverse. What does it print?
+    code:
+      python: "n = 6\nadj = [[] for _ in range(n)]\nfor u, v in [(5, 2), (5, 0), (4, 0), (4, 1), (2, 3),\
+        \ (3, 1)]:\n    adj[u].append(v)\nseen = [False] * n\npost = []\ndef dfs(u):\n    seen[u] = True\n\
+        \    for v in adj[u]:\n        if not seen[v]:\n            dfs(v)\n    post.append(u)\nfor u in\
+        \ range(n):\n    if not seen[u]:\n        dfs(u)\nprint(*reversed(post))\n"
+      cpp: "int n = 6;\nvector<vector<int>> adj(n);\nint e[6][2] = {{5, 2}, {5, 0}, {4, 0}, {4, 1}, {2,\
+        \ 3}, {3, 1}};\nfor (auto& p : e) adj[p[0]].push_back(p[1]);\nvector<bool> seen(n, false);\nvector<int>\
+        \ post;\nfunction<void(int)> dfs = [&](int u) {\n    seen[u] = true;\n    for (int v : adj[u])\n\
+        \        if (!seen[v]) dfs(v);\n    post.push_back(u);\n};\nfor (int u = 0; u < n; u++) if (!seen[u])\
+        \ dfs(u);\nfor (int i = (int)post.size() - 1; i >= 0; i--) cout << post[i] << (i > 0 ? \" \" : \"\
+        \");\n"
+      java: "class T {\n    List<List<Integer>> adj = new ArrayList<>();\n    boolean[] seen = new boolean[6];\n\
+        \    List<Integer> post = new ArrayList<>();\n    void dfs(int u) {\n        seen[u] = true;\n \
+        \       for (int v : adj.get(u))\n            if (!seen[v]) dfs(v);\n        post.add(u);\n    }\n\
+        }\nT t = new T();\nfor (int i = 0; i < 6; i++) t.adj.add(new ArrayList<>());\nint[][] e = {{5, 2},\
+        \ {5, 0}, {4, 0}, {4, 1}, {2, 3}, {3, 1}};\nfor (int[] p : e) t.adj.get(p[0]).add(p[1]);\nfor (int\
+        \ u = 0; u < 6; u++) if (!t.seen[u]) t.dfs(u);\nStringBuilder sb = new StringBuilder();\nfor (int\
+        \ i = t.post.size() - 1; i >= 0; i--) sb.append(t.post.get(i)).append(\" \");\nSystem.out.println(sb.toString().trim());\n"
+    options:
+    - 5 4 2 3 1 0
+    - 4 5 2 3 1 0
+    - 5 4 2 0 3 1
+    - 0 1 3 2 4 5
+    answer: 0
+    explanation: 'The finishing order is 0, 1, 3, 2, 4, 5: nodes 0 and 1 finish first (no outgoing edges),
+      then 3 and 2, then 4 and 5 once everything below them is done. Reversed, it is 5 4 2 3 1 0. This is
+      a different valid answer than Kahn''s algorithm gives for the same graph.'
+    difficulty: 4
+  - id: alien-order
+    kind: mcq
+    prompt: An alien dictionary lists the words wrt, wrf, er, ett, rftt in sorted order. Comparing neighbouring
+      words gives rules such as t before f. What is the order of the letters?
+    options:
+    - wertf
+    - werft
+    - wetrf
+    - wefrt
+    answer: 0
+    explanation: 'The first difference between adjacent words gives one edge: wrt/wrf gives t -> f, wrf/er
+      gives w -> e, er/ett gives r -> t, and ett/rftt gives e -> r. The chain w, e, r, t, f is the only
+      topological order. Remember the special case where a longer word precedes its own prefix: that makes
+      the input invalid.'
+    difficulty: 4
+  - id: ready-always-one
+    kind: mcq
+    prompt: How can you tell, while running Kahn's algorithm, that the graph has exactly one valid topological
+      order?
+    options:
+    - The queue holds exactly one node at every step until the last node has been output
+    - The graph has exactly one node with in-degree zero at the very start of the run
+    - The graph has no node with more than one outgoing edge, so branching is impossible
+    - The output matches the numerical order of the labels, which proves it is the only one
+    answer: 0
+    explanation: 'Whenever two nodes are ready at once, either may come first, giving at least two orders.
+      If exactly one is ready at each step, every choice is forced. A single starting node is not enough:
+      it might release two nodes together afterwards.'
+    difficulty: 5
+  - id: duplicate-edge-stall
+    kind: bug
+    prompt: Two tasks, and the same dependency 0 -> 1 is listed twice. In-degrees are counted from the edge
+      LIST, but the adjacency uses a set (which stores the edge only once). How many tasks does Kahn's algorithm
+      output?
+    code:
+      python: "n = 2\nedges = [(0, 1), (0, 1)]\nadj = [set() for _ in range(n)]\nindeg = [0] * n\nfor u,\
+        \ v in edges:\n    adj[u].add(v)\n    indeg[v] += 1\nq = [i for i in range(n) if indeg[i] == 0]\n\
+        order = []\nwhile q:\n    u = q.pop()\n    order.append(u)\n    for v in adj[u]:\n        indeg[v]\
+        \ -= 1\n        if indeg[v] == 0:\n            q.append(v)\nprint(len(order))\n"
+      cpp: "int n = 2;\nvector<pair<int, int>> edges = {{0, 1}, {0, 1}};\nvector<set<int>> adj(n);\nvector<int>\
+        \ indeg(n, 0);\nfor (auto& e : edges) {\n    adj[e.first].insert(e.second);\n    indeg[e.second]++;\n\
+        }\nvector<int> q, order;\nfor (int i = 0; i < n; i++)\n    if (indeg[i] == 0) q.push_back(i);\n\
+        while (!q.empty()) {\n    int u = q.back();\n    q.pop_back();\n    order.push_back(u);\n    for\
+        \ (int v : adj[u])\n        if (--indeg[v] == 0) q.push_back(v);\n}\ncout << order.size();\n"
+      java: "int n = 2;\nint[][] edges = {{0, 1}, {0, 1}};\nList<Set<Integer>> adj = new ArrayList<>();\n\
+        for (int i = 0; i < n; i++) adj.add(new HashSet<>());\nint[] indeg = new int[n];\nfor (int[] e :\
+        \ edges) {\n    adj.get(e[0]).add(e[1]);\n    indeg[e[1]]++;\n}\nDeque<Integer> q = new ArrayDeque<>();\n\
+        int count = 0;\nfor (int i = 0; i < n; i++)\n    if (indeg[i] == 0) q.push(i);\nwhile (!q.isEmpty())\
+        \ {\n    int u = q.pop();\n    count++;\n    for (int v : adj.get(u))\n        if (--indeg[v] ==\
+        \ 0) q.push(v);\n}\nSystem.out.println(count);\n"
+    options:
+    - '1'
+    - '2'
+    - '0'
+    - '3'
+    answer: 0
+    explanation: 'Node 1 gets in-degree 2 but loses only 1, so it is never released and the output looks
+      like a cycle. The degree count and the adjacency must be built from the same data: store both from
+      the same (deduplicated) edge set.'
+    difficulty: 4
 problems: [course-order, project-crunch]
 practice_links:
   - title: Course Schedule

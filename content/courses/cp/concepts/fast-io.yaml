@@ -136,59 +136,146 @@ resources:
     minutes: 60
     level: deep
 quiz:
-  - id: overflow-product
-    kind: mcq
-    prompt: In C++, int a = 100000, b = 100000; long long c = a * b; — what goes wrong?
-    options:
-      - "a * b overflows as int before being stored in c"
-      - "Nothing; c is long long, so the product fits there"
-      - "It is a compile error to store int * int in a long long"
-      - "c becomes exactly 10^10, as expected from the maths"
-    answer: 0
-    explanation: The multiplication happens in int; write 1LL * a * b.
-    difficulty: 2
   - id: budget
     kind: mcq
-    prompt: n = 2·10^5 and the limit is 1 second. Which is safe in C++?
-    options: ["O(n log n)", "O(n²)", "O(n² log n)", "O(2^n)"]
+    prompt: n = 2·10^5 and the time limit is 1 second. Which worst-case complexity is the most you can afford?
+    options:
+    - O(n log n)
+    - O(n²)
+    - O(n² log n)
+    - O(2^n)
     answer: 0
-    explanation: n log n ≈ 3.5·10^6 operations; n² is 4·10^10.
+    explanation: n log n is about 3.5·10^6 operations. n² is 4·10^10, roughly 400 times over a 10^8 budget.
     difficulty: 1
+  - id: cpp-endl
+    kind: mcq
+    languages:
+    - cpp
+    prompt: A C++ solution prints 10^6 lines with cout << x << endl and gets Time Limit Exceeded. What is
+      the one-token fix?
+    options:
+    - 'Replace endl with ''\n'': endl flushes the buffer on every line'
+    - 'Replace endl with ends: it terminates the line faster'
+    - Call cout.flush() once per line instead
+    - Use printf only for the first line, since cout is initialised lazily
+    answer: 0
+    explanation: endl is '\n' plus a flush. A million flushes are a million system calls; '\n' lets the
+      buffer fill and write in big chunks.
+    difficulty: 1
+  - id: sum-bound
+    kind: mcq
+    prompt: n ≤ 2·10^5 and each a[i] ≤ 10^9. You print the sum of the array. What is the largest value the
+      sum can reach, and what does that force?
+    options:
+    - '2·10^14: it does not fit in 32 bits, so use a 64-bit type (Python needs nothing)'
+    - '2·10^9: it just fits in a signed 32-bit int, so int is enough for the sum'
+    - '2·10^9: it fits in an unsigned 32-bit int, so use unsigned int to be safe'
+    - '10^9: the sum cannot be larger than the largest single element'
+    answer: 0
+    explanation: 2·10^5 · 10^9 = 2·10^14, far above 2^31 − 1 ≈ 2.1·10^9 and above 2^32 ≈ 4.3·10^9. Work
+      out the worst case from the constraints before choosing a type.
+    difficulty: 2
+  - id: python-io
+    kind: mcq
+    languages:
+    - python
+    prompt: In Python you must read 2·10^5 lines of input, one integer per line. Which approach is the fast,
+      standard contest pattern?
+    options:
+    - data = sys.stdin.buffer.read().split(), then convert tokens as needed
+    - 'Call input() inside the loop: it is buffered, so it costs the same as the above'
+    - Use eval(input()) per line, since it parses the line in C
+    - Read with open(0).readline() once per character
+    answer: 0
+    explanation: One bulk read plus split avoids per-call overhead. input() works for small inputs but its
+      per-call cost adds up past about 10^5 lines.
+    difficulty: 2
   - id: java-input
     kind: mcq
-    prompt: Which Java approach reads 10^6 integers fast enough?
-    options: ["BufferedReader with StringTokenizer (or a custom byte reader)", "Scanner.nextInt", "System.console()", "Reading one char at a time with System.in.read() unbuffered"]
+    languages:
+    - java
+    prompt: Which approach reads 10^6 integers fast enough in Java?
+    options:
+    - BufferedReader with StringTokenizer, or a custom byte reader
+    - Scanner.nextInt(), which is fine because it buffers its input internally
+    - System.console().readLine() once per number, parsed with Integer.parseInt
+    - System.in.read() one byte per call, assembling each number by hand
     answer: 0
-    explanation: Scanner's regex parsing is far too slow at this scale.
+    explanation: Scanner parses with regexes and is several times slower; at 10^6 numbers it can alone exceed
+      the time limit.
     difficulty: 2
-  - id: endl
+  - id: estimate
     kind: mcq
-    prompt: Why avoid endl in C++ when printing many lines?
-    options: ["It flushes the output buffer every time", "It is not portable across operating systems", "It writes two newline characters per line", "It is a compile error in modern C++ versions"]
-    answer: 0
-    explanation: Flushing on every line turns buffered output into many slow system calls.
-    difficulty: 1
-  - id: sync-off
-    kind: mcq
-    prompt: "In C++, what does ios::sync_with_stdio(false); cin.tie(nullptr); change?"
+    prompt: n = 5000 and the solution checks every pair (i < j) with a few simple operations, about n²/2
+      = 1.25·10^7 steps. The limit is 1 second. Which statement is correct?
     options:
-      - "Streams stop syncing with C stdio and cin no longer flushes cout first"
-      - "cin reads numbers faster, but strings and characters are unaffected"
-      - "Output becomes unbuffered, so each character is written immediately"
-      - "It enables multithreaded reading, splitting the input across cores"
+    - C++ and Java finish well under a second; plain Python loops are borderline
+    - It is too slow in every language, because any n² algorithm exceeds 10^7 steps
+    - It is safe in every language, because 1.25·10^7 is far below the 10^8 budget
+    - Only Python is safe, since its integers never overflow and its loops are optimised
     answer: 0
-    explanation: "Both remove per-operation overhead; afterwards don't mix printf/scanf with cin/cout."
-    difficulty: 4
-  - id: endl-cost
+    explanation: Compiled languages manage roughly 10^8 simple steps per second; interpreted Python manages
+      roughly 10^7. The same step count can be trivial in one and a time-limit failure in another.
+    difficulty: 3
+  - id: cpp-sync
     kind: mcq
-    prompt: "Why is printing 10^6 lines with std::endl much slower than with \\n?"
+    languages:
+    - cpp
+    prompt: What does ios::sync_with_stdio(false); cin.tie(nullptr); change?
     options:
-      - "endl flushes the buffer every line"
-      - "endl writes two characters per line"
-      - "\\n is optimised away by the compiler"
-      - "endl allocates memory on every call"
+    - Streams stop syncing with C stdio, and cin no longer flushes cout before each read
+    - cin reads numbers faster, but strings and characters are unaffected
+    - Output becomes unbuffered, so each character is written immediately
+    - It enables multithreaded reading, splitting the input across cores
     answer: 0
-    explanation: "Each flush forces a system call; \\n just adds to the buffer."
+    explanation: 'The two calls remove the per-operation synchronisation work. The cost: do not mix cin/cout
+      with scanf/printf afterwards.'
+    difficulty: 3
+  - id: multitest
+    kind: mcq
+    prompt: Input has t ≤ 10^4 test cases with Σn ≤ 2·10^5. Your code declares arrays of size 10^6 and clears
+      them completely at the start of every test case. What happens?
+    options:
+    - 'About 10^10 clearing operations: it times out. Clear or size only the first n entries'
+    - 'Nothing: the clear is a single fast operation regardless of size'
+    - It is correct and fast, because Σn bounds all the work
+    - It overflows the memory limit, since arrays are re-allocated each case
+    answer: 0
+    explanation: The sum-of-n guarantee bounds work proportional to n. Anything proportional to the maximum
+      size, repeated per test, is t · 10^6 = 10^10.
+    difficulty: 3
+  - id: mod-chain
+    kind: mcq
+    prompt: a, b, c are each below M = 10^9 + 7, stored in 64-bit signed integers. Which expression for
+      a·b·c mod M is safe from overflow?
+    options:
+    - (a * b % M) * c % M
+    - a * b * c % M
+    - (a * b * c) % M with parentheses
+    - a % M * b * c % M
+    answer: 0
+    explanation: a·b < 1.0·10^18 fits (limit ≈ 9.2·10^18) but a·b·c ≈ 10^27 does not. Reduce after every
+      multiplication. The last option reduces a only, leaving b·c unreduced.
+    difficulty: 5
+  - id: java-shift
+    kind: output
+    languages:
+    - java
+    prompt: What does this print?
+    code:
+      java: 'long x = 1 << 40;
+
+        System.out.println(x);
+
+        '
+    options:
+    - '256'
+    - '1099511627776'
+    - '0'
+    - '-2147483648'
+    answer: 0
+    explanation: 1 is an int, and int shifts use only the low 5 bits of the count, so 1 << 40 is 1 << 8
+      = 256 before widening. Write 1L << 40 (1LL << 40 in C++).
     difficulty: 5
 problems: [sum-big, pairwise-sums]
 practice_links:

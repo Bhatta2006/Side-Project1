@@ -1,0 +1,81 @@
+id: decode-ways
+title: Secret code readings
+concepts:
+- recursion
+difficulty: hard
+statement: |
+  A message was written by replacing each letter by its position in the alphabet (A = 1, B = 2,
+  ..., Z = 26) and gluing the numbers together without separators. For example `12` could be
+  `AB` (1, 2) or `L` (12). Given the digit string, count how many different letter messages it
+  could have come from. A piece may not start with 0 (so `06` is not valid), but `10` and `20`
+  are fine. Print the count modulo 1 000 000 007.
+input_format: |
+  One line with the digit string.
+output_format: The number of readings modulo 1000000007 (0 if none).
+constraints:
+- 1 ≤ length ≤ 100000
+examples:
+- input: '226'
+  output: '3'
+  explanation: 2|2|6 (BBF), 22|6 (VF) and 2|26 (BZ).
+- input: '06'
+  output: '0'
+hints:
+- Look at the end of the string. The last piece is either one digit or two digits. How many ways are there
+  for what remains?
+- Let ways(i) be the number of readings of the first i digits. Then ways(i) adds ways(i - 1) when digit
+  i is not 0, and adds ways(i - 2) when digits i-1 and i form a number from 10 to 26.
+- A plain recursion repeats the same sub-questions exponentially often. Store the answers in a list (or
+  compute upward from the front) to get O(n). A recursion this deep also needs the iterative form in most
+  languages.
+approach: |
+  ways[0] = 1. For each position i: if the digit is not '0', add ways[i - 1]; if the two digits
+  ending at i form a number between 10 and 26, add ways[i - 2]. Take everything modulo
+  10^9 + 7. The answer is ways[n]. O(n).
+reference: |
+  s = input().strip()
+  MOD = 10**9 + 7
+  n = len(s)
+  w = [0] * (n + 1)
+  w[0] = 1
+  for i in range(1, n + 1):
+      if s[i - 1] != "0":
+          w[i] += w[i - 1]
+      if i >= 2 and 10 <= int(s[i - 2:i]) <= 26:
+          w[i] += w[i - 2]
+      w[i] %= MOD
+  print(w[n])
+brute: |
+  import sys
+  sys.setrecursionlimit(10000)
+  s = input().strip()
+
+  def go(i):
+      if i == len(s):
+          return 1
+      if s[i] == "0":
+          return 0
+      total = go(i + 1)
+      if i + 1 < len(s) and int(s[i:i + 2]) <= 26:
+          total += go(i + 2)
+      return total
+
+  print(go(0) % (10**9 + 7))
+small_generator: |
+  def cases(rng):
+      for _ in range(80):
+          n = rng.randint(1, 14)
+          yield "".join(rng.choice("0123456789" if rng.random() < 0.6 else "12") for _ in range(n))
+generator: |
+  def cases(rng):
+      yield "226"
+      yield "06"
+      yield "10"
+      yield "0"
+      yield "1" * 100000
+      yield "2" * 100000
+      yield "10" * 50000
+      yield "27" * 50000
+      for _ in range(6):
+          n = rng.randint(1000, 100000)
+          yield "".join(rng.choice("123456") if rng.random() < 0.9 else rng.choice("0789") for _ in range(n))

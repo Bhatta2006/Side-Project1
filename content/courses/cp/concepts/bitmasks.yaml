@@ -107,27 +107,170 @@ resources:
     minutes: 30
     level: deep
 quiz:
+  - id: bit-test
+    kind: mcq
+    prompt: Which expression is nonzero exactly when bit 3 (counting from 0 at the least significant end)
+      of x is set?
+    options:
+    - (x >> 3) & 1
+    - x & 3
+    - x | (1 << 3)
+    - x ^ 3
+    answer: 0
+    explanation: Shifting right by 3 brings bit 3 to position 0, and & 1 isolates it. x & 3 tests bits 0
+      and 1, and x | (1 << 3) is always nonzero.
+    difficulty: 1
   - id: subset-test
     kind: mcq
-    prompt: How do you test whether mask a is a subset of mask b?
-    options: ["(a & b) == a", "(a | b) == a", "(a ^ b) == 0", "a < b"]
+    prompt: Masks represent sets of items. How do you test whether set a is a subset of set b?
+    options:
+    - (a & b) == a
+    - (a | b) == a
+    - (a ^ b) == 0
+    - a < b
     answer: 0
-    explanation: Every bit of a must also be set in b.
+    explanation: a & b keeps the elements common to both. If that is all of a, then every element of a is
+      in b. (a | b) == b would be the other correct form.
     difficulty: 2
   - id: range-xor
     kind: mcq
-    prompt: With prefix XOR px, the XOR of a[l..r] is...
-    options: ["px[r+1] ^ px[l]", "px[r] − px[l]", "px[r+1] & px[l]", "px[r] ^ px[r]"]
+    prompt: With prefix XORs px, where px[i] is the XOR of the first i elements, the XOR of a[l..r] (0-indexed,
+      inclusive) is...
+    options:
+    - px[r + 1] ^ px[l]
+    - px[r] − px[l]
+    - px[r + 1] & px[l]
+    - px[r] ^ px[r]
     answer: 0
-    explanation: XOR cancels the common prefix a[0..l−1].
+    explanation: The elements before l appear in both prefixes and cancel under XOR, leaving exactly a[l..r].
+      XOR has no need for subtraction.
     difficulty: 2
-  - id: three-n
-    kind: mcq
-    prompt: Enumerating every submask of every mask of n bits takes...
-    options: ["O(3^n)", "O(4^n)", "O(2^n)", "O(n · 2^n)"]
+  - id: lowbit-output
+    kind: output
+    prompt: What does this print?
+    code:
+      python: 'x = 44
+
+        print(x & -x, x & (x - 1))
+
+        '
+      cpp: 'int x = 44;
+
+        cout << (x & -x) << " " << (x & (x - 1));
+
+        '
+      java: 'int x = 44;
+
+        System.out.println((x & -x) + " " + (x & (x - 1)));
+
+        '
+    options:
+    - 4 40
+    - 44 0
+    - 2 42
+    - 4 43
     answer: 0
-    explanation: Each element is either outside the mask, in the mask but not the submask, or in both — 3 choices.
+    explanation: 44 = 101100 in binary. x & −x isolates the lowest set bit (4), and x & (x − 1) clears it
+      (40 = 101000).
     difficulty: 3
+  - id: submask-output
+    kind: output
+    prompt: What does this loop print?
+    code:
+      python: "m = 0b1011\nsub = m\ncnt = 0\nwhile sub:\n    cnt += 1\n    sub = (sub - 1) & m\nprint(cnt)\n"
+      cpp: "int m = 11, sub = m, cnt = 0;\nwhile (sub) {\n    cnt++;\n    sub = (sub - 1) & m;\n}\ncout\
+        \ << cnt;\n"
+      java: "int m = 11, sub = m, cnt = 0;\nwhile (sub != 0) {\n    cnt++;\n    sub = (sub - 1) & m;\n}\n\
+        System.out.println(cnt);\n"
+    options:
+    - '7'
+    - '8'
+    - '11'
+    - '4'
+    answer: 0
+    explanation: m has 3 set bits, so it has 2³ = 8 submasks, but the loop stops when sub reaches 0, so
+      the empty submask is never counted. Handle it separately when you need it.
+    difficulty: 3
+  - id: xor-subarrays
+    kind: mcq
+    prompt: How many subarrays of [3, 1, 2, 3] have XOR equal to 0?
+    options:
+    - '2'
+    - '1'
+    - '3'
+    - '4'
+    answer: 0
+    explanation: 'The prefix XORs are 0, 3, 2, 0, 3. Equal prefixes delimit a zero-XOR subarray: (0, 0)
+      gives [3, 1, 2] and (3, 3) gives [1, 2, 3].'
+    difficulty: 4
+  - id: cpp-precedence
+    kind: mcq
+    languages:
+    - cpp
+    prompt: You write if (x & (x - 1) == 0) to test for a power of two. Why is this a bug?
+    options:
+    - '== binds tighter than &, so it computes x & ((x − 1) == 0): write (x & (x − 1)) == 0'
+    - x & (x − 1) is never zero for powers of two, so the test as written can never succeed
+    - The & operator only works on unsigned types, so x must be declared unsigned first
+    - 'It is correct as written: == is evaluated last, after & has combined the operands'
+    answer: 0
+    explanation: Relative precedence of bitwise and comparison operators is a classic C++ trap. Parenthesise
+      every bitwise sub-expression. (Also, 0 passes this test and is not a power of two.)
+    difficulty: 4
+  - id: wide-mask
+    kind: mcq
+    prompt: A subset of up to 40 items is stored as a mask in one integer variable. What must you use?
+    options:
+    - A 64-bit integer, with bits built as 1LL << i (1L << i in Java)
+    - A 32-bit int, using unsigned so that all 40 bits are available
+    - A 32-bit int, since only a few of the 40 bits are ever set at once
+    - A double, because it stores 2^40 exactly and bit tricks are optional
+    answer: 0
+    explanation: 'Bit 39 needs a 40-bit value. With int, 1 << i is wrong for i ≥ 31 (C++: undefined; Java:
+      the shift count wraps). Python integers are unbounded, so this only bites in C++ and Java.'
+    difficulty: 4
+  - id: sos
+    kind: mcq
+    prompt: You need f[mask] = sum of g[sub] over all submasks of mask, for all masks over n = 20 bits.
+      Which is feasible in a second?
+    options:
+    - Sum-over-subsets DP in O(n · 2^n) ≈ 2·10^7 steps
+    - 'Enumerating every submask of every mask: 3^20 ≈ 3.5·10^9 steps'
+    - 'Looping over all pairs of masks: 4^20 ≈ 10^12 steps'
+    - Trying every permutation of the bits
+    answer: 0
+    explanation: 'The SOS DP adds one bit dimension at a time: for each bit, for each mask containing it,
+      f[mask] += f[mask without the bit]. That is 20 · 2^20 ≈ 2.1·10^7.'
+    difficulty: 5
+  - id: test-bit-equals-one
+    kind: bug
+    prompt: x = 6 (binary 110) has bit 1 set. This test compares the masked value with 1 instead of testing
+      it against zero. What does it print?
+    code:
+      python: "x, i = 6, 1\nif (x & (1 << i)) == 1:\n    print(\"set\")\nelse:\n    print(\"clear\")\n"
+      cpp: 'int x = 6, i = 1;
+
+        if ((x & (1 << i)) == 1) cout << "set";
+
+        else cout << "clear";
+
+        '
+      java: 'int x = 6, i = 1;
+
+        if ((x & (1 << i)) == 1) System.out.println("set");
+
+        else System.out.println("clear");
+
+        '
+    options:
+    - clear
+    - set
+    - error
+    - six
+    answer: 0
+    explanation: 'x & (1 << i) is 2 (the value of the bit), not 1. Only bit 0 would give exactly 1. Test
+      with != 0, or shift first: (x >> i) & 1.'
+    difficulty: 2
 problems: [xor-subarrays]
 practice_links:
   - title: Gray Code

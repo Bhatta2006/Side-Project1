@@ -1,0 +1,62 @@
+id: loop-iterations
+title: How long does this loop run?
+concepts: [complexity]
+difficulty: hard
+statement: |
+  This code is run with a given n:
+
+  ```
+  count = 0
+  for i in 1..n:
+      for j in i, 2i, 3i, ... while j <= n:
+          count += 1
+  ```
+
+  Print the final value of `count`.
+input_format: A single integer n.
+output_format: The final value of count.
+constraints:
+  - 1 ≤ n ≤ 10^12
+examples:
+  - input: "6"
+    output: "14"
+    explanation: The inner loop runs 6, 3, 2, 1, 1, 1 times for i = 1..6, which adds up to 14.
+  - input: "1"
+    output: "1"
+hints:
+  - The inner loop for a given i runs floor(n / i) times, so the answer is a sum of floor(n / i). Running it directly is 10^12 steps.
+  - floor(n / i) takes only about 2·sqrt(n) different values. Many consecutive i give the same quotient.
+  - For a given i, the quotient q = n // i stays the same up to i' = n // q. Add q times the block length (i' - i + 1), then jump to i' + 1.
+approach: |
+  Sum of floor(n / i) for i = 1..n. Group the i with equal quotient: starting at i, the
+  quotient q = n // i holds until i2 = n // q, contributing q · (i2 − i + 1). Then continue
+  from i2 + 1. There are O(sqrt(n)) groups, about 2·10^6 steps for n = 10^12.
+reference: |
+  n = int(input())
+  i = 1
+  total = 0
+  while i <= n:
+      q = n // i
+      i2 = n // q
+      total += q * (i2 - i + 1)
+      i = i2 + 1
+  print(total)
+brute: |
+  n = int(input())
+  print(sum(n // i for i in range(1, n + 1)))
+small_generator: |
+  def cases(rng):
+      for n in range(1, 40):
+          yield str(n)
+      for _ in range(20):
+          yield str(rng.randint(40, 5000))
+generator: |
+  def cases(rng):
+      yield "6"
+      yield "1"
+      yield str(10**12)
+      yield str(10**12 - 1)
+      yield str(999999999989)
+      yield str(2**39)
+      for _ in range(6):
+          yield str(rng.randint(1, 10**12))

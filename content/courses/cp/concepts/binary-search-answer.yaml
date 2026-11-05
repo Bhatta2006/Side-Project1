@@ -117,35 +117,144 @@ resources:
     source: CSES
     minutes: 25
 quiz:
+  - id: iterations
+    kind: mcq
+    prompt: Binary searching an integer answer in [0, 10^18] takes about how many feasibility checks?
+    options:
+    - '60'
+    - 10^9
+    - '18'
+    - 1,000
+    answer: 0
+    explanation: Each check halves the range, and 2^60 > 10^18. Even an enormous answer range costs only
+      dozens of checks.
+    difficulty: 1
   - id: monotonic
     kind: mcq
-    prompt: Why may we binary search the time T in "factory machines"?
+    prompt: Why may we binary search the time T in 'k machines, each with its own speed, must make n items'?
     options:
-      - "If k items can be made in time T, they can be made in any T' > T"
-      - "Machines are given sorted by speed, so the times are sorted too"
-      - "The answer T is always a power of two, so halving finds it fast"
-      - "The times are small enough to try every value of T directly"
+    - If n items can be made in time T, they can be made in any T' > T
+    - Machines are given sorted by speed, so the times are sorted too
+    - The answer T is always a power of two
+    - The times are small enough to try every T directly
     answer: 0
-    explanation: More time never produces fewer items, so feasibility is monotonic.
+    explanation: 'Binary search needs a yes/no predicate that is monotonic: no...no, yes...yes. More time
+      never hurts, so feasibility only switches once.'
+    difficulty: 2
+  - id: first-true-output
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "lo, hi = 0, 100\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if mid * mid >= 50:\n    \
+        \    hi = mid\n    else:\n        lo = mid + 1\nprint(lo)\n"
+      cpp: "int lo = 0, hi = 100;\nwhile (lo < hi) {\n    int mid = (lo + hi) / 2;\n    if (mid * mid >=\
+        \ 50) hi = mid;\n    else lo = mid + 1;\n}\ncout << lo;\n"
+      java: "int lo = 0, hi = 100;\nwhile (lo < hi) {\n    int mid = (lo + hi) / 2;\n    if (mid * mid >=\
+        \ 50) hi = mid;\n    else lo = mid + 1;\n}\nSystem.out.println(lo);\n"
+    options:
+    - '8'
+    - '7'
+    - '50'
+    - '100'
+    answer: 0
+    explanation: It finds the smallest x with x² ≥ 50. 7² = 49 fails, 8² = 64 passes, so the answer is 8.
     difficulty: 2
   - id: last-true
     kind: mcq
-    prompt: Searching the LAST x with ok(x) true, why use mid = (lo + hi + 1) / 2?
+    prompt: When searching for the LAST x with ok(x) true and updating lo = mid on success, why must mid
+      be (lo + hi + 1) / 2?
     options:
-      - "With lo = mid on success, rounding down could loop forever"
-      - "Rounding up makes each step of the search run faster"
-      - "Adding 1 avoids integer overflow when lo + hi is large"
-      - "It finds the first true value instead of the last one"
+    - With lo = mid, rounding down can leave lo and hi one apart forever (mid = lo)
+    - Rounding up makes each iteration run faster, because the upper half is searched first
+    - Adding 1 protects against overflow when lo + hi gets close to the 64-bit limit
+    - It turns the search into a first-true search, since rounding up lands on the left boundary
     answer: 0
-    explanation: When hi = lo + 1, rounding down gives mid = lo and lo = mid makes no progress.
+    explanation: When hi = lo + 1, (lo + hi) / 2 = lo, so lo = mid makes no progress. Rounding up gives
+      mid = hi, and the range shrinks.
     difficulty: 3
-  - id: iterations
-    kind: mcq
-    prompt: Binary searching an answer in [0, 10^18] takes about how many checks?
-    options: ["60", "10^9", "18", "1,000"]
+  - id: last-true-output
+    kind: output
+    prompt: What does this print?
+    code:
+      python: "lo, hi = 0, 100\nwhile lo < hi:\n    mid = (lo + hi + 1) // 2\n    if mid * mid <= 50:\n\
+        \        lo = mid\n    else:\n        hi = mid - 1\nprint(lo)\n"
+      cpp: "int lo = 0, hi = 100;\nwhile (lo < hi) {\n    int mid = (lo + hi + 1) / 2;\n    if (mid * mid\
+        \ <= 50) lo = mid;\n    else hi = mid - 1;\n}\ncout << lo;\n"
+      java: "int lo = 0, hi = 100;\nwhile (lo < hi) {\n    int mid = (lo + hi + 1) / 2;\n    if (mid * mid\
+        \ <= 50) lo = mid;\n    else hi = mid - 1;\n}\nSystem.out.println(lo);\n"
+    options:
+    - '7'
+    - '8'
+    - '50'
+    - '0'
     answer: 0
-    explanation: log₂(10^18) ≈ 60.
-    difficulty: 1
+    explanation: This finds the largest x with x² ≤ 50, which is 7 (49). Compare with the first-true version,
+      where the same boundary gave 8.
+    difficulty: 3
+  - id: min-max-split
+    kind: mcq
+    prompt: Split [7, 2, 5, 10, 8] into 2 contiguous parts so that the largest part sum is as small as possible.
+      Binary searching that sum, what is the answer?
+    options:
+    - '18'
+    - '15'
+    - '17'
+    - '25'
+    answer: 0
+    explanation: 'The search range is [max element, total] = [10, 32]. A limit of 18 works ([7, 2, 5] =
+      14 and [10, 8] = 18). A limit of 17 fails: [10, 8] = 18 is too big, and any split that separates 10
+      from 8 puts 7 + 2 + 5 + 10 = 24 in one part.'
+    difficulty: 4
+  - id: real-iterations
+    kind: mcq
+    prompt: The answer is a real number in [0, 10^9] and the checker accepts absolute error 10^-6. About
+      how many halvings are enough?
+    options:
+    - About 50
+    - About 10^6
+    - About 15
+    - About 1000
+    answer: 0
+    explanation: 'The range must shrink from 10^9 to 10^-6: a factor of 10^15, and 2^50 ≈ 1.1·10^15. In
+      practice run a fixed 100 iterations instead of testing hi − lo against an epsilon.'
+    difficulty: 4
+  - id: check-overflow
+    kind: mcq
+    prompt: Machines have speed 1 item per second and there are 10^5 of them. You binary search T up to
+      10^18 and your check sums T / speed over machines. What bug can occur?
+    options:
+    - 'The sum reaches about 10^23, which overflows 64-bit: stop adding once the total reaches the target'
+    - 'None: 64-bit integers can hold sums up to about 10^23 without special care'
+    - T / speed rounds down, so the check is always false for large T and the search never moves
+    - The search needs floating point for T above 10^9, because integers lose exactness there
+    answer: 0
+    explanation: The predicate itself overflowed, so a feasible T can look infeasible. Cap the running total
+      (return true as soon as it reaches n) or use min(T / speed, n).
+    difficulty: 5
+  - id: floor-instead-of-ceil
+    kind: bug
+    prompt: Chapters of 3, 6, 7 and 11 pages must be read in at most 8 hours, and chapter i takes ceil(p
+      / k) hours at speed k. The true minimum speed is 4. This search uses FLOOR division p / k for the
+      hours. What does it print?
+    code:
+      python: "piles = [3, 6, 7, 11]\nh = 8\nlo, hi = 1, 11\nwhile lo < hi:\n    mid = (lo + hi) // 2\n\
+        \    hours = sum(p // mid for p in piles)\n    if hours <= h:\n        hi = mid\n    else:\n   \
+        \     lo = mid + 1\nprint(lo)\n"
+      cpp: "int piles[4] = {3, 6, 7, 11};\nint h = 8, lo = 1, hi = 11;\nwhile (lo < hi) {\n    int mid =\
+        \ (lo + hi) / 2, hours = 0;\n    for (int p : piles) hours += p / mid;\n    if (hours <= h) hi =\
+        \ mid;\n    else lo = mid + 1;\n}\ncout << lo;\n"
+      java: "int[] piles = {3, 6, 7, 11};\nint h = 8, lo = 1, hi = 11;\nwhile (lo < hi) {\n    int mid =\
+        \ (lo + hi) / 2, hours = 0;\n    for (int p : piles) hours += p / mid;\n    if (hours <= h) hi =\
+        \ mid;\n    else lo = mid + 1;\n}\nSystem.out.println(lo);\n"
+    options:
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    answer: 0
+    explanation: A chapter of 7 pages at speed 3 takes 3 hours, not floor(7/3) = 2. Floor division undercounts
+      the hours, so a too-slow speed passes the check. Use (p + k - 1) / k, the ceiling.
+    difficulty: 3
 problems: [factory-time]
 practice_links:
   - title: Factory Machines
