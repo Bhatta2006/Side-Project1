@@ -244,3 +244,54 @@ graded evidence with honest labels, per-course isolation, and depth on request.
 Everything in the Observed table comes from the signed-out client code and is as reliable as that
 is. Their code, prompts and figure descriptions were read for ideas only; none was copied, and
 the analysis files stay in the scratch folder, not in this repository.
+
+## 9. Wondering, signed in: how a course and its practice are actually generated
+
+Run on 2026-11-05 with the owner's own Wondering account (one-time email code, isolated headless
+browser profile deleted afterwards). One test course was created ("Teach me fractions, I am 10
+and like games"). A recorder logged their backend calls: timings, paths, statuses and response
+structure; it never recorded headers or tokens. Full responses of the generation calls were kept
+in the session scratch folder only, not in this repository. Server code, prompts and models stay
+unknown; everything below is what the client sent and received.
+
+### The pipeline, measured
+
+| Step | Call | Time | What comes back |
+|---|---|---|---|
+| Clarifying chat (2 questions) | `course-creation-chat` | 2.3-3.2 s per turn | One typed JSON result per turn: `clarification` {message, quickReplies[{text}], multiSelect} or `goal_suggestion` {message, suggestedName, suggestedGoal, suggestedGoalSummary, suggestedBackground} |
+| Outline | `generate-lesson-plan-from-content`, stage `outline` | 6.6 s | 4 sections, 12 lessons, each lesson only {name, hook, meaning} (2.5 KB). Shown to the learner with "Request changes" / "Create course" |
+| Create | REST inserts | about 1 s | Course, section and lesson rows; each lesson a shell with status `pending_generation`, its hook and meaning, a **practice menu** (`practiceTypes`, e.g. mcq, pool_cloze, binary_choice, drag_order_steps), a **count range** (`targetPracticeCount` 4-8) and a difficulty |
+| Brief for lesson 1 | same function, stage `detailed` | 6.8 s | Lesson 1 only: concepts [{name, description, scenario, workedExample}] and a ~1,000-character `sourceContent` |
+| Lesson 1 | `generate-lesson` | 202 at once, ready about 38 s later (polled every 2 s) | Pages and practice together (experiment flag `joint-lesson-generation`) |
+| Briefs for the other 11 lessons | same function, stage `detailed`, in parallel | 17 s | Same shape for every remaining lesson (19 KB), persisted for later |
+| Cover, mind map, summary, podcast | separate calls, in parallel | 5-11 s | Never block the course or the lesson |
+| Next lessons | `generate-lesson` x2 when lesson 1 is opened | background | "Next lesson prepared ahead" |
+
+First lesson ready about 50 s after "Create". Socrat's first live run: outline 48 s, 4 of 6
+first lessons released in 10 minutes.
+
+### The contracts (why each step is easy to pass)
+
+- **Lesson** = 7 pages of 600-1,000 characters, each {heading, content}; content is Markdown with
+  at most about one embedded component, written inline as `{{interactive:<name> data='<json>'}}`.
+  Six generic components were used: `wondering-lens`, `lesson-table`, `lesson-stepper`,
+  `lesson-compare-toggle`, `comparison-visualization`, `pyramid-visualization`. The lesson also
+  carries `keywords` [{name, description}] for tap-to-define terms.
+- **Practice item** = {type, question, answer, options, explanation}. Multiple choice marks each
+  option with `isCorrect`, so there is no separate answer index to get wrong. Cloze writes the
+  answer inside the sentence, Anki style (`the {{c1::denominator}} is 10`), and the blanks and
+  the answer text are derived from it, so they cannot disagree. Every item has an explanation.
+- **Provenance** on every lesson: prompt id and hash and model for pages and for practice.
+
+### What this means for Socrat
+
+1. Their stages are small and each has a tiny contract (an outline is three strings per lesson),
+   so there is little to fail and nothing to send back. Socrat's architect writes a full
+   competency graph and a critic reviews it before the learner sees anything.
+2. The learner is the outline's reviewer ("Request changes"); no model critic round is visible.
+3. Correctness lives inside the item (`isCorrect`, inline cloze), not in a parallel index.
+4. The practice menu and count are fixed per lesson before writing (our section 7 fix is the same
+   idea for planned activities).
+5. Lessons are short pages with at most about one component each, from a small generic set.
+6. They trade verification for speed: no fact-check or review round is visible in the client.
+   Socrat's gates catch errors theirs may ship; keep them, but make each one cheaper to pass.
