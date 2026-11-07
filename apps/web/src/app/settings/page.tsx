@@ -13,7 +13,7 @@ import type { BillingStatus, Course, Language, Profile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { Pill } from '@/components/choice';
-import { TOUR_EVENT } from '@/components/tour';
+import { TOUR_EVENT } from '@/components/tour-event';
 import CodeforcesLink from '@/components/codeforces-link';
 import { SuccessLine } from '@/components/socrat/states';
 import {
