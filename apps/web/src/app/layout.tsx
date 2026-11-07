@@ -9,7 +9,7 @@ import Shell from '@/components/shell';
 import { ThemeProvider } from '@/components/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
-import { WebVitals } from '@/components/web-vitals';
+import { DeferredWebVitals } from '@/components/deferred-vitals';
 import { ErrorReporter } from '@/components/error-reporter';
 import { PwaSetup } from '@/components/install-app';
 import { LEGAL } from '@/lib/legal';
@@ -79,7 +79,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');` }} />
       </head>
       <body>
-        <WebVitals />
+        <DeferredWebVitals />
         <ErrorReporter />
         <PwaSetup />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>

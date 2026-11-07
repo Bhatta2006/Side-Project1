@@ -1,0 +1,766 @@
+# Placement bank, Competitive Programming. Hard on purpose: edge cases, special cases,
+# traces, fill-in-the-blank and find-the-bug. Placement only: never shown in lessons.
+# Numeric answers were computed by brute force; "output" items are executed by
+# scripts/dev/verify_placement_bank.py.
+course: cp
+concepts:
+  fast-io:
+    - id: pl-py-fast-read
+      kind: mcq
+      prompt: In Python, what is the usual fast way to read 10^6 integers?
+      options:
+        - Read everything at once with sys.stdin.buffer.read().split() and convert
+        - Call input() 10^6 times
+        - Read one character at a time
+        - Use eval on each line
+      answer: 0
+      explanation: One big read avoids a million slow calls. Writing output joined in one call helps the same way.
+      languages: [python]
+      difficulty: 4
+    - id: pl-py-fast-write
+      kind: mcq
+      prompt: In Python, a solution prints 10^6 lines one call at a time and times out. What helps most?
+      options:
+        - Build the lines in a list and write them once with sys.stdout.write and "\n".join
+        - Add flush=True to every call
+        - Print the numbers with commas
+        - Use a bigger time limit
+      answer: 0
+      explanation: Each call has overhead; flushing every line makes it worse.
+      languages: [python]
+      difficulty: 4
+    - id: pl-cpp-sync
+      kind: mcq
+      prompt: In C++, a solution reading 10^6 integers with cin gets Time Limit Exceeded. What is the usual fix?
+      options:
+        - Call ios::sync_with_stdio(false) and cin.tie(nullptr) at the start
+        - Switch every cin to scanf and keep the cin calls too
+        - Read the numbers as strings
+        - Use endl after every read
+      answer: 0
+      explanation: Syncing with C stdio and flushing cout before each read make cin slow. Do not mix cin and scanf after turning sync off.
+      difficulty: 4
+    - id: pl-cpp-endl
+      kind: mcq
+      prompt: In C++, why can printing 10^6 lines with endl be far slower than with "\n"?
+      options:
+        - endl flushes the output buffer on every line
+        - endl writes two characters
+        - endl is a function and "\n" is not
+        - It is not slower
+      answer: 0
+      explanation: Flushing forces a system call per line. Use "\n" and let the buffer flush once at the end.
+      difficulty: 4
+    - id: pl-interactive-flush
+      kind: mcq
+      prompt: In an interactive problem, a correct solution gets Idleness Limit Exceeded. What is the likely cause?
+      options:
+        - The query was never flushed, so the judge is still waiting for it
+        - The solution reads too fast
+        - The answer format is wrong
+        - Interactive problems forbid buffered output
+      answer: 0
+      explanation: Buffered output stays on your side until flushed. Flush after every query.
+      difficulty: 5
+    - id: pl-java-reader
+      kind: mcq
+      prompt: In Java, which reads 10^6 integers fast enough for a 1-second limit?
+      options:
+        - BufferedReader with StringTokenizer (or a custom byte reader)
+        - Scanner
+        - Scanner with a larger buffer passed in
+        - Reading one character at a time with System.in.read() unbuffered
+      answer: 0
+      explanation: Scanner parses with regular expressions and is several times too slow for this size.
+      difficulty: 4
+  number-theory:
+    - id: pl-divisors-360
+      kind: mcq
+      prompt: How many positive divisors does 360 have?
+      options:
+        - "24"
+        - "20"
+        - "18"
+        - "12"
+      answer: 0
+      explanation: 360 = 2^3 * 3^2 * 5, so (3 + 1)(2 + 1)(1 + 1) = 24.
+      difficulty: 4
+    - id: pl-sieve-start
+      kind: mcq
+      prompt: In the sieve of Eratosthenes, why can crossing out multiples of p start at p * p?
+      options:
+        - Every smaller multiple k * p with k < p was already crossed out by a smaller prime factor of k
+        - Numbers below p * p are all prime
+        - It is only an optimisation for even p
+        - To avoid crossing out p itself, which p + p would also avoid
+      answer: 0
+      explanation: That also means the outer loop can stop once p * p exceeds n.
+      difficulty: 5
+    - id: pl-phi-36
+      kind: mcq
+      prompt: Euler's totient φ(36), the count of numbers from 1 to 36 coprime to 36?
+      options:
+        - "12"
+        - "24"
+        - "11"
+        - "18"
+      answer: 0
+      explanation: 36 * (1 - 1/2) * (1 - 1/3) = 12.
+      difficulty: 5
+    - id: pl-euclid-worst
+      kind: mcq
+      prompt: Which inputs make Euclid's gcd algorithm take the most steps for their size, and how many steps is that?
+      options:
+        - Consecutive Fibonacci numbers, about log of the input steps
+        - Two equal numbers, about n steps
+        - A prime and 1, about sqrt n steps
+        - Powers of two, about n steps
+      answer: 0
+      explanation: Each step is like a Fibonacci step backwards, so the count is logarithmic.
+      difficulty: 5
+  simulation:
+    - id: pl-robot-turns
+      kind: mcq
+      prompt: A robot faces north, turns right three times, then left once. Which way does it face?
+      options:
+        - South
+        - North
+        - East
+        - West
+      answer: 0
+      explanation: Right three times is west; one left from west is south. Keep direction as an index into (N, E, S, W).
+      difficulty: 4
+    - id: pl-huge-steps
+      kind: mcq
+      prompt: A deterministic process with at most 10^5 distinct states must be simulated for 10^18 steps. What works?
+      options:
+        - Record when each state is first seen, find the cycle, and jump ahead using the remainder
+        - Simulate all 10^18 steps
+        - Simulate 10^5 steps and stop there
+        - Use a faster language
+      answer: 0
+      explanation: Within 10^5 + 1 steps a state repeats; after that the process loops with a fixed period.
+      difficulty: 5
+    - id: pl-josephus
+      kind: mcq
+      prompt: Seven people stand in a circle numbered 1 to 7. Counting from 1, every 3rd person leaves. Who is left last?
+      options:
+        - "4"
+        - "7"
+        - "1"
+        - "3"
+      answer: 0
+      explanation: People leave in the order 3, 6, 2, 7, 5, 1, leaving 4.
+      difficulty: 5
+  binary-search-answer:
+    - id: pl-real-binsearch
+      kind: bug
+      prompt: A binary search on real numbers runs while hi - lo > 1e-9, with values up to 10^9. It sometimes never ends. Why?
+      options:
+        - Near 10^9 neighbouring doubles are further apart than 1e-9, so the gap can never shrink that far
+        - The midpoint overflows
+        - Floating-point division is random
+        - The loop condition should use >=
+      answer: 0
+      explanation: Run a fixed number of iterations (for example 100) instead of testing an absolute gap.
+      difficulty: 5
+    - id: pl-aggressive-cows
+      kind: mcq
+      prompt: Place 3 cows in stalls at positions 1, 2, 4, 8, 9 to make the smallest distance between any two cows as large as possible. What is it?
+      options:
+        - "3"
+        - "4"
+        - "2"
+        - "5"
+      answer: 0
+      explanation: Stalls 1, 4 and 8 (or 9) give 3. For distance 4, greedy placement fits only two cows.
+      difficulty: 5
+    - id: pl-monotone-predicate
+      kind: mcq
+      prompt: Binary search on the answer needs which property of check(x)?
+      options:
+        - Once it becomes true it stays true for every larger x (or the reverse)
+        - It must be fast to compute for every x
+        - It must be true for exactly one x
+        - It must be continuous
+      answer: 0
+      explanation: Without monotonicity there is no single boundary to find.
+      difficulty: 4
+  complete-search:
+    - id: pl-meet-in-middle
+      kind: mcq
+      prompt: Counting subsets with a given sum, n = 40. Trying all 2^40 subsets is too slow. What fits?
+      options:
+        - Meet in the middle, enumerating 2^20 subsets of each half and combining with sorting or hashing
+        - Trying all subsets with faster I/O
+        - Greedy by largest element
+        - Dynamic programming over sums of size up to 10^18
+      answer: 0
+      explanation: 2 * 2^20 is about 2 * 10^6, plus a sort or hash join.
+      difficulty: 5
+    - id: pl-factorial-limit
+      kind: mcq
+      prompt: Trying every permutation of 12 items, each in O(1), within about 1 second?
+      options:
+        - About 4.8 * 10^8 permutations, usually too slow
+        - About 3.6 * 10^6, comfortably fast
+        - About 10^12, impossible
+        - About 144, trivial
+      answer: 0
+      explanation: 12! = 479 001 600; with n work per permutation it is far too slow. 10! is the usual limit.
+      difficulty: 4
+    - id: pl-subsets-sum-ten
+      kind: mcq
+      prompt: How many subsets of {1, 2, ..., 10} have elements adding up to exactly 10?
+      options:
+        - "10"
+        - "9"
+        - "42"
+        - "8"
+      answer: 0
+      explanation: This counts partitions of 10 into distinct parts, which brute force confirms is 10.
+      difficulty: 5
+  modular-arithmetic:
+    - id: pl-mod-subtract
+      kind: bug
+      prompt: In C++ or Java, a solution computes (a - b) % MOD with 0 <= a, b < MOD. Why can the answer be wrong?
+      options:
+        - When a < b the result is negative; use (a - b + MOD) % MOD
+        - Subtraction overflows for any a and b
+        - "% cannot be used with subtraction"
+        - It is always right
+      answer: 0
+      explanation: "In these languages % keeps the dividend's sign."
+      difficulty: 5
+    - id: pl-mod-inverse
+      kind: mcq
+      prompt: What is the inverse of 3 modulo 7?
+      options:
+        - "5"
+        - "3"
+        - "2"
+        - "4"
+      answer: 0
+      explanation: 3 * 5 = 15 = 2 * 7 + 1. With a prime modulus, the inverse is 3^(7 - 2) mod 7.
+      difficulty: 4
+    - id: pl-mod-division
+      kind: mcq
+      prompt: Why is (n! mod p) / (k! mod p) not n! / k! mod p?
+      options:
+        - Remainders do not divide; multiply by the modular inverse of k! instead
+        - It is equal when p is prime
+        - Integer division rounds down
+        - Factorials are too big to store
+      answer: 0
+      explanation: Addition, subtraction and multiplication survive mod; division needs an inverse.
+      difficulty: 5
+    - id: pl-fermat-exponent
+      kind: mcq
+      prompt: Computing 2^(10^18) mod p for a prime p, the exponent may first be reduced modulo what?
+      options:
+        - p - 1
+        - p
+        - p + 1
+        - It cannot be reduced
+      answer: 0
+      explanation: By Fermat, 2^(p - 1) = 1 mod p when p does not divide 2, so exponents repeat with period dividing p - 1.
+      difficulty: 5
+    - id: pl-mulmod-overflow
+      kind: mcq
+      prompt: With a 64-bit signed type, a * b is computed before taking % MOD, where 0 <= a, b < MOD. For which MOD can it overflow?
+      options:
+        - MOD near 10^18, but not 10^9 + 7
+        - MOD = 10^9 + 7
+        - Both
+        - Neither
+      answer: 0
+      explanation: (10^9)^2 is about 10^18, under 9.2 * 10^18. With MOD near 10^18 the product is near 10^36.
+      difficulty: 5
+  prefix-difference:
+    - id: pl-difference-array
+      kind: mcq
+      prompt: Six zeros, indexes 0..5. Add 3 to positions 1..3 and 2 to positions 2..5 (inclusive) with a difference array. Final array?
+      options:
+        - "[0, 3, 5, 5, 2, 2]"
+        - "[0, 3, 5, 5, 5, 2]"
+        - "[0, 3, 3, 5, 2, 2]"
+        - "[3, 5, 5, 2, 2, 0]"
+      answer: 0
+      explanation: d[1] += 3, d[4] -= 3, d[2] += 2, d[6] -= 2, then take prefix sums.
+      difficulty: 4
+    - id: pl-2d-prefix
+      kind: fill
+      prompt: "With a 1-based 2D prefix table P, fill in the blank: the sum of rectangle (r1, c1)..(r2, c2) is P[r2][c2] - P[r1 - 1][c2] - P[r2][c1 - 1] ____"
+      options:
+        - + P[r1 - 1][c1 - 1]
+        - "- P[r1 - 1][c1 - 1]"
+        - + P[r1][c1]
+        - nothing more
+      answer: 0
+      explanation: The top-left block was subtracted twice, so it is added back once.
+      difficulty: 4
+    - id: pl-diff-size
+      kind: bug
+      prompt: A difference array has exactly n slots. A range update on l..r writes d[l] += x and d[r + 1] -= x. Which update breaks?
+      options:
+        - One ending at r = n - 1, which writes past the end
+        - One starting at l = 0
+        - Any update with x negative
+        - One with l = r
+      answer: 0
+      explanation: Allocate n + 1 slots, or skip the second write when r + 1 == n.
+      difficulty: 5
+  bitmasks:
+    - id: pl-submask-total
+      kind: mcq
+      prompt: For every mask of n bits you loop over all its submasks. How many steps is that in total?
+      options:
+        - 3^n
+        - 4^n
+        - n * 2^n
+        - 2^n
+      answer: 0
+      explanation: "Each bit is outside the mask, in the mask but not the submask, or in both: three choices per bit."
+      difficulty: 5
+    - id: pl-popcount-mask
+      kind: mcq
+      prompt: How many bits are set in 255 AND (NOT 15)?
+      options:
+        - "4"
+        - "8"
+        - "2"
+        - "6"
+      answer: 0
+      explanation: 255 is 11111111 and NOT 15 clears the low four bits, leaving 11110000.
+      difficulty: 4
+    - id: pl-shift-literal
+      kind: bug
+      prompt: In C++ or Java, a mask is a 64-bit integer and the code tests bit 40 with mask & (1 << 40). What goes wrong?
+      options:
+        - 1 is a 32-bit int, so the shift is wrong; write 1LL (C++) or 1L (Java)
+        - Nothing, the result is widened to 64 bits
+        - Bit 40 does not exist in a 64-bit integer
+        - "& cannot be used on 64-bit values"
+      answer: 0
+      explanation: The shift happens in 32 bits before the & widens anything.
+      languages: [cpp, java]
+      difficulty: 5
+  combinatorics:
+    - id: pl-stars-bars
+      kind: mcq
+      prompt: What are C(5, 2), and the number of ways to put 5 identical balls into 3 distinct boxes (boxes may be empty)?
+      options:
+        - 10 and 21
+        - 10 and 15
+        - 20 and 21
+        - 10 and 243
+      answer: 0
+      explanation: Stars and bars gives C(5 + 3 - 1, 3 - 1) = C(7, 2) = 21. 3^5 = 243 would be for distinct balls.
+      difficulty: 5
+    - id: pl-derangements
+      kind: mcq
+      prompt: In how many ways can 4 letters go into 4 envelopes so that no letter is in its own envelope?
+      options:
+        - "9"
+        - "24"
+        - "8"
+        - "11"
+      answer: 0
+      explanation: D(4) = 3 * (D(3) + D(2)) = 3 * (2 + 1) = 9.
+      difficulty: 5
+    - id: pl-catalan
+      kind: mcq
+      prompt: How many valid strings of 3 pairs of parentheses are there?
+      options:
+        - "5"
+        - "6"
+        - "14"
+        - "3"
+      answer: 0
+      explanation: The Catalan number C3 = 5.
+      difficulty: 4
+    - id: pl-precompute-factorials
+      kind: mcq
+      prompt: Up to 10^5 queries ask C(n, k) mod 10^9 + 7 with n up to 10^6. What should be precomputed?
+      options:
+        - Factorials and inverse factorials up to 10^6
+        - Pascal's triangle up to 10^6 rows
+        - Nothing; compute each from scratch
+        - Only factorials, then divide normally
+      answer: 0
+      explanation: Pascal's triangle would need 10^12 entries; dividing remainders is wrong.
+      difficulty: 4
+  dp-classics:
+    - id: pl-domino-tiling
+      kind: mcq
+      prompt: In how many ways can a 2 by 5 board be tiled with 1 by 2 dominoes?
+      options:
+        - "8"
+        - "5"
+        - "13"
+        - "10"
+      answer: 0
+      explanation: ways(n) = ways(n - 1) + ways(n - 2), a Fibonacci sequence 1, 2, 3, 5, 8.
+      difficulty: 4
+    - id: pl-frog-jump
+      kind: mcq
+      prompt: A frog on stones with heights [10, 30, 40, 20] jumps 1 or 2 stones ahead, paying the height difference. Least total cost to the last stone?
+      options:
+        - "30"
+        - "40"
+        - "20"
+        - "50"
+      answer: 0
+      explanation: 10 → 30 (20) → 20 (10) costs 30, skipping 40.
+      difficulty: 4
+    - id: pl-mod-when
+      kind: bug
+      prompt: A DP adds many counts and applies % MOD only once, at the very end. What goes wrong?
+      options:
+        - Intermediate sums overflow before the final mod
+        - Nothing, mod at the end gives the same answer
+        - The answer is off by MOD
+        - It is just slower
+      answer: 0
+      explanation: Take the mod after every addition or multiplication so values stay small.
+      difficulty: 4
+  fenwick-tree:
+    - id: pl-fenwick-query-path
+      kind: mcq
+      prompt: A Fenwick tree prefix query at index 13 adds which cells, in order?
+      options:
+        - 13, 12, 8
+        - 13, 14, 16
+        - 13, 12, 11, ..., 1
+        - 13, 6, 3, 1
+      answer: 0
+      explanation: Each step removes the lowest set bit, 1101 → 1100 → 1000 → 0.
+      difficulty: 5
+    - id: pl-fenwick-update-path
+      kind: mcq
+      prompt: In a Fenwick tree of size 16, an update at index 5 changes which cells?
+      options:
+        - 5, 6, 8, 16
+        - 5, 4, 0
+        - 5, 6, 7, ..., 16
+        - 5, 10, 16
+      answer: 0
+      explanation: Each step adds the lowest set bit, 101 → 110 → 1000 → 10000.
+      difficulty: 5
+    - id: pl-fenwick-range-update
+      kind: mcq
+      prompt: How can a Fenwick tree support "add x to a range" and "read one position"?
+      options:
+        - Store the difference array; a range add is two point updates, a read is a prefix sum
+        - It cannot
+        - Update every position in the range
+        - Use two trees and multiply them
+      answer: 0
+      explanation: Range add plus range sum needs two trees; range add plus point read needs one.
+      difficulty: 5
+  greedy-cp:
+    - id: pl-spt
+      kind: mcq
+      prompt: Jobs run one after another. To minimise the sum of their completion times, in what order should they run?
+      options:
+        - Shortest job first
+        - Longest job first
+        - In input order
+        - By deadline
+      answer: 0
+      explanation: Swapping a longer job ahead of a shorter one raises the total, the classic exchange argument.
+      difficulty: 4
+    - id: pl-max-lateness
+      kind: mcq
+      prompt: To minimise the maximum lateness of jobs with deadlines, in what order should they run?
+      options:
+        - Earliest deadline first
+        - Shortest job first
+        - Latest deadline first
+        - Longest job first
+      answer: 0
+      explanation: Any inversion of deadlines can be swapped without increasing the maximum lateness.
+      difficulty: 5
+    - id: pl-cookies
+      kind: mcq
+      prompt: Children need cookie sizes of at least [1, 2, 3], and the cookies are [1, 1]. At most how many children are satisfied?
+      options:
+        - "1"
+        - "2"
+        - "0"
+        - "3"
+      answer: 0
+      explanation: Only the child needing 1 can be served; one cookie per child.
+      difficulty: 4
+  string-hashing:
+    - id: pl-anti-hash
+      kind: mcq
+      prompt: A solution hashes strings modulo 2^64 (letting unsigned overflow do the mod) with a fixed base. Why can it fail on purpose-built tests?
+      options:
+        - Known string families (Thue-Morse) collide for any base modulo 2^64
+        - 2^64 is too small to hold a hash
+        - Unsigned overflow is undefined
+        - It cannot; 2^64 is safe
+      answer: 0
+      explanation: Use a large prime modulus (or two) and a random base.
+      difficulty: 5
+    - id: pl-substring-hash
+      kind: fill
+      prompt: "Prefix hashes satisfy H[i + 1] = H[i] * B + s[i]. Fill in the blank: the hash of s[l..r] is H[r + 1] - H[l] * ____"
+      options:
+        - B^(r - l + 1)
+        - B^(r - l)
+        - B^l
+        - B^(r + 1)
+      answer: 0
+      explanation: H[l] must be shifted past the r - l + 1 characters of the substring before subtracting.
+      difficulty: 5
+    - id: pl-birthday
+      kind: mcq
+      prompt: One million distinct strings get hashes modulo about 10^9. Is some collision likely?
+      options:
+        - Yes, almost certain; about n^2 / (2m) = 500 colliding pairs are expected
+        - No, a million is far less than a billion
+        - About a 0.1% chance
+        - Only if the strings are long
+      answer: 0
+      explanation: The birthday paradox. Use two moduli or 64-bit hashes when comparing many strings.
+      difficulty: 5
+  tree-techniques:
+    - id: pl-reroot-distances
+      kind: fill
+      prompt: "Sum of distances from every node, n nodes. Moving the root from parent p to child c: ans[c] = ans[p] - size[c] + ____"
+      options:
+        - (n - size[c])
+        - size[c]
+        - (n - 1)
+        - size[p]
+      answer: 0
+      explanation: The size[c] nodes in c's subtree get 1 closer and the other n - size[c] nodes get 1 farther.
+      difficulty: 5
+    - id: pl-euler-tour
+      kind: mcq
+      prompt: With an Euler tour recording entry time tin and exit time tout, what does the subtree of v become?
+      options:
+        - A contiguous range of positions from tin[v] to tout[v]
+        - The positions of v's children only
+        - Two separate ranges
+        - The path from v to the root
+      answer: 0
+      explanation: That turns subtree queries into range queries on an array.
+      difficulty: 4
+    - id: pl-two-bfs-diameter
+      kind: mcq
+      prompt: Tree diameter by BFS twice. Why can the first BFS start from any node?
+      options:
+        - The farthest node from any node is an endpoint of some diameter
+        - Every node is on the diameter
+        - The first BFS only finds a leaf, any leaf works
+        - It cannot; it must start at the root
+      answer: 0
+      explanation: This holds for trees with non-negative edge weights, not for general graphs.
+      difficulty: 5
+  bitmask-dp:
+    - id: pl-assignment-cost
+      kind: mcq
+      prompt: Assigning n = 20 workers to 20 jobs with dp over the set of jobs taken. Time?
+      options:
+        - O(2^n * n), about 2 * 10^7
+        - O(n!), about 2.4 * 10^18
+        - O(n^2)
+        - O(2^n * 2^n)
+      answer: 0
+      explanation: The next worker is popcount(mask), so the state is the mask alone; each tries n jobs.
+      difficulty: 5
+    - id: pl-popcount-index
+      kind: mcq
+      prompt: In that dp[mask], why is the next worker's index popcount(mask)?
+      options:
+        - Workers are assigned in order, so the number of taken jobs equals the number of workers done
+        - It is a coincidence
+        - popcount gives the cheapest job
+        - The mask stores workers, not jobs
+      answer: 0
+      explanation: Fixing the order of workers removes it from the state.
+      difficulty: 5
+    - id: pl-hamiltonian-count
+      kind: mcq
+      prompt: How many Hamiltonian paths, counted with direction, does the complete graph on 4 nodes have?
+      options:
+        - "24"
+        - "12"
+        - "6"
+        - "4"
+      answer: 0
+      explanation: Every ordering of the 4 nodes is a path, 4! = 24 (12 if direction is ignored).
+      difficulty: 4
+  kmp:
+    - id: pl-prefix-function
+      kind: mcq
+      prompt: The prefix function of "aabaaab"?
+      options:
+        - "[0, 1, 0, 1, 2, 2, 3]"
+        - "[0, 1, 0, 1, 2, 3, 3]"
+        - "[0, 0, 0, 1, 2, 2, 3]"
+        - "[0, 1, 0, 1, 2, 2, 2]"
+      answer: 0
+      explanation: At index 5 the border "aab" fails, so it falls back to "a" and extends to "aa", giving 2.
+      difficulty: 5
+    - id: pl-kmp-separator
+      kind: mcq
+      prompt: Finding pattern p in text t with the prefix function of p + "#" + t. Why the separator?
+      options:
+        - So no border can be longer than p, which makes a value of |p| mean exactly one match
+        - To mark the end of the text
+        - It speeds up the loop
+        - It is not needed
+      answer: 0
+      explanation: The separator must be a character that appears in neither string.
+      difficulty: 5
+    - id: pl-string-period
+      kind: mcq
+      prompt: What is the smallest period of "abcabcab", found as n minus the last prefix-function value?
+      options:
+        - "3"
+        - "8"
+        - "5"
+        - "2"
+      answer: 0
+      explanation: The last value is 5, so 8 - 5 = 3. The string need not be a whole number of periods.
+      difficulty: 5
+  lca:
+    - id: pl-lifting-table
+      kind: mcq
+      prompt: Binary lifting for LCA on n = 10^5 nodes. How large is the ancestor table?
+      options:
+        - About n * 17
+        - About n * n
+        - About n
+        - About n * 100
+      answer: 0
+      explanation: 2^17 > 10^5, so 17 levels of jumps cover any depth.
+      difficulty: 4
+    - id: pl-tree-distance
+      kind: fill
+      prompt: "Fill in the blank: the distance between u and v in a tree is depth[u] + depth[v] - ____"
+      options:
+        - 2 * depth[lca(u, v)]
+        - depth[lca(u, v)]
+        - 2 * depth[root]
+        - depth[u] * depth[v]
+      answer: 0
+      explanation: The shared stretch from the root to the LCA is counted in both depths.
+      difficulty: 4
+    - id: pl-lifting-steps
+      kind: mcq
+      prompt: In binary-lifting LCA, after lifting the deeper node to the same depth, the two nodes still differ. What next?
+      options:
+        - For each power from high to low, jump both up if their ancestors there differ; the answer is then their parent
+        - Jump both up one step at a time
+        - The deeper node's parent is the answer
+        - Jump both by the highest power at once
+      answer: 0
+      explanation: Jumping only while ancestors differ keeps both just below the LCA.
+      difficulty: 5
+  mst:
+    - id: pl-kruskal-weight
+      kind: mcq
+      prompt: "Edges: a-b 1, b-c 2, a-c 2, c-d 3, b-d 4. Weight of a minimum spanning tree?"
+      options:
+        - "6"
+        - "7"
+        - "8"
+        - "5"
+      answer: 0
+      explanation: Take a-b 1, then one of the 2s, then c-d 3. The other 2 would close a cycle.
+      difficulty: 4
+    - id: pl-mst-unique
+      kind: mcq
+      prompt: When is the minimum spanning tree guaranteed unique?
+      options:
+        - When all edge weights are distinct
+        - When the graph is a tree
+        - When the graph is complete
+        - Always
+      answer: 0
+      explanation: Equal weights can give several MSTs with the same total, like the two 2s above.
+      difficulty: 5
+    - id: pl-dense-prim
+      kind: mcq
+      prompt: For a dense graph with V = 10^4 and about V^2 / 2 edges, which MST method is fastest?
+      options:
+        - Prim with a plain array, O(V^2)
+        - Kruskal, O(E log E)
+        - Prim with a binary heap, O(E log V)
+        - Bellman-Ford
+      answer: 0
+      explanation: With E near V^2 the log factors cost more than the simple O(V^2) scan.
+      difficulty: 5
+  segment-tree:
+    - id: pl-segtree-size
+      kind: mcq
+      prompt: How many slots does a recursive segment tree over n elements need to be safe for any n?
+      options:
+        - 4n
+        - 2n
+        - n log n
+        - n + 1
+      answer: 0
+      explanation: 2n is enough only when n is a power of two; 4n covers the rounding up.
+      difficulty: 4
+    - id: pl-lazy-push
+      kind: bug
+      prompt: In a segment tree with lazy range updates, when must a node's pending tag be pushed to its children?
+      options:
+        - Before visiting its children, in both updates and queries
+        - Only at the end of all updates
+        - Only in queries
+        - Never; tags are applied at the leaves
+      answer: 0
+      explanation: Forgetting the push in queries reads children that do not include the pending update.
+      difficulty: 5
+    - id: pl-lazy-compose
+      kind: mcq
+      prompt: A segment tree supports both "assign value to range" and "add value to range". A node holds a pending add, then receives an assign. What is right?
+      options:
+        - The assign replaces the pending add
+        - The add is applied after the assign
+        - Both are kept and applied in arrival order at the leaves only
+        - The assign is ignored
+      answer: 0
+      explanation: An add arriving after an assign, by contrast, is added onto the assign value.
+      difficulty: 5
+  graph-techniques:
+    - id: pl-odd-cycle
+      kind: mcq
+      prompt: Is a cycle of 5 nodes bipartite?
+      options:
+        - No, an odd cycle cannot be 2-coloured
+        - Yes, every cycle is bipartite
+        - Yes, if it is directed
+        - Only if the nodes are numbered in order
+      answer: 0
+      explanation: A graph is bipartite exactly when it has no odd cycle.
+      difficulty: 4
+    - id: pl-scc-count
+      kind: mcq
+      prompt: Directed edges 1 → 2, 2 → 3, 3 → 1, 3 → 4. How many strongly connected components?
+      options:
+        - "2"
+        - "1"
+        - "4"
+        - "3"
+      answer: 0
+      explanation: "{1, 2, 3} and {4}. Nothing leads from 4 back."
+      difficulty: 4
+    - id: pl-bridge-condition
+      kind: fill
+      prompt: "In DFS with entry times tin and low-links low, the tree edge (u, v) with v a child of u is a bridge when ____"
+      options:
+        - low[v] > tin[u]
+        - low[v] >= tin[u]
+        - low[u] > tin[v]
+        - tin[v] > tin[u]
+      answer: 0
+      explanation: ">= is the articulation-point test. A bridge needs v's subtree to reach nothing at or above u."
+      difficulty: 5

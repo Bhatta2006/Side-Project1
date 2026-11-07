@@ -10,9 +10,9 @@ import type { CourseFeatures } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Soc } from '@/components/socrat/illustration';
+import { TOUR_EVENT } from '@/components/tour-event';
 
-/** Settings › "Replay tour" fires this; the shell's Tour listens. */
-export const TOUR_EVENT = 'socrat:tour';
+export { TOUR_EVENT } from '@/components/tour-event';
 /** Set once the tour is done in this browser, so a failed save never shows it twice. */
 const SEEN_KEY = 'socrat:tour-seen';
 

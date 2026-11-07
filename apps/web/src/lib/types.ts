@@ -155,6 +155,7 @@ export interface PlacementSummary {
   correct: number;
   known_concepts: string[];
   starting_concept: string | null;
+  weak_concepts?: string[];
 }
 
 export type ActivityKind =
