@@ -72,7 +72,9 @@ def test_the_lesson_gate_uses_pages_when_given():
     course = to_course(Brief.model_validate(BRIEF), OUTLINE)
     concept = course.concept("loss")
     p = pages.profile(L(register="kid", starting_level="none", minutes_per_day=10))
-    short = "".join(f"## Page {i}\n\n{' '.join(['word'] * p.words[0])}\n\n" for i in range(p.pages[0]))
+    short = "".join(
+        f"## Page {i}\n\n{' '.join(['word'] * p.words[0])}\n\n" for i in range(p.pages[0])
+    )
     short += "## Check yourself\n\n<details>x</details>"
     draft = {"lesson": short}
     # Too short for the default 3,000-character floor, right for this child.
