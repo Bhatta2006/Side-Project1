@@ -45,6 +45,21 @@ is in section 6, "Experience plan". Full API suite after this work: 988 passed, 
 (26 min). On this machine pytest needs `--basetemp` pointing at a
 folder you own, or every test using a temp folder errors at setup (421 errors, no failures).
 
+
+**Update 2026-11-07 (strict placement, branch `fix/strict-placement`).** The owner asked for
+placements that are hard to pass and for today's lesson to start where placement ended, never
+back at the start. Placement now asks only hard questions: a new placement-only bank
+(`content/placement/{zero,dsa,cp}.yaml`, 283 items: edge cases, traces, fill-in-the-blank, bugs;
+loaded by `socrat/placement/bank.py`), then the concept's own difficulty 4-5 quiz items. A concept
+counts as known only after two right answers; one miss or "not sure" marks it unknown; two spot
+checks test concepts below the frontier that the search only inferred; at most 60% of a path can
+be placed (`SKIP_CAP`, was 85%). The planner puts placement confirmation checks after the first
+lesson at the frontier instead of before it, and the placement summary names the concept the
+plan really opens with plus the topics placement caught as gaps. Every code question in the bank
+is executed in Python, C++ and Java by `scripts/dev/verify_placement_bank.py` (all pass). This is
+a behaviour change, not behind a flag, because the owner asked for it as a fix. Not verified: a
+real learner session in the browser.
+
 ---
 
 ## 1. What the owner wants (do not re-ask these)

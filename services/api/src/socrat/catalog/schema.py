@@ -117,7 +117,7 @@ class Provenance(Model):
 
 class QuizItem(Model):
     id: Slug
-    kind: Literal["mcq", "output", "bug"] = "mcq"
+    kind: Literal["mcq", "output", "bug", "fill"] = "mcq"  # fill: pick the missing piece
     prompt: str = Field(min_length=5, max_length=4000)
     code: dict[Language, str] = Field(default_factory=dict)
     options: list[str] = Field(min_length=2, max_length=6)

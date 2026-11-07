@@ -421,6 +421,10 @@ def build_plan(
                 )
             )
     skipped = 0
+    # Placement confirmations wait until the learner has started at their frontier: the
+    # plan opens on the first concept they do not know, never back at the start of the path.
+    confirms: list[Activity] = []
+    frontier_end: int | None = None
     for qualified in path:
         state = states.get(qualified, ConceptState())
         concept = catalog.concept(qualified)
@@ -467,7 +471,7 @@ def build_plan(
             status, why = "assumed", "Placement suggests you know this; a short check confirms it."
             skipped += 1
             if f"testout:{qualified}" not in completed:
-                queue.append(
+                confirms.append(
                     Activity(
                         f"testout:{qualified}",
                         "testout",
@@ -531,6 +535,8 @@ def build_plan(
                         )
                     )
             queue.extend(pending)
+            if frontier_end is None and pending:
+                frontier_end = len(queue)
             if overrides.get("stretch") and pending and f"stretch:{qualified}" not in completed:
                 queue.append(
                     Activity(
@@ -631,6 +637,9 @@ def build_plan(
                 code="transfer",
             )
         )
+    if confirms:
+        at = len(queue) if frontier_end is None else frontier_end
+        queue = queue[:at] + confirms + queue[at:]
     queue = front + queue
     if skipped:
         reasons.append(

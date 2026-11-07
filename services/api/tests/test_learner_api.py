@@ -8,6 +8,7 @@ from runner_support import SIGNING, WORKER, profiles
 
 from socrat.catalog.registry import default_catalog
 from socrat.execution.protocol import CaseResult, ExecutionResult, JobEnvelope, sign
+from socrat.placement import engine as placement_engine
 
 ORIGIN = "http://localhost:3000"
 
@@ -195,10 +196,14 @@ def test_placement_adapts_and_seeds_the_plan(client):
         if view["done"]:
             break
         question = view["question"]
-        concept = next(
-            c for c in catalog.concepts.values() if any(q.id == question["id"] for q in c.quiz)
+        # Placement draws from the hard placement bank first, then the lesson quiz.
+        key, item = next(
+            (k, q)
+            for k, c in catalog.concepts.items()
+            for q in [*catalog.placement_items.get(k, []), *c.quiz]
+            if q.id == question["id"]
         )
-        item = next(q for q in concept.quiz if q.id == question["id"])
+        concept = catalog.concept(key)
         correct = item.shown(f"placement:{int(enrollment['id'].replace('-', '')[:8], 16)}")[
             "answer"
         ]
@@ -211,7 +216,7 @@ def test_placement_adapts_and_seeds_the_plan(client):
             headers=headers,
         )
         asked += 1
-        assert asked <= 12
+        assert asked <= placement_engine.MAX_QUESTIONS
     summary = client.get("/api/v1/placement/summary").json()
     assert summary["known_concepts"] and summary["starting_concept"]
     plan = client.get("/api/v1/plan").json()
