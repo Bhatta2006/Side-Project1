@@ -124,13 +124,18 @@ def finish(
     prefetch.request(db, enrollment, now, catalog)
 
 
-def summary(catalog: Catalog, enrollment: Enrollment) -> dict:
+def summary(catalog: Catalog, enrollment: Enrollment, first: str | None = None) -> dict:
+    """``first`` is the concept the plan opens with, when the caller has the plan."""
     state = current(catalog, enrollment)
     known = placement.result(state)
-    start = next((c for c in state.path if not known[c]), None)
+    start = (
+        first if first in catalog.concepts else next((c for c in state.path if not known[c]), None)
+    )
     return {
         "asked": len(state.asked),
         "correct": sum(1 for x in state.asked if x["correct"]),
         "known_concepts": [catalog.concept(c).title for c, k in known.items() if k],
         "starting_concept": catalog.concept(start).title if start else None,
+        # Where placement caught a gap, so the learner sees why they start where they do.
+        "weak_concepts": [catalog.concept(c).title for c in placement.missed(state)],
     }

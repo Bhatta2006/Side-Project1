@@ -17,6 +17,7 @@ from socrat.catalog.registry import default_catalog
 from socrat.learn import service as learn
 from socrat.learn import transfers
 from socrat.models import Enrollment, User
+from socrat.placement import engine as placement_engine
 
 DAY = 86_400
 QUIZ_KINDS = {"quiz", "review", "remedial", "probe", "testout", "moduletest", "checkpoint"}
@@ -144,12 +145,14 @@ def always_right(_activity, _question, _log):
 def place(client, headers, enrollment, right):  # noqa: F811
     cat = default_catalog()
     seed = f"placement:{int(enrollment['id'].replace('-', '')[:8], 16)}"
-    for _ in range(14):
+    items = [q for c in cat.concepts.values() for q in c.quiz]
+    items += [q for bank in cat.placement_items.values() for q in bank]
+    for _ in range(placement_engine.MAX_QUESTIONS + 1):
         view = client.get("/api/v1/placement").json()
         if view["done"]:
             return client.get("/api/v1/placement/summary").json()
         question = view["question"]
-        item = next(q for c in cat.concepts.values() for q in c.quiz if q.id == question["id"])
+        item = next(q for q in items if q.id == question["id"])
         good = item.shown(seed)["answer"]
         client.post(
             "/api/v1/placement/answer",
@@ -219,18 +222,25 @@ def test_placement_knowledge_counts_only_after_its_confirmation_check(client, cl
     assert summary["known_concepts"], "a strong placement skips lessons"
     today = client.get("/api/v1/today").json()
     assert today["progress"]["assumed"] > 0 and today["progress"]["finished"] == 0
-    # The first steps are confirmation checks, not lessons for what placement believes.
-    nxt = today["next"]
-    assert nxt["kind"] == "testout" and nxt["code"] == "assumed_confirm"
-    assert nxt["title"].startswith("Confirm:")
+    # Today starts where placement left off, never back at the start of the path.
+    first = today["next"]
+    assert first["kind"] != "testout", first
+    assert default_catalog().concept(first["concept"]).title == summary["starting_concept"]
+    # The confirmation checks for what placement believes come after it.
+    plan = client.get("/api/v1/plan").json()
+    queued = [i for d in plan["days"] for i in d["items"]]
+    confirms = [i for i in queued if i.get("code") == "assumed_confirm"]
+    assert confirms and queued.index(confirms[0]) > 0
+    nxt = confirms[0]
+    assert nxt["kind"] == "testout" and nxt["title"].startswith("Confirm:")
     cat = default_catalog()
     passed = take(client, headers, cat, nxt["id"], lambda q: True)
     assert passed["testout"]["passed"]
     after = client.get("/api/v1/today").json()["progress"]
     assert after["finished"] == 1 and after["assumed"] == today["progress"]["assumed"] - 1
     # Missing a confirmation puts the real lesson back on the path.
-    second = client.get("/api/v1/today").json()["next"]
-    assert second["code"] == "assumed_confirm"
+    plan = client.get("/api/v1/plan").json()
+    second = next(i for d in plan["days"] for i in d["items"] if i.get("code") == "assumed_confirm")
     take(client, headers, cat, second["id"], lambda q: False)
     plan = client.get("/api/v1/plan").json()
     queued = {i["id"] for d in plan["days"] for i in d["items"]}

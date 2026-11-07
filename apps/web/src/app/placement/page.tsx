@@ -66,6 +66,9 @@ export default function Placement() {
         <p className="mt-3 text-base text-muted-foreground">
           {summary.starting_concept ? <>You start with <strong className="text-foreground">{summary.starting_concept}</strong>, at the edge of what you know.</> : 'You answered everything we asked. Short confirmation checks prove it before anything counts as learned.'}
         </p>
+        {summary.weak_concepts?.length ? (
+          <p className="mt-2 text-[15px] text-muted-foreground">Placement caught gaps in {summary.weak_concepts.join(', ')}. Your plan picks up there.</p>
+        ) : null}
         {summary.known_concepts.length ? (
           <section className="mt-8 paper rounded-card p-5 lg:p-6" aria-labelledby="skip-heading">
             <h2 id="skip-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Lessons you can skip, once confirmed</h2>
@@ -113,7 +116,7 @@ export default function Placement() {
             <Button size="lg" disabled={busy || choice === null} aria-busy={busy} onClick={() => submit(choice)}>Submit answer</Button>
             <Button size="lg" variant="outline" disabled={busy} onClick={() => submit(null)}>Not sure yet</Button>
           </div>
-          <p className="text-sm text-muted-foreground">Not sure yet is fine. It helps place you and is not marked wrong.</p>
+          <p className="text-sm text-muted-foreground">These questions are hard on purpose: edge cases, traces and bugs. Not sure yet is fine; that topic stays on your plan instead of being skipped.</p>
         </div>
       ) : null}
       {error ? <ErrorNote message={error} /> : null}

@@ -18,7 +18,7 @@ from socrat.catalog.atoms import AtomPack, PatternAtomPack
 from socrat.catalog.patterns import Pattern
 from socrat.catalog.projects import Project
 from socrat.catalog.quizbank import QuizFamily
-from socrat.catalog.schema import Concept, Course, Problem, TestCase
+from socrat.catalog.schema import Concept, Course, Problem, QuizItem, TestCase
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 CONTENT_ROOT = REPO_ROOT / "content" / "courses"
@@ -98,6 +98,8 @@ class Catalog:
     pattern_atoms: dict[str, PatternAtomPack] = field(default_factory=dict)
     quiz_root: Path | None = None  # content/quiz: families, generators, verified manifest
     misconceptions: set[str] = field(default_factory=set)  # controlled misconception IDs
+    # Hard placement-only questions per qualified concept (content/placement, socrat.placement.bank).
+    placement_items: dict[str, list[QuizItem]] = field(default_factory=dict)
 
     def course(self, course_id: str) -> Course:
         try:
@@ -220,6 +222,12 @@ def load(root: Path = CONTENT_ROOT, tests_root: Path | None = TESTS_ROOT) -> Cat
     )
     quizbank.check_patterns(catalog.quiz_families, catalog.patterns)
     catalog.projects = projects.load(root.parent / "projects", catalog)
+    from socrat.placement import bank as placement_bank
+
+    try:
+        catalog.placement_items = placement_bank.load(root.parent / "placement", catalog)
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        raise CatalogError(f"Invalid placement bank: {exc}") from exc
     registry_file = root.parent / "sources" / "registry.yaml"
     if registry_file.exists():
         from socrat.catalog import sources
@@ -257,6 +265,16 @@ def load(root: Path = CONTENT_ROOT, tests_root: Path | None = TESTS_ROOT) -> Cat
             | (
                 {"projects": {k: v.model_dump(mode="json") for k, v in catalog.projects.items()}}
                 if catalog.projects
+                else {}
+            )
+            | (
+                {
+                    "placement": {
+                        k: [q.model_dump(mode="json") for q in v]
+                        for k, v in catalog.placement_items.items()
+                    }
+                }
+                if catalog.placement_items
                 else {}
             ),
             sort_keys=True,

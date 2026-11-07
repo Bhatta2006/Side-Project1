@@ -507,7 +507,13 @@ def placement_answer(body: PlacementAnswer, request: Request):
 def placement_summary(request: Request):
     with Session(engine(request)) as db:
         user = user_of(request, db)
-        return placement.summary(catalog(), learn.require_enrollment(db, user.id))
+        enrollment = learn.require_enrollment(db, user.id)
+        first = None
+        if enrollment.status == "active":
+            # Name the concept the plan really opens with (it orders by the learner's goal).
+            plan = learn.plan_for(db, catalog(), user, enrollment, now())
+            first = next((a.concept for a in plan.queue if a.kind != "testout"), None)
+        return placement.summary(catalog(), enrollment, first)
 
 
 # ---------------------------------------------------------------- plan & today
