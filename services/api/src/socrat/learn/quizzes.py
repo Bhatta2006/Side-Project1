@@ -38,7 +38,9 @@ PROBE_PREREQS = 3
 
 
 def item(catalog: Catalog, concept: str, item_id: str) -> QuizItem:
-    return next(q for q in catalog.concept(concept).quiz if q.matches(item_id))
+    """The quiz item, from the concept's lesson quiz or, for checkpoints, its hard bank."""
+    found = [*catalog.concept(concept).quiz, *catalog.placement_items.get(concept, [])]
+    return next(q for q in found if q.matches(item_id))
 
 
 def fitting(catalog: Catalog, concept: str, language: str) -> list[QuizItem]:
@@ -86,11 +88,22 @@ def open_test(db: Session, enrollment: Enrollment, now: int) -> bool:
 
 
 def gate_pool(catalog: Catalog, module_key: str, language: str) -> list[tuple[str, QuizItem]]:
-    return [
-        (c, q)
-        for c in gates.module_concepts(catalog, module_key)
-        for q in fitting(catalog, c, language)
-    ]
+    """Every checkpoint question is a hard one: difficulty 4 or 5. A module whose questions are
+    all easier than that is asked its own hardest ones, so the checkpoint is never empty."""
+    concepts = gates.module_concepts(catalog, module_key)
+    pool = [(c, q) for c in concepts for q in fitting(catalog, c, language)]
+    floor = min(gates.HARD_FLOOR, max((q.difficulty for _, q in pool), default=1))
+    hard = [(c, q) for c, q in pool if q.difficulty >= floor]
+    if len(hard) < gates.MAX_ITEMS:
+        # A module with few hard questions borrows from its hard bank, so the exam is not thin.
+        have = {q.id for _, q in hard}
+        for c in concepts:
+            for q in catalog.placement_items.get(c, []):
+                if q.id not in have and q.fits(language):
+                    hard.append((c, q))
+        floor = min(gates.HARD_FLOOR, max(q.difficulty for _, q in hard))
+        hard = [(c, q) for c, q in hard if q.difficulty >= floor]
+    return hard
 
 
 def recent_items(db: Session, enrollment: Enrollment, now: int, exclude: str = "") -> set[str]:
@@ -323,14 +336,10 @@ def gate_view(db: Session, catalog: Catalog, session: QuizSession, language: str
     keys = gates.module_keys(catalog, course_id)
     position = keys.index(module_key)
     unlocks = keys[position + 1] if position + 1 < len(keys) else None
-    pool = gate_pool(catalog, module_key, language)
     return dict(
         max_items=gates.MAX_ITEMS,
         max_strikes=gates.MAX_STRIKES,
         strikes=state.strikes,
-        levels=sorted({q.difficulty for _, q in pool}),
-        level=state.next_level,
-        hard_level=state.hard_level,
         hard_needed=state.hard_needed,
         hard_correct=state.hard_correct,
         pass_score=gates.PASS_SCORE,
@@ -367,10 +376,11 @@ def session_view(
             prompt=q.prompt,
             code=q.snippet(language),
             options=shown["options"],
-            difficulty=q.difficulty,
             answered=answer is not None,
             choice=answer["choice"] if answer else None,
         )
+        if not checkpoint:
+            entry["difficulty"] = q.difficulty  # a checkpoint never shows how hard a question is
         if answer is not None and graded:
             entry.update(
                 correct=answer["correct"], answer=shown["answer"], explanation=q.explanation

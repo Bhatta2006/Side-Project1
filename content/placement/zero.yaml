@@ -1,0 +1,1377 @@
+# Placement bank, Programming from Zero. Hard on purpose: edge cases, special cases,
+# traces, fill-in-the-blank and find-the-bug. Placement only: never shown in lessons.
+# Every "output" item is executed by scripts/dev/verify_placement_bank.py.
+course: zero
+concepts:
+  programs-and-output:
+    - id: pl-extra-blank-line
+      kind: mcq
+      prompt: The expected output is three lines. A program prints the same three lines but adds one empty line before them. What does a judge comparing line by line report?
+      options:
+        - Wrong answer, because the first line is now empty
+        - Accepted, because blank lines never matter
+        - Runtime error
+        - Accepted, with a warning
+      answer: 0
+      explanation: Many judges ignore trailing whitespace, but an extra line at the start shifts every line.
+      difficulty: 4
+    - id: pl-lost-buffer
+      kind: mcq
+      prompt: A program prints a message and then crashes on the next line. Sometimes the message never appears. Why?
+      options:
+        - Output waits in a buffer and is lost if the program dies before it is flushed
+        - The crash deletes the screen
+        - Messages before an error are always hidden
+        - The print statement is skipped when an error follows
+      answer: 0
+      explanation: Buffered output is written in batches. Flushing (or printing to the error stream) makes it appear at once.
+      difficulty: 5
+    - id: pl-sep-end-newline
+      kind: output
+      prompt: Mind every separator and line ending. What is printed exactly?
+      code:
+        python: |
+          print("a", "b", sep="", end="-")
+          print("c", end="")
+          print()
+          print("d")
+      options:
+        - "ab-c\nd"
+        - "a b-c\nd"
+        - "ab-c\n\nd"
+        - "ab-\nc\nd"
+      answer: 0
+      explanation: sep="" joins a and b, end="-" replaces the newline, the bare print() ends the line, then d.
+      difficulty: 5
+    - id: pl-java-concat-order
+      kind: output
+      prompt: String concatenation and addition share one operator, evaluated left to right. What is printed?
+      code:
+        java: |
+          System.out.println(1 + 2 + "3" + 4 + 5);
+      options:
+        - "3345"
+        - "12345"
+        - "339"
+        - "15"
+      answer: 0
+      explanation: 1 + 2 is 3 (both numbers), then "3" turns everything after it into text, so 4 and 5 are appended.
+      difficulty: 5
+    - id: pl-cpp-stream-arith
+      kind: output
+      prompt: Each << sends one value to the output. What is printed?
+      code:
+        cpp: |
+          cout << 1 + 2 << "3" << 4 + 5;
+      options:
+        - "339"
+        - "3345"
+        - "12345"
+        - "1239"
+      answer: 0
+      explanation: + binds tighter than <<, so the three values sent are 3, "3" and 9.
+      difficulty: 4
+    - id: pl-crash-midway
+      kind: mcq
+      prompt: In Python, a program prints A, then divides a number by zero, then prints B. What does the learner see?
+      options:
+        - A, then an error message; B is never printed
+        - Only an error message, because Python checks the division before running anything
+        - A and B, followed by the error
+        - A and B; dividing by zero gives infinity
+      answer: 0
+      explanation: Statements run in order. The error stops the program at the division, after A was already printed.
+      difficulty: 4
+  variables-and-types:
+    - id: pl-rebind-vs-copy
+      kind: output
+      prompt: Assignment never copies, but x = x + [2] builds a new list. What is printed?
+      code:
+        python: |
+          a = 5
+          b = a
+          a = a + 1
+          x = [1]
+          y = x
+          x = x + [2]
+          print(b, y)
+      options:
+        - "5 [1]"
+        - "6 [1, 2]"
+        - "5 [1, 2]"
+        - "6 [1]"
+      answer: 0
+      explanation: b keeps 5. x + [2] creates a new list and rebinds x; y still names the original [1].
+      difficulty: 5
+    - id: pl-float-traps
+      kind: output
+      prompt: Division, float rounding and int() conversion. What is printed?
+      code:
+        python: |
+          print(type(7 / 7).__name__, 0.1 + 0.2 == 0.3, int(-2.7))
+      options:
+        - "float False -2"
+        - "int False -3"
+        - "float True -2"
+        - "int True -3"
+      answer: 0
+      explanation: / always gives a float; 0.1 + 0.2 is 0.30000000000000004; int() truncates toward zero.
+      difficulty: 5
+    - id: pl-java-int-overflow
+      kind: output
+      prompt: x holds the largest int. What is printed?
+      code:
+        java: |
+          int x = 2147483647;
+          x = x + 1;
+          System.out.println(x);
+      options:
+        - "-2147483648"
+        - "2147483648"
+        - "2147483647"
+        - "An ArithmeticException is thrown"
+      answer: 0
+      explanation: int arithmetic wraps around silently; one past the maximum is the minimum.
+      difficulty: 5
+    - id: pl-cpp-char-promotion
+      kind: output
+      prompt: A char is a small number. What is printed?
+      code:
+        cpp: |
+          char c = 'A' + 2;
+          cout << c << " " << c + 1;
+      options:
+        - "C 68"
+        - "C D"
+        - "67 68"
+        - "C 67"
+      answer: 0
+      explanation: c is 'C' (67) and prints as a letter, but c + 1 is an int (68) and prints as a number.
+      difficulty: 5
+    - id: pl-fill-swap
+      kind: fill
+      prompt: "Fill in the blank so the values of a and b are swapped with no other variable: a = a + b; b = ____; a = a - b;"
+      options:
+        - a - b
+        - b - a
+        - a + b
+        - a
+      answer: 0
+      explanation: After a = a + b, a - b is the old a, which is what b must become; then a - b gives the old b.
+      difficulty: 4
+  input-and-arithmetic:
+    - id: pl-division-three-languages
+      kind: mcq
+      prompt: The same expression 7 / 2 (two whole numbers) is printed in Python 3, in C++ and in Java. Which list gives the three outputs in that order?
+      options:
+        - 3.5, 3, 3
+        - 3, 3, 3
+        - 3.5, 3.5, 3.5
+        - 3.5, 3, 3.5
+      answer: 0
+      explanation: Python's / always gives a float. C++ and Java divide two ints as integers and drop the fraction.
+      difficulty: 4
+    - id: pl-py-negative-floor
+      kind: output
+      prompt: Floor division and remainder with negative numbers. What is printed?
+      code:
+        python: |
+          print(-7 // 2, -7 % 2, 7 % -2)
+      options:
+        - "-4 1 -1"
+        - "-3 -1 1"
+        - "-4 -1 -1"
+        - "-3 1 1"
+      answer: 0
+      explanation: Python floors toward minus infinity, so -7 // 2 is -4; the remainder takes the divisor's sign.
+      difficulty: 5
+    - id: pl-c-negative-truncate
+      kind: output
+      prompt: Integer division and remainder with a negative number. What is printed?
+      code:
+        cpp: |
+          cout << -7 / 2 << " " << -7 % 2;
+        java: |
+          System.out.println(-7 / 2 + " " + -7 % 2);
+      options:
+        - "-3 -1"
+        - "-4 1"
+        - "-3 1"
+        - "-4 -1"
+      answer: 0
+      explanation: C++ and Java truncate toward zero, so -7 / 2 is -3 and the remainder keeps the dividend's sign.
+      difficulty: 5
+    - id: pl-read-two-ints
+      kind: mcq
+      prompt: In Python, one input line holds "  12 7 " (extra spaces around). Which line reads both numbers correctly?
+      options:
+        - a, b = map(int, input().split())
+        - a, b = int(input())
+        - a, b = input().split(" ")
+        - a = int(input()); b = int(input())
+      answer: 0
+      explanation: split() with no argument drops all surrounding spaces. split(" ") keeps empty pieces, and the last option reads two lines.
+      languages: [python]
+      difficulty: 5
+  conditionals:
+    - id: pl-if-then-chain
+      kind: output
+      prompt: Two separate if statements, the second with elif and else. What is printed?
+      code:
+        python: |
+          x = 15
+          if x > 10:
+              print("A", end="")
+          if x > 5:
+              print("B", end="")
+          elif x > 0:
+              print("C", end="")
+          else:
+              print("D", end="")
+      options:
+        - "AB"
+        - "A"
+        - "ABC"
+        - "B"
+      answer: 0
+      explanation: The first if is independent. In the second chain only the first true branch runs, so B and not C.
+      difficulty: 4
+    - id: pl-grade-order
+      kind: mcq
+      prompt: "A grading chain checks marks >= 80 first (grade B), then else-if marks >= 90 (grade A), else C. What does a score of 95 get?"
+      options:
+        - B
+        - A
+        - A and B
+        - C
+      answer: 0
+      explanation: 95 >= 80 is true, so the chain stops at B; the A branch is unreachable. The widest test must come last.
+      difficulty: 4
+    - id: pl-dangling-else
+      kind: output
+      prompt: Read the indentation with suspicion. What is printed?
+      code:
+        cpp: |
+          int x = 5;
+          if (x > 10)
+              if (x > 20) cout << "A";
+          else cout << "B";
+          cout << "C";
+        java: |
+          int x = 5;
+          if (x > 10)
+              if (x > 20) System.out.print("A");
+          else System.out.print("B");
+          System.out.print("C");
+      options:
+        - "C"
+        - "BC"
+        - "B"
+        - "AC"
+      answer: 0
+      explanation: An else belongs to the nearest if, here x > 20. Since x > 10 is false, neither A nor B runs.
+      difficulty: 5
+    - id: pl-cpp-assign-in-if
+      kind: bug
+      prompt: The author meant to compare x with 5. What is printed?
+      code:
+        cpp: |
+          int x = 0;
+          if (x = 5) cout << "yes " << x;
+          else cout << "no " << x;
+      options:
+        - "yes 5"
+        - "no 0"
+        - "yes 0"
+        - "It does not compile"
+      answer: 0
+      explanation: x = 5 assigns 5 and the condition is the value 5, which is true. It should be x == 5.
+      difficulty: 5
+  operators-and-expressions:
+    - id: pl-py-power-assoc
+      kind: output
+      prompt: Exponent associativity and unary minus. What is printed?
+      code:
+        python: |
+          print(2 ** 3 ** 2, -2 ** 2, 10 - 4 - 3)
+      options:
+        - "512 -4 3"
+        - "64 4 9"
+        - "512 4 3"
+        - "64 -4 3"
+      answer: 0
+      explanation: "The power operator groups right to left (3 ** 2 first), binds tighter than unary minus, and - groups left to right."
+      difficulty: 5
+    - id: pl-java-pre-post
+      kind: output
+      prompt: Post-increment gives the old value, pre-increment the new one. What is printed?
+      code:
+        java: |
+          int i = 5;
+          int j = i++ + ++i;
+          System.out.println(j + " " + i);
+      options:
+        - "12 7"
+        - "11 7"
+        - "12 6"
+        - "10 7"
+      answer: 0
+      explanation: i++ yields 5 (i becomes 6), then ++i makes i 7 and yields 7. 5 + 7 = 12.
+      difficulty: 5
+    - id: pl-safe-midpoint
+      kind: fill
+      prompt: "Fill in the blank so the midpoint of two non-negative ints lo <= hi is correct and can never overflow: mid = ____"
+      options:
+        - lo + (hi - lo) / 2
+        - (lo + hi) / 2
+        - lo / 2 + hi / 2
+        - (lo + hi + 1) / 2
+      answer: 0
+      explanation: lo + hi can exceed the int range. lo / 2 + hi / 2 avoids overflow but is one short when both are odd.
+      difficulty: 5
+    - id: pl-bitwise-small
+      kind: mcq
+      prompt: Working bit by bit, what are 5 AND 3, 5 OR 3 and 5 XOR 3?
+      options:
+        - 1, 7, 6
+        - 1, 7, 2
+        - 0, 8, 8
+        - 1, 6, 7
+      answer: 0
+      explanation: 101 and 011 share only the last bit (1); together they have 111 (7); they differ in 110 (6).
+      difficulty: 4
+  boolean-logic:
+    - id: pl-de-morgan
+      kind: fill
+      prompt: "Fill in the blank: not (a and b) is always equal to ____"
+      options:
+        - (not a) or (not b)
+        - (not a) and (not b)
+        - not a and b
+        - a or b
+      answer: 0
+      explanation: De Morgan's law. The pair fails to be both true exactly when at least one of them is false.
+      difficulty: 4
+    - id: pl-py-truthy-chain
+      kind: output
+      prompt: and and or return one of their operands, not just True or False. What is printed?
+      code:
+        python: |
+          print(0 or "" or [] or "x", 3 and 0 and 5, not [] == False)
+      options:
+        - "x 0 True"
+        - "x 0 False"
+        - "True False True"
+        - "x 5 False"
+      answer: 0
+      explanation: or returns the first truthy value, and returns the first falsy one; == binds tighter than not, and [] == False is False.
+      difficulty: 5
+    - id: pl-short-circuit-count
+      kind: mcq
+      prompt: "c starts at 0, then this runs: r = (c++ > 0) && (c++ > 0). What is c afterwards?"
+      code:
+        cpp: |
+          int c = 0;
+          bool r = (c++ > 0) && (c++ > 0);
+        java: |
+          int c = 0;
+          boolean r = (c++ > 0) && (c++ > 0);
+      options:
+        - "1"
+        - "2"
+        - "0"
+        - It depends on the compiler
+      answer: 0
+      explanation: The left side compares the old value 0 and is false, so && never evaluates the right side.
+      difficulty: 5
+    - id: pl-cpp-chained-compare
+      kind: mcq
+      prompt: In C++, with int x = 50, what does the condition 1 <= x <= 10 evaluate to?
+      options:
+        - true, because (1 <= x) becomes 1 and 1 <= 10 holds
+        - false, because 50 is outside the range
+        - It does not compile
+        - It is undefined behaviour
+      answer: 0
+      explanation: C++ compares left to right; the first comparison yields true (1). Write 1 <= x && x <= 10.
+      languages: [cpp]
+      difficulty: 5
+  while-loops:
+    - id: pl-collatz-count
+      kind: output
+      prompt: Count the steps carefully. What is printed?
+      code:
+        python: |
+          n = 10
+          count = 0
+          while n != 1:
+              n = n // 2 if n % 2 == 0 else 3 * n + 1
+              count += 1
+          print(count)
+      options:
+        - "6"
+        - "7"
+        - "5"
+        - "8"
+      answer: 0
+      explanation: 10, 5, 16, 8, 4, 2, 1 is six steps; the starting value is not a step.
+      difficulty: 4
+    - id: pl-step-two-count
+      kind: mcq
+      prompt: A loop runs while i < n, with i starting at 0 and growing by 2 each time. For n = 7, how many times does the body run?
+      options:
+        - "4"
+        - "3"
+        - "7"
+        - "5"
+      answer: 0
+      explanation: i takes 0, 2, 4 and 6; at 8 the condition fails.
+      difficulty: 4
+    - id: pl-stray-semicolon
+      kind: bug
+      prompt: What happens when this runs?
+      code:
+        cpp: |
+          int i = 0;
+          while (i < 5);
+          {
+              i++;
+          }
+        java: |
+          int i = 0;
+          while (i < 5);
+          {
+              i++;
+          }
+      options:
+        - It never ends, because the ; after the condition is an empty loop body
+        - The block runs 5 times and i ends at 5
+        - It does not compile, because a block cannot follow a semicolon
+        - The block runs once and i ends at 1
+      answer: 0
+      explanation: The ; is the whole body, so i never changes and i < 5 stays true forever.
+      difficulty: 5
+  for-loops:
+    - id: pl-doubling-count
+      kind: mcq
+      prompt: i starts at 1 and is doubled after each run of the body, while i <= 100. How many times does the body run?
+      options:
+        - "7"
+        - "6"
+        - "100"
+        - "8"
+      answer: 0
+      explanation: i takes 1, 2, 4, 8, 16, 32 and 64; the next value 128 fails the test.
+      difficulty: 4
+    - id: pl-step-three-last
+      kind: mcq
+      prompt: A loop starts i at 0, runs while i < 10, and adds 3 to i after each run. How many runs, and what is i during the last one?
+      options:
+        - 4 runs, last i = 9
+        - 3 runs, last i = 9
+        - 4 runs, last i = 12
+        - 3 runs, last i = 6
+      answer: 0
+      explanation: i is 0, 3, 6 and 9 inside the body; it becomes 12 only for the failing test.
+      difficulty: 4
+    - id: pl-range-negative-step
+      kind: output
+      prompt: A range that counts down by 3. What is printed?
+      code:
+        python: |
+          s = 0
+          for i in range(10, 0, -3):
+              s += i
+          print(s)
+      options:
+        - "22"
+        - "21"
+        - "12"
+        - "18"
+      answer: 0
+      explanation: i takes 10, 7, 4, 1 (the stop 0 is excluded). 10 + 7 + 4 + 1 = 22.
+      difficulty: 4
+    - id: pl-remove-while-iterating
+      kind: output
+      prompt: The list is changed while the loop walks it. What is printed?
+      code:
+        python: |
+          nums = [2, 4, 6, 7]
+          for x in nums:
+              if x % 2 == 0:
+                  nums.remove(x)
+          print(nums)
+      options:
+        - "[4, 7]"
+        - "[7]"
+        - "[4, 6, 7]"
+        - "An error: the list changed during the loop"
+      answer: 0
+      explanation: Removing 2 shifts 4 into position 0, which the loop has passed, so 4 is skipped; 6 is removed next.
+      difficulty: 5
+    - id: pl-continue-break
+      kind: output
+      prompt: continue skips to the next turn, break leaves the loop. What is printed?
+      code:
+        python: |
+          s = 0
+          for i in range(10):
+              if i % 3 == 0:
+                  continue
+              if i == 8:
+                  break
+              s += i
+          print(s)
+        cpp: |
+          int s = 0;
+          for (int i = 0; i < 10; i++) {
+              if (i % 3 == 0) continue;
+              if (i == 8) break;
+              s += i;
+          }
+          cout << s;
+        java: |
+          int s = 0;
+          for (int i = 0; i < 10; i++) {
+              if (i % 3 == 0) continue;
+              if (i == 8) break;
+              s += i;
+          }
+          System.out.println(s);
+      options:
+        - "19"
+        - "27"
+        - "20"
+        - "12"
+      answer: 0
+      explanation: 0, 3 and 6 are skipped, the loop stops at 8, so s = 1 + 2 + 4 + 5 + 7 = 19.
+      difficulty: 5
+  math-on-numbers:
+    - id: pl-inclusion-exclusion
+      kind: mcq
+      prompt: How many whole numbers from 1 to 1000 are divisible by 3 or by 5?
+      options:
+        - "467"
+        - "533"
+        - "466"
+        - "400"
+      answer: 0
+      explanation: 333 + 200 counts the 66 multiples of 15 twice, so 333 + 200 - 66 = 467.
+      difficulty: 5
+    - id: pl-gcd-lcm-edges
+      kind: mcq
+      prompt: What are gcd(0, 12) and lcm(4, 6)?
+      options:
+        - 12 and 12
+        - 0 and 24
+        - undefined and 12
+        - 12 and 24
+      answer: 0
+      explanation: Every number divides 0, so the greatest common divisor of 0 and 12 is 12. lcm(4, 6) = 4 * 6 / gcd = 12.
+      difficulty: 4
+    - id: pl-prime-loop-edges
+      kind: mcq
+      prompt: A primality test tries divisors d = 2, 3, 4, ... while d * d <= n, and says prime if none divides n. What does it decide for n = 25 and for n = 1?
+      options:
+        - 25 is not prime; 1 is wrongly called prime
+        - 25 is prime; 1 is not prime
+        - 25 is not prime; 1 is not prime
+        - 25 is prime; 1 is wrongly called prime
+      answer: 0
+      explanation: d = 5 satisfies 5 * 5 <= 25 and divides it. For n = 1 the loop never runs, so 1 needs its own check.
+      difficulty: 5
+    - id: pl-digit-loop-zero
+      kind: mcq
+      prompt: A digit counter repeats "count += 1; n = n / 10 (integer division)" while n > 0. What does it return for n = 0?
+      options:
+        - 0, which is wrong because 0 has one digit
+        - "1"
+        - It never stops
+        - It crashes on division
+      answer: 0
+      explanation: The loop body never runs for 0. Zero has one digit, so it needs a special case (or a do-while).
+      difficulty: 4
+  lists:
+    - id: pl-shared-rows
+      kind: output
+      prompt: Multiplying a list of lists, and += on a list. What is printed?
+      code:
+        python: |
+          a = [[0] * 2] * 2
+          a[0][0] = 5
+          b = [1, 2, 3]
+          c = b
+          b += [4]
+          print(a, c)
+      options:
+        - "[[5, 0], [5, 0]] [1, 2, 3, 4]"
+        - "[[5, 0], [0, 0]] [1, 2, 3, 4]"
+        - "[[5, 0], [5, 0]] [1, 2, 3]"
+        - "[[5, 0], [0, 0]] [1, 2, 3]"
+      answer: 0
+      explanation: "* 2 repeats one inner list, so both rows are the same object. += changes the list in place, which c also names."
+      difficulty: 5
+    - id: pl-slice-edges
+      kind: output
+      prompt: Slices never raise for out-of-range bounds. What is printed?
+      code:
+        python: |
+          a = [1, 2, 3, 4, 5]
+          print(a[-2:], a[::2], a[5:10])
+      options:
+        - "[4, 5] [1, 3, 5] []"
+        - "[4] [1, 3, 5] []"
+        - "[4, 5] [2, 4] []"
+        - "An IndexError for a[5:10]"
+      answer: 0
+      explanation: -2 counts from the end, ::2 takes every second item from the start, and a slice past the end is just empty.
+      difficulty: 4
+    - id: pl-off-the-end
+      kind: mcq
+      prompt: An array has n elements indexed from 0. A loop takes i from 0 up to and including n and reads element i. What happens on the last step?
+      options:
+        - It reads one past the end; Python and Java raise an error, C++ may silently read garbage
+        - It reads the last element, because indexes run from 0 to n
+        - It wraps around to the first element
+        - Every language raises an error before the loop starts
+      answer: 0
+      explanation: Valid indexes are 0 to n - 1. C++ does not check plain array indexing, so the bug can hide there.
+      difficulty: 4
+    - id: pl-java-array-alias
+      kind: output
+      prompt: Arrays are objects. What is printed?
+      code:
+        java: |
+          int[] a = {1, 2, 3};
+          int[] b = a;
+          b[0] = 9;
+          System.out.println(a[0] + " " + (b == new int[]{9, 2, 3}));
+      options:
+        - "9 false"
+        - "1 false"
+        - "9 true"
+        - "1 true"
+      answer: 0
+      explanation: b names the same array as a. == compares identity, and a new array is a different object.
+      difficulty: 5
+    - id: pl-cpp-vector-copy
+      kind: output
+      prompt: Vectors are values. What is printed?
+      code:
+        cpp: |
+          vector<int> a = {1, 2, 3};
+          vector<int> b = a;
+          b[0] = 9;
+          cout << a[0] << " " << (b == vector<int>{9, 2, 3});
+      options:
+        - "1 1"
+        - "9 1"
+        - "1 0"
+        - "9 0"
+      answer: 0
+      explanation: Assigning a vector copies it, so a is unchanged. == on vectors compares contents, which match.
+      difficulty: 5
+  nested-loops:
+    - id: pl-triangle-count
+      kind: mcq
+      prompt: "count starts at 0. For i from 1 to n, for j from i to n (both inclusive), count goes up by 1. What is count for n = 4?"
+      options:
+        - "10"
+        - "16"
+        - "6"
+        - "8"
+      answer: 0
+      explanation: 4 + 3 + 2 + 1 = 10, since j starts at i rather than at 1.
+      difficulty: 4
+    - id: pl-break-inner-only
+      kind: output
+      prompt: break leaves only the loop it is in. What is printed?
+      code:
+        python: |
+          found = False
+          for i in range(3):
+              for j in range(3):
+                  if i * j == 2:
+                      found = True
+                      break
+              print(i, end="")
+              if found:
+                  break
+      options:
+        - "01"
+        - "012"
+        - "0"
+        - "1"
+      answer: 0
+      explanation: At i = 1, j = 2 gives 2 and breaks the inner loop; 1 is still printed, then the flag stops the outer loop.
+      difficulty: 5
+    - id: pl-pairs-count
+      kind: mcq
+      prompt: How many pairs (i, j) with 0 <= i < j < n are there for n = 6?
+      options:
+        - "15"
+        - "30"
+        - "36"
+        - "21"
+      answer: 0
+      explanation: Choosing 2 of 6 positions, order fixed by i < j, is 6 * 5 / 2 = 15.
+      difficulty: 4
+  functions:
+    - id: pl-swap-params
+      kind: mcq
+      prompt: A function swaps the values of its two whole-number parameters inside itself. x = 1 and y = 2 are passed in (Python, Java, or C++ without &). What are x and y afterwards?
+      options:
+        - 1 and 2, because the function swapped its own copies
+        - 2 and 1
+        - 2 and 2
+        - 1 and 1
+      answer: 0
+      explanation: Rebinding parameters never reaches the caller. C++ needs reference parameters (int&) for this.
+      difficulty: 4
+    - id: pl-argument-order
+      kind: mcq
+      prompt: A call f(g(), h()) has two arguments that both print something. In which order are g and h called?
+      options:
+        - Python and Java call g first; in C++ the order is not specified
+        - Always g first, in every language
+        - Always h first, in every language
+        - Both at the same time
+      answer: 0
+      explanation: C++ leaves argument evaluation order to the compiler, so side effects in arguments are a trap there.
+      difficulty: 5
+    - id: pl-mutable-default
+      kind: output
+      prompt: The default list is created once, when the function is defined. What is printed?
+      code:
+        python: |
+          def add(x, bag=[]):
+              bag.append(x)
+              return bag
+          add(1)
+          print(add(2), add(3, []))
+      options:
+        - "[1, 2] [3]"
+        - "[2] [3]"
+        - "[1, 2] [1, 2, 3]"
+        - "[2] [2, 3]"
+      answer: 0
+      explanation: Calls without bag share one list, which already holds 1. Passing [] gives that call its own list.
+      difficulty: 5
+    - id: pl-missing-return
+      kind: output
+      prompt: One path through the function has no return. What is printed?
+      code:
+        python: |
+          def f(x):
+              if x > 0:
+                  return x * 2
+          print(f(3), f(-1))
+      options:
+        - "6 None"
+        - "6 0"
+        - "6 -2"
+        - "An error for f(-1)"
+      answer: 0
+      explanation: Falling off the end of a Python function returns None.
+      difficulty: 4
+    - id: pl-java-pass-value
+      kind: output
+      prompt: One argument is an int, the other an array. What is printed?
+      code:
+        java: |
+          class B {
+              void bump(int x, int[] a) { x++; a[0]++; }
+          }
+          int x = 1;
+          int[] a = {1};
+          new B().bump(x, a);
+          System.out.println(x + " " + a[0]);
+      options:
+        - "1 2"
+        - "2 2"
+        - "1 1"
+        - "2 1"
+      answer: 0
+      explanation: Java passes copies. The copy of x changes alone; the copied reference still points at the same array.
+      difficulty: 5
+    - id: pl-cpp-vector-by-value
+      kind: output
+      prompt: Both parameters are taken by value. What is printed?
+      code:
+        cpp: |
+          auto bump = [](int x, vector<int> a) { x++; a[0]++; };
+          int x = 1;
+          vector<int> a = {1};
+          bump(x, a);
+          cout << x << " " << a[0];
+      options:
+        - "1 1"
+        - "1 2"
+        - "2 2"
+        - "2 1"
+      answer: 0
+      explanation: A vector taken by value is copied whole, so the caller's a is untouched. Use vector<int>& to change it.
+      difficulty: 5
+  grids:
+    - id: pl-flat-index
+      kind: fill
+      prompt: "A grid of R rows and C columns is stored row by row in one flat array. Fill in the blank: cell (r, c) is at index ____"
+      options:
+        - r * C + c
+        - r * R + c
+        - c * R + r
+        - (r + 1) * (c + 1) - 1
+      answer: 0
+      explanation: Each full row before r holds C cells, then c more along the row. c * R + r is column-by-column storage.
+      difficulty: 4
+    - id: pl-edge-neighbours
+      kind: mcq
+      prompt: In a 4 by 5 grid, how many cells have exactly 3 neighbours inside the grid (up, down, left, right)?
+      options:
+        - "10"
+        - "14"
+        - "18"
+        - "4"
+      answer: 0
+      explanation: "Border cells that are not corners: 2 * (5 - 2) + 2 * (4 - 2) = 10. Corners have 2, inner cells 4."
+      difficulty: 5
+    - id: pl-transpose-shape
+      kind: output
+      prompt: zip(*g) turns rows into columns. What is printed?
+      code:
+        python: |
+          g = [[1, 2, 3], [4, 5, 6]]
+          t = [list(r) for r in zip(*g)]
+          print(len(t), len(t[0]), t[2][1])
+      options:
+        - "3 2 6"
+        - "2 3 6"
+        - "3 2 5"
+        - "2 3 5"
+      answer: 0
+      explanation: The transpose of a 2 by 3 grid is 3 by 2, [[1, 4], [2, 5], [3, 6]], and t[2][1] is 6.
+      difficulty: 5
+  strings:
+    - id: pl-py-string-mix
+      kind: output
+      prompt: Reversal, a missing substring, counting and chained comparison. What is printed?
+      code:
+        python: |
+          s = "racecar"
+          print(s[::-1] == s, s.find("z"), s.count("c"), "abc" < "abd" < "b")
+      options:
+        - "True -1 2 True"
+        - "True None 2 True"
+        - "True -1 1 False"
+        - "False -1 2 True"
+      answer: 0
+      explanation: find returns -1 when missing. Strings compare letter by letter, so "abd" < "b" because a < b.
+      difficulty: 5
+    - id: pl-java-string-identity
+      kind: output
+      prompt: == and equals on strings. What is printed?
+      code:
+        java: |
+          String a = "hi";
+          String b = new String("hi");
+          System.out.println((a == b) + " " + a.equals(b));
+      options:
+        - "false true"
+        - "true true"
+        - "false false"
+        - "true false"
+      answer: 0
+      explanation: new String makes a separate object, so == (identity) is false; equals compares characters.
+      difficulty: 5
+    - id: pl-cpp-char-sum
+      kind: output
+      prompt: Adding a char to a string, and adding two chars. What is printed?
+      code:
+        cpp: |
+          string s = "ab";
+          cout << s + 'c' << " " << ('a' + 'b');
+      options:
+        - "abc 195"
+        - "abc ab"
+        - "abc 97"
+        - "ab99 195"
+      answer: 0
+      explanation: "string + char appends. Two chars add as numbers: 97 + 98 = 195."
+      difficulty: 5
+    - id: pl-anagram-case
+      kind: mcq
+      prompt: Two words are compared as anagrams by sorting their characters, without changing case. Are "Listen" and "Silent" anagrams by this test?
+      options:
+        - No, because "L" and "l" (and "S" and "s") are different characters
+        - Yes, they use the same letters
+        - Yes, because sorting ignores case
+        - No, because they have different lengths
+      answer: 0
+      explanation: Upper and lower case letters are different codes. Lower-case both words first.
+      difficulty: 4
+    - id: pl-py-immutable-string
+      kind: bug
+      prompt: What happens when this runs?
+      code:
+        python: |
+          s = "abc"
+          s[0] = "z"
+          print(s)
+      options:
+        - A TypeError, because strings cannot be changed in place
+        - It prints zbc
+        - It prints abc
+        - It prints z
+      answer: 0
+      explanation: Python strings are immutable. Build a new one, for example "z" + s[1:].
+      difficulty: 4
+  debugging:
+    - id: pl-average-empty
+      kind: bug
+      prompt: A function adds up a list and returns the total divided by the list's length. Which input breaks it?
+      options:
+        - An empty list
+        - A list with negative numbers
+        - A list of one number
+        - A list of decimals
+      answer: 0
+      explanation: An empty list makes the length 0, so it divides by zero.
+      difficulty: 4
+    - id: pl-max-starts-zero
+      kind: bug
+      prompt: A find-the-largest function starts with best = 0 and keeps any value larger than best. Which input gives a wrong answer?
+      options:
+        - A list where every value is negative
+        - A list with repeated values
+        - A list already sorted
+        - A list with one positive value
+      answer: 0
+      explanation: For [-5, -2, -9] it returns 0, which is not even in the list. Start best at the first element.
+      difficulty: 4
+    - id: pl-last-index-skips-zero
+      kind: bug
+      prompt: This should return the last position of x. What is printed?
+      code:
+        python: |
+          def last_index(a, x):
+              for i in range(len(a) - 1, 0, -1):
+                  if a[i] == x:
+                      return i
+              return -1
+          print(last_index([7, 1, 2], 7))
+      options:
+        - "-1, because the loop stops before index 0"
+        - "0"
+        - "2"
+        - "An IndexError"
+      answer: 0
+      explanation: The stop value 0 is excluded, so index 0 is never checked. The stop should be -1.
+      difficulty: 5
+  maps:
+    - id: pl-map-order
+      kind: mcq
+      prompt: In what order do keys come out when you loop over a map?
+      options:
+        - Python dicts keep insertion order; hashed maps in C++ and Java promise no order; C++'s tree map is sorted
+        - Always sorted, in every language
+        - Always in insertion order, in every language
+        - Random, changing on every loop
+      answer: 0
+      explanation: Never rely on the order of a hashed map; sort the keys when order matters.
+      difficulty: 5
+    - id: pl-count-top-two
+      kind: output
+      prompt: Counting words, then sorting by count (high first) and word. What is printed?
+      code:
+        python: |
+          d = {}
+          for w in "a b a c b a".split():
+              d[w] = d.get(w, 0) + 1
+          print(sorted(d.items(), key=lambda kv: (-kv[1], kv[0]))[:2])
+      options:
+        - "[('a', 3), ('b', 2)]"
+        - "[('a', 3), ('c', 1)]"
+        - "[('b', 2), ('a', 3)]"
+        - "[('c', 1), ('b', 2)]"
+      answer: 0
+      explanation: a appears 3 times, b twice, c once; the minus sign sorts counts from high to low.
+      difficulty: 4
+    - id: pl-equal-keys
+      kind: output
+      prompt: Keys that compare equal are the same key. What is printed?
+      code:
+        python: |
+          d = {1: "a", 1.0: "b", True: "c"}
+          print(len(d), d[1])
+      options:
+        - "1 c"
+        - "3 a"
+        - "1 a"
+        - "2 c"
+      answer: 0
+      explanation: 1, 1.0 and True are equal with equal hashes, so each assignment overwrites the same entry.
+      difficulty: 5
+    - id: pl-missing-key-behaviour
+      kind: mcq
+      prompt: You read count[key] for a key that was never inserted. Which description is right?
+      options:
+        - A Python dictionary raises KeyError; C++ map inserts 0 and returns it; Java's map get returns null
+        - All three return 0
+        - All three raise an error
+        - Python returns an empty value; C++ raises an error; Java returns 0
+      answer: 0
+      explanation: Know your language. In Java, unboxing that null into an int then throws a NullPointerException.
+      difficulty: 5
+    - id: pl-java-null-unbox
+      kind: bug
+      prompt: What happens when this runs?
+      code:
+        java: |
+          Map<String, Integer> m = new HashMap<>();
+          int c = m.get("x");
+          System.out.println(c);
+      options:
+        - A NullPointerException, because get returns null and null cannot become an int
+        - It prints 0
+        - It prints null
+        - It does not compile
+      answer: 0
+      explanation: Use m.getOrDefault("x", 0) when a missing key should count as zero.
+      difficulty: 5
+  recursion:
+    - id: pl-fib-call-count
+      kind: mcq
+      prompt: fib(n) returns n when n <= 1, else fib(n - 1) + fib(n - 2). How many calls does fib(5) make in total, counting the first?
+      options:
+        - "15"
+        - "5"
+        - "8"
+        - "31"
+      answer: 0
+      explanation: calls(n) = 1 + calls(n - 1) + calls(n - 2) with calls(0) = calls(1) = 1, giving 3, 5, 9, 15.
+      difficulty: 5
+    - id: pl-skip-base-case
+      kind: bug
+      prompt: A recursive function stops when n equals 0 and otherwise calls itself with n - 2. What happens for n = 5?
+      options:
+        - It never reaches 0 and runs until the call stack overflows
+        - It stops at 1
+        - It returns after three calls
+        - It stops at -1
+      answer: 0
+      explanation: 5, 3, 1, -1, -3 never equals 0. Base cases should cover every way in, here n <= 0.
+      difficulty: 4
+    - id: pl-recursive-reverse
+      kind: output
+      prompt: The first character is added after the recursive call returns. What is printed?
+      code:
+        python: |
+          def g(s):
+              if len(s) <= 1:
+                  return s
+              return g(s[1:]) + s[0]
+          print(g("abc"))
+      options:
+        - "cba"
+        - "abc"
+        - "bca"
+        - "cab"
+      answer: 0
+      explanation: g("abc") = g("bc") + "a" = (g("c") + "b") + "a" = "cba".
+      difficulty: 4
+    - id: pl-fast-power-calls
+      kind: mcq
+      prompt: power(x, n) returns x when n is 1, otherwise computes half = power(x, n / 2) once and squares it. How many calls does power(x, 1024) make?
+      options:
+        - "11"
+        - "1024"
+        - "512"
+        - "10"
+      answer: 0
+      explanation: n halves each call, 1024, 512, ..., 2, 1, which is 11 calls.
+      difficulty: 5
+  scope-and-mutation:
+    - id: pl-loop-var-after
+      kind: mcq
+      prompt: A variable is created in a for loop header and the loop finishes. Can the code after the loop still read it?
+      options:
+        - In Python yes, with its last value; in C++ and Java it no longer exists
+        - Yes, in all three languages
+        - No, in all three languages
+        - Only in Java
+      answer: 0
+      explanation: Python has no block scope for loops. In C++ and Java the header variable belongs to the loop.
+      difficulty: 5
+    - id: pl-rebind-param
+      kind: mcq
+      prompt: A function receives a list (or array) and assigns a brand-new empty list to its parameter. Does the caller's variable change?
+      options:
+        - No, only the function's own name now points somewhere else
+        - Yes, the caller's list becomes empty
+        - Yes, but only in Java
+        - It causes an error
+      answer: 0
+      explanation: Assigning to a parameter rebinds the local name. Changing the list's contents would be visible.
+      difficulty: 4
+    - id: pl-unbound-local
+      kind: bug
+      prompt: What happens when this runs?
+      code:
+        python: |
+          x = 10
+          def f():
+              x += 1
+              return x
+          print(f())
+      options:
+        - An UnboundLocalError, because the assignment makes x local to f
+        - It prints 11
+        - It prints 10
+        - It prints 1
+      answer: 0
+      explanation: Any assignment to x inside f makes x local there, so reading it before assigning fails. Use global or pass x in.
+      difficulty: 5
+    - id: pl-plus-vs-plus-equals
+      kind: output
+      prompt: One function rebinds its parameter, the other changes the list in place. What is printed?
+      code:
+        python: |
+          def f(a):
+              a = a + [1]
+          def g(a):
+              a += [1]
+          x = []
+          f(x)
+          g(x)
+          print(x)
+      options:
+        - "[1]"
+        - "[1, 1]"
+        - "[]"
+        - "An error"
+      answer: 0
+      explanation: a + [1] makes a new list only f sees. a += [1] extends the caller's list in place.
+      difficulty: 5
+    - id: pl-late-binding
+      kind: output
+      prompt: Each lambda looks i up when it is called, not when it is made. What is printed?
+      code:
+        python: |
+          fs = [lambda: i for i in range(3)]
+          print([f() for f in fs])
+      options:
+        - "[2, 2, 2]"
+        - "[0, 1, 2]"
+        - "[0, 0, 0]"
+        - "An error"
+      answer: 0
+      explanation: "All three share one i, which is 2 when they run. Bind it early with lambda i=i: i."
+      difficulty: 5
+    - id: pl-java-shallow-clone
+      kind: output
+      prompt: clone copies only the outer array. What is printed?
+      code:
+        java: |
+          int[] a = {1, 2};
+          int[] b = a.clone();
+          b[0] = 5;
+          int[][] g = {{1}, {2}};
+          int[][] h = g.clone();
+          h[0][0] = 9;
+          System.out.println(a[0] + " " + g[0][0]);
+      options:
+        - "1 9"
+        - "5 9"
+        - "1 1"
+        - "5 1"
+      answer: 0
+      explanation: A 1D clone is independent. A 2D clone shares its inner arrays, so h[0] is g[0].
+      difficulty: 5
+  searching-and-sorting:
+    - id: pl-binsearch-duplicates
+      kind: mcq
+      prompt: Binary search on [1, 3, 3, 3, 5] for 3 starts with lo = 0, hi = 4, mid = (lo + hi) / 2 rounded down, and returns as soon as a[mid] is 3. Which index does it return?
+      options:
+        - "2"
+        - "1"
+        - "3"
+        - Any of 1, 2 or 3, at random
+      answer: 0
+      explanation: The first mid is 2, which already holds 3. Finding the first or last copy needs a different loop.
+      difficulty: 4
+    - id: pl-stable-sort
+      kind: mcq
+      prompt: Which of these sorts is stable, keeping equal items in their original order?
+      options:
+        - Merge sort
+        - Selection sort that swaps the minimum into place
+        - Heap sort
+        - In-place quicksort
+      answer: 0
+      explanation: Merge sort takes from the left half on ties. Long-distance swaps in the others can reorder equal items.
+      difficulty: 5
+    - id: pl-bubble-sorted-input
+      kind: mcq
+      prompt: Bubble sort stops after a pass with no swaps. How many comparisons does it make on an already sorted list of 10 items?
+      options:
+        - "9"
+        - "45"
+        - "10"
+        - "0"
+      answer: 0
+      explanation: One pass compares each neighbouring pair once, 9 pairs, finds nothing to swap and stops.
+      difficulty: 4
+    - id: pl-py-sort-case
+      kind: output
+      prompt: Capital letters sort before small ones. What is printed?
+      code:
+        python: |
+          print(sorted(["b", "A", "a", "B"]), sorted([3, 1, 2], reverse=True)[1:])
+      options:
+        - "['A', 'B', 'a', 'b'] [2, 1]"
+        - "['A', 'a', 'B', 'b'] [2, 1]"
+        - "['a', 'A', 'b', 'B'] [1, 2]"
+        - "['A', 'B', 'a', 'b'] [3, 2]"
+      answer: 0
+      explanation: Strings sort by character code, and every capital letter comes before every small one.
+      difficulty: 4
+  classes-and-objects:
+    - id: pl-cpp-ref-vs-copy
+      kind: output
+      prompt: One name is a reference, the other a copy. What is printed?
+      code:
+        cpp: |
+          struct P { int x = 0; };
+          P a;
+          P& r = a;
+          P c = a;
+          r.x = 5;
+          c.x = 7;
+          cout << a.x;
+      options:
+        - "5"
+        - "7"
+        - "0"
+        - "12"
+      answer: 0
+      explanation: r is another name for a, so r.x = 5 changes a. c is a separate copy.
+      difficulty: 5
+    - id: pl-cpp-object-copy
+      kind: mcq
+      prompt: In C++, an object (not a pointer or reference) is assigned to a second variable, and a field is changed through the second. What does the first see?
+      options:
+        - The old value, because assignment copied the whole object
+        - The new value, because both share one object
+        - An error
+        - Undefined behaviour
+      answer: 0
+      explanation: C++ objects are values. Use a reference or pointer to share one object.
+      languages: [cpp]
+      difficulty: 5
+    - id: pl-class-attribute-shared
+      kind: output
+      prompt: items is defined on the class, not in __init__. What is printed?
+      code:
+        python: |
+          class Bag:
+              items = []
+              def add(self, x):
+                  self.items.append(x)
+          a, b = Bag(), Bag()
+          a.add(1)
+          b.add(2)
+          print(a.items)
+      options:
+        - "[1, 2]"
+        - "[1]"
+        - "[2]"
+        - "[]"
+      answer: 0
+      explanation: Both objects find the one list on the class. Create self.items = [] in __init__ for one each.
+      difficulty: 5
+    - id: pl-default-equality
+      kind: output
+      prompt: The class does not define how to compare. What is printed?
+      code:
+        python: |
+          class P:
+              def __init__(self, x):
+                  self.x = x
+          p = P(1)
+          q = P(1)
+          print(p == q, p.x == q.x)
+      options:
+        - "False True"
+        - "True True"
+        - "False False"
+        - "True False"
+      answer: 0
+      explanation: Without __eq__, == compares identity, and p and q are different objects.
+      difficulty: 4
+    - id: pl-java-hashset-no-equals
+      kind: output
+      prompt: P does not override equals or hashCode. What is printed?
+      code:
+        java: |
+          class P {
+              int x;
+              P(int x) { this.x = x; }
+          }
+          Set<P> s = new HashSet<>();
+          s.add(new P(1));
+          s.add(new P(1));
+          System.out.println(s.size());
+      options:
+        - "2"
+        - "1"
+        - "0"
+        - It does not compile
+      answer: 0
+      explanation: The default equals is identity, so two separate objects are two members.
+      difficulty: 5
+    - id: pl-object-alias
+      kind: mcq
+      prompt: An object is assigned to a second variable, and a field is changed through the second. What does the first variable see?
+      options:
+        - The change, because both names refer to the same object
+        - The old value, because assignment copies the object
+        - An error, because two names cannot share one object
+        - The old value until the program saves it
+      answer: 0
+      explanation: In Python and Java, assigning an object copies the reference, not the object.
+      languages: [python, java]
+      difficulty: 4
+  problem-solving:
+    - id: pl-pair-sum-approach
+      kind: mcq
+      prompt: You must decide whether any two of 100 000 numbers add up to a target within 1 second. Which approach fits?
+      options:
+        - One pass keeping a set of values seen so far
+        - Checking every pair of numbers
+        - Sorting, then checking every pair
+        - Trying every subset of the numbers
+      answer: 0
+      explanation: Every pair is about 5 * 10^9 checks. With a set, each number checks for target minus itself in about one step.
+      difficulty: 4
+    - id: pl-second-largest-test
+      kind: mcq
+      prompt: A function should return the second largest distinct value. Which test is most likely to expose a bug?
+      options:
+        - "[5, 5, 4]"
+        - "[1, 2, 3]"
+        - "[3, 2, 1]"
+        - "[10, 20, 30, 40]"
+      answer: 0
+      explanation: A repeated maximum tempts a naive answer of 5. The distinct second largest is 4.
+      difficulty: 4
+    - id: pl-time-estimate
+      kind: mcq
+      prompt: An algorithm does about n * n simple steps, n is 100 000, and a computer does about 10^8 simple steps per second. Roughly how long does it take?
+      options:
+        - About 100 seconds
+        - About 1 second
+        - About 0.01 seconds
+        - About 10^5 seconds
+      answer: 0
+      explanation: n * n is 10^10 steps, and 10^10 / 10^8 = 100 seconds.
+      difficulty: 4

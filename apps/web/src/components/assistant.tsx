@@ -272,9 +272,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
   return (
     <section
       className={cn(
-        'fixed inset-x-0 bottom-0 z-[60] flex h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-t-card border bg-card pb-[env(safe-area-inset-bottom)] text-card-foreground shadow-floating animate-in fade-in slide-in-from-bottom-2 sm:inset-x-auto sm:bottom-6 sm:h-[min(680px,calc(100dvh-6rem))] sm:w-[420px] sm:rounded-card sm:pb-0',
-        // On a problem the test results sit bottom-right, so the tutor opens over the statement instead.
-        problem ? 'sm:left-6 lg:left-[17rem]' : 'sm:right-6',
+        'fixed inset-x-0 bottom-0 z-[60] flex h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-t-card border bg-card pb-[env(safe-area-inset-bottom)] text-card-foreground shadow-floating animate-in fade-in slide-in-from-bottom-2 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:h-[min(680px,calc(100dvh-6rem))] sm:w-[420px] sm:rounded-card sm:pb-0',
       )}
       role="dialog"
       aria-label={title}

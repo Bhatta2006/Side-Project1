@@ -15,6 +15,7 @@ MAX_ITEMS = 10
 MAX_STRIKES = 3
 PASS_SCORE = 0.8
 HARD_CORRECT = 2
+HARD_FLOOR = 4  # a checkpoint asks only questions at this difficulty or above
 COOLDOWN_SECONDS = DAY
 RECENT_SECONDS = 14 * DAY  # avoid re-asking items seen this recently, when possible
 

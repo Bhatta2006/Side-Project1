@@ -5,7 +5,7 @@ from hypothesis import strategies as st
 from test_learner_api import client, login, onboard  # noqa: F401  (client is a fixture)
 
 from socrat.catalog.registry import default_catalog
-from socrat.learn import routes
+from socrat.learn import quizzes, routes
 from socrat.mastery.model import DAY, ConceptState
 from socrat.planner import gates
 
@@ -109,7 +109,7 @@ def answer_gate(client, headers, gate: str, right: bool) -> dict:  # noqa: F811
     view = client.get(f"/api/v1/quiz/{gate}").json()
     while not view["completed"]:
         question = next(q for q in view["questions"] if not q["answered"])
-        q = next(x for x in catalog.concept(question["concept"]).quiz if x.id == question["id"])
+        q = quizzes.item(catalog, question["concept"], question["id"])
         correct = q.shown(view["id"])["answer"]
         choice = correct if right else (correct + 1) % len(q.options)
         view = client.post(
@@ -153,8 +153,12 @@ def test_gate_locks_the_next_module_until_passed(client, monkeypatch):  # noqa: 
     passed = answer_gate(client, headers, gate, right=True)
     assert passed["gate"]["passed"] is True and passed["id"] != failed["id"]
     assert passed["gate"]["hard_correct"] >= passed["gate"]["hard_needed"]
-    levels = [q["difficulty"] for q in passed["questions"]]
-    assert levels[1] >= levels[0]  # harder after a correct answer
+    # A checkpoint never shows difficulty, and every question in it is a hard one.
+    assert all("difficulty" not in q for q in passed["questions"])
+    assert not {"levels", "level", "hard_level"} & set(passed["gate"])
+    floor = min(gates.HARD_FLOOR, 5)
+    asked = [quizzes.item(catalog, q["concept"], q["id"]) for q in passed["questions"]]
+    assert asked and all(q.difficulty >= floor for q in asked)
     assert client.get(f"/api/v1/concepts/{locked_concept}").json()["locked"] is None
     assert (
         client.post(
@@ -162,3 +166,15 @@ def test_gate_locks_the_next_module_until_passed(client, monkeypatch):  # noqa: 
         ).status_code
         == 200
     )
+
+
+def test_every_checkpoint_pool_holds_only_hard_questions():
+    catalog = default_catalog()
+    for course_id in catalog.courses:
+        for key in gates.module_keys(catalog, course_id):
+            for language in ("python", "cpp", "java"):
+                pool = quizzes.gate_pool(catalog, key, language)
+                assert pool, (key, language)
+                top = max(q.difficulty for _, q in pool)
+                floor = min(gates.HARD_FLOOR, top)
+                assert all(q.difficulty >= floor for _, q in pool), (key, language)

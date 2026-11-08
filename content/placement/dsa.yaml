@@ -1,0 +1,1435 @@
+# Placement bank, Data Structures and Algorithms. Hard on purpose: edge cases, special
+# cases, traces, fill-in-the-blank and find-the-bug. Placement only: never shown in lessons.
+# Numeric answers were computed by brute force; "output" items are executed by
+# scripts/dev/verify_placement_bank.py.
+course: dsa
+concepts:
+  complexity:
+    - id: pl-doubling-outer
+      kind: mcq
+      prompt: The outer loop runs i = 1, 2, 4, 8, ... while i < n; the inner loop runs i times. Total work?
+      options:
+        - O(n)
+        - O(n log n)
+        - O(log n)
+        - O(n^2)
+      answer: 0
+      explanation: 1 + 2 + 4 + ... up to n is less than 2n. The log n outer steps do not multiply n.
+      difficulty: 5
+    - id: pl-harmonic-loops
+      kind: mcq
+      prompt: For every i from 1 to n, an inner loop visits j = i, 2i, 3i, ... up to n. Total work?
+      options:
+        - O(n log n)
+        - O(n^2)
+        - O(n)
+        - O(n sqrt n)
+      answer: 0
+      explanation: The inner loop runs n / i times, and n/1 + n/2 + ... + n/n is n times the harmonic sum, about n ln n.
+      difficulty: 5
+    - id: pl-dynamic-array-amortized
+      kind: mcq
+      prompt: A dynamic array doubles its capacity when full. What is the cost of n appends?
+      options:
+        - O(n) in total, although one single append can cost O(n)
+        - O(n log n) in total
+        - O(n^2) in total
+        - O(1) for every single append, including the ones that resize
+      answer: 0
+      explanation: Copies happen at sizes 1, 2, 4, ..., which add up to under 2n. That is O(1) amortized, not per call.
+      difficulty: 5
+    - id: pl-master-theorem
+      kind: fill
+      prompt: "Fill in the blank: T(n) = 2T(n / 2) + n, with T(1) constant, solves to T(n) = ____"
+      options:
+        - Θ(n log n)
+        - Θ(n)
+        - Θ(n^2)
+        - Θ(log n)
+      answer: 0
+      explanation: Each of the log n levels does n work in total; this is merge sort's recurrence.
+      difficulty: 4
+  arrays-hashing:
+    - id: pl-dup-within-k
+      kind: mcq
+      prompt: In [1, 2, 3, 1, 2, 3] with k = 2, are there two equal values at positions at most k apart?
+      options:
+        - No, every pair of equal values is exactly 3 apart
+        - Yes, 1 appears twice
+        - Yes, positions 0 and 3
+        - No, the list has no repeated values
+      answer: 0
+      explanation: Repeats exist, but the distance condition fails. Keep a window of the last k values.
+      difficulty: 4
+    - id: pl-anagram-sum-key
+      kind: mcq
+      prompt: Words are grouped as anagrams by a key computed from each word. Which key wrongly groups words that are not anagrams?
+      options:
+        - The sum of the character codes
+        - The letters sorted
+        - The count of each of the 26 letters
+        - The letters sorted and joined with a separator
+      answer: 0
+      explanation: '"ad" and "bc" both sum to 197. A sum loses which letters were used.'
+      difficulty: 5
+    - id: pl-two-sum-self-pair
+      kind: bug
+      prompt: Two-sum on [3, 3] with target 6. The loop first stores a[i] -> i in the map, then looks up target - a[i]. What does it return?
+      options:
+        - (0, 0), pairing an element with itself
+        - (0, 1)
+        - No pair
+        - (1, 1)
+      answer: 0
+      explanation: At i = 0 it stores 3 -> 0 and immediately finds 3 at index 0. Look up before storing.
+      difficulty: 5
+  bit-manipulation:
+    - id: pl-clear-lowest
+      kind: mcq
+      prompt: What are x & (x - 1) for x = 12, and for x = 0 in a signed 32-bit int?
+      options:
+        - 8 and 0
+        - 4 and -1
+        - 11 and 0
+        - 8 and -1
+      answer: 0
+      explanation: 1100 & 1011 = 1000. For 0, x - 1 is -1 (all ones) and 0 & -1 = 0.
+      difficulty: 4
+    - id: pl-lowbit
+      kind: mcq
+      prompt: What is x & -x for x = 40?
+      options:
+        - "8"
+        - "40"
+        - "32"
+        - "2"
+      answer: 0
+      explanation: 40 is 101000. x & -x keeps only the lowest set bit, 1000 = 8.
+      difficulty: 4
+    - id: pl-shift-32
+      kind: mcq
+      prompt: The value 1 is shifted left by 32 using each language's default whole-number type. Which list is right for Python, Java and C++?
+      options:
+        - Python 4294967296; Java 1; C++ undefined behaviour
+        - Python 4294967296; Java 0; C++ 0
+        - All three give 0
+        - All three give 4294967296
+      answer: 0
+      explanation: Python ints grow. Java masks the shift to 5 bits (32 becomes 0). In C++ a shift of at least the width is undefined.
+      difficulty: 5
+    - id: pl-set-bit
+      kind: fill
+      prompt: "Fill in the blank to turn bit k of x on, whether or not it was already on: x = x ____ (1 << k)"
+      options:
+        - "|"
+        - "^"
+        - "+"
+        - "&"
+      answer: 0
+      explanation: OR sets the bit. XOR would turn it off if it was on; + would carry into the next bit.
+      difficulty: 4
+  dp-introduction:
+    - id: pl-stairs-base
+      kind: mcq
+      prompt: Climbing n stairs taking 1 or 2 steps at a time. As the recurrence needs it, how many ways are there for n = 0, and for n = 5?
+      options:
+        - 1 and 8
+        - 0 and 8
+        - 1 and 5
+        - 0 and 13
+      answer: 0
+      explanation: Standing still is one way, so ways(0) = 1. Then 1, 2, 3, 5, 8 for n = 1 to 5.
+      difficulty: 4
+    - id: pl-memo-zero-sentinel
+      kind: bug
+      prompt: A memo table is filled with 0 to mean "not computed yet". What goes wrong?
+      options:
+        - States whose real answer is 0 are recomputed on every visit, which can make it exponential again
+        - Nothing, because 0 is never a valid answer
+        - It returns 0 for every state
+        - It uses twice the memory
+      answer: 0
+      explanation: Use a separate marker such as -1, None or a visited flag.
+      difficulty: 5
+    - id: pl-greedy-coins-fail
+      kind: mcq
+      prompt: Fewest coins for amount 6 with coins 1, 3 and 4. What do greedy (largest coin first) and DP give?
+      options:
+        - Greedy 3 coins, DP 2 coins
+        - Both 2 coins
+        - Both 3 coins
+        - Greedy 2 coins, DP 3 coins
+      answer: 0
+      explanation: Greedy takes 4 + 1 + 1. DP finds 3 + 3.
+      difficulty: 4
+  recursion-patterns:
+    - id: pl-perm-duplicates
+      kind: mcq
+      prompt: Permutations of "aab" are generated by swapping, with no check for repeated letters. How many strings are produced?
+      options:
+        - 6, with each distinct one appearing twice
+        - "3"
+        - "9"
+        - "2"
+      answer: 0
+      explanation: 3! = 6 orders are generated, but only 3 are distinct. Skip a letter already tried at a position.
+      difficulty: 5
+    - id: pl-deep-recursion
+      kind: mcq
+      prompt: A recursive function goes 1 000 000 calls deep on a path-shaped input. What usually happens?
+      options:
+        - It overflows the call stack (Python stops near 1000 calls by default); make it iterative
+        - It runs fine, recursion has no depth limit
+        - It runs fine in every language except Java
+        - The compiler turns it into a loop automatically in every language
+      answer: 0
+      explanation: Each call keeps a frame on a limited stack. Use an explicit stack or loop for deep inputs.
+      difficulty: 4
+    - id: pl-hanoi-moves
+      kind: fill
+      prompt: "Fill in the blank: Tower of Hanoi with n disks needs exactly ____ moves"
+      options:
+        - 2^n - 1
+        - 2^n
+        - n^2
+        - 2n - 1
+      answer: 0
+      explanation: moves(n) = 2 * moves(n - 1) + 1 with moves(1) = 1.
+      difficulty: 4
+  sorting:
+    - id: pl-comparator-overflow
+      kind: bug
+      prompt: A comparator returns a - b to sort ints. Why can this sort wrongly?
+      options:
+        - a - b can overflow for values near the int limits and flip its sign
+        - Subtraction is slower than comparison
+        - It sorts in descending order
+        - It is not stable
+      answer: 0
+      explanation: With a = 2^31 - 1 and b = -1, a - b overflows to a negative number. Compare instead.
+      difficulty: 5
+    - id: pl-quicksort-sorted
+      kind: mcq
+      prompt: Quicksort always takes the first element as the pivot. What is its running time on input that is already sorted?
+      options:
+        - O(n^2)
+        - O(n log n)
+        - O(n)
+        - O(log n)
+      answer: 0
+      explanation: Each split peels off one element, giving n levels. Pick a random or median pivot.
+      difficulty: 4
+    - id: pl-counting-sort-range
+      kind: mcq
+      prompt: When is counting sort over values 0..k a bad choice?
+      options:
+        - When k is far larger than n, for example 10 values up to 10^9
+        - When values repeat
+        - When n is large and k is small
+        - When stability is needed
+      answer: 0
+      explanation: It costs O(n + k) time and O(k) memory, so a huge range dominates.
+      difficulty: 4
+  backtracking:
+    - id: pl-n-queens
+      kind: mcq
+      prompt: How many ways are there to place n queens on an n by n board with no two attacking, for n = 4 and for n = 6?
+      options:
+        - 2 and 4
+        - 1 and 4
+        - 2 and 0
+        - 4 and 8
+      answer: 0
+      explanation: Brute force confirms 2 and 4 (n = 6 has fewer than n = 5, which has 10).
+      difficulty: 5
+    - id: pl-combination-sum
+      kind: mcq
+      prompt: Candidates 2, 3, 6, 7 can each be used any number of times. How many combinations (order ignored) add up to 7?
+      options:
+        - "2"
+        - "4"
+        - "3"
+        - "1"
+      answer: 0
+      explanation: "{7} and {2, 2, 3}. Counting orders of 2, 2, 3 separately would wrongly give 4."
+      difficulty: 4
+    - id: pl-subsets-with-dups
+      kind: mcq
+      prompt: How many distinct subsets does [1, 2, 2] have, counting the empty one?
+      options:
+        - "6"
+        - "8"
+        - "7"
+        - "5"
+      answer: 0
+      explanation: "{}, {1}, {2}, {1,2}, {2,2}, {1,2,2}. The two 2s are interchangeable."
+      difficulty: 5
+    - id: pl-path-not-copied
+      kind: output
+      prompt: The current path is appended to the results without a copy. What is printed?
+      code:
+        python: |
+          res = []
+          path = []
+          def go(i):
+              if i == 2:
+                  res.append(path)
+                  return
+              path.append(i)
+              go(i + 1)
+              path.pop()
+              go(i + 1)
+          go(0)
+          print(res)
+      options:
+        - "[[], [], [], []]"
+        - "[[0, 1], [0], [1], []]"
+        - "[[0, 1], [0, 1], [0, 1], [0, 1]]"
+        - "[]"
+      answer: 0
+      explanation: Every entry is the same list object, which is empty once backtracking finishes. Append path[:].
+      difficulty: 5
+  binary-search:
+    - id: pl-infinite-mid
+      kind: bug
+      prompt: "while lo < hi: mid = (lo + hi) / 2 rounded down; if a[mid] < x then lo = mid else hi = mid - 1. What can go wrong?"
+      options:
+        - It can loop forever when hi = lo + 1 and a[lo] < x
+        - It skips the first element
+        - It overflows for small arrays
+        - Nothing, it always ends
+      answer: 0
+      explanation: mid equals lo, so lo = mid makes no progress. Use lo = mid + 1, or round mid up.
+      difficulty: 5
+    - id: pl-lower-bound-edges
+      kind: mcq
+      prompt: Lower bound returns the first index i with a[i] >= x, or n if none. On [1, 2, 4, 4, 7], what does it return for x = 5 and for x = 8?
+      options:
+        - 4 and 5
+        - 3 and 4
+        - 4 and -1
+        - 4 and 4
+      answer: 0
+      explanation: 7 at index 4 is the first value >= 5. Nothing is >= 8, so it returns n = 5.
+      difficulty: 5
+    - id: pl-binsearch-update
+      kind: fill
+      prompt: "while lo <= hi: mid = lo + (hi - lo) / 2; if a[mid] == x return mid; if a[mid] < x then lo = ____ else hi = mid - 1"
+      options:
+        - mid + 1
+        - mid
+        - mid - 1
+        - hi
+      answer: 0
+      explanation: a[mid] is already ruled out. lo = mid can loop forever when lo == hi.
+      difficulty: 4
+    - id: pl-rotated-half
+      kind: mcq
+      prompt: Searching the rotated sorted array [4, 5, 6, 7, 0, 1, 2], lo = 0, hi = 6, mid = 3 (value 7). Which statement is right?
+      options:
+        - The left half 4..7 is sorted, since a[lo] <= a[mid]
+        - The right half is sorted, since it holds 0
+        - Neither half is sorted
+        - Both halves are sorted
+      answer: 0
+      explanation: In a rotated array at least one half is always sorted; compare a[lo] with a[mid] to know which.
+      difficulty: 4
+  dp-1d:
+    - id: pl-house-robber
+      kind: mcq
+      prompt: House robber on [2, 7, 9, 3, 1] (no two adjacent houses). Maximum?
+      options:
+        - "12"
+        - "11"
+        - "10"
+        - "19"
+      answer: 0
+      explanation: 2 + 9 + 1 = 12 beats 7 + 3 = 10.
+      difficulty: 4
+    - id: pl-house-robber-circle
+      kind: mcq
+      prompt: The houses [2, 3, 2] stand in a circle, so the first and last are neighbours. Maximum?
+      options:
+        - "3"
+        - "4"
+        - "2"
+        - "7"
+      answer: 0
+      explanation: Taking both 2s is not allowed in a circle. Solve twice, without the first and without the last house.
+      difficulty: 5
+    - id: pl-decode-ways
+      kind: mcq
+      prompt: Letters are coded A = 1 to Z = 26. In how many ways can "226" and "06" be decoded?
+      options:
+        - 3 and 0
+        - 3 and 1
+        - 2 and 0
+        - 3 and 2
+      answer: 0
+      explanation: '"226" is 2-2-6, 22-6, 2-26. "06" has no valid reading, because no code starts with 0.'
+      difficulty: 5
+    - id: pl-kadane-negatives
+      kind: mcq
+      prompt: Maximum sum of a non-empty contiguous subarray of [-3, -1, -2]?
+      options:
+        - "-1"
+        - "0"
+        - "-6"
+        - "-3"
+      answer: 0
+      explanation: The empty subarray is not allowed. A version that starts best at 0 wrongly returns 0.
+      difficulty: 5
+  intervals:
+    - id: pl-merge-touching
+      kind: mcq
+      prompt: Merge the closed intervals [1, 4], [4, 5], [6, 7], [2, 3].
+      options:
+        - "[1, 5], [6, 7]"
+        - "[1, 4], [4, 5], [6, 7]"
+        - "[1, 7]"
+        - "[1, 3], [4, 5], [6, 7]"
+      answer: 0
+      explanation: Sort by start first. [1, 4] and [4, 5] touch, so they merge; [2, 3] is inside [1, 4].
+      difficulty: 4
+    - id: pl-meeting-rooms
+      kind: mcq
+      prompt: Meetings [0, 30), [5, 10), [15, 20), [10, 15), where a meeting ending at 10 frees its room for one starting at 10. Fewest rooms?
+      options:
+        - "2"
+        - "3"
+        - "4"
+        - "1"
+      answer: 0
+      explanation: At any moment at most [0, 30) and one other meeting run. Process ends before starts at equal times.
+      difficulty: 5
+    - id: pl-erase-overlap
+      kind: mcq
+      prompt: Fewest intervals to remove from [1, 2], [2, 3], [3, 4], [1, 3] so the rest do not overlap (touching ends are fine)?
+      options:
+        - "1"
+        - "2"
+        - "0"
+        - "3"
+      answer: 0
+      explanation: Remove [1, 3]. Greedy by end time keeps [1, 2], [2, 3], [3, 4].
+      difficulty: 4
+  linked-lists:
+    - id: pl-cycle-start
+      kind: mcq
+      prompt: In Floyd's cycle detection, slow and fast pointers have just met. How do you find where the cycle starts?
+      options:
+        - Move one pointer back to the head, then advance both one step at a time until they meet
+        - The meeting point is the cycle start
+        - Advance fast alone until it reaches slow again
+        - Count the nodes in the cycle; the start is that many steps from the head
+      answer: 0
+      explanation: The head-to-start distance equals the meeting-point-to-start distance around the cycle.
+      difficulty: 5
+    - id: pl-remove-nth-head
+      kind: bug
+      prompt: Removing the n-th node from the end with two pointers and no dummy node. Which case breaks?
+      options:
+        - n equals the list length, so the head itself must be removed
+        - n equals 1, the last node
+        - The list has an even length
+        - n equals 2
+      answer: 0
+      explanation: There is no node before the head to relink. A dummy node in front handles this case.
+      difficulty: 5
+    - id: pl-middle-even
+      kind: mcq
+      prompt: slow and fast start at the head of 1 -> 2 -> 3 -> 4. While fast and fast.next both exist, slow moves 1 and fast moves 2. Where does slow end?
+      options:
+        - At 3, the second middle
+        - At 2, the first middle
+        - At 4
+        - At 1
+      answer: 0
+      explanation: fast goes 1, 3, then past the end; slow goes 1, 2, 3.
+      difficulty: 4
+  prefix-sums:
+    - id: pl-subarray-sum-k
+      kind: mcq
+      prompt: How many contiguous subarrays of [1, 1, 1] sum to 2? And of [0, 0, 0] sum to 0?
+      options:
+        - 2 and 6
+        - 2 and 3
+        - 3 and 6
+        - 2 and 1
+      answer: 0
+      explanation: For zeros, every one of the 3 + 2 + 1 subarrays works. The counting map must start with prefix 0 seen once.
+      difficulty: 5
+    - id: pl-prefix-range
+      kind: fill
+      prompt: "P[0] = 0 and P[i] = a[0] + ... + a[i - 1]. Fill in the blank: the sum of a[l..r], both inclusive, is ____"
+      options:
+        - P[r + 1] - P[l]
+        - P[r] - P[l]
+        - P[r] - P[l - 1]
+        - P[r + 1] - P[l - 1]
+      answer: 0
+      explanation: P[r + 1] covers a[0..r] and P[l] covers a[0..l - 1]; the difference is a[l..r].
+      difficulty: 4
+    - id: pl-negative-mod
+      kind: mcq
+      prompt: Counting subarrays whose sum is divisible by k, prefix sums may be negative. In C++ or Java, what key should the map use?
+      options:
+        - ((p % k) + k) % k, because % can be negative there
+        - p % k as it is
+        - The absolute value of p % k
+        - p / k
+      answer: 0
+      explanation: In C++ and Java -1 % 5 is -1, which should match 4. Normalise into 0..k - 1.
+      difficulty: 5
+  stacks:
+    - id: pl-counter-brackets
+      kind: mcq
+      prompt: A bracket checker only counts opens minus closes (never below 0, zero at the end) and ignores bracket type. Which string does it wrongly accept?
+      options:
+        - "([)]"
+        - "(()"
+        - "())("
+        - "((()))"
+      answer: 0
+      explanation: Counts balance in ([)], but ) closes a [. A stack of open brackets catches the mismatch.
+      difficulty: 5
+    - id: pl-rpn-truncate
+      kind: mcq
+      prompt: Evaluate the postfix tokens 7, -2, / with division truncating toward zero. And what would Python's // give?
+      options:
+        - -3, while // would give -4
+        - -4, and // would also give -4
+        - -3, and // would also give -3
+        - "-3.5"
+      answer: 0
+      explanation: -3.5 truncates to -3 but floors to -4. In Python use int(a / b) for truncation.
+      difficulty: 5
+    - id: pl-min-stack-dups
+      kind: bug
+      prompt: A min-stack pushes onto its min-stack only values strictly smaller than the current min. After push 3, push 1, push 1, pop, what does getMin return?
+      options:
+        - 3, which is wrong because a 1 is still on the stack
+        - "1"
+        - An error
+        - "2"
+      answer: 0
+      explanation: The second 1 was not recorded, so popping it removed the only 1 from the min-stack. Push when <=.
+      difficulty: 5
+  two-pointers:
+    - id: pl-three-sum-unique
+      kind: mcq
+      prompt: How many distinct triplets in [-1, 0, 1, 2, -1, -4] add up to 0?
+      options:
+        - "2"
+        - "3"
+        - "4"
+        - "1"
+      answer: 0
+      explanation: "[-1, -1, 2] and [-1, 0, 1]. The two -1s must not produce [-1, 0, 1] twice."
+      difficulty: 4
+    - id: pl-container-water
+      kind: mcq
+      prompt: Container with most water for heights [1, 8, 6, 2, 5, 4, 8, 3, 7]?
+      options:
+        - "49"
+        - "64"
+        - "40"
+        - "56"
+      answer: 0
+      explanation: Heights 8 (index 1) and 7 (index 8) give min(8, 7) * 7 = 49.
+      difficulty: 4
+    - id: pl-move-shorter
+      kind: mcq
+      prompt: In container with most water, why is it safe to move the pointer at the shorter line inward?
+      options:
+        - Any container using the shorter line with a nearer partner is narrower and no taller, so none can win
+        - The shorter line is always on the left
+        - Moving the taller one is slower
+        - It is not safe; both must be tried
+      answer: 0
+      explanation: The shorter line caps the height, and the width only shrinks; every skipped pair is provably worse.
+      difficulty: 5
+  binary-search-on-answer:
+    - id: pl-koko-speed
+      kind: mcq
+      prompt: Piles [3, 6, 7, 11] must be eaten within 8 hours, one pile at most per hour, k bananas per hour. Smallest k?
+      options:
+        - "4"
+        - "5"
+        - "3"
+        - "6"
+      answer: 0
+      explanation: At 4 the hours are 1 + 2 + 2 + 3 = 8. At 3 they are 1 + 2 + 3 + 4 = 10.
+      difficulty: 4
+    - id: pl-split-array
+      kind: mcq
+      prompt: Split [7, 2, 5, 10, 8] into 2 contiguous parts to minimise the largest part sum. What is it?
+      options:
+        - "18"
+        - "14"
+        - "21"
+        - "23"
+      answer: 0
+      explanation: "[7, 2, 5] and [10, 8] give 14 and 18. Search the answer between max = 10 and sum = 32."
+      difficulty: 5
+    - id: pl-answer-range
+      kind: mcq
+      prompt: Searching for the least ship capacity that delivers all packages within D days, what range must the search cover?
+      options:
+        - From the heaviest package up to the total weight
+        - From 0 up to the total weight
+        - From 1 up to the heaviest package
+        - From the lightest package up to the heaviest
+      answer: 0
+      explanation: Below the heaviest package nothing ships; at the total weight one day suffices.
+      difficulty: 4
+  binary-trees:
+    - id: pl-rebuild-postorder
+      kind: mcq
+      prompt: Inorder is [9, 3, 15, 20, 7] and preorder is [3, 9, 20, 15, 7]. What is the postorder?
+      options:
+        - "[9, 15, 7, 20, 3]"
+        - "[9, 7, 15, 20, 3]"
+        - "[3, 9, 15, 7, 20]"
+        - "[15, 7, 20, 9, 3]"
+      answer: 0
+      explanation: 3 is the root, 9 the left subtree, and 20 the right subtree with children 15 and 7.
+      difficulty: 5
+    - id: pl-diameter-not-root
+      kind: mcq
+      prompt: Why is the diameter of a binary tree not simply left height plus right height at the root?
+      options:
+        - The longest path may stay entirely inside one subtree and never pass the root
+        - Heights are measured in nodes, not edges
+        - The root has no height
+        - It is; that formula is always right
+      answer: 0
+      explanation: Track the best left + right sum at every node during one post-order pass.
+      difficulty: 5
+    - id: pl-full-tree-count
+      kind: mcq
+      prompt: Every internal node of a binary tree has exactly two children, and there are 8 leaves. How many nodes are there?
+      options:
+        - "15"
+        - "16"
+        - "8"
+        - "7"
+      answer: 0
+      explanation: Such a tree always has one fewer internal node than leaves, 7 + 8 = 15, whatever its shape.
+      difficulty: 4
+  dp-2d:
+    - id: pl-unique-paths
+      kind: mcq
+      prompt: Moving only right or down, how many paths cross a 3 by 7 grid from the top left to the bottom right?
+      options:
+        - "28"
+        - "21"
+        - "84"
+        - "36"
+      answer: 0
+      explanation: 2 downs among 8 moves is C(8, 2) = 28.
+      difficulty: 4
+    - id: pl-obstacle-start
+      kind: mcq
+      prompt: In unique paths with obstacles, the starting cell itself holds an obstacle. How many paths are there?
+      options:
+        - "0"
+        - "1"
+        - The same as with no obstacles
+        - It depends on the grid size
+      answer: 0
+      explanation: A common bug sets dp[0][0] = 1 before checking the cell.
+      difficulty: 5
+    - id: pl-min-path-sum
+      kind: mcq
+      prompt: Minimum path sum moving right or down through [[1, 3, 1], [1, 5, 1], [4, 2, 1]]?
+      options:
+        - "7"
+        - "8"
+        - "6"
+        - "12"
+      answer: 0
+      explanation: 1 → 3 → 1 → 1 → 1 = 7.
+      difficulty: 4
+    - id: pl-palindromic-subsequence
+      kind: mcq
+      prompt: Longest palindromic subsequence of "bbbab"?
+      options:
+        - "4"
+        - "3"
+        - "5"
+        - "2"
+      answer: 0
+      explanation: '"bbbb" (skip the a). A subsequence need not be contiguous.'
+      difficulty: 5
+  dp-lis:
+    - id: pl-lis-basic
+      kind: mcq
+      prompt: Length of the longest strictly increasing subsequence of [0, 1, 0, 3, 2, 3] and of [7, 7, 7, 7]?
+      options:
+        - 4 and 1
+        - 4 and 4
+        - 3 and 1
+        - 5 and 0
+      answer: 0
+      explanation: 0, 1, 2, 3 works for the first. Equal values do not count as increasing.
+      difficulty: 5
+    - id: pl-lis-tails-meaning
+      kind: mcq
+      prompt: After the O(n log n) method on [10, 9, 2, 5, 3, 7, 101, 18], the tails array is [2, 3, 7, 18]. What does it guarantee?
+      options:
+        - Only the length, 4; in general tails need not be an actual subsequence
+        - It is always a valid LIS
+        - It is the lexicographically smallest LIS
+        - Nothing; the length may be wrong
+      answer: 0
+      explanation: tails[i] is the smallest tail of any increasing run of length i + 1; the entries can come from different runs.
+      difficulty: 5
+    - id: pl-lis-non-decreasing
+      kind: fill
+      prompt: "For the longest non-decreasing subsequence with the tails method, each x replaces ____ in tails"
+      options:
+        - the first element greater than x
+        - the first element greater than or equal to x
+        - the last element smaller than x
+        - the last element of tails
+      answer: 0
+      explanation: Equal values may extend a run, so search for the first strictly greater value (upper bound).
+      difficulty: 5
+  graph-traversal:
+    - id: pl-bfs-mark-when
+      kind: mcq
+      prompt: In BFS on a large grid, when should a cell be marked visited?
+      options:
+        - When it is added to the queue
+        - When it is taken out of the queue
+        - After all its neighbours are processed
+        - Only at the target
+      answer: 0
+      explanation: Marking on removal lets the same cell enter the queue many times, which can blow up time and memory.
+      difficulty: 5
+    - id: pl-islands-diagonal
+      kind: mcq
+      prompt: The grid rows are 110, 010, 001 (1 is land). How many islands are there with 4-direction moves, and with 8-direction moves?
+      options:
+        - 2 and 1
+        - 2 and 2
+        - 3 and 1
+        - 1 and 1
+      answer: 0
+      explanation: The bottom-right cell touches the rest only diagonally.
+      difficulty: 4
+    - id: pl-undirected-parent
+      kind: mcq
+      prompt: Detecting a cycle in an undirected graph with DFS, why skip the edge back to the parent?
+      options:
+        - Every undirected edge is seen from both ends, so the parent edge would look like a cycle
+        - The parent is always unvisited
+        - It saves time but is not needed
+        - Parents can never be in a cycle
+      answer: 0
+      explanation: With parallel edges between the same two nodes, skip only the one edge used to arrive, not the node.
+      difficulty: 5
+  greedy:
+    - id: pl-jump-game
+      kind: mcq
+      prompt: Jump game on [3, 2, 1, 0, 4], each value the maximum jump from that spot. Can you reach the last index?
+      options:
+        - No, every path lands on the 0 at index 3
+        - Yes, jump 3 from index 0, then 1
+        - Yes, by jumping 4
+        - Only if you start at index 1
+      answer: 0
+      explanation: The furthest reach never passes index 3. Track the maximum reachable index.
+      difficulty: 4
+    - id: pl-gas-station
+      kind: mcq
+      prompt: Gas [1, 2, 3, 4, 5], cost to next station [3, 4, 5, 1, 2], going round a circle. Which start index completes the loop?
+      options:
+        - "3"
+        - "4"
+        - "0"
+        - None, -1
+      answer: 0
+      explanation: Total gas 15 equals total cost 15. Restart after every point where the tank goes negative; that leaves 3.
+      difficulty: 5
+    - id: pl-greedy-coin-sets
+      kind: mcq
+      prompt: For which coin set is taking the largest coin first always optimal?
+      options:
+        - 1, 5, 10, 25
+        - 1, 3, 4
+        - 1, 7, 10
+        - 1, 6, 10
+      answer: 0
+      explanation: 1, 7, 10 fails on 14 (7 + 7) and 1, 6, 10 fails on 12 (6 + 6).
+      difficulty: 5
+  hashing:
+    - id: pl-hash-collision
+      kind: mcq
+      prompt: Two different strings get the same rolling hash. What must a correct substring matcher do?
+      options:
+        - Compare the characters whenever the hashes match
+        - Nothing; equal hashes mean equal strings
+        - Use a bigger table size
+        - Report every hash match as a match
+      answer: 0
+      explanation: Hashes can collide. Verify, or use double hashing to make collisions astronomically rare.
+      difficulty: 4
+    - id: pl-mutated-key
+      kind: bug
+      prompt: An object is changed after it was inserted as a key in a hash map, changing its hash. What does a later lookup with that same object usually do?
+      options:
+        - It fails, because it searches the bucket for the new hash
+        - It finds it, because it is the same object
+        - It throws an error
+        - It finds a copy of the old key
+      answer: 0
+      explanation: Keys must stay unchanged while in a map, which is why Python allows only immutable keys.
+      difficulty: 5
+    - id: pl-hash-worst-case
+      kind: mcq
+      prompt: What are the expected and worst-case costs of one lookup in a hash table with chaining?
+      options:
+        - O(1) expected, O(n) worst case
+        - O(1) in every case
+        - O(log n) expected, O(n) worst case
+        - O(n) expected, O(n) worst case
+      answer: 0
+      explanation: Adversarial inputs can put every key in one bucket; contest tests do this to unordered_map.
+      difficulty: 4
+  dp-lcs:
+    - id: pl-lcs-length
+      kind: mcq
+      prompt: Length of the longest common subsequence of "ABCBDAB" and "BDCABA"?
+      options:
+        - "4"
+        - "3"
+        - "5"
+        - "6"
+      answer: 0
+      explanation: For example "BCBA" or "BDAB".
+      difficulty: 4
+    - id: pl-subsequence-vs-substring
+      kind: mcq
+      prompt: For "abcde" and "abfde", what are the longest common subsequence and the longest common substring?
+      options:
+        - 4 and 2
+        - 2 and 4
+        - 3 and 2
+        - 4 and 4
+      answer: 0
+      explanation: '"abde" skips the middle; a substring must be contiguous, so "ab" or "de".'
+      difficulty: 5
+    - id: pl-lcs-table-size
+      kind: fill
+      prompt: "For strings of lengths m and n, the LCS table including the empty-prefix row and column has size ____"
+      options:
+        - (m + 1) by (n + 1)
+        - m by n
+        - (m - 1) by (n - 1)
+        - (m + n) by 2
+      answer: 0
+      explanation: Row 0 and column 0 stand for empty prefixes, which makes the base case free.
+      difficulty: 4
+  dp-partition:
+    - id: pl-equal-partition
+      kind: mcq
+      prompt: Can [1, 5, 11, 5] be split into two subsets of equal sum? And [1, 2, 3, 5]?
+      options:
+        - Yes and no
+        - Yes and yes
+        - No and no
+        - No and yes
+      answer: 0
+      explanation: "{11} and {1, 5, 5}. The second totals 11, which is odd."
+      difficulty: 4
+    - id: pl-subset-loop-direction
+      kind: mcq
+      prompt: With a one-dimensional subset-sum table, why must the inner loop go from high sums down to low?
+      options:
+        - So each item is used at most once; going up lets it be reused within the same pass
+        - It is faster
+        - So the answer ends at index 0
+        - It does not matter
+      answer: 0
+      explanation: Going up reads values already updated with this item, which is the unbounded version.
+      difficulty: 5
+    - id: pl-min-partition-diff
+      kind: mcq
+      prompt: Split [1, 6, 11, 5] into two groups so the difference of their sums is as small as possible. The difference?
+      options:
+        - "1"
+        - "0"
+        - "3"
+        - "5"
+      answer: 0
+      explanation: "The total is 23, so 11 and 12 is the best: {1, 5, 6} and {11}."
+      difficulty: 4
+  dp-stocks:
+    - id: pl-stock-falling
+      kind: mcq
+      prompt: One buy and one sell on prices [7, 6, 4, 3, 1]. Maximum profit?
+      options:
+        - "0"
+        - "-1"
+        - "6"
+        - "3"
+      answer: 0
+      explanation: Not trading is allowed, so the answer is never negative.
+      difficulty: 4
+    - id: pl-stock-cooldown
+      kind: mcq
+      prompt: Prices [1, 2, 3, 0, 2], unlimited trades, but after selling you must wait one day before buying. Maximum profit?
+      options:
+        - "3"
+        - "4"
+        - "2"
+        - "5"
+      answer: 0
+      explanation: Buy 1, sell 2, cool down, buy 0, sell 2. Selling at 3 instead blocks the buy at 0.
+      difficulty: 5
+    - id: pl-stock-two-trades
+      kind: mcq
+      prompt: Prices [3, 3, 5, 0, 0, 3, 1, 4], at most 2 transactions. Maximum profit?
+      options:
+        - "6"
+        - "7"
+        - "8"
+        - "5"
+      answer: 0
+      explanation: Buy 0 sell 3, buy 1 sell 4. Three trades would give 8 but only 2 are allowed.
+      difficulty: 5
+  heaps:
+    - id: pl-kth-largest
+      kind: mcq
+      prompt: The 2nd largest of [3, 2, 1, 5, 6, 4] is found with a min-heap kept at size 2. What does the heap's top hold at the end?
+      options:
+        - "5"
+        - "6"
+        - "4"
+        - "2"
+      answer: 0
+      explanation: The heap keeps the 2 largest, {5, 6}, and its minimum is the answer.
+      difficulty: 4
+    - id: pl-heapify-cost
+      kind: mcq
+      prompt: Building a binary heap from n items with bottom-up heapify costs?
+      options:
+        - O(n)
+        - O(n log n)
+        - O(log n)
+        - O(n^2)
+      answer: 0
+      explanation: Most nodes are near the bottom and sift down only a little; the sum is linear.
+      difficulty: 5
+    - id: pl-merge-k-lists
+      kind: mcq
+      prompt: Merging k sorted lists holding N items in total, using a heap of the current list heads. Time?
+      options:
+        - O(N log k)
+        - O(N log N)
+        - O(N k)
+        - O(k log N)
+      answer: 0
+      explanation: The heap never holds more than k items, and each of the N items is pushed and popped once.
+      difficulty: 4
+  knapsack-01:
+    - id: pl-knapsack-value
+      kind: mcq
+      prompt: Weights [1, 3, 4, 5], values [1, 4, 5, 7], capacity 7, each item at most once. Maximum value?
+      options:
+        - "9"
+        - "8"
+        - "11"
+        - "10"
+      answer: 0
+      explanation: Items of weight 3 and 4 give 9. Weight 5 + 1 gives only 8.
+      difficulty: 4
+    - id: pl-pseudo-polynomial
+      kind: mcq
+      prompt: The knapsack DP takes O(n * W) time. Why is it called pseudo-polynomial?
+      options:
+        - W is a number whose value can be exponential in the number of digits needed to write it
+        - It is polynomial only for small n
+        - It uses floating-point numbers
+        - It is actually exponential in n
+      answer: 0
+      explanation: Capacity 10^18 fits in 60 bits but makes the table impossibly large.
+      difficulty: 5
+  sliding-window:
+    - id: pl-abba-left-back
+      kind: output
+      prompt: This longest-substring-without-repeats solution moves left without taking a max. What is printed for "abba"?
+      code:
+        python: |
+          def longest(s):
+              last, left, best = {}, 0, 0
+              for i, c in enumerate(s):
+                  if c in last:
+                      left = last[c] + 1
+                  last[c] = i
+                  best = max(best, i - left + 1)
+              return best
+          print(longest("abba"))
+      options:
+        - "3"
+        - "2"
+        - "4"
+        - "1"
+      answer: 0
+      explanation: At the last a, left jumps back from 2 to 1. It should be left = max(left, last[c] + 1); the right answer is 2.
+      difficulty: 5
+    - id: pl-min-window
+      kind: mcq
+      prompt: Smallest window of "ADOBECODEBANC" containing all of A, B and C?
+      options:
+        - BANC
+        - ADOBEC
+        - CODEBA
+        - ABC
+      answer: 0
+      explanation: Grow the right edge until all are covered, then shrink the left edge as far as possible.
+      difficulty: 4
+    - id: pl-window-negatives
+      kind: mcq
+      prompt: When does the shrinking two-pointer window fail for "count subarrays with sum exactly k"?
+      options:
+        - When the array can hold negative numbers
+        - When k is 0
+        - When the array is sorted
+        - When the array has duplicates
+      answer: 0
+      explanation: With negatives, growing the window can lower the sum, so shrinking is no longer safe. Use prefix sums.
+      difficulty: 5
+  topological-sort:
+    - id: pl-kahn-short
+      kind: mcq
+      prompt: Kahn's algorithm outputs fewer nodes than the graph has. What does this mean?
+      options:
+        - The graph has a cycle
+        - The graph is disconnected
+        - Some nodes have no edges
+        - The queue was too small
+      answer: 0
+      explanation: Nodes in a cycle never reach in-degree 0. Disconnected parts are still output.
+      difficulty: 4
+    - id: pl-topo-count
+      kind: mcq
+      prompt: Three tasks with edges a → b and a → c. How many valid topological orders are there?
+      options:
+        - "2"
+        - "1"
+        - "3"
+        - "6"
+      answer: 0
+      explanation: a comes first, then b and c in either order.
+      difficulty: 4
+    - id: pl-dfs-topo
+      kind: mcq
+      prompt: With DFS, a topological order is which?
+      options:
+        - The reverse of the order in which nodes finish
+        - The order in which nodes are first visited
+        - The order in which nodes finish
+        - Any DFS order
+      answer: 0
+      explanation: A node finishes only after everything it points to, so reversing finish order puts it first.
+      difficulty: 5
+  tree-patterns:
+    - id: pl-lca-ancestor
+      kind: mcq
+      prompt: In a binary tree, node 4 is a descendant of node 5. What is the lowest common ancestor of 5 and 4?
+      options:
+        - "5"
+        - The parent of 5
+        - The root
+        - "4"
+      answer: 0
+      explanation: A node counts as its own ancestor.
+      difficulty: 4
+    - id: pl-path-sum-leaf
+      kind: mcq
+      prompt: A root with value 1 has only a left child with value 2. Is there a root-to-leaf path summing to 1?
+      options:
+        - No, the root is not a leaf, so the only path sums to 3
+        - Yes, the root alone
+        - Yes, because the right child is empty
+        - It depends on the traversal
+      answer: 0
+      explanation: A check that returns true when it reaches an empty child accepts the root here wrongly.
+      difficulty: 5
+    - id: pl-preorder-no-nulls
+      kind: mcq
+      prompt: Can a binary tree be rebuilt uniquely from its preorder alone, without null markers?
+      options:
+        - No, for example 1 with left child 2 and 1 with right child 2 give the same preorder
+        - Yes, always
+        - Only for full trees
+        - Yes, if the values are distinct
+      answer: 0
+      explanation: Include null markers, or pair preorder with inorder.
+      difficulty: 5
+  tries:
+    - id: pl-search-vs-prefix
+      kind: mcq
+      prompt: A trie holds only "app". What do search("ap") and startsWith("ap") return?
+      options:
+        - false and true
+        - true and true
+        - false and false
+        - true and false
+      answer: 0
+      explanation: The path exists, but no word ends at "ap".
+      difficulty: 4
+    - id: pl-end-flag
+      kind: bug
+      prompt: A trie has no end-of-word flag; search returns true whenever the path exists. After inserting "apple", what does search("app") return?
+      options:
+        - true, which is wrong
+        - "false"
+        - An error
+        - It depends on insertion order
+      answer: 0
+      explanation: Every prefix of an inserted word would count as a word. Mark where words end.
+      difficulty: 5
+    - id: pl-trie-node-count
+      kind: mcq
+      prompt: How many nodes, not counting the root, after inserting "tea", "ten" and "to"?
+      options:
+        - "5"
+        - "8"
+        - "3"
+        - "6"
+      answer: 0
+      explanation: t, e, a, n, o. Shared prefixes share nodes.
+      difficulty: 4
+  union-find:
+    - id: pl-uf-cost
+      kind: mcq
+      prompt: With path compression and union by rank, what is the amortized cost per operation?
+      options:
+        - Inverse Ackermann, effectively constant
+        - O(log n)
+        - O(n)
+        - O(1) exactly, with no amortization
+      answer: 0
+      explanation: Either trick alone gives O(log n); together they give α(n), at most 4 for any real input.
+      difficulty: 5
+    - id: pl-uf-first-cycle
+      kind: mcq
+      prompt: Edges (1, 2), (3, 4), (2, 3), (1, 4) are added in order with union-find. Which edge first joins two nodes already connected?
+      options:
+        - (1, 4)
+        - (2, 3)
+        - (3, 4)
+        - None of them
+      answer: 0
+      explanation: After the first three, all four nodes are in one set.
+      difficulty: 4
+    - id: pl-uf-components
+      kind: mcq
+      prompt: Six nodes 0..5, unions (0, 1), (2, 3), (1, 2). How many components remain?
+      options:
+        - "3"
+        - "2"
+        - "4"
+        - "6"
+      answer: 0
+      explanation: "{0, 1, 2, 3}, {4} and {5}. Untouched nodes are components too."
+      difficulty: 4
+  bst:
+    - id: pl-validate-children-only
+      kind: bug
+      prompt: A BST check only compares each node with its direct children. Which tree does it wrongly accept?
+      options:
+        - Root 5, left 4, right 6, and 6 has a left child 3
+        - Root 5, left 4, right 6
+        - Root 2, left 1, right 3
+        - A single node
+      answer: 0
+      explanation: 3 is less than 6, but it sits in 5's right subtree. Pass down the allowed (low, high) range.
+      difficulty: 5
+    - id: pl-sorted-insert-height
+      kind: mcq
+      prompt: Inserting 1, 2, 3, 4, 5 in that order into an empty plain BST. Height, counted in edges?
+      options:
+        - "4"
+        - "2"
+        - "3"
+        - "5"
+      answer: 0
+      explanation: Each value goes right of the last, making a chain. Self-balancing trees prevent this.
+      difficulty: 4
+    - id: pl-delete-two-children
+      kind: mcq
+      prompt: Deleting a BST node with two children. What replaces its value?
+      options:
+        - Its inorder successor (smallest in the right subtree) or predecessor
+        - Its left child
+        - Its right child
+        - The root
+      answer: 0
+      explanation: That value keeps the ordering valid; then delete it from its old spot, where it has at most one child.
+      difficulty: 4
+  design-data-structures:
+    - id: pl-lru-trace
+      kind: mcq
+      prompt: LRU cache with capacity 2. put(1, 1), put(2, 2), get(1), put(3, 3), get(2). What does the last get return?
+      options:
+        - "-1"
+        - "2"
+        - "1"
+        - "3"
+      answer: 0
+      explanation: get(1) makes 1 the most recent, so put(3, 3) evicts 2.
+      difficulty: 5
+    - id: pl-lru-structure
+      kind: mcq
+      prompt: Which structures give an LRU cache O(1) get and put?
+      options:
+        - A hash map pointing into a doubly linked list
+        - A sorted array
+        - A heap ordered by last use
+        - A singly linked list alone
+      answer: 0
+      explanation: The map finds the node; the doubly linked list moves or removes it in O(1).
+      difficulty: 4
+    - id: pl-random-set-remove
+      kind: mcq
+      prompt: A set must support insert, remove and getRandom, all in O(1). How is remove done?
+      options:
+        - Swap the item with the last array slot, pop the end, and fix the moved item's index in the map
+        - Delete it from the middle of the array
+        - Mark it deleted and skip it in getRandom
+        - Rebuild the array
+      answer: 0
+      explanation: Marking deleted breaks uniform randomness and O(1) getRandom as tombstones pile up.
+      difficulty: 5
+  dp-advanced-patterns:
+    - id: pl-burst-balloons
+      kind: mcq
+      prompt: Burst balloons [3, 1, 5, 8]. Bursting i earns left * i * right with neighbours at that moment, and the ends count as 1. Maximum coins?
+      options:
+        - "167"
+        - "160"
+        - "120"
+        - "192"
+      answer: 0
+      explanation: Think of which balloon bursts last in each range; interval DP over that choice gives 167.
+      difficulty: 5
+    - id: pl-bitmask-states
+      kind: mcq
+      prompt: Bitmask DP for the travelling salesman over n = 20 cities uses states (visited set, current city). Roughly how many states?
+      options:
+        - About 2 * 10^7
+        - About 400
+        - About 20!
+        - About 10^5
+      answer: 0
+      explanation: 2^20 * 20 is about 21 million, far below 20! (about 2.4 * 10^18).
+      difficulty: 5
+    - id: pl-digit-dp-tight
+      kind: mcq
+      prompt: In digit DP counting numbers up to N, what does the "tight" flag record?
+      options:
+        - Whether the digits chosen so far equal N's prefix, which limits the next digit
+        - Whether the number has leading zeros
+        - Whether the number is even
+        - Whether the answer overflowed
+      answer: 0
+      explanation: While tight, the next digit can go only up to N's digit at that position.
+      difficulty: 5
+  dp-edit-distance:
+    - id: pl-edit-horse
+      kind: mcq
+      prompt: Edit distance (insert, delete, replace) from "horse" to "ros", and from "" to "abc"?
+      options:
+        - 3 and 3
+        - 4 and 3
+        - 3 and 0
+        - 2 and 3
+      answer: 0
+      explanation: horse → rorse → rose → ros. An empty string needs one insert per letter.
+      difficulty: 4
+    - id: pl-edit-intention
+      kind: mcq
+      prompt: Edit distance from "intention" to "execution"?
+      options:
+        - "5"
+        - "4"
+        - "6"
+        - "8"
+      answer: 0
+      explanation: The shared ending "tion" costs nothing; five edits fix "inten" into "execu".
+      difficulty: 5
+  dp-on-trees:
+    - id: pl-tree-robber
+      kind: mcq
+      prompt: Root 3 has children 2 and 3. The 2 has one child 3; the other 3 has one child 1. No parent and child both taken. Maximum?
+      options:
+        - "7"
+        - "9"
+        - "6"
+        - "8"
+      answer: 0
+      explanation: Root 3 plus the grandchildren 3 and 1 is 7. Each node returns (best with it, best without it).
+      difficulty: 5
+    - id: pl-tree-max-path-negative
+      kind: mcq
+      prompt: Maximum path sum (any node to any node) in a tree with the single node -3?
+      options:
+        - "-3"
+        - "0"
+        - "3"
+        - Undefined
+      answer: 0
+      explanation: The path must contain at least one node. Starting the best at 0 returns a wrong 0.
+      difficulty: 5
+  knapsack-unbounded:
+    - id: pl-coin-combinations
+      kind: mcq
+      prompt: Coins 1, 2 and 5, each usable any number of times. How many combinations (order ignored) make 5?
+      options:
+        - "4"
+        - "9"
+        - "3"
+        - "5"
+      answer: 0
+      explanation: 5, 2+2+1, 2+1+1+1, 1+1+1+1+1. Counting orders gives 9.
+      difficulty: 5
+    - id: pl-loop-order
+      kind: mcq
+      prompt: For coin change counting, coins in the outer loop and amounts in the inner loop count combinations. Amounts outer and coins inner count what?
+      options:
+        - Ordered sequences, so 1+2 and 2+1 count separately
+        - The same combinations
+        - Only sequences using each coin once
+        - The fewest coins
+      answer: 0
+      explanation: With amounts outside, every coin can be the last one added at every amount, so order matters.
+      difficulty: 5
+    - id: pl-coin-impossible
+      kind: mcq
+      prompt: Fewest coins to make 3 using only coin 2?
+      options:
+        - Impossible (usually returned as -1)
+        - "1"
+        - "2"
+        - "0"
+      answer: 0
+      explanation: Initialise with infinity, not 0, and map an unreachable amount to -1.
+      difficulty: 4
+  monotonic-stack:
+    - id: pl-next-greater
+      kind: mcq
+      prompt: Next greater element to the right for each of [2, 1, 2, 4, 3] (-1 if none)?
+      options:
+        - "[4, 2, 4, -1, -1]"
+        - "[4, 2, 4, -1, 3]"
+        - "[2, 2, 4, -1, -1]"
+        - "[1, 2, 4, 3, -1]"
+      answer: 0
+      explanation: The first 2 needs a strictly greater value, so it skips the later 2 and takes 4.
+      difficulty: 4
+    - id: pl-histogram
+      kind: mcq
+      prompt: Largest rectangle in the histogram [2, 1, 5, 6, 2, 3]?
+      options:
+        - "10"
+        - "12"
+        - "6"
+        - "8"
+      answer: 0
+      explanation: Heights 5 and 6 at width 2 give 10.
+      difficulty: 5
+    - id: pl-rain-water
+      kind: mcq
+      prompt: Trapped rain water for [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]?
+      options:
+        - "6"
+        - "5"
+        - "7"
+        - "8"
+      answer: 0
+      explanation: Each cell holds min(highest left, highest right) minus its own height.
+      difficulty: 5
+  shortest-paths:
+    - id: pl-dijkstra-negative
+      kind: mcq
+      prompt: Why can Dijkstra's algorithm give a wrong answer when one edge is negative?
+      options:
+        - It finalises a node when popped, but a later negative edge could still shorten it
+        - It cannot store negative numbers
+        - It loops forever
+        - It is only wrong when there are cycles
+      answer: 0
+      explanation: Use Bellman-Ford (or SPFA, carefully) for negative edges.
+      difficulty: 4
+    - id: pl-dijkstra-stale
+      kind: bug
+      prompt: In heap-based Dijkstra a node is pushed several times. A popped entry's distance is larger than the best already known. What should the code do?
+      options:
+        - Skip it
+        - Relax its edges anyway
+        - Push it back
+        - Stop the algorithm
+      answer: 0
+      explanation: Relaxing from stale entries wastes time and can turn O(E log V) into much more.
+      difficulty: 5
+    - id: pl-bellman-rounds
+      kind: mcq
+      prompt: Bellman-Ford on n nodes. How many relaxation rounds are needed, and what does an improvement in one extra round mean?
+      options:
+        - n - 1 rounds; an improvement after them means a reachable negative cycle
+        - n rounds; an improvement means a positive cycle
+        - log n rounds; an improvement means nothing
+        - n - 1 rounds; an improvement means a disconnected graph
+      answer: 0
+      explanation: A shortest path has at most n - 1 edges. Anything still improving loops forever.
+      difficulty: 5
+    - id: pl-zero-one-bfs
+      kind: mcq
+      prompt: All edge weights are 0 or 1. What gives shortest paths in O(V + E)?
+      options:
+        - A deque, pushing 0-weight neighbours at the front and 1-weight ones at the back
+        - Plain BFS with a queue
+        - DFS
+        - Sorting the edges first
+      answer: 0
+      explanation: Plain BFS treats 0 edges as 1 and gives wrong distances.
+      difficulty: 5
+  dp-squares:
+    - id: pl-maximal-square
+      kind: mcq
+      prompt: "Largest square of 1s, in area, in the rows 10100, 10111, 11111, 10010?"
+      options:
+        - "4"
+        - "9"
+        - "6"
+        - "2"
+      answer: 0
+      explanation: A 2 by 2 block in rows 2-3 and columns 3-4. A 3 by 3 block of 1s does not exist.
+      difficulty: 5
+    - id: pl-perfect-squares
+      kind: mcq
+      prompt: Fewest perfect squares adding up to 12, and to 13?
+      options:
+        - 3 and 2
+        - 2 and 2
+        - 3 and 3
+        - 4 and 2
+      answer: 0
+      explanation: 12 = 4 + 4 + 4 (greedy 9 + 1 + 1 + 1 uses 4). 13 = 4 + 9.
+      difficulty: 5
+    - id: pl-square-recurrence
+      kind: fill
+      prompt: "For a cell holding 1, the side of the largest square ending there is 1 + ____ of the squares ending above, to the left and above-left"
+      options:
+        - the minimum
+        - the maximum
+        - the sum
+        - the average
+      answer: 0
+      explanation: The smallest neighbouring square limits how far the new square can extend.
+      difficulty: 4
