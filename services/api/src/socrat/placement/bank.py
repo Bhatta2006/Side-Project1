@@ -55,9 +55,7 @@ def load(folder: Path, catalog: "Catalog") -> dict[str, list[QuizItem]]:
             if qualified not in catalog.concepts:
                 raise ValueError(f"{path.name}: unknown concept {qualified}")
             existing = items.setdefault(qualified, [])
-            taken = {q.id for q in catalog.concepts[qualified].quiz} | {
-                q.id for q in catalog.concepts[qualified].retired_quiz
-            }
+            taken = {q.id for q in catalog.concepts[qualified].quiz}
             for q in questions:
                 if q.difficulty < MIN_DIFFICULTY:
                     raise ValueError(f"{qualified}/{q.id}: placement items are difficulty 4 or 5")
