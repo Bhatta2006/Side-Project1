@@ -14,8 +14,8 @@ from test_learner_api import client, login, onboard  # noqa: F401
 
 from socrat import models
 from socrat.catalog.registry import default_catalog
+from socrat.learn import quizzes, transfers
 from socrat.learn import service as learn
-from socrat.learn import transfers
 from socrat.models import Enrollment, User
 from socrat.placement import engine as placement_engine
 
@@ -36,7 +36,7 @@ def clock(monkeypatch):
 
 
 def correct_choice(cat, session_id: str, question: dict) -> int:
-    item = next(q for q in cat.concept(question["concept"]).quiz if q.id == question["id"])
+    item = quizzes.item(cat, question["concept"], question["id"])  # lesson quiz or hard bank
     return item.shown(session_id)["answer"]
 
 

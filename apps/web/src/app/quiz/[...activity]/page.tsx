@@ -69,9 +69,8 @@ function QuizHeader({ title, topic, count, value }: { title: string; topic?: str
   );
 }
 
-/** Difficulty climbs with each correct answer; misses are limited. Shapes and numbers, no colour coding. */
+/** Misses are limited. Difficulty is never shown: every checkpoint question is a hard one. */
 function GateMeter({ gate, asked }: { gate: Gate; asked: number }) {
-  const position = Math.max(0, gate.levels.indexOf(gate.level));
   const left = gate.max_strikes - gate.strikes;
   return (
     <div className="mb-8 grid gap-4 paper rounded-card p-5 sm:grid-cols-[1fr_auto] sm:items-center lg:p-6">
@@ -79,14 +78,8 @@ function GateMeter({ gate, asked }: { gate: Gate; asked: number }) {
         <p className="flex items-center gap-2 font-semibold"><StatusIcon status="locked" size={20} /> Checkpoint: {gate.module}</p>
         <p className="mt-1 text-sm text-muted-foreground">
           {gate.unlocks ? <>Pass to unlock <span className="font-semibold text-foreground">{gate.unlocks}</span>. </> : null}
-          Questions get harder each time you are right. Results come at the end.
+          Every question here is a hard one. Results come at the end.
         </p>
-        <div className="mt-4 flex items-end gap-1.5" role="img" aria-label={`Difficulty level ${position + 1} of ${gate.levels.length}`}>
-          {gate.levels.map((level, i) => (
-            <span key={level} className={cn('w-7 rounded-md', i <= position ? 'bg-primary' : 'bg-raised')} style={{ height: `${10 + i * 8}px` }} />
-          ))}
-          <span className="ml-2 text-[13px] text-muted-foreground">Difficulty {position + 1} of {gate.levels.length}</span>
-        </div>
       </div>
       <div className="flex items-center gap-6 text-sm">
         <div>
@@ -114,7 +107,7 @@ function GateResult({ gate }: { gate: Gate }) {
         <div aria-hidden="true" className="pointer-events-none absolute right-6 -bottom-3 hidden w-[170px] sm:block"><SocFigure books mood="proud" idle className="h-auto w-full" /></div>
         <p className="text-[15px] text-(--card-muted)">Checkpoint passed. Weighted score {percent}%.</p>
         <h1 className="type-display-l mt-2">{gate.unlocks ? `${gate.unlocks} unlocked` : 'Course checkpoint passed'}</h1>
-        <p className="mt-3 text-base text-(--card-muted)">{gate.hard_correct} correct at the hardest level. Your plan now opens the next module.</p>
+        <p className="mt-3 text-base text-(--card-muted)">{gate.hard_correct} correct on the toughest questions. Your plan now opens the next module.</p>
         {gate.unlocks ? (
           <Link href="/plan" className="mt-5 flex min-h-14 items-center gap-3 rounded-[16px] bg-proof px-4 py-3 font-semibold text-proof-foreground transition-opacity hover:opacity-90">
             <StatusIcon status="not_seen" size={22} />
@@ -131,7 +124,7 @@ function GateResult({ gate }: { gate: Gate }) {
       <p className="flex items-center gap-2 text-[15px] text-muted-foreground"><AttentionIcon /> Checkpoint: {gate.module}. Score {percent}%.</p>
       <h1 className="type-display-l mt-2">Not yet</h1>
       <p className="mt-3 max-w-xl text-base text-muted-foreground sm:pr-[130px]">
-        Passing needs {Math.round(gate.pass_score * 100)}% and {gate.hard_needed} correct at the hardest level ({gate.hard_correct} this time).
+        Passing needs {Math.round(gate.pass_score * 100)}% and {gate.hard_needed} correct on the toughest questions ({gate.hard_correct} this time).
         Your plan added focused reviews on the weakest topics.
       </p>
       {gate.retry_at ? <p className="mt-4 inline-flex rounded-full border border-border-strong px-4 py-2 text-sm font-semibold">Next attempt opens {formatStamp(gate.retry_at)}</p> : null}

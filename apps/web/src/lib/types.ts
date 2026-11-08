@@ -623,9 +623,6 @@ export interface Gate {
   max_items: number;
   max_strikes: number;
   strikes: number;
-  levels: number[];
-  level: number;
-  hard_level: number;
   hard_needed: number;
   hard_correct: number;
   pass_score: number;

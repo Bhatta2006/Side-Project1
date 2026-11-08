@@ -607,7 +607,8 @@ def build_plan(
                             module,
                             f"Checkpoint: {title}",
                             CHECKPOINT_MINUTES,
-                            reason="Questions get harder as you get them right." + unlocks,
+                            reason="Every question here is a hard one. Results come at the end."
+                            + unlocks,
                             code="checkpoint",
                         )
                     )
