@@ -1,4 +1,6 @@
-FROM node:24-alpine AS build
+# Install and build on the native build host: running node/npm under QEMU emulation crashes
+# (Illegal instruction). Only the production node_modules are fetched for the target CPU.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /app
 ARG API_INTERNAL_URL=http://api:8000
 ENV API_INTERNAL_URL=$API_INTERNAL_URL
@@ -14,12 +16,21 @@ COPY apps/web apps/web
 COPY services/api/src/socrat/checks/engine.py services/api/src/socrat/checks/engine.py
 RUN npm run build --workspace @socrat/web
 
+# Production dependencies for the image's CPU, installed without running anything for it.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS deps
+ARG TARGETARCH
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
+ENV npm_config_fetch_retries=5 npm_config_fetch_retry_mintimeout=10000 npm_config_fetch_retry_maxtimeout=120000
+RUN CPU=$([ "$TARGETARCH" = "arm64" ] && echo arm64 || echo x64)  && npm ci --omit=dev --ignore-scripts --os=linux --libc=musl --cpu=$CPU
+
 FROM node:24-alpine AS runtime
 LABEL org.opencontainers.image.source="https://github.com/Bhatta2006/Socrat"
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/apps/web ./apps/web
 USER node
 EXPOSE 3000
