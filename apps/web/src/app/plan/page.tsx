@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, MessageCircle } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
-import { KIND_LABEL, NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, formatStamp, hours } from '@/lib/routes';
+import { NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, hours } from '@/lib/routes';
 import type { PlanView, ProjectView, RoadmapItem } from '@/lib/types';
 import { Milestones, PathStyles, WeeklyReviewPanel } from '@/components/socrat/plan-adaptive';
 import { ProposalList } from '@/components/socrat/proposals';
@@ -23,6 +23,7 @@ import { Soc } from '@/components/socrat/illustration';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ReasonChip } from '@/components/socrat/reason-chip';
+import { NextTwoWeeks, PlanChanges } from '@/components/socrat/plan-schedule';
 
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
@@ -307,46 +308,11 @@ export default function PlanPage() {
             ) : null}
           </Disclosure>
           <Disclosure id="schedule-heading" title="Next two weeks" defaultOpen>
-            <ol className="grid gap-4">
-              {plan.days.map((day, index) => (
-                <li key={day.date}>
-                  <div className="mb-1 flex items-baseline justify-between">
-                    <span className="font-semibold" data-visual-mask="">{index === 0 ? NAME.today : formatDate(day.date, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                    <span className="text-[13px] text-muted-foreground tabular-nums">{day.minutes} min planned</span>
-                  </div>
-                  <ul className="grid gap-1">
-                    {day.items.map(item => (
-                      <li key={item.id} className="text-[15px]">
-                        <Link href={activityHref(item.id)} className="underline-offset-4 hover:underline">{item.title}</Link>
-                        <span className="text-[13px] text-muted-foreground">, {(KIND_LABEL[item.kind] ?? item.kind).toLowerCase()}</span>
-                        {item.reason ? <span className="block text-[13px] text-muted-foreground">{item.reason}</span> : null}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ol>
+            <NextTwoWeeks days={plan.days} />
           </Disclosure>
           {plan.reasons.length || plan.revisions.length ? (
             <Disclosure id="why-heading" title="Why did my plan change?">
-              <ul className="grid gap-2 text-[15px]">
-                {plan.reasons.map(r => <li key={r}>{r}</li>)}
-              </ul>
-              {plan.revisions.length ? (
-                <>
-                  <h3 className="type-label mt-5 mb-2 text-muted-foreground">Recent changes</h3>
-                  <ol className="grid gap-2 text-[15px]">
-                    {plan.revisions.map(rev => (
-                      <li key={rev.at} className="rounded-[16px] bg-raised p-3">
-                        <p className="text-[13px] text-muted-foreground">{formatStamp(rev.at)}. {PACE_LABEL[rev.pace]}. Finish {formatDate(rev.projected_finish)}</p>
-                        {rev.reasons.map(r => <p key={r} className="mt-1">{r}</p>)}
-                        {rev.changes?.added?.length ? <p className="mt-1 text-[14px]"><span className="font-semibold">Added:</span> {rev.changes.added.join(', ')}</p> : null}
-                        {rev.changes?.removed?.length ? <p className="mt-1 text-[14px]"><span className="font-semibold">Removed:</span> {rev.changes.removed.join(', ')}</p> : null}
-                      </li>
-                    ))}
-                  </ol>
-                </>
-              ) : null}
+              <PlanChanges reasons={plan.reasons} revisions={plan.revisions} />
             </Disclosure>
           ) : null}
           {guides.length ? (

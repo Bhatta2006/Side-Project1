@@ -242,6 +242,33 @@ export default function Start() {
 
   if (!allowed || !courses) return error ? <div className="mx-auto max-w-2xl p-6"><ErrorNote message={error} /></div> : <Loading variant="form" label="Loading setup" />;
 
+  // Sign in first: the plan, the placement check and every answer are kept from the start.
+  if (!profile) {
+    return (
+      <div className="mx-auto grid w-full max-w-md gap-8 px-4 pt-12 pb-32 sm:px-6 md:pt-20">
+        <div className="grid justify-items-start gap-3">
+          <Soc size={112} mood="curious" />
+          <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">before we start</p>
+          <h1 className="type-display-l">Make your <span className="hl hl-draw">Socrat</span> account</h1>
+          <p className="text-base text-muted-foreground">A few questions and a short placement check follow. Signing in first means none of it is lost.</p>
+        </div>
+        <div className="grid gap-3">
+          {features?.oidc_login ? (
+            <Button asChild size="lg" className="w-full"><a href="/api/v1/auth/login"><GoogleMark /> Continue with Google</a></Button>
+          ) : null}
+          {features?.dev_login ? (
+            <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => void devSignIn()}>Continue as a simulated learner (development)</Button>
+          ) : null}
+          {features && !features.oidc_login && !features.dev_login ? <p className="text-[15px] text-muted-foreground">Sign-in is not configured on this server.</p> : null}
+        </div>
+        <p className="text-[13px] text-muted-foreground">
+          By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms of service</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
+        </p>
+        {error ? <ErrorNote message={error} /> : null}
+      </div>
+    );
+  }
+
   const position = ORDER.indexOf(step);
   const back = position > (profile?.birth_year ? 1 : 0) ? () => setStep(ORDER[position - 1]) : undefined;
   const toggleDay = (i: number) => setWeekdays(w => (w.includes(i) ? (w.length > 1 ? w.filter(x => x !== i) : w) : [...w, i].sort()));

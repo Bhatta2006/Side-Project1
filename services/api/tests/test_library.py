@@ -79,13 +79,15 @@ def test_library_browse_mark_and_recommend(client):  # noqa: F811
     assert set(meta["platforms"]) == {"LeetCode", "CSES", "Codeforces"}
     assert any(c["id"] == "dsa:two-pointers" for c in meta["concepts"])
 
-    page = client.get("/api/v1/library?concept=dsa:two-pointers&platform=Codeforces&limit=5").json()
+    page = client.get(
+        "/api/v1/library?concept=zero:input-and-arithmetic&platform=Codeforces&limit=5"
+    ).json()
     assert page["total"] > 0 and len(page["items"]) == 5
     assert all(p["platform"] == "Codeforces" and p["rating"] for p in page["items"])
     rated = client.get(
-        "/api/v1/library?platform=Codeforces&rating_min=1500&rating_max=1600&sort=easiest"
+        "/api/v1/library?platform=Codeforces&rating_min=800&rating_max=1000&sort=easiest"
     ).json()["items"]
-    assert rated and all(1500 <= p["rating"] <= 1600 for p in rated)
+    assert rated and all(800 <= p["rating"] <= 1000 for p in rated)
     assert rated == sorted(rated, key=lambda p: p["rating"])
 
     target = page["items"][0]["id"]
@@ -104,7 +106,7 @@ def test_library_browse_mark_and_recommend(client):  # noqa: F811
     solved = client.get("/api/v1/library?status=solved").json()
     assert [p["id"] for p in solved["items"]] == [target]
     unsolved = client.get(
-        "/api/v1/library?concept=dsa:two-pointers&platform=Codeforces&status=unsolved"
+        "/api/v1/library?concept=zero:input-and-arithmetic&platform=Codeforces&status=unsolved"
     )
     assert target not in {p["id"] for p in unsolved.json()["items"]}
     assert client.put("/api/v1/library/problems/cf:0Z", json={}, headers=headers).status_code == 404
@@ -171,7 +173,9 @@ def test_level_view_is_bounded(rating):
 
 def test_public_stats_and_light_summary(client):  # noqa: F811
     stats = client.get("/api/v1/library/stats").json()  # no sign-in needed
-    assert stats["courses"] == 3 and stats["library"] > 10_000 and stats["problems"] > 50
+    assert (
+        stats["courses"] == 3 and 400 <= stats["library"] <= 600
+    )  # the curated list and stats["problems"] > 50
     headers = login(client)
     assert client.get("/api/v1/me/summary").json() == {"streak": None, "minutes": None}
     onboard(client, headers)
@@ -223,7 +227,7 @@ def test_library_ranking_is_cached_per_learner_state_and_matches_direct_scoring(
     from socrat.library import service
 
     index = default_index()
-    states = {"dsa:arrays-hashing": strong()}
+    states: dict = {}  # a new learner: the curated list has picks at their level
     learner = recommend.Learner(course="dsa", states=states, now=NOW, rating=1300, seed="s")
     fits = service.fits_for("u1", learner, index, "dsa:arrays-hashing")
     again = recommend.Learner(course="dsa", states=states, now=NOW, rating=1300, seed="s")
@@ -239,3 +243,27 @@ def test_library_ranking_is_cached_per_learner_state_and_matches_direct_scoring(
     )
     refreshed = service.fits_for("u1", moved, index, "dsa:arrays-hashing")
     assert refreshed is not fits and solved not in refreshed
+
+
+def test_curated_library_is_current_and_keeps_pattern_problems():
+    """curated.json is what scripts/dev/curate_practice.py writes from the imported index."""
+    import importlib.util
+    import json
+
+    from socrat.catalog.practice import default_index
+    from socrat.catalog.registry import REPO_ROOT
+
+    spec = importlib.util.spec_from_file_location(
+        "curate_practice", REPO_ROOT / "scripts" / "dev" / "curate_practice.py"
+    )
+    assert spec and spec.loader
+    curate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(curate)
+    built = curate.build()
+    saved = json.loads((REPO_ROOT / "content" / "practice" / "curated.json").read_text("utf-8"))
+    assert saved == built, "run scripts/dev/curate_practice.py"
+    assert 400 <= built["total"] <= 550
+    known = {p for group in built["by_concept"].values() for p in group}
+    assert curate.pattern_ids(set(default_index().problems)) <= set(built["problems"])
+    assert all(len(group) <= curate.CAP for group in built["by_concept"].values())
+    assert known <= set(built["problems"])

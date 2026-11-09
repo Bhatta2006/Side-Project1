@@ -187,6 +187,28 @@ async def run(engine: Engine, settings: Settings, job_id: str):
         beater.cancel()
 
 
+def start_queued(engine: Engine, settings: Settings, running: set[asyncio.Task]) -> None:
+    """Claim queued generations up to the concurrency limit and run each as a task."""
+    while len(running) < settings.explainer_concurrent_limit and (job_id := claim(engine)):
+        task = asyncio.create_task(run(engine, settings, job_id))
+        running.add(task)
+        task.add_done_callback(running.discard)
+
+
+async def run_forever(engine: Engine, settings: Settings) -> None:
+    """Run visual generations inside the API process, for setups without ``socrat.worker``.
+
+    Without a runner a request stays queued for good and the page waits on "Getting it ready"
+    forever (the bug behind "Watch it work does nothing" locally)."""
+    running: set[asyncio.Task] = set()
+    while True:
+        try:
+            start_queued(engine, settings, running)
+        except Exception:
+            log.exception("playground_claim_failed")
+        await asyncio.sleep(2)
+
+
 def fail(engine: Engine, job_id: str, code: str):
     with Session(engine) as db, db.begin():
         job = db.get(PlaygroundJob, job_id)

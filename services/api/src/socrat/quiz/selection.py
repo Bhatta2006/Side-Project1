@@ -149,9 +149,15 @@ def ladder(steps: list[Step], ctx: Context, cfg: EngineConfig = DEFAULT) -> Ladd
     return Ladder((low, high), (low, high), "target")
 
 
+def served_stems(items: list[Item], steps: list[Step]) -> set[str]:
+    """Stems already asked this session (the same generated question with other values counts)."""
+    keys = {s.item for s in steps}
+    return keys | {i.stem for i in items if i.key in keys}
+
+
 def candidates(items: list[Item], steps: list[Step], ctx: Context) -> list[Item]:
-    """Items the mode may serve at all: pool, status, scope, unseen, language."""
-    served = {s.item for s in steps}
+    """Items the mode may serve at all: pool, status, scope, unseen, language, new question."""
+    served = served_stems(items, steps)
     scope = set(ctx.patterns)
     base = [
         i
@@ -160,7 +166,7 @@ def candidates(items: list[Item], steps: list[Step], ctx: Context) -> list[Item]
         and i.status != "retired"
         and (i.status == "calibrated" or not ctx.mode.calibrated_only)
         and i.pattern in scope
-        and i.key not in served
+        and i.stem not in served
         and i.key not in ctx.seen
         and (not i.languages or ctx.language in i.languages)
     ]
@@ -191,14 +197,14 @@ def topup(items: list[Item], steps: list[Step], ctx: Context) -> list[Item]:
     The assessment pool stays reserved for exams, and exam modes never relax."""
     if ctx.mode.calibrated_only or ctx.mode.paced:
         return []
-    served = {s.item for s in steps}
+    served = served_stems(items, steps)
     scope = set(ctx.patterns)
     live = [
         i
         for i in items
         if i.status != "retired"
         and i.pattern in scope
-        and i.key not in served
+        and i.stem not in served
         and (not i.languages or ctx.language in i.languages)
     ]
     for keep in (

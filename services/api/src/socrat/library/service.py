@@ -148,7 +148,7 @@ def fits_for(
     pool = (
         (index.problems[i] for i in index.by_concept.get(concept, []))
         if concept
-        else index.problems.values()
+        else index.listed.values()
     )
     for p in pool:
         primary = concept or (p["concepts"][0] if p["concepts"] else "")
@@ -230,7 +230,7 @@ def meta(db: Session, catalog: Catalog, user: User, now: int) -> dict:
     learner = learner_for(db, catalog, user, enrollment, now)
     platforms: dict[str, int] = {}
     sheets: dict[str, int] = {}
-    for p in index.problems.values():
+    for p in index.listed.values():
         if not learner.can_practice(p):
             continue
         platforms[p["platform"]] = platforms.get(p["platform"], 0) + 1
@@ -498,7 +498,7 @@ def solved_board(db: Session, catalog, user, enrollment, now: int) -> dict:
     total = Counter({x: 0 for x in levels})
     for _, problem in catalog.problems.values():
         total[getattr(problem, "difficulty", "medium")] += 1
-    for problem in index.problems.values():
+    for problem in index.listed.values():
         total[_level(practice.rating_of(problem))] += 1
 
     today = learn.local_day(user, now)

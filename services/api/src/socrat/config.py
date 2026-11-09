@@ -170,6 +170,9 @@ class Settings(DatabaseSettings):
     explainer_chat_template_kwargs: dict = Field(default_factory=dict)
     explainer_daily_messages: int = Field(default=20, ge=1, le=200)
     explainer_concurrent_limit: int = Field(default=4, ge=1, le=16)
+    # Run queued Playground visuals in the API process. Unset: on in development (no separate
+    # worker there), off elsewhere, where `python -m socrat.worker` runs them.
+    explainer_runner: bool | None = None
     explainer_sandbox_origin: str = ""
     explainer_checker_url: str = ""
     explainer_checker_secret: SecretStr = SecretStr("")
@@ -287,9 +290,12 @@ class Settings(DatabaseSettings):
         self.resend_api_key = _secret_from_file(
             "resend_api_key", self.resend_api_key, self.resend_api_key_file
         )
+        if self.explainer_runner is None:
+            self.explainer_runner = self.environment == "development"
         if self.environment == "test":
             self.codeforces_autosync = False
             self.gen_runner = False
+            self.explainer_runner = False
         from socrat.coursegen.roles import check_roles
 
         check_roles(self.gen_roles)

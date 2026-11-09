@@ -81,7 +81,7 @@ def stats():
         "courses": len(cat.courses),
         "concepts": len(cat.concepts),
         "problems": len(cat.problems),
-        "library": len(practice.default_index().problems),
+        "library": len(practice.default_index().listed),
     }
 
 

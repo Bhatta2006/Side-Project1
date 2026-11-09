@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import QuizItem
 
-MAX_QUESTIONS = 20
+MAX_QUESTIONS = 15  # placement should feel short: at most 15 questions
 SKIP_CAP = 0.6  # most of the path placement may mark as assumed known
 CONFIRM = 2  # correct answers a concept needs before placement believes it
 SPOT_CHECKS = 2  # inferred concepts below the frontier that are tested anyway

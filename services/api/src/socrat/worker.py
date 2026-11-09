@@ -33,10 +33,7 @@ def drain_once(engine: Engine) -> int:
 
 
 def start_jobs(engine: Engine, settings: Settings, running: set[asyncio.Task]):
-    while len(running) < settings.explainer_concurrent_limit and (job_id := jobs.claim(engine)):
-        task = asyncio.create_task(jobs.run(engine, settings, job_id))
-        running.add(task)
-        task.add_done_callback(running.discard)
+    jobs.start_queued(engine, settings, running)
 
 
 REMINDER_SWEEP_SECONDS = 15 * 60

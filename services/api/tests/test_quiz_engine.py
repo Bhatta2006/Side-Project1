@@ -176,6 +176,47 @@ def test_select_is_deterministic_per_seed_and_skips_seen_items():
     assert again.item is not None and again.item.key != first.item.key
 
 
+def test_a_session_never_repeats_one_generated_question_with_new_values():
+    # Every seed of a generator is the same question with other numbers (the owner saw one
+    # loop question four times in one test). Once one is served, the rest are skipped.
+    base = simulate.synthetic_bank()
+    template = [
+        replace(i, key=f"gen:loop:s{n}", family="quiz:loop", seed=n, band=2, pool="practice")
+        for n, i in enumerate(base[:30])
+    ]
+    other = [i for i in base if i.pool == "practice"]
+    items = template + other
+    steps: list[Step] = []
+    for _ in range(12):
+        choice = select(items, steps, ctx())
+        if choice.item is None:
+            break
+        i = choice.item
+        steps.append(Step(i.key, i.pattern, i.band, i.format, "correct"))
+    served = [s.item for s in steps]
+    assert sum(k.startswith("gen:loop:") for k in served) <= 1
+    alone = select(template, [Step("gen:loop:s0", "sim:window", 2, "mcq", "correct")], ctx())
+    assert alone.item is None
+
+
+def test_real_generated_families_appear_once_per_session():
+    cat = default_catalog()
+    bank = pools.bank(cat)
+    family = "quiz:zero:for-loops:accumulator"
+    pattern = next(i.pattern for i in bank if i.family == family and i.seed is not None)
+    items = [i for i in bank if i.pattern == pattern]
+    check = ctx(patterns=(pattern,), thetas={pattern: 1000.0}, language="python")
+    steps: list[Step] = []
+    for _ in range(CHECK.max_items if hasattr(CHECK, "max_items") else 10):
+        choice = select(items, steps, check)
+        if choice.item is None:
+            break
+        i = choice.item
+        steps.append(Step(i.key, i.pattern, i.band, i.format, "correct"))
+    stems = [next(i.stem for i in items if i.key == s.item) for s in steps]
+    assert len(stems) == len(set(stems))
+
+
 def test_select_filters_languages_formats_and_exposure():
     items = [
         replace(i, languages=("cpp",)) if i.band == 1 else i for i in simulate.synthetic_bank()

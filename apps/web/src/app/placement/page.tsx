@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Check } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import type { PlacementQuestion, PlacementSummary } from '@/lib/types';
@@ -14,6 +15,50 @@ import { Progress } from '@/components/ui/progress';
 import { codeSpans } from '@/components/markdown';
 import { SocFigure } from '@/components/socrat/soc';
 
+const BUILD_STEPS = [
+  'Reading your answers',
+  'Finding the edge of what you know',
+  'Building your personalised plan',
+  'Soc is getting ready',
+];
+const BUILD_STEP_MS = 900;
+
+/** Shown between the last answer and the summary while the plan is put together. */
+function PlanBuilding({ step }: { step: number }) {
+  return (
+    <div className="mx-auto grid w-full max-w-md justify-items-center gap-8 px-4 pt-16 pb-32 text-center sm:px-6 md:pt-24" role="status" aria-live="polite">
+      <SocFigure books mood="happy" idle size={150} />
+      <div className="grid gap-1">
+        <p className="font-hand -rotate-2 text-[22px] text-pen">one moment</p>
+        <h1 className="type-display-m">Making your plan</h1>
+      </div>
+      <ol className="grid w-full gap-2 text-left">
+        {BUILD_STEPS.map((label, i) => {
+          const done = i < step;
+          const now = i === step;
+          return (
+            <li key={label} className={`flex min-h-12 items-center gap-3 rounded-[16px] px-4 transition-all duration-500 motion-reduce:transition-none ${i > step ? 'opacity-35' : 'opacity-100'} ${now ? 'bg-raised' : ''}`}>
+              <span className={`grid size-6 flex-none place-items-center rounded-full border-2 transition-colors duration-500 ${done ? 'border-primary bg-primary text-primary-foreground' : now ? 'border-primary' : 'border-border'}`} aria-hidden="true">
+                {done ? <Check className="size-3.5" strokeWidth={3} /> : now ? <span className="size-2 animate-pulse rounded-full bg-primary motion-reduce:animate-none" /> : null}
+              </span>
+              <span className={now ? 'font-semibold' : 'text-muted-foreground'}>{label}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/** Placement questions are answered, not looked up: no copying, cutting, pasting or selecting. */
+const noCopy = {
+  onCopy: (e: React.ClipboardEvent) => e.preventDefault(),
+  onCut: (e: React.ClipboardEvent) => e.preventDefault(),
+  onPaste: (e: React.ClipboardEvent) => e.preventDefault(),
+  onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+  onDragStart: (e: React.DragEvent) => e.preventDefault(),
+};
+
 export default function Placement() {
   const allowed = useGuard('enrolled');
   const { refresh } = useSession();
@@ -22,14 +67,38 @@ export default function Placement() {
   const [choice, setChoice] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // -1: not building; 0..n: the build step on screen. Only a just-finished placement plays it.
+  const [building, setBuilding] = useState(-1);
 
-  const finish = useCallback(async () => {
-    setSummary(await api.get<PlacementSummary>('/placement/summary'));
+  const finish = useCallback(async (animate = false) => {
+    if (!animate) {
+      setSummary(await api.get<PlacementSummary>('/placement/summary'));
+      await refresh();
+      return;
+    }
+    setBuilding(0);
+    const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const pace = reduced ? 250 : BUILD_STEP_MS;
+    const ready = api.get<PlacementSummary>('/placement/summary');
+    for (let i = 1; i <= BUILD_STEPS.length; i++) {
+      await new Promise(r => setTimeout(r, pace));
+      setBuilding(i);
+    }
+    try {
+      setSummary(await ready);
+    } catch (e) {
+      setError(explain(e));
+    } finally {
+      setBuilding(-1);
+    }
+    // Last: refreshing the session re-checks the guard, which would cut the sequence short.
     await refresh();
   }, [refresh]);
+  const loaded = useRef(false);
 
   useEffect(() => {
-    if (!allowed) return;
+    if (!allowed || loaded.current) return;
+    loaded.current = true;
     api
       .get<PlacementQuestion>('/placement')
       .then(async q => {
@@ -47,7 +116,7 @@ export default function Placement() {
       const next = await api.post<PlacementQuestion>('/placement/answer', { item: state.question.id, choice: answer });
       setState(next);
       setChoice(null);
-      if (next.done) await finish();
+      if (next.done) await finish(true);
     } catch (e) {
       setError(explain(e));
     } finally {
@@ -55,7 +124,9 @@ export default function Placement() {
     }
   }
 
-  if (!allowed || (!state && !error)) return <Loading variant="quiz" label="Loading the placement check" />;
+  if (building >= 0) return <PlanBuilding step={building} />;
+
+  if (!summary && (!allowed || (!state && !error))) return <Loading variant="quiz" label="Loading the placement check" />;
 
   if (summary) {
     return (
@@ -101,7 +172,7 @@ export default function Placement() {
         {state?.max_questions ? <Progress value={(100 * state.asked) / state.max_questions} aria-label="Placement progress" /> : null}
       </div>
       {q ? (
-        <div key={q.id} className="grid gap-5 animate-in fade-in duration-200">
+        <div key={q.id} className="grid gap-5 select-none animate-in fade-in duration-200 [-webkit-touch-callout:none]" {...noCopy}>
           <Badge className="w-fit">{q.topic}</Badge>
           <h1 className="type-title min-h-[2.4em] text-balance">{codeSpans(q.prompt)}</h1>
           {q.code ? <pre className="code-block">{q.code}</pre> : null}
