@@ -7,6 +7,7 @@ Built offline by scripts/content/import_practice.py; metadata and links only.
 import json
 import os
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
@@ -89,12 +90,20 @@ COMPANY_NAMES = {
 
 @dataclass
 class PracticeIndex:
+    # Every imported problem, so company lists and a learner's earlier marks still resolve.
     problems: dict[str, dict] = field(default_factory=dict)
+    # The curated few per concept (curated.json) that the library and recommendations serve.
     by_concept: dict[str, list[str]] = field(default_factory=dict)
+    listed: dict[str, dict] = field(default_factory=dict)
     companies: dict[str, dict] = field(default_factory=dict)
     implementations: dict[tuple[str, str], list[dict]] = field(default_factory=dict)
     book: dict = field(default_factory=dict)
     _urls: dict[str, str] = field(default_factory=dict, repr=False)
+
+    def __post_init__(self) -> None:
+        # Built by hand (tests, tools): everything given is listed.
+        if not self.listed:
+            self.listed = dict(self.problems)
 
     def for_concept(self, concept: str, band: str, limit: int = 8) -> list[dict]:
         """Best external problems for a concept, matched to the learner's level."""
@@ -130,13 +139,22 @@ class PracticeIndex:
         sheet: str = "",
         ids: set[str] | None = None,
     ) -> list[dict]:
-        """Filter the whole library. Callers sort; this keeps index order (by id)."""
+        """Filter the curated library. Callers sort; this keeps index order (by id).
+
+        ``ids`` (the learner's own solved, bookmarked or attempted problems) searches every
+        imported problem, so a problem they marked before the curation still shows."""
         words = re.findall(r"[a-z0-9]+", query.lower())
-        pool = (
-            (self.problems[i] for i in self.by_concept.get(concept, []))
-            if concept
-            else self.problems.values()
-        )
+        pool: Iterable[dict]
+        if ids is not None:
+            pool = (
+                self.problems[i]
+                for i in sorted(ids)
+                if i in self.problems and (not concept or concept in self.problems[i]["concepts"])
+            )
+        elif concept:
+            pool = (self.problems[i] for i in self.by_concept.get(concept, []))
+        else:
+            pool = self.listed.values()
         out = []
         for p in pool:
             if ids is not None and p["id"] not in ids:
@@ -205,8 +223,19 @@ def load(root: Path = PRACTICE_ROOT) -> PracticeIndex:
     for line in problems_path.read_text(encoding="utf-8").splitlines():
         problem = json.loads(line)
         index.problems[problem["id"]] = problem
-        for concept in problem["concepts"]:
-            index.by_concept.setdefault(concept, []).append(problem["id"])
+    curated_path = root / "curated.json"
+    if curated_path.exists():
+        # The library shows a short, well-known list per concept, not the whole import.
+        curated = json.loads(curated_path.read_text(encoding="utf-8"))
+        keep = [i for i in curated["problems"] if i in index.problems]
+        index.listed = {i: index.problems[i] for i in sorted(keep)}
+        for concept, ids in curated["by_concept"].items():
+            index.by_concept[concept] = [i for i in ids if i in index.listed]
+    else:
+        index.listed = dict(index.problems)
+        for problem in index.problems.values():
+            for concept in problem["concepts"]:
+                index.by_concept.setdefault(concept, []).append(problem["id"])
     companies_path = root / "companies.json"
     if companies_path.exists():
         index.companies = json.loads(companies_path.read_text(encoding="utf-8"))

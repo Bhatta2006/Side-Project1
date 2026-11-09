@@ -47,6 +47,12 @@ class Item:
     reviewed: bool = True  # False: answers do not count as mastery evidence (§8.7)
     seed: int | None = None  # generated items: the generator seed
 
+    @property
+    def stem(self) -> str:
+        """The question behind the item: every seed of one generator is the same question with
+        different values, so a session serves at most one of them."""
+        return f"gen:{self.family}" if self.seed is not None else self.key
+
 
 def unit(key: str, salt: str = POOL_SALT) -> float:
     """A stable number in [0, 1) for ``key``; independent of process and platform."""

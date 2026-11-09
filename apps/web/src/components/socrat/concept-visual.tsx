@@ -20,6 +20,10 @@ type Shared =
 
 const PHASE: Record<string, string> = { generating: 'Building the visual', checking: 'Checking that it runs', reviewing: 'Reviewing it' };
 const POLL_MS = 2000;
+// A request nobody has started building after this long is stuck (no generator is running).
+const QUEUED_LIMIT_MS = 60_000;
+// Generation itself is bounded server-side; past this the page stops waiting.
+const TOTAL_LIMIT_MS = 6 * 60_000;
 
 /**
  * The concept's visual, in the page where the learner is. It is the same one for every learner,
@@ -33,10 +37,12 @@ export function ConceptVisual({ concept, title, problem }: { concept: string; ti
   const [reporting, setReporting] = useState(false);
   const [reason, setReason] = useState('');
   const [thanks, setThanks] = useState(false);
+  const [since, setSince] = useState<number | null>(null);
+  const [stalled, setStalled] = useState(false);
   const where = { concept, ...(problem ? { problem } : {}) };
 
   const start = useCallback(() => {
-    setBusy(true); setError(''); setThanks(false);
+    setBusy(true); setError(''); setThanks(false); setStalled(false); setSince(Date.now());
     api.post<Shared>('/playground/shared', where)
       .then(setShared)
       .catch(e => setError(e instanceof ApiError && e.code === 'independent_work_in_progress' ? 'Visuals are off while you do this unaided.' : explain(e)))
@@ -47,12 +53,17 @@ export function ConceptVisual({ concept, title, problem }: { concept: string; ti
   // While it is being made (by this learner or another), look again until it is ready.
   useEffect(() => {
     if (shared?.state !== 'generating') return;
+    const waited = Date.now() - (since ?? Date.now());
+    if (waited > TOTAL_LIMIT_MS || (waited > QUEUED_LIMIT_MS && !shared.progress?.phase)) {
+      setStalled(true);
+      return;
+    }
     const timer = setTimeout(() => {
       api.get<Shared>(`/playground/shared?${new URLSearchParams(where)}`).then(setShared).catch(e => setError(explain(e)));
     }, POLL_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shared, concept, problem]);
+  }, [shared, concept, problem, since]);
 
   const report = () => {
     if (shared?.state !== 'ready') return;
@@ -81,10 +92,10 @@ export function ConceptVisual({ concept, title, problem }: { concept: string; ti
     );
   }
 
-  const failed = shared?.state === 'failed';
+  const failed = shared?.state === 'failed' || stalled;
   return (
     <div className="grid gap-3">
-      {shared?.state === 'generating' ? (
+      {shared?.state === 'generating' && !stalled ? (
         <div className="paper rounded-card p-5" role="status">
           <p className="font-semibold">{PHASE[shared.progress.phase ?? ''] ?? 'Getting it ready'}</p>
           <p className="mt-1 text-[15px] text-muted-foreground">
@@ -99,7 +110,13 @@ export function ConceptVisual({ concept, title, problem }: { concept: string; ti
               {thanks ? 'Thanks for flagging it' : failed ? 'That one did not come out' : `Watch ${title} work, step by step`}
             </p>
             <p className="mt-1 text-[15px] text-muted-foreground">
-              {thanks ? 'If enough learners flag it, it is replaced.' : failed ? 'Try once more.' : 'An interactive picture of the idea. Change the inputs and see what happens.'}
+              {thanks
+                ? 'If enough learners flag it, it is replaced.'
+                : stalled
+                  ? 'The visual maker did not pick this up in time. Try again in a moment.'
+                  : failed
+                    ? 'Try once more.'
+                    : 'An interactive picture of the idea. Change the inputs and see what happens.'}
             </p>
           </div>
           <Button disabled={busy} onClick={start}>{failed ? 'Try again' : thanks ? 'Watch it again' : 'Watch it work'}</Button>

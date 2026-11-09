@@ -80,6 +80,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         background = None
         if settings.codeforces_autosync:
             background = asyncio.create_task(autosync.run_forever(engine))
+        visuals = None
+        if settings.explainer_runner and settings.explainer_enabled:
+            from socrat.explainer import jobs as explainer_jobs
+
+            visuals = asyncio.create_task(explainer_jobs.run_forever(engine, settings))
         generation = None
         if settings.gen_runner:
             generation = asyncio.create_task(
@@ -95,6 +100,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             background.cancel()
         if generation is not None:
             generation.cancel()
+        if visuals is not None:
+            visuals.cancel()
         engine.dispose()
 
     app = FastAPI(
