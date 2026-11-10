@@ -39,7 +39,7 @@ from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.catalog.schema import Citation
 from socrat.config import Settings
-from socrat.coursegen import execute, research, roles, search, validation, youtube
+from socrat.coursegen import execute, fetch, research, roles, search, validation, youtube
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -704,6 +704,10 @@ async def run_package(
                 http,
                 broad=course.title,
                 youtube_key=settings.youtube_api_key.get_secret_value(),
+                keys={
+                    "web": settings.web_search_api_key.get_secret_value(),
+                    "openalex": settings.openalex_api_key.get_secret_value(),
+                },
             )
             if hits:  # nothing found: fall back to named sources, still link-checked
                 allowed = {h.url: h for h in hits}
@@ -714,6 +718,8 @@ async def run_package(
         if settings.youtube_transcripts:
             cited = research.add_videos(cited, list(allowed.values()) if allowed else [])
             cited = await youtube.with_transcripts(cited)
+        if settings.research_read_pages and allowed is not None:
+            cited = await fetch.with_pages(cited, http)
         _note(
             engine,
             job_id,
@@ -723,6 +729,7 @@ async def run_package(
                 "sources": [
                     {k: s[k] for k in ("n", "title", "url")}
                     | ({"transcript_chars": len(s["passage"])} if s.get("transcript") else {})
+                    | ({"page_chars": len(s["passage"])} if s.get("page") else {})
                     for s in cited
                 ],
             },

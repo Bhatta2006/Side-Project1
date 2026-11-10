@@ -137,7 +137,10 @@ whole revision round.
 | `SOCRAT_LEARNING_REQUESTS_ENABLED` | Learner-made courses (`/new`) | after a live-model run of the benchmark | set false; existing courses stay readable |
 | `SOCRAT_GEN_VISUALS` | Experience Designer adds lesson visuals | after reviewing a few designed lessons | set false; stored visuals still render |
 | `SOCRAT_MAINTAINER_ENABLED` | Scheduled link checks and repairs | any time; no model | set false |
-| `SOCRAT_RESEARCH_PROVIDERS` | Grounded research, e.g. `["wikipedia","wikibooks","arxiv","open-library","youtube"]` | after one live run | empty list |
+| `SOCRAT_RESEARCH_PROVIDERS` | Grounded research. Keyless: `wikipedia`, `wikibooks`, `wikiversity`, `mit-ocw`, `openstax`, `arxiv`, `openalex`, `open-library`. Keyed: `web`, `youtube` | after one live run | empty list |
+| `SOCRAT_WEB_SEARCH_API_KEY` | Brave Search API key for the `web` provider (articles and the wider web); `web` adds nothing without it | with `web` | empty |
+| `SOCRAT_OPENALEX_API_KEY` | Optional key for `openalex` (it works without one on a small shared allowance) | when papers matter | empty |
+| `SOCRAT_RESEARCH_READ_PAGES` | Read the chosen pages (public https, robots.txt honoured, 6,000 characters each, 3 per lesson) and write from their text instead of the search snippet. On by default; only acts when providers are set | on | set false |
 | `SOCRAT_YOUTUBE_API_KEY` | YouTube Data API v3 key for the `youtube` provider (about 100 lessons a day on the free quota) | with `youtube` | empty |
 | `SOCRAT_YOUTUBE_TRANSCRIPTS` | Video captions as the author's source text (reads the public watch page; no official API) | owner decision | false |
 | `SOCRAT_EXPLAINER_SKETCH_DECLARATIVE` | Sketches as data, no model code | after checking a few generated sketches | set false; old and new sketches both still play |

@@ -100,7 +100,21 @@ def initial(db: Session, course_id: str, start: str | None = None) -> list:
     if course is None:
         return []
     queued = []
-    for n, local in enumerate(initial_slice(course, start)):
+    wanted = initial_slice(course, start)
+    # The lesson started before publish (jobs.early_first_lesson) is the course's first. A
+    # learner placed further in does not begin there: if it is still waiting, it steps aside
+    # so their real first lesson is written first. One already being written is left to finish.
+    for early in db.scalars(
+        select(GenerationJob).where(
+            GenerationJob.course_id == course_id,
+            GenerationJob.kind == "package",
+            GenerationJob.state == "queued",
+            GenerationJob.target.not_in(wanted),
+        )
+    ):
+        if (early.input or {}).get("trigger") == "first":
+            early.state = "cancelled"
+    for n, local in enumerate(wanted):
         latest = db.scalars(
             select(GenerationJob)
             .where(

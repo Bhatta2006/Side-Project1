@@ -40,7 +40,12 @@ ROLE_KIND = {
     "visual": "interactive",
     "practice": "docs",
 }
-MEDIA_KIND = {"video": "video", "playlist": "course", "book": "book"}  # search hit -> Resource
+MEDIA_KIND = {
+    "video": "video",
+    "playlist": "course",
+    "book": "book",
+    "course": "course",
+}  # search hit -> Resource
 MIN_FIT = 3
 
 

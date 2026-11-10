@@ -230,6 +230,15 @@ class Settings(DatabaseSettings):
     # e.g. ["wikipedia", "wikibooks", "arxiv", "open-library"]. Empty: the model names sources from memory
     # and only the link check guards them.
     research_providers: list[str] = Field(default_factory=list)
+    # "web" in research_providers searches articles and the wider web with the Brave Search
+    # API; it adds nothing without this key. "openalex" works without a key on a small shared
+    # allowance and uses this one when set.
+    web_search_api_key: SecretStr = SecretStr("")
+    openalex_api_key: SecretStr = SecretStr("")
+    # Read the pages the researcher picked (public https only, robots.txt honoured) and give
+    # their text to the author, so a lesson is written from the source and not from a
+    # two-line search snippet. Only used when research_providers is set.
+    research_read_pages: bool = True
     # "youtube" in research_providers searches videos and playlists with the YouTube Data API
     # (a free Google Cloud key; about 100 lessons a day on the free quota).
     youtube_api_key: SecretStr = SecretStr("")

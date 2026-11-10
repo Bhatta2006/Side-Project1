@@ -351,3 +351,24 @@ page in a real browser on the hand-authored Programming from Zero course (tabs, 
 no sideways scroll at 375 px, no console errors). Not checked: the cards and timeline layouts
 with real entries in a browser (covered by the API test only), any section planned by a live
 model, the Playwright suites. No migration: sections live in the stored course and concept JSON.
+
+### 2026-11-10, slice 3: the engine finds and reads its own material
+
+| Change | Where |
+|---|---|
+| Four new sources that need no key: Wikiversity and MIT OpenCourseWare (free courses), OpenStax (peer-reviewed open textbooks), OpenAlex (open-access papers in every field) | `coursegen/search.py` |
+| A `web` source for articles and the wider web, through the Brave Search API. It needs `SOCRAT_WEB_SEARCH_API_KEY` and does nothing without it; the key travels in a header, never the URL | `coursegen/search.py`, `config.py` |
+| The pages the researcher chooses are now read, and their text is what the lesson is written from and checked against (before: a two-line search snippet). Public https only, re-checked on every redirect; robots.txt honoured; HTML or plain text only; 1.5 MB cap; scripts, navigation and forms stripped; 6,000 characters a page, three pages a lesson | `coursegen/fetch.py`, `jobs.run_package` |
+| Stop words no longer count as a match ("Algebra and Trigonometry" for "supply and demand"); results from whole-document searches that share no subject word are dropped; the researcher sees the best 24 | `search.gather`, `search.rank` |
+| Fixed, from slice 1: for a learner placed further into the course, the early first lesson could be written before their real first lesson. A waiting early lesson now steps aside at publish | `prefetch.initial` |
+
+Checked: 8 new offline tests (`test_more_sources.py`), one more in `test_engine_any_course.py`,
+the related suites, lint and types. Also run once against the real sites (not part of the test
+suite): all eight keyless sources answered in 1 to 3 seconds for two subjects and four pages
+were read in about a second. Not checked: the `web` source against the real Brave API (no key
+here), any lesson written by a live model from page text, the full API suite for this slice.
+
+To switch on locally, add the new names to `SOCRAT_RESEARCH_PROVIDERS` in `.env`.
+
+Still open from the owner's point 1: sources are searched per lesson, not gathered once per
+course; no Khan Academy or LibreTexts source (neither has a public search API); PDFs are not read.

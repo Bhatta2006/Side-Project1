@@ -85,3 +85,24 @@ def test_an_unscored_dimension_is_unknown_not_a_failure():
     partial = PASS | {"scores": {k: v for k, v in SCORES.items() if k != "accessibility"}}
     passed, _, scores = pkg.verdict(FACTS_OK, partial)
     assert passed and "accessibility" not in scores
+
+
+def test_an_early_lesson_steps_aside_for_a_learner_placed_further_in(learner_outline):
+    from socrat.coursegen import prefetch
+
+    assert run(learner_outline, outline_script())
+    bind = learner_outline.app.state.engine
+    with Session(bind) as db, db.begin():
+        saved = generated.course(db, "ai-basics")
+        assert saved is not None
+        early = db.scalars(select(GenerationJob).where(GenerationJob.kind == "package")).one()
+        later = saved.modules[-1].concepts[0]  # where a placed learner really begins
+        assert early.target != later
+        early_id = early.id
+        queued = prefetch.initial(db, "ai-basics", later)
+        assert queued[0].target == later and queued[0].input["trigger"] == "first"
+        first_id = queued[0].id
+    with Session(bind) as db:
+        stepped = db.get(GenerationJob, early_id)
+        assert stepped is not None and stepped.state == "cancelled"
+    assert jobs.claim(bind) == first_id
