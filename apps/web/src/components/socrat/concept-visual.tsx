@@ -26,33 +26,47 @@ const POLL_MS = 2000;
  * so a click usually shows it at once; only the first request ever waits for it to be made.
  * `problem` makes the server refuse it while that problem is an unaided transfer check.
  */
-export function ConceptVisual({ concept, title, problem }: { concept: string; title: string; problem?: string }) {
+export function ConceptVisual({ concept, title, problem, section, onOpen }: {
+  concept: string;
+  title: string;
+  problem?: string;
+  /** One page of the lesson (0-based): the visual is of that page alone. */
+  section?: number;
+  /** Told when the learner asks for the visual. */
+  onOpen?: () => void;
+}) {
   const [shared, setShared] = useState<Shared | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [reporting, setReporting] = useState(false);
   const [reason, setReason] = useState('');
   const [thanks, setThanks] = useState(false);
-  const where = { concept, ...(problem ? { problem } : {}) };
+  const where = { concept, ...(problem ? { problem } : {}), ...(section === undefined ? {} : { section }) };
+  const query = new URLSearchParams({ concept, ...(problem ? { problem } : {}), ...(section === undefined ? {} : { section: String(section) }) });
+  const part = section !== undefined;
+
+  // Another page of the lesson is another visual: start clean.
+  useEffect(() => { setShared(null); setError(''); setThanks(false); setReporting(false); }, [concept, section]);
 
   const start = useCallback(() => {
     setBusy(true); setError(''); setThanks(false);
+    onOpen?.();
     api.post<Shared>('/playground/shared', where)
       .then(setShared)
       .catch(e => setError(e instanceof ApiError && e.code === 'independent_work_in_progress' ? 'Visuals are off while you do this unaided.' : explain(e)))
       .finally(() => setBusy(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [concept, problem]);
+  }, [concept, problem, section]);
 
   // While it is being made (by this learner or another), look again until it is ready.
   useEffect(() => {
     if (shared?.state !== 'generating') return;
     const timer = setTimeout(() => {
-      api.get<Shared>(`/playground/shared?${new URLSearchParams(where)}`).then(setShared).catch(e => setError(explain(e)));
+      api.get<Shared>(`/playground/shared?${query}`).then(setShared).catch(e => setError(explain(e)));
     }, POLL_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shared, concept, problem]);
+  }, [shared, concept, problem, section]);
 
   const report = () => {
     if (shared?.state !== 'ready') return;
@@ -96,13 +110,13 @@ export function ConceptVisual({ concept, title, problem }: { concept: string; ti
           <div className="min-w-0 flex-1 basis-64">
             <p className="type-label">{NAME.playground}</p>
             <p className="mt-1 font-display text-lg font-semibold tracking-[-0.02em]">
-              {thanks ? 'Thanks for flagging it' : failed ? 'That one did not come out' : `Watch ${title} work, step by step`}
+              {thanks ? 'Thanks for flagging it' : failed ? 'That one did not come out' : part ? `See this part: ${title}` : `Watch ${title} work, step by step`}
             </p>
             <p className="mt-1 text-[15px] text-muted-foreground">
               {thanks ? 'If enough learners flag it, it is replaced.' : failed ? 'Try once more.' : 'An interactive picture of the idea. Change the inputs and see what happens.'}
             </p>
           </div>
-          <Button disabled={busy} onClick={start}>{failed ? 'Try again' : thanks ? 'Watch it again' : 'Watch it work'}</Button>
+          <Button disabled={busy} onClick={start}>{failed ? 'Try again' : thanks ? 'Watch it again' : part ? 'Show me this part' : 'Watch it work'}</Button>
         </div>
       )}
       {error ? <ErrorNote message={error} retry={start} /> : null}

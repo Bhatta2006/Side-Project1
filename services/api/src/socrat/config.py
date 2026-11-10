@@ -178,6 +178,13 @@ class Settings(DatabaseSettings):
     explainer_timeout_seconds: float = Field(default=180, ge=30, le=600)
     explainer_chat_template_kwargs: dict = Field(default_factory=dict)
     explainer_daily_messages: int = Field(default=20, ge=1, le=200)
+    # "Show me this part": a shared visual for one page of a lesson, built from that page's
+    # own text, made once and reused by everyone like the lesson's visual. Off: only the
+    # one visual per lesson.
+    explainer_section_visuals: bool = False
+    # Visuals a learner on the free plan may ask for in the Playground each week (their own
+    # questions; the shared lesson visuals are free for everyone already). 0: none, as before.
+    playground_free_per_week: int = Field(default=0, ge=0, le=20)
     explainer_concurrent_limit: int = Field(default=4, ge=1, le=16)
     explainer_sandbox_origin: str = ""
     explainer_checker_url: str = ""

@@ -39,6 +39,18 @@ PLANS = {
 }
 
 
+# Set from SOCRAT_PLAYGROUND_FREE_PER_WEEK at startup: visuals a free learner may ask for.
+FREE_PLAYGROUND_PER_WEEK = 0
+
+
+def limits(plan: str) -> dict[str, tuple[int, str]]:
+    """What a plan allows, with the free plan's small Playground allowance when one is set."""
+    allowed = dict(PLANS[plan])
+    if plan == "free" and FREE_PLAYGROUND_PER_WEEK > 0:
+        allowed["playground"] = (FREE_PLAYGROUND_PER_WEEK, "week")
+    return allowed
+
+
 def plan_of(db: Session, user_id: str, stamp: int | None = None) -> str:
     """Paid access lasts until the end of the period that was paid for, cancelled or not."""
     at = stamp or now()
@@ -130,7 +142,7 @@ def used(db: Session, user_id: str, feature: str, since: int) -> int:
 def enforce(db: Session, user_id: str, feature: str, stamp: int):
     if not ENABLED:
         return
-    limit, unit = PLANS[plan_of(db, user_id, stamp)][feature]
+    limit, unit = limits(plan_of(db, user_id, stamp))[feature]
     if limit == 0:
         raise HTTPException(402, "upgrade_required")
     since = window_start(db.get(User, user_id), unit, stamp)
@@ -142,7 +154,7 @@ def usage(db: Session, user_id: str, stamp: int) -> dict:
     plan = plan_of(db, user_id, stamp)
     user = db.get(User, user_id)
     out = {}
-    for feature, (limit, unit) in PLANS[plan].items():
+    for feature, (limit, unit) in limits(plan).items():
         spent = used(db, user_id, feature, window_start(user, unit, stamp)) if limit else 0
         out[feature] = dict(limit=limit, used=spent, window=unit)
     return out

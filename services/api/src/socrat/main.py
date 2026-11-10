@@ -166,6 +166,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(billing_router)
     app.include_router(email_auth_router)
     entitlements.ENABLED = settings.billing_enabled
+    entitlements.FREE_PLAYGROUND_PER_WEEK = settings.playground_free_per_week
     app.include_router(errors.router)
     app.add_middleware(
         SessionMiddleware,

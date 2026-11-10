@@ -719,7 +719,10 @@ def concept(qualified: str, request: Request, locale: str | None = None):
 
         # ?locale=en shows the original for this view only; the account's language is unchanged.
         tag = locale if locale and localized.locales.supported(locale) else user.locale
-        return localized.overlay(db, qualified, cat.concept(qualified), tag, view)
+        shown = localized.overlay(db, qualified, cat.concept(qualified), tag, view)
+        # Whether each page of the lesson offers "show me this part" (explainer/shared.py).
+        shown["section_visuals"] = bool(request.app.state.settings.explainer_section_visuals)
+        return shown
 
 
 @router.post("/concepts/{qualified}/explain")

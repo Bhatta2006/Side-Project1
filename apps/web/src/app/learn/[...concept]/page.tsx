@@ -231,7 +231,7 @@ export default function Lesson() {
 
   // How the lesson is read, for the coach: counters only, never scored. The API answers
   // 404 while the feature is off, and a lost signal is never worth an error on screen.
-  const signal = useCallback((kind: 'page' | 'simpler' | 'deeper' | 'reread' | 'question', page?: number) => {
+  const signal = useCallback((kind: 'page' | 'simpler' | 'deeper' | 'reread' | 'question' | 'visual', page?: number) => {
     api.post(`/concepts/${qualified}/signals`, page ? { kind, page } : { kind }).catch(() => undefined);
   }, [qualified]);
   const loaded = concept?.id;
@@ -372,7 +372,7 @@ export default function Lesson() {
 
           {/* The concept's shared visual sits above the reading; free-form requests stay in the Playground. */}
           <section className="mb-8" aria-label={`${concept.title}, visual`}>
-            <ConceptVisual concept={concept.id} title={concept.title} />
+            <ConceptVisual concept={concept.id} title={concept.title} onOpen={() => signal('visual')} />
           </section>
 
           {concept.locked ? (
@@ -404,6 +404,9 @@ export default function Lesson() {
           ) : null}
           {/* Lesson pages, then visuals and tasks in the order this concept was planned, then the recap. */}
           <LessonPages
+            tool={concept.section_visuals ? (index, title) => (
+              <ConceptVisual concept={concept.id} title={title || concept.title} section={index} onOpen={() => signal('visual')} />
+            ) : undefined}
             onPage={page => signal('page', page)}
             id={qualified}
             source={concept.lesson}

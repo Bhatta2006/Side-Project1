@@ -155,6 +155,8 @@ whole revision round.
 | `SOCRAT_PRACTICE_BANK` | Practice sets are built from the lesson's own checked material (in-lesson checks, section rows) when it holds at least 3 questions: no model call, not counted against the daily allowance. Otherwise a model writes the set | any time | false |
 | `SOCRAT_PRACTICE_EVIDENCE` | Answers to bank questions count as recall evidence: at most 3 per lesson a day, each question once a day. Model-written sets never count | any time | false |
 | `SOCRAT_LESSON_SIGNALS` | The app reports how each lesson is read (furthest page, "simpler" and "deeper" taps, rereads, questions). Counters only, never evidence. The stuck detector reads them as weak signals, the tutor is told them, and the learner reads them at `GET /api/v1/memory` | any time | false |
+| `SOCRAT_EXPLAINER_SECTION_VISUALS` | Each page of a lesson offers "Show me this part": a shared visual built from that page's own text, made once and reused by every learner, not charged to anyone's plan | any time | false |
+| `SOCRAT_PLAYGROUND_FREE_PER_WEEK` | Visuals a learner on the free plan may ask for in the Playground each week (0 to 20). Shared lesson visuals are free already | restart | 0 |
 | `SOCRAT_WORKER_RUNS_GENERATION` | Generation in the worker | see `docs/operations/api-worker-split.md` | as there |
 
 Migrations 0034 to 0044 are additive; each has a tested downgrade

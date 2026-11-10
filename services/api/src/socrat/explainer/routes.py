@@ -265,6 +265,8 @@ class SharedInput(BaseModel):
     level: str = Field(default="standard", pattern=r"^(simple|standard|deep)$")
     # The problem the learner is on, so a check that must be unaided never offers a visual.
     problem: str | None = Field(default=None, pattern=r"^[a-z0-9][a-z0-9-]{0,127}$")
+    # One page of the lesson (0-based, as the lesson page numbers them): "show me this part".
+    section: int | None = Field(default=None, ge=0, le=59)
 
 
 def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool):
@@ -274,8 +276,18 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
     if body.problem and transfers.is_pending(db, cat, enrollment, body.problem):
         raise HTTPException(423, "independent_work_in_progress")
     concept = cat.concept(body.concept)
-    source = shared.fingerprint(concept)
-    key = (body.concept, body.level, enrollment.language)
+    if body.section is None:
+        source, prompt = shared.fingerprint(concept), shared.prompt_for(concept)
+    else:
+        if not settings.explainer_section_visuals:
+            raise HTTPException(404, "not_found")
+        pages = shared.parts(concept.lesson)
+        if body.section >= len(pages) or not pages[body.section][1]:
+            raise HTTPException(404, "not_found")
+        title, text = pages[body.section]
+        source = shared.fingerprint_part(concept, title, text)
+        prompt = shared.prompt_for_part(concept, title, text)
+    key = (shared.key_for(body.concept, body.section), body.level, enrollment.language)
     row = db.get(SharedVisual, key, with_for_update=True)
     if row is not None:
         shared.settle(db, row)
@@ -300,7 +312,7 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
     fresh = dict(status="generating", job_id=job_id, artifact_id=None, source_hash=source)
     if row is None:
         row = SharedVisual(
-            concept=body.concept,
+            concept=key[0],
             level=body.level,
             language=enrollment.language,
             reports=[],
@@ -321,7 +333,7 @@ def serve_shared(db, settings, user, enrollment, body: SharedInput, start: bool)
         settings,
         user.id,
         enrollment.language,
-        shared.prompt_for(concept),
+        prompt,
         body.level,
         job_id,
         shared=True,
@@ -348,10 +360,11 @@ def shared_state(
     concept: str = Query(pattern=r"^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$"),
     level: str = Query(default="standard", pattern=r"^(simple|standard|deep)$"),
     problem: str | None = Query(default=None, pattern=r"^[a-z0-9][a-z0-9-]{0,127}$"),
+    section: int | None = Query(default=None, ge=0, le=59),
 ):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db)
-        body = SharedInput(concept=concept, level=level, problem=problem)
+        body = SharedInput(concept=concept, level=level, problem=problem, section=section)
         return serve_shared(
             db, request.app.state.settings, user, active(db, user), body, start=False
         )

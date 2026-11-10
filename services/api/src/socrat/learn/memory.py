@@ -33,7 +33,7 @@ router = APIRouter(prefix="/api/v1")
 
 PREFIX = "signal:"
 DRILL = "drill:"
-COUNTERS = ("simpler", "deeper", "reread", "question")
+COUNTERS = ("simpler", "deeper", "reread", "question", "visual")
 MOST = 99  # a counter stops here: a stuck button is not a thousand signals
 MANY = 2  # taps or rereads on one lesson that count as a sign of trouble
 LINES = 8  # the memory is short, so it is read
@@ -41,7 +41,7 @@ LINES = 8  # the memory is short, so it is read
 
 class Signal(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    kind: Literal["page", "simpler", "deeper", "reread", "question"]
+    kind: Literal["page", "simpler", "deeper", "reread", "question", "visual"]
     page: int | None = Field(default=None, ge=1, le=60)
 
 
@@ -118,6 +118,9 @@ def remembered(db: Session, cat: Catalog, enrollment: Enrollment) -> list[dict]:
         if seen.get("question", 0) >= MANY:
             text = f"Asked the tutor about {name} {seen['question']} times."
             items.append((seen["question"] * 2, dict(kind="question", concept=concept, text=text)))
+        if seen.get("visual", 0) >= MANY:
+            text = f"Opened the visual for {name} {seen['visual']} times."
+            items.append((seen["visual"], dict(kind="visual", concept=concept, text=text)))
         if seen.get("deeper", 0) >= MANY:
             text = f"Asked to go deeper into {name} {seen['deeper']} times."
             items.append((seen["deeper"], dict(kind="deeper", concept=concept, text=text)))

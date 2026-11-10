@@ -491,3 +491,27 @@ Left for later, by the owner's decision: listening and speaking items. Also not 
 a label onto a picture (it needs lesson diagrams with marked parts, so it belongs with
 Visualise), time on page as a signal, and a screen in the app for the memory (the API is
 there).
+
+### 2026-11-10, slice 9: visualise from a lesson (G8)
+
+What G8 said was missing was partly there already: the lesson page has had one shared visual
+per lesson ("Watch it work"), made once, cached per lesson, depth and language, free for
+every plan, retired when two learners flag it (`explainer/shared.py`). This slice adds what
+was still missing.
+
+| Change | Where |
+|---|---|
+| `SOCRAT_EXPLAINER_SECTION_VISUALS` (off): every reading page of a lesson offers "Show me this part". The visual is asked for with that page's own text (never anything a learner typed), made once and reused by everyone, keyed by lesson and page, rebuilt when that page's text changes, and not charged to anyone's plan. The server splits a lesson into pages by the same rule as the lesson page, so page N is the same page on both sides | `explainer/shared.py` (`parts`, `prompt_for_part`, `fingerprint_part`, `key_for`), `explainer/routes.serve_shared` (`section`), `apps/web/src/components/socrat/concept-visual.tsx`, `components/lesson-pages.tsx` |
+| `SOCRAT_PLAYGROUND_FREE_PER_WEEK` (0): a small weekly allowance of the learner's own Playground questions on the free plan. Paid plans are unchanged | `entitlements.limits`, `main.py` |
+| Opening a visual is a lesson signal (`visual`); twice or more on one lesson is kept in the learner memory | `learn/memory.py`, lesson page |
+| The lesson view says whether pages offer visuals (`section_visuals`), so the button is shown only when the API will answer | `learn/routes.concept` |
+
+Checked: 5 new tests (`test_visualise.py`), 75 with the visual, billing and memory suites,
+plus the learner API suite; lint, types and the web type check. In a browser against the
+offline API: each lesson page shows "See this part: <page title>", the click reaches the API
+(refused there, as that server has no model) and the signal is recorded. Not checked: a
+visual actually generated for a page; cost per page visual; the full API suite; Playwright.
+
+Still open from G8: lesson visuals written with the lesson (`gen_visuals`) stay off until a
+sample is reviewed; a visual writes no evidence; the vision review of a 3D film against the
+real object needs the owner's approval; tapping a label onto a picture is not built.

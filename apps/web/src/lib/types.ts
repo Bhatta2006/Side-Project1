@@ -636,6 +636,8 @@ export interface ProjectView {
 }
 
 export interface ConceptView {
+  /** Each page of the lesson offers "show me this part" (a shared visual of that page). */
+  section_visuals?: boolean;
   prompts?: WrittenPrompt[];
   exercises: { number: number; title: string; url: string; language: string; guidance: string }[];
   id: string;

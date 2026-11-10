@@ -32,7 +32,7 @@ export type ExtraPage = { key: string; title: string; node: ReactNode };
  * pages of their own, then the recap. Page sizes were chosen for this learner when the lesson
  * was written. "Show the whole lesson" keeps the single scroll for anyone who prefers it.
  */
-export function LessonPages({ id, source, language, extra = [], recap, onPage }: {
+export function LessonPages({ id, source, language, extra = [], recap, onPage, tool }: {
   id: string;
   source: string;
   language?: string;
@@ -40,6 +40,8 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage }:
   recap: ReactNode;
   /** Told the page the reader has reached (1-based), each time it changes. */
   onPage?: (page: number) => void;
+  /** Shown under a reading page (0-based index, its title): "show me this part". */
+  tool?: (index: number, title: string) => ReactNode;
 }) {
   const reading = useMemo(() => splitPages(source), [source]);
   const total = reading.length + extra.length + 1;
@@ -150,6 +152,7 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage }:
           </h2>
         ) : <h2 id="lesson-page-title" ref={heading} tabIndex={-1} className="sr-only">Lesson</h2>}
         {page ? <Markdown source={page.body} language={language} rich /> : onExtra ? extra[index - reading.length].node : recap}
+        {page && tool && !isCheckPage(page) ? <div className="mt-6">{tool(index, page.title)}</div> : null}
       </section>
 
       <div className="mt-8 flex items-center justify-between gap-3 border-t pt-5">
