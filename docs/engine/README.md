@@ -150,6 +150,8 @@ whole revision round.
 | `SOCRAT_GEN_INITIAL_ON_PUBLISH` | Admin-published courses write their first slice at once | any time | set false |
 | `SOCRAT_GEN_TIERS` | Model tiers per agent role (`coursegen/roles.ROLE_TIER`): `strong` for architect, reviser, facts, reviewer; `fast` for intent, stylist, researcher, experience; the default model for the rest. A garbled quiz or atoms reply, and a part on its last round, is asked of the strong model. A role's entry in `SOCRAT_GEN_ROLES` wins over its tier | after a live run that compares cost per released lesson | empty: one model for all |
 | `SOCRAT_GEN_LESSON_COST_TARGET_USD` | Marks courses above this cost per released lesson in `GET /admin/engine-costs` (default 0.10). Stops nothing | any time | 0 |
+| `SOCRAT_GEN_FAST_FIRST_LESSON` | A learner's first lesson takes the search's best-ranked sources as they are, without the researcher's model call. Links are still checked | any time | false |
+| `SOCRAT_GEN_FIRST_LESSON_PREVIEW` | The owner of a private course may read their first lesson's draft once it passes the lesson gates, labelled as still being checked. Read-only. Never with safety notes or a learner under 13 | any time | false |
 | `SOCRAT_WORKER_RUNS_GENERATION` | Generation in the worker | see `docs/operations/api-worker-split.md` | as there |
 
 Migrations 0034 to 0044 are additive; each has a tested downgrade

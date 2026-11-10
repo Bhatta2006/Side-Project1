@@ -54,6 +54,7 @@ from socrat.coursegen.outline import (
     needs_detail,
     skeleton_of,
     tidy,
+    titles,
     to_course,
 )
 from socrat.models import GeneratedCourse, GenerationJob, need, now
@@ -279,6 +280,12 @@ async def run_outline(
             continue
         previous = skeleton_of(reply.data)
         outline = reply.data
+        # The learner sees the plan's shape now, while its details are written and reviewed.
+        _note(
+            engine,
+            job_id,
+            {"role": "architect", "round": attempt, "event": "skeleton", "plan": titles(outline)},
+        )
         early: roles.Reply | None = (
             None  # the critic's review of the skeleton, run while the details are written
         )
@@ -716,8 +723,15 @@ async def run_package(
                 allowed = {h.url: h for h in hits}
                 prompt = f"{prompt}\n\n{search.block(hits)}"
             _note(engine, job_id, {"role": "search", "hits": len(hits)})
-        found = await ask("researcher", research.RESEARCHER, prompt, 2000)
-        cited = await research.screen(found.data, http, allowed)
+        # A learner's first lesson: the search ranked the results already, so code takes
+        # the best and the author starts one model call sooner.
+        fast = bool(settings.gen_fast_first_lesson and data.get("trigger") == "first" and allowed)
+        if fast:
+            cited = await research.screen(research.best(hits), http, allowed)
+        if not fast or not cited:
+            fast = False
+            found = await ask("researcher", research.RESEARCHER, prompt, 2000)
+            cited = await research.screen(found.data, http, allowed)
         if settings.youtube_transcripts:
             cited = research.add_videos(cited, list(allowed.values()) if allowed else [])
             cited = await youtube.with_transcripts(cited)
@@ -729,6 +743,7 @@ async def run_package(
             {
                 "role": "researcher",
                 "grounded": allowed is not None,
+                "chosen_by": "code" if fast else "model",
                 "sources": [
                     {k: s[k] for k in ("n", "title", "url")}
                     | ({"transcript_chars": len(s["passage"])} if s.get("transcript") else {})
@@ -736,7 +751,7 @@ async def run_package(
                     for s in cited
                 ],
             },
-            found.cost_usd,
+            0.0 if fast else found.cost_usd,
         )
         if cited:
             ctx = "\n\n".join([ctx, research.block(cited)])
@@ -824,6 +839,11 @@ async def run_package(
                 continue
             notes["lesson"] = []
             lesson = research.attach(lesson, cited)
+            if settings.gen_first_lesson_preview and data.get("trigger") == "first":
+                # Past the lesson gates: the waiting learner may read it as a draft while the
+                # quiz is written and the checks run (learn/preview.py decides who may).
+                entry = {"role": "system", "round": attempt, "event": "preview_ready"}
+                _note(engine, job_id, entry, output={"lesson": lesson})
         assert lesson is not None  # written above, or kept from the previous round
         pending = {}
         asked: dict[str, tuple[str, str, int]] = {}  # part -> (system, prompt, tokens)

@@ -77,6 +77,8 @@ type LearningRequest = {
   course_id: string | null;
   published: boolean;
   job: { state: string; error: string } | null;
+  // The plan's shape while its details are written: titles only, not checked yet.
+  skeleton: { title: string; tagline: string; modules: { title: string; lessons: string[] }[] } | null;
   blueprint: {
     title: string;
     tagline: string;
@@ -169,7 +171,7 @@ export default function NewCourse() {
     if (!(waiting || writing) || !req) return;
     const timer = setInterval(() => {
       api.get<LearningRequest>(`/learning-requests/${req.id}`).then(setReq).catch(() => {});
-    }, 4000);
+    }, waiting ? 2000 : 4000); // the plan is what they are waiting for: look more often
     return () => clearInterval(timer);
   }, [waiting, writing, req]);
 
@@ -446,7 +448,33 @@ export default function NewCourse() {
             </section>
           ) : null}
 
-          {waiting ? <Loading label="Writing your course plan" variant="inline" /> : null}
+          {waiting ? (
+            <Loading
+              label={req.skeleton?.modules.length ? 'Filling in each lesson and checking the plan' : 'Writing your course plan'}
+              variant="inline"
+            />
+          ) : null}
+          {waiting && req.skeleton?.modules.length ? (
+            <section aria-label="Your course plan, first draft">
+              <h2 className="type-display-l">{req.skeleton.title || 'Your course'}</h2>
+              {req.skeleton.tagline ? <p className="mt-1 text-muted-foreground">{req.skeleton.tagline}</p> : null}
+              <p className="mt-2 text-sm text-muted-foreground">
+                A first draft of your plan. It may still change while it is checked; you can start as soon as it is ready.
+              </p>
+              <ol className="mt-4 grid gap-4">
+                {req.skeleton.modules.map((m, i) => (
+                  <li key={`${i}-${m.title}`} className="rounded-[16px] border bg-card px-4 py-3">
+                    <p className="font-semibold">{m.title}</p>
+                    {m.lessons.length ? (
+                      <ul className="mt-2 grid gap-1 text-[15px] text-muted-foreground">
+                        {m.lessons.map((title, n) => <li key={`${n}-${title}`}>{title}</li>)}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
           {req.job?.state === 'failed' ? (
             <ErrorNote message="The plan could not be written. Try again with more detail." />
           ) : null}

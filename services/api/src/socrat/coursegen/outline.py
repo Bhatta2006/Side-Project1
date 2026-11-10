@@ -391,6 +391,33 @@ def needs_detail(outline: dict) -> bool:
     return any(not (c.get("objectives") and c.get("assessment")) for c in concepts)
 
 
+def titles(outline: dict) -> dict:
+    """The plan as a learner can read it the moment the architect has answered: the course,
+    its modules and their lesson titles, nothing else. Shown while the details are written
+    and the critic reads it, so the wait has something in it. Not validated yet: it is
+    labelled as a draft, and nothing can be started from it."""
+
+    def text(value, limit: int) -> str:
+        return " ".join(str(value).split())[:limit] if isinstance(value, str) else ""
+
+    modules = []
+    planned = outline.get("modules")
+    for m in planned if isinstance(planned, list) else []:
+        if not isinstance(m, dict) or not text(m.get("title"), 120):
+            continue
+        found = m.get("concepts")
+        concepts = found if isinstance(found, list) else []
+        lessons = [text(c.get("title"), 120) for c in concepts if isinstance(c, dict)]
+        modules.append(
+            {"title": text(m.get("title"), 120), "lessons": [t for t in lessons if t][:40]}
+        )
+    return {
+        "title": text(outline.get("title"), 120),
+        "tagline": text(outline.get("tagline"), 300),
+        "modules": modules[:30],
+    }
+
+
 def skeleton_of(outline: dict) -> dict:
     """The outline without per-concept details: what the architect revises, kept short."""
     return {

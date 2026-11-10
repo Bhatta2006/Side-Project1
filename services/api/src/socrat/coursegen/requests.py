@@ -73,6 +73,7 @@ def view(db: Session, row: LearningRequest) -> dict:
         course_id=row.course_id,
         created_at=row.created_at,
         blueprint=None,
+        skeleton=None,
         job=None,
         published=False,
         diagnostic="none",
@@ -161,6 +162,10 @@ def view(db: Session, row: LearningRequest) -> dict:
         ).first()
         if job is not None:
             out["job"] = dict(state=job.state, error=job.error)
+            # The plan's shape while its details are written: titles only, not yet checked.
+            drafts = [e for e in job.log if e.get("event") == "skeleton"]
+            if drafts and out["blueprint"] is None and job.state in jobs.OPEN:
+                out["skeleton"] = drafts[-1].get("plan")
             # What the architect assumed and could not settle, so the learner can check it.
             planned = [e for e in job.log if e.get("role") == "architect" and "concepts" in e]
             blueprint = out["blueprint"]

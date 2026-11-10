@@ -269,6 +269,14 @@ class Settings(DatabaseSettings):
     gen_initial_on_publish: bool = False
     # A learner's first lesson starts when their plan is saved, not when they press Start.
     gen_early_first_lesson: bool = True
+    # A learner's first lesson takes the search's best-ranked sources as they are, without the
+    # researcher's model call: one step fewer before the author starts. Links are still checked.
+    gen_fast_first_lesson: bool = False
+    # The learner may read their first lesson's draft once it has passed the lesson gates,
+    # labelled as still being checked, while its quiz is written and the fact check and review
+    # run. Read-only: nothing is marked done from a draft. Never for a course with safety
+    # notes or a learner under 13. Off until the owner decides (spec, owner decisions).
+    gen_first_lesson_preview: bool = False
     # Split deployment: API with SOCRAT_GEN_RUNNER=false, worker with SOCRAT_WORKER_RUNS_GENERATION=true.
     # Claims are atomic, so running both is safe too (a job is taken by exactly one process).
     worker_runs_generation: bool = False

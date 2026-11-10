@@ -419,3 +419,25 @@ lesson and first-round pass rate with tiers off and on.
 Earlier slices already cut cost: non-programming courses no longer carry the DSA outline and
 reference lesson in every prompt, dead links and formatting slips no longer cost a rewrite
 round, and a disputed quiz item is dropped instead of the quiz being rewritten.
+
+### 2026-11-10, slice 6: a fast start
+
+Before: after "write my plan" the learner saw a spinner until the whole plan was written,
+detailed and reviewed, and a lesson being prepared was a locked page that never refreshed.
+
+| Change | Where |
+|---|---|
+| The plan's shape (course title, modules, lesson titles) is logged the moment the architect answers and shown as a first draft while details are written and the critic reads it. Nothing can be started from it; a failed job's draft is not shown. The page asks every 2 s while waiting | `outline.titles`, `jobs.run_outline` (log event `skeleton`), `requests.view` (`skeleton`), `apps/web/src/app/new/page.tsx` |
+| `SOCRAT_GEN_FAST_FIRST_LESSON` (off): a learner's first lesson takes the search's best-ranked results as its sources, text before video, without the researcher's model call. One model step fewer before the author starts. Links are still checked; if none survive, the researcher is asked as before. The log says who chose (`chosen_by`) | `research.best`, `jobs.run_package` |
+| `SOCRAT_GEN_FIRST_LESSON_PREVIEW` (off): once the first lesson's draft passes the lesson gates, its owner may read it, labelled "a first draft, still being checked", while the quiz is written and the fact check and review run. Read-only: no quiz, no progress. Only the owner, on their own private course, for the job marked as their first lesson; never with safety notes, a learner under 13 or a child's register | `learn/preview.py` (`GET /api/v1/concepts/{id}/preview`), `jobs.run_package` (log event `preview_ready`) |
+| A lesson being prepared now opens by itself when it is ready (asked every 5 s), with the draft shown meanwhile when there is one | `apps/web/src/app/learn/[...concept]/page.tsx` |
+
+Checked: 10 new tests (`test_fast_start.py`), 110 with the related suites, lint, types, and
+the web type check. Not checked: either page in a browser; any timing (the 30 to 60 second
+plan and the one-minute first lesson can only be measured with a live model); the full API
+suite and Playwright.
+
+The preview answers the open decision "first lesson before the fact check" in code but not
+in policy: it stays off until the owner turns it on. Not done in this slice: token-by-token
+streaming, a single combined call for lesson and quiz, and reuse of a similar (not
+identical) existing course.

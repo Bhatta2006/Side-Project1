@@ -180,6 +180,8 @@ export default function Lesson() {
   const [error, setError] = useState('');
   const [upgrade, setUpgrade] = useState(false);
   const [locked, setLocked] = useState<'' | 'gate' | 'preparing'>('');
+  // The first lesson's draft, readable while its checks run (only when the API offers one).
+  const [draft, setDraft] = useState<{ title: string; lesson: string; key_points: string[] } | null>(null);
   const [variant, setVariant] = useState<{ style: string; content: string } | null>(null);
   const [explaining, setExplaining] = useState('');
   const [completing, setCompleting] = useState(false);
@@ -207,6 +209,25 @@ export default function Lesson() {
     load();
     if (active) api.post(`/activities/lesson:${qualified}/start`).catch(() => undefined);
   }, [allowed, active, load, qualified]);
+
+  // A lesson being prepared opens by itself when it is ready; meanwhile show its draft if
+  // there is one. Nothing can be marked done from a draft.
+  const preparing = !concept && locked === 'preparing';
+  useEffect(() => {
+    if (!preparing) {
+      setDraft(null);
+      return;
+    }
+    const look = () => {
+      api.get<{ title: string; lesson: string; key_points: string[] }>(`/concepts/${qualified}/preview`).then(setDraft).catch(() => setDraft(null));
+    };
+    look();
+    const timer = setInterval(() => {
+      // Quietly: an answer replaces the page, a refusal leaves the draft where it is.
+      api.get<ConceptView>(`/concepts/${qualified}`).then(setConcept).catch(look);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [preparing, qualified]);
 
   async function reexplain(style: string) {
     setExplaining(style);
@@ -247,11 +268,35 @@ export default function Lesson() {
       </div>
     );
   }
+  if (!concept && locked === 'preparing' && draft) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <p role="status" className="mb-5 rounded-[16px] border border-border-strong px-4 py-3 text-[15px]">
+          <span className="font-semibold">A first draft, still being checked.</span>{' '}
+          <span className="text-muted-foreground">
+            You can start reading now. The checked lesson, with its questions, replaces this page by itself. If a check finds a mistake, this draft is rewritten.
+          </span>
+        </p>
+        <h1 className="type-display-m break-words">{draft.title}</h1>
+        <article className="mt-5">
+          <Markdown source={draft.lesson} rich />
+        </article>
+        {draft.key_points.length ? (
+          <section className="mt-6" aria-label="Key points">
+            <h2 className="font-display text-xl font-semibold tracking-[-0.03em]">Key points</h2>
+            <ul className="mt-2 grid list-disc gap-1 pl-5">
+              {draft.key_points.map(p => <li key={p}>{p}</li>)}
+            </ul>
+          </section>
+        ) : null}
+      </div>
+    );
+  }
   if (!concept && locked === 'preparing') {
     return (
       <div className="mx-auto max-w-3xl p-6">
         <LockedState title="This lesson is being prepared" href="/plan" action="Back to your plan">
-          It opens as soon as it is ready. Keep going with the topics before it.
+          It opens here by itself as soon as it is ready.
         </LockedState>
       </div>
     );

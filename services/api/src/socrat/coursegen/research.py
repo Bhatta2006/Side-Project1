@@ -129,6 +129,26 @@ def candidates(data) -> list[dict]:
 NOMINAL_MINUTES = 10  # reading time for a researched source; nobody has timed it
 
 
+def best(hits: list, most: int = MAX_SOURCES) -> dict:
+    """The best-ranked search results in the researcher's reply format, chosen by code. For a
+    learner's first lesson (``gen_fast_first_lesson``): the search already ranked them, so the
+    researcher's model call, one whole step before the author can start, is skipped. Text
+    sources first; videos join through ``add_videos`` as usual."""
+    ranked = sorted(hits, key=lambda h: (h.kind in ("video", "playlist"), -h.score))
+    return {
+        "sources": [
+            {
+                "title": h.title,
+                "url": h.url,
+                "supports": h.snippet or h.title,
+                "role": "explain",
+                "fit": MIN_FIT,
+            }
+            for h in ranked[:most]
+        ]
+    }
+
+
 async def screen(data, http=None, allowed: dict | None = None) -> list[dict]:
     """Candidates whose links are public and reachable, numbered from 1 and license-tagged.
     ``allowed`` (url -> search ``Hit``): only search results may be chosen, and their author,
