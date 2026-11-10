@@ -200,6 +200,16 @@ class Settings(DatabaseSettings):
     # "openai", "model": "...", "base_url": "..."}}'; unset keys fall back to SOCRAT_AI_*.
     # "chat_template_kwargs" (an object) overrides SOCRAT_OPENAI_CHAT_TEMPLATE_KWARGS per role.
     gen_roles: dict[str, dict[str, str | float | dict]] = Field(default_factory=dict)
+    # Model tiers (coursegen/roles.ROLE_TIER): "strong" for the plan, the checks and rewrites
+    # of failed lessons; "fast" for reading and sorting; everything else stays on SOCRAT_AI_*.
+    # Same keys as SOCRAT_GEN_ROLES, e.g. SOCRAT_GEN_TIERS='{"strong": {"model": "...",
+    # "price_input_per_mtok": 3, "price_output_per_mtok": 15}, "fast": {"model": "..."}}'.
+    # Empty: every role runs on the default model, as before. A role's own entry in
+    # SOCRAT_GEN_ROLES wins over its tier.
+    gen_tiers: dict[str, dict[str, str | float | dict]] = Field(default_factory=dict)
+    # What one released lesson should cost at most. Nothing is stopped by it: courses above
+    # it are marked in the owner's cost report, so a dear course is seen, not discovered.
+    gen_lesson_cost_target_usd: float = Field(default=0.10, ge=0, le=100)
     # Write-check-revise rounds per lesson package. Revisions are targeted edits, so a round
     # costs little; subjects the model knows less well (a live Kannada course) need more.
     gen_package_rounds: int = Field(default=3, ge=1, le=8)
@@ -373,9 +383,10 @@ class Settings(DatabaseSettings):
         if self.environment == "test":
             self.codeforces_autosync = False
             self.gen_runner = False
-        from socrat.coursegen.roles import check_roles
+        from socrat.coursegen.roles import check_roles, check_tiers
 
         check_roles(self.gen_roles)
+        check_tiers(self.gen_tiers)
         if self.ai_provider == "openai" and not self.openai_model:
             raise ValueError("The OpenAI provider requires SOCRAT_OPENAI_MODEL")
         if self.ai_provider == "anthropic" and not self.ai_model.startswith("claude-"):

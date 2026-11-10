@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from socrat.models import AIUsage, GeneratedConcept, GeneratedCourse, GenerationJob
 
 
-def by_course(db: Session, *, limit: int = 50) -> list[dict]:
+def by_course(db: Session, *, limit: int = 50, target_usd: float = 0.0) -> list[dict]:
     spend = {
         course_id: (jobs, cost or 0.0)
         for course_id, jobs, cost in db.execute(
@@ -44,6 +44,10 @@ def by_course(db: Session, *, limit: int = 50) -> list[dict]:
                 cost_usd=round(cost, 4),
                 released_concepts=count,
                 cost_per_released_concept_usd=round(cost / count, 4) if count else None,
+                # Above the owner's target for one lesson (0 = no target). Spend with nothing
+                # released is over any target.
+                over_target=bool(target_usd)
+                and (cost / count > target_usd if count else cost > target_usd),
             )
         )
     rows.sort(key=lambda r: r["cost_usd"], reverse=True)
@@ -85,6 +89,50 @@ def by_role(db: Session, *, since_day: str) -> dict[str, dict]:
             .group_by(AIUsage.feature)
         )
     }
+
+
+def by_model(db: Session, *, since_day: str) -> dict[str, dict]:
+    """Per model from the call ledger: what each tier's model was asked and what it cost, so
+    the owner can see whether the strong model is earning its price."""
+    return {
+        str(model): dict(
+            calls=calls,
+            cost_usd=round(total or 0.0, 4),
+            input_tokens=int(tokens_in or 0),
+            output_tokens=int(tokens_out or 0),
+            cost_per_call_usd=round((total or 0.0) / calls, 5) if calls else None,
+        )
+        for model, calls, total, tokens_in, tokens_out in db.execute(
+            select(
+                AIUsage.model,
+                func.count(),
+                func.sum(AIUsage.cost_usd),
+                func.sum(AIUsage.input_tokens),
+                func.sum(AIUsage.output_tokens),
+            )
+            .where(AIUsage.day >= since_day, AIUsage.feature.like("coursegen.%"))
+            .group_by(AIUsage.model)
+        )
+    }
+
+
+def tiers(settings) -> dict:
+    """Which tier each role runs on and which model that is right now, without any secret."""
+    from socrat.coursegen import roles
+
+    out = {}
+    for role in sorted(roles.ROLES):
+        tuned = roles.role_settings(settings, role)
+        tier = roles.tier_of(role)
+        model = {"anthropic": tuned.ai_model, "openai": tuned.openai_model}.get(
+            tuned.ai_provider, tuned.ai_provider
+        )
+        out[role] = dict(
+            tier=(tier if tier in settings.gen_tiers else "") or "default",
+            model=model,
+            effort=tuned.ai_effort,
+        )
+    return out
 
 
 def _percentile(values: list[int], share: float) -> int | None:

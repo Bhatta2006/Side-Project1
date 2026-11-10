@@ -678,12 +678,15 @@ async def run_package(
     models: dict[str, str] = {}
     calls: list[dict] = []  # every model call: role, model, prompt version, time, cost
 
-    async def ask(role, system, prompt, tokens):
-        reply = await roles.ask(engine, settings, role, system, prompt, tokens, make)
+    async def ask(role, system, prompt, tokens, escalate=False):
+        reply = await roles.ask(
+            engine, settings, role, system, prompt, tokens, make, escalate=escalate
+        )
         models[role] = reply.model
         calls.append(
             {
                 "role": role,
+                "tier": roles.tier_of(role, escalate) or "default",
                 "model": reply.model,
                 "prompt": reply.prompt_version,
                 "ms": reply.ms,
@@ -773,6 +776,7 @@ async def run_package(
         if _job_cost(engine, job_id) >= brief.concept_budget_usd:
             _note(engine, job_id, {"role": "system", "event": "concept_budget_reached"})
             break
+        last = attempt == rounds and rounds > 1
         if "lesson" in redo:
             prompt = pkg.lesson_prompt(ctx, reference, lesson, notes["lesson"])
             # The first draft is the cheap model's; a lesson sent back is rewritten by the
@@ -840,13 +844,14 @@ async def run_package(
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             quiz_rules = pkg.QUIZ_MARKED if settings.gen_marked_answers else pkg.QUIZ
             asked["quiz"] = (quiz_rules + note, prompt, 6000)
-            pending["quiz"] = ask("quiz", *asked["quiz"])
+            # A part sent back twice goes to the strong model for its last try.
+            pending["quiz"] = ask("quiz", *asked["quiz"], escalate=last and quiz is not None)
         if "atoms" in redo or atoms is None:
             extra = pkg.ATOMS_CODE.format(languages=", ".join(code)) if code else ""
             prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], extra)
             atom_rules = pkg.ATOMS_MARKED if settings.gen_marked_answers else pkg.ATOMS
             asked["atoms"] = (atom_rules + note, prompt, 8000)
-            pending["atoms"] = ask("atoms", *asked["atoms"])
+            pending["atoms"] = ask("atoms", *asked["atoms"], escalate=last and atoms is not None)
         replies = dict(zip(pending, await asyncio.gather(*pending.values()), strict=True))
         # A quiz or atoms reply that is not readable JSON is re-asked once, at once and alone,
         # with the parse error. Before, it cost a whole round (3 by default), and the next round
@@ -860,6 +865,7 @@ async def run_package(
                         asked[name][0],
                         f"{asked[name][1]}\n\n{pkg.UNREADABLE.format(problem=replies[name].problem)}",
                         asked[name][2],
+                        escalate=True,  # the usual model could not; ask the strong one once
                     )
                     for name in unreadable
                 )

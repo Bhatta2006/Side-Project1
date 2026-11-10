@@ -66,6 +66,41 @@ ROLE_EFFORT = {
 }
 
 
+# Model tiers: a strong model where judgement decides the result, a fast cheap one where
+# the work is retrieval or reading, the default model for everything else. Before this every
+# role ran on one model unless each was overridden by hand, so a course was either dear
+# everywhere or weak everywhere. A tier does nothing until SOCRAT_GEN_TIERS configures it.
+TIERS = ("strong", "fast")
+ROLE_TIER = {
+    # One call shapes the whole course; a weak plan is paid for in every lesson after it.
+    "architect": "strong",
+    # Only lessons that failed reach the reviser, so the strong model is paid for rarely.
+    "reviser": "strong",
+    # The two checks that decide what a learner is shown.
+    "facts": "strong",
+    "reviewer": "strong",
+    # Reading and sorting, not reasoning.
+    "researcher": "fast",
+    "stylist": "fast",
+    "intent": "fast",
+    "experience": "fast",
+}
+
+
+def tier_of(role: str, escalate: bool = False) -> str:
+    """The tier a role runs on: "strong", "fast" or "" (the default model)."""
+    return "strong" if escalate else ROLE_TIER.get(role, "")
+
+
+def check_tiers(tiers: dict) -> None:
+    for tier, overrides in tiers.items():
+        if tier not in TIERS:
+            raise ValueError(f"SOCRAT_GEN_TIERS: unknown tier {tier!r}; use {list(TIERS)}")
+        unknown = set(overrides) - set(KEYS)
+        if unknown:
+            raise ValueError(f"SOCRAT_GEN_TIERS[{tier}]: unknown keys {sorted(unknown)}")
+
+
 def check_roles(roles: dict) -> None:
     for role, overrides in roles.items():
         if role not in ROLES:
@@ -75,16 +110,27 @@ def check_roles(roles: dict) -> None:
             raise ValueError(f"SOCRAT_GEN_ROLES[{role}]: unknown keys {sorted(unknown)}")
 
 
-def role_settings(settings: Settings, role: str) -> Settings:
+def role_settings(settings: Settings, role: str, escalate: bool = False) -> Settings:
+    """The settings one call runs with. Most specific wins: the role's own override
+    (SOCRAT_GEN_ROLES), then its tier (SOCRAT_GEN_TIERS), then SOCRAT_AI_*. ``escalate``
+    moves this call to the strong tier: a second try at something the usual model got wrong."""
     update: dict = {
         "ai_effort": ROLE_EFFORT.get(role, DEFAULT_EFFORT),
         "ai_timeout_seconds": settings.gen_timeout_seconds,
     }
-    if role == "reviser" and role not in settings.gen_roles:
-        role = "author"  # no stronger model set: the author revises its own drafts
-    for key, value in settings.gen_roles.get(role, {}).items():
+    tier = tier_of(role, escalate)
+    strong = "strong" in settings.gen_tiers
+    if role == "reviser" and role not in settings.gen_roles and not strong:
+        role, tier = "author", tier_of("author", escalate)  # nothing stronger: the author revises
+    for key, value in settings.gen_tiers.get(tier, {}).items():
         for field in KEYS[key]:
             update[field] = value
+    # An escalated call exists to use the strong model: a per-role override that pins the
+    # usual model for this role must not undo that.
+    if not (escalate and strong):
+        for key, value in settings.gen_roles.get(role, {}).items():
+            for field in KEYS[key]:
+                update[field] = value
     return settings.model_copy(update=update)
 
 
@@ -183,11 +229,13 @@ async def ask(
     max_tokens: int,
     make=make_provider,
     user_id: str | None = None,
+    escalate: bool = False,
 ) -> Reply:
     """One metered call, charged to ``user_id`` when a learner caused it. Raises ProviderError
-    when the provider, the global budget or that learner's budget refuses."""
+    when the provider, the global budget or that learner's budget refuses. ``escalate``: run
+    this call on the strong tier (see ``role_settings``)."""
     started = time.monotonic()
-    tuned = role_settings(settings, role)
+    tuned = role_settings(settings, role, escalate)
     provider: Provider = make(tuned)
     if provider.name != "offline":
         with Session(engine) as db:

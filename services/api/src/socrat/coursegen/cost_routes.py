@@ -15,14 +15,18 @@ router = APIRouter(prefix="/api/v1/admin/engine-costs")
 @router.get("")
 def report(request: Request):
     stamp = now()
+    settings = request.app.state.settings
     with Session(engine(request)) as db:
         require_admin(request, db)
         month = budget.day_of(stamp)[:8] + "01"
         return dict(
             month_from=month,
             queue=costs.queue(db, stamp),
-            courses=costs.by_course(db),
+            lesson_cost_target_usd=settings.gen_lesson_cost_target_usd,
+            courses=costs.by_course(db, target_usd=settings.gen_lesson_cost_target_usd),
             roles=costs.by_role(db, since_day=month),
+            models=costs.by_model(db, since_day=month),
+            tiers=costs.tiers(settings),
             reliability=costs.reliability(db),
         )
 

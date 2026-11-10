@@ -398,3 +398,24 @@ learns through an adult's account and there is no guardian or child-profile feat
 "gamified" course is still a writing style, with no game mechanics in the app; enrolment
 accepts only fixed session lengths (15 to 120 minutes), so a 12-minute request is planned as
 12 minutes but enrolled at the nearest allowed value.
+
+### 2026-11-10, slice 5: stronger agents where they matter, cost in view
+
+Before: every agent ran on one model unless each was overridden by hand, so a course was
+either dear everywhere or weak everywhere.
+
+| Change | Where |
+|---|---|
+| Three tiers. **Strong**: the course plan (one call shapes every lesson), the fact check, the review, and rewrites of lessons that failed. **Fast**: reading the request, the style, the sources and picking visuals. **Default**: the lesson's first draft, quiz, in-lesson checks and the rest. Configured with `SOCRAT_GEN_TIERS`; empty means one model for everything, as before | `coursegen/roles.py` (`ROLE_TIER`, `role_settings`), `config.py` |
+| Escalation: a quiz or in-lesson-check reply the default model garbled is asked again of the strong model, and a part still failing on its last round is written by the strong model. The strong model is paid for only when the cheap one has failed | `roles.ask(escalate=)`, `jobs.run_package` |
+| Each tier carries its own prices, so spend is counted at the right rate. Every model call in a lesson's log now records its tier | `roles.KEYS`, job log `calls[].tier` |
+| The owner's cost report adds: which tier and model each role runs on (no keys or URLs), spend and cost per call for each model, and a mark on any course whose cost per released lesson is above `SOCRAT_GEN_LESSON_COST_TARGET_USD` (default 0.10; it marks, it does not stop) | `coursegen/costs.py` (`tiers`, `by_model`, `over_target`), `GET /admin/engine-costs` |
+
+Checked: 7 new tests (`test_model_tiers.py`), 68 with the related suites, lint and types.
+Not checked: any real model on any tier. Which models to put on each tier, and whether the
+strong tier earns its price, can only be settled by a live run comparing cost per released
+lesson and first-round pass rate with tiers off and on.
+
+Earlier slices already cut cost: non-programming courses no longer carry the DSA outline and
+reference lesson in every prompt, dead links and formatting slips no longer cost a rewrite
+round, and a disputed quiz item is dropped instead of the quiz being rewritten.

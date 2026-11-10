@@ -148,6 +148,8 @@ whole revision round.
 | `SOCRAT_GEN_MARKED_ANSWERS` | Quiz and atom writers mark the right option instead of giving its index (`coursegen/keyed.py`; replies in either form are always parsed) | at the next live run, comparing fact-checker `incorrect` quiz claims off and on | set false |
 | `SOCRAT_GEN_APPLIED_LESSONS` | Learner courses end each module with a planned "Apply" lesson (`coursegen/applied.py`) | after reading a few generated ones | set false; existing ones stay as planned lessons |
 | `SOCRAT_GEN_INITIAL_ON_PUBLISH` | Admin-published courses write their first slice at once | any time | set false |
+| `SOCRAT_GEN_TIERS` | Model tiers per agent role (`coursegen/roles.ROLE_TIER`): `strong` for architect, reviser, facts, reviewer; `fast` for intent, stylist, researcher, experience; the default model for the rest. A garbled quiz or atoms reply, and a part on its last round, is asked of the strong model. A role's entry in `SOCRAT_GEN_ROLES` wins over its tier | after a live run that compares cost per released lesson | empty: one model for all |
+| `SOCRAT_GEN_LESSON_COST_TARGET_USD` | Marks courses above this cost per released lesson in `GET /admin/engine-costs` (default 0.10). Stops nothing | any time | 0 |
 | `SOCRAT_WORKER_RUNS_GENERATION` | Generation in the worker | see `docs/operations/api-worker-split.md` | as there |
 
 Migrations 0034 to 0044 are additive; each has a tested downgrade
