@@ -148,6 +148,16 @@ def known_concepts(catalog: Catalog) -> str:
     )
 
 
+# Adapters whose courses are programming courses ("" is a course made before adapters existed).
+SOFTWARE_ADAPTERS = {"", "software"}
+# What the DSA example teaches the architect, said without the DSA: for every other subject.
+GRANULARITY = """Granularity and ordering: this course stands alone, so every prerequisite is a
+concept of this course. One concept is one idea a learner can study in a single sitting of the
+length they asked for; split anything bigger. Order concepts so each uses only what came before,
+group them into modules of 3 to 7 that each end in something the learner can do, and let the
+subject decide the shape: do not borrow the structure of a programming course."""
+
+
 def gold_example(catalog: Catalog) -> str:
     """The hand-authored DSA course's shape: the granularity and ordering to match."""
     if "dsa" not in catalog.courses:
@@ -328,13 +338,18 @@ def architect_prompt(
     previous: dict | None = None,
     issues: list[str] | None = None,
 ) -> str:
-    parts = [
-        brief_text(brief),
-        *([styles.block(brief.style)] if brief.style else []),
-        "Existing Socrat concepts you may use as prerequisites:\n" + known_concepts(catalog),
-        "For quality, granularity and ordering, match the hand-authored DSA course:\n"
-        + gold_example(catalog),
-    ]
+    parts = [brief_text(brief), *([styles.block(brief.style)] if brief.style else [])]
+    if brief.adapter in SOFTWARE_ADAPTERS:
+        # Only a programming course can build on the hand-authored programming courses, and only
+        # it is helped by their shape. Every other subject used to get both (hundreds of lines of
+        # DSA in a children's physics prompt): slower, dearer and pulling the plan towards code.
+        parts += [
+            "Existing Socrat concepts you may use as prerequisites:\n" + known_concepts(catalog),
+            "For quality, granularity and ordering, match the hand-authored DSA course:\n"
+            + gold_example(catalog),
+        ]
+    else:
+        parts.append(GRANULARITY)
     if previous is not None:
         parts.append("Your previous outline:\n" + json.dumps(previous, indent=1))
     if issues:

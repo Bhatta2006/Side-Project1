@@ -26,6 +26,7 @@ import asyncio
 import hashlib
 import json
 import logging
+from dataclasses import replace
 from typing import Any
 
 from fastapi import HTTPException
@@ -72,6 +73,29 @@ BACKOFF_SECONDS = (60, 300, 900)  # wait before the next try, by attempt
 TRANSIENT = {"provider_unreachable", "provider_rate_limited", "ai_rate_limited"}
 OPEN = ("queued", "running")
 CLOSED = ("done", "failed", "dead", "cancelled")
+
+
+# Which job runs first (lower first), then oldest first. A learner looking at a spinner
+# comes before lessons written ahead of time; before this, jobs ran oldest first across every
+# course, so a new learner's plan waited behind other learners' background lessons.
+BACKGROUND = 3
+PRIORITY = {
+    "outline": 0,  # someone is waiting for a plan
+    "first": 1,  # the first lesson of a new course
+    "owner": 1,  # the learner asked for this lesson again
+    "bridge": 1,  # a bridge lesson the learner accepted
+    "initial": 2,  # the rest of the first slice
+    "prefetch": BACKGROUND,
+    "release": 4,  # exercises and projects that follow a released lesson
+}
+
+
+def priority_of(kind: str, data: dict) -> int:
+    if kind == "outline":
+        return PRIORITY["outline"]
+    if data.get("urgent"):  # the lesson the learner is standing in front of
+        return PRIORITY["first"]
+    return PRIORITY.get(str(data.get("trigger", "")), BACKGROUND)
 
 
 def transient(error: ProviderError) -> bool:
@@ -133,7 +157,13 @@ def enqueue(
     decides (migration 0045), so two requests that both passed an ``active()`` check cannot
     both queue it; the savepoint keeps the caller's transaction usable."""
     job = GenerationJob(
-        kind=kind, course_id=course_id, target=target, input=data, log=[], created_by=user_id
+        kind=kind,
+        course_id=course_id,
+        target=target,
+        input=data,
+        log=[],
+        created_by=user_id,
+        priority=priority_of(kind, data),
     )
     try:
         with db.begin_nested():
@@ -164,7 +194,10 @@ def claim(engine: Engine) -> str | None:
     ) & GenerationJob.course_id.not_in(paused)
     with Session(engine) as db, db.begin():
         candidates = db.scalars(
-            select(GenerationJob.id).where(claimable).order_by(GenerationJob.created_at).limit(5)
+            select(GenerationJob.id)
+            .where(claimable)
+            .order_by(GenerationJob.priority, GenerationJob.created_at)
+            .limit(5)
         ).all()
         for job_id in candidates:
             # The state condition again: another process may have taken it meanwhile.
@@ -345,7 +378,28 @@ async def run_outline(
         generated.save_course(db, base, best, status="review", brief=brief.model_dump(mode="json"))
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
+            early_first_lesson(db, settings, best)
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
+
+
+def early_first_lesson(db: Session, settings: Settings, course) -> None:
+    """Start a learner's first lesson the moment their plan exists, so it is being written
+    while they read the plan instead of after they press Start (``gen_early_first_lesson``).
+    One lesson only: where they really begin is known after the placement check, and the
+    rest of the first slice is queued at publish from there. No commit."""
+    if not settings.gen_early_first_lesson:
+        return
+    first = next(
+        (
+            cid
+            for m in course.modules
+            for cid in m.concepts
+            if course.concept(cid).status == "planned"
+        ),
+        None,
+    )
+    if first is not None:
+        enqueue_once(db, "package", course.id, {"trigger": "first"}, None, first)
 
 
 def _with_applied(engine: Engine, settings: Settings, job_id: str, course, owner: str | None):
@@ -567,8 +621,12 @@ async def run_package(
         course_id, concept_id, data = job.course_id, job.target, job.input
         brief = Brief.model_validate(need(db.get(GeneratedCourse, course_id)).brief)
         course = need(generated.course(db, course_id))
-    concept = course.concept(concept_id)
-    if concept.status != "planned":
+    concept = next((c for c in course.concepts if c.id == concept_id), None)
+    if concept is None or concept.status != "planned":
+        if data.get("trigger") == "first":
+            # Queued before the learner had approved the plan; they changed it meanwhile.
+            _note(engine, job_id, {"role": "system", "event": "plan_changed"}, state="cancelled")
+            return
         raise ValueError(f"{course_id}:{concept_id} is not planned")
     from socrat.engine import design
 
@@ -602,7 +660,7 @@ async def run_package(
 
         paging = pages.profile(brief.learner or pages.learner_of(None, style), style)
         ctx = f"{ctx}\n\n{pages.block(paging)}"
-    reference = pkg.gold(base) if style is None or style.shows_reference() else None
+    reference = pkg.gold(base, course) if style is None or style.shows_reference() else None
     note = pkg.STYLE_NOTE if style else ""
     cited: list[dict] = []
     version = concept.provenance.version + 1 if concept.provenance else 1
@@ -737,11 +795,9 @@ async def run_package(
                 for r in lesson.get("resources", [])
                 if not (isinstance(r, dict) and r.get("url") in dead)
             ]
-            if len(research.attach(lesson, cited).get("resources", [])) < 2:
-                issues += [
-                    f"This resource link is unreachable or not public https; replace it: {url}"
-                    for url in sorted(dead)
-                ] or ["Give at least 2 resources you are certain exist at that exact URL."]
+            # Too few live links is not a defect of the lesson: the dead ones are gone, the
+            # lesson keeps what was verified. (It used to cost a whole rewrite round, and the
+            # author's replacement guesses mostly failed the same check.)
             entry = {
                 "role": "author",
                 "round": attempt,
@@ -887,11 +943,25 @@ async def run_package(
                 6000,
             ),
         )
+        # One disputed quiz item or atom is dropped, not a reason to rewrite the part.
+        live, pack, checked, dropped = pkg.drop_disputed(live, pack, facts.data)
+        if dropped:
+            entry = {"role": "system", "round": attempt, "event": "dropped", "items": dropped}
+            _note(engine, job_id, entry)
+            # Gone from the drafts too, so a later round cannot bring the item back.
+            gone = {d.split(":", 1)[1] for d in dropped}
+            for draft, key, kind in ((quiz, "quiz", "quiz"), (atoms, "atoms", "atom")):
+                if any(d.startswith(f"{kind}:") for d in dropped):
+                    draft[key] = [
+                        x
+                        for x in draft.get(key, [])
+                        if not (isinstance(x, dict) and x.get("id") in gone)
+                    ]
         passed, notes, scores = pkg.verdict(
-            facts.data, review.data, style is not None, settings.gen_score_floor
+            checked, review.data, style is not None, settings.gen_score_floor
         )
         status, findings = validation.assess(
-            [], facts.data, review.data, scores, bar, adapter, brief.safety
+            [], checked, review.data, scores, bar, adapter, brief.safety
         )
         if passed != (status in validation.RELEASED):  # the two must agree; the gate wins
             status = "needs_revision" if not passed else status
@@ -925,6 +995,24 @@ async def run_package(
         if passed:
             release(live, pack, summary)
             return
+        # Every deterministic gate passed and the fact checker found nothing incorrect: the
+        # only objection is the reviewer's rubric. Keep it, and release it if no later round
+        # does better, with the reviewer's findings on its report. A lesson with a wrong fact
+        # or a failed gate is never kept this way.
+        sound = checked is not None and not any(
+            isinstance(c, dict) and c.get("verdict") == "incorrect"
+            for c in checked.get("claims", [])
+        )
+        # Correctness must be at the floor; the other dimensions may be weak (2), never
+        # unusable (1). An unread review counts as no objection: the facts were checked.
+        right = scores.get("correctness", settings.gen_score_floor) >= settings.gen_score_floor
+        if sound and fallback is None and right and all(s >= 2 for s in scores.values()):
+            held = [
+                replace(f, severity="warning") if f.severity == "blocking" else f for f in findings
+            ]
+            person = validation.needs_person(adapter, brief.safety)
+            kept_as = "human_review_required" if person else "pass_with_warnings"
+            fallback = (live, pack, summary, kept_as, held + person)
         redo = {k for k, v in notes.items() if v} or {"lesson"}
         entry = {"role": "system", "round": attempt, "event": "revising"}
         _note(engine, job_id, entry, stage="generating")

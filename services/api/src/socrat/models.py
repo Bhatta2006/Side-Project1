@@ -855,6 +855,8 @@ class GenerationJob(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)  # transient failures so far
     not_before: Mapped[int] = mapped_column(Integer, default=0)  # retry backoff
     stage: Mapped[str] = mapped_column(String(16), default="")  # generating | validating
+    # Lower runs first (coursegen.jobs.PRIORITY): a waiting learner before background work.
+    priority: Mapped[int] = mapped_column(Integer, default=3, server_default="3")
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)

@@ -212,11 +212,15 @@ def test_package_is_revised_by_artifact_then_released(client, published, web):  
     assert run(client, script.make, web())
     # Round 1: the lesson failed its gates, so nothing else was spent on it.
     assert "needs at least 2000" in script.prompts["author"][1]
-    assert "unreachable" in script.prompts["author"][1]
-    # Round 2: the reviewer's depth note went to the author, the wrong key to the quiz builder.
+    # A dead link is dropped, never a reason for a rewrite.
+    assert "unreachable" not in script.prompts["author"][1]
+    # Round 2: the reviewer's depth note went to the author. The quiz item the fact checker
+    # called incorrect was dropped, so the quiz builder was not asked again.
     assert "Trace the example step by step." in script.prompts["author"][2]
-    assert "[incorrect] quiz:q2" in script.prompts["quiz"][1]
+    assert len(script.prompts["quiz"]) == 1
     assert len(script.prompts["atoms"]) == 1  # atoms passed, so they were kept
+    kept = generated.merged(default_catalog()).concept("ai-basics:what-is-ml").quiz
+    assert "q2" not in {q.id for q in kept} and len(kept) >= 3
 
     detail = client.get("/api/v1/admin/courses/ai-basics/concepts/what-is-ml", headers=published)
     run_log = detail.json()["jobs"][0]
@@ -253,7 +257,29 @@ def test_a_dead_extra_link_is_dropped_without_a_new_round(client, published, web
     assert [str(r.url) for r in live.resources] == GOOD
 
 
-def test_a_package_that_never_passes_stays_planned(client, published, web):  # noqa: F811
+WRONG = PASS | {"scores": SCORES | {"correctness": 2}, "lesson": ["The loss is misdefined."]}
+
+
+def test_a_package_the_reviewer_calls_wrong_stays_planned(client, published, web):  # noqa: F811
+    generate(client, published, "loss")
+    script = Scripted(
+        author=[lesson()] * 3,
+        quiz=[QUIZ],
+        atoms=[ATOMS],
+        facts=[FACTS_OK] * 3,
+        reviewer=[WRONG] * 3,
+    )
+    run(client, script.make, web())
+    detail = client.get("/api/v1/admin/courses/ai-basics/concepts/loss", headers=published).json()
+    assert detail["jobs"][0]["state"] == "failed"
+    assert detail["concept"]["status"] == "planned" and detail["atoms"] is None
+    assert detail["jobs"][0]["output"]["scores"]["correctness"] == 2  # the last draft is kept
+
+
+def test_a_sound_package_is_released_when_rounds_run_out(client, published, web):  # noqa: F811
+    """Every gate passed and no fact was wrong; the reviewer kept asking for more depth. The
+    learner gets the lesson, with the reviewer's findings on its report, instead of a hole in
+    their course."""
     generate(client, published, "loss")
     script = Scripted(
         author=[lesson()] * 3,
@@ -264,9 +290,15 @@ def test_a_package_that_never_passes_stays_planned(client, published, web):  # n
     )
     run(client, script.make, web())
     detail = client.get("/api/v1/admin/courses/ai-basics/concepts/loss", headers=published).json()
-    assert detail["jobs"][0]["state"] == "failed"
-    assert detail["concept"]["status"] == "planned" and detail["atoms"] is None
-    assert detail["jobs"][0]["output"]["scores"]["depth"] == 2  # the last draft is kept
+    assert detail["jobs"][0]["state"] == "done"
+    assert detail["concept"]["status"] == "live"
+    from sqlalchemy.orm import Session
+
+    from socrat.coursegen import validation
+
+    with Session(client.app.state.engine) as db:
+        report = validation.latest(db, "ai-basics", "loss")
+    assert report is not None and report.status == "pass_with_warnings"
 
 
 def test_generation_needs_a_published_outline_and_planned_concepts(client, published):  # noqa: F811
@@ -300,7 +332,7 @@ def test_lesson_gates_and_verdict_rules():
     concept = default_catalog().concept("zero:programs-and-output")
     short = pkg.check_lesson(concept, course, {"lesson": "## a\n```rust\nx\n```"})
     assert any("characters" in p for p in short) and any("rust" in p for p in short)
-    assert any("<details>" in p for p in short)
+    assert not any("<details>" in p for p in short)  # missing self-checks do not block
     passed, notes, _ = pkg.verdict(FACTS_OK, PASS)
     assert passed and notes == {"lesson": [], "quiz": [], "atoms": []}
     assert not pkg.verdict(FACTS_BAD, PASS)[0]  # an incorrect claim always blocks

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Maximize } from 'lucide-react';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
+import { useCourse } from '@/lib/course';
 import { NAME, conceptHref, formatStamp } from '@/lib/routes';
 import type { AssessmentStatus, AssessmentView } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -105,13 +106,15 @@ function Locked({ status }: { status: AssessmentStatus }) {
 }
 
 function Upcoming({ status }: { status: AssessmentStatus }) {
+  // Only a programming course has a coding task; every other course is questions alone.
+  const task = useCourse().features.code ? ', plus a coding task' : '';
   const day = status.opens_on ? new Date(`${status.opens_on}T00:00:00`) : null;
   return (
     <section className="grid gap-3 paper rounded-card p-6 lg:p-8" aria-labelledby="upcoming-heading">
       <div className="flex flex-wrap gap-2"><Badge>Week {status.week.split('-W')[1]}</Badge><Badge>{status.time_limit_minutes ?? 30} min, full screen</Badge></div>
       <h2 id="upcoming-heading" className="type-display-l">Opens {day ? day.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : 'on Sunday'}</h2>
       <p className="max-w-2xl text-base text-muted-foreground">
-        The weekly exam runs on Sundays: the hardest questions Socrat has on what you studied this week, none you have seen before, plus a coding task. Thirty minutes, full screen, no tutor.
+        The weekly exam runs on Sundays: the hardest questions Socrat has on what you studied this week, none you have seen before{task}. Thirty minutes, full screen, no tutor.
       </p>
       {status.topics.length ? <ul className="flex flex-wrap gap-2">{status.topics.map(t => <li key={t}><Badge>{t}</Badge></li>)}</ul> : null}
     </section>
@@ -119,13 +122,14 @@ function Upcoming({ status }: { status: AssessmentStatus }) {
 }
 
 function Available({ status, onStart, busy }: { status: AssessmentStatus; onStart: (timed: boolean) => void; busy: boolean }) {
+  const task = useCourse().features.code ? ', plus a coding task' : '';
   return (
     <section className="relative flex flex-col gap-5 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:p-8" data-tone="hero" aria-labelledby="available-heading">
       <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[180px] lg:block"><SocFigure books mood="thinking" idle className="h-auto w-full" /></div>
       <div className="flex flex-wrap gap-2"><Badge>Available</Badge><Badge>Week {status.week.split('-W')[1]}</Badge></div>
       <h2 id="available-heading" className="type-display-l">{NAME.assessment}</h2>
       <p className="max-w-2xl text-base lg:pr-[200px]">
-        {status.questions} of the hardest questions on what you studied this week, none you have seen before, plus a coding task. {status.time_limit_minutes} minutes in full screen. No tutor, no copy and paste. Answers are shown at the end.
+        {status.questions} of the hardest questions on what you studied this week, none you have seen before{task}. {status.time_limit_minutes} minutes in full screen. No tutor, no copy and paste. Answers are shown at the end.
       </p>
       <ul className="flex flex-wrap gap-2">{status.topics.map(t => <li key={t}><Badge>{t}</Badge></li>)}</ul>
       <div className="flex flex-wrap gap-3">

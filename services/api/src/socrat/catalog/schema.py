@@ -364,7 +364,12 @@ class Concept(Model):
                 for name, ok in (
                     ("a lesson of at least 200 characters", len(self.lesson) >= 200),
                     ("at least 2 key points", len(self.key_points) >= 2),
-                    ("at least 2 resources", len(self.resources) >= 2),
+                    # A generated lesson stands on its own text: its sources are whatever the
+                    # engine found and verified, which for some subjects is one or none.
+                    (
+                        "at least 2 resources",
+                        len(self.resources) >= 2 or self.provenance is not None,
+                    ),
                     ("at least 2 quiz items", len(self.quiz) >= 2),
                 )
                 if not ok

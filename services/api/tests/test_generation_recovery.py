@@ -155,7 +155,11 @@ def test_publishing_starts_the_first_lessons_and_shows_honest_stages(on):
     request_id, course_id = _published(on, ada)
     queued = _packages(on, course_id)
     assert sorted(j.target for j in queued) == ["loss", "what-is-ml"]
-    assert {j.input["trigger"] for j in queued} == {"initial"}
+    # The first lesson jumps the queue; the rest of the slice follows.
+    assert {j.target: j.input["trigger"] for j in queued} == {
+        "what-is-ml": "first",
+        "loss": "initial",
+    }
     stages = {
         c["id"]: c["generation"]
         for m in on.get(f"{URL}/{request_id}").json()["blueprint"]["modules"]

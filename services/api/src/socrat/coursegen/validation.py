@@ -71,14 +71,19 @@ def _facts(facts: dict | None) -> list[Finding]:
 
 def _review(review: dict | None, scores: dict, bar: dict[str, int]) -> list[Finding]:
     out = [
-        Finding("reviewer", "blocking", dim, f"Scored {scores.get(dim, 0)}, needs {need}.")
+        Finding("reviewer", "blocking", dim, f"Scored {scores[dim]}, needs {need}.")
         for dim, need in bar.items()
-        if scores.get(dim, 0) < need
+        if dim in scores and scores[dim] < need
+    ]
+    out += [  # the reviewer left it out: unknown, said plainly, not a block
+        Finding("reviewer", "warning", dim, "The reviewer gave no score for this.")
+        for dim in bar
+        if dim not in scores
     ]
     for dim, need in bar.items():  # not blocked, but under target: say so
         goal = 5 if dim == "correctness" else 4
         got = scores.get(dim, 0)
-        if need <= got < goal:
+        if dim in scores and need <= got < goal:
             out.append(
                 Finding(
                     "reviewer",

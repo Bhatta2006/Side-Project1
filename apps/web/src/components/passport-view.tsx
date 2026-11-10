@@ -79,7 +79,7 @@ export function PassportCard({ passport, headingLevel = 1 }: { passport: Passpor
       ) : null}
 
       <footer className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
-        <span>Computed from judged submissions and checks on {generated}. Reading a lesson never counts, and help received lowers what a result counts for.</span>
+        <span>Computed from graded work and checks on {generated}. Reading a lesson never counts, and help received lowers what a result counts for.</span>
         <Wordmark size={22} />
       </footer>
     </article>

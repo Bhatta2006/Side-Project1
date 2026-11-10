@@ -125,7 +125,7 @@ def test_a_learner_outline_is_saved_with_apply_lessons_when_on(learner_outline):
     # The critic judged the architect's plan, not the lessons code adds afterwards.
     assert "apply-" not in script.prompts["critic"][0]
     with Session(learner_outline.app.state.engine) as db:
-        log = db.scalars(select(GenerationJob)).one().log
+        log = db.scalars(select(GenerationJob).where(GenerationJob.kind == "outline")).one().log
         saved = generated.course(db, "ai-basics")
     assert any(e.get("event") == "applied_lessons" for e in log)
     assert saved is not None and saved.concept("apply-training").status == "planned"

@@ -48,7 +48,7 @@ def request(db: Session, enrollment: Enrollment, now: int, catalog=None) -> list
         c for c, s in states.items() if s.mastered(now) or (s.assumed and s.evidence_count == 0)
     } | {a.removeprefix("lesson:") for a in completed if a.startswith("lesson:")}
     queued = []
-    for concept in upcoming(catalog, enrollment.course_id, done, AHEAD):
+    for n, concept in enumerate(upcoming(catalog, enrollment.course_id, done, AHEAD)):
         if catalog.concept(concept).status != "planned":
             continue
         local = concept.split(":", 1)[1]
@@ -65,7 +65,9 @@ def request(db: Session, enrollment: Enrollment, now: int, catalog=None) -> list
         # so a concept that cannot pass its gates does not burn budget on every visit.
         if latest is not None and latest.state in SETTLED:
             continue
-        job = jobs.enqueue_once(db, "package", course.id, {"trigger": "prefetch"}, None, local)
+        # The very next lesson is the one the learner is waiting for: it jumps the queue.
+        data = {"trigger": "prefetch", "urgent": True} if n == 0 else {"trigger": "prefetch"}
+        job = jobs.enqueue_once(db, "package", course.id, data, None, local)
         if job is not None:  # None: a concurrent page load queued it first
             queued.append(job)
     return queued
@@ -98,16 +100,21 @@ def initial(db: Session, course_id: str, start: str | None = None) -> list:
     if course is None:
         return []
     queued = []
-    for local in initial_slice(course, start):
-        seen = db.scalar(
-            select(GenerationJob.id).where(
+    for n, local in enumerate(initial_slice(course, start)):
+        latest = db.scalars(
+            select(GenerationJob)
+            .where(
                 GenerationJob.course_id == course_id,
                 GenerationJob.target == local,
                 GenerationJob.kind == "package",
             )
-        )
-        if seen is None:
-            job = jobs.enqueue_once(db, "package", course_id, {"trigger": "initial"}, None, local)
+            .order_by(GenerationJob.created_at.desc())
+        ).first()
+        # A finished job for a concept that is planned again means the plan was revised after
+        # the lesson was written (the first lesson starts before publish): write it again.
+        if latest is None or latest.state == "done":
+            trigger = "first" if n == 0 else "initial"
+            job = jobs.enqueue_once(db, "package", course_id, {"trigger": trigger}, None, local)
             if job is not None:
                 queued.append(job)
     # Jobs are claimed oldest first and these share one second: stagger them backwards so the

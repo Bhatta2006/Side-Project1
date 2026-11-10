@@ -144,7 +144,12 @@ def practice_line(course: Course) -> str:
     )
 
 
-def gold(catalog: Catalog) -> Concept | None:
+def gold(catalog: Catalog, course: Course | None = None) -> Concept | None:
+    """The reference lesson, for programming courses only. It is a DSA lesson: shown to the
+    author of a physics, language or children's course it pulled every lesson towards code,
+    edge cases and invariants, and added thousands of tokens to every call."""
+    if course is not None and shape.effective(course).studio != "code":
+        return None
     return catalog.concepts.get(GOLD)
 
 
@@ -154,13 +159,15 @@ skill, not summaries. Write one concept's lesson in Markdown, original prose onl
 The lesson must:
 - open with why the idea matters, then build intuition before formalism;
 - work at least one concrete example step by step, showing intermediate values;
-- explain why it works (the reasoning or invariant), not only how;
-- cover edge cases and limits, and say when NOT to use the idea;
+- explain why it works, not only how;
+- say where the idea stops working or does not apply;
 - confront each listed misconception directly and explain why it is wrong;
 - teach every objective; finish with 3-5 self-check questions (answers in a <details> block);
-- use "## " section headings; code (only if it helps) as fenced blocks, one per course
-  language, equivalent across languages; no other languages.
-Match the depth and style of the reference lesson shown. Never invent citations.
+- use "## " section headings; code only in a course that has code languages, as fenced
+  blocks, one per course language, equivalent across languages; no other languages.
+If a reference lesson is shown, match its depth, never its subject. Write for the learner
+described: their age, level and the way they asked to be taught decide the words, the
+examples and the length. Never invent citations.
 
 Reply with one JSON object only:
 {"lesson": "markdown",
@@ -168,8 +175,9 @@ Reply with one JSON object only:
  "pitfalls": ["2-8 specific mistakes"],
  "resources": [{"title": "...", "url": "https://...", "kind": "article|video|docs|course|book|interactive|visualizer",
                 "source": "publisher or site", "minutes": 1-600, "level": "intro|core|deep"}]}
-Give 2-5 resources you are certain exist at exactly that URL: official documentation,
-well-known textbooks' free pages, or major university course pages. Every link is checked."""
+Give up to 5 resources, only ones you are certain exist at exactly that URL: official
+documentation, well-known textbooks' free pages, or major university course pages. Every link
+is checked and a dead one is dropped, so an empty list is better than a guess."""
 
 QUIZ = """You are the Quiz Builder for Socrat. From the lesson, write multiple-choice items
 that check understanding, not recall of wording.
@@ -400,6 +408,9 @@ SHELL_FENCES = {"bash", "sh", "shell", "console", "zsh", "powershell", "ps", "cm
 # wrote bite lessons 30-45% over while the reviewer scored their style fit 4, so the reviewer's
 # style_fit (>= 4 to pass) judges the length the learner meets; this only stops a runaway.
 CEILING_SLACK = 1.5
+# The floor is guidance too: a lesson a fifth short of it is not a defect. Before, a 1,950
+# character lesson for a 2,000 floor went back for a whole round.
+FLOOR_SLACK = 0.8
 
 
 def teaching_length(text: str) -> int:
@@ -453,7 +464,7 @@ def check_lesson(
     floor, ceiling = MIN_LESSON[depth], None
     if style is not None and style.format != "standard":
         floor, ceiling = style.lesson_bounds()
-    if len(text) < floor:
+    if len(text) < floor * FLOOR_SLACK:
         problems.append(
             f"The lesson is {len(text)} characters; this concept needs at least "
             f"{floor}. Add worked examples, reasoning and edge cases, not padding."
@@ -465,7 +476,7 @@ def check_lesson(
             f"about {taught // 6} words; this style allows at most {ceiling} characters "
             f"(about {ceiling // 6} words). Keep one idea and cut the rest."
         )
-    wanted = style.min_headings() if style is not None else 3
+    wanted = style.min_headings() if style is not None else 2
     if len(re.findall(r"^## ", text, re.MULTILINE)) < wanted:
         problems.append(f"Use at least {wanted} '## ' section heading{'s' if wanted > 1 else ''}.")
     return problems + _common_lesson_checks(course, text)
@@ -480,8 +491,8 @@ def _common_lesson_checks(course: Course, text: str) -> list[str]:
     stray = {f for f in fences if f.lower() not in allowed}
     if stray:
         problems.append(f"Code blocks in {sorted(stray)} are outside the course languages.")
-    if "<details" not in text:
-        problems.append("End with self-check questions, answers inside a <details> block.")
+    # Missing self-check answers are not a reason to hold a lesson back: every lesson ships
+    # with a quiz and in-lesson checks, and the reviewer may still ask for them.
     return problems
 
 
@@ -897,6 +908,58 @@ def imprecise_notes(facts: dict | None) -> dict[str, list[str]]:
     return notes
 
 
+MIN_QUIZ_AFTER_DROP = 3
+MIN_ATOMS_AFTER_DROP = 3
+
+
+def drop_disputed(live: Concept, pack: AtomPack, facts: dict | None):
+    """A quiz item or atom the fact checker calls incorrect is taken out, not argued over:
+    the lesson, the other items and the other atoms were not at fault, and rewriting the whole
+    part to fix one item cost a round and often broke a different item. Returns the concept,
+    the pack, the fact report without the claims settled this way, and the ids dropped.
+    Nothing is dropped when too few would remain; that claim then blocks as before."""
+    if not isinstance(facts, dict):
+        return live, pack, facts, []
+    wrong: dict[str, set[str]] = {"quiz": set(), "atom": set()}
+    for claim in facts.get("claims", []):
+        if isinstance(claim, dict) and claim.get("verdict") == "incorrect":
+            kind, _, ident = str(claim.get("where", "")).partition(":")
+            if kind.strip() in wrong and ident.strip():
+                wrong[kind.strip()].add(ident.strip())
+    dropped: list[str] = []
+    quiz = [q for q in live.quiz if q.id not in wrong["quiz"]]
+    if len(quiz) < len(live.quiz) and len(quiz) >= MIN_QUIZ_AFTER_DROP:
+        try:
+            data = live.model_dump(mode="json")
+            data["quiz"] = [q.model_dump(mode="json") for q in quiz]
+            live = Concept.model_validate(data)
+            dropped += [f"quiz:{i}" for i in sorted(wrong["quiz"])]
+        except ValidationError:
+            pass
+    atoms = [a for a in pack.atoms if a.id not in wrong["atom"]]
+    if len(atoms) < len(pack.atoms) and len(atoms) >= MIN_ATOMS_AFTER_DROP:
+        try:
+            data = pack.model_dump(mode="json")
+            data["atoms"] = [a.model_dump(mode="json") for a in atoms]
+            pack = AtomPack.model_validate(data)
+            dropped += [f"atom:{i}" for i in sorted(wrong["atom"])]
+        except ValidationError:
+            pass
+    if not dropped:
+        return live, pack, facts, []
+    settled = set(dropped)
+    kept = [
+        c
+        for c in facts.get("claims", [])
+        if not (
+            isinstance(c, dict)
+            and c.get("verdict") == "incorrect"
+            and str(c.get("where", "")).replace(" ", "") in settled
+        )
+    ]
+    return live, pack, {**facts, "claims": kept}, dropped
+
+
 def verdict(
     facts: dict | None, review: dict | None, style: bool = False, floor: int = 3
 ) -> tuple[bool, dict[str, list[str]], dict]:
@@ -922,13 +985,22 @@ def verdict(
             f"[{claim.get('verdict')}] {where}: {claim.get('claim', '')} → {claim.get('correction', '')}"
         )
         blocking |= claim.get("verdict") == "incorrect"
+    # A dimension the reviewer did not score is unknown, not a defect: it is left out of the
+    # scores (and so of the bar). It used to count as 0 and fail the whole package, so one
+    # forgotten key in a reviewer's reply cost a round.
     scores = {}
+    given = (review or {}).get("scores", {})
     for dim in dimensions:
         try:
-            scores[dim] = int((review or {}).get("scores", {}).get(dim, 0))
+            value = int(given.get(dim) or 0) if isinstance(given, dict) else 0
         except (TypeError, ValueError):
-            scores[dim] = 0
+            continue
+        if 1 <= value <= 5:
+            scores[dim] = value
     for target in notes:
         notes[target] += [str(n) for n in (review or {}).get(target, []) if n][:10]
-    passed = not blocking and facts is not None and all(scores[d] >= floor for d in dimensions)
+    # No readable review at all is not a pass (the round's fallback may still release it).
+    read = isinstance(review, dict) and bool(scores)
+    passed = not blocking and facts is not None and read
+    passed = passed and all(s >= floor for s in scores.values())
     return passed, notes, scores

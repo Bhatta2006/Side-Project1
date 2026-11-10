@@ -69,7 +69,9 @@ def test_lesson_gates_follow_the_style_and_default_behaviour_is_unchanged():
 def test_style_fit_is_required_only_when_the_course_has_a_style():
     facts, review = FACTS_OK, PASS
     assert pkg.verdict(facts, review)[0]
-    assert not pkg.verdict(facts, review, style=True)[0]  # no style_fit score given
+    # A score the reviewer left out is unknown, not a failure (it is a warning on the report).
+    passed, _, scores = pkg.verdict(facts, review, style=True)
+    assert passed and "style_fit" not in scores
     scored = PASS | {"scores": PASS["scores"] | {"style_fit": 4}}
     assert pkg.verdict(facts, scored, style=True)[0]
     weak = PASS | {"scores": PASS["scores"] | {"style_fit": 2}}

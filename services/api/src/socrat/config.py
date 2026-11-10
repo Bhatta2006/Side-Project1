@@ -248,6 +248,8 @@ class Settings(DatabaseSettings):
     gen_runner_concurrency: int = Field(default=1, ge=1, le=16)
     # Admin-published courses: write the first slice at once (learner courses always do).
     gen_initial_on_publish: bool = False
+    # A learner's first lesson starts when their plan is saved, not when they press Start.
+    gen_early_first_lesson: bool = True
     # Split deployment: API with SOCRAT_GEN_RUNNER=false, worker with SOCRAT_WORKER_RUNS_GENERATION=true.
     # Claims are atomic, so running both is safe too (a job is taken by exactly one process).
     worker_runs_generation: bool = False
