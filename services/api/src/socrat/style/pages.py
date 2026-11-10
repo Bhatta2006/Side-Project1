@@ -54,7 +54,33 @@ BALANCE = {"practice-heavy": 0.85, "balanced": 1.0, "theory-heavy": 1.15}
 # concept check, practice and thinking.
 READING_SHARE = {"practice-heavy": 0.3, "balanced": 0.4, "theory-heavy": 0.55}
 ACCESS_WORDS = 0.75  # stated reading or attention needs: smaller pages, same content
+# Under 18 the page grows with the learner year by year instead of jumping between three
+# groups: (age, words a page, study-reading words a minute). Between two rows the value is
+# interpolated; a 9-year-old and a 12-year-old no longer get the same page.
+BY_AGE: tuple[tuple[int, int, int], ...] = (
+    (3, 30, 30),
+    (5, 50, 40),
+    (7, 80, 55),
+    (9, 110, 70),
+    (12, 160, 95),
+    (15, 200, 110),
+    (17, 250, 125),
+)
 MIN_WORDS, MAX_WORDS = 30, 600
+
+
+def for_age(age: int) -> tuple[float, float] | None:
+    """(words a page, reading rate) for a learner under 18; None for an adult."""
+    if age > BY_AGE[-1][0]:
+        return None
+    age = max(age, BY_AGE[0][0])
+    for (a0, w0, r0), (a1, w1, r1) in zip(BY_AGE, BY_AGE[1:], strict=False):
+        if a0 <= age <= a1:
+            t = (age - a0) / (a1 - a0)
+            return w0 + t * (w1 - w0), r0 + t * (r1 - r0)
+    return float(BY_AGE[-1][1]), float(BY_AGE[-1][2])
+
+
 MIN_PAGES, MAX_PAGES = 2, 12
 
 
@@ -64,6 +90,7 @@ class Learner(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
     register: str = "general"
+    age: int | None = Field(default=None, ge=3, le=110)  # when the learner gave it
     starting_level: str = "beginner"
     desired_level: str = "intermediate"
     approach: list[str] = Field(default_factory=list, max_length=8)
@@ -109,8 +136,10 @@ def learner_of(intent_or_none, style: StyleSpec | None) -> Learner:
     if intent_or_none is not None:
         i = intent_or_none
         minutes = getattr(i, "minutes_per_day", None)
+        age = getattr(i, "age", None)
         return Learner(
             register=getattr(i, "register", "general"),
+            age=age if isinstance(age, int) and 3 <= age <= 110 else None,
             starting_level=getattr(i, "starting_level", "beginner"),
             desired_level=getattr(i, "desired_level", "intermediate"),
             approach=list(getattr(i, "approach", []))[:8],
@@ -142,8 +171,13 @@ def profile(learner: Learner, style: StyleSpec | None = None) -> PageProfile:
     """The page profile for this learner, every number with its reason."""
     reasons: list[str] = []
     register = learner.register if learner.register in BASE_WORDS else "general"
-    words = float(BASE_WORDS[register])
-    reasons.append(f"Pages start at about {int(words)} words for a {register} reader.")
+    words, rate = float(BASE_WORDS[register]), float(READ_RATE[register])
+    aged = for_age(learner.age) if learner.age else None
+    if aged is not None:
+        words, rate = aged
+        reasons.append(f"Pages start at about {int(words)} words for a {learner.age}-year-old.")
+    else:
+        reasons.append(f"Pages start at about {int(words)} words for a {register} reader.")
 
     def scale(factor: float, why: str) -> None:
         nonlocal words
@@ -178,7 +212,7 @@ def profile(learner: Learner, style: StyleSpec | None = None) -> PageProfile:
 
     minutes = learner.minutes_per_day or (style.session_minutes if style else 30)
     share = READING_SHARE.get(learner.balance, 0.4)
-    total = minutes * share * READ_RATE[register]
+    total = minutes * share * rate
     pages = max(MIN_PAGES, min(MAX_PAGES, round(total / per_page)))
     if style is not None and style.depth == "mastery":
         pages = min(MAX_PAGES, pages + 1)

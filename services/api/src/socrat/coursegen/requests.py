@@ -32,6 +32,11 @@ class Create(BaseModel):
     choices: list[str] = Field(default_factory=list, max_length=12)  # fixed picks: intent.PRESETS
     # Optional: the learner's own notes to build the course from (Wondering-style).
     material: str = Field(default="", max_length=intents.MATERIAL_LIMIT)
+    # Optional, in the learner's own terms. The fixed choices are shortcuts; these are the
+    # facts, and they win: any age, any way of learning they can describe, any session length.
+    age: int | None = Field(default=None, ge=intents.MIN_LEARNER_AGE, le=intents.MAX_LEARNER_AGE)
+    style: str = Field(default="", max_length=intents.STYLE_LIMIT)
+    minutes_per_day: int | None = Field(default=None, ge=1, le=480)
 
 
 class Clarify(BaseModel):
@@ -188,8 +193,18 @@ async def create(body: Create, request: Request):
     material = body.material.strip()
     # Different notes make a different request; the same notes again are the same request.
     noted = hashlib.sha256(material.encode()).hexdigest()[:16] if material else ""
+    wish = intents.normalise(body.style)
+    extras = (
+        f"|age={body.age}|min={body.minutes_per_day}|{wish}"
+        if (body.age or body.minutes_per_day or wish)
+        else ""
+    )
     key = intents.request_key(
-        intents.normalise(body.text) + "|" + ",".join(picks) + (f"|{noted}" if noted else "")
+        intents.normalise(body.text)
+        + "|"
+        + ",".join(picks)
+        + (f"|{noted}" if noted else "")
+        + extras
     )
     with Session(eng) as db:
         user = user_of(request, db, write=True)
@@ -211,6 +226,7 @@ async def create(body: Create, request: Request):
     parsed, source = await intents.parse(eng, settings, body.text, user_id, **_notes(material))
     parsed = intents.apply_adapter(parsed, body.text)
     parsed = intents.apply_choices(parsed, picks)
+    parsed = intents.settle(parsed, body.text, body.age, wish, body.minutes_per_day)
     status = (
         "blocked"
         if parsed.blocked
@@ -256,11 +272,20 @@ async def clarify(request_id: str, body: Clarify, request: Request):
             return view(db, row)  # already answered (a double submit) or never asked
         questions = list(row.intent.get("clarifications") or [])
         text, material = row.text, row.material or ""
+        before = dict(row.intent)
     said = [f"Q: {q} A: {a}" for q, a in zip(questions, answers, strict=False) if a]
     combined = (f"{text} (The learner's answers: {' '.join(said)})" if said else text)[:2000]
     parsed, source = await intents.parse(eng, settings, combined, user_id, **_notes(material))
     parsed = intents.apply_adapter(parsed, combined)
     parsed = intents.apply_choices(parsed, picks).model_copy(update={"clarifications": []})
+    # What the learner typed into the form the first time is kept through the second reading.
+    parsed = intents.settle(
+        parsed,
+        combined,
+        before.get("age"),
+        str(before.get("style_request") or ""),
+        None if parsed.minutes_per_day else before.get("minutes_per_day"),
+    )
     with Session(eng) as db, db.begin():
         row = db.get(LearningRequest, request_id)
         if row is None or row.status != "needs_clarification":

@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-// Matches the API's cap on a learner's notes (intent.MATERIAL_LIMIT).
-const MATERIAL_LIMIT = 20000;
+// Matches the API's cap on how a learner describes the way they want to learn (intent.STYLE_LIMIT).
+const STYLE_LIMIT = 400;
 
 type Group = { id: string; single: boolean; choices: { id: string; label: string }[] };
 type Options = { subjects: { id: string; label: string; group: string }[]; groups: Group[] };
@@ -59,6 +59,9 @@ type Intent = {
   desired_level: string;
   starting_level: string;
   register: string;
+  age?: number | null;
+  style_request?: string;
+  minutes_per_day?: number | null;
   clarifications: string[];
   blocked: string;
   safety_notes: string[];
@@ -119,7 +122,10 @@ export default function NewCourse() {
   const [options, setOptions] = useState<Options | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [text, setText] = useState('');
-  const [material, setMaterial] = useState('');
+  // In the learner's own terms; the fixed choices below are shortcuts, these win.
+  const [style, setStyle] = useState('');
+  const [age, setAge] = useState('');
+  const [minutes, setMinutes] = useState('');
   const [picks, setPicks] = useState<string[]>([]);
   const [req, setReq] = useState<LearningRequest | null>(null);
   // Every change to a published plan, and why (never silent; coursegen/evolve.py).
@@ -193,7 +199,17 @@ export default function NewCourse() {
   const stopWriting = () => {
     if (req) run(() => api.post<LearningRequest>(`/learning-requests/${req.id}/cancel`, {}), setReq);
   };
-  const make = () => run(() => api.post<LearningRequest>('/learning-requests', { text, choices: picks, ...(material.trim() ? { material } : {}) }), setReq);
+  const whole = (value: string, low: number, high: number) => {
+    const n = Number.parseInt(value, 10);
+    return Number.isFinite(n) && n >= low && n <= high ? n : undefined;
+  };
+  const make = () => run(() => api.post<LearningRequest>('/learning-requests', {
+    text,
+    choices: picks,
+    ...(style.trim() ? { style: style.trim() } : {}),
+    ...(whole(age, 3, 110) ? { age: whole(age, 3, 110) } : {}),
+    ...(whole(minutes, 1, 480) ? { minutes_per_day: whole(minutes, 1, 480) } : {}),
+  }), setReq);
   const [answers, setAnswers] = useState<string[]>([]);
   // One round of questions; skipping sends blank answers and Socrat picks sensible defaults.
   const answer = (skip = false) => {
@@ -322,25 +338,36 @@ export default function NewCourse() {
               ))}
             </ul>
           </div>
-          <details className="rounded-[16px] border bg-card px-4 py-3" open={material.length > 0}>
-            <summary className="cursor-pointer font-semibold">Build it from your own notes (optional)</summary>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Paste class notes, a chapter or an article. Socrat builds the course around them and teaches what is correct where they are not. Your notes stay private to you.
-            </p>
-            <label htmlFor="material" className="sr-only">Your notes</label>
+          <div>
+            <label htmlFor="style" className="mb-2 block font-semibold">
+              How do you want to learn it? <span className="font-normal text-muted-foreground">(optional)</span>
+            </label>
             <Textarea
-              id="material"
-              className="mt-3 min-h-32"
-              value={material}
-              maxLength={MATERIAL_LIMIT}
-              onChange={(e) => setMaterial(e.target.value)}
-              placeholder="Paste your notes here"
-              aria-describedby="material-count"
+              id="style"
+              className="min-h-20"
+              value={style}
+              maxLength={STYLE_LIMIT}
+              onChange={(e) => setStyle(e.target.value)}
+              placeholder="Any way you like: as a story, through football, like a detective case, only by building things"
             />
-            <p id="material-count" className="mt-1 text-right text-[13px] text-muted-foreground tabular-nums">
-              {material.length.toLocaleString()} / {MATERIAL_LIMIT.toLocaleString()}
+            <div className="mt-4 flex flex-wrap gap-4">
+              <div>
+                <label htmlFor="age" className="mb-1 block text-sm font-medium">
+                  Age of the learner <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Input id="age" className="w-28" inputMode="numeric" value={age} maxLength={3} onChange={(e) => setAge(e.target.value.replace(/\D/g, ''))} placeholder="Any age" />
+              </div>
+              <div>
+                <label htmlFor="minutes" className="mb-1 block text-sm font-medium">
+                  Minutes a day <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Input id="minutes" className="w-28" inputMode="numeric" value={minutes} maxLength={3} onChange={(e) => setMinutes(e.target.value.replace(/\D/g, ''))} placeholder="Any length" />
+              </div>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Lessons are written for exactly this learner. The choices below are shortcuts; what you type here wins.
             </p>
-          </details>
+          </div>
           {options.groups.map((group) => (
             <fieldset key={group.id}>
               <legend className="mb-2 font-semibold">{tx(`new.group.${group.id}`, GROUP_TITLE[group.id] ?? group.id)}</legend>
@@ -368,7 +395,9 @@ export default function NewCourse() {
                 {intent.subject}: {intent.goal}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                From {intent.starting_level} to {intent.desired_level}, written for: {intent.register}.
+                From {intent.starting_level} to {intent.desired_level}, written for: {intent.age ? `age ${intent.age}` : intent.register}
+                {intent.minutes_per_day ? `, ${intent.minutes_per_day} minutes a day` : ''}.
+                {intent.style_request ? ` Taught the way you asked: ${intent.style_request}` : ''}
                 {req.source === 'rules' ? ' (Read with simple rules; the AI reader was not available.)' : ''}
               </p>
               {intent.needs_physical_practice || intent.needs_external_evaluator ? (

@@ -372,3 +372,29 @@ To switch on locally, add the new names to `SOCRAT_RESEARCH_PROVIDERS` in `.env`
 
 Still open from the owner's point 1: sources are searched per lesson, not gathered once per
 course; no Khan Academy or LibreTexts source (neither has a public search API); PDFs are not read.
+
+### 2026-11-10, slice 4: any age, any style
+
+Before: a learner's age was one of six groups and their style one of eight labels.
+
+| Change | Where |
+|---|---|
+| A request carries the learner's exact age (3 to 110) when they give it: typed into the form, or stated in their words ("my 6 year old", "I am 70"). Only an explicit statement counts; nothing is guessed | `coursegen/intent.py` (`Intent.age`, `stated_age`, `settle`) |
+| A known age under 18 decides the register; an adult keeps the register they asked for and is never put in an age group. The lesson writer is told the exact age; for adults it is told to use it for examples only and to assume nothing about ability | `intent.settle`, `intent.to_brief` |
+| Page size and reading pace grow year by year under 18 (a 9-year-old and a 12-year-old no longer get the same page). Adults are not sized by age | `style/pages.py` (`BY_AGE`, `for_age`) |
+| A request carries how the learner wants to be taught, in their own words, up to 400 characters. It goes first into the brief's style request, which the style interpreter turns into the style every writer follows | `Intent.style_request`, `to_brief` |
+| The tutor is told the exact age of a learner under 18. The free-text style still never reaches the tutor (the existing rule: validated fields only) | `coursegen/audience.py` |
+| The request form has three free inputs: how you want to learn it, age, minutes a day (1 to 480). They win over the fixed choices, which stay as shortcuts | `coursegen/requests.py`, `apps/web/src/app/new/page.tsx` |
+| The "build it from your own notes" box is gone from the form (owner's clarification 1). The API still accepts notes | `apps/web/src/app/new/page.tsx` |
+| A model reply with a slip in the age or style keeps everything else it understood | `intent._soften` |
+
+Checked: 15 new tests (`test_any_age_any_style.py`), 56 with the related suites, lint, types,
+and the form in a real browser against the offline API (age 8, 12 minutes, a treasure-hunt
+style: all three came back in "What Socrat understood"). Not checked: a live model reading an
+age or style from free text, or writing a lesson in an unusual style; the full API suite.
+
+Still open: accounts need the holder to be 13 or older (`learn/routes.MIN_AGE`), so a child
+learns through an adult's account and there is no guardian or child-profile feature; a
+"gamified" course is still a writing style, with no game mechanics in the app; enrolment
+accepts only fixed session lengths (15 to 120 minutes), so a 12-minute request is planned as
+12 minutes but enrolled at the nearest allowed value.

@@ -62,6 +62,11 @@ GUARD = (
 def block(intent: Intent) -> str:
     """The tutor text for one intent; empty when it asks for nothing beyond the default."""
     lines = []
+    if intent.age and intent.age < 18:
+        # A validated number, never free text: the exact age beats the age group below.
+        lines.append(
+            f"The learner is {intent.age} years old. Pitch every reply at exactly that age."
+        )
     if intent.register in REGISTER:
         lines.append(REGISTER[intent.register])
     lines += [APPROACH[a] for a in intent.approach if a in APPROACH]
