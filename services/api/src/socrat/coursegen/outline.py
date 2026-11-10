@@ -88,6 +88,7 @@ def to_course(brief: Brief, outline: dict) -> Course:
             "languages": brief.languages,
             "levels": outline["levels"],
             "shape": outline["shape"],
+            "sections": outline.get("sections") or [],
             "modules": [
                 {
                     "id": m["id"],
@@ -116,6 +117,7 @@ def from_course(course: Course) -> dict:
         "description": course.description,
         "levels": [level.model_dump(mode="json") for level in course.levels],
         "shape": shape.effective(course).model_dump(mode="json"),
+        "sections": [s.model_dump(mode="json") for s in course.sections],
         "modules": [
             {
                 "id": m.id,
@@ -186,6 +188,12 @@ SHAPE = """{
     "tools": ["editor | graph | cas | simulation (0-3, distinct)"],
     "label": "optional name for the practice area, at most 24 chars"
   },
+  "sections": [
+    {"id": "kebab-case", "title": "2-40 chars, what the learner sees",
+     "purpose": "10-200 chars: what it collects and why this subject needs it",
+     "style": "cards | table | timeline | list",
+     "fields": ["1-4 short names for what one entry holds, in order"]}
+  ],
   "levels": [
     {"id": "brand-new", "label": "...", "description": "...", "start_concept": null},
     {"id": "...", "label": "...", "description": "...", "start_concept": "<concept id in this course>"}
@@ -255,6 +263,13 @@ Rules:
   (loop predict-observe-explain). reading: any other subject until it has its own studio
   (quiz and explanation only). Pick only evidence and tools that studio supports. A course
   with no code should not list the editor tool or the tests evidence.
+- Sections: 0-4 parts of its own this subject needs beyond lessons and practice, which
+  fill up entry by entry as lessons are written. A language course needs a vocabulary
+  (fields: word, meaning, example); history a timeline (date, event, why it matters);
+  music a repertoire; law a list of cases; chemistry a table of reactions; a children's
+  course a sticker book of things discovered. Add a section only when a learner of this
+  subject would really go back to it; none is right for many courses. Do not add sections
+  for key points, common mistakes, formulas or sources: every course has those already.
 - Write original text. Do not copy any published syllabus.
 - If the brief carries a learning style, it governs the plan: concept size follows the
   session length (a 5-minute session means 3-8 minute concepts and many of them), depth tags
@@ -509,6 +524,44 @@ def _tidy_shape(given: dict, adapter: str = "") -> None:
         given[name] = kept or fallback
 
 
+# Every course has these built from its lessons (learn/sections.py); a planned section
+# with one of these ids or names would only repeat them.
+BUILT_IN_SECTIONS = {"key-ideas", "mistakes", "formulas", "sources"}
+SECTION_STYLES = {"cards", "table", "timeline", "list"}
+
+
+def tidy_sections(given) -> list[dict]:
+    """The course's own sections, repaired or dropped by code: a section is an extra, so a
+    malformed one is left out instead of failing the outline. At most four, ids distinct."""
+    from socrat.catalog.schema import Section
+
+    kept: list[dict] = []
+    for raw in given if isinstance(given, list) else []:
+        if not isinstance(raw, dict):
+            continue
+        named = raw.get("fields")
+        fields = [
+            str(f).strip()[:24]
+            for f in (named if isinstance(named, list) else [])
+            if str(f).strip()
+        ][:4]
+        section = {
+            "id": str(raw.get("id", "")).strip().lower(),
+            "title": str(raw.get("title", "")).strip()[:40],
+            "purpose": str(raw.get("purpose", "")).strip()[:200],
+            "style": raw.get("style") if raw.get("style") in SECTION_STYLES else "list",
+            "fields": fields,
+        }
+        try:
+            Section.model_validate(section)
+        except ValueError:
+            continue
+        if section["id"] in BUILT_IN_SECTIONS or section["id"] in {s["id"] for s in kept}:
+            continue
+        kept.append(section)
+    return kept[:4]
+
+
 def tidy(outline: dict, catalog: Catalog, adapter: str = "") -> dict:
     """Deterministic repairs of slips that need no model, instead of a whole new round:
     - a concept related to itself, to one of its own prerequisites, or to a concept that does
@@ -527,6 +580,7 @@ def tidy(outline: dict, catalog: Catalog, adapter: str = "") -> dict:
     ]
     if isinstance(outline.get("shape"), dict):
         _tidy_shape(outline["shape"], adapter)
+    outline["sections"] = tidy_sections(outline.get("sections"))
     # A planned activity the course's studio cannot produce is dropped here, before any lesson
     # is written against it (see ``shape.NEEDS_STUDIO``). No shape yet means a code course.
     studio = outline["shape"]["studio"] if isinstance(outline.get("shape"), dict) else "code"

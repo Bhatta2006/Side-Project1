@@ -21,11 +21,13 @@ from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import (
     Concept,
     Course,
+    Entry,
     Exercise,
     Experiment,
     Prompt,
     Provenance,
     QuizItem,
+    Section,
     Task,
 )
 from socrat.coursegen import execute, keyed, links
@@ -331,6 +333,49 @@ activities, using "lesson", "quiz", "visual:0", "prompt:<id>", "task:<id>" (only
   "prompt": "...", "rubric": [{{"criterion": "...", "points": 2, "look_for": "..."}}], "safety": ""}}],
 "sequence": ["lesson", "quiz", "task:<id>"]"""
 
+ENTRIES = """This course keeps sections of its own that fill up lesson by lesson. Add
+"entries": what THIS lesson contributes to them, taken only from what the lesson teaches:
+{sections}
+Each entry is {{"section": "<section id>", "values": ["one value per field, in the field
+order"]}}. Up to 12 entries; none is fine when the lesson adds nothing to a section. Never
+repeat an entry, and never invent one the lesson does not cover."""
+
+
+def entries_block(course: Course) -> str:
+    """The ask for section entries, or "" when the course has no sections of its own."""
+    if not course.sections:
+        return ""
+    lines = [
+        f'- "{s.id}" ({s.title}): {s.purpose} Fields: {", ".join(s.fields)}.'
+        for s in course.sections
+    ]
+    return ENTRIES.format(sections="\n".join(lines))
+
+
+def check_entries(raw, sections: Sequence[Section]) -> list[Entry]:
+    """The entries that fit one of the course's sections. A section is an extra: an entry for
+    an unknown section, with the wrong number of values or repeated is dropped, never a
+    reason to send the lesson back."""
+    width = {s.id: len(s.fields) for s in sections}
+    kept: list[Entry] = []
+    seen: set[tuple] = set()
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict) or item.get("section") not in width:
+            continue
+        values = item.get("values")
+        if not isinstance(values, list) or len(values) != width[item["section"]]:
+            continue
+        try:
+            entry = Entry(section=item["section"], values=[str(v).strip() for v in values])
+        except ValidationError:
+            continue
+        key = (entry.section, entry.values[0].casefold())
+        if key not in seen:
+            seen.add(key)
+            kept.append(entry)
+    return kept[:24]
+
+
 DOING = {"performance", "reflection", "discussion", "project", "lab"}
 
 
@@ -603,6 +648,7 @@ def build_concept(
     languages: Sequence[str] = (),
     workbench: bool = False,
     lab: bool = False,
+    sections: Sequence[Section] = (),
 ):
     """The live concept, or (None, problems by artifact). ``languages``: code items allowed
     (and required in each of them), verified later by ``run_code``. Free-text prompts are
@@ -705,6 +751,7 @@ def build_concept(
                 "quiz": parsed,
                 "prompts": prompts,
                 "tasks": tasks,
+                "entries": check_entries(quiz.get("entries"), sections),
                 "sequence": sequence,
                 "exercises": exercises,
                 "experiments": experiments,

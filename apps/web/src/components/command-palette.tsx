@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { BookOpen, Building2, CalendarCheck, ChartNoAxesColumn, ExternalLink, House, RotateCcw, Route, Settings, Shapes, Sparkles, SquareCode, Timer } from 'lucide-react';
+import { BookOpen, Building2, CalendarCheck, ChartNoAxesColumn, ExternalLink, House, NotebookPen, RotateCcw, Route, Settings, Shapes, Sparkles, SquareCode, Timer } from 'lucide-react';
 import { api } from '@/lib/api';
 import { NAME, conceptHref } from '@/lib/routes';
 import type { CourseFeatures, DrillOverview, LibraryProblem } from '@/lib/types';
@@ -28,6 +28,7 @@ const PAGES: { href: string; label: string; icon: typeof House; keywords: string
   { href: '/sprint', label: NAME.sprint, icon: Timer, keywords: 'timer clock', needs: 'library' },
   { href: '/playground', label: NAME.playground, icon: Shapes, keywords: 'visual explain' },
   { href: '/reviews', label: 'Reviews', icon: RotateCcw, keywords: 'review spaced recall snooze due' },
+  { href: '/notes', label: 'Notes', icon: NotebookPen, keywords: 'notes key ideas mistakes formulas sources vocabulary timeline sections' },
   { href: '/progress', label: NAME.evidence, icon: ChartNoAxesColumn, keywords: 'progress mastery history' },
   { href: '/assessments', label: NAME.assessment, icon: CalendarCheck, keywords: 'assessments test exam' },
   { href: '/settings', label: NAME.settings, icon: Settings, keywords: 'account theme' },

@@ -51,7 +51,7 @@ export type NavKey = 'today' | 'skills' | 'practice' | 'playground' | 'evidence'
 /** Six destinations. Each lists the routes that live under it, for the active state. */
 export const NAV: { key: NavKey; href: string; label: string; owns: string[] }[] = [
   { key: 'today', href: '/today', label: NAME.today, owns: ['/today'] },
-  { key: 'skills', href: '/plan', label: NAME.skills, owns: ['/plan', '/graph', '/learn', '/quiz', '/transfer'] },
+  { key: 'skills', href: '/plan', label: NAME.skills, owns: ['/plan', '/graph', '/learn', '/quiz', '/transfer', '/notes'] },
   { key: 'practice', href: '/library', label: NAME.practice, owns: ['/library', '/companies', '/company-sprint', '/sprint', '/problems', '/studio'] },
   { key: 'playground', href: '/playground', label: NAME.playground, owns: ['/playground'] },
   { key: 'evidence', href: '/progress', label: NAME.evidence, owns: ['/progress', '/assessments'] },

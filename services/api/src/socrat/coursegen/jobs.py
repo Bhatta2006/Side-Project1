@@ -828,6 +828,8 @@ async def run_package(
                 example += "\n\n" + pkg.EXPERIMENTS.format(models=pkg.models_text())
             if pkg.wants_tasks(concept, adapter):
                 example += "\n\n" + pkg.TASKS.format()
+            if course.sections:
+                example += "\n\n" + pkg.entries_block(course)
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             quiz_rules = pkg.QUIZ_MARKED if settings.gen_marked_answers else pkg.QUIZ
             asked["quiz"] = (quiz_rules + note, prompt, 6000)
@@ -890,7 +892,16 @@ async def run_package(
             + (f" {caution}" if caution else "")
         )
         live, problems = await asyncio.to_thread(
-            pkg.build_concept, concept, lesson, quiz, version, attribution, code, workbench, lab
+            pkg.build_concept,
+            concept,
+            lesson,
+            quiz,
+            version,
+            attribution,
+            code,
+            workbench,
+            lab,
+            course.sections,
         )
         pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version, code)
         output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}

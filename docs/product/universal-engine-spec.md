@@ -332,3 +332,22 @@ rules (one test split in two: a lesson the reviewer calls *wrong* still stays pl
 Not done in this slice, in order: a live-model run to measure the effect; skeleton shown before
 details; the fast path for the first lesson; course-specific sections beyond the four studios;
 match and reuse; web and free-course sources; stronger models per role with a cost report.
+
+### 2026-11-10, slice 2: a course can have sections of its own
+
+The lesson-and-practice template had no place for what a subject keeps beyond lessons: a
+language's vocabulary, a history timeline, a music repertoire, a list of cases.
+
+| Change | Where |
+|---|---|
+| A course plan may declare up to four sections of its own: id, title, purpose, a layout (cards, table, timeline, list) and the fields one entry holds. The architect is told when a subject needs one and that many need none; a malformed or repeated section is dropped by code, never a failed outline | `catalog/schema.py` (`Section`, `Course.sections`), `coursegen/outline.py` (`tidy_sections`) |
+| Each lesson adds its entries to those sections. The quiz writer is asked for them only when the course has sections; an entry that does not fit is dropped, never a reason to send a lesson back | `Concept.entries`, `package.entries_block`, `package.check_entries` |
+| Every course, hand-authored ones included, gets four sections built from its lessons at no model cost: key ideas, mistakes to avoid, formulas and sources | `learn/sections.py` |
+| `GET /api/v1/sections` returns the active course's sections, grouped by lesson. Only lessons the learner has finished are shown, so it is their notebook and never previews a check | `learn/sections.py` |
+| A Notes page in the app, with a tab per section, linked from Today and the search palette | `apps/web/src/app/notes/page.tsx` |
+
+Checked: 5 new API tests (`test_course_sections.py`), 82 related tests, lint, types, and the
+page in a real browser on the hand-authored Programming from Zero course (tabs, table layout,
+no sideways scroll at 375 px, no console errors). Not checked: the cards and timeline layouts
+with real entries in a browser (covered by the API test only), any section planned by a live
+model, the Playwright suites. No migration: sections live in the stored course and concept JSON.

@@ -319,6 +319,16 @@ class Visual(Model):
         return self
 
 
+class Entry(Model):
+    """One row a lesson adds to one of its course's sections: a word and its meaning, a date
+    and what happened, a piece and its composer. ``values`` follow the section's ``fields``."""
+
+    section: Slug
+    values: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
+        min_length=1, max_length=4
+    )
+
+
 class Concept(Model):
     id: Slug
     title: str = Field(min_length=2, max_length=100)
@@ -339,6 +349,8 @@ class Concept(Model):
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)
     tasks: list[Task] = Field(default_factory=list, max_length=4)
+    # What this lesson adds to the course's own sections (``Course.sections``).
+    entries: list[Entry] = Field(default_factory=list, max_length=24)
     # The order a learner meets this concept's activities (empty: the page's default order):
     # "lesson", "quiz", "visual:N", or "prompt:", "exercise:", "experiment:", "problem:",
     # "task:" followed by an id. Every entry must name something this concept has.
@@ -453,6 +465,22 @@ class LevelStart(Model):
     start_concept: Slug | None = None  # None = absolute beginner, skip placement.
 
 
+class Section(Model):
+    """A part of a course that this subject needs and the lesson-and-practice template does
+    not have: a language's vocabulary, a history course's timeline, a music course's
+    repertoire, a law course's cases. The course's plan declares it; each lesson adds its
+    entries (``Concept.entries``), so the section fills as the course is written and learned.
+    ``fields`` name what one entry holds, in order; ``style`` is how the app lays them out."""
+
+    id: Slug
+    title: str = Field(min_length=2, max_length=40)
+    purpose: str = Field(min_length=10, max_length=200)
+    style: Literal["cards", "table", "timeline", "list"] = "list"
+    fields: list[Annotated[str, Field(min_length=1, max_length=24)]] = Field(
+        min_length=1, max_length=4
+    )
+
+
 class Course(Model):
     id: Slug
     title: str = Field(min_length=2, max_length=80)
@@ -466,6 +494,14 @@ class Course(Model):
     problems: list[Problem] = Field(default_factory=list)
     # How this course is practised and evidenced; none means a programming course.
     shape: CourseShape | None = None
+    # Sections of its own this course has beyond lessons and practice (see ``Section``).
+    sections: list[Section] = Field(default_factory=list, max_length=4)
+
+    @model_validator(mode="after")
+    def sections_are_distinct(self):
+        if len({s.id for s in self.sections}) != len(self.sections):
+            raise ValueError(f"course {self.id} repeats a section id")
+        return self
 
     def concept(self, concept_id: str) -> Concept:
         return next(item for item in self.concepts if item.id == concept_id)
