@@ -2,17 +2,71 @@
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from socrat.assistant import budget
 from socrat.assistant.gateway import ProviderError, make_provider
-from socrat.drills import service
+from socrat.catalog import shape
+from socrat.drills import bank, service
+from socrat.learn import sections
 from socrat.learn import service as learn
 from socrat.learn.routes import active, catalog, engine, require_feature, user_of
-from socrat.models import Enrollment, need, now
+from socrat.models import Enrollment, Evidence, GeneratedCourse, need, now
 from socrat.workbench.routes import CONCEPT
 
 router = APIRouter(prefix="/api/v1/drills")
+
+PRACTICE_EVIDENCE_PER_DAY = 3  # answers per lesson a day that count as evidence
+EVIDENCE_PREFIX = "practice:"
+
+
+def kinds_for(db: Session, cat, course_id: str) -> list[str]:
+    """The question kinds that suit this course (bank.plan), for the bank and the model."""
+    course = cat.course(course_id)
+    meta = db.get(GeneratedCourse, course_id)
+    learner = ((meta.brief or {}).get("learner") or {}) if meta is not None else {}
+    return bank.plan(course, shape.effective(course).studio, str(learner.get("register", "")))
+
+
+def count_as_evidence(
+    db: Session, enrollment: Enrollment, user, outcome: dict, index: int, right: bool, stamp: int
+) -> bool:
+    """One bank answer as recall evidence, within the day's limits. True when it counted."""
+    ref = outcome["questions"][index].get("ref")
+    if outcome.get("source") != "bank" or not ref:
+        return False  # a model-written question was never checked: it proves nothing
+    midnight = learn.local_now(user, stamp).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = (
+        select(func.count())
+        .select_from(Evidence)
+        .where(
+            Evidence.enrollment_id == enrollment.id,
+            Evidence.created_at >= int(midnight.timestamp()),
+        )
+    )
+    activity = f"{EVIDENCE_PREFIX}{ref}"
+    if db.scalar(today.where(Evidence.activity_id == activity)):
+        return False  # this question already counted today
+    counted = db.scalar(
+        today.where(
+            Evidence.concept == outcome["concept"],
+            Evidence.activity_id.like(f"{EVIDENCE_PREFIX}%"),
+        )
+    )
+    if (counted or 0) >= PRACTICE_EVIDENCE_PER_DAY:
+        return False
+    learn.record_evidence(
+        db,
+        enrollment,
+        outcome["concept"],
+        "retrieval",
+        1.0 if right else 0.0,
+        activity,
+        stamp,
+        details={"source": "practice"},
+    )
+    return True
 
 
 class NewSet(BaseModel):
@@ -61,6 +115,17 @@ async def make(body: NewSet, request: Request):
             raise HTTPException(404, "not_found")
         learn.require_unlocked(db, cat, enrollment, body.concept, stamp)
         midnight = learn.local_now(user, stamp).replace(hour=0, minute=0, second=0, microsecond=0)
+        kinds = kinds_for(db, cat, enrollment.course_id)
+        if settings.practice_bank:
+            # Enough checked material in the lesson itself: the set is ready now, at no cost.
+            course = cat.course(enrollment.course_id)
+            items = bank.pool(cat, course, body.concept, sections.finished(db, cat, enrollment))
+            if len(items) >= bank.MIN_SET:
+                right, missed = bank.history(service._records(db, enrollment))
+                chosen = bank.choose(items, kinds, right, missed)
+                record = service.store(db, enrollment, cat, body.concept, chosen, "bank", stamp)
+                db.commit()
+                return service.view(record)
         if service.made_since(db, enrollment, int(midnight.timestamp())) >= service.SETS_PER_DAY:
             raise HTTPException(429, "practice_sets_today")
         db.expunge(user)
@@ -70,7 +135,7 @@ async def make(body: NewSet, request: Request):
     )
     try:
         questions, source = await service.draft(
-            provider, cat, enrollment, user, body.concept, stamp
+            provider, cat, enrollment, user, body.concept, stamp, kinds
         )
     except ProviderError as exc:
         code = "ai_budget_reached" if "budget" in str(exc) else "practice_unavailable"
@@ -94,15 +159,20 @@ def one(set_id: str, request: Request):
 
 @router.post("/{set_id}/answers")
 def reply(set_id: str, body: Reply, request: Request):
+    stamp = now()
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
-        record = service.find(db, active(db, user), set_id)
+        enrollment = active(db, user)
+        record = service.find(db, enrollment, set_id)
         if record is None:
             raise HTTPException(404, "not_found")
         try:
-            result = service.answer(record, body.question, body.answer, now())
+            result = service.answer(record, body.question, body.answer, stamp)
         except LookupError:
             raise HTTPException(404, "not_found") from None
         except ValueError:
             raise HTTPException(409, "already_answered") from None
-        return result | dict(set=service.view(record))
+        counted = request.app.state.settings.practice_evidence and count_as_evidence(
+            db, enrollment, user, record.outcome, body.question, result["correct"], stamp
+        )
+        return result | dict(set=service.view(record), counted=bool(counted))

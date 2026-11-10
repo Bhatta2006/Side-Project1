@@ -277,6 +277,14 @@ class Settings(DatabaseSettings):
     # run. Read-only: nothing is marked done from a draft. Never for a course with safety
     # notes or a learner under 13. Off until the owner decides (spec, owner decisions).
     gen_first_lesson_preview: bool = False
+    # Practice sets come from the lesson's own checked material (its in-lesson checks and the
+    # rows it adds to the course's sections) when there is enough of it: ready at once, no
+    # model call, shaped by the subject (drills/bank.py). Otherwise a model writes the set.
+    practice_bank: bool = False
+    # Answers to bank questions count as recall evidence, so the coach sees practice in any
+    # course: at most PRACTICE_EVIDENCE_PER_DAY per lesson a day, each question once a day.
+    # Model-written sets never count. Off until the owner decides (spec, owner decisions).
+    practice_evidence: bool = False
     # Split deployment: API with SOCRAT_GEN_RUNNER=false, worker with SOCRAT_WORKER_RUNS_GENERATION=true.
     # Claims are atomic, so running both is safe too (a job is taken by exactly one process).
     worker_runs_generation: bool = False

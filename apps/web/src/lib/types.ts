@@ -65,8 +65,11 @@ export interface DrillSummary {
 
 export interface DrillSet extends DrillSummary {
   items: DrillQuestion[];
-  /** "checks": no model was available, so the topic's own concept checks were used. */
-  source: 'model' | 'checks';
+  /** "checks": no model was available, so the topic's own concept checks were used.
+   *  "bank": built from the lesson's own checked material, with no model call. */
+  source: 'model' | 'checks' | 'bank';
+  /** What the coach says once the set is finished; `concept` is a lesson worth rereading. */
+  coach?: { tone: 'ahead' | 'steady' | 'review'; message: string; concept: string | null } | null;
 }
 
 export interface DrillOverview {

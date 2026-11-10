@@ -235,7 +235,23 @@ def from_concept_checks(concept: Concept, language: str) -> list[dict]:
     return out[:QUESTIONS]
 
 
-def brief(cat: Catalog, course_id: str, qualified: str, user: User, stamp: int) -> str:
+KIND_WORDS = {
+    "choice": "choosing between options",
+    "number": "working out a number",
+    "text": "recalling a word or short phrase",
+    "order": "putting steps or events in order",
+    "match": "matching pairs",
+}
+
+
+def brief(
+    cat: Catalog,
+    course_id: str,
+    qualified: str,
+    user: User,
+    stamp: int,
+    kinds: list[str] | None = None,
+) -> str:
     course = cat.course(course_id)
     concept = cat.concept(qualified)
     age = ""
@@ -250,6 +266,14 @@ def brief(cat: Catalog, course_id: str, qualified: str, user: User, stamp: int) 
         f"Topic: {concept.title}\nSummary: {concept.summary}\n"
         f"Key points:\n{points}\nCommon mistakes:\n{pitfalls}{age}\n\n"
         f"Write {QUESTIONS} practice questions on this topic."
+        + (
+            # What suits this subject, decided by code from the course (drills/bank.plan).
+            " This course practises best by, most fitting first: "
+            + ", ".join(KIND_WORDS[k] for k in kinds if k in KIND_WORDS)
+            + "."
+            if kinds
+            else ""
+        )
     )
 
 
@@ -278,7 +302,12 @@ def _records(db: Session, enrollment: Enrollment) -> list[ActivityRecord]:
 
 
 def made_since(db: Session, enrollment: Enrollment, since: int) -> int:
-    return sum(r.started_at >= since for r in _records(db, enrollment))
+    """Sets a model wrote since ``since``. A set from the bank costs nothing and is not
+    counted against the day's allowance."""
+    return sum(
+        r.started_at >= since and r.outcome.get("source") != "bank"
+        for r in _records(db, enrollment)
+    )
 
 
 def summary(record: ActivityRecord) -> dict:
@@ -317,7 +346,38 @@ def view(record: ActivityRecord) -> dict:
                 explanation=q["explanation"],
             )
         questions.append(item)
-    return summary(record) | dict(items=questions, source=outcome.get("source", "model"))
+    return summary(record) | dict(
+        items=questions, source=outcome.get("source", "model"), coach=advice(outcome)
+    )
+
+
+def advice(outcome: dict) -> dict | None:
+    """What the coach says once a set is finished, in plain words, decided by code from the
+    answers: move on when it was easy, go back to the lesson when most were missed."""
+    questions, answers = outcome["questions"], outcome.get("answers", {})
+    if not questions or len(answers) < len(questions):
+        return None
+    correct = sum(a["correct"] for a in answers.values())
+    if correct == len(questions):
+        return dict(
+            tone="ahead",
+            message="All correct. You have this: move on, or take the checkpoint to skip ahead.",
+            concept=None,
+        )
+    if correct * 2 <= len(questions):
+        return dict(
+            tone="review",
+            message=(
+                f"{correct} of {len(questions)} this time. Read the lesson once more, then "
+                "try a new set: the questions you missed come back first."
+            ),
+            concept=outcome["concept"],
+        )
+    return dict(
+        tone="steady",
+        message=f"{correct} of {len(questions)}. One more set will bring back the ones you missed.",
+        concept=None,
+    )
 
 
 def find(db: Session, enrollment: Enrollment, set_id: str) -> ActivityRecord | None:
@@ -327,14 +387,20 @@ def find(db: Session, enrollment: Enrollment, set_id: str) -> ActivityRecord | N
 
 
 async def draft(
-    provider: Provider, cat: Catalog, enrollment: Enrollment, user: User, qualified: str, stamp: int
+    provider: Provider,
+    cat: Catalog,
+    enrollment: Enrollment,
+    user: User,
+    qualified: str,
+    stamp: int,
+    kinds: list[str] | None = None,
 ) -> tuple[list[dict], str]:
     """Questions for the topic and where they came from ("model" or "checks")."""
     try:
         reply = await complete(
             provider,
             SYSTEM.replace("{count}", str(QUESTIONS)),
-            [Turn("user", brief(cat, enrollment.course_id, qualified, user, stamp))],
+            [Turn("user", brief(cat, enrollment.course_id, qualified, user, stamp, kinds))],
             2500,
         )
         return parse(reply), "model"

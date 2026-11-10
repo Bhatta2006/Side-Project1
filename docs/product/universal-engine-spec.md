@@ -441,3 +441,31 @@ The preview answers the open decision "first lesson before the fact check" in co
 in policy: it stays off until the owner turns it on. Not done in this slice: token-by-token
 streaming, a single combined call for lesson and quiz, and reuse of a similar (not
 identical) existing course.
+
+### 2026-11-10, slice 7: practice shaped by the subject, seen by the coach
+
+Before: outside the programming library every practice set was written on demand by one
+model call (slow, 12 a day, unchecked), in the same five kinds for every subject, and no
+answer reached the coach.
+
+| Change | Where |
+|---|---|
+| `SOCRAT_PRACTICE_BANK` (off): a set is built by code from material the lesson already holds and that passed its gates and fact check: its in-lesson checks (those that stand without code), and the rows it adds to the course's own sections. A vocabulary becomes matching and typed recall, a timeline with years becomes ordering. Ready at once, no model call, not counted against the day's allowance. With fewer than 3 such questions the model writes the set as before. Nothing is taken from the lesson's closing quiz | `drills/bank.py` (`from_checks`, `from_sections`, `pool`), `drills/routes.py` |
+| Question kinds are chosen per course, most fitting first: by studio, by the sections the course has, and tapping before typing for a young learner. The bank fills a set in that order and the model is told it | `bank.plan`, `drills/service.brief` |
+| A new set brings back what the learner missed first, then questions never asked, then the rest, without two of a kind in a row | `bank.choose`, `bank.history` |
+| `SOCRAT_PRACTICE_EVIDENCE` (off): a bank answer is recorded as recall evidence (`retrieval`), so mastery, the skill profile and the stuck detector see practice in any course. At most 3 answers per lesson a day, each question once a day; a model-written question never counts | `drills/routes.count_as_evidence` |
+| When a set is finished the coach says what to do next, decided by code: move on or take the checkpoint when all were right, reread the lesson (with a link) when half or more were missed | `drills/service.advice`, `apps/web/src/components/studio/drills.tsx` |
+
+Checked: 9 new tests (`test_practice_bank.py`), 73 with the related suites, lint, types and
+the web type check. Not checked: a bank set in a browser (the shipped courses hold only two
+code-free checks per lesson, under the minimum, so it needs a generated course); how many
+bank questions a real generated lesson yields; the full API suite and Playwright.
+
+Evidence weight: there is no lower weight for practice than the existing `retrieval` weight
+(0.6, the same as a quiz item) without changing the scoring policy for every learner, so the
+limit is by count, not by weight. Owner decision 4 (may practice count?) is answered in code
+and stays off until the owner turns it on.
+
+Still open from G6 and G7: listening and speaking items, tap-and-label, true or false with a
+reason; an easier item on the same idea and then on its prerequisite; lesson events (pages
+reached, time, "simpler" taps) as signals; a learner memory shared by tutor and planner.

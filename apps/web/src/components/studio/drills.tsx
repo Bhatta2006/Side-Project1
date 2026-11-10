@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, ChevronDown, ChevronUp, Flame, Lightbulb, Loader2, Lock, RotateCcw, Sparkles, Star, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { answerToPicks, matchReady, move, picksToAnswer } from '@/lib/arrange';
+import { conceptHref } from '@/lib/routes';
 import type { DrillOverview, DrillQuestion, DrillSet } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading } from '@/components/common';
@@ -163,9 +165,12 @@ function Play({ set, onChange, onDone, onAgain }: { set: DrillSet; onChange: (s:
           <Stars got={set.correct} of={set.questions} />
           <p className="font-display text-2xl font-semibold">{set.correct} of {set.questions} right</p>
           <p className="max-w-md text-[15px] text-muted-foreground">
-            {set.correct === set.questions ? 'A perfect set. Try another topic, or a fresh set on this one.' : 'Look back at the ones you missed, then try a fresh set.'}
+            {set.coach?.message ?? (set.correct === set.questions ? 'A perfect set. Try another topic, or a fresh set on this one.' : 'Look back at the ones you missed, then try a fresh set.')}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
+            {set.coach?.concept ? (
+              <Button asChild variant="outline"><Link href={conceptHref(set.coach.concept)}>Read the lesson again</Link></Button>
+            ) : null}
             <Button onClick={onAgain}><RotateCcw data-icon="inline-start" /> New set on this topic</Button>
             <Button variant="outline" onClick={onDone}>Pick another topic</Button>
           </div>
@@ -185,6 +190,7 @@ function Play({ set, onChange, onDone, onAgain }: { set: DrillSet; onChange: (s:
         />
       )}
 
+      {set.source === 'bank' ? <p className="text-[13px] text-muted-foreground">These questions come from this lesson&apos;s own checked material.</p> : null}
       {set.source === 'checks' ? <p className="text-[13px] text-muted-foreground">These come from this topic&apos;s own concept checks while new questions can&apos;t be written.</p> : null}
       {!finished ? <div><Button variant="ghost" size="sm" className="-ml-3" onClick={onDone}>Back to topics</Button></div> : null}
     </div>
