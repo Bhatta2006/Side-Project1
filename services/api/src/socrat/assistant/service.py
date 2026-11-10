@@ -248,6 +248,13 @@ def learner_sections(
     how = audience.tutor_block(db, user, enrollment)
     if how:
         sections["how_you_asked_to_learn"] = how
+    # What the reading and the practice showed that scores do not (learn/memory.py). Built
+    # by code from counters and results: no learner-written text, so nothing to obey.
+    from socrat.learn import memory
+
+    noticed = memory.tutor_block(db, catalog, enrollment)
+    if noticed:
+        sections["what_socrat_has_noticed"] = noticed
     return sections
 
 

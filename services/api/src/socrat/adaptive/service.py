@@ -96,10 +96,20 @@ def build_profiles(
     rows = evidence_rows(db, enrollment)
     ratings = concept_ratings(db, catalog, enrollment)
     verdicts = failed_verdicts(db, catalog, enrollment.user_id)
+    from socrat.learn import memory
+
+    # How each lesson was read. Empty unless SOCRAT_LESSON_SIGNALS records them.
+    reading = memory.signals(db, enrollment)
     concepts = set(states) | set(rows)
     return {
         c: profiles.build(
-            c, states.get(c, ConceptState()), rows.get(c, []), now, ratings.get(c), verdicts.get(c)
+            c,
+            states.get(c, ConceptState()),
+            rows.get(c, []),
+            now,
+            ratings.get(c),
+            verdicts.get(c),
+            reading.get(c),
         )
         for c in sorted(concepts)
         if c in catalog.concepts

@@ -42,6 +42,7 @@ from socrat.engine.routes import router as engine_router
 from socrat.explainer.routes import router as explainer_router
 from socrat.lab.routes import router as lab_router
 from socrat.learn.graded_routes import router as graded_router
+from socrat.learn.memory import router as memory_router
 from socrat.learn.preview import router as preview_router
 from socrat.learn.reviews import router as reviews_router
 from socrat.learn.routes import router as learner_router
@@ -157,6 +158,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(drills_router)
     app.include_router(sections_router)
     app.include_router(preview_router)
+    app.include_router(memory_router)
     app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)

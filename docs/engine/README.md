@@ -154,6 +154,7 @@ whole revision round.
 | `SOCRAT_GEN_FIRST_LESSON_PREVIEW` | The owner of a private course may read their first lesson's draft once it passes the lesson gates, labelled as still being checked. Read-only. Never with safety notes or a learner under 13 | any time | false |
 | `SOCRAT_PRACTICE_BANK` | Practice sets are built from the lesson's own checked material (in-lesson checks, section rows) when it holds at least 3 questions: no model call, not counted against the daily allowance. Otherwise a model writes the set | any time | false |
 | `SOCRAT_PRACTICE_EVIDENCE` | Answers to bank questions count as recall evidence: at most 3 per lesson a day, each question once a day. Model-written sets never count | any time | false |
+| `SOCRAT_LESSON_SIGNALS` | The app reports how each lesson is read (furthest page, "simpler" and "deeper" taps, rereads, questions). Counters only, never evidence. The stuck detector reads them as weak signals, the tutor is told them, and the learner reads them at `GET /api/v1/memory` | any time | false |
 | `SOCRAT_WORKER_RUNS_GENERATION` | Generation in the worker | see `docs/operations/api-worker-split.md` | as there |
 
 Migrations 0034 to 0044 are additive; each has a tested downgrade

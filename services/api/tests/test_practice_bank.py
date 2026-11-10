@@ -68,17 +68,25 @@ def test_a_vocabulary_becomes_matching_and_recall_filled_from_finished_lessons()
     )
     items = bank.from_sections(course(VOCAB), here, [before])
     kinds = [q["kind"] for q in items]
-    assert kinds == ["match", "text", "text"]
+    assert kinds == ["match", "truefalse", "text", "text"]
+    judge = items[1]
+    assert judge["prompt"] == "Vocabulary. True or false? namaskara: go"
+    assert judge["truth"] is False and len(judge["options"]) == 2
+    why = judge["options"].index("namaskara goes with: hello")
+    assert service.correct(judge, f"false|{why}")
+    assert not service.correct(judge, f"true|{why}")
+    assert not service.correct(judge, f"false|{1 - why}")  # right verdict, wrong reason
     match = items[0]
     assert match["prompt"] == "Vocabulary: match each word to its meaning."
     assert match["lefts"] == ["namaskara", "hogi", "ondu", "eradu"]  # this lesson's rows first
     assert sorted(match["options"]) == ["go", "hello", "one", "two"]
-    recall = items[1]
+    recall = items[2]
     assert recall["answer"] == "namaskara" and "hello" in recall["prompt"]
     assert service.correct(recall, "Namaskara") and not service.correct(recall, "hogi")
-    assert len({q["ref"] for q in items}) == 3
-    # Too few rows to match: recall only. Nothing of this lesson in the section: nothing.
-    assert [q["kind"] for q in bank.from_sections(course(VOCAB), here, [])] == ["text", "text"]
+    assert len({q["ref"] for q in items}) == 4
+    # Too few rows to match: judging and recall. Nothing of this lesson: nothing.
+    alone = [q["kind"] for q in bank.from_sections(course(VOCAB), here, [])]
+    assert alone == ["truefalse", "text", "text"]
     assert bank.from_sections(course(VOCAB), lesson("x", "X"), [before]) == []
 
 
@@ -225,11 +233,17 @@ def test_a_bank_set_needs_no_model_is_free_and_brings_misses_back(client, monkey
     for index in range(service.QUESTIONS):
         result = answer(client, headers, first["id"], index, "no" if index == 2 else "yes")
         assert result["counted"] is False  # evidence is off
-    assert result["set"]["coach"]["tone"] == "steady"
+    # The miss earned one easier question on the same idea, added to the end of the set.
+    extra = result["set"]["items"][-1]
+    assert len(result["set"]["items"]) == service.QUESTIONS + 1
+    assert extra["note"] == "An easier one on the same idea."
+    assert answer(client, headers, first["id"], service.QUESTIONS, "yes")["set"]["coach"][
+        "tone"
+    ] == ("steady")
     second = client.post("/api/v1/drills", json={"concept": concept}, headers=headers).json()
     prompts = [item["prompt"] for item in second["items"]]
     assert prompts[0] == missed  # the miss comes back first
-    assert set(prompts[1:3]) == {"Question 5?", "Question 6?"}  # then what was never asked
+    assert "Question 6?" in prompts[1:3]  # then what was never asked
 
 
 def test_too_little_in_the_bank_leaves_the_set_to_the_model(client, monkeypatch):
@@ -261,6 +275,7 @@ def test_bank_answers_count_as_recall_evidence_within_the_days_limits(client, mo
         for i in range(service.QUESTIONS)
     ]
     assert counted == [True] * PRACTICE_EVIDENCE_PER_DAY + [False] * 2  # a few a day, no more
+    answer(client, headers, first["id"], service.QUESTIONS, "yes")  # the coach's extra question
     with Session(client.app.state.engine) as db:
         rows = db.scalars(select(Evidence).where(Evidence.activity_id.like("practice:%"))).all()
     assert [(r.kind, r.score, r.concept) for r in rows] == [
@@ -289,3 +304,116 @@ def test_a_model_written_set_never_counts(client, monkeypatch):
         assert (
             db.scalars(select(Evidence).where(Evidence.activity_id.like("practice:%"))).all() == []
         )
+
+
+def test_true_or_false_is_judged_with_its_reason_and_refuses_malformed_answers():
+    plain = service.Question.model_validate(
+        {
+            "kind": "truefalse",
+            "prompt": "Ice is frozen water.",
+            "answer": "True",
+            "explanation": "It is.",
+        }
+    ).model_dump()
+    assert plain["truth"] is True and plain["options"] == [] and plain["answer"] == "True"
+    assert service.correct(plain, "true") and not service.correct(plain, "false")
+    assert service.judged("true|0", plain) is None and service.judged("maybe", plain) is None
+    reasoned = service.Question.model_validate(
+        {
+            "kind": "truefalse",
+            "prompt": "Heavier things fall faster in a vacuum.",
+            "answer": "false",
+            "reasons": ["Gravity pulls harder on them", "Without air, all things fall alike"],
+            "reason": "Without air, all things fall alike",
+            "explanation": "Air resistance is what separates them.",
+        }
+    ).model_dump()
+    key = reasoned["options"].index("Without air, all things fall alike")
+    assert service.correct(reasoned, f"false|{key}") and not service.correct(reasoned, "false")
+    assert service.judged("false", reasoned) is None  # a reason is required here
+    assert "Without air" in reasoned["answer"]
+    # A stored question validates again to the same question: the key is never lost.
+    assert service.Question.model_validate(reasoned).model_dump() == reasoned
+    for bad in (
+        {"answer": "perhaps"},
+        {"answer": "true", "reasons": ["only one"], "reason": "only one"},
+        {"answer": "true", "reasons": ["a", "b"], "reason": "c"},
+    ):
+        try:
+            service.Question.model_validate(
+                {"kind": "truefalse", "prompt": "A statement.", "explanation": "Why."} | bad
+            )
+        except ValueError:
+            continue
+        raise AssertionError(bad)
+
+
+def test_gaps_are_filled_from_a_shuffled_word_bank_and_graded_by_position():
+    gaps = service.Question.model_validate(
+        {
+            "kind": "gaps",
+            "prompt": "Water ___ at 100 degrees and ___ at 0.",
+            "fills": ["boils", "freezes"],
+            "extras": ["melts"],
+            "explanation": "At sea level.",
+        }
+    ).model_dump()
+    assert sorted(gaps["options"]) == ["boils", "freezes", "melts"]
+    assert gaps["answer"] == "Water boils at 100 degrees and freezes at 0."
+    right = ",".join(str(gaps["options"].index(w)) for w in ("boils", "freezes"))
+    wrong = ",".join(str(gaps["options"].index(w)) for w in ("freezes", "boils"))
+    assert service.correct(gaps, right) and not service.correct(gaps, wrong)
+    assert service.picks("0", gaps) is None  # one pick per gap
+    for bad in (
+        {"prompt": "No gap here.", "fills": ["x"]},
+        {"prompt": "One ___ only.", "fills": ["a", "b"]},
+        {"prompt": "Same ___ and ___.", "fills": ["a", "a"]},
+    ):
+        try:
+            service.Question.model_validate({"kind": "gaps", "explanation": "Why."} | bad)
+        except ValueError:
+            continue
+        raise AssertionError(bad)
+    kept = service.parse(
+        '{"questions": ['
+        + ",".join(
+            [
+                '{"kind": "gaps", "prompt": "A ___ b.", "fills": ["x"], "extras": ["y"], "explanation": "ok."}',
+                '{"kind": "truefalse", "prompt": "Fire is cold.", "answer": "false", "explanation": "ok."}',
+                '{"kind": "number", "prompt": "Two plus two?", "answer": "4", "explanation": "ok."}',
+            ]
+        )
+        + "]}"
+    )
+    assert [q["kind"] for q in kept] == ["gaps", "truefalse", "number"]
+
+
+def test_after_a_miss_the_coach_goes_easier_then_to_the_lesson_underneath(monkeypatch):
+    def item(ref, kind="choice"):
+        return {"ref": ref, "kind": kind}
+
+    pools = {
+        "k:loops": [item("l1", "text"), item("l2"), item("l3", "text")],
+        "k:variables": [item("v1", "text"), item("v2", "match")],
+    }
+    monkeypatch.setattr(bank, "pool", lambda cat, course, concept, earlier: pools[concept])
+    cat = SimpleNamespace(
+        course=lambda course_id: None,
+        prerequisites={"k:loops": ["k:missing", "k:variables"]},
+        concepts={"k:variables": 1, "k:loops": 1},
+        concept=lambda q: SimpleNamespace(status="live", title="Variables"),
+    )
+    outcome = {"source": "bank", "concept": "k:loops", "questions": [item("l1", "text")]}
+    first = bank.follow_up(cat, outcome, 0, [])
+    assert first["ref"] == "l2" and first["concept"] == "k:loops"  # recognising, same idea
+    assert first["note"] == "An easier one on the same idea."
+    outcome["questions"].append(first)
+    second = bank.follow_up(cat, outcome, 1, [])  # the easier one was missed too
+    assert second["ref"] == "v2" and second["concept"] == "k:variables"
+    assert "Variables" in second["note"] and "builds on" in second["note"]
+    outcome["questions"].append(second)
+    assert bank.follow_up(cat, outcome, 2, []) is None  # two a set, no more
+    assert (
+        bank.follow_up(cat, {**outcome, "source": "model", "questions": [item("l1")]}, 0, [])
+        is None
+    )

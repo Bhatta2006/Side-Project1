@@ -466,6 +466,28 @@ Evidence weight: there is no lower weight for practice than the existing `retrie
 limit is by count, not by weight. Owner decision 4 (may practice count?) is answered in code
 and stays off until the owner turns it on.
 
-Still open from G6 and G7: listening and speaking items, tap-and-label, true or false with a
-reason; an easier item on the same idea and then on its prerequisite; lesson events (pages
-reached, time, "simpler" taps) as signals; a learner memory shared by tutor and planner.
+The open items listed here at first were taken up in slice 8, except listening and speaking.
+
+### 2026-11-10, slice 8: the rest of practice and the coach (G6, G7)
+
+| Change | Where |
+|---|---|
+| Two more question kinds, for the model and the bank alike. **True or false with a reason**: judge a statement, then pick why from 2 to 4 reasons; right only when both are right. **Fill the gaps**: a sentence with up to four gaps and a word bank with distractors, filled by tapping. Both graded exactly by the server; the key never leaves it before the answer | `drills/service.py` (`Question`, `judged`, `correct`), `apps/web/src/components/studio/drills.tsx` |
+| The bank writes true-or-false questions by code from a course's sections: one row shown with another row's second field, false because of the pairing, with the right pairing as the reason | `drills/bank.from_sections` |
+| The coach's ladder in a practice set: after a miss, one easier question on the same idea is added (recognising instead of recalling). If that is missed too, or the lesson has none left, a question from a lesson this one builds on, named as such. At most two a set; bank sets only. A question from an earlier lesson counts as evidence about that lesson | `drills/bank.follow_up`, `drills/routes.reply` |
+| `SOCRAT_LESSON_SIGNALS` (off): the lesson page reports the furthest page reached, taps on "More simply" and "Go deeper", rereads of a finished lesson and questions asked from it. One record of counters per lesson; never scored, never evidence, so they cannot move mastery | `learn/memory.py` (`POST /api/v1/concepts/{id}/signals`), `apps/web/src/app/learn/[...concept]/page.tsx`, `components/lesson-pages.tsx` |
+| The stuck detector gains two weak signs, "asked for a simpler explanation more than once" and "came back to reread the lesson". Like the others they only count together with another sign, and never before anything was scored | `adaptive/profile.py` (`simpler_requests`, `rereads`), `adaptive/stuck.py` |
+| A learner memory: up to eight plain statements built by code from the signals and the latest practice set per lesson. The tutor is given it (section `what_socrat_has_noticed`) and the learner can read exactly the same lines at `GET /api/v1/memory`. No text a learner typed is in it | `learn/memory.py` (`remembered`, `tutor_block`), `assistant/service.learner_sections` |
+
+Fixed on the way: a true-or-false or gaps question lost its answer key when a stored
+question was validated a second time; it now validates to the same question.
+
+Checked: 18 new or changed tests (`test_practice_bank.py`, `test_learner_memory.py`), 110
+with the coach, tutor and practice suites, lint, types and the web type check. Not checked:
+the two new question kinds, the follow-up question and the signals in a browser; whether a
+live model writes good true-or-false reasons and gaps; the full API suite and Playwright.
+
+Left for later, by the owner's decision: listening and speaking items. Also not built: tapping
+a label onto a picture (it needs lesson diagrams with marked parts, so it belongs with
+Visualise), time on page as a signal, and a screen in the app for the memory (the API is
+there).

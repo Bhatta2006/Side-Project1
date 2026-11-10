@@ -26,11 +26,14 @@ MIN_SET = 3  # fewer bank items than this: the set is written by the model as be
 # The kinds that suit a subject, most fitting first: the order a set is filled in, and what
 # the model is asked to prefer when it writes a set. By studio, then by what the course has.
 BY_STUDIO: dict[str, tuple[str, ...]] = {
-    "code": ("choice", "order", "text"),
-    "workbench": ("number", "choice", "order"),
-    "lab": ("choice", "number", "order"),
-    "reading": ("choice", "match", "order", "text"),
+    "code": ("choice", "order", "truefalse", "text"),
+    "workbench": ("number", "choice", "order", "truefalse"),
+    "lab": ("choice", "truefalse", "number", "order"),
+    "reading": ("choice", "truefalse", "match", "gaps", "order", "text"),
 }
+# Recognising is easier than recalling: what the coach offers after a miss.
+EASIER = ("choice", "truefalse", "match")
+FOLLOW_UPS = 2  # questions the coach may add to one set
 SECTION_KINDS = {"cards": "match", "table": "match", "timeline": "order", "list": "text"}
 YOUNG = {"little-kid", "kid"}
 
@@ -145,6 +148,23 @@ def from_sections(course: Course, concept: Concept, earlier: list[Concept]) -> l
             )
             if item:
                 out.append(item)
+        # True or false, with the reason: one of this lesson's rows shown with another
+        # row's second field. False because of the pairing, never because of wording.
+        others = [r for r in pool if r[1] != mine[0][1]]
+        if others and len(mine[0][0]) <= SIDE_LIMIT and len(others[0][1]) <= SIDE_LIMIT:
+            left, right, title = mine[0]
+            wrong = others[0][1]
+            item = _question(
+                _ref("truefalse", where, section.id, left),
+                kind="truefalse",
+                prompt=f"{section.title}. True or false? {left}: {wrong}",
+                truth=False,
+                reasons=[f"{left} goes with: {right}"[:160], f"{left} goes with: {wrong}"[:160]],
+                reason=f"{left} goes with: {right}"[:160],
+                explanation=f"{left}: {right} (from the lesson \u201c{title}\u201d).",
+            )
+            if item:
+                out.append(item)
         for left, right, title in mine:
             if len(left.split()) > 3 or len(left) > 40 or len(right) > 300:
                 continue  # a typed answer is a word or a short phrase
@@ -188,6 +208,45 @@ def choose(items: list[dict], kinds: list[str], right: set[str], missed: set[str
         waiting.remove(pick)
         chosen.append(pick)
     return chosen
+
+
+def follow_up(cat: Catalog, outcome: dict, index: int, earlier: list[Concept]) -> dict | None:
+    """The question the coach adds after a miss, or None. First an easier one on the same
+    idea (recognising instead of recalling); when that is missed too, or the lesson has none
+    left, one from a lesson this one builds on, to find where the gap really is."""
+    questions = outcome["questions"]
+    if outcome.get("source") != "bank":
+        return None
+    if sum(1 for q in questions if q.get("note")) >= FOLLOW_UPS:
+        return None
+    used = {q.get("ref") for q in questions}
+    qualified = outcome["concept"]
+
+    def easier(concept: str) -> dict | None:
+        course = cat.course(concept.split(":", 1)[0])
+        return next(
+            (
+                q
+                for q in pool(cat, course, concept, earlier)
+                if q["kind"] in EASIER and q["ref"] not in used
+            ),
+            None,
+        )
+
+    missed = questions[index]
+    if not missed.get("note"):  # the first miss on this idea: stay on it
+        same = easier(qualified)
+        if same is not None:
+            return same | {"note": "An easier one on the same idea.", "concept": qualified}
+    for before in cat.prerequisites.get(qualified, []):
+        if before not in cat.concepts or cat.concept(before).status != "live":
+            continue
+        found = easier(before)
+        if found is not None:
+            title = cat.concept(before).title
+            note = f"From \u201c{title}\u201d, which this lesson builds on."
+            return found | {"note": note, "concept": before}
+    return None
 
 
 def history(records: list) -> tuple[set[str], set[str]]:

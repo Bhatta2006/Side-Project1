@@ -36,7 +36,10 @@ SIGNAL_WORDS = {
     "slow": "it takes much longer than planned",
     "repeat_mistake": "the same mistake keeps coming back",
     "failing": "several recent attempts missed",
+    "asked_simpler": "you asked for a simpler explanation more than once",
+    "rereading": "you came back to reread the lesson",
 }
+READING_TAPS = 2  # "simpler" taps or rereads on one lesson that count as a sign
 MODE_WORDS = {
     "concept_gap": "the idea itself isn't solid yet",
     "logic": "the approach is close but the logic slips on some cases",
@@ -75,6 +78,11 @@ def signals(profile: SkillProfile, now: int) -> list[str]:
         found.append("repeat_mistake")
     if profile.recent_failures >= 3:
         found.append("failing")
+    # How the lesson was read: weak signs, so they only ever count next to another one.
+    if profile.simpler_requests >= READING_TAPS:
+        found.append("asked_simpler")
+    if profile.rereads >= READING_TAPS:
+        found.append("rereading")
     return found
 
 

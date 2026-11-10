@@ -41,9 +41,13 @@ export interface CourseFeatures {
 
 export interface DrillQuestion {
   index: number;
-  kind: 'choice' | 'number' | 'text' | 'order' | 'match';
+  kind: 'choice' | 'number' | 'text' | 'order' | 'match' | 'truefalse' | 'gaps';
   prompt: string;
+  /** truefalse: the reasons to choose from (empty: judge the statement only).
+   *  gaps: the word bank; the prompt has one "___" per gap. */
   options: string[];
+  /** Why the coach added this question to the set after a miss. */
+  note?: string;
   /** match: the fixed items on the left; the learner picks a partner from `options` for each. */
   lefts?: string[];
   hint: string;

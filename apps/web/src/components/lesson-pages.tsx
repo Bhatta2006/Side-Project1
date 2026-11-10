@@ -32,12 +32,14 @@ export type ExtraPage = { key: string; title: string; node: ReactNode };
  * pages of their own, then the recap. Page sizes were chosen for this learner when the lesson
  * was written. "Show the whole lesson" keeps the single scroll for anyone who prefers it.
  */
-export function LessonPages({ id, source, language, extra = [], recap }: {
+export function LessonPages({ id, source, language, extra = [], recap, onPage }: {
   id: string;
   source: string;
   language?: string;
   extra?: ExtraPage[];
   recap: ReactNode;
+  /** Told the page the reader has reached (1-based), each time it changes. */
+  onPage?: (page: number) => void;
 }) {
   const reading = useMemo(() => splitPages(source), [source]);
   const total = reading.length + extra.length + 1;
@@ -49,6 +51,12 @@ export function LessonPages({ id, source, language, extra = [], recap }: {
 
   useEffect(() => setView(readView()), []);
   useEffect(() => { setIndex(0); moved.current = false; }, [id]);
+
+  const reached = useRef(onPage);
+  reached.current = onPage;
+  useEffect(() => {
+    if (moved.current) reached.current?.(index + 1);
+  }, [index]);
 
   useEffect(() => {
     if (!moved.current) return;

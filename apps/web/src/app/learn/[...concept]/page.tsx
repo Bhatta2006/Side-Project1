@@ -229,7 +229,26 @@ export default function Lesson() {
     return () => clearInterval(timer);
   }, [preparing, qualified]);
 
+  // How the lesson is read, for the coach: counters only, never scored. The API answers
+  // 404 while the feature is off, and a lost signal is never worth an error on screen.
+  const signal = useCallback((kind: 'page' | 'simpler' | 'deeper' | 'reread' | 'question', page?: number) => {
+    api.post(`/concepts/${qualified}/signals`, page ? { kind, page } : { kind }).catch(() => undefined);
+  }, [qualified]);
+  const loaded = concept?.id;
+  const wasDone = useRef(false);
+  useEffect(() => {
+    if (!loaded) return;
+    wasDone.current = Boolean(concept?.lesson_done);
+    if (wasDone.current && active) signal('reread'); // opened again after finishing it
+    // Only when a lesson loads: marking it read on this visit is not a reread.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, active, signal]);
+  useEffect(() => {
+    if (askSoc > 0) signal('question');
+  }, [askSoc, signal]);
+
   async function reexplain(style: string) {
+    if (style === 'simpler' || style === 'deeper') signal(style);
     setExplaining(style);
     try {
       const result = await api.post<{ content: string }>(`/concepts/${qualified}/explain`, { style });
@@ -385,6 +404,7 @@ export default function Lesson() {
           ) : null}
           {/* Lesson pages, then visuals and tasks in the order this concept was planned, then the recap. */}
           <LessonPages
+            onPage={page => signal('page', page)}
             id={qualified}
             source={concept.lesson}
             language={concept.language}

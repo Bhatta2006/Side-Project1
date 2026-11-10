@@ -285,6 +285,11 @@ class Settings(DatabaseSettings):
     # course: at most PRACTICE_EVIDENCE_PER_DAY per lesson a day, each question once a day.
     # Model-written sets never count. Off until the owner decides (spec, owner decisions).
     practice_evidence: bool = False
+    # The app reports how a lesson is read (furthest page, "simpler" and "deeper" taps,
+    # rereads, questions asked from it). Counters only, never scored: they cannot move
+    # mastery. The stuck detector reads them as weak signals, the tutor is told them, and
+    # the learner can read them at GET /api/v1/memory (learn/memory.py).
+    lesson_signals: bool = False
     # Split deployment: API with SOCRAT_GEN_RUNNER=false, worker with SOCRAT_WORKER_RUNS_GENERATION=true.
     # Claims are atomic, so running both is safe too (a job is taken by exactly one process).
     worker_runs_generation: bool = False

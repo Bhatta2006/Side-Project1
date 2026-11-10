@@ -218,12 +218,17 @@ function QuestionCard({ setId, question, number, total, onAnswered, onNext }: {
   return (
     <section className="paper grid gap-5 rounded-card p-5 sm:p-7" aria-labelledby={`q-${question.index}`}>
       <p className="text-sm font-semibold text-muted-foreground tabular-nums">Question {number} of {total}</p>
+      {question.note ? <p className="-mt-3 text-[15px] text-muted-foreground">{question.note}</p> : null}
       <h3 id={`q-${question.index}`} className="text-xl font-semibold whitespace-pre-wrap text-pretty sm:text-2xl">{question.prompt}</h3>
 
       {question.kind === 'order' ? (
         <OrderQuestion question={question} locked={busy || answered} busy={busy} onCheck={picks => void send(picksToAnswer(picks))} />
       ) : question.kind === 'match' ? (
         <MatchQuestion question={question} locked={busy || answered} busy={busy} onCheck={picks => void send(picksToAnswer(picks))} />
+      ) : question.kind === 'truefalse' ? (
+        <TrueFalseQuestion question={question} locked={busy || answered} busy={busy} onCheck={given => void send(given)} />
+      ) : question.kind === 'gaps' ? (
+        <GapsQuestion question={question} locked={busy || answered} busy={busy} onCheck={picks => void send(picksToAnswer(picks))} />
       ) : question.kind === 'choice' ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {question.options.map(option => {
@@ -303,6 +308,82 @@ function OrderQuestion({ question, locked, busy, onCheck }: { question: DrillQue
       </ol>
       {!answered ? (
         <div><Button size="lg" disabled={busy} onClick={() => onCheck(order)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : null} Check my order</Button></div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Judge a statement, then (when reasons are offered) pick why. Sent as "true|2". */
+function TrueFalseQuestion({ question, locked, busy, onCheck }: { question: DrillQuestion; locked: boolean; busy: boolean; onCheck: (given: string) => void }) {
+  const answered = question.correct !== undefined;
+  const [said0, picked0] = (question.given ?? '').split('|');
+  const [said, setSaid] = useState<'true' | 'false' | ''>('');
+  const [reason, setReason] = useState<number | null>(null);
+  const shownSaid = answered ? said0 : said;
+  const shownReason = answered ? (picked0 === undefined || picked0 === '' ? null : Number(picked0)) : reason;
+  const needsReason = question.options.length > 0;
+  const ready = said !== '' && (!needsReason || reason !== null);
+  const choice = 'flex min-h-14 items-center rounded-[16px] border-2 bg-card px-4 py-3 text-left text-[17px] font-medium transition-colors enabled:hover:border-[var(--soc-outline)]';
+  return (
+    <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label="True or false">
+        {(['true', 'false'] as const).map(value => (
+          <button key={value} type="button" disabled={locked} aria-pressed={shownSaid === value} onClick={() => setSaid(value)} className={cn(choice, 'justify-center', shownSaid === value && 'border-primary')}>
+            {value === 'true' ? 'True' : 'False'}
+          </button>
+        ))}
+      </div>
+      {needsReason ? (
+        <div className="grid gap-2" role="group" aria-label="Why">
+          <p className="font-semibold">Why?</p>
+          {question.options.map((option, i) => (
+            <button key={option} type="button" disabled={locked} aria-pressed={shownReason === i} onClick={() => setReason(i)} className={cn(choice, shownReason === i && 'border-primary')}>
+              {option}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {!answered ? (
+        <div><Button size="lg" disabled={busy || !ready} onClick={() => ready && onCheck(needsReason ? `${said}|${reason}` : said)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : null} Check</Button></div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Fill each gap of the sentence from the word bank: one native select per gap. */
+function GapsQuestion({ question, locked, busy, onCheck }: { question: DrillQuestion; locked: boolean; busy: boolean; onCheck: (picks: number[]) => void }) {
+  const parts = question.prompt.split('___');
+  const gaps = parts.length - 1;
+  const [picks, setPicks] = useState<(number | null)[]>(() => Array.from({ length: gaps }, () => null));
+  const answered = question.correct !== undefined;
+  const given = answered ? answerToPicks(question.given) : null;
+  const value = (i: number) => (given ? given[i] : picks[i]);
+  return (
+    <div className="grid gap-3">
+      <p className="text-[17px] leading-[2.6]">
+        {parts.map((part, i) => (
+          <span key={i}>
+            {part}
+            {i < gaps ? (
+              <NativeSelect
+                aria-label={`Word for gap ${i + 1}`}
+                className="mx-1 inline-flex w-auto align-middle"
+                value={value(i) ?? ''}
+                disabled={locked}
+                onChange={e => setPicks(p => p.map((x, j) => (j === i ? (e.target.value === '' ? null : Number(e.target.value)) : x)))}
+              >
+                <NativeSelectOption value="">Choose…</NativeSelectOption>
+                {question.options.map((option, k) => <NativeSelectOption key={option} value={k}>{option}</NativeSelectOption>)}
+              </NativeSelect>
+            ) : null}
+          </span>
+        ))}
+      </p>
+      {!answered ? (
+        <div className="grid gap-1.5">
+          <div><Button size="lg" disabled={busy || !matchReady(picks)} onClick={() => matchReady(picks) && onCheck(picks)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : null} Check</Button></div>
+          {picks.every(p => p !== null) && !matchReady(picks) ? <p className="text-[13px] text-muted-foreground" role="status">Each word can be used once.</p> : null}
+        </div>
       ) : null}
     </div>
   );

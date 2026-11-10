@@ -40,7 +40,7 @@ class Question(BaseModel):
     which stays on the server until the question is answered."""
 
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
-    kind: Literal["choice", "number", "text", "order", "match"]
+    kind: Literal["choice", "number", "text", "order", "match", "truefalse", "gaps"]
     prompt: str = Field(min_length=3, max_length=600)
     options: list[str] = Field(default_factory=list, max_length=6)
     answer: str = Field(default="", max_length=240)
@@ -54,13 +54,31 @@ class Question(BaseModel):
     # (match), and the correct option index for each position (order) or left item (match).
     lefts: list[str] = Field(default_factory=list, max_length=5)
     key: list[int] = Field(default_factory=list, max_length=6)
+    # truefalse: is the statement in ``prompt`` true, and (optionally) why. ``reasons`` are
+    # the reasons to choose from, ``reason`` the right one, copied exactly.
+    truth: bool | None = None
+    reasons: list[str] = Field(default_factory=list, max_length=4)
+    reason: str = Field(default="", max_length=160)
+    # gaps: ``prompt`` has one "___" per gap; ``fills`` are the words that belong there, in
+    # order, and ``extras`` are words that belong nowhere. Shown together as a word bank.
+    fills: list[str] = Field(default_factory=list, max_length=4)
+    extras: list[str] = Field(default_factory=list, max_length=3)
 
     @model_validator(mode="after")
     def gradable(self):
         if self.kind in ("order", "match"):
             self._build_arranged()
+            self.truth, self.reasons, self.reason, self.fills, self.extras = None, [], "", [], []
             return self
         self.sequence, self.pairs, self.lefts, self.key = [], [], [], []
+        if self.kind == "truefalse":
+            self._build_truefalse()
+            return self
+        self.truth, self.reasons, self.reason = None, [], ""
+        if self.kind == "gaps":
+            self._build_gaps()
+            return self
+        self.fills, self.extras = [], []
         if not self.answer:
             raise ValueError("a question needs an answer")
         if self.kind == "choice":
@@ -73,6 +91,49 @@ class Question(BaseModel):
         if self.kind == "number" and number(self.answer) is None:
             raise ValueError("a number question needs a numeric answer")
         return self
+
+    def _build_truefalse(self) -> None:
+        """A statement to judge and, when reasons are given, the reason to pick with it."""
+        self.fills, self.extras, self.accept = [], [], []
+        if self.truth is None:
+            said = normal(self.answer)
+            if said not in ("true", "false"):
+                raise ValueError("a true-or-false question needs the answer true or false")
+            self.truth = said == "true"
+        reasons = [r.strip() for r in self.reasons]
+        if reasons:
+            if not 2 <= len(reasons) <= 4 or len(set(reasons)) != len(reasons):
+                raise ValueError("give 2-4 distinct reasons, or none")
+            if not all(reasons) or any(len(r) > 160 for r in reasons):
+                raise ValueError("a reason is 1-160 characters")
+            if self.reason.strip() not in reasons:
+                raise ValueError("the right reason must be one of the reasons")
+            self.options = shuffled(reasons, self.prompt)
+            self.key = [self.options.index(self.reason.strip())]
+        else:
+            self.options, self.key, self.reason = [], [], ""
+        # ``reasons`` and ``reason`` stay: a stored question validates again to the same one.
+        word = "True" if self.truth else "False"
+        self.answer = (f"{word}. {self.reason.strip()}" if self.key else word)[:240]
+
+    def _build_gaps(self) -> None:
+        """A sentence with gaps and the word bank to fill them from."""
+        self.accept = []
+        fills = [f.strip() for f in self.fills]
+        extras = [e.strip() for e in self.extras if e.strip()]
+        bank = fills + extras
+        if not 1 <= len(fills) <= 4 or self.prompt.count("___") != len(fills):
+            raise ValueError('a gaps question has 1-4 gaps, each written "___", and a word each')
+        if not all(fills) or len(set(bank)) != len(bank) or len(bank) < 2 or len(bank) > 6:
+            raise ValueError("the word bank needs 2-6 distinct words")
+        if any(len(w) > 40 for w in bank):
+            raise ValueError("a word in the bank is at most 40 characters")
+        self.options = shuffled(bank, self.prompt)
+        self.key = [self.options.index(f) for f in fills]
+        filled = self.prompt
+        for word in fills:
+            filled = filled.replace("___", word, 1)
+        self.answer = filled[:240]  # ``fills`` stay, so a stored question validates again
 
     def _build_arranged(self) -> None:
         """Options (shuffled), the key and a readable answer for an order or match question."""
@@ -140,13 +201,21 @@ Reply with JSON only, no prose and no code fences, in exactly this shape:
   {"kind": "order", "prompt": "Put these steps in order: ...", "sequence": ["first", "second", "third"],
    "hint": "...", "explanation": "..."},
   {"kind": "match", "prompt": "Match each ... to its ...", "pairs": [["left 1", "right 1"], ["left 2", "right 2"], ["left 3", "right 3"]],
-   "hint": "...", "explanation": "..."}
+   "hint": "...", "explanation": "..."},
+  {"kind": "truefalse", "prompt": "a statement that is clearly true or clearly false", "answer": "false",
+   "reasons": ["the right reason", "a tempting wrong reason", "another wrong reason"], "reason": "<the right reason, copied exactly>",
+   "hint": "...", "explanation": "..."},
+  {"kind": "gaps", "prompt": "A sentence with ___ for each missing word, up to four ___.", "fills": ["first word", "second word"],
+   "extras": ["a word that fits nowhere"], "hint": "...", "explanation": "..."}
 ]}
 Rules: write {count} questions, easiest first, mixing the kinds that suit the subject: use at
 most one "order" and one "match" question, and only where the topic really has steps in a fixed
 order or pairs that belong together. An "order" has 3-6 steps given in their CORRECT order (it is
 shuffled for the learner); a "match" has 3-5 pairs with every left item and every right item
-different (the right side is shuffled). A
+different (the right side is shuffled). A "truefalse" statement is never a trick of wording:
+it is false because of the idea, and its reasons are each under 160 characters. A "gaps"
+prompt has one ___ per word in "fills", in order; each word is at most 40 characters and
+appears once in the word bank. A
 "number" answer is a plain number or fraction (no units in the answer; say the unit in the
 prompt). A "text" answer is at most three words with every acceptable variant in "accept".
 Every question has exactly one correct answer. Check each answer before you reply."""
@@ -179,10 +248,27 @@ def picks(given: str, question: dict) -> list[int] | None:
     return chosen
 
 
+def judged(given: str, question: dict) -> tuple[bool, int | None] | None:
+    """A true-or-false answer: "true" or "false", then "|<reason index>" when the question
+    has reasons. None when the text is not a valid answer to this question."""
+    said, _, picked = given.strip().casefold().partition("|")
+    if said not in ("true", "false"):
+        return None
+    if not question["key"]:
+        return (said == "true", None) if not picked else None
+    if not picked.isdigit() or int(picked) >= len(question["options"]):
+        return None
+    return said == "true", int(picked)
+
+
 def correct(question: dict, given: str) -> bool:
     kind = question["kind"]
-    if kind in ("order", "match"):
+    if kind in ("order", "match", "gaps"):
         return picks(given, question) == question["key"]
+    if kind == "truefalse":
+        answer = judged(given, question)
+        key = question["key"][0] if question["key"] else None
+        return answer is not None and answer == (question["truth"], key)
     if kind == "choice":
         return given.strip() == question["answer"]
     if kind == "number":
@@ -241,6 +327,8 @@ KIND_WORDS = {
     "text": "recalling a word or short phrase",
     "order": "putting steps or events in order",
     "match": "matching pairs",
+    "truefalse": "judging a statement true or false and choosing the reason",
+    "gaps": "filling the gaps in a sentence from a word bank",
 }
 
 
@@ -338,6 +426,8 @@ def view(record: ActivityRecord) -> dict:
         item["hint"] = q.get("hint", "")
         if q["kind"] == "match":
             item["lefts"] = q["lefts"]  # the key itself is never sent before the answer
+        if q.get("note"):
+            item["note"] = q["note"]  # why the coach added this question to the set
         if (given := answers.get(str(index))) is not None:
             item |= dict(
                 given=given["given"],
@@ -452,8 +542,10 @@ def answer(record: ActivityRecord, index: int, given: str, stamp: int) -> dict:
     question = questions[index]
     if question["kind"] == "choice" and given not in question["options"]:
         raise LookupError("not one of the options")
-    if question["kind"] in ("order", "match") and picks(given, question) is None:
+    if question["kind"] in ("order", "match", "gaps") and picks(given, question) is None:
         raise LookupError("not a valid arrangement")
+    if question["kind"] == "truefalse" and judged(given, question) is None:
+        raise LookupError("not a valid true-or-false answer")
     right = correct(question, given)
     answers[str(index)] = dict(given=given, correct=right, at=stamp)
     outcome["answers"] = answers

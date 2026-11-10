@@ -66,6 +66,9 @@ class SkillProfile:
     active_days: int = 0
     misconceptions: dict[str, int] = field(default_factory=dict)  # unresolved, by count
     failure_modes: dict[str, int] = field(default_factory=dict)
+    # How the lesson was read (learn/memory.py): counters, never scored.
+    simpler_requests: int = 0  # taps on "explain it simpler"
+    rereads: int = 0  # came back to a lesson already finished
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -78,6 +81,7 @@ def build(
     now: int,
     rating: float | None = None,
     verdicts: list[str] | None = None,
+    reading: dict | None = None,
 ) -> SkillProfile:
     """``rows`` are this concept's evidence, oldest first; ``verdicts`` its failed submits."""
     scored = [r for r in rows if r.kind in SCORED]
@@ -119,6 +123,8 @@ def build(
         active_days=len({r.created_at // DAY for r in rows}),
         misconceptions=unresolved(rows),
         failure_modes=dict(Counter(FAILURE_MODES.get(v, "other") for v in verdicts or [])),
+        simpler_requests=int((reading or {}).get("simpler", 0)),
+        rereads=int((reading or {}).get("reread", 0)),
     )
 
 

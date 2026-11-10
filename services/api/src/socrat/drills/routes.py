@@ -33,9 +33,12 @@ def count_as_evidence(
     db: Session, enrollment: Enrollment, user, outcome: dict, index: int, right: bool, stamp: int
 ) -> bool:
     """One bank answer as recall evidence, within the day's limits. True when it counted."""
-    ref = outcome["questions"][index].get("ref")
+    question = outcome["questions"][index]
+    ref = question.get("ref")
     if outcome.get("source") != "bank" or not ref:
         return False  # a model-written question was never checked: it proves nothing
+    # A question the coach added from an earlier lesson is evidence about that lesson.
+    concept = question.get("concept") or outcome["concept"]
     midnight = learn.local_now(user, stamp).replace(hour=0, minute=0, second=0, microsecond=0)
     today = (
         select(func.count())
@@ -50,7 +53,7 @@ def count_as_evidence(
         return False  # this question already counted today
     counted = db.scalar(
         today.where(
-            Evidence.concept == outcome["concept"],
+            Evidence.concept == concept,
             Evidence.activity_id.like(f"{EVIDENCE_PREFIX}%"),
         )
     )
@@ -59,7 +62,7 @@ def count_as_evidence(
     learn.record_evidence(
         db,
         enrollment,
-        outcome["concept"],
+        concept,
         "retrieval",
         1.0 if right else 0.0,
         activity,
@@ -175,4 +178,15 @@ def reply(set_id: str, body: Reply, request: Request):
         counted = request.app.state.settings.practice_evidence and count_as_evidence(
             db, enrollment, user, record.outcome, body.question, result["correct"], stamp
         )
+        if not result["correct"]:
+            # The coach's ladder: an easier question on the same idea, then one from a
+            # lesson underneath it (bank sets only; drills/bank.follow_up).
+            cat = catalog()
+            extra = bank.follow_up(
+                cat, record.outcome, body.question, sections.finished(db, cat, enrollment)
+            )
+            if extra is not None:
+                outcome = dict(record.outcome)
+                outcome["questions"] = [*outcome["questions"], extra]
+                record.outcome = outcome
         return result | dict(set=service.view(record), counted=bool(counted))
