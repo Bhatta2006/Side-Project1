@@ -40,7 +40,7 @@ export default function RefundsPage() {
       <section aria-labelledby="refunds">
         <h2 id="refunds">When we refund</h2>
         <ul>
-          <li><strong>First purchase.</strong> If you ask within 7 days of your first payment for a plan, we refund it in full.</li>
+          <li><strong>First purchase.</strong> If you ask within 48 hours of your first payment for a plan, we refund it in full.</li>
           <li><strong>Renewals.</strong> If a plan renewed and you did not mean it to, ask within 48 hours of the charge and we will refund it, as long as you have not used the paid features since.</li>
           <li><strong>Payment problems.</strong> If you were charged twice, or charged and your plan did not start, we fix it or refund you in full.</li>
           <li><strong>Otherwise.</strong> We do not refund the unused part of a period you chose not to use, so cancel before the renewal date if you do not want to continue.</li>
