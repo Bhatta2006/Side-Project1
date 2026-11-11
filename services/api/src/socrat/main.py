@@ -135,6 +135,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(billing_router)
     app.include_router(email_auth_router)
     entitlements.ENABLED = settings.billing_enabled
+    entitlements.LAUNCH_PROMO_SLOTS = settings.launch_promo_slots
+    entitlements.LAUNCH_PROMO_DAYS = settings.launch_promo_days
     app.include_router(errors.router)
     app.add_middleware(
         SessionMiddleware,

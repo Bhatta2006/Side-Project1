@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from socrat import entitlements
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, user_of
-from socrat.models import BillingPlan, Subscription, now
+from socrat.models import BillingPlan, LaunchGrant, Subscription, now
 
 router = APIRouter(prefix="/api/v1/billing")
 API = "https://api.razorpay.com/v1"
@@ -109,15 +109,33 @@ def status(request: Request):
         plan = entitlements.plan_of(db, user.id, stamp)
         sub = db.get(Subscription, user.id)
         paid = sub is not None and plan != "free"
+        grant = db.scalar(select(LaunchGrant).where(LaunchGrant.user_id == user.id))
+        promo = (
+            dict(ends_at=grant.expires_at, seen=grant.seen_at is not None)
+            if grant and grant.expires_at > stamp and not paid
+            else None
+        )
         return dict(
             enabled=entitlements.ENABLED,
             plan=plan,
             usage=entitlements.usage(db, user.id, stamp),
-            free_concepts=None if paid else sorted(entitlements.free_concepts(catalog())),
+            free_concepts=None if plan != "free" else sorted(entitlements.free_concepts(catalog())),
+            promo=promo,
             renews_at=sub.current_end if sub and paid else None,
             cancel_at_period_end=bool(sub and paid and sub.cancel_at_period_end),
             prices=PRICES,
         )
+
+
+@router.post("/promo/seen")
+def promo_seen(request: Request):
+    """The learner saw the launch-offer celebration; it is shown once."""
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        grant = db.scalar(select(LaunchGrant).where(LaunchGrant.user_id == user.id))
+        if grant is not None and grant.seen_at is None:
+            grant.seen_at = now()
+        return dict(ok=True)
 
 
 @router.post("/checkout")

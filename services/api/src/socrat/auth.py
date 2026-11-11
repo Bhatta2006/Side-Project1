@@ -8,10 +8,24 @@ from fastapi import HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from socrat import entitlements
 from socrat.database import record_event
 from socrat.models import LoginSession, User
 
 COOKIE = "socrat_session"
+# A random id for the browser, kept across sign-outs and accounts. Only its hash is stored, and
+# only to allow one launch-offer grant per device.
+DEVICE_COOKIE = "socrat_device"
+DEVICE_SECONDS = 2 * 365 * 86400
+
+
+def device_hash(request: Request) -> str:
+    """Hash of this browser's device id, minting one for the response if it has none yet."""
+    token = request.cookies.get(DEVICE_COOKIE, "")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{32,64}", token):
+        token = getattr(request.state, "device_token", None) or secrets.token_urlsafe(32)
+        request.state.device_token = token  # open_session sets it on the response
+    return hashlib.sha256(f"device:{token}".encode()).hexdigest()
 
 
 def token_hash(token: str) -> str:
@@ -72,6 +86,7 @@ def establish_session(
             user = db.scalar(select(User).where(User.email == email, User.issuer == "email"))
             if user is not None:
                 user.issuer, user.subject = issuer, subject
+        created = user is None
         if user is None:
             user = User(issuer=issuer, subject=subject)
             db.add(user)
@@ -82,6 +97,8 @@ def establish_session(
         ):
             user.email = email
         db.flush()
+        if created:
+            entitlements.grant_launch_promo(db, user, device_hash(request))
         user_id = user.id
     return open_session(request, response, user_id)
 
@@ -112,4 +129,15 @@ def open_session(request: Request, response, user_id: str):
         samesite="lax",
         path="/",
     )
+    minted = getattr(request.state, "device_token", None)
+    if minted:
+        response.set_cookie(
+            DEVICE_COOKIE,
+            minted,
+            max_age=DEVICE_SECONDS,
+            httponly=True,
+            secure=settings.secure,
+            samesite="lax",
+            path="/",
+        )
     return response

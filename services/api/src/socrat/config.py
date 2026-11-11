@@ -141,6 +141,10 @@ class Settings(DatabaseSettings):
     explainer_enabled: bool = True
     # Freemium plans (Razorpay Subscriptions). Off = no plan limits for anyone.
     billing_enabled: bool = False
+    # Launch offer: the first N new signups get Plus free for launch_promo_days. 0 = off. N counts
+    # grants ever made, so raising it later only opens the extra slots.
+    launch_promo_slots: int = Field(default=0, ge=0, le=1000)
+    launch_promo_days: int = Field(default=30, ge=1, le=365)
     razorpay_key_id: str = Field(
         default="", validation_alias=AliasChoices("socrat_razorpay_key_id", "razorpay_key_id")
     )

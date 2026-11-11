@@ -9,12 +9,14 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from socrat.catalog.registry import Catalog
 from socrat.models import (
     AssistantMessage,
     AssistantThread,
+    LaunchGrant,
     PlaygroundJob,
     Subscription,
     User,
@@ -38,12 +40,66 @@ PLANS = {
 }
 
 
+# Set from SOCRAT_LAUNCH_PROMO_* at startup: how many first signups get free Plus, for how long.
+LAUNCH_PROMO_SLOTS = 0
+LAUNCH_PROMO_DAYS = 30
+# Test and local sign-ins never use up a launch slot.
+NO_PROMO_ISSUERS = {"local-development", "eval"}
+
+
 def plan_of(db: Session, user_id: str, stamp: int | None = None) -> str:
-    """Paid access lasts until the end of the period that was paid for, cancelled or not."""
+    """Paid access lasts until the end of the period that was paid for, cancelled or not.
+    A launch grant gives Plus until it expires; a paid plan above it still wins."""
+    at = stamp or now()
     sub = db.get(Subscription, user_id)
-    if sub and sub.plan in PLANS and sub.current_end > (stamp or now()):
-        return sub.plan
-    return "free"
+    paid = sub.plan if sub and sub.plan in PLANS and sub.current_end > at else "free"
+    if paid == "free":
+        grant = db.scalar(select(LaunchGrant).where(LaunchGrant.user_id == user_id))
+        if grant and grant.expires_at > at:
+            return "plus"
+    return paid
+
+
+def grant_launch_promo(
+    db: Session, user: User, device: str, stamp: int | None = None
+) -> LaunchGrant | None:
+    """Give a brand-new account one of the launch slots, if any are left. Call it only where an
+    account is created, never on sign-in, so existing learners are not eligible.
+
+    Each attempt claims the next slot number inside a savepoint; if another signup took that
+    number first, the primary key rejects it and we try the next. Slots above the cap are never
+    written, so the cap holds under concurrent signups.
+
+    ``device`` is the hash of the browser's device cookie: a device that already holds a grant
+    gets no second one, whichever account signs up on it."""
+    if LAUNCH_PROMO_SLOTS <= 0 or user.issuer in NO_PROMO_ISSUERS:
+        return None
+    if db.scalar(select(LaunchGrant.slot).where(LaunchGrant.device_hash == device)) is not None:
+        return None
+    at = stamp or now()
+    for _ in range(5):
+        taken = db.scalar(select(func.max(LaunchGrant.slot))) or 0
+        if taken >= LAUNCH_PROMO_SLOTS:
+            return None
+        grant = LaunchGrant(
+            slot=taken + 1,
+            user_id=user.id,
+            granted_at=at,
+            expires_at=at + LAUNCH_PROMO_DAYS * 86400,
+            device_hash=device,
+        )
+        try:
+            with db.begin_nested():
+                db.add(grant)
+                db.flush()
+            return grant
+        except IntegrityError:
+            # Another signup claimed that slot (look again), or this device just got a grant
+            # in a racing request (the next look finds it and stops).
+            if db.scalar(select(LaunchGrant.slot).where(LaunchGrant.device_hash == device)):
+                return None
+            continue
+    return None
 
 
 def free_concepts(catalog: Catalog) -> set[str]:

@@ -599,3 +599,36 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
 /* Soc thinking: a pencil scribble that keeps drawing itself. */
 .soc-scribble path { stroke-dasharray: 46 120; animation: soc-scribble 1.3s linear infinite; }
 @keyframes soc-scribble { from { stroke-dashoffset: 166; } to { stroke-dashoffset: 0; } }
+
+/* Launch-offer celebration (components/launch-gift.tsx): confetti out of a popper. */
+@keyframes socrat-confetti {
+  0% { transform: translate(0, 0) rotate(0deg) scale(0.4); opacity: 1; }
+  55% { transform: translate(var(--x), var(--y)) rotate(calc(var(--r) * 0.7)) scale(1); opacity: 1; }
+  100% { transform: translate(var(--x), calc(var(--y) + 80px)) rotate(var(--r)) scale(1); opacity: 0; }
+}
+/* Springs in, winds up, then kicks back as it fires (the burst starts at the kick). */
+@keyframes socrat-popper {
+  0% { transform: rotate(-25deg) scale(0.6); }
+  35% { transform: rotate(8deg) scale(1.1); }
+  55% { transform: rotate(-14deg) scale(0.92); }
+  68% { transform: rotate(10deg) scale(1.22); }
+  100% { transform: none; }
+}
+@keyframes socrat-popper-fire {
+  0% { transform: translateY(40px) rotate(-30deg) scale(0.6); opacity: 0; }
+  30% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  42% { transform: translate(-6px, 6px) rotate(-12deg) scale(0.9); }
+  52% { transform: translate(4px, -4px) rotate(8deg) scale(1.15); }
+  75% { transform: none; opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+.confetti { opacity: 0; animation: socrat-confetti 1.7s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.popper-in { display: inline-block; animation: socrat-popper 0.9s ease-out both; }
+.popper-fire { animation: socrat-popper-fire 2.2s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .confetti, .popper-fire { display: none; }
+  .popper-in { animation: none; }
+}
+:root[data-reduce-motion='true'] .confetti,
+:root[data-reduce-motion='true'] .popper-fire { display: none; }
+:root[data-reduce-motion='true'] .popper-in { animation: none; }

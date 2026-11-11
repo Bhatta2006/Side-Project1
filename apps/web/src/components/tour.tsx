@@ -8,6 +8,7 @@ import { useSession } from '@/lib/session';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Soc } from '@/components/socrat/illustration';
+import { useTourHeld } from '@/lib/first-run';
 
 /** Settings › "Replay tour" fires this; the shell's Tour listens. */
 export const TOUR_EVENT = 'socrat:tour';
@@ -142,6 +143,7 @@ export function Tour() {
   const scrolled = useRef(-1);
   const lastTop = useRef<number | undefined>(undefined);
   const tries = useRef(0);
+  const held = useTourHeld();
 
   const steps = STEPS;
   const step = steps[index];
@@ -156,10 +158,10 @@ export function Tour() {
 
   // Auto-start once, on Today, for a learner who has not seen it.
   useEffect(() => {
-    if (open || !profile || profile.tour_seen || recorded.current || pathname !== '/today' || seenHere()) return;
+    if (open || held || !profile || profile.tour_seen || recorded.current || pathname !== '/today' || seenHere()) return;
     const timer = window.setTimeout(start, 600);
     return () => window.clearTimeout(timer);
-  }, [open, profile, pathname, start]);
+  }, [open, held, profile, pathname, start]);
 
   useEffect(() => {
     window.addEventListener(TOUR_EVENT, start);

@@ -47,6 +47,8 @@ export interface BillingStatus {
   free_concepts: string[] | null;
   renews_at: number | null;
   cancel_at_period_end: boolean;
+  /** Free Plus from the launch offer, while it lasts; `seen` once the celebration was shown. */
+  promo?: { ends_at: number; seen: boolean } | null;
   prices: Record<'plus' | 'pro', Record<'month' | 'year', Record<'INR' | 'USD', number>>>;
 }
 
