@@ -566,3 +566,33 @@ per-lesson amount should be set from the live run); the full API suite; Playwrig
 Still open from G5: the quota is one number for every course, not per plan tier; the learner
 sees it only on the lesson they reach, not on the plan page; a course paused for budget still
 needs an admin to resume it.
+
+### 2026-11-11, slice 12: any way of being taught is a frame the whole engine follows (G9, part)
+
+Owner's instruction: do not stop at "gamified". A learner may ask to be taught through
+analogies, as a story, as a game, as a detective story, through projects, the way an
+80-year-old would understand, or any way they can describe.
+
+Before: a learner's words about how to be taught were kept and shown to the writers as one
+line, but the only way the engine knew by name was `gamified`, a yes or no.
+
+| Change | Where |
+|---|---|
+| A course's style carries a **frame**: its name, how every lesson is built in it (an instruction to the writers), and its own words for a lesson, a module and what a finished lesson earns ("case", "investigation", "clue"). `gamified` stays for old courses; a game is now one frame among any | `style/spec.py` (`Frame`, `StyleSpec.frame`) |
+| The style interpreter is asked for a frame for any wish. Without a model, the usual wishes (detective, story, analogies, projects, game) get a built-in frame, and anything else keeps the learner's own words as the method, so no way of being taught is dropped. A slip in the model's frame keeps the rest of what it understood | `spec.STYLIST`, `interpret`, `frame_from_rules` |
+| The planner and every lesson writer are told the frame: keep it from the first line to the last and in the questions; it decides how an idea is taught, never what is true; the idea is always stated plainly at least once. The style reviewer already scores a lesson against its style | `spec.block` |
+| The tutor of anyone taking the course is told the frame's name and words, and to step out of the frame whenever the learner is confused. Only pattern-checked plain words reach the tutor and the app; the free-text method stays with the writers | `coursegen/audience.py` (`frame_line`) |
+| The plan page speaks the course's words: "Taught as: Detective story. 1 of 2 cases finished, 1 clue earned", "Investigation 1: ...". Every number is a lesson the learner really finished; a frame adds words, never points of its own | `learn/views.frame_view`, `apps/web/src/app/plan/page.tsx` |
+| A request's deadline, when it is a real date still ahead, is sent to enrolment as the target date, so the plan is paced against it (the planner already did this for a date set by hand) | `coursegen/requests.py` (`_deadline`) |
+
+Checked: 5 new tests (`test_style_frames.py`), including one course from request to plan with
+a scripted interpreter; the style, request, plan and tutor suites; lint, types and the web
+type check. In a browser against the offline API, on a seeded detective-story course: the
+plan page showed the frame line and "Investigation 1". Not checked: a live model choosing a
+frame for an unusual wish, or writing a lesson inside one (the frame's value depends on
+this); the full API suite; Playwright.
+
+Still open from G9: guardian and child accounts (owner's legal decision); the frame's words
+are on the plan page only, not yet on Today or the lesson page; enrolment still accepts only
+fixed session lengths (15 to 120 minutes), because the planner's day budgets are untested
+below 15; no university template or syllabus import.

@@ -439,6 +439,9 @@ export interface RoadmapItem {
 }
 
 export interface PlanView {
+  /** How this course is taught (a detective story, a game...), with its words for progress.
+   *  The counts are lessons really finished. Absent for a course with no frame. */
+  frame?: { name: string; lesson_word: string; module_word: string; reward_word: string; lessons: number; finished: number } | null;
   pace: Pace;
   pace_reason: string;
   projected_finish: string;

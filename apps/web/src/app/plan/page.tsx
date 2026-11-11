@@ -28,6 +28,10 @@ import { ReasonChip } from '@/components/socrat/reason-chip';
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
 const FINISHED = ['mastered', 'practiced'];
+// A course's own words for its progress ("case", "clue"): plain words from the API.
+const capital = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
+const plural = (word: string, count: number) =>
+  count === 1 ? word : /(s|x|ch|sh)$/.test(word) ? `${word}es` : /[^aeiou]y$/.test(word) ? `${word.slice(0, -1)}ies` : `${word}s`;
 const FOCUS_LABEL = { foundations: 'programming foundations', interview: 'coding interviews', contest: 'contests' } as const;
 
 /** Learner-owned changes to one concept, each with a way to take it back. */
@@ -128,6 +132,15 @@ export default function PlanPage() {
           <p className="mt-3 max-w-2xl text-base text-muted-foreground">
             Your roadmap{features.code ? ` for ${FOCUS_LABEL[plan.focus]}` : ''}, on the {STYLE_LABEL[plan.style]} path. It adapts to your results, and Socrat asks before changing it.
           </p>
+          {plan.frame ? (
+            <p className="mt-3 max-w-2xl text-base" aria-label="How this course is taught">
+              <span className="font-semibold">Taught as: {plan.frame.name}.</span>{' '}
+              <span className="text-muted-foreground">
+                {plan.frame.finished} of {plan.frame.lessons} {plural(plan.frame.lesson_word, plan.frame.lessons)} finished
+                {plan.frame.reward_word && plan.frame.finished ? `, ${plan.frame.finished} ${plural(plan.frame.reward_word, plan.frame.finished)} earned` : ''}.
+              </span>
+            </p>
+          ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setPlanChat(n => n + 1)}><MessageCircle data-icon="inline-start" /> Plan with Soc</Button>
             <Button asChild variant="outline"><Link href="/graph">Skill graph</Link></Button>
@@ -212,7 +225,7 @@ export default function PlanPage() {
                     <summary className="flex min-h-16 cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 lg:px-6 [&::-webkit-details-marker]:hidden">
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-display text-lg font-semibold tracking-[-0.02em]">{module.title}</span>
+                          <span className="font-display text-lg font-semibold tracking-[-0.02em]">{plan.frame && !module.bridge ? `${capital(plan.frame.module_word)} ${plan.modules.slice(0, mi + 1).filter(m => !m.bridge).length}: ` : ''}{module.title}</span>
                           {isCurrent ? <Badge>Current</Badge> : null}
                           {unlocked.has(module.id) ? <Badge>Unlocked</Badge> : null}
                           {module.locked_by ? <StatusLabel status="locked" muted className="text-[13px]" /> : null}
@@ -258,7 +271,7 @@ export default function PlanPage() {
                                   {here ? <Badge>Current</Badge> : null}
                                   {c.review_due ? <Badge>Review due</Badge> : null}
                                   {c.transfer === 'verified' ? <Badge variant="secondary">Transfer verified</Badge> : null}
-                                  {c.lesson_done ? <Badge variant="secondary">Lesson read</Badge> : null}
+                                  {c.lesson_done ? <Badge variant="secondary">{plan.frame && !module.bridge ? `${capital(plan.frame.lesson_word)} finished` : 'Lesson read'}</Badge> : null}
                                   {c.quiz_done ? <Badge variant="secondary">Concept check done</Badge> : null}
                                   {c.reason_codes?.map(code => <ReasonChip key={code} code={code} />)}
                                   <OverrideBadges item={c} undo={undo} />

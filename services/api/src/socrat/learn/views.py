@@ -256,6 +256,28 @@ def current_module(plan: Plan, next_concept: str | None) -> str | None:
     return next((r["module"] for r in plan.roadmap if r["status"] in OPEN), None)
 
 
+def frame_view(db: Session, enrollment: Enrollment, modules: list[dict]) -> dict | None:
+    """How this course is taught, in words the app can use for progress ("3 of 12 cases",
+    "3 clues"). Every number is counted from lessons the learner really finished; a frame
+    adds words, never points of its own. None for a course without a frame."""
+    from socrat.models import GeneratedCourse
+    from socrat.style import spec as styles
+
+    course = db.get(GeneratedCourse, enrollment.course_id)
+    frame = styles.course_frame(course.brief) if course is not None else None
+    if frame is None:
+        return None
+    own = [c for m in modules if not m["bridge"] for c in m["concepts"]]
+    return dict(
+        name=frame.name,
+        lesson_word=frame.lesson_word,
+        module_word=frame.module_word,
+        reward_word=frame.reward_word,
+        lessons=len(own),
+        finished=sum(1 for c in own if c["lesson_done"]),
+    )
+
+
 def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int) -> dict:
     plan = learn.plan_for(db, catalog, user, enrollment, now)
     completed = learn.completed_for(db, enrollment)
@@ -323,6 +345,7 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
     first = plan.days[0]["items"][0] if plan.days and plan.days[0]["items"] else None
     return dict(
         style=plan.style,
+        frame=frame_view(db, enrollment, modules),
         focus=plan.focus,
         forecast=plan.forecast,
         milestones=plan.milestones,

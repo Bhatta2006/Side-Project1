@@ -62,6 +62,18 @@ class Confirm(BaseModel):
     intent: dict | None = None  # the learner's edits, validated as a whole Intent
 
 
+def _deadline(intent: dict) -> str | None:
+    """The request's deadline when it is a real date still ahead; a past or broken one is
+    dropped, not sent to enrolment."""
+    from datetime import UTC, date, datetime
+
+    try:
+        due = date.fromisoformat(str(intent.get("deadline") or ""))
+    except ValueError:
+        return None
+    return due.isoformat() if due > datetime.now(UTC).date() else None
+
+
 def _enabled(request: Request) -> None:
     if not request.app.state.settings.learning_requests_enabled:
         raise HTTPException(404, "not_found")
@@ -116,6 +128,8 @@ def view(db: Session, row: LearningRequest) -> dict:
                     120,
                 ),
                 weekdays=list(range(7)),
+                # The date they asked to be ready by, so the plan is paced against it.
+                **({"target_date": due} if (due := _deadline(row.intent)) else {}),
             )
         if stored is not None:
             by_id = {c.id: c for c in stored.concepts}

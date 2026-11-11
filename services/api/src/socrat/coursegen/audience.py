@@ -82,8 +82,34 @@ def tutor_block(db: Session, user: User, enrollment: Enrollment | None) -> str:
     if enrollment is None:
         return ""
     course = db.get(GeneratedCourse, enrollment.course_id)
-    if course is None or course.owner_id != user.id:
+    if course is None:
         return ""
+    framed = frame_line(course.brief)
+    if course.owner_id != user.id:
+        return "\n".join([framed, GUARD]) if framed else ""
+    mine = _own_block(db, user, course)
+    return "\n".join(x for x in (framed, mine) if x)
+
+
+def frame_line(brief: dict | None) -> str:
+    """How the course is taught, for the tutor of anyone taking it: the frame's name and its
+    words for a lesson and a module. These are pattern-checked plain words (style/spec.py);
+    the frame's free-text method stays with the lesson writers."""
+    from socrat.style import spec as styles
+
+    frame = styles.course_frame(brief)
+    if frame is None:
+        return ""
+    return (
+        f"This course is taught as: {frame.name}. In it a lesson is called a "
+        f'"{frame.lesson_word}" and a module a "{frame.module_word}". Keep that framing in '
+        "your replies, and step out of it whenever the learner is confused: a clear answer "
+        "comes first. Never invent rewards, scores or progress."
+    )
+
+
+def _own_block(db: Session, user: User, course: GeneratedCourse) -> str:
+    """How the learner who made this course asked to be taught (their validated picks)."""
     request = db.scalars(
         select(LearningRequest)
         .where(LearningRequest.user_id == user.id, LearningRequest.course_id == course.id)

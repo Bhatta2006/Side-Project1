@@ -38,6 +38,34 @@ def for_session(spec: "StyleSpec | None", minutes: int | None) -> "StyleSpec | N
     return (spec or StyleSpec(name=f"{minutes} minutes a session")).fitted(minutes)
 
 
+_WORD = r"^[A-Za-z]+([ \-][A-Za-z]+)?$"  # one or two plain words, shown in the app
+
+
+class Frame(BaseModel):
+    """The way a course is taught, for any way a learner can describe: a detective story,
+    only analogies, a game, projects, letters from a grandparent. ``gamified`` used to be the
+    one such way the engine knew; a frame is the same idea for all of them. Writers build
+    every lesson inside it, the tutor speaks inside it, and the app uses its words for the
+    learner's progress. It shapes how an idea is taught, never what is true."""
+
+    model_config = ConfigDict(extra="forbid")
+    # Plain words only: the name and the three words below are shown in the app and told
+    # to the tutor, so they can carry no instruction. ``method`` goes to lesson writers only.
+    name: str = Field(
+        min_length=2, max_length=40, pattern=r"^[A-Za-z']+([ \-][A-Za-z']+){0,2}$"
+    )  # "Detective story"
+    # How every lesson is built in this frame, as an instruction to the writer.
+    method: str = Field(min_length=10, max_length=400)
+    lesson_word: str = Field(
+        default="lesson", min_length=2, max_length=20, pattern=_WORD
+    )  # "case", "chapter", "level"
+    module_word: str = Field(
+        default="module", min_length=2, max_length=20, pattern=_WORD
+    )  # "investigation", "world"
+    # What a finished lesson earns, in the frame's words ("clue", "star"); "" for nothing.
+    reward_word: str = Field(default="", max_length=20, pattern=r"^$|" + _WORD)
+
+
 class StyleSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(default="Custom", min_length=2, max_length=60)
@@ -52,6 +80,7 @@ class StyleSpec(BaseModel):
     )
     rigor: Rigor = "standard"  # intuitive: no formalism; rigorous: derivations and proofs
     gamified: bool = False
+    frame: Frame | None = None  # how the course is taught, for any style (see ``Frame``)
     notes: str = Field(default="", max_length=600)  # the learner's own words, kept verbatim
 
     def lesson_bounds(self) -> tuple[int, int | None]:
@@ -78,7 +107,12 @@ class StyleSpec(BaseModel):
 
     def shows_reference(self) -> bool:
         """The hand-authored reference lesson is a model for long, plain lessons only."""
-        return self.format != "bite" and not self.gamified and self.tone != "playful"
+        return (
+            self.format != "bite"
+            and not self.gamified
+            and self.tone != "playful"
+            and self.frame is None  # a plain lesson is no model for a story or a case
+        )
 
 
 PRESETS: dict[str, StyleSpec] = {
@@ -157,14 +191,111 @@ _RULES: list[tuple[re.Pattern, str]] = [
 ]
 
 
+# Common ways to be taught, for when no model is available to read the wish. A model reads
+# any wish; these only make sure the usual ones work without one (first match wins).
+_FRAMES: list[tuple[re.Pattern, Frame]] = [
+    (
+        re.compile(r"\b(detective|mystery|mysteries|whodunn?it|case file|investigat\w*)\b", re.I),
+        Frame(
+            name="Detective story",
+            method="Every lesson is a case. Open with something puzzling that the learner "
+            "cannot yet explain, let them gather clues, and make the lesson's idea the clue "
+            "that solves it. Close the case by stating the idea plainly.",
+            lesson_word="case",
+            module_word="investigation",
+            reward_word="clue",
+        ),
+    ),
+    (
+        re.compile(r"\b(stor(y|ies)|tale|narrative|fable|novel|adventure)\b", re.I),
+        Frame(
+            name="Story",
+            method="Teach through one continuing story with the same characters. Each lesson "
+            "is a chapter in which a character meets a problem that the lesson's idea solves. "
+            "After the scene, state the idea plainly so it is never left only implied.",
+            lesson_word="chapter",
+            module_word="part",
+            reward_word="page",
+        ),
+    ),
+    (
+        re.compile(r"\b(analog(y|ies)|metaphors?|comparisons?|everyday examples?)\b", re.I),
+        Frame(
+            name="Analogies",
+            method="Explain every idea first through one everyday analogy the learner already "
+            "knows, then map each part of the analogy to the real thing, and say where the "
+            "analogy stops being true.",
+            lesson_word="lesson",
+            module_word="module",
+            reward_word="",
+        ),
+    ),
+    (
+        re.compile(r"\b(projects?|build(ing)?|hands[\s-]?on|by (doing|making))\b", re.I),
+        Frame(
+            name="Projects",
+            method="Every lesson builds one small, real thing. Start from what will be built, "
+            "teach only the idea needed for the next step, and end with the piece working. "
+            "Each lesson's piece adds to the module's project.",
+            lesson_word="build",
+            module_word="project",
+            reward_word="piece",
+        ),
+    ),
+    (
+        re.compile(r"\b(gamif\w*|games?|quests?|levels?|video[\s-]?game)\b", re.I),
+        Frame(
+            name="Game",
+            method="Every lesson is a level with a clear goal. Give a short challenge first, "
+            "teach the idea as the move that beats it, and finish with a slightly harder "
+            "challenge that uses it.",
+            lesson_word="level",
+            module_word="world",
+            reward_word="star",
+        ),
+    ),
+]
+
+
+def frame_from_rules(request: str) -> Frame | None:
+    """The frame for a wish, without a model: one of the common ones by keyword, else the
+    learner's own words as the method, so no way of being taught is dropped. None only when
+    there is no wish to follow."""
+    text = re.sub(r"\s+", " ", request.strip())
+    for pattern, frame in _FRAMES:
+        if pattern.search(text):
+            return frame
+    if len(text) < 10:
+        return None
+    return Frame(
+        name="Your way",
+        method=f"Teach every lesson the way the learner asked, in their words: {text}"[:400],
+    )
+
+
 def from_rules(request: str) -> StyleSpec:
-    """A preset chosen by keywords, carrying the request as notes. The fallback when no
-    model is available, and the answer for the simplest wishes."""
+    """A preset chosen by keywords, carrying the request as notes and its frame. The fallback
+    when no model is available, and the answer for the simplest wishes."""
     text = request.strip()
+    frame = frame_from_rules(text)
     for pattern, key in _RULES:
         if pattern.search(text):
-            return PRESETS[key].model_copy(update={"notes": text[:600] or PRESETS[key].notes})
-    return PRESETS["standard"].model_copy(update={"notes": text[:600]})
+            return PRESETS[key].model_copy(
+                update={"notes": text[:600] or PRESETS[key].notes, "frame": frame}
+            )
+    return PRESETS["standard"].model_copy(update={"notes": text[:600], "frame": frame})
+
+
+def course_frame(brief: dict | None) -> Frame | None:
+    """The frame a generated course was written in, from its stored brief; None when it has
+    none or the stored one no longer validates (never raises)."""
+    stored = ((brief or {}).get("style") or {}).get("frame")
+    if not isinstance(stored, dict):
+        return None
+    try:
+        return Frame.model_validate(stored)
+    except ValidationError:
+        return None
 
 
 def parse(value: dict | None) -> StyleSpec | None:
@@ -208,6 +339,15 @@ def block(spec: StyleSpec) -> str:
             else ""
         ),
     ]
+    if spec.frame:
+        frame = spec.frame
+        lines.append(
+            f"- Teaching frame: {frame.name}. {frame.method} Keep this frame from the first "
+            "line of every lesson to the last, and in its checks and questions; it decides "
+            "how the idea is taught, never what is true, and the idea itself is always stated "
+            f'plainly at least once. In this course a lesson is called a "{frame.lesson_word}" '
+            f'and a module a "{frame.module_word}".'
+        )
     if spec.notes:
         lines.append(f"- The learner's own words: {spec.notes}")
     lines.append(
@@ -232,6 +372,15 @@ Fields:
 - tutor: socratic (mostly questions) | coach (encouraging, example-led) | direct (answers first)
 - rigor: intuitive (no formalism) | standard | rigorous (derivations, proofs)
 - gamified: true when they want game mechanics
+- frame: how the course is taught, for ANY way they describe (a detective story, only
+  analogies, a game, projects, a cooking show, letters from a grandparent); null only when
+  they asked for nothing about how. An object:
+  - name: 1-3 words ("Detective story")
+  - method: 1-3 sentences telling a lesson writer how to build EVERY lesson this way
+  - lesson_word: what one lesson is called in this frame, one or two plain words
+    ("case", "chapter", "level", "recipe"); "lesson" if nothing fits
+  - module_word: what a group of lessons is called ("investigation", "part", "world")
+  - reward_word: what finishing a lesson earns ("clue", "star", "page"), or ""
 - notes: their wish in one sentence, in their words
 
 Reply with one JSON object only with exactly those fields."""
@@ -259,11 +408,16 @@ async def interpret(
     except ProviderError:
         return from_rules(text), "rules"
     if reply.data is not None:
+        data = {**reply.data, "notes": reply.data.get("notes") or text[:600]}
         try:
-            spec = StyleSpec.model_validate(
-                {**reply.data, "notes": reply.data.get("notes") or text[:600]}
-            )
-            return spec, "agent"
+            return StyleSpec.model_validate(data), "agent"
+        except ValidationError:
+            pass
+        # A slip in the frame alone (a word too long, a missing method) keeps everything
+        # else the model understood; the frame then comes from the wish itself.
+        try:
+            spec = StyleSpec.model_validate({**data, "frame": None})
+            return spec.model_copy(update={"frame": frame_from_rules(text)}), "agent"
         except ValidationError:
             pass
     return from_rules(text), "rules"
@@ -300,6 +454,13 @@ def tutor_block(spec: StyleSpec) -> str:
             "Frame learning as quests and levels with playful challenges and encouragement. "
             "Never state points, levels or streaks as facts about their account; Socrat's "
             "own progress numbers come only from the context."
+        )
+    if spec.frame:
+        lines.append(
+            f"The course is taught as: {spec.frame.name}. {spec.frame.method} Speak inside "
+            f'this frame (a lesson is a "{spec.frame.lesson_word}"), and step out of it '
+            "whenever the learner is confused: a clear answer comes before the frame. Never "
+            "invent rewards, scores or progress; those come only from the context."
         )
     if spec.notes:
         lines.append(f"In their words: {spec.notes}")
