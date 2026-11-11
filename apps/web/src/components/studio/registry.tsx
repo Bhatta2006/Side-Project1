@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState, type ComponentType } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight } from '@/components/icons';
 import { api } from '@/lib/api';
 import { activityHref } from '@/lib/routes';
 import type { CourseShape, Today } from '@/lib/types';

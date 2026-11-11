@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp, TriangleAlert } from '@/components/icons';
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
@@ -31,6 +31,7 @@ import { SUPPORT_STEPS } from '@/lib/routes';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Paper } from '@/components/ui/paper';
 import { Spinner } from '@/components/ui/spinner';
 
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
@@ -295,7 +296,7 @@ export default function Lesson() {
   if (!concept && locked === 'preparing' && draft) {
     return (
       <div className="mx-auto max-w-3xl p-6">
-        <p role="status" className="mb-5 rounded-[16px] border border-border-strong px-4 py-3 text-[15px]">
+        <p role="status" className="mb-5 rounded-[4px] border border-border-strong px-4 py-3 text-[15px]">
           <span className="font-semibold">A first draft, still being checked.</span>{' '}
           <span className="text-muted-foreground">
             You can start reading now. The checked lesson, with its questions, replaces this page by itself. If a check finds a mistake, this draft is rewritten.
@@ -359,9 +360,9 @@ export default function Lesson() {
       <ReadingProgress />
 
       {/* Header card: the one blue element on this reading screen, with a doodle. */}
-      <header className="doodle-host relative mb-6 overflow-hidden rounded-card bg-violet p-6 text-violet-foreground [--card-muted:color-mix(in_srgb,var(--violet-foreground),transparent_8%)] lg:p-8" data-tone="violet">
+      <Paper as="header" stock="sticky-blue" tilt={-0.4} tape="corner" seed="lesson-header" className="doodle-host mb-8 p-6 text-ink [--card-muted:var(--ll-ink-soft)] lg:p-8" data-tone="violet">
         <div className="relative max-w-[70%] lg:max-w-[75%]">
-          <Link href="/plan" transitionTypes={['nav-back']} aria-label={`Back to ${NAME.skills}`} className="mb-5 grid size-11 place-items-center rounded-full bg-ink text-ink-foreground">
+          <Link href="/plan" transitionTypes={['nav-back']} aria-label={`Back to ${NAME.skills}`} className="mb-5 grid size-11 place-items-center rounded-full border-[1.5px] border-ink text-ink hover:bg-hi-select">
             <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
           </Link>
           <h1 className="type-display-m break-words">
@@ -373,7 +374,7 @@ export default function Lesson() {
           <p className="mt-3 text-[15px] font-semibold text-(--card-muted)">{features.code ? `Lesson, ${LANGUAGE_LABEL[concept.language]}` : 'Lesson'}</p>
         </div>
         <Illustration name="bulb" draw="load" className="pointer-events-none absolute top-1/2 right-6 size-28 -translate-y-1/2 [--illo-line:#fff] sm:size-36 lg:right-10" />
-      </header>
+      </Paper>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
         <article className="min-w-0">
@@ -393,7 +394,7 @@ export default function Lesson() {
           ) : null}
 
           {weakPrereqs.length ? (
-            <div className="mb-6 rounded-[20px] border px-4 py-3.5 text-[15px]">
+            <div className="mb-6 rounded-[4px] border px-4 py-3.5 text-[15px]">
               This builds on{' '}
               {weakPrereqs.map((p, i, all) => (
                 <span key={p.id}><Link className="font-semibold underline underline-offset-4" href={conceptHref(p.id)}>{p.title}</Link>{i < all.length - 1 ? ', ' : ''}</span>
@@ -409,7 +410,7 @@ export default function Lesson() {
           {/* Safety notes are the one thing about how a lesson was made that stays in front:
               they must be read before acting. Everything else is in "About this lesson". */}
           {concept.safety?.length ? (
-            <div className="mb-6 max-w-[68ch] rounded-[16px] border border-border-strong px-4 py-3 text-sm">
+            <div className="mb-6 max-w-[68ch] rounded-[4px] border border-border-strong px-4 py-3 text-sm">
               {concept.safety.map(n => <p key={n}>{n}</p>)}
             </div>
           ) : null}
@@ -451,7 +452,7 @@ export default function Lesson() {
           {/* Explain it differently. */}
           <section className="mt-10 max-w-[68ch]" aria-labelledby="reexplain-heading">
             <h2 id="reexplain-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Explain it differently</h2>
-            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-[24px] bg-raised p-1" role="group" aria-label="Explanation style">
+            <div className="inline-flex max-w-full flex-wrap gap-1 rounded-[4px] bg-raised p-1" role="group" aria-label="Explanation style">
               {STYLES.map(([style, label]) => (
                 <button
                   key={style}
@@ -489,7 +490,7 @@ export default function Lesson() {
                 <ul className="grid gap-2">
                   {concept.problems.map(p => (
                     <li key={p.id}>
-                      <Link href={`/problems/${p.id}`} className="flex min-h-14 items-center gap-3 rounded-[16px] bg-raised px-4 py-2 transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_5%)]">
+                      <Link href={`/problems/${p.id}`} className="flex min-h-14 items-center gap-3 rounded-[4px] bg-raised px-4 py-2 transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_5%)]">
                         <StatusIcon status={p.solved ? 'practised' : 'not_seen'} size={22} title={p.solved ? 'Solved' : 'Not solved yet'} />
                         <span className="min-w-0 flex-1 font-semibold">{p.title}</span>
                         <Difficulty level={p.difficulty} />

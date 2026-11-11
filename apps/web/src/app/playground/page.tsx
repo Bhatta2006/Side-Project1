@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, MoreHorizontal, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, PanelRightClose, PanelRightOpen } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import type { VisualArtifact } from '@/lib/explainer';
@@ -65,7 +65,7 @@ function SavedList({ saved, busy, onOpen }: { saved: Saved[]; busy: boolean; onO
       <ul className="grid gap-2">
         {saved.map(item => (
           <li key={item.id}>
-            <button type="button" disabled={busy} onClick={() => onOpen(item.id)} aria-label={`Open ${item.title}`} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-[16px] bg-raised px-4 py-3 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_6%)] disabled:opacity-50">
+            <button type="button" disabled={busy} onClick={() => onOpen(item.id)} aria-label={`Open ${item.title}`} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-[4px] bg-raised px-4 py-3 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_6%)] disabled:opacity-50">
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{item.title}</span>
                 <span className="block text-[13px] text-muted-foreground">{savedDate(item.created_at)}</span>

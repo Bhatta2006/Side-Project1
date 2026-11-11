@@ -1,5 +1,6 @@
 import { useId, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
+import { SocStone } from './soc-pebble';
 
 /**
  * Soc, the tutor: the waitlist mascot. A cartoon stone bust of Socrates, light speckled stone with a
@@ -208,7 +209,8 @@ function Books() {
   );
 }
 
-export function SocFigure({
+/** The original stone bust on books, kept so the old Soc is one line away. */
+export function SocBust({
   mood = 'neutral',
   books = false,
   look,
@@ -312,4 +314,24 @@ export function SocFigure({
       </g>
     </svg>
   );
+}
+
+/**
+ * Soc as drawn across the app: the round granite pebble (Socrates trained as a stonemason).
+ * Same props as before, so every caller keeps working: `books` sets him on a notebook page,
+ * `look` turns his eyes, small sizes crop to the stone.
+ */
+export function SocFigure(props: {
+  mood?: SocMood;
+  books?: boolean;
+  look?: Look;
+  idle?: boolean;
+  /** Width in px. Height follows the figure's proportions. */
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+  /** An accessible name. Without one the figure is decorative. */
+  title?: string;
+}) {
+  return <SocStone {...props} />;
 }

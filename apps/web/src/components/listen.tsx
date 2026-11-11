@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Headphones, Pause, Play, Square } from 'lucide-react';
+import { Headphones, Pause, Play, Square } from '@/components/icons';
 import { canSpeak, lessonText, speakableChunks } from '@/lib/speech';
 import { Button } from '@/components/ui/button';
 

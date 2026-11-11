@@ -43,7 +43,7 @@ export function PathStyles({ onChanged }: { onChanged: () => void }) {
         <label
           key={o.style}
           className={cn(
-            'flex cursor-pointer gap-3 rounded-[16px] border bg-raised p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+            'flex cursor-pointer gap-3 rounded-[4px] border bg-raised p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
             o.current && 'border-primary ring-1 ring-primary',
           )}
         >

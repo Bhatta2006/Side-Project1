@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, ChevronDown, ChevronUp, Flame, Lightbulb, Loader2, Lock, RotateCcw, Sparkles, Star, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronUp, Flame, Lightbulb, Loader2, Lock, RotateCcw, Sparkles, Star, X } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { answerToPicks, matchReady, move, picksToAnswer } from '@/lib/arrange';
@@ -68,10 +68,10 @@ export function Drills({ initialConcept }: { initialConcept?: string }) {
           <h2 id="new-set" className="font-display text-xl font-semibold tracking-[-0.02em]">New practice set</h2>
           <p className="text-[15px] text-muted-foreground">Pick a topic. Socrat writes {5} fresh questions for {overview.course}, easiest first.</p>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="grid min-w-0 flex-1 gap-1.5 text-sm font-medium sm:max-w-md">
+        <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
+          <label className="grid min-w-0 gap-1.5 text-sm font-medium sm:flex-1 sm:max-w-md">
             Topic
-            <NativeSelect value={concept} onChange={e => setConcept(e.target.value)} aria-label="Topic to practise">
+            <NativeSelect className="w-full" value={concept} onChange={e => setConcept(e.target.value)} aria-label="Topic to practise">
               {overview.concepts.map(c => (
                 <NativeSelectOption key={c.concept} value={c.concept} disabled={c.locked}>{c.title}{c.locked ? ' (locked)' : ''}</NativeSelectOption>
               ))}
@@ -90,7 +90,7 @@ export function Drills({ initialConcept }: { initialConcept?: string }) {
           <ul className="grid gap-2 sm:grid-cols-2">
             {overview.sets.map(s => (
               <li key={s.id}>
-                <button type="button" onClick={() => void open(s.id)} className="flex w-full items-center justify-between gap-3 rounded-[16px] border bg-card px-4 py-3 text-left transition-colors hover:bg-raised">
+                <button type="button" onClick={() => void open(s.id)} className="flex w-full items-center justify-between gap-3 rounded-[4px] border bg-card px-4 py-3 text-left transition-colors hover:bg-raised">
                   <span className="min-w-0">
                     <span className="block truncate font-semibold">{s.title}</span>
                     <span className="block text-[13px] text-muted-foreground">
@@ -241,7 +241,7 @@ function QuestionCard({ setId, question, number, total, onAnswered, onNext }: {
                 disabled={busy || answered}
                 onClick={() => void send(option)}
                 className={cn(
-                  'flex min-h-14 items-center justify-between gap-3 rounded-[16px] border-2 bg-card px-4 py-3 text-left text-[17px] font-medium transition-colors enabled:hover:border-[var(--soc-outline)]',
+                  'flex min-h-14 items-center justify-between gap-3 rounded-[4px] border-2 bg-card px-4 py-3 text-left text-[17px] font-medium transition-colors enabled:hover:border-[var(--soc-outline)]',
                   right && 'border-primary bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))]',
                   picked && !right && 'border-attention',
                 )}
@@ -270,12 +270,12 @@ function QuestionCard({ setId, question, number, total, onAnswered, onNext }: {
 
       {!answered && question.hint ? (
         hint
-          ? <p className="flex gap-2 rounded-[16px] bg-raised px-4 py-3 text-[15px]"><Lightbulb className="mt-0.5 size-4 flex-none" aria-hidden="true" /> {question.hint}</p>
+          ? <p className="flex gap-2 rounded-[4px] bg-raised px-4 py-3 text-[15px]"><Lightbulb className="mt-0.5 size-4 flex-none" aria-hidden="true" /> {question.hint}</p>
           : <div><Button variant="ghost" size="sm" className="-ml-3" onClick={() => setHint(true)}><Lightbulb data-icon="inline-start" /> Show a hint</Button></div>
       ) : null}
 
       {answered ? (
-        <div role="status" className={cn('grid gap-2 rounded-[16px] border px-4 py-3', question.correct ? 'border-primary' : 'border-attention')}>
+        <div role="status" className={cn('grid gap-2 rounded-[4px] border px-4 py-3', question.correct ? 'border-primary' : 'border-attention')}>
           <p className="font-semibold">{question.correct ? 'Right!' : `Not quite. The answer is ${question.expected}.`}</p>
           {question.explanation ? <p className="text-[15px] text-muted-foreground">{question.explanation}</p> : null}
           <div className="mt-1"><Button onClick={onNext}>{number < total ? 'Next question' : 'See my score'} <ArrowRight data-icon="inline-end" /></Button></div>
@@ -294,7 +294,7 @@ function OrderQuestion({ question, locked, busy, onCheck }: { question: DrillQue
     <div className="grid gap-3">
       <ol className="grid gap-2" aria-label="Steps, in your order">
         {shown.map((optionIndex, position) => (
-          <li key={optionIndex} className="flex items-center gap-2 rounded-[16px] border-2 bg-card px-3 py-2">
+          <li key={optionIndex} className="flex items-center gap-2 rounded-[4px] border-2 bg-card px-3 py-2">
             <span className="grid size-7 flex-none place-items-center rounded-full bg-raised text-sm font-bold tabular-nums" aria-hidden="true">{position + 1}</span>
             <span className="min-w-0 flex-1 text-[17px] font-medium">{question.options[optionIndex]}</span>
             {!locked ? (
@@ -323,7 +323,7 @@ function TrueFalseQuestion({ question, locked, busy, onCheck }: { question: Dril
   const shownReason = answered ? (picked0 === undefined || picked0 === '' ? null : Number(picked0)) : reason;
   const needsReason = question.options.length > 0;
   const ready = said !== '' && (!needsReason || reason !== null);
-  const choice = 'flex min-h-14 items-center rounded-[16px] border-2 bg-card px-4 py-3 text-left text-[17px] font-medium transition-colors enabled:hover:border-[var(--soc-outline)]';
+  const choice = 'flex min-h-14 items-center rounded-[4px] border-2 bg-card px-4 py-3 text-left text-[17px] font-medium transition-colors enabled:hover:border-[var(--soc-outline)]';
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-2 gap-2" role="group" aria-label="True or false">
@@ -400,7 +400,7 @@ function MatchQuestion({ question, locked, busy, onCheck }: { question: DrillQue
     <div className="grid gap-3">
       <ul className="grid gap-2">
         {lefts.map((left, i) => (
-          <li key={left} className="grid gap-1.5 rounded-[16px] border-2 bg-card px-3 py-2.5 sm:grid-cols-[1fr_1fr] sm:items-center sm:gap-3">
+          <li key={left} className="grid gap-1.5 rounded-[4px] border-2 bg-card px-3 py-2.5 sm:grid-cols-[1fr_1fr] sm:items-center sm:gap-3">
             <span className="text-[17px] font-medium">{left}</span>
             <NativeSelect
               aria-label={`Partner for ${left}`}

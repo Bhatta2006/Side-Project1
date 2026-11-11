@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { money } from '@/lib/billing';
 import { PLAN_NAME } from '@/lib/plans';

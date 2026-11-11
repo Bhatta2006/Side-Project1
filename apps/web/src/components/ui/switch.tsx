@@ -1,30 +1,64 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
 import { Switch as SwitchPrimitive } from "radix-ui"
 
-function Switch({
-  className,
-  size = "default",
-  ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
-  size?: "sm" | "default"
-}) {
+import { useInk, useMergedRef } from "@/lib/ink/react"
+import { switchRecipe, switchThumbRecipe } from "@/lib/ink/recipes/switch-ink"
+import { cn } from "@/lib/utils"
+
+function SwitchThumb({ className, seed, disabled, ref, ...props }: React.ComponentProps<typeof SwitchPrimitive.Thumb> & { seed: string; disabled: boolean }) {
+  const { hostRef, hostProps, node } = useInk({ recipe: switchThumbRecipe, params: { disabled }, kind: "thumb", seed, still: true })
   return (
-    <SwitchPrimitive.Root
-      data-slot="switch"
-      data-size={size}
+    <SwitchPrimitive.Thumb
+      data-slot="switch-thumb"
+      ref={useMergedRef<HTMLSpanElement>(hostRef, ref)}
+      {...hostProps}
       className={cn(
-        "peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none group-has-[:focus-visible]/field-label:border-transparent group-has-[:focus-visible]/field-label:ring-0 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50",
+        "pointer-events-none relative isolate block shrink-0 transition-transform duration-(--ll-dur-pop) ease-pop forced-colors:rounded-full forced-colors:bg-[ButtonText]",
+        "size-(--sw-t) data-[state=unchecked]:translate-x-1 rtl:data-[state=unchecked]:-translate-x-1 data-[state=checked]:translate-x-(--sw-on) rtl:data-[state=checked]:-translate-x-(--sw-on)",
         className
       )}
       {...props}
     >
-      <SwitchPrimitive.Thumb
-        data-slot="switch-thumb"
-        className="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground"
-      />
+      {node}
+    </SwitchPrimitive.Thumb>
+  )
+}
+
+function Switch({
+  className,
+  size = "default",
+  seed,
+  disabled,
+  ref,
+  ...props
+}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
+  size?: "sm" | "default"
+  seed?: string | number
+}) {
+  const invalid = props["aria-invalid"] === true || props["aria-invalid"] === "true"
+  const { hostRef, hostProps, node, seed: hostSeed } = useInk({ recipe: switchRecipe, params: { disabled: !!disabled, invalid }, kind: "switch", seed })
+  return (
+    <SwitchPrimitive.Root
+      data-slot="switch"
+      data-size={size}
+      ref={useMergedRef<HTMLButtonElement>(hostRef, ref)}
+      {...hostProps}
+      disabled={disabled}
+      className={cn(
+        "peer group/switch relative isolate inline-flex shrink-0 items-center after:absolute after:-inset-1 disabled:cursor-not-allowed",
+        "h-6 w-11 [--sw-on:1.5rem] [--sw-t:1rem] data-[size=sm]:h-5 data-[size=sm]:w-9 data-[size=sm]:[--sw-on:1.25rem] data-[size=sm]:[--sw-t:0.75rem] calm:h-5 calm:w-9 calm:[--sw-on:1.25rem] calm:[--sw-t:0.75rem]",
+        "forced-colors:border forced-colors:border-[ButtonText] forced-colors:data-[state=checked]:bg-[Highlight]",
+        "group-hover/field:[&>svg_[data-layer=hover]]:visible group-hover/field:[&>svg_[data-layer=hover]]:opacity-100",
+        "has-[+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:visible has-[+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:opacity-100",
+        "has-[+input+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:visible has-[+input+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:opacity-100",
+        className
+      )}
+      {...props}
+    >
+      {node}
+      <SwitchThumb seed={`${hostSeed}|thumb`} disabled={!!disabled} />
     </SwitchPrimitive.Root>
   )
 }

@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, MessageCircle } from 'lucide-react';
+import { ChevronDown, MessageCircle } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { useCourse } from '@/lib/course';
@@ -261,7 +261,7 @@ export default function PlanPage() {
                           const here = c.concept === plan.current_concept;
                           return (
                             <li key={c.concept}>
-                              <Link href={conceptHref(c.concept)} transitionTypes={['nav-forward']} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[20px] bg-raised px-4 py-3.5 transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_5%)]', here && 'ring-1 ring-primary')}>
+                              <Link href={conceptHref(c.concept)} transitionTypes={['nav-forward']} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[4px] bg-raised px-4 py-3.5 transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_5%)]', here && 'ring-1 ring-primary')}>
                                 <span className="min-w-0 flex-1 basis-48">
                                   <span className="font-semibold">{c.title}</span>
                                   {c.why ? <span className="block text-[13px] text-muted-foreground">{c.why}</span> : null}
@@ -352,7 +352,7 @@ export default function PlanPage() {
                   <h3 className="type-label mt-5 mb-2 text-muted-foreground">Recent changes</h3>
                   <ol className="grid gap-2 text-[15px]">
                     {plan.revisions.map(rev => (
-                      <li key={rev.at} className="rounded-[16px] bg-raised p-3">
+                      <li key={rev.at} className="rounded-[4px] bg-raised p-3">
                         <p className="text-[13px] text-muted-foreground">{formatStamp(rev.at)}. {PACE_LABEL[rev.pace]}. Finish {formatDate(rev.projected_finish)}</p>
                         {rev.reasons.map(r => <p key={r} className="mt-1">{r}</p>)}
                         {rev.changes?.added?.length ? <p className="mt-1 text-[14px]"><span className="font-semibold">Added:</span> {rev.changes.added.join(', ')}</p> : null}

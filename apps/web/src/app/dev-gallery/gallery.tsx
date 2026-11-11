@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Play } from 'lucide-react';
+import { Play } from '@/components/icons';
 import { Difficulty, Page, Ring, StatCard } from '@/components/common';
 import { Choice, Pill } from '@/components/choice';
 import { ArrowButton } from '@/components/socrat/arrow-button';

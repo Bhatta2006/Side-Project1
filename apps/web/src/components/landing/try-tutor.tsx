@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Lightbulb, Play, SendHorizontal } from 'lucide-react';
+import { Lightbulb, Play, SendHorizontal } from '@/components/icons';
 import { api, explain, stream } from '@/lib/api';
 import { runInBrowser, warm, type RunnerStage } from '@/lib/runner';
 import { useLite } from '@/lib/lite';
@@ -157,7 +157,7 @@ export function TryTutor() {
                   <figure><figcaption className="mb-1 text-[13px] font-semibold">Expected output</figcaption><pre className="code-block text-[13px]!"><code>{problem.examples[0].output}</code></pre></figure>
                 </div>
               </div>
-              <div className="min-h-56 overflow-hidden rounded-[16px] border" onFocus={() => { if (!lite) void warm('python'); }}>
+              <div className="min-h-56 overflow-hidden rounded-[4px] border" onFocus={() => { if (!lite) void warm('python'); }}>
                 <CodeEditor
                   language="python"
                   value={code}
@@ -177,9 +177,9 @@ export function TryTutor() {
                 <span className="text-[13px] text-muted-foreground">Runs in your browser. The first run loads Python, about 10 seconds.</span>
               </div>
               <div aria-live="polite">
-                {runError ? <p role="alert" className="rounded-[16px] border border-attention px-4 py-3 text-sm">{runError}</p> : null}
+                {runError ? <p role="alert" className="rounded-[4px] border border-attention px-4 py-3 text-sm">{runError}</p> : null}
                 {outcome ? (
-                  <div className="rounded-[20px] border bg-background p-4">
+                  <div className="rounded-[4px] border bg-background p-4">
                     <p className="flex items-center gap-2 font-display text-lg font-semibold tracking-[-0.03em]">
                       <StatusIcon status={solved ? 'practised' : 'needs_practice'} size={22} />
                       {outcome.passed} of {outcome.total} tests passed
@@ -214,7 +214,7 @@ export function TryTutor() {
               <div className="grid gap-2 text-[15px] text-muted-foreground">
                 <p>Tell me what you tried, or pick a starting point. Hints get more specific as you keep working.</p>
                 {STARTERS.map(s => (
-                  <Button key={s} type="button" variant="outline" size="sm" className="h-auto min-h-11 justify-start rounded-[16px] py-2.5 text-left font-medium whitespace-normal" disabled={busy || !problem} onClick={() => send('chat', s)}>{s}</Button>
+                  <Button key={s} type="button" variant="outline" size="sm" className="h-auto min-h-11 justify-start rounded-[4px] py-2.5 text-left font-medium whitespace-normal" disabled={busy || !problem} onClick={() => send('chat', s)}>{s}</Button>
                 ))}
               </div>
             ) : null}
@@ -230,14 +230,14 @@ export function TryTutor() {
               </div>
             ))}
             {solved ? (
-              <div data-tone="hero" className="rounded-[20px] bg-forest p-5 text-forest-foreground">
+              <div data-tone="hero" className="rounded-[4px] bg-forest p-5 text-forest-foreground">
                 <p className="font-display text-xl font-semibold tracking-[-0.03em]">Solved{solvedIn !== null ? ` in ${clock(solvedIn)}` : ''}.</p>
                 <p className="mt-1 text-sm">That is what Socrat feels like. Sign up to keep this as your first piece of evidence and get a plan built around your goal.</p>
                 <Button asChild variant="ink" className="mt-4"><Link href="/login">Create my plan<ArrowCircle /></Link></Button>
               </div>
             ) : null}
           </div>
-          {chatError ? <p role="alert" className="mx-4 mb-2 rounded-[16px] border border-attention px-3 py-2 text-sm">{chatError}</p> : null}
+          {chatError ? <p role="alert" className="mx-4 mb-2 rounded-[4px] border border-attention px-3 py-2 text-sm">{chatError}</p> : null}
           {outOfTurns ? (
             <div className="border-t p-4 text-sm">
               <p>That is the end of the free preview.</p>

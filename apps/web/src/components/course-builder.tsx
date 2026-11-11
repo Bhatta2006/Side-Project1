@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { BookPlus, CheckCircle2, Code2, Hammer, Loader2, Pause, Play, RotateCcw, Save, ShieldOff, Sparkles } from 'lucide-react';
+import { BookPlus, CheckCircle2, Code2, Hammer, Loader2, Pause, Play, RotateCcw, Save, ShieldOff, Sparkles } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { conceptHref } from '@/lib/routes';
@@ -138,7 +138,7 @@ function JobLog({ job }: { job: Job }) {
       </p>
       <ol className="grid gap-2">
         {job.log.map((e, i) => (
-          <li key={i} className="rounded-[16px] bg-raised p-3">
+          <li key={i} className="rounded-[4px] bg-raised p-3">
             <p className="font-medium capitalize">
               {e.role}{e.round ? `, round ${e.round}` : ''}
               {e.verdict ? <Badge variant={e.verdict === 'pass' ? 'default' : 'outline'} className="ml-2">{e.verdict}</Badge> : null}
@@ -188,7 +188,7 @@ function Outline({ course, courseId, packages, exercises, designs = {}, projects
             const ready = m.concepts.every(c => byId[c]?.status === 'live');
             if (!project && !job && !(onDesign && ready)) return null;
             return (
-              <div className="grid gap-2 rounded-[16px] bg-raised p-3 text-sm">
+              <div className="grid gap-2 rounded-[4px] bg-raised p-3 text-sm">
                 <p className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">Project:</span>
                   {project ? <>{project.title} <span className="text-muted-foreground">({project.milestones.length} milestones)</span></> : <span className="text-muted-foreground">none yet</span>}
@@ -208,7 +208,7 @@ function Outline({ course, courseId, packages, exercises, designs = {}, projects
               const c = byId[id];
               const busy = busyJob(packages[id]) || busyJob(exercises[id]);
               return (
-                <li key={id} className="rounded-[16px] border p-3 text-sm">
+                <li key={id} className="rounded-[4px] border p-3 text-sm">
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     {c.title} <span className="font-mono text-xs text-muted-foreground">{c.id}</span>
                     {c.outline ? <Badge variant="outline">{c.outline.depth}</Badge> : null}

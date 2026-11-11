@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Check, Lightbulb, Loader2 } from 'lucide-react';
+import { Check, Lightbulb, Loader2 } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { conceptHref } from '@/lib/routes';

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, formatStamp } from '@/lib/routes';

@@ -23,7 +23,7 @@ function Problem({ problem }: { problem: Classify['problem'] }) {
       <p className="text-[15px]"><span className="font-semibold">Output:</span> {problem.output_format}</p>
       {problem.constraints.length ? <ul className="list-disc pl-5 text-[15px]">{problem.constraints.map(c => <li key={c}>{c}</li>)}</ul> : null}
       {problem.examples.map((e, i) => (
-        <pre key={i} className="overflow-x-auto rounded-[16px] bg-raised p-3 text-[14px]">{`Input\n${e.input}\nOutput\n${e.output}`}</pre>
+        <pre key={i} className="overflow-x-auto rounded-[4px] bg-raised p-3 text-[14px]">{`Input\n${e.input}\nOutput\n${e.output}`}</pre>
       ))}
     </div>
   );

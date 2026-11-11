@@ -97,6 +97,8 @@ export interface Profile {
   /** Opt-in study reminder emails. */
   reminders?: boolean;
   can_remind?: boolean;
+  /** The learner's colours, "palette:mode" (lib/palette.ts); null is Classic in light. */
+  appearance?: string | null;
   enrollment: Enrollment | null;
 }
 

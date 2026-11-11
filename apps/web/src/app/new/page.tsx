@@ -430,7 +430,7 @@ export default function NewCourse() {
         <div className="space-y-6">
           {req.status === 'blocked' ? <ErrorNote message="Socrat can't build a course for that request." /> : null}
           {intent ? (
-            <section className="rounded-[20px] border bg-card p-5" aria-label="What Socrat understood">
+            <section className="rounded-[4px] border bg-card p-5" aria-label="What Socrat understood">
               <h2 className="font-semibold">What Socrat understood</h2>
               <p className="mt-2">
                 {intent.subject}: {intent.goal}
@@ -502,7 +502,7 @@ export default function NewCourse() {
               </p>
               <ol className="mt-4 grid gap-4">
                 {req.skeleton.modules.map((m, i) => (
-                  <li key={`${i}-${m.title}`} className="rounded-[16px] border bg-card px-4 py-3">
+                  <li key={`${i}-${m.title}`} className="rounded-[4px] border bg-card px-4 py-3">
                     <p className="font-semibold">{m.title}</p>
                     {m.lessons.length ? (
                       <ul className="mt-2 grid gap-1 text-[15px] text-muted-foreground">
@@ -589,7 +589,7 @@ export default function NewCourse() {
           ) : null}
 
           {req.blueprint && !req.published ? (
-            <section className="rounded-[20px] border bg-card p-5" aria-label="Where to start">
+            <section className="rounded-[4px] border bg-card p-5" aria-label="Where to start">
               <h2 className="font-semibold">Where should you start?</h2>
               {!check ? (
                 <>
@@ -647,7 +647,7 @@ export default function NewCourse() {
           ) : null}
 
           {req.published && req.community ? (
-            <section className="rounded-[20px] border bg-card p-5" aria-label="Share with the community">
+            <section className="rounded-[4px] border bg-card p-5" aria-label="Share with the community">
               <h2 className="font-semibold">Share this course</h2>
               {req.community.shared ? (
                 <>
@@ -692,14 +692,14 @@ export default function NewCourse() {
           ) : null}
 
           {open && matches.length ? (
-            <section className="rounded-[20px] border bg-card p-5" aria-label="Courses that already fit">
+            <section className="rounded-[4px] border bg-card p-5" aria-label="Courses that already fit">
               <h2 className="font-semibold">{matches.length === 1 ? 'This course already exists' : 'These courses already exist'}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Start one now with nothing to wait for, or have Socrat write a new one for you below.
               </p>
               <ul className="mt-4 space-y-4">
                 {matches.map((m) => (
-                  <li key={m.course} className="rounded-[14px] border p-4">
+                  <li key={m.course} className="rounded-[4px] border p-4">
                     <p className="font-medium">{m.title}</p>
                     {m.tagline ? <p className="mt-1 text-sm text-muted-foreground">{m.tagline}</p> : null}
                     <p className="mt-2 text-[13px] text-muted-foreground">

@@ -262,7 +262,7 @@ export function Tour() {
           {rect ? (
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute rounded-[20px] ring-2 ring-primary transition-[left,top,width,height] duration-500 ease-[var(--ease-soft)] motion-reduce:transition-none"
+              className="pointer-events-none absolute rounded-[4px] ring-2 ring-primary transition-[left,top,width,height] duration-500 ease-[var(--ease-soft)] motion-reduce:transition-none"
               style={{
                 boxShadow: '0 0 0 9999px color-mix(in srgb, var(--ink), transparent 40%)',
                 left: rect.left - PAD, top: rect.top - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2,

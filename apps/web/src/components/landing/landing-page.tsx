@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Menu, Plus, X } from 'lucide-react';
+import { Menu, Plus, X } from '@/components/icons';
 import { api } from '@/lib/api';
 import { destination, useSession } from '@/lib/session';
 import type { Course } from '@/lib/types';
@@ -14,9 +14,9 @@ import type { SocMood } from '@/components/socrat/soc';
 import { StatusIcon } from '@/components/socrat/status';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { ArrowCircle, Button } from '@/components/ui/button';
+import { Paper } from '@/components/ui/paper';
 import { InView } from '@/components/motion';
 import { Reveal } from '@/components/common';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { WhySocrat } from '@/components/landing/why-socrat';
 import { CommunityButton, CommunityCard } from '@/components/community-link';
 import { InstallAppButton } from '@/components/install-app';
@@ -71,7 +71,7 @@ function PenArrow({ className, d = 'M6 6c10 18 14 34 10 56', head = 'M6 50l10 12
 
 function TodaySample() {
   return (
-    <div className="relative overflow-hidden rounded-[20px] bg-forest p-5 text-forest-foreground" data-tone="hero">
+    <div className="relative overflow-hidden rounded-[4px] bg-forest p-5 text-forest-foreground" data-tone="hero">
       <p className="type-label opacity-80">Next for you · 45 min</p>
       <p className="mt-2 max-w-[11ch] font-display text-3xl leading-none font-semibold tracking-[-0.045em]">Two-pointer problems</p>
       <p className="mt-2 text-sm opacity-90">Practise, then one attempt on your own.</p>
@@ -92,7 +92,7 @@ function ProblemSample() {
         {'        '}total = numbers[left] + numbers[right]{'\n'}
         {'        '}<span style={{ color: 'var(--syntax-comment)' }}># which pointer moves next?</span>
       </code></pre>
-      <div className="rounded-[18px] border bg-card p-4">
+      <div className="rounded-[4px] border bg-card p-4">
         <p className="font-display text-lg font-semibold tracking-[-0.03em]"><span className="hl">3 of 4</span> tests passed</p>
         <ul className="mt-2 grid gap-1.5 text-sm">
           {rows.map(([ok, name]) => (
@@ -111,12 +111,12 @@ function ProblemSample() {
 function PlaygroundSample() {
   const values = [1, 3, 5, 7, 9];
   return (
-    <div className="overflow-hidden rounded-[18px] border bg-card">
+    <div className="overflow-hidden rounded-[4px] border bg-card">
       <div className="grid gap-4 p-5">
         <p className="text-sm text-muted-foreground">Find two numbers that add up to 8.</p>
         <div className="flex justify-center gap-2">
           {values.map((v, i) => (
-            <span key={v} className={cn('grid size-11 place-items-center rounded-[12px] border-2 font-display text-lg font-semibold', i === 0 || i === 3 ? 'border-[var(--soc-outline)] bg-primary text-primary-foreground shadow-[2px_2px_0_var(--soc-outline)]' : 'border-border bg-raised')}>{v}</span>
+            <span key={v} className={cn('grid size-11 place-items-center rounded-[4px] border-2 font-display text-lg font-semibold', i === 0 || i === 3 ? 'border-[var(--soc-outline)] bg-primary text-primary-foreground shadow-[2px_2px_0_var(--soc-outline)]' : 'border-border bg-raised')}>{v}</span>
           ))}
         </div>
         <p className="text-center text-sm font-medium">1 + 7 = 8. <span className="font-hand text-[19px] text-pen">found it!</span></p>
@@ -165,25 +165,24 @@ export function LandingPage() {
   const problems = courses.reduce((sum, c) => sum + c.problem_count, 0);
 
   return (
-    <div className="landing min-h-dvh text-foreground">
+    <div className="landing ll-desk min-h-dvh text-foreground">
       <header
-        className="landing-nav fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6 lg:px-8"
+        className="landing-nav fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4"
         onKeyDown={event => { if (event.key === 'Escape' && menu) { setMenu(false); event.currentTarget.querySelector<HTMLButtonElement>('[data-menu-button]')?.focus(); } }}
       >
-        <div className="mx-auto flex h-14 max-w-[1500px] items-center justify-between gap-4">
+        <Paper stock="slip" tilt={false} seed="landing-header" className="relative mx-auto flex h-16 max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
-          <nav aria-label="Site" className="glass-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-1.5 shadow-floating lg:flex">
-            {links.map(([href, label]) => <a key={href} href={href} className="rounded-full px-4 py-2 text-[15px] text-muted-foreground transition-colors hover:bg-raised hover:text-foreground">{label}</a>)}
+          <nav aria-label="Site" className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
+            {links.map(([href, label]) => <a key={href} href={href} className="rounded-[3px] px-3 py-1.5 text-[17px] text-ink transition-colors hover:bg-hi-select">{label}</a>)}
           </nav>
           <div className="flex items-center gap-1 sm:gap-3">
-            <ThemeToggle />
-            <Link href="/login" className="hidden min-h-11 items-center rounded-full border border-border bg-background px-3 text-[15px] font-medium text-foreground underline-offset-4 hover:underline sm:inline-flex">Log in</Link>
+            <Button asChild variant="outline" className="hidden sm:inline-flex"><Link href="/login">Log in</Link></Button>
             <Button asChild className="max-sm:h-10 max-sm:px-4 max-sm:[&_[data-slot=arrow]]:hidden"><Link href="/start">Get started<ArrowCircle /></Link></Button>
             <Button data-menu-button variant="ghost" size="icon" className="lg:hidden" aria-label={menu ? 'Close navigation' : 'Open navigation'} aria-expanded={menu} aria-controls={menu ? 'landing-mobile-nav' : undefined} onClick={() => setMenu(!menu)}>
               {menu ? <X /> : <Menu />}
             </Button>
           </div>
-        </div>
+        </Paper>
         {menu ? (
           <nav id="landing-mobile-nav" aria-label="Mobile site" className="paper mx-auto mt-2 grid max-w-[1500px] rounded-card px-4 py-2 lg:hidden">
             {links.map(([href, label]) => <a key={href} href={href} onClick={() => setMenu(false)} className="flex min-h-12 items-center text-[17px] font-medium">{label}</a>)}
@@ -195,7 +194,7 @@ export function LandingPage() {
 
       <main>
         {/* Hero: Soc introduces himself, then asks the first question. The answer changes his reaction. */}
-        <section id="hero" aria-labelledby="hero-title" className="margin-rule relative min-h-[100svh] overflow-hidden [--margin-x:20px] sm:[--margin-x:40px] lg:[--margin-x:88px]">
+        <section id="hero" aria-labelledby="hero-title" className="relative min-h-[100svh] overflow-hidden [--margin-x:20px] sm:[--margin-x:40px] lg:[--margin-x:88px]">
           <div className="mx-auto grid min-h-[100svh] max-w-[1500px] items-center gap-10 pt-28 pr-5 pb-24 pl-10 sm:pr-8 sm:pl-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:pr-10 lg:pl-[128px]">
             <div>
               <p className="max-w-[30ch] text-[22px] leading-[1.3] tracking-[-0.03em] text-muted-foreground sm:text-[28px] lg:text-[32px]">
@@ -320,7 +319,7 @@ export function LandingPage() {
                   <Link
                     href={`/start?course=${path.id}`}
                     aria-label={`Get started with ${path.name}`}
-                    className={cn('relative flex min-h-[22rem] flex-col gap-3 overflow-hidden rounded-[20px] border-2 border-[var(--soc-outline)] p-6 shadow-[6px_6px_0_var(--soc-outline)] transition-[transform,box-shadow] duration-300 ease-[var(--ease-soft)] group-hover:-translate-x-0.5 group-hover:-translate-y-1 group-hover:shadow-[9px_10px_0_var(--soc-outline)] lg:p-8', path.color)}
+                    className={cn('relative flex min-h-[22rem] flex-col gap-3 overflow-hidden rounded-[4px] border-2 border-[var(--soc-outline)] p-6 shadow-[6px_6px_0_var(--soc-outline)] transition-[transform,box-shadow] duration-300 ease-[var(--ease-soft)] group-hover:-translate-x-0.5 group-hover:-translate-y-1 group-hover:shadow-[9px_10px_0_var(--soc-outline)] lg:p-8', path.color)}
                   >
                     <span aria-hidden="true" className="absolute inset-y-0 left-5 w-px bg-current opacity-25" />
                     <p className="type-label pl-4 opacity-85">{course?.title ?? path.name}</p>
@@ -363,7 +362,7 @@ export function LandingPage() {
 
         {/* Final call to action: Soc, happy, on his books. */}
         <section aria-labelledby="cta-title" className="below-fold mx-auto max-w-[1500px] px-5 pb-20 sm:px-8 lg:pr-10 lg:pb-28 lg:pl-[128px]">
-          <InView className="paper relative grid items-center gap-8 overflow-hidden rounded-[28px] p-8 sm:p-10 lg:grid-cols-[1fr_auto] lg:p-14">
+          <InView className="paper relative grid items-center gap-8 overflow-hidden rounded-[4px] p-8 sm:p-10 lg:grid-cols-[1fr_auto] lg:p-14">
             <div>
               <h2 id="cta-title" className="type-display-l max-w-[18ch]">Start where you are. <span className="hl">Soc will ask the first question.</span></h2>
               <div className="mt-8 flex flex-wrap gap-3">

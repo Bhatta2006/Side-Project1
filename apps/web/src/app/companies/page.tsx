@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Lock, Search } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Lock, Search } from '@/components/icons';
 import { api, explain, openPaywall } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, conceptHref } from '@/lib/routes';
@@ -63,7 +63,7 @@ function LockedCompanies({ companies, query, onQuery }: { companies: Company[]; 
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {companies.map(c => (
           <li key={c.slug}>
-            <button type="button" onClick={() => openPaywall('pro_required')} className="flex w-full items-center justify-between gap-3 rounded-[14px] border bg-card px-4 py-3 text-left transition-colors hover:border-foreground/40">
+            <button type="button" onClick={() => openPaywall('pro_required')} className="flex w-full items-center justify-between gap-3 rounded-[4px] border bg-card px-4 py-3 text-left transition-colors hover:border-foreground/40">
               <span className="min-w-0 truncate font-semibold">{c.name}</span>
               <span className="inline-flex flex-none items-center gap-1.5 text-[13px] text-muted-foreground tabular-nums"><Lock className="size-3.5" aria-hidden="true" />{c.problems} questions</span>
             </button>
@@ -163,7 +163,7 @@ export default function Companies() {
                   <li key={c.slug}>
                     <button
                       type="button"
-                      className={cn('flex min-h-11 w-full items-center justify-between gap-2 rounded-[14px] px-3 py-2 text-left text-[15px] transition-colors hover:bg-raised', selected === c.slug && 'bg-primary font-bold text-primary-foreground hover:bg-primary')}
+                      className={cn('flex min-h-11 w-full items-center justify-between gap-2 rounded-[4px] px-3 py-2 text-left text-[15px] transition-colors hover:bg-raised', selected === c.slug && 'bg-primary font-bold text-primary-foreground hover:bg-primary')}
                       aria-pressed={selected === c.slug}
                       onClick={() => choose(c.slug)}
                     >

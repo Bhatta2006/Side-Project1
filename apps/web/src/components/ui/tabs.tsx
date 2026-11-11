@@ -2,34 +2,39 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
 import { Tabs as TabsPrimitive } from "radix-ui"
 
-function Tabs({
-  className,
-  orientation = "horizontal",
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
+import { useInk, useMergedRef } from "@/lib/ink/react"
+import { tabsRecipe } from "@/lib/ink/recipes/tabs-ink"
+import { cn } from "@/lib/utils"
+
+const TabsContext = React.createContext<{ orientation: "horizontal" | "vertical"; variant: "default" | "line" }>({ orientation: "horizontal", variant: "default" })
+
+const WIPE_WHEN_ACTIVE = "data-[state=active]:[&>svg_[data-part=swipe]]:animate-[ll-wipe_var(--ll-dur-sheet)_var(--ll-ease-out)_both]"
+
+function Tabs({ className, orientation = "horizontal", ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
+  const ctx = React.useContext(TabsContext)
+  const value = React.useMemo(() => ({ ...ctx, orientation }), [ctx, orientation])
   return (
-    <TabsPrimitive.Root
-      data-slot="tabs"
-      data-orientation={orientation}
-      className={cn(
-        "group/tabs flex gap-2 data-horizontal:flex-col",
-        className
-      )}
-      {...props}
-    />
+    <TabsContext.Provider value={value}>
+      <TabsPrimitive.Root
+        data-slot="tabs"
+        data-orientation={orientation}
+        orientation={orientation}
+        className={cn("group/tabs flex gap-3 data-[orientation=horizontal]:flex-col", className)}
+        {...props}
+      />
+    </TabsContext.Provider>
   )
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit max-w-full items-center justify-center overflow-x-auto rounded-full p-1 text-muted-foreground group-data-horizontal/tabs:h-12 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
+  "group/tabs-list inline-flex w-fit max-w-full items-end justify-start overflow-x-auto overflow-y-hidden [scrollbar-width:none] text-muted-foreground aria-[orientation=horizontal]:h-11 aria-[orientation=horizontal]:pt-1 aria-[orientation=vertical]:h-fit aria-[orientation=vertical]:flex-col aria-[orientation=vertical]:items-stretch",
   {
     variants: {
       variant: {
-        default: "bg-raised",
-        line: "gap-1 bg-transparent",
+        default: "gap-1",
+        line: "gap-1",
       },
     },
     defaultVariants: {
@@ -38,48 +43,56 @@ const tabsListVariants = cva(
   }
 )
 
-function TabsList({
-  className,
-  variant = "default",
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.List> &
-  VariantProps<typeof tabsListVariants>) {
+function TabsList({ className, variant = "default", ...props }: React.ComponentProps<typeof TabsPrimitive.List> & VariantProps<typeof tabsListVariants>) {
+  const ctx = React.useContext(TabsContext)
+  const value = React.useMemo(() => ({ ...ctx, variant: variant ?? "default" }), [ctx, variant])
   return (
-    <TabsPrimitive.List
-      data-slot="tabs-list"
-      data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
-      {...props}
-    />
+    <TabsContext.Provider value={value}>
+      <TabsPrimitive.List data-slot="tabs-list" data-variant={variant} className={cn(tabsListVariants({ variant }), className)} {...props} />
+    </TabsContext.Provider>
   )
 }
 
 function TabsTrigger({
   className,
+  seed,
+  disabled,
+  ref,
+  children,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+}: React.ComponentProps<typeof TabsPrimitive.Trigger> & {
+  seed?: string | number
+}) {
+  const { orientation, variant } = React.useContext(TabsContext)
+  const { hostRef, hostProps, node } = useInk({ recipe: tabsRecipe, params: { variant, orientation, disabled: !!disabled }, kind: "tab", seed, still: true })
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
+      data-orientation={orientation}
+      ref={useMergedRef<HTMLButtonElement>(hostRef, ref)}
+      {...hostProps}
+      disabled={disabled}
       className={cn(
-        "relative inline-flex h-full min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-transparent px-4 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors duration-200 group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "group-data-[variant=default]/tabs-list:data-active:border-border group-data-[variant=default]/tabs-list:data-active:bg-card group-data-[variant=default]/tabs-list:data-active:font-bold group-data-[variant=default]/tabs-list:data-active:text-foreground",
-        "group-data-[variant=line]/tabs-list:rounded-none group-data-[variant=line]/tabs-list:data-active:text-foreground group-data-[variant=line]/tabs-list:data-active:font-bold after:absolute after:bg-primary after:opacity-0 group-data-horizontal/tabs:after:inset-x-2 group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+        "relative isolate inline-flex h-9 flex-1 items-center justify-center gap-1.5 px-4 font-hand text-[15px] font-bold whitespace-nowrap text-muted-foreground transition-[translate,color] duration-(--ll-dur-hover) ease-settle hover:text-foreground data-[state=active]:text-foreground disabled:pointer-events-none disabled:text-pencil-text compact:h-8 calm:h-7 calm:text-sm",
+        "data-[orientation=horizontal]:pt-1 data-[orientation=vertical]:pt-0.5 data-[orientation=vertical]:w-full data-[orientation=vertical]:justify-start",
+        variant === "default" && "data-[orientation=horizontal]:data-[state=active]:-translate-y-0.5 data-[orientation=vertical]:data-[state=active]:translate-x-0.5 data-[orientation=vertical]:rtl:data-[state=active]:-translate-x-0.5",
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not(.absolute):not([class*='size-'])]:size-4",
+        WIPE_WHEN_ACTIVE,
         className
       )}
       {...props}
-    />
+    >
+      {node}
+      {children}
+    </TabsPrimitive.Trigger>
   )
 }
 
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
+function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      className={cn("flex-1 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:duration-(--ll-dur-fade)", className)}
       {...props}
     />
   )

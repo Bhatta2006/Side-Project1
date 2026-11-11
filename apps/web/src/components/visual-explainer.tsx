@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { ChevronLeft, ChevronRight, Expand, Info, Pause, Play, RotateCcw, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Expand, Info, Pause, Play, RotateCcw, X } from '@/components/icons';
 import type { VisualArtifact, VisualState } from '@/lib/explainer';
 import { useReducedMotion } from '@/lib/motion';
 import { cn } from '@/lib/utils';
@@ -193,7 +193,7 @@ export default function VisualExplainer({ artifact, onExplain, onReport, onBack 
             <>
               {!ready ? (
                 <div className="absolute inset-0 z-10 grid place-content-center gap-4 p-8" role="status">
-                  <Skeleton className="mx-auto h-40 w-64 max-w-full rounded-[20px]" />
+                  <Skeleton className="mx-auto h-40 w-64 max-w-full rounded-[4px]" />
                   <p className="text-center text-[15px] text-muted-foreground">{themeNote ? 'Applying theme.' : 'Loading the visual.'}</p>
                 </div>
               ) : null}

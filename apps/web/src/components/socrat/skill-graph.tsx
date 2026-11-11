@@ -30,7 +30,7 @@ function Skill({ data }: NodeProps<SkillNode>) {
       <Handle type="target" position={Position.Left} isConnectable={false} className="!opacity-0" />
       <Link
         href={conceptHref(item.concept)}
-        className={cn('flex items-center gap-3 rounded-[16px] border bg-card px-3 py-2 text-left shadow-sm', current && 'ring-2 ring-primary', faded(item) && 'opacity-50')}
+        className={cn('flex items-center gap-3 rounded-[4px] border bg-card px-3 py-2 text-left shadow-sm', current && 'ring-2 ring-primary', faded(item) && 'opacity-50')}
         style={{ width: W, height: H }}
       >
         <StatusIcon status={status} size={32} className="flex-none" />

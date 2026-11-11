@@ -69,7 +69,7 @@ export function LearnerProfileCard() {
           <h3 className="type-label mb-2 text-muted-foreground">Where you&apos;re stuck</h3>
           <ul className="grid gap-2">
             {stuck.map(c => (
-              <li key={c.concept} className="rounded-[16px] bg-raised p-3">
+              <li key={c.concept} className="rounded-[4px] bg-raised p-3">
                 <Link href={conceptHref(c.concept)} className="font-semibold underline-offset-4 hover:underline">{c.title}</Link>
                 <span className="ml-2 text-[13px] text-muted-foreground">{BAND_LABEL[c.band]}</span>
                 <p className="mt-1 text-[14px] text-muted-foreground">{c.stuck?.summary}</p>

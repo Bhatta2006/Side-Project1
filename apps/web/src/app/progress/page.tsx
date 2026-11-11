@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { useCourse } from '@/lib/course';
@@ -18,6 +18,8 @@ import { STATUS_LABEL, StatusIcon, StatusLabel, StatusLegend, statusFromBand } f
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowCircle, Button } from '@/components/ui/button';
+import { Paper } from '@/components/ui/paper';
+import { Stamp } from '@/components/ui/stamp';
 import { SocFigure } from '@/components/socrat/soc';
 
 const KIND: Record<string, string> = { quiz: 'concept check', code: 'problem', checkpoint: 'checkpoint', review: 'review', placement: 'placement', external: 'practice', verified: 'Codeforces', guided: 'guided step', trace: 'trace', retrieval: 'recall', debug: 'debugging', explanation: 'explanation', explain: 'written answer (AI-graded)', project: 'project milestone (AI-graded)' };
@@ -89,20 +91,23 @@ export default function ProgressPage() {
         ) : null}
 
         {/* Hero: course completion. */}
-        <section className="relative flex flex-wrap items-center gap-6 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:gap-8 lg:p-6" data-tone="hero" data-tour="evidence-course" aria-labelledby="course-heading">
+        <Paper as="section" stock="sticky-yellow" tape="both" tilt={-0.3} seed="evidence-hero" className="flex flex-wrap items-center gap-6 p-6 text-ink lg:gap-8 lg:p-8" data-tone="hero" data-tour="evidence-course" aria-labelledby="course-heading">
           <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[150px] xl:block"><SocFigure books mood="proud" idle className="h-auto w-full" /></div>
           <Ring value={data.progress.percent} size={104} stroke={6} label={<span className="font-display text-3xl">{data.progress.percent}%</span>} ariaLabel={`Course ${data.progress.percent} percent complete`} />
           <div className="min-w-0 flex-1 xl:pr-[180px]">
-            <p className="font-hand origin-left -rotate-2 text-[22px] text-white/90">look how far you&apos;ve come</p>
+            <p className="font-script origin-left -rotate-2 text-[24px] text-red">look how far you&apos;ve come</p>
             <h2 id="course-heading" className="type-display-m mt-2 tabular-nums">{data.progress.finished} of {data.progress.total} skills</h2>
             <p className="mt-2 text-base" data-visual-mask="">Projected finish {formatDate(data.projected_finish, { month: 'long', day: 'numeric', year: 'numeric' })}. {PACE_LABEL[data.pace]} pace.</p>
             <p className="mt-1 max-w-xl text-sm">Counts skills you have practised or mastered{data.progress.assumed ? `. ${data.progress.assumed} more are assumed from placement until a short review confirms them` : ''}.</p>
           </div>
-        </section>
+          {mastered > 0 ? (
+            <Stamp text="PROVEN" sub={`${mastered} mastered`} shape="round" ink="green" size={96} tilt={-8} seed="evidence-proven" className="absolute top-4 right-[200px] hidden xl:block" />
+          ) : null}
+        </Paper>
 
         {features.library ? <SolvedBoard /> : null}
 
-        <div className={cn('grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6', features.code ? 'lg:grid-cols-4' : 'lg:grid-cols-3')}>
+        <div className={cn('grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6', features.code ? 'lg:grid-cols-4' : 'max-sm:[&>:last-child]:col-span-2 sm:grid-cols-3')}>
           <StatCard value={mastered} icon={<StatusIcon status="mastered" size={28} />} label="Skills mastered" hint={features.code ? 'Evidence from checks, judged code and reviews passed the mastery threshold.' : 'Evidence from checks and reviews passed the mastery threshold.'} />
           <StatCard value={due} icon={<StatusIcon status="review" size={28} />} label="Reviews due" hint="Spaced reviews that are due now." />
           <StatCard value={weak} icon={<StatusIcon status="needs_practice" size={28} />} label="Need practice" hint="Recent results show these are not holding yet." />
@@ -139,7 +144,7 @@ export default function ProgressPage() {
                         const status = due && c.band !== 'not_started' ? 'review' : c.status === 'practiced' ? 'learned' : c.status === 'assumed' ? 'assumed' : statusFromBand(c.band, due);
                         const helped = (c.assisted ?? 0) > (c.independent ?? 0);
                         return (
-                          <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[16px] bg-raised px-4 py-3">
+                          <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[4px] bg-raised px-4 py-3">
                             <Link href={conceptHref(c.id)} transitionTypes={['nav-forward']} className="min-w-0 flex-1 basis-40 font-semibold underline-offset-4 hover:underline">{c.title}</Link>
                             <StatusLabel status={status} className="text-[13px]" />
                             {helped ? <span className="text-[13px] text-muted-foreground">mostly with help</span> : null}

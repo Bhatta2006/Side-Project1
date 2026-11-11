@@ -20,14 +20,14 @@ export function NodeMap({ nodes, label }: { nodes: MapNode[]; label: string }) {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="type-label text-(--card-muted,var(--muted-foreground))">Order in module</p>
-        <div className="inline-flex h-10 rounded-full bg-[color-mix(in_srgb,currentColor,transparent_88%)] p-1" role="group" aria-label="Skill view">
+        <div className="inline-flex h-10 rounded-[4px] border border-line p-1" role="group" aria-label="Skill view">
           {(['map', 'list'] as const).map(v => (
             <button
               key={v}
               type="button"
               aria-pressed={view === v}
               onClick={() => setView(v)}
-              className={cn('min-h-8 rounded-full px-4 text-sm font-medium capitalize', view === v && 'bg-ink font-bold text-ink-foreground')}
+              className={cn('min-h-8 rounded-[3px] px-4 text-sm font-medium capitalize', view === v && 'bg-hi-select font-bold text-ink')}
             >
               {v}
             </button>
@@ -52,7 +52,7 @@ export function NodeMap({ nodes, label }: { nodes: MapNode[]; label: string }) {
         <ol className="grid gap-1">
           {nodes.map(n => (
             <li key={n.id}>
-              <Link href={n.href} className="flex min-h-12 items-center gap-3 rounded-[14px] px-2 py-2 transition-colors hover:bg-[color-mix(in_srgb,currentColor,transparent_90%)]">
+              <Link href={n.href} className="flex min-h-12 items-center gap-3 rounded-[4px] px-2 py-2 transition-colors hover:bg-[color-mix(in_srgb,currentColor,transparent_90%)]">
                 <StatusIcon status={n.status} size={24} />
                 <span className="min-w-0 flex-1 font-semibold">{n.title}</span>
                 <span className="text-[13px] font-medium">{n.status === 'locked' ? 'Locked' : STATUS_LABEL[n.status]}{n.current ? ', current' : ''}</span>

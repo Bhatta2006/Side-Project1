@@ -10,10 +10,10 @@ type Palette = {
 };
 
 const LIGHT: Palette = {
-  bg: '#ffffff', fg: '#15161E', gutter: '#ffffff', gutterFg: '#8E8C84', border: '#E4E2DA',
-  selection: '#FBF0A6', activeLine: '#F8F7F3', cursor: '#2340E8', focus: '#2340E8',
-  keyword: '#2340E8', string: '#2F7A4C', number: '#B0441E', comment: '#6F6D66', fn: '#0E6F80',
-  type: '#0E6F80', constant: '#B0441E', operator: '#3B3C46', punctuation: '#5D5C57',
+  bg: '#fbf8f1', fg: '#2a2420', gutter: '#fbf8f1', gutterFg: '#8e887f', border: '#d8d0c2',
+  selection: '#f8dc4c66', activeLine: '#f4efe2', cursor: '#2c4f9e', focus: '#2c4f9e',
+  keyword: '#b23a28', string: '#3b6f45', number: '#9a4a26', comment: '#5a554e', fn: '#2c4f9e',
+  type: '#2c4f9e', constant: '#9a4a26', operator: '#4a423b', punctuation: '#4a433c',
 };
 const DARK: Palette = {
   bg: '#16171C', fg: '#ECEBE5', gutter: '#16171C', gutterFg: '#6B6A64', border: '#2A2B33',

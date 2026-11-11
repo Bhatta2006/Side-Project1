@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
@@ -91,7 +91,7 @@ function ProjectCard({ project, onChange }: { project: ProjectView; onChange: ()
       {project.preparing ? <p className="text-[15px] text-muted-foreground">Some of its lessons are still being written. It opens when they are ready.</p> : null}
       <ol className="grid gap-4">
         {project.milestones.map((m, i) => (
-          <li key={m.id} className="grid gap-3 rounded-[16px] border p-4">
+          <li key={m.id} className="grid gap-3 rounded-[4px] border p-4">
             <p className="flex flex-wrap items-center gap-2 font-semibold">
               {i + 1}. {m.title}
               {m.done ? <Badge><CheckCircle2 /> Done</Badge> : !m.available ? <Badge variant="outline">After milestone {i}</Badge> : null}

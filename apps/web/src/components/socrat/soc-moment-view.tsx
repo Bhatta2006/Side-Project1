@@ -109,7 +109,7 @@ export default function SocMomentView({ moment, onDone }: { moment: Moment | nul
         @media (prefers-reduced-motion: reduce) { .soc-moment, .soc-moment-say { animation: none !important } }
       `}</style>
       <p
-        className="soc-moment-say max-w-[260px] rounded-[18px] rounded-br-sm border border-border-strong bg-card px-4 py-3 font-hand text-[19px] leading-snug text-foreground shadow-floating"
+        className="soc-moment-say max-w-[260px] rounded-[4px] rounded-br-sm border border-border-strong bg-card px-4 py-3 font-hand text-[19px] leading-snug text-foreground shadow-floating"
         style={{ animation: 'soc-say 260ms 320ms both ease-out' }}
       >
         {said.line}

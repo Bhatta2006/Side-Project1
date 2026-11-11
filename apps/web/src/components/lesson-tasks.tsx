@@ -58,7 +58,7 @@ function TaskCard({ concept, task }: { concept: string; task: LessonTask }) {
   }
 
   return (
-    <section aria-labelledby={`task-${task.id}`} className="grid gap-3 rounded-[20px] border bg-card p-5">
+    <section aria-labelledby={`task-${task.id}`} className="grid gap-3 rounded-[4px] border bg-card p-5">
       <h3 id={`task-${task.id}`} className="font-semibold">{KIND[task.kind]}</h3>
       <p className="text-[15px]">{task.prompt}</p>
       {task.safety ? <p className="text-sm font-medium">Safety: {task.safety}</p> : null}

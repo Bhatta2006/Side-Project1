@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { ArrowLeft, Check, ChevronDown, Cloud, CloudOff, Loader2, Play, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Cloud, CloudOff, Loader2, Play, RotateCcw } from '@/components/icons';
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
 import { reportError } from '@/lib/report-error';
@@ -265,7 +265,7 @@ export default function Problem() {
       {examGuard}
       {soc.element}
       {proving ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-border-strong px-4 py-2.5 text-[15px]">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[4px] border border-border-strong px-4 py-2.5 text-[15px]">
           <span className="font-semibold">{examId ? 'Weekly exam coding task' : 'Transfer check'}. No tutor, no copy and paste.</span>
           <Button asChild size="sm" variant="outline"><Link href={examId ? '/assessments' : checkBack ?? '/plan'}>{examId ? 'Back to the exam' : 'Back to the check'}</Link></Button>
         </div>
@@ -428,7 +428,7 @@ export default function Problem() {
           />
           <p id="editor-keyboard-help" className="sr-only">Press Escape, then Tab, to move focus out of the editor.</p>
 
-          <details className="group rounded-[16px] border" open={useCustom} onToggle={e => setUseCustom((e.currentTarget as HTMLDetailsElement).open)}>
+          <details className="group rounded-[4px] border" open={useCustom} onToggle={e => setUseCustom((e.currentTarget as HTMLDetailsElement).open)}>
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-[15px] font-semibold [&::-webkit-details-marker]:hidden">
               Custom input {useCustom ? <span className="text-[13px] font-medium text-muted-foreground">Used when you run tests</span> : null}
               <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
@@ -437,7 +437,7 @@ export default function Problem() {
               <Textarea className="font-mono text-sm" rows={4} value={customInput} onChange={e => setCustomInput(e.target.value)} maxLength={20000} aria-label="Custom input" />
             </div>
           </details>
-          <div className={cn('sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-wrap items-center gap-2 border-t bg-background px-4 py-3 sm:mx-0 sm:rounded-[20px] sm:border md:bottom-4 lg:static lg:border-0 lg:bg-transparent lg:p-0', !proving && 'pr-[84px] sm:pr-[84px] lg:pr-0')}>
+          <div className={cn('sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-wrap items-center gap-2 border-t bg-background px-4 py-3 sm:mx-0 sm:rounded-[4px] sm:border md:bottom-4 lg:static lg:border-0 lg:bg-transparent lg:p-0', !proving && 'pr-[84px] sm:pr-[84px] lg:pr-0')}>
             {/* Desktop runs and submits from the header; these are the phone and tablet copies. */}
             <Button variant="run" className="flex-1 sm:flex-none lg:hidden" disabled={!canExecute || Boolean(pending)} aria-busy={pending === 'run'} onClick={() => execute('run')}>
               {pending === 'run' ? <Loader2 className="animate-spin" /> : <Play />} Run tests
@@ -448,9 +448,9 @@ export default function Problem() {
           </div>
           {problem.locked ? <p className="text-sm text-muted-foreground">Run and submit unlock after the {problem.locked.module} checkpoint.</p> : null}
           {!features?.code_execution ? (
-            <p className="rounded-[16px] border px-4 py-3 text-[15px]">Code execution is turned off on this server. Your drafts still save, and Soc can review your code.</p>
+            <p className="rounded-[4px] border px-4 py-3 text-[15px]">Code execution is turned off on this server. Your drafts still save, and Soc can review your code.</p>
           ) : !runtimeReady ? (
-            <div className="flex items-start gap-3 rounded-[16px] border border-attention px-4 py-3 text-[15px]"><AttentionIcon /> <span>{LANGUAGE_LABEL[lang]} needs Socrat's server runner, which is offline right now. Python and C++ run in your browser; switch language to run your code.</span></div>
+            <div className="flex items-start gap-3 rounded-[4px] border border-attention px-4 py-3 text-[15px]"><AttentionIcon /> <span>{LANGUAGE_LABEL[lang]} needs Socrat's server runner, which is offline right now. Python and C++ run in your browser; switch language to run your code.</span></div>
           ) : null}
           <p className="hidden text-[13px] text-muted-foreground sm:block">
             <kbd className="rounded-md border border-border-strong px-1.5 font-sans">Ctrl Enter</kbd> runs tests. <kbd className="rounded-md border border-border-strong px-1.5 font-sans">Ctrl Shift Enter</kbd> submits.
@@ -461,7 +461,7 @@ export default function Problem() {
 
           <div aria-live="polite">
             {pending && result?.status !== 'done' ? (
-              <p className="flex items-center gap-2 rounded-[16px] border px-4 py-3 text-[15px] text-muted-foreground">
+              <p className="flex items-center gap-2 rounded-[4px] border px-4 py-3 text-[15px] text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" /> {stage?.startsWith('downloading:') ? `Downloading the C++ compiler to your browser (once): ${stage.split(':')[1]}%` : STAGE_LABEL[stage ?? ''] ?? (result?.status === 'running' ? 'Running your code' : 'Waiting for a runner')}
               </p>
             ) : null}
@@ -474,7 +474,7 @@ export default function Problem() {
                   <span className="text-[13px] font-semibold text-muted-foreground">{result.mode === 'submit' ? 'Submission' : 'Test run'}: {verdict.label}</span>
                 </div>
                 {result.verdict === 'compile_error' || result.verdict === 'runtime_error' ? (
-                  <div className="flex items-start gap-3 rounded-[16px] border border-attention p-3">
+                  <div className="flex items-start gap-3 rounded-[4px] border border-attention p-3">
                     <AttentionIcon />
                     <pre className="io-block min-w-0 flex-1 bg-transparent! p-0!">{result.cases.find(c => c.stderr)?.stderr || verdict.label}</pre>
                   </div>

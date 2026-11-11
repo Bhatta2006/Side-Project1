@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Check, ExternalLink, Star } from 'lucide-react';
+import { Check, ExternalLink, Star } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import type { ExternalProblem, Level, PracticeStatus } from '@/lib/types';

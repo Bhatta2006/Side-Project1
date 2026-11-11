@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
-import { Check, Download, LogOut } from 'lucide-react';
+import { Check, Download, LogOut } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useReducedMotion } from '@/lib/motion';
 import { useGuard, useSession } from '@/lib/session';
@@ -28,17 +27,13 @@ import { Switch } from '@/components/ui/switch';
 import { useInstall } from '@/lib/pwa';
 import { CommunityButton, useCommunityUrl } from '@/components/community-link';
 import { LanguagePicker } from '@/components/language-picker';
+import { PalettePicker } from '@/components/palette-picker';
 import { DataUsePicker } from '@/components/data-use';
 import { InstallAppButton } from '@/components/install-app';
 import { Soc } from '@/components/socrat/illustration';
 
 const MINUTES = [15, 20, 30, 45, 60, 90, 120];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const THEMES = [
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'system', label: 'System' },
-] as const;
 
 function Section({ id, title, description, children, className }: { id: string; title: string; description?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
@@ -83,7 +78,7 @@ function SectionNav({ active, onPick }: { active: string; onPick: (id: string) =
               href={`#${n.id}`}
               aria-current={active === n.id ? 'location' : undefined}
               onClick={() => onPick(n.id)}
-              className={cn('flex min-h-10 items-center rounded-full px-4 text-[15px] font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground lg:rounded-[14px]', active === n.id && 'bg-raised font-bold text-foreground')}
+              className={cn('flex min-h-10 items-center rounded-full px-4 text-[15px] font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground lg:rounded-[4px]', active === n.id && 'bg-raised font-bold text-foreground')}
             >
               {n.label}
             </a>
@@ -142,50 +137,14 @@ function AppSection() {
   );
 }
 
-/** A small flat preview of each theme: canvas, card, a brand bar. */
-function ThemePreview({ id }: { id: 'light' | 'dark' | 'system' }) {
-  const swatch = (bg: string, card: string, text: string) => (
-    <span className="flex h-16 flex-1 flex-col gap-1.5 p-2" style={{ background: bg }}>
-      <span className="h-2 w-10 rounded-full" style={{ background: text }} />
-      <span className="flex-1 rounded-md p-1.5" style={{ background: card }}><span className="block h-2 w-8 rounded-full bg-[#2340E8]" /></span>
-    </span>
-  );
-  const light = swatch('#F6F5F0', '#FFFFFF', '#15161E');
-  const dark = swatch('#121318', '#1A1B21', '#ECEBE5');
-  return <span className="flex w-full overflow-hidden rounded-[14px] border" aria-hidden="true">{id === 'light' ? light : id === 'dark' ? dark : <>{light}{dark}</>}</span>;
-}
-
 function Appearance() {
-  const { theme, setTheme } = useTheme();
   const motion = useReducedMotion();
   const { profile, refresh } = useSession();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
   return (
-    <Section id="appearance-heading" title="Appearance" description="System follows your device.">
-      <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
-        <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Theme">
-          {THEMES.map(t => {
-            const active = mounted && (theme ?? 'system') === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setTheme(t.id)}
-                className={cn('grid content-start gap-2 rounded-[20px] border border-border-strong p-2 pb-3 text-left transition-colors hover:bg-raised', active && 'border-primary ring-1 ring-primary')}
-              >
-                <ThemePreview id={t.id} />
-                <span className="flex items-center gap-1.5 px-1 text-[15px] font-medium">
-                  {active ? <Check className="size-4 text-brand" aria-hidden="true" /> : null}
-                  <span className={cn(active && 'font-bold')}>{t.label}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="grid content-start divide-y">
+    <Section id="appearance-heading" title="Appearance" description="Colours, language, motion and reminders.">
+      <div className="grid gap-6 lg:gap-10">
+        <div className="grid max-w-2xl content-start divide-y">
+          <PalettePicker />
           <LanguagePicker />
           <div className="flex items-start justify-between gap-4 py-5">
             <div>

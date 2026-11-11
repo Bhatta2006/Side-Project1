@@ -75,7 +75,7 @@ export default function Placement() {
             <p className="mt-1 text-[15px] text-muted-foreground">Placement suggests you know these. They are not counted as learned yet: each gets a short, harder confirmation check on your plan. Pass it and the skill counts; miss it and you learn it properly, no harm done.</p>
             <ul className="mt-4 grid gap-2">
               {summary.known_concepts.map(c => (
-                <li key={c} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-[16px] bg-raised px-4 py-2.5">
+                <li key={c} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-[4px] bg-raised px-4 py-2.5">
                   <span className="font-semibold">{c}</span>
                   <StatusLabel status="assumed" muted className="text-[13px]" />
                 </li>

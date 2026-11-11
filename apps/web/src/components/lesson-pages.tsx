@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from '@/components/icons';
 import Markdown from '@/components/markdown';
 import { Button } from '@/components/ui/button';
 import { isCheckPage, minutes, splitPages } from '@/lib/pages';

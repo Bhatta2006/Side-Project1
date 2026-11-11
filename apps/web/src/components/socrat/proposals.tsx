@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import type { Proposal, ProposalsView } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ export function ProposalList({
         {proposals.map(p => {
           const decided = done[p.id];
           return (
-            <li key={p.id} className={`rounded-[16px] border bg-raised ${compact ? 'p-3' : 'p-4'}`}>
+            <li key={p.id} className={`rounded-[4px] border bg-raised ${compact ? 'p-3' : 'p-4'}`}>
               <p className="text-[12px] font-medium tracking-wide text-muted-foreground uppercase">{SOURCE[p.source]}</p>
               <p className="mt-1 font-semibold">{p.title}</p>
               <p className="mt-1 text-[14px] text-muted-foreground">{p.reason}</p>
