@@ -167,6 +167,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(email_auth_router)
     entitlements.ENABLED = settings.billing_enabled
     entitlements.FREE_PLAYGROUND_PER_WEEK = settings.playground_free_per_week
+    from socrat.coursegen import prefetch
+
+    prefetch.AHEAD = settings.gen_lessons_ahead
+    prefetch.INITIAL_CONCEPTS = settings.gen_initial_lessons
+    prefetch.LESSONS_PER_DAY = settings.gen_lessons_per_day
     app.include_router(errors.router)
     app.add_middleware(
         SessionMiddleware,

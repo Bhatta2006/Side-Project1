@@ -156,6 +156,10 @@ whole revision round.
 | `SOCRAT_PRACTICE_EVIDENCE` | Answers to bank questions count as recall evidence: at most 3 per lesson a day, each question once a day. Model-written sets never count | any time | false |
 | `SOCRAT_LESSON_SIGNALS` | The app reports how each lesson is read (furthest page, "simpler" and "deeper" taps, rereads, questions). Counters only, never evidence. The stuck detector reads them as weak signals, the tutor is told them, and the learner reads them at `GET /api/v1/memory` | any time | false |
 | `SOCRAT_EXPLAINER_SECTION_VISUALS` | Each page of a lesson offers "Show me this part": a shared visual built from that page's own text, made once and reused by every learner, not charged to anyone's plan | any time | false |
+| `SOCRAT_GEN_BUDGET_PER_LESSON_USD` | Each released lesson adds this much to what its course may spend, so a long course that keeps releasing never stops itself; one that spends without releasing still pauses. 0 keeps the fixed course budget | any time | 0 |
+| `SOCRAT_GEN_LESSONS_PER_DAY` | Lessons written for one course in any 24 hours. A lesson over the quota is queued with the time it will be written and the learner is told when. 0 is no quota | restart | 0 |
+| `SOCRAT_GEN_INITIAL_LESSONS` | Lessons written when a course is published, before the learner has read a line (1 to 6) | restart | 6 |
+| `SOCRAT_GEN_LESSONS_AHEAD` | Lessons kept written ahead of the learner, counting the one they are on (1 to 5) | restart | 3 |
 | `SOCRAT_REQUEST_MATCHING` | Match before build: a new request is compared with the courses the learner may already take (their own, and ones other learners chose to share) and a fit is offered to start at once. Private courses are never compared; no model is called | any time | false |
 | `SOCRAT_PLAYGROUND_FREE_PER_WEEK` | Visuals a learner on the free plan may ask for in the Playground each week (0 to 20). Shared lesson visuals are free already | restart | 0 |
 | `SOCRAT_WORKER_RUNS_GENERATION` | Generation in the worker | see `docs/operations/api-worker-split.md` | as there |

@@ -182,6 +182,8 @@ export default function Lesson() {
   const [locked, setLocked] = useState<'' | 'gate' | 'preparing'>('');
   // The first lesson's draft, readable while its checks run (only when the API offers one).
   const [draft, setDraft] = useState<{ title: string; lesson: string; key_points: string[] } | null>(null);
+  // When a lesson over the day's quota will be written (only when the API has a quota set).
+  const [due, setDue] = useState<{ per_day: number; seconds: number } | null>(null);
   const [variant, setVariant] = useState<{ style: string; content: string } | null>(null);
   const [explaining, setExplaining] = useState('');
   const [completing, setCompleting] = useState(false);
@@ -216,8 +218,11 @@ export default function Lesson() {
   useEffect(() => {
     if (!preparing) {
       setDraft(null);
+      setDue(null);
       return;
     }
+    api.get<{ per_day: number; seconds: number }>(`/concepts/${qualified}/writing`)
+      .then(w => setDue(w.seconds > 0 ? w : null)).catch(() => setDue(null));
     const look = () => {
       api.get<{ title: string; lesson: string; key_points: string[] }>(`/concepts/${qualified}/preview`).then(setDraft).catch(() => setDraft(null));
     };
@@ -314,9 +319,15 @@ export default function Lesson() {
   if (!concept && locked === 'preparing') {
     return (
       <div className="mx-auto max-w-3xl p-6">
-        <LockedState title="This lesson is being prepared" href="/plan" action="Back to your plan">
-          It opens here by itself as soon as it is ready.
-        </LockedState>
+        {due ? (
+          <LockedState title={`This lesson is written ${whenDue(due.seconds)}`} href="/reviews" action="Review what you have learned">
+            Socrat writes {due.per_day === 1 ? 'one new lesson' : `${due.per_day} new lessons`} a day for this course, so each one is checked properly. This one is scheduled and opens here by itself. Until then, your reviews and practice are ready.
+          </LockedState>
+        ) : (
+          <LockedState title="This lesson is being prepared" href="/plan" action="Back to your plan">
+            It opens here by itself as soon as it is ready.
+          </LockedState>
+        )}
       </div>
     );
   }
@@ -630,6 +641,13 @@ function Recap({ concept, active, canCheck, completing, onComplete, feel }: {
 
 function hasAbout(concept: ConceptView): boolean {
   return Boolean(concept.ai_generated || concept.translation || concept.citations?.length || concept.teaching?.techniques.length);
+}
+
+/** "in about 5 hours", "tomorrow": when a scheduled lesson will be written. */
+function whenDue(seconds: number): string {
+  const hours = Math.ceil(seconds / 3600);
+  if (hours <= 1) return 'within the hour';
+  return hours < 20 ? `in about ${hours} hours` : 'tomorrow';
 }
 
 /** ★ About this lesson: how it was written and checked, its sources and why it is taught this

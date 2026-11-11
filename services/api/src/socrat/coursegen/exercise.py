@@ -245,7 +245,9 @@ async def run_exercise(engine, settings, base: Catalog, job_id: str, make, execu
     taken = set(base.problems) | {p.id for p in course.problems}
     draft, notes = None, list[str]()
     for attempt in range(1, jobs.ROUNDS + 1):
-        if jobs._over_budget(engine, course_id, brief.budget_usd):
+        if jobs._over_budget(
+            engine, course_id, brief.budget_usd, settings.gen_budget_per_lesson_usd
+        ):
             jobs.pause_for_budget(engine, course_id, job_id)
             return
         if jobs._job_cost(engine, job_id) >= brief.concept_budget_usd:

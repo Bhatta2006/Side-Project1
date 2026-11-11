@@ -575,9 +575,16 @@ async def _reuse(
     return True
 
 
-def _over_budget(engine: Engine, course_id: str, budget_usd: float) -> bool:
+def _over_budget(
+    engine: Engine, course_id: str, budget_usd: float, per_lesson_usd: float = 0.0
+) -> bool:
+    """Has the course spent all it may: its base budget, plus what each released lesson
+    earned when a per-lesson budget is set (coursegen/pacing.py)."""
+    from socrat.coursegen import pacing
+
     with Session(engine) as db:
-        return spent(db, course_id) >= budget_usd
+        allowed = pacing.ceiling(db, course_id, budget_usd, per_lesson_usd)
+        return spent(db, course_id) >= allowed
 
 
 def pause_for_budget(engine: Engine, course_id: str, job_id: str) -> None:
@@ -785,7 +792,7 @@ async def run_package(
     rounds = settings.gen_package_rounds
     fallback = None  # the first package that passed, kept while that round runs
     for attempt in range(1, rounds + 1):
-        if _over_budget(engine, course_id, brief.budget_usd):
+        if _over_budget(engine, course_id, brief.budget_usd, settings.gen_budget_per_lesson_usd):
             pause_for_budget(engine, course_id, job_id)
             return
         if _job_cost(engine, job_id) >= brief.concept_budget_usd:

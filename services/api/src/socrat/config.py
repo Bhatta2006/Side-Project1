@@ -272,6 +272,18 @@ class Settings(DatabaseSettings):
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)
+    # Pacing (coursegen/pacing.py). A course is written lesson by lesson; these decide how
+    # fast and at what cost. All default to the behaviour before they existed.
+    # Each released lesson adds this much to what its course may spend, so a long course
+    # that keeps releasing never stops itself. 0: the fixed course budget above.
+    gen_budget_per_lesson_usd: float = Field(default=0.0, ge=0, le=10)
+    # At most this many lessons are written for one course in any 24 hours. One over the
+    # quota is queued with the time it will be written, and the learner is told. 0: no quota.
+    gen_lessons_per_day: int = Field(default=0, ge=0, le=100)
+    # Lessons written when a course is published, before the learner has read a line.
+    gen_initial_lessons: int = Field(default=6, ge=1, le=6)
+    # Lessons kept written ahead of the learner, counting the one they are on.
+    gen_lessons_ahead: int = Field(default=3, ge=1, le=5)
     gen_runner: bool = True  # run queued generation jobs in the API process (off in tests)
     # Generation jobs the API process runs at once. With 1 a course's first lessons are written
     # one after another; with 3-4 the first lesson is not kept waiting behind the others.

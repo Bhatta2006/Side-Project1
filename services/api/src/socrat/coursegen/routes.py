@@ -307,7 +307,15 @@ def resume(course_id: str, request: Request):
     with Session(engine(request)) as db, db.begin():
         user = require_admin(request, db, write=True)
         row = _course_row(db, course_id)
-        if jobs.spent(db, course_id) >= need(row.brief, "brief")["budget_usd"]:
+        from socrat.coursegen import pacing
+
+        allowed = pacing.ceiling(
+            db,
+            course_id,
+            need(row.brief, "brief")["budget_usd"],
+            request.app.state.settings.gen_budget_per_lesson_usd,
+        )
+        if jobs.spent(db, course_id) >= allowed:
             raise HTTPException(409, "budget_reached")
         row.paused = ""
         record_event(db, user.id, "coursegen.resumed", course_id)

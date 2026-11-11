@@ -62,6 +62,43 @@ def draft(db: Session, course_id: str, concept_id: str) -> dict | None:
     return lesson
 
 
+@router.get("/{qualified}/writing")
+def writing(qualified: str, request: Request):
+    """When a lesson that is not written yet will be: for the learner who has reached it.
+    Only while a daily lesson quota is set (``gen_lessons_per_day``); it says a time, never
+    a cost."""
+    from socrat.coursegen import jobs, prefetch
+    from socrat.models import now
+
+    if prefetch.LESSONS_PER_DAY <= 0:
+        raise HTTPException(404, "not_found")
+    course_id, _, concept_id = qualified.partition(":")
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        enrollment = active(db, user)
+        if enrollment.course_id != course_id or db.get(GeneratedCourse, course_id) is None:
+            raise HTTPException(404, "not_found")
+        job = db.scalars(
+            select(GenerationJob)
+            .where(
+                GenerationJob.course_id == course_id,
+                GenerationJob.kind == "package",
+                GenerationJob.target == concept_id,
+            )
+            .order_by(GenerationJob.created_at.desc())
+        ).first()
+        if job is None:
+            raise HTTPException(404, "not_found")
+        stamp = now()
+        waiting = job.state == "queued" and job.not_before > stamp
+        return dict(
+            state=jobs.lifecycle(job),
+            per_day=prefetch.LESSONS_PER_DAY,
+            at=job.not_before if waiting else None,  # when it will be written, if not yet
+            seconds=job.not_before - stamp if waiting else 0,
+        )
+
+
 @router.get("/{qualified}/preview")
 def preview(qualified: str, request: Request):
     if not request.app.state.settings.gen_first_lesson_preview:

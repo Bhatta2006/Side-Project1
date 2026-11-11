@@ -540,3 +540,29 @@ Still open from G2 and G5: subjects that mean the same in different words ("math
 match is started as it is, not forked and personalised; released lessons are not reused across
 learners' private courses (owner decision 3); the built-in courses are not offered, because a
 learner can only take them in sequence; the per-course budget still pauses a long course (G5).
+
+### 2026-11-11, slice 11: pacing, so a long course finishes and cost follows use (G5)
+
+Lessons were already written a few at a time (six at publish, three ahead of the learner),
+but a learner's course had one fixed budget and stopped for good when it was spent, and the
+numbers were constants in the code.
+
+| Change | Where |
+|---|---|
+| `SOCRAT_GEN_BUDGET_PER_LESSON_USD` (0): every released lesson adds this much to what its course may spend. A long course that keeps releasing lessons never stops itself; a course that spends without releasing anything still pauses exactly where it did. The per-lesson cap (`concept_budget_usd`) is unchanged | `coursegen/pacing.py` (`ceiling`, `released`), `jobs._over_budget`, `exercise.py`, `routes.resume` |
+| `SOCRAT_GEN_LESSONS_PER_DAY` (0): at most this many lessons are written for one course in any 24 hours. A lesson over the quota is not refused and the course is not paused: the job is queued with the time it will be written, the runner leaves it until then, and it arrives by itself | `pacing.slot`, `prefetch.request` |
+| The learner who reaches a scheduled lesson is told when it will be written and sent to their reviews meanwhile. `GET /concepts/{id}/writing` says a time and the quota, never a cost | `learn/preview.py` (`writing`), lesson page |
+| `SOCRAT_GEN_INITIAL_LESSONS` (6) and `SOCRAT_GEN_LESSONS_AHEAD` (3): how many lessons are written at publish and kept ahead of the learner. Lower values write a course one lesson at a time | `prefetch.py`, `main.py` |
+
+Nothing about how a lesson is written or checked changed: the same sources, gates, fact
+check and review. Only when and how many.
+
+Checked: 5 new tests (`test_pacing.py`) with the batch, recovery, fast-start, package and
+matching suites; lint, types and the web type check. In a browser against the offline API,
+with a quota of one lesson a day: the second lesson's page said "This lesson is written
+tomorrow" with the quota and a link to reviews. Not checked: real cost per lesson (the
+per-lesson amount should be set from the live run); the full API suite; Playwright.
+
+Still open from G5: the quota is one number for every course, not per plan tier; the learner
+sees it only on the lesson they reach, not on the plan page; a course paused for budget still
+needs an admin to resume it.

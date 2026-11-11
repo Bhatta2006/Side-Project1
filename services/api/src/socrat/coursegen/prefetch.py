@@ -20,6 +20,9 @@ INITIAL_MODULES = 3
 INITIAL_CONCEPTS = 6
 # A job in one of these states is on its way or needs a person (or the owner) to act; prefetch
 # does not queue the concept again on every visit.
+# Set from SOCRAT_GEN_LESSONS_PER_DAY at startup (AHEAD and INITIAL_CONCEPTS likewise, from
+# their settings): lessons written for one course in any 24 hours. 0: no quota.
+LESSONS_PER_DAY = 0
 SETTLED = {"queued", "running", "failed", "dead", "cancelled"}
 
 
@@ -36,7 +39,7 @@ def request(db: Session, enrollment: Enrollment, now: int, catalog=None) -> list
         return []  # hand-authored courses are always fully written
     from socrat.catalog import generated
     from socrat.catalog.registry import default_catalog
-    from socrat.coursegen import jobs
+    from socrat.coursegen import jobs, pacing
     from socrat.learn import service as learn
 
     catalog = catalog or generated.merged(default_catalog())
@@ -67,8 +70,11 @@ def request(db: Session, enrollment: Enrollment, now: int, catalog=None) -> list
             continue
         # The very next lesson is the one the learner is waiting for: it jumps the queue.
         data = {"trigger": "prefetch", "urgent": True} if n == 0 else {"trigger": "prefetch"}
+        # Over the day's quota: still queued, with the time it will be written.
+        wait = pacing.slot(db, course.id, LESSONS_PER_DAY, now)
         job = jobs.enqueue_once(db, "package", course.id, data, None, local)
         if job is not None:  # None: a concurrent page load queued it first
+            job.not_before = wait
             queued.append(job)
     return queued
 
