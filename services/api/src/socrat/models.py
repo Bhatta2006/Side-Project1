@@ -72,6 +72,8 @@ class User(Base):
     locale: Mapped[str] = mapped_column(String(16), default="en")  # BCP-47, see socrat.localize
     reminder_sent_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reminders_unanswered: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # The learner's colours as "palette:mode" (e.g. "tide:dark"); null is Classic in light.
+    appearance: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class LoginSession(Base):

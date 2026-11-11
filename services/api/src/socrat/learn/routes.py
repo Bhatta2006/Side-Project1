@@ -44,6 +44,11 @@ router = APIRouter(prefix="/api/v1")
 MIN_AGE = 13
 
 
+# The colour palettes the web app offers (apps/web/src/app/palettes.css).
+APPEARANCE_PALETTES = {"classic", "tide", "lilac", "meadow", "riso", "dusk"}
+APPEARANCE_MODES = {"light", "dark", "system"}
+
+
 class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -55,6 +60,18 @@ class ProfileUpdate(Strict):
     timezone: str | None = Field(default=None, max_length=64)
     reminders: bool | None = None
     locale: str | None = Field(default=None, max_length=16)
+    # "palette:mode", as offered in Settings > Appearance > Colours.
+    appearance: str | None = Field(default=None, max_length=32)
+
+    @field_validator("appearance")
+    @classmethod
+    def known_appearance(cls, value):
+        if value is None:
+            return value
+        palette, _, mode = value.partition(":")
+        if palette not in APPEARANCE_PALETTES or mode not in APPEARANCE_MODES:
+            raise ValueError("Choose a palette and light, dark or system")
+        return value
 
     @field_validator("locale")
     @classmethod
@@ -225,6 +242,7 @@ def profile_view(
         tour_seen=user.tour_seen_at is not None,
         reminders=user.reminders,
         can_remind=bool(user.email),
+        appearance=user.appearance,
         enrollment=None
         if enrollment is None
         else dict(
@@ -321,6 +339,8 @@ def update_me(body: ProfileUpdate, request: Request):
             user.timezone = body.timezone
         if body.locale is not None:
             user.locale = body.locale
+        if body.appearance is not None:
+            user.appearance = body.appearance
         if body.reminders is not None:
             if body.reminders and not user.email:
                 raise HTTPException(409, "reminders_need_email")

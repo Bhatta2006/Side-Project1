@@ -295,3 +295,20 @@ def test_first_run_tour_is_recorded_once(platform):
     assert client.post("/api/v1/me/tour", headers=headers).status_code == 204
     with Session(app.state.engine) as db:
         assert db.get(User, me["id"]).tour_seen_at == first
+
+
+def test_appearance_is_saved_on_the_account(platform):
+    _, client = platform
+    login(client)
+    me = client.get("/api/v1/me").json()
+    assert me["appearance"] is None
+    headers = {"Origin": "http://localhost:3000", "X-CSRF-Token": me["csrf_token"]}
+    response = client.patch("/api/v1/me", json={"appearance": "tide:dark"}, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["appearance"] == "tide:dark"
+    assert client.get("/api/v1/me").json()["appearance"] == "tide:dark"
+    for bad in ("neon:dark", "tide:dim", "tide", "<script>:dark"):
+        assert (
+            client.patch("/api/v1/me", json={"appearance": bad}, headers=headers).status_code == 422
+        )
+    assert client.get("/api/v1/me").json()["appearance"] == "tide:dark"
