@@ -1096,6 +1096,15 @@ async def run_package(
             person = validation.needs_person(adapter, brief.safety)
             kept_as = "human_review_required" if person else "pass_with_warnings"
             fallback = (live, pack, summary, kept_as, held + person)
+        elif settings.gen_relaxed_gates and fallback is None:
+            # Testing only (config.gen_relaxed_gates): the basic gates passed, so this package
+            # is kept and released if no later round passes, the judges' objections as warnings.
+            held = [
+                replace(f, severity="warning") if f.severity == "blocking" else f for f in findings
+            ]
+            fallback = (live, pack, summary, "pass_with_warnings", held)
+            entry = {"role": "system", "round": attempt, "event": "relaxed_gates_kept"}
+            _note(engine, job_id, entry)
         redo = {k for k, v in notes.items() if v} or {"lesson"}
         entry = {"role": "system", "round": attempt, "event": "revising"}
         _note(engine, job_id, entry, stage="generating")

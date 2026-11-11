@@ -226,6 +226,11 @@ class Settings(DatabaseSettings):
     # rest) is a visible warning. Only a score below this floor blocks, as a sign the lesson is
     # seriously weak. Raise it as stronger models arrive.
     gen_score_floor: int = Field(default=3, ge=2, le=5)
+    # TESTING ONLY. Keeps the basic gates (the lesson, quiz and atoms build and validate, code
+    # runs) and drops the judged ones: a lesson the fact checker or reviewer objects to is still
+    # released, with their objections as warnings. Refused in staging and production. Turn it
+    # back off before any real learner sees a course.
+    gen_relaxed_gates: bool = False
     style_engine_enabled: bool = True  # learning styles; admin accounts only while testing
     # Learner-typed courses ("teach me X"): off until the owner turns it on.
     learning_requests_enabled: bool = False
@@ -424,6 +429,8 @@ class Settings(DatabaseSettings):
         self.resend_api_key = _secret_from_file(
             "resend_api_key", self.resend_api_key, self.resend_api_key_file
         )
+        if self.gen_relaxed_gates and self.environment in {"staging", "production"}:
+            raise ValueError("SOCRAT_GEN_RELAXED_GATES is for local testing only")
         if self.environment == "test":
             self.codeforces_autosync = False
             self.gen_runner = False

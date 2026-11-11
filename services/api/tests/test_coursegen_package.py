@@ -462,3 +462,59 @@ def test_only_imprecise_claims_ask_for_a_polish_round():
         {"claims": [{"where": "atom:a1", "claim": "x", "verdict": "imprecise", "correction": "y"}]}
     )
     assert notes["atoms"] == ["[imprecise] atom:a1: x → y"] and notes["lesson"] == []
+
+
+WRONG_IN_LESSON = {
+    "claims": [
+        {
+            "where": "lesson",
+            "claim": "Models never need data",
+            "verdict": "incorrect",
+            "correction": "Models learn from data",
+        }
+    ]
+}
+
+
+def _wrong_every_round(client, published, web, concept):  # noqa: F811
+    generate(client, published, concept)
+    script = Scripted(
+        author=[lesson()] * 3,
+        quiz=[QUIZ],
+        atoms=[ATOMS],
+        facts=[WRONG_IN_LESSON] * 3,
+        reviewer=[SHALLOW] * 3,
+    )
+    run(client, script.make, web())
+    url = f"/api/v1/admin/courses/ai-basics/concepts/{concept}"
+    return client.get(url, headers=published).json()
+
+
+def test_relaxed_gates_release_what_the_judges_object_to(client, published, web, monkeypatch):  # noqa: F811
+    """Testing switch: the basic gates still hold, but a fact checker's or reviewer's objection
+    no longer keeps a lesson back. Off, the same lesson is held; on, it is released with
+    warnings."""
+    monkeypatch.setattr(jobs, "AUTO_RETRIES", -1)  # no automatic second try in this test
+    held = _wrong_every_round(client, published, web, "loss")
+    assert {j["state"] for j in held["jobs"]} == {"failed"} and held["concept"]["status"] != "live"
+
+    client.app.state.settings.gen_relaxed_gates = True
+    try:
+        kept = _wrong_every_round(client, published, web, "what-is-ml")
+    finally:
+        client.app.state.settings.gen_relaxed_gates = False
+    assert kept["concept"]["status"] == "live"
+    from sqlalchemy.orm import Session
+
+    from socrat.coursegen import validation
+
+    with Session(client.app.state.engine) as db:
+        report = validation.latest(db, "ai-basics", "what-is-ml")
+    assert report is not None and report.status == "pass_with_warnings"
+
+
+def test_relaxed_gates_are_refused_outside_local_testing():
+    from socrat.config import Settings
+
+    with pytest.raises(ValueError, match="local testing only"):
+        Settings(environment="production", gen_relaxed_gates=True)
