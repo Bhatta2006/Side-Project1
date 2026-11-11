@@ -221,6 +221,7 @@ export default function TodayPage() {
           <Pill><span className="tabular-nums">{today.minutes.done} of {today.minutes.goal} min today</span></Pill>
           {today.reviews_due ? <Pill><StatusIcon status="review" size={16} /> <Link href="/reviews" className="underline-offset-4 hover:underline">{today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</Link></Pill> : <Pill><Link href="/reviews" className="underline-offset-4 hover:underline">Reviews</Link></Pill>}
           <Pill><Link href="/notes" className="underline-offset-4 hover:underline">Notes</Link></Pill>
+          <Pill><Link href="/courses" className="underline-offset-4 hover:underline">Courses</Link></Pill>
         </ul>
       </Reveal>
 

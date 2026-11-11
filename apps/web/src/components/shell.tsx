@@ -15,6 +15,7 @@ import {
   MessageCircle,
   MessageSquareWarning,
   NotebookPen,
+  BookOpen,
   Route,
   Search,
   Settings,
@@ -304,6 +305,9 @@ function AppSidebar({ active, ready }: { active: NavKey | null; ready: boolean }
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Courses"><Link href="/courses"><BookOpen aria-hidden="true" /><span className="group-data-[collapsible=icon]:hidden">Courses</span></Link></SidebarMenuButton>
+          </SidebarMenuItem>
           {profile?.admin ? (
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Admin"><Link href="/admin"><ShieldCheck aria-hidden="true" /><span className="group-data-[collapsible=icon]:hidden">Admin</span></Link></SidebarMenuButton>

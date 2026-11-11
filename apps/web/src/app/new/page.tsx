@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 import { Pill } from '@/components/choice';
 import { Button } from '@/components/ui/button';
+import { ChevronDown } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -133,13 +134,28 @@ const GROUP_TITLE: Record<string, string> = {
 export default function NewCourse() {
   const { t, tx } = useI18n();
   const router = useRouter();
-  const { refresh } = useSession();
+  const { profile, refresh } = useSession();
   const [options, setOptions] = useState<Options | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [text, setText] = useState('');
   // In the learner's own terms; the fixed choices below are shortcuts, these win.
   const [style, setStyle] = useState('');
   const [age, setAge] = useState('');
+  // A learner who came straight here has no birth year yet, and enrolling needs one (13+).
+  // The course's "age" is who it is written for, maybe a child, so it only prefills this.
+  const thisYear = new Date().getFullYear();
+  const [birthYear, setBirthYear] = useState('');
+  const needsYear = !!profile && !profile.birth_year;
+  const yearOk = thisYear - Number(birthYear) >= 13 && Number(birthYear) > thisYear - 110;
+  useEffect(() => {
+    const n = Number.parseInt(age, 10);
+    if (Number.isFinite(n) && n >= 13 && n <= 110) setBirthYear(y => y || String(thisYear - n));
+  }, [age, thisYear]);
+  const saveYear = async () => {
+    if (!needsYear) return;
+    if (!yearOk) throw new ApiError(422, 'minimum_age');
+    await api.patch('/me', { birth_year: Number(birthYear), birthday_passed: true });
+  };
   const [minutes, setMinutes] = useState('');
   const [picks, setPicks] = useState<string[]>([]);
   const [req, setReq] = useState<LearningRequest | null>(null);
@@ -258,6 +274,7 @@ export default function NewCourse() {
     run(
       async () => {
         // A matched request is someone's finished course: there is nothing to publish.
+        await saveYear();
         const published = req.status === 'matched' ? req : await api.post<LearningRequest>(`/learning-requests/${req.id}/publish`, {});
         await api.post('/enrollments', published.enroll);
         // Load the new course into the session before leaving: otherwise every page keeps
@@ -273,6 +290,7 @@ export default function NewCourse() {
     if (!req) return;
     run(
       async () => {
+        await saveYear();
         const taken = await api.post<LearningRequest>(`/learning-requests/${req.id}/take`, { course });
         await api.post('/enrollments', taken.enroll);
         await refresh();
@@ -500,15 +518,23 @@ export default function NewCourse() {
               <p className="mt-2 text-sm text-muted-foreground">
                 A first draft of your plan. It may still change while it is checked; you can start as soon as it is ready.
               </p>
-              <ol className="mt-4 grid gap-4">
+              <ol className="mt-4 grid gap-3">
                 {req.skeleton.modules.map((m, i) => (
-                  <li key={`${i}-${m.title}`} className="rounded-[4px] border bg-card px-4 py-3">
-                    <p className="font-semibold">{m.title}</p>
-                    {m.lessons.length ? (
-                      <ul className="mt-2 grid gap-1 text-[15px] text-muted-foreground">
-                        {m.lessons.map((title, n) => <li key={`${n}-${title}`}>{title}</li>)}
-                      </ul>
-                    ) : null}
+                  <li key={`${i}-${m.title}`} className="rounded-[4px] border bg-card">
+                    <details className="group">
+                      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                        <span className="font-semibold">{m.title}</span>
+                        <span className="flex flex-none items-center gap-2 text-[13px] text-muted-foreground">
+                          {m.lessons.length ? `${m.lessons.length} lesson${m.lessons.length === 1 ? '' : 's'}` : null}
+                          <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+                        </span>
+                      </summary>
+                      {m.lessons.length ? (
+                        <ul className="grid gap-1 px-4 pb-3 text-[15px] text-muted-foreground">
+                          {m.lessons.map((title, n) => <li key={`${n}-${title}`}>{title}</li>)}
+                        </ul>
+                      ) : null}
+                    </details>
                   </li>
                 ))}
               </ol>
@@ -550,9 +576,16 @@ export default function NewCourse() {
                 </div>
               ) : null}
               {req.blueprint.modules.map((m) => (
-                <div key={m.id} className="mt-5">
-                  <h3 className="font-semibold">{m.title}</h3>
-                  <ol className="mt-2 space-y-2">
+                // Module headings only; a module opens to show its lessons.
+                <details key={m.id} className="group mt-3 rounded-[4px] border">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                    <h3 className="font-semibold">{m.title}</h3>
+                    <span className="flex flex-none items-center gap-2 text-[13px] text-muted-foreground">
+                      {m.concepts.length} lesson{m.concepts.length === 1 ? '' : 's'}
+                      <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+                    </span>
+                  </summary>
+                  <ol className="space-y-2 px-4 pb-4">
                     {m.concepts.map((c) => (
                       <li key={c.id} className="rounded-xl border bg-card px-4 py-3">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -583,7 +616,7 @@ export default function NewCourse() {
                       </li>
                     ))}
                   </ol>
-                </div>
+                </details>
               ))}
             </section>
           ) : null}
@@ -721,6 +754,13 @@ export default function NewCourse() {
             </section>
           ) : null}
 
+          {needsYear && (req.blueprint || matches.length) ? (
+            <div>
+              <label htmlFor="birth-year" className="mb-1 block text-sm font-medium">Your birth year</label>
+              <Input id="birth-year" className="w-28" inputMode="numeric" maxLength={4} value={birthYear} onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, ''))} placeholder={String(thisYear - 20)} aria-describedby="birth-year-note" />
+              <p id="birth-year-note" className="mt-1 text-[13px] text-muted-foreground">Asked once, to keep Socrat safe for its age (13 or older). Not shown to anyone.</p>
+            </div>
+          ) : null}
           {error ? <ErrorNote message={error} /> : null}
           <div className="flex flex-wrap gap-3">
             {req.status === 'parsed' ? (
@@ -729,7 +769,7 @@ export default function NewCourse() {
               </Button>
             ) : null}
             {req.blueprint ? (
-              <Button onClick={start} disabled={busy}>
+              <Button onClick={start} disabled={busy || (needsYear && !yearOk)}>
                 {busy ? 'Starting…' : 'Start this course'}
               </Button>
             ) : null}
