@@ -170,8 +170,9 @@ export function LandingPage() {
         className="landing-nav fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6 lg:px-8"
         onKeyDown={event => { if (event.key === 'Escape' && menu) { setMenu(false); event.currentTarget.querySelector<HTMLButtonElement>('[data-menu-button]')?.focus(); } }}
       >
-        <div className="mx-auto flex h-14 max-w-[1500px] items-center justify-between gap-4">
-          <Link href="/" aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
+        <div className="mx-auto flex h-14 max-w-[1500px] items-center justify-between gap-2 sm:gap-4">
+          {/* Right of the hero's red margin line (--margin-x), lined up with the hero text from sm. */}
+          <Link href="/" aria-label="Socrat home" className="ml-2 rounded-full sm:ml-10 lg:ml-24"><Wordmark /></Link>
           <nav aria-label="Site" className="glass-nav absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-1.5 shadow-floating lg:flex">
             {links.map(([href, label]) => <a key={href} href={href} className="rounded-full px-4 py-2 text-[15px] text-muted-foreground transition-colors hover:bg-raised hover:text-foreground">{label}</a>)}
           </nav>
