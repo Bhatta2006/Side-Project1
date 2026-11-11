@@ -71,7 +71,7 @@ type Intent = {
 };
 type LearningRequest = {
   id: string;
-  status: 'parsed' | 'needs_clarification' | 'blocked' | 'confirmed';
+  status: 'parsed' | 'needs_clarification' | 'blocked' | 'confirmed' | 'matched';
   source: 'model' | 'rules';
   intent: Intent;
   course_id: string | null;
@@ -108,6 +108,19 @@ type Check = {
     review: { concept: string; correct: boolean; answer: number; why: string }[];
   };
 };
+// A course the learner may already take that fits the request (coursegen/match.py).
+type Match = {
+  course: string;
+  title: string;
+  tagline: string;
+  fit: 'exact' | 'close';
+  differences: string[];
+  lessons: number;
+  ready: number;
+  mine: boolean;
+  by: string | null;
+  enrolled: boolean;
+};
 type Enrolled = { id: string; course: string; title: string; active: boolean };
 
 const GROUP_TITLE: Record<string, string> = {
@@ -142,6 +155,18 @@ export default function NewCourse() {
   const [consent, setConsent] = useState(false);
   const [credit, setCredit] = useState<'anonymous' | 'name'>('anonymous');
   const [mine, setMine] = useState<Enrolled[]>([]);
+  // Courses that already fit an open request. Empty when matching is off (the API says 404).
+  const [matches, setMatches] = useState<Match[]>([]);
+  const open = req?.status === 'parsed' || req?.status === 'needs_clarification';
+  useEffect(() => {
+    setMatches([]);
+    if (!req?.id || !open) return;
+    let current = true;
+    api.get<{ items: Match[] }>(`/learning-requests/${req.id}/matches`)
+      .then(r => { if (current) setMatches(r.items); })
+      .catch(() => undefined);
+    return () => { current = false; };
+  }, [req?.id, open]);
 
   // The start page hands over what the learner typed.
   useEffect(() => {
@@ -232,10 +257,24 @@ export default function NewCourse() {
     if (!req) return;
     run(
       async () => {
-        const published = await api.post<LearningRequest>(`/learning-requests/${req.id}/publish`, {});
+        // A matched request is someone's finished course: there is nothing to publish.
+        const published = req.status === 'matched' ? req : await api.post<LearningRequest>(`/learning-requests/${req.id}/publish`, {});
         await api.post('/enrollments', published.enroll);
         // Load the new course into the session before leaving: otherwise every page keeps
         // drawing the previous course (its language, its Practice tabs) until a reload.
+        await refresh();
+      },
+      () => router.push('/today'),
+    );
+  };
+
+  // Start a course that already exists instead of building one: nothing is generated.
+  const take = (course: string) => {
+    if (!req) return;
+    run(
+      async () => {
+        const taken = await api.post<LearningRequest>(`/learning-requests/${req.id}/take`, { course });
+        await api.post('/enrollments', taken.enroll);
         await refresh();
       },
       () => router.push('/today'),
@@ -652,11 +691,41 @@ export default function NewCourse() {
             </section>
           ) : null}
 
+          {open && matches.length ? (
+            <section className="rounded-[20px] border bg-card p-5" aria-label="Courses that already fit">
+              <h2 className="font-semibold">{matches.length === 1 ? 'This course already exists' : 'These courses already exist'}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Start one now with nothing to wait for, or have Socrat write a new one for you below.
+              </p>
+              <ul className="mt-4 space-y-4">
+                {matches.map((m) => (
+                  <li key={m.course} className="rounded-[14px] border p-4">
+                    <p className="font-medium">{m.title}</p>
+                    {m.tagline ? <p className="mt-1 text-sm text-muted-foreground">{m.tagline}</p> : null}
+                    <p className="mt-2 text-[13px] text-muted-foreground">
+                      {m.mine ? 'You made this course' : m.by ? `Shared by ${m.by}` : 'Shared by another learner'}
+                      {' · '}{m.ready} of {m.lessons} lessons ready, the rest are written as you go
+                      {m.fit === 'exact' ? ' · Fits what you asked for' : ''}
+                    </p>
+                    {m.differences.length ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                        {m.differences.map((d) => <li key={d}>{d}</li>)}
+                      </ul>
+                    ) : null}
+                    <Button className="mt-3" variant={m.fit === 'exact' ? 'default' : 'outline'} onClick={() => take(m.course)} disabled={busy}>
+                      {m.enrolled ? 'Continue this course' : 'Start this course'}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {error ? <ErrorNote message={error} /> : null}
           <div className="flex flex-wrap gap-3">
             {req.status === 'parsed' ? (
-              <Button onClick={confirm} disabled={busy}>
-                Looks right, write my plan
+              <Button onClick={confirm} disabled={busy} variant={matches.some((m) => m.fit === 'exact') ? 'outline' : 'default'}>
+                {matches.length ? 'Write a new one for me' : 'Looks right, write my plan'}
               </Button>
             ) : null}
             {req.blueprint ? (

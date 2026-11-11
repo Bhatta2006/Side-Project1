@@ -515,3 +515,28 @@ visual actually generated for a page; cost per page visual; the full API suite; 
 Still open from G8: lesson visuals written with the lesson (`gen_visuals`) stay off until a
 sample is reviewed; a visual writes no evidence; the vision review of a 3D film against the
 real object needs the owner's approval; tapping a label onto a picture is not built.
+
+### 2026-11-11, slice 10: match before build (G2, first part)
+
+Step 2 of the loop ("the engine looks for a course that already fits") did not exist: every
+request built a new course, even when the learner or someone else already had the same one.
+
+| Change | Where |
+|---|---|
+| `SOCRAT_REQUEST_MATCHING` (off): an open request is compared with the courses this learner may already take: their own, and courses another learner agreed to share (public, in good standing, at least one released lesson). A private course is never compared, so a match shows nothing the course list does not already show. No model is called | `coursegen/match.py` (`find`) |
+| The comparison is code over two validated intents. Same subject means the same words once filler, order and plurals are set aside ("Introduction to fractions" is "fractions basics"; "Linear algebra" is not "Algebra"). The language must be the same. A child is never offered an adult's course or the other way round. Exact: nothing differs. Close: the differences in register, level or style are listed in plain words | `match.subject_key`, `match.fit` |
+| `GET /learning-requests/{id}/matches` lists up to three, exact first, the learner's own first. `POST /learning-requests/{id}/take` settles the request with one of its own matches (new status `matched`): nothing is generated, the request stops counting as open, and the view carries what to send to enrol | `coursegen/requests.py` |
+| The request page shows "This course already exists" above the build button, with who shared it, how many lessons are ready and what differs. "Start this course" enrols and opens Today; "Write a new one for me" builds as before | `apps/web/src/app/new/page.tsx` |
+
+Checked: 5 new tests (`test_match.py`), 31 with the learning-request and fast-start suites;
+lint, types and the web type check. In a browser against the offline API, with a course
+shared by another learner in a seeded database: the card appeared for "Teach me algebra",
+"Start this course" enrolled the learner and opened Today, and the request became `matched`
+with no generation job. Not checked: the full API suite; Playwright; matching at scale (every
+candidate course is read on each lookup, which is fine for hundreds, not for many thousands).
+
+Still open from G2 and G5: subjects that mean the same in different words ("maths" and
+"mathematics", "ML" and "machine learning") do not match, since there is no embedding; a close
+match is started as it is, not forked and personalised; released lessons are not reused across
+learners' private courses (owner decision 3); the built-in courses are not offered, because a
+learner can only take them in sequence; the per-course budget still pauses a long course (G5).

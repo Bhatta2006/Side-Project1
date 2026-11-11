@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from socrat.catalog import generated
 from socrat.catalog.registry import CatalogError, default_catalog
 from socrat.catalog.revisions import module_version
-from socrat.coursegen import community, jobs, prefetch
+from socrat.coursegen import community, jobs, match, prefetch
 from socrat.coursegen import intent as intents
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, user_of
@@ -50,6 +50,11 @@ class Share(BaseModel):
     model_config = ConfigDict(extra="forbid")
     consent: bool  # must be true: the learner agrees to share this course with everyone
     credit: str = Field(default="anonymous", pattern=r"^(anonymous|name)$")
+
+
+class Take(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    course: str = Field(pattern=r"^[a-z][a-z0-9-]{0,79}$")  # one of the request's matches
 
 
 class Confirm(BaseModel):
@@ -339,7 +344,7 @@ def confirm(request_id: str, body: Confirm, request: Request):
         row = db.get(LearningRequest, request_id)
         if row is None or row.user_id != user.id:
             raise HTTPException(404, "not_found")
-        if row.status == "confirmed":
+        if row.status in ("confirmed", "matched"):
             return view(db, row)
         if row.status == "blocked":
             raise HTTPException(422, "request_blocked")
@@ -365,6 +370,51 @@ def confirm(request_id: str, body: Confirm, request: Request):
         row.intent = parsed.model_dump(mode="json")
         row.course_id, row.status, row.updated_at = course_id, "confirmed", now()
         record_event(db, user.id, "learning_request.confirmed", row.id)
+        db.flush()
+        return view(db, row)
+
+
+def _matching(request: Request) -> None:
+    _enabled(request)
+    if not request.app.state.settings.request_matching:
+        raise HTTPException(404, "not_found")
+
+
+@router.get("/{request_id}/matches")
+def matches(request_id: str, request: Request):
+    """Courses this learner may already take that fit the request, best first. Empty once
+    the request is settled (confirmed, matched or blocked)."""
+    _matching(request)
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        row = db.get(LearningRequest, request_id)
+        if row is None or row.user_id != user.id:
+            raise HTTPException(404, "not_found")
+        if row.status not in OPEN:
+            return {"items": []}
+        return {"items": match.find(db, catalog(), user.id, row.intent)}
+
+
+@router.post("/{request_id}/take")
+def take(request_id: str, body: Take, request: Request):
+    """Settle the request with a course that already exists instead of building one. The
+    course must be one of the request's own matches. Nothing is generated; the view carries
+    what to send to POST /api/v1/enrollments. Idempotent."""
+    _matching(request)
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        row = db.get(LearningRequest, request_id)
+        if row is None or row.user_id != user.id:
+            raise HTTPException(404, "not_found")
+        if row.status == "matched" and row.course_id == body.course:
+            return view(db, row)
+        if row.status not in OPEN:
+            raise HTTPException(409, "request_settled")
+        found = match.find(db, catalog(), user.id, row.intent)
+        if body.course not in {m["course"] for m in found}:
+            raise HTTPException(404, "not_a_match")
+        row.course_id, row.status, row.updated_at = body.course, "matched", now()
+        record_event(db, user.id, "learning_request.matched", row.id)
         db.flush()
         return view(db, row)
 
