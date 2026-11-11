@@ -763,3 +763,24 @@ class GenerationJob(Base):
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class LaunchGrant(Base):
+    """Free Plus for one of the first signups at launch. The slot number is the primary key and
+    only slots 1..SOCRAT_LAUNCH_PROMO_SLOTS are ever written, so two racing signups cannot share
+    a slot and no more grants exist than the cap."""
+
+    __tablename__ = "launch_grants"
+    slot: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    # Null once the account is deleted: the slot and the device stay used, so deleting an account
+    # and signing up again does not earn a second month.
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, unique=True
+    )
+    granted_at: Mapped[int] = mapped_column(Integer, default=now)
+    expires_at: Mapped[int] = mapped_column(Integer)
+    # When the learner saw the "you unlocked Plus" celebration; null until then.
+    seen_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Hash of the browser's device cookie (auth.DEVICE_COOKIE): one grant per device, so one
+    # person cannot collect several by signing up with different Google accounts.
+    device_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)

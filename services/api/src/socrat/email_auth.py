@@ -20,7 +20,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from socrat.auth import open_session
+from socrat import entitlements
+from socrat.auth import device_hash, open_session
 from socrat.config import Settings
 from socrat.database import record_event
 from socrat.models import EmailCode, LoginSession, User, now
@@ -229,6 +230,7 @@ def verify(body: Confirm, request: Request):
     pending = redeem(request, body.email, "signup", body.code)
     with Session(request.app.state.engine) as db, db.begin():
         user = db.scalar(select(User).where(User.email == body.email))
+        created = user is None
         if user is None:
             user = User(
                 issuer="email",
@@ -240,6 +242,8 @@ def verify(body: Confirm, request: Request):
         # On an existing (Google) account with this verified email, this adds the password.
         user.password_hash = pending["password_hash"]
         db.flush()
+        if created:
+            entitlements.grant_launch_promo(db, user, device_hash(request))
         record_event(db, user.id, "auth.email_verified")
         user_id = user.id
     return open_session(request, JSONResponse({"authenticated": True}), user_id)
