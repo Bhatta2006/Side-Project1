@@ -89,6 +89,10 @@ PRIORITY = {
     "prefetch": BACKGROUND,
     "release": 4,  # exercises and projects that follow a released lesson
 }
+# A lesson that failed its gates is written once more, automatically, before it waits for the
+# owner: one unlucky generation must not leave a learner on "being prepared" for good, and a
+# concept that cannot pass is retried once, not on every visit.
+AUTO_RETRIES = 1
 
 
 def priority_of(kind: str, data: dict) -> int:
@@ -97,6 +101,34 @@ def priority_of(kind: str, data: dict) -> int:
     if data.get("urgent"):  # the lesson the learner is standing in front of
         return PRIORITY["first"]
     return PRIORITY.get(str(data.get("trigger", "")), BACKGROUND)
+
+
+def retry_once(engine: Engine, job_id: str) -> str | None:
+    """After ``job_id`` failed its gates: queue the concept again at the same priority, unless it
+    has already failed ``AUTO_RETRIES + 1`` times. Returns the new job's id, or None."""
+    with Session(engine) as db, db.begin():
+        job = db.get(GenerationJob, job_id)
+        if job is None or job.kind != "package" or not job.target:
+            return None
+        failures = db.scalar(
+            select(func.count())
+            .select_from(GenerationJob)
+            .where(
+                GenerationJob.course_id == job.course_id,
+                GenerationJob.kind == "package",
+                GenerationJob.target == job.target,
+                GenerationJob.state == "failed",
+            )
+        )
+        if (failures or 0) > AUTO_RETRIES:
+            return None
+        data = {**(job.input or {}), "retry_of": job.id}
+        again = enqueue_once(db, "package", job.course_id, data, None, job.target)
+        if again is not None:
+            again.priority = job.priority  # the learner's first lesson stays first
+            db.flush()
+            return again.id
+        return None
 
 
 def transient(error: ProviderError) -> bool:
@@ -1082,6 +1114,7 @@ async def run_package(
         state="failed",
         error="The package did not pass every gate; the concept stays planned. See the log.",
     )
+    retry_once(engine, job_id)
 
 
 async def add_visuals(

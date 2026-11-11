@@ -686,6 +686,24 @@ def today(request: Request):
         return views.today_view(db, catalog(), user, active(db, user), now())
 
 
+@router.get("/me/preparing")
+def preparing(request: Request):
+    """The lessons of the learner's course still being written, in course order, with how far
+    each one is (``coursegen.progress``). Polled by Today and the skill map while any is in
+    progress, so a lesson appears the moment it passes its checks, without a refresh."""
+    from socrat.catalog import generated
+    from socrat.coursegen import progress
+
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        enrollment = learn.active_enrollment(db, user.id)
+        course = generated.course(db, enrollment.course_id) if enrollment else None
+        if course is None:
+            return {"lessons": []}
+        rounds = request.app.state.settings.gen_package_rounds
+        return {"lessons": progress.for_course(db, course, rounds, now())}
+
+
 @router.get("/plan")
 def plan(request: Request):
     with Session(engine(request)) as db, db.begin():

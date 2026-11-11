@@ -24,6 +24,8 @@ import { Soc } from '@/components/socrat/illustration';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ReasonChip } from '@/components/socrat/reason-chip';
+import { LessonProgress } from '@/components/socrat/lesson-progress';
+import { usePreparing } from '@/lib/preparing';
 
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 
@@ -105,6 +107,9 @@ export default function PlanPage() {
     api.get<{ projects: ProjectView[] }>('/projects').then(r => setProjects(r.projects)).catch(() => undefined);
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
+  // Lessons being written: each row fills up as its lesson does, and the map reloads when one goes live.
+  const preparing = usePreparing(Boolean(allowed), load);
+  const writing = new Map(preparing.filter(l => l.state !== 'later').flatMap(l => [[l.concept, l], [l.concept.split(':').pop() ?? l.concept, l]] as const));
 
   const undo = useCallback((kind: string, concept: string) => {
     api.post('/adaptive/overrides/undo', { kind, concept }).then(load).catch(e => setError(explain(e)));
@@ -266,7 +271,11 @@ export default function PlanPage() {
                                   <span className="font-semibold">{c.title}</span>
                                   {c.why ? <span className="block text-[13px] text-muted-foreground">{c.why}</span> : null}
                                 </span>
-                                <StatusLabel status={status} detail={byPlan ? 'Founding Member' : c.status === 'preparing' ? 'Being prepared' : status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
+                                {!byPlan && writing.get(c.concept) ? (
+                                  <LessonProgress lesson={writing.get(c.concept)!} compact />
+                                ) : (
+                                  <StatusLabel status={status} detail={byPlan ? 'Founding Member' : c.status === 'preparing' ? 'Being prepared' : status === 'locked' && module.locked_by ? `Locked until ${module.locked_by.module}` : undefined} className="text-[13px]" />
+                                )}
                                 <span className="flex flex-wrap gap-1.5">
                                   {here ? <Badge>Current</Badge> : null}
                                   {c.review_due ? <Badge>Review due</Badge> : null}

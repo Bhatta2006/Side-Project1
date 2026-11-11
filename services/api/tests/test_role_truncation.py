@@ -62,3 +62,33 @@ def test_the_doubled_budget_has_a_ceiling(client):
     make, calls = make_provider([("", 12000), ('{"ok": true}', 10)])
     ask(client, make, limit=12000)
     assert calls == [12000, roles.TRUNCATION_CEILING]
+
+
+def test_the_retry_of_a_cut_off_reply_answers_without_thinking(client):
+    """A reasoning model that spent its budget thinking would spend it again: the second try
+    turns thinking off, so a fact check that ran out of room still returns its verdict."""
+    seen: list[dict] = []
+
+    def make(settings):
+        seen.append(dict(settings.openai_chat_template_kwargs))
+
+        class Provider:
+            name = "anthropic"
+
+            async def converse(self, system, turns, max_tokens, *args, **kwargs):
+                if len(seen) == 1:
+                    yield usage_event(100, max_tokens)  # thought until the budget ran out
+                else:
+                    yield Event("text", text='{"claims": []}')
+                    yield usage_event(100, 300)
+
+        return Provider()
+
+    state = client.app.state
+    thinking = state.settings.model_copy(
+        update={"openai_chat_template_kwargs": {"thinking": True, "other": 1}}
+    )
+    reply = asyncio.run(roles.ask(state.engine, thinking, "facts", "sys", "prompt", 1000, make))
+    assert reply.data == {"claims": []}
+    assert seen[0].get("thinking") is True
+    assert seen[-1] == {"thinking": False, "other": 1}

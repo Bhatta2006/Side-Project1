@@ -368,7 +368,7 @@ export default function Lesson() {
           <h1 className="type-display-m break-words">
             {concept.title}
             {hasAbout(concept) ? (
-              <a href="#about-lesson" className="ml-2 align-super text-[0.45em] font-semibold no-underline opacity-80 hover:opacity-100" aria-label="About this lesson: how it was written and checked">★</a>
+              <a href="#about-lesson" onClick={() => document.getElementById('about-lesson')?.setAttribute('open', '')} className="ml-2 align-super text-[0.45em] font-semibold no-underline opacity-80 hover:opacity-100" aria-label="About this lesson: how it was written and checked">★</a>
             ) : null}
           </h1>
           <p className="mt-3 text-[15px] font-semibold text-(--card-muted)">{features.code ? `Lesson, ${LANGUAGE_LABEL[concept.language]}` : 'Lesson'}</p>
@@ -444,10 +444,6 @@ export default function Lesson() {
               />
             }
           />
-
-          {hasAbout(concept) ? (
-            <AboutLesson concept={concept} onOriginal={() => setOriginal(true)} t={t} />
-          ) : null}
 
           {/* Explain it differently. */}
           <section className="mt-10 max-w-[68ch]" aria-labelledby="reexplain-heading">
@@ -574,6 +570,11 @@ export default function Lesson() {
                 </div>
               </Section>
             ) : null}
+
+            {/* How it was written and checked: below Resources, closed until asked for. */}
+            {hasAbout(concept) ? (
+              <AboutLesson concept={concept} onOriginal={() => setOriginal(true)} t={t} />
+            ) : null}
           </div>
           {error ? <ErrorNote message={error} /> : null}
         </article>
@@ -652,16 +653,20 @@ function whenDue(seconds: number): string {
 }
 
 /** ★ About this lesson: how it was written and checked, its sources and why it is taught this
- *  way. At the end of the lesson rather than above it; complete, never hidden. */
+ *  way. Below Resources and closed by default, so it never pulls the eye off the lesson; the ★
+ *  by the title opens it. Complete once opened. */
 function AboutLesson({ concept, onOriginal, t }: {
   concept: ConceptView;
   onOriginal: () => void;
   t: ReturnType<typeof useI18n>['t'];
 }) {
   return (
-    <section id="about-lesson" aria-labelledby="about-heading" className="mt-10 max-w-[68ch] scroll-mt-24 border-t pt-6 text-sm text-muted-foreground">
-      <h2 id="about-heading" className="mb-3 text-[15px] font-semibold text-foreground"><span aria-hidden="true">★ </span>About this lesson</h2>
-      <div className="grid gap-3">
+    <details id="about-lesson" className="group scroll-mt-24 rounded-card border border-line text-sm text-muted-foreground">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 lg:px-6 [&::-webkit-details-marker]:hidden">
+        <h2 id="about-heading" className="text-[15px] font-semibold text-foreground"><span aria-hidden="true">★ </span>About this lesson</h2>
+        <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div className="grid gap-3 px-5 pb-5 lg:px-6">
         {concept.ai_generated ? (
           <p>
             {concept.attribution || 'Written by Socrat AI and checked by AI models.'}{' '}
@@ -700,7 +705,7 @@ function AboutLesson({ concept, onOriginal, t }: {
           </details>
         ) : null}
       </div>
-    </section>
+    </details>
   );
 }
 

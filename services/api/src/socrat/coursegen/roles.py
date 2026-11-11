@@ -275,6 +275,15 @@ async def ask(
             break
         if attempt == 0:
             limit = min(limit * 2, TRUNCATION_CEILING)
+            # The retry answers without thinking: a model that spent 16000 tokens reasoning would
+            # spend them again, and a cut-off fact check fails a lesson the reviewer rated well.
+            # The question and the checks on the answer are the same; only the reasoning goes.
+            kwargs = dict(tuned.openai_chat_template_kwargs or {})
+            if kwargs.get("thinking"):
+                tuned = tuned.model_copy(
+                    update={"openai_chat_template_kwargs": {**kwargs, "thinking": False}}
+                )
+                provider = make(tuned)
             continue
         problem = f"reply was cut off at the {limit} token limit before the JSON was complete"
     ms = int((time.monotonic() - started) * 1000)

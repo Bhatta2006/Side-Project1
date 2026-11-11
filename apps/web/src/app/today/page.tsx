@@ -26,6 +26,8 @@ import { Card } from '@/components/ui/card';
 import { Doodle } from '@/components/ui/doodle';
 import { Sticker } from '@/components/ui/sticker';
 import { CommunityCard } from '@/components/community-link';
+import { LessonProgress } from '@/components/socrat/lesson-progress';
+import { usePreparing } from '@/lib/preparing';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
@@ -153,6 +155,8 @@ export default function TodayPage() {
     api.get<{ current: AssessmentStatus }>('/assessments').then(r => setAssessment(r.current)).catch(() => undefined);
   }, [library]);
   useEffect(() => { if (allowed && courseReady) load(); }, [allowed, courseReady, load]);
+  // Lessons still being written: a bar each, and Today reloads when one goes live.
+  const preparing = usePreparing(Boolean(allowed && courseReady), load);
   // The open section lives in the URL hash, so a link or a refresh lands where the learner was.
   useEffect(() => {
     const wanted = window.location.hash.slice(1) as TabId;
@@ -332,6 +336,28 @@ export default function TodayPage() {
             </div>
           </Card>
         </Reveal>
+
+        {/* Lessons being written right now, so nobody has to refresh to find out. */}
+        {preparing.some(l => l.state !== 'later') ? (
+          <Reveal index={3} className="col-span-12">
+            <Card tone="raised" className="relative" aria-labelledby="preparing-heading">
+              <div className="grid gap-4 px-(--card-spacing)">
+                <div>
+                  <h2 id="preparing-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">{next ? 'Your next lessons are being written' : 'Your lesson is being written'}</h2>
+                  <p className="text-sm text-muted-foreground">Each is written, fact-checked and reviewed before it opens. It appears here the moment it&apos;s ready.</p>
+                </div>
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {preparing.filter(l => l.state !== 'later').slice(0, 3).map(l => (
+                    <li key={l.concept} className="flex flex-col justify-between gap-2">
+                      <span className="font-semibold">{l.title}</span>
+                      <LessonProgress lesson={l} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Card>
+          </Reveal>
+        ) : null}
 
         {/* 4. Needs you: only things that are due or open, one line each. */}
         {review || today.reviews_due || assessmentOpen ? (
