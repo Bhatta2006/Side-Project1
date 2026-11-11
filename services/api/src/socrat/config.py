@@ -261,6 +261,13 @@ class Settings(DatabaseSettings):
     # allowance and uses this one when set.
     web_search_api_key: SecretStr = SecretStr("")
     openalex_api_key: SecretStr = SecretStr("")
+    # Pictures on lessons (learn/images.py): openly licensed images from Wikimedia Commons
+    # and Openverse, each with its author, licence and source link. Off until turned on.
+    lesson_images: bool = False
+    # Also image search results from the wider web (Brave, needs web_search_api_key): a
+    # thumbnail linking to its page, as a search engine shows it. Those images keep their
+    # owners' rights, so this is a legal decision for the owner, separate from the above.
+    lesson_images_web: bool = False
     # Read the pages the researcher picked (public https only, robots.txt honoured) and give
     # their text to the author, so a lesson is written from the source and not from a
     # two-line search snippet. Only used when research_providers is set.

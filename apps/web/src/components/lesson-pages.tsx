@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight } from '@/components/icons';
 import Markdown from '@/components/markdown';
+import { afterFirstParagraph } from '@/components/socrat/lesson-pictures';
 import { Button } from '@/components/ui/button';
 import { isCheckPage, minutes, splitPages } from '@/lib/pages';
 import { cn } from '@/lib/utils';
@@ -32,7 +33,7 @@ export type ExtraPage = { key: string; title: string; node: ReactNode };
  * pages of their own, then the recap. Page sizes were chosen for this learner when the lesson
  * was written. "Show the whole lesson" keeps the single scroll for anyone who prefers it.
  */
-export function LessonPages({ id, source, language, extra = [], recap, onPage, tool }: {
+export function LessonPages({ id, source, language, extra = [], recap, onPage, tool, figure }: {
   id: string;
   source: string;
   language?: string;
@@ -42,6 +43,8 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
   onPage?: (page: number) => void;
   /** Shown under a reading page (0-based index, its title): "show me this part". */
   tool?: (index: number, title: string) => ReactNode;
+  /** A picture for a section, by its heading: drawn inside the text, after its first paragraph. */
+  figure?: (title: string) => ReactNode;
 }) {
   const reading = useMemo(() => splitPages(source), [source]);
   const total = reading.length + extra.length + 1;
@@ -104,7 +107,11 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
     return (
       <div className="max-w-[68ch]">
         {total > 2 ? <div className="mb-4 flex justify-end">{toggle}</div> : null}
-        <div id="step-lesson"><Markdown source={source} language={language} rich /></div>
+        <div id="step-lesson">
+          {figure ? reading.map((p, i) => (
+            <Section key={i} body={p.title ? `## ${p.title}\n\n${p.body}` : p.body} node={isCheckPage(p) ? null : figure(p.title)} language={language} />
+          )) : <Markdown source={source} language={language} rich />}
+        </div>
         {extra.map(p => <div key={p.key} className="mt-8">{p.node}</div>)}
         <div className="mt-10">{recap}</div>
       </div>
@@ -151,7 +158,7 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
             {title}
           </h2>
         ) : <h2 id="lesson-page-title" ref={heading} tabIndex={-1} className="sr-only">Lesson</h2>}
-        {page ? <Markdown source={page.body} language={language} rich /> : onExtra ? extra[index - reading.length].node : recap}
+        {page ? <Section body={page.body} node={figure && !isCheckPage(page) ? figure(page.title) : null} language={language} /> : onExtra ? extra[index - reading.length].node : recap}
         {page && tool && !isCheckPage(page) ? <div className="mt-6">{tool(index, page.title)}</div> : null}
       </section>
 
@@ -167,5 +174,18 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
       </div>
       <div className="mt-4">{toggle}</div>
     </div>
+  );
+}
+
+/** A section's text with its picture after the first paragraph, like a figure in a book. */
+function Section({ body, node, language }: { body: string; node: ReactNode; language?: string }) {
+  if (!node) return <Markdown source={body} language={language} rich />;
+  const [head, rest] = afterFirstParagraph(body.replace(/\r\n/g, '\n'));
+  return (
+    <>
+      <Markdown source={head} language={language} rich />
+      {node}
+      {rest.trim() ? <Markdown source={rest} language={language} rich /> : null}
+    </>
   );
 }

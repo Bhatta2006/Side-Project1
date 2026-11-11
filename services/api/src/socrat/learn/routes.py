@@ -763,6 +763,26 @@ def concept(qualified: str, request: Request, locale: str | None = None):
         return shown
 
 
+@router.get("/concepts/{qualified}/images")
+async def concept_images(qualified: str, request: Request):
+    """Pictures about this lesson, each with its credit and source link (learn/images.py)."""
+    settings = request.app.state.settings
+    if not settings.lesson_images:
+        raise HTTPException(404, "not_found")
+    cat = catalog()
+    if qualified not in cat.concepts:
+        raise HTTPException(404, "not_found")
+    with Session(engine(request)) as db:
+        user = user_of(request, db)
+        guard_instruction(db, cat, user, qualified)
+    from socrat.learn import images
+
+    concept = cat.concept(qualified)
+    course = cat.course(qualified.split(":", 1)[0])
+    query = images.query_for(concept.title, course.title)
+    return {"items": await images.find(qualified, query, settings, lesson=concept.lesson)}
+
+
 @router.post("/concepts/{qualified}/explain")
 async def explain(qualified: str, body: ExplainInput, request: Request):
     cat = catalog()

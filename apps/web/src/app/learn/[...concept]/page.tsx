@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LessonFigure, useLessonPictures } from '@/components/socrat/lesson-pictures';
 import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp, TriangleAlert } from '@/components/icons';
 import { toast } from 'sonner';
 import { ApiError, api, explain } from '@/lib/api';
@@ -177,6 +178,8 @@ export default function Lesson() {
   const [original, setOriginal] = useState(false);
   const params = useParams<{ concept: string[] }>();
   const qualified = joinSegments(params.concept);
+  // Real pictures about the topic, one per section, each credited and linked to its source.
+  const pictures = useLessonPictures(qualified);
   const [concept, setConcept] = useState<ConceptView | null>(null);
   const [error, setError] = useState('');
   const [upgrade, setUpgrade] = useState(false);
@@ -420,6 +423,7 @@ export default function Lesson() {
               <ConceptVisual concept={concept.id} title={title || concept.title} section={index} onOpen={() => signal('visual')} />
             ) : undefined}
             onPage={page => signal('page', page)}
+            figure={pictures.size ? title => { const p = pictures.get(title); return p ? <LessonFigure picture={p} /> : null; } : undefined}
             id={qualified}
             source={concept.lesson}
             language={concept.language}
