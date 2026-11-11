@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { PartyPopper } from 'lucide-react';
-import { api } from '@/lib/api';
-import { holdTour } from '@/lib/first-run';
-import type { BillingStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -57,35 +54,14 @@ function CornerPopper({ side }: { side: 'left' | 'right' }) {
   );
 }
 
-/** Shown once to a learner who got free Plus as one of the first signups at launch. */
-export function LaunchGift() {
-  const [endsAt, setEndsAt] = useState<number | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const release = useRef<(() => void) | null>(null);
-
-  // The first-run tour waits until we know there is no offer, or until it is closed.
-  useEffect(() => {
-    const done = holdTour();
-    release.current = done;
-    api.get<BillingStatus>('/billing/status')
-      .then(s => {
-        if (!s.promo || s.promo.seen) return done();
-        setEndsAt(s.promo.ends_at);
-        setOpen(true);
-        // Marked seen as soon as it shows, so a reload does not throw the party twice.
-        api.post('/billing/promo/seen').catch(() => undefined);
-      })
-      .catch(done);
-    return done;
-  }, []);
-
+/** The celebration itself; `LaunchGift` loads this on demand, only for a learner who has an
+ * unseen offer, so Today does not carry it for everyone else. */
+export default function LaunchGiftDialog({ endsAt, onClose }: { endsAt: number; onClose: () => void }) {
+  const [open, setOpen] = useState(true);
   const toggle = (next: boolean) => {
     setOpen(next);
-    if (!next) release.current?.();
+    if (!next) onClose();
   };
-
-  if (endsAt === null) return null;
   const until = new Date(endsAt * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
 
   return (

@@ -23,7 +23,7 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { CommunityCard } from '@/components/community-link';
-import { LaunchGift } from '@/components/launch-gift';
+import { LaunchGift } from '@/components/launch-gift-host';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
