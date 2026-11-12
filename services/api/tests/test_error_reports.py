@@ -102,3 +102,123 @@ def test_error_logs_from_socrat_code_become_reports(client):
     app, _ = client
     logging.getLogger("socrat.ai_budget").error("ai_daily_budget_reached")
     assert [r.message for r in rows(app)] == ["socrat.ai_budget: ai_daily_budget_reached"]
+
+
+def report(http, headers, message, category="bug"):
+    sent = http.post(
+        "/api/v1/problem-reports",
+        json={"message": message, "route": "/today", "category": category},
+        headers=headers,
+    )
+    assert sent.status_code == 200
+
+
+def test_admin_sees_who_reported_what_and_the_log_counts_solved(client):
+    app, http = client
+    bob = login(http, subject="bob", name="Bob")
+    report(http, bob, "The hint button does nothing")
+    report(http, bob, "Dark mode please", category="idea")
+    admin = login(http)
+    report(http, admin, "Typo on the plan page", category="content")
+
+    queue = http.get("/api/v1/admin/errors").json()["items"]
+    by_message = {i["message"]: i for i in queue}
+    hint = by_message["[bug] The hint button does nothing"]
+    assert hint["reporter"]["name"] == "Bob" and hint["category"] == "bug"
+    assert hint["resolved_at"] is None
+
+    assert http.post(f"/api/v1/admin/errors/{hint['id']}/resolve", headers=admin).status_code == 200
+    [solved] = http.get("/api/v1/admin/errors?status=resolved").json()["items"]
+    assert solved["id"] == hint["id"]
+    assert solved["resolved_at"] and solved["resolved_by"]["name"] == "Ada"
+    assert solved["thanks_seen_at"] is None
+    assert hint["id"] not in {i["id"] for i in http.get("/api/v1/admin/errors").json()["items"]}
+
+    log = http.get("/api/v1/admin/reports/log").json()
+    rows = {r["reporter"]["name"]: r for r in log["reporters"]}
+    assert (rows["Bob"]["reported"], rows["Bob"]["solved"], rows["Bob"]["open"]) == (2, 1, 1)
+    assert (rows["Ada"]["reported"], rows["Ada"]["solved"]) == (1, 0)
+    assert log["totals"] == dict(reporters=2, reported=3, solved=1, open=2)
+    assert list(rows) == ["Bob", "Ada"]  # most reports first
+
+    login(http, subject="bob", name="Bob")
+    assert http.get("/api/v1/admin/reports/log").status_code == 403
+    assert http.get("/api/v1/admin/errors?status=resolved").status_code == 403
+
+
+def test_reporter_gets_one_thank_you_per_resolution_when_switched_on(client):
+    app, http = client
+    bob = login(http, subject="bob", name="Bob")
+    report(http, bob, "The run button spins forever")
+    admin = login(http)
+    [item] = http.get("/api/v1/admin/errors").json()["items"]
+    http.post(f"/api/v1/admin/errors/{item['id']}/resolve", headers=admin)
+
+    bob = login(http, subject="bob", name="Bob")
+    # Off by default: nothing to show.
+    assert http.get("/api/v1/problem-reports/thanks").json() == {"items": []}
+
+    app.state.settings = app.state.settings.model_copy(update={"report_thanks_enabled": True})
+    [note] = http.get("/api/v1/problem-reports/thanks").json()["items"]
+    assert note == dict(
+        id=item["id"],
+        category="bug",
+        message="The run button spins forever",
+        resolved_at=note["resolved_at"],
+    )
+    assert note["resolved_at"]
+
+    # Someone else cannot dismiss Bob's note.
+    carol = login(http, subject="carol", name="Carol")
+    assert http.get("/api/v1/problem-reports/thanks").json() == {"items": []}
+    assert http.post(
+        "/api/v1/problem-reports/thanks/seen", json={"ids": [item["id"]]}, headers=carol
+    ).json() == {"marked": 0}
+
+    bob = login(http, subject="bob", name="Bob")
+    assert (
+        http.post("/api/v1/problem-reports/thanks/seen", json={"ids": [item["id"]]}).status_code
+        == 403
+    )
+    assert http.post(
+        "/api/v1/problem-reports/thanks/seen", json={"ids": [item["id"]]}, headers=bob
+    ).json() == {"marked": 1}
+    assert http.get("/api/v1/problem-reports/thanks").json() == {"items": []}
+
+    admin = login(http)
+    [seen] = http.get("/api/v1/admin/errors?status=resolved").json()["items"]
+    assert seen["thanks_seen_at"]
+
+
+def test_a_returning_server_error_clears_its_resolution(client):
+    app, http = client
+    http.get("/api/v1/test-boom")
+    admin = login(http)
+    [item] = http.get("/api/v1/admin/errors").json()["items"]
+    http.post(f"/api/v1/admin/errors/{item['id']}/resolve", headers=admin)
+    http.get("/api/v1/test-boom")
+    [back] = http.get("/api/v1/admin/errors").json()["items"]
+    assert back["id"] == item["id"] and back["resolved_at"] is None and back["resolved_by"] is None
+
+
+def test_report_thanks_migration_downgrades_cleanly(tmp_path):
+    import sqlite3
+
+    from alembic import command
+    from alembic.config import Config
+
+    path = tmp_path / "m.db"
+    config = Config("alembic.ini")
+    config.set_main_option("sqlalchemy.url", f"sqlite:///{path}")
+    command.upgrade(config, "head")
+
+    def columns():
+        with sqlite3.connect(path) as db:
+            return {r[1] for r in db.execute("PRAGMA table_info(error_reports)")}
+
+    assert {"resolved_at", "resolved_by", "thanks_seen_at"} <= columns()
+    command.downgrade(config, "0034_launch_grants")
+    assert not {"resolved_at", "resolved_by", "thanks_seen_at"} & columns()
+    assert "status" in columns()
+    command.upgrade(config, "head")
+    assert "thanks_seen_at" in columns()

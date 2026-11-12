@@ -43,12 +43,24 @@ def ai_costs(request: Request):
 
 
 @router.get("/errors")
-def error_reports(request: Request):
+def error_reports(request: Request, status: Literal["open", "resolved"] = "open"):
     from socrat import errors
 
     with Session(engine(request)) as db:
         require_admin(request, db)
-        return {"items": errors.recent(db)}
+        return {
+            "items": errors.recent(db, limit=100 if status == "resolved" else 50, status=status)
+        }
+
+
+@router.get("/reports/log")
+def report_log(request: Request):
+    """Learner reports per reporter: who reported how much, and how much of it was solved."""
+    from socrat import errors
+
+    with Session(engine(request)) as db:
+        require_admin(request, db)
+        return errors.reporter_log(db)
 
 
 @router.post("/errors/{report_id}/resolve")
@@ -61,6 +73,9 @@ def resolve_error(report_id: str, request: Request):
         if row is None:
             raise HTTPException(404, "not_found")
         row.status = "resolved"
+        row.resolved_at = now()
+        row.resolved_by = user.id
+        row.thanks_seen_at = None  # a fresh resolution earns a fresh thank-you
         record_event(db, user.id, "admin.error_resolved", report_id)
         return {"resolved": True}
 

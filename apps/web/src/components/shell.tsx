@@ -201,6 +201,7 @@ function useAssessmentReady(learning: boolean) {
 
 // The tutor panel loads after first paint so it never counts against every route's JS budget.
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+const ReportThanks = dynamic(() => import('@/components/report-thanks').then(m => m.ReportThanks), { ssr: false });
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 const ownTutor = (path: string) => path === '/today' || path === '/plan' || path.startsWith('/learn/') || /^\/problems\/[^/]+$/.test(path);
 /** Checks and tests are proof of what the learner knows on their own: no tutor on these. */
@@ -362,7 +363,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
         </header>
       )}
       <main id="main" tabIndex={-1} className="outline-none"><PageTransition>{children}</PageTransition></main>
-      {profile ? <ReportProblem /> : null}
+      {profile ? <><ReportProblem /><ReportThanks /></> : null}
     </div>
   );
 }
@@ -412,6 +413,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       <ReportProblem />
       {/* Soc is one tap away everywhere; pages with their own tutor (lesson, problem, plan, today) mount a scoped one. */}
       {ownTutor(pathname) || examRoute(pathname) ? null : <Assistant scope="general" title="Ask Soc" />}
+      <ReportThanks />
     </SidebarProvider>
   );
 }
