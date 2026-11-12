@@ -22,11 +22,13 @@ import { WeekStrip } from '@/components/socrat/week-strip';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Doodle } from '@/components/ui/doodle';
-import { Sticker } from '@/components/ui/sticker';
 import { CommunityCard } from '@/components/community-link';
 import { LaunchGift } from '@/components/launch-gift-host';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// Decorations from the large sticker and doodle catalogues load on their own, after the page.
+const Doodle = dynamic(() => import('@/components/ui/doodle').then(m => m.Doodle), { ssr: false });
+const Sticker = dynamic(() => import('@/components/ui/sticker').then(m => m.Sticker), { ssr: false });
 
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
 // otherwise sits in Today's first load. An early openSignal still opens it once it arrives.

@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown } from '@/components/icons';
@@ -17,8 +18,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Paper } from '@/components/ui/paper';
-import { Stamp } from '@/components/ui/stamp';
 import { SocFigure } from '@/components/socrat/soc';
+
+// Decorations from the large sticker and doodle catalogues load on their own, after the page.
+const Stamp = dynamic(() => import('@/components/ui/stamp').then(m => m.Stamp), { ssr: false });
 
 const KIND: Record<string, string> = { quiz: 'concept check', code: 'problem', checkpoint: 'checkpoint', review: 'review', placement: 'placement', external: 'practice', verified: 'Codeforces', guided: 'guided step', trace: 'trace', retrieval: 'recall', debug: 'debugging', explanation: 'explanation', explain: 'written answer (AI-graded)', project: 'project milestone (AI-graded)' };
 
