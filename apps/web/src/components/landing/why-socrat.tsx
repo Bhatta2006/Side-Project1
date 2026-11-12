@@ -82,7 +82,7 @@ export function WhySocrat({ skills, problems }: { skills: number; problems: numb
               </div>
             ))}
           </dl>
-          <Button asChild variant="ink" size="lg"><a href="#try">See it on a real problem<ArrowCircle /></a></Button>
+          <Button asChild variant="ink" size="lg"><a href="#film">Watch a day with Soc<ArrowCircle /></a></Button>
         </div>
       </div>
       <p className="mt-6 text-[13px] text-muted-foreground">

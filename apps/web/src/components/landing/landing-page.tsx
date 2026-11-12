@@ -1,8 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, Plus, X } from '@/components/icons';
 import { api } from '@/lib/api';
@@ -22,20 +21,17 @@ import { CommunityButton, CommunityCard } from '@/components/community-link';
 import { InstallAppButton } from '@/components/install-app';
 import { SocraticDemo } from '@/components/landing/socratic-demo';
 import { FollowSoc } from '@/components/landing/follow-soc';
+import { ProductFilm } from '@/components/landing/product-film';
+import { AskColumns, FeatureCards, SourcesStrip } from '@/components/landing/motion-sections';
 import { cn } from '@/lib/utils';
 
-// The demo pulls in the editor and runner; load it after the page is interactive.
-const TryTutor = dynamic(() => import('@/components/landing/try-tutor').then(m => m.TryTutor), {
-  ssr: false,
-  loading: () => <div id="try" className="mx-auto min-h-[720px] max-w-[1320px] scroll-mt-20" aria-hidden="true" />,
-});
 
 /** The hero's opening question. Each answer changes how Soc reacts and where the button goes. */
 const GOALS: { id: string; label: string; mood: SocMood; say: string; cta: string; href: string }[] = [
   { id: 'zero', label: 'Learn to code from zero', mood: 'happy', say: 'Lovely. So what is a variable, really?', cta: 'Start from zero', href: '/start?course=zero' },
   { id: 'interview', label: 'Crack DSA interviews', mood: 'curious', say: 'Why does a hash map make it fast?', cta: 'Prep for interviews', href: '/start?course=dsa' },
   { id: 'competitive', label: 'Win coding contests', mood: 'proud', say: 'Can you prove it runs in time?', cta: 'Train for contests', href: '/start?course=cp' },
-  { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then try one problem below. No sign-up.', cta: 'Try a problem', href: '#try' },
+  { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then watch a day with me, just below.', cta: 'See how it works', href: '#film' },
 ];
 
 const PATHS = [
@@ -60,74 +56,18 @@ const STEPS: { title: string; status: 'read' | 'practised' | 'mastered'; label: 
   { title: 'Prove', status: 'mastered', label: 'Mastered', text: 'Checkpoints and spaced reviews confirm what holds up over time, as the questions get harder.', doodle: 'target', note: 'the part that counts' },
 ];
 
+/** Words that rise in one after another (`.word-rise` on the parent); `from` continues the count. */
+function Words({ text, from = 0 }: { text: string; from?: number }) {
+  // The space sits between the spans: inside an inline-block it would collapse.
+  return <>{text.split(' ').map((w, i) => <Fragment key={i}>{i ? ' ' : ''}<span style={{ '--i': from + i } as React.CSSProperties}>{w}</span></Fragment>)}</>;
+}
+
 /** A hand-drawn arrow in red pen. */
 function PenArrow({ className, d = 'M6 6c10 18 14 34 10 56', head = 'M6 50l10 12 8-14' }: { className?: string; d?: string; head?: string }) {
   return (
     <svg viewBox="0 0 40 70" className={cn('text-pen', className)} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={d} /><path d={head} />
     </svg>
-  );
-}
-
-function TodaySample() {
-  return (
-    <div className="relative overflow-hidden rounded-[4px] bg-forest p-5 text-forest-foreground" data-tone="hero">
-      <p className="type-label opacity-80">Next for you · 45 min</p>
-      <p className="mt-2 max-w-[11ch] font-display text-3xl leading-none font-semibold tracking-[-0.045em]">Two-pointer problems</p>
-      <p className="mt-2 text-sm opacity-90">Practise, then one attempt on your own.</p>
-      <span className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-[15px] font-medium text-ink-foreground">Open problem <ArrowCircle /></span>
-      <Soc size={84} mood="happy" className="absolute right-3 bottom-3" />
-    </div>
-  );
-}
-
-function ProblemSample() {
-  const rows: [boolean, string][] = [[true, 'Example 1'], [true, 'Example 2'], [true, 'Duplicates'], [false, 'Edge case: empty array']];
-  return (
-    <div className="grid gap-3">
-      <pre className="code-block text-[13px]!"><code>
-        <span style={{ color: 'var(--syntax-keyword)' }}>def</span> <span style={{ color: 'var(--syntax-function)' }}>find_pair</span>(numbers, target):{'\n'}
-        {'    '}left, right = <span style={{ color: 'var(--syntax-number)' }}>0</span>, len(numbers) - <span style={{ color: 'var(--syntax-number)' }}>1</span>{'\n'}
-        {'    '}<span style={{ color: 'var(--syntax-keyword)' }}>while</span> left &lt; right:{'\n'}
-        {'        '}total = numbers[left] + numbers[right]{'\n'}
-        {'        '}<span style={{ color: 'var(--syntax-comment)' }}># which pointer moves next?</span>
-      </code></pre>
-      <div className="rounded-[4px] border bg-card p-4">
-        <p className="font-display text-lg font-semibold tracking-[-0.03em]"><span className="hl">3 of 4</span> tests passed</p>
-        <ul className="mt-2 grid gap-1.5 text-sm">
-          {rows.map(([ok, name]) => (
-            <li key={name} className="flex items-center gap-2">
-              {ok ? <span className="grid size-5 place-items-center rounded-full bg-[var(--highlight)] text-[#15161E]"><svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : <StatusIcon status="needs_practice" size={20} />}
-              <span className={ok ? '' : 'font-medium'}>{ok ? 'Passed' : name}</span>
-              {ok ? <span className="text-muted-foreground">{name}</span> : null}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function PlaygroundSample() {
-  const values = [1, 3, 5, 7, 9];
-  return (
-    <div className="overflow-hidden rounded-[4px] border bg-card">
-      <div className="grid gap-4 p-5">
-        <p className="text-sm text-muted-foreground">Find two numbers that add up to 8.</p>
-        <div className="flex justify-center gap-2">
-          {values.map((v, i) => (
-            <span key={v} className={cn('grid size-11 place-items-center rounded-[4px] border-2 font-display text-lg font-semibold', i === 0 || i === 3 ? 'border-[var(--soc-outline)] bg-primary text-primary-foreground shadow-[2px_2px_0_var(--soc-outline)]' : 'border-border bg-raised')}>{v}</span>
-          ))}
-        </div>
-        <p className="text-center text-sm font-medium">1 + 7 = 8. <span className="font-hand text-[19px] text-pen">found it!</span></p>
-      </div>
-      <div className="flex items-center gap-2 border-t px-4 py-3 text-[13px] font-medium">
-        <span className="rounded-full border border-border-strong px-3 py-1.5">Previous</span>
-        <span className="rounded-full bg-primary px-3 py-1.5 text-primary-foreground">Play</span>
-        <span className="rounded-full border border-border-strong px-3 py-1.5">Next</span>
-        <span className="ml-auto text-muted-foreground tabular-nums">Step 3 of 3</span>
-      </div>
-    </div>
   );
 }
 
@@ -159,7 +99,7 @@ export function LandingPage() {
     return () => { active = false; };
   }, []);
 
-  const links = [['#how', 'How it works'], ['#tutor', 'The tutor'], ['#try', 'Try it'], ['#paths', 'Paths'], ['/pricing', 'Pricing'], ['#faq', 'FAQ']] as const;
+  const links = [['#how', 'How it works'], ['#tutor', 'The tutor'], ['#film', 'See it'], ['#paths', 'Paths'], ['/pricing', 'Pricing'], ['#faq', 'FAQ']] as const;
   const chosen = GOALS.find(g => g.id === goal) ?? null;
   const skills = courses.reduce((sum, c) => sum + c.concept_count, 0);
   const problems = courses.reduce((sum, c) => sum + c.problem_count, 0);
@@ -197,8 +137,8 @@ export function LandingPage() {
         <section id="hero" aria-labelledby="hero-title" className="relative min-h-[100svh] overflow-hidden [--margin-x:20px] sm:[--margin-x:40px] lg:[--margin-x:88px]">
           <div className="mx-auto grid min-h-[100svh] max-w-[1500px] items-center gap-10 pt-28 pr-5 pb-24 pl-10 sm:pr-8 sm:pl-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:pr-10 lg:pl-[128px]">
             <div>
-              <p className="max-w-[30ch] text-[22px] leading-[1.3] tracking-[-0.03em] text-muted-foreground sm:text-[28px] lg:text-[32px]">
-                Hey there, I&apos;m Soc,<br />the tutor who answers your questions with questions.
+              <p className="word-rise max-w-[30ch] text-[22px] leading-[1.3] tracking-[-0.03em] text-muted-foreground sm:text-[28px] lg:text-[32px]">
+                <Words text="Hey there, I'm Soc," /><br /><Words text="the tutor who answers your questions with questions." from={4} />
               </p>
               {/* The heading is the largest paint: no fade-in on it (LCP). */}
               <h1 id="hero-title" className="mt-8 max-w-[19ch] text-[34px] leading-[1.12] font-medium tracking-[-0.045em] sm:text-[44px] lg:text-[52px]">
@@ -235,14 +175,27 @@ export function LandingPage() {
               <LiveSoc mood={chosen?.mood ?? 'worried'} say={chosen?.say ?? null} />
             </div>
           </div>
-          <a href="#statement" className="absolute right-6 bottom-6 hidden items-end gap-2 sm:flex lg:right-12 lg:bottom-8">
+          <Illustration name="bulb" className="drift pointer-events-none absolute top-28 right-[38%] hidden size-16 opacity-70 lg:block" />
+          <Illustration name="plane" className="drift-slow pointer-events-none absolute bottom-24 left-[44%] hidden size-20 opacity-70 lg:block" />
+          <a href="#film" className="absolute right-6 bottom-6 hidden items-end gap-2 sm:flex lg:right-12 lg:bottom-8">
             <span className="font-hand -rotate-3 text-[26px] text-pen">scroll down, I&apos;ll follow you</span>
             <PenArrow className="h-12 w-7" />
           </a>
         </section>
 
+        {/* A day with Soc, as a short film: it replaces the live demo, so it costs nothing to show. */}
+        <section id="film" data-soc="hide" aria-labelledby="film-title" className="mx-auto max-w-[1500px] scroll-mt-20 px-5 pt-6 pb-20 sm:px-8 lg:pr-10 lg:pb-28 lg:pl-[128px]">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2 id="film-title" className="type-display-l max-w-[16ch]">Watch a day with Soc.</h2>
+            <p className="font-hand -rotate-2 text-[24px] text-pen">40 seconds. no sign-up.</p>
+          </div>
+          <InView className="mt-10">
+            <ProductFilm className="mx-auto max-w-[1080px] rotate-[-0.4deg]" />
+          </InView>
+        </section>
+
         {/* The problem, stated plainly, beside a replay of Soc teaching. */}
-        <section id="statement" data-soc="thinking|Finding answers is easy. Knowing why?" aria-labelledby="statement-title" className="mx-auto grid max-w-[1500px] scroll-mt-20 items-center gap-14 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:py-32 lg:pr-10 lg:pl-[128px]">
+        <section id="statement" data-soc="thinking|Finding answers is easy. Knowing why?" data-soc-x="left" aria-labelledby="statement-title" className="mx-auto grid max-w-[1500px] scroll-mt-20 items-center gap-14 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:py-32 lg:pr-10 lg:pl-[128px]">
           <div>
             <h2 id="statement-title" className="text-[44px] leading-[0.98] font-semibold tracking-[-0.055em] sm:text-[64px] lg:text-[84px]">
               More tutorials won&apos;t fix that. <span className="hl">Proving what you can do</span> will.
@@ -254,8 +207,11 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/* Questions answered with questions, drifting past in columns. */}
+        <AskColumns />
+
         {/* How it works: three pages of a notebook. */}
-        <section id="how" data-soc="happy|Read, check, prove. In that order." aria-labelledby="how-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
+        <section id="how" data-soc="happy|Read, check, prove. In that order." data-soc-x="right" aria-labelledby="how-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
           <SectionHead id="how-title" title={<>Read. Check. <span className="hl">Prove.</span></>} note="reading about it is not knowing it">
             Every skill separates reading a lesson, passing its check and proving it again after a gap.
           </SectionHead>
@@ -285,31 +241,15 @@ export function LandingPage() {
           <WhySocrat skills={skills} problems={problems} />
         </div>
 
-        {/* First "aha" before sign-up. */}
-        <div data-soc="curious|Go on. Write some code. I will only ask questions.">
-          <TryTutor />
-        </div>
 
-        {/* Product proof: real components with sample data. */}
-        <section data-soc="proud|This is where you will work every day." aria-labelledby="inside-title" className="below-fold mx-auto max-w-[1500px] px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
-          <SectionHead id="inside-title" title="Inside Socrat">One next step each day, a real editor with judged tests, and visuals you can play with.</SectionHead>
-          <div className="mt-12 grid gap-5 lg:grid-cols-3 lg:gap-6">
-            {([['Today', <TodaySample key="t" />], ['Problem workspace', <ProblemSample key="p" />], ['Playground', <PlaygroundSample key="g" />]] as const).map(([title, sample], i) => (
-              <InView key={title} index={i} className="flex">
-                <figure className="paper flex w-full flex-col overflow-hidden rounded-card">
-                  <figcaption className="flex items-center justify-between gap-3 border-b px-5 py-3 text-[14px]">
-                    <span className="font-medium">{title}</span>
-                    <span className="font-hand text-[18px] text-pen">sample data</span>
-                  </figcaption>
-                  <div className="flex-1 p-4 sm:p-5" aria-hidden="true">{sample}</div>
-                </figure>
-              </InView>
-            ))}
-          </div>
-        </section>
+        {/* What Soc does, as index cards with small looping drawings and a word from him on each. */}
+        <FeatureCards />
+
+        {/* Where he sends you for more: the open resources, drifting past. */}
+        <SourcesStrip />
 
         {/* Learning paths: three books from Soc's stack. */}
-        <section id="paths" data-soc="happy|Pick a book. Any book." aria-labelledby="paths-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
+        <section id="paths" data-soc="happy|Pick a book. Any book." data-soc-x="right" aria-labelledby="paths-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
           <SectionHead id="paths-title" title="Three ways in" note="each one is a book from Soc's stack ↓" />
           <div className="mt-12 grid gap-6 md:grid-cols-3 lg:gap-8">
             {PATHS.map((path, i) => {
@@ -338,7 +278,7 @@ export function LandingPage() {
         </section>
 
         {/* FAQ: questions in the margin, answers on the line. */}
-        <section id="faq" data-soc="curious|Ask me anything. I will ask back." aria-labelledby="faq-title" className="below-fold mx-auto grid max-w-[1500px] scroll-mt-20 gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_1.5fr] lg:py-28 lg:pr-10 lg:pl-[128px]">
+        <section id="faq" data-soc="curious|Ask me anything. I will ask back." data-soc-x="right" aria-labelledby="faq-title" className="below-fold mx-auto grid max-w-[1500px] scroll-mt-20 gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_1.5fr] lg:py-28 lg:pr-10 lg:pl-[128px]">
           <div>
             <h2 id="faq-title" className="type-display-l">Questions?</h2>
             <p className="font-hand mt-3 -rotate-2 text-[24px] text-pen">of course there are questions. it&apos;s Socrat.</p>
@@ -361,7 +301,7 @@ export function LandingPage() {
         <div className="below-fold mx-auto max-w-[1500px] px-5 pb-8 sm:px-8 lg:pr-10 lg:pl-[128px]"><CommunityCard /></div>
 
         {/* Final call to action: Soc, happy, on his books. */}
-        <section aria-labelledby="cta-title" className="below-fold mx-auto max-w-[1500px] px-5 pb-20 sm:px-8 lg:pr-10 lg:pb-28 lg:pl-[128px]">
+        <section data-soc="hide" aria-labelledby="cta-title" className="below-fold mx-auto max-w-[1500px] px-5 pb-20 sm:px-8 lg:pr-10 lg:pb-28 lg:pl-[128px]">
           <InView className="paper relative grid items-center gap-8 overflow-hidden rounded-[4px] p-8 sm:p-10 lg:grid-cols-[1fr_auto] lg:p-14">
             <div>
               <h2 id="cta-title" className="type-display-l max-w-[18ch]">Start where you are. <span className="hl">Soc will ask the first question.</span></h2>
