@@ -57,7 +57,7 @@ const lines = [];
 let inked = 0;
 for (const name of [...used].sort()) {
   const id = NEAREST[name] ?? kebab(name);
-  if (drawn.has(id)) { lines.push(`export const ${name} = ink(Lucide.${name}, '${id}');`); inked++; }
+  if (drawn.has(id)) { lines.push(`export const ${name} = ink('${id}');`); inked++; }
   else lines.push(`export const ${name} = Lucide.${name};`);
 }
 
@@ -68,9 +68,10 @@ import * as Lucide from 'lucide-react';
 import type { LucideIcon, LucideProps } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 
-function ink(fallback: LucideIcon, name: string): LucideIcon {
+// Only the name is kept: a lucide fallback here would ship every replaced lucide icon too.
+function ink(name: string): LucideIcon {
   function Drawn({ size, strokeWidth: _s, absoluteStrokeWidth: _a, color, style, ...props }: LucideProps) {
-    void fallback; void _s; void _a;
+    void _s; void _a;
     return (
       <Icon
         name={name}

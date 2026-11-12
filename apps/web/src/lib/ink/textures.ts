@@ -195,7 +195,8 @@ export interface TextureBytes {
 }
 
 export function textureBytes() {
-  const of = (uri: string, png: number): TextureBytes => ({ png, base64: uri.length })
+  // The tiles are static files now (public/ink/tiles); base64 is what inlining one would cost.
+  const of = (_uri: string, png: number): TextureBytes => ({ png, base64: Math.ceil(png / 3) * 4 })
   const masks = Object.fromEntries(GRAIN_KINDS.map((k) => [k, of(GRAIN_TILES[k].uri, GRAIN_TILES[k].bytes)])) as Record<GrainMaskKind, TextureBytes>
   const paper = Object.fromEntries((Object.keys(PAPER_TILES) as PaperTileName[]).map((k) => [k, of(PAPER_TILES[k].uri, PAPER_TILES[k].bytes)])) as Record<PaperTileName, TextureBytes>
   const sum = (r: Record<string, TextureBytes>) => Object.values(r).reduce((a, b) => ({ png: a.png + b.png, base64: a.base64 + b.base64 }), { png: 0, base64: 0 })

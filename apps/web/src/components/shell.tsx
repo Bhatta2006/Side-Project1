@@ -51,7 +51,6 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Kbd } from '@/components/ui/kbd';
 import { Paper } from '@/components/ui/paper';
-import { Sticker } from '@/components/ui/sticker';
 import { Tally } from '@/components/ui/tally';
 import {
   Sidebar,
@@ -201,6 +200,8 @@ function useAssessmentReady(learning: boolean) {
 
 // The tutor panel loads after first paint so it never counts against every route's JS budget.
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
+// The sticker catalogue is large and the shell shows one rocket, so it loads on its own.
+const Sticker = dynamic(() => import('@/components/ui/sticker').then(m => m.Sticker), { ssr: false });
 const ReportThanks = dynamic(() => import('@/components/report-thanks').then(m => m.ReportThanks), { ssr: false });
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 const ownTutor = (path: string) => path === '/today' || path === '/plan' || path.startsWith('/learn/') || /^\/problems\/[^/]+$/.test(path);

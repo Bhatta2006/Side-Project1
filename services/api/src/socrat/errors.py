@@ -12,7 +12,7 @@ import logging
 import time
 import traceback
 from collections import defaultdict, deque
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -288,6 +288,11 @@ def recent(db: Session, limit: int = 50, status: str = "open") -> list[dict]:
     ]
 
 
+def _count(value: Any) -> int:
+    """A SQL count or sum as an int (a sum over no rows is NULL)."""
+    return int(value or 0)
+
+
 def reporter_log(db: Session) -> dict:
     """Learner reports per reporter: how many they sent and how many were solved."""
     solved = func.sum(case((ErrorReport.status == "resolved", 1), else_=0))
@@ -307,9 +312,9 @@ def reporter_log(db: Session) -> dict:
     reporters = [
         dict(
             reporter=_person(people.get(user_id)),
-            reported=int(reported),
-            solved=int(done or 0),
-            open=int(reported) - int(done or 0),
+            reported=_count(reported),
+            solved=_count(done),
+            open=_count(reported) - _count(done),
             last_reported_at=last,
         )
         for user_id, reported, done, last in rows
