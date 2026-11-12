@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentProps, ReactNode } from 'react';
-import { Check } from 'lucide-react';
+import { Check } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { StatusIcon } from '@/components/socrat/status';
 
@@ -29,7 +29,7 @@ export function Choice({
       data-selected={selected || undefined}
       data-tone={tone}
       className={cn(
-        'group/choice flex min-h-14 w-full items-start gap-3 rounded-[20px] border border-border-strong bg-card p-4 text-left transition-[transform,box-shadow,border-color] duration-200 ease-[var(--ease-soft)] outline-none',
+        'group/choice flex min-h-14 w-full items-start gap-3 rounded-[4px] border border-border-strong bg-card p-4 text-left transition-[transform,box-shadow,border-color] duration-200 ease-[var(--ease-soft)] outline-none',
         'hover:border-foreground/40',
         // Selected: an inked card with an offset shadow, like a book pulled from Soc's stack.
         'data-[selected]:-translate-x-0.5 data-[selected]:-translate-y-0.5 data-[selected]:border-2 data-[selected]:border-[var(--soc-outline)] data-[selected]:shadow-[4px_4px_0_var(--soc-outline)] dark:data-[selected]:border-foreground dark:data-[selected]:shadow-[4px_4px_0_var(--foreground)] data-[selected]:[&_.choice-title]:font-semibold',
@@ -69,7 +69,7 @@ export function Pill({ pressed, className, children, ...props }: ComponentProps<
       aria-pressed={pressed}
       className={cn(
         'inline-flex h-11 items-center gap-1.5 rounded-full border border-border-strong bg-card px-4 text-[15px] font-medium transition-colors hover:border-foreground/40',
-        'aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-ink-foreground',
+        'aria-pressed:border-ink aria-pressed:bg-hi-select aria-pressed:font-bold aria-pressed:text-ink',
         'outline-none',
         className,
       )}

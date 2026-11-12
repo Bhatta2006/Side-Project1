@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api, explain, stream } from '@/lib/api';
 import type { ChatMessage, Proposal, ProposalsView } from '@/lib/types';
 import { ProposalList } from '@/components/socrat/proposals';
-import { ArrowLeft, BookOpen, Check, History, Lightbulb, SendHorizontal, SquarePen, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, History, Lightbulb, SendHorizontal, SquarePen, ThumbsDown, ThumbsUp, X } from '@/components/icons';
 import { prefersReducedMotion } from '@/lib/motion';
 import { Soc } from '@/components/socrat/illustration';
 import Markdown from './markdown';
@@ -375,7 +375,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
             {!problem ? (
               <div className="mt-4 grid gap-2">
                 {STARTERS[scope === 'general' || scope === 'plan' ? scope : 'concept'].map(s => (
-                  <Button key={s} type="button" variant="outline" size="sm" className="h-auto min-h-11 justify-start rounded-[16px] py-2.5 text-left font-medium whitespace-normal" disabled={busy || !loaded} onClick={() => send('chat', s)}>
+                  <Button key={s} type="button" variant="outline" size="sm" className="h-auto min-h-11 justify-start rounded-[4px] py-2.5 text-left font-medium whitespace-normal" disabled={busy || !loaded} onClick={() => send('chat', s)}>
                     {s}
                   </Button>
                 ))}
@@ -436,7 +436,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           </div>
         ) : null}
       </div>
-      {error ? <p role="alert" className="mx-4 mb-2 rounded-[16px] border border-attention px-3 py-2 text-sm">{error}</p> : null}
+      {error ? <p role="alert" className="mx-4 mb-2 rounded-[4px] border border-attention px-3 py-2 text-sm">{error}</p> : null}
       {problem ? (
         <div className="flex flex-wrap items-center gap-2 border-t px-4 pt-3">
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send('hint')}><Lightbulb data-icon="inline-start" /> Give me a hint</Button>

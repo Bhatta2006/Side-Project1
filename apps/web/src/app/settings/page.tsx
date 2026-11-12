@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
-import { Download, LogOut, Monitor, Moon, Sun } from 'lucide-react';
+import { Check, Download, LogOut } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useReducedMotion } from '@/lib/motion';
 import { useGuard, useSession } from '@/lib/session';
@@ -26,16 +25,12 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Switch } from '@/components/ui/switch';
 import { useInstall } from '@/lib/pwa';
 import { CommunityButton, useCommunityUrl } from '@/components/community-link';
+import { PalettePicker } from '@/components/palette-picker';
 import { InstallAppButton } from '@/components/install-app';
 import { Soc } from '@/components/socrat/illustration';
 
 const MINUTES = [15, 20, 30, 45, 60, 90, 120];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const THEMES = [
-  { id: 'light', label: 'Light', icon: Sun },
-  { id: 'dark', label: 'Dark', icon: Moon },
-  { id: 'system', label: 'System', icon: Monitor },
-] as const;
 
 function Section({ id, title, description, children, className }: { id: string; title: string; description?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
@@ -80,7 +75,7 @@ function SectionNav({ active, onPick }: { active: string; onPick: (id: string) =
               href={`#${n.id}`}
               aria-current={active === n.id ? 'location' : undefined}
               onClick={() => onPick(n.id)}
-              className={cn('flex min-h-10 items-center rounded-full px-4 text-[15px] font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground lg:rounded-[14px]', active === n.id && 'bg-raised font-bold text-foreground')}
+              className={cn('flex min-h-10 items-center rounded-full px-4 text-[15px] font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-raised hover:text-foreground lg:rounded-[4px]', active === n.id && 'bg-raised font-bold text-foreground')}
             >
               {n.label}
             </a>
@@ -140,40 +135,13 @@ function AppSection() {
 }
 
 function Appearance() {
-  const { theme, setTheme } = useTheme();
   const motion = useReducedMotion();
   const { profile, refresh } = useSession();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
   return (
-    <Section id="appearance-heading" title="Appearance" description="System follows your device.">
-      <div className="grid gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="font-semibold" id="theme-label">Theme</span>
-          <div className="inline-flex rounded-full bg-raised p-1" role="radiogroup" aria-labelledby="theme-label">
-            {THEMES.map(t => {
-              const active = mounted && (theme ?? 'system') === t.id;
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setTheme(t.id)}
-                  className={cn(
-                    'flex min-h-10 items-center gap-1.5 rounded-full px-4 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground',
-                    active && 'bg-primary text-primary-foreground shadow-sm hover:text-primary-foreground',
-                  )}
-                >
-                  <Icon className="size-4" aria-hidden="true" />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="grid content-start divide-y border-t">
+    <Section id="appearance-heading" title="Appearance" description="Colours, motion and reminders.">
+      <div className="grid gap-6 lg:gap-10">
+        <div className="grid max-w-2xl content-start divide-y">
+          <PalettePicker />
           <div className="flex items-start justify-between gap-4 py-5">
             <div>
               <label htmlFor="reduce-motion" className="font-semibold">Reduce motion</label>

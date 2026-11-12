@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search } from '@/components/icons';
 
 const load = () => import('@/components/command-palette');
 const CommandPalette = dynamic(load, { ssr: false });
@@ -50,11 +50,11 @@ export function CommandMenu() {
         onFocus={() => void load()}
         aria-label="Search Socrat"
         data-tour="search"
-        className="hidden h-11 w-64 items-center gap-2.5 rounded-control border border-border-strong bg-card px-4 text-[15px] text-muted-foreground transition-colors hover:border-ring sm:flex lg:w-80"
+        className="hidden h-10 w-full max-w-80 min-w-0 items-center gap-2 rounded-[4px] border border-line bg-slip px-3 text-[15px] text-ink-muted transition-colors hover:border-ink sm:flex"
       >
         <Search className="size-4.5" strokeWidth={1.75} aria-hidden="true" />
-        <span className="flex-1 text-left">Search Socrat</span>
-        <kbd className="rounded-md border border-border-strong px-1.5 font-sans text-xs">{mac ? '⌘K' : 'Ctrl K'}</kbd>
+        <span className="min-w-0 flex-1 truncate text-left">Search Socrat</span>
+        <kbd className="hidden rounded-[3px] border border-line px-1.5 font-sans text-xs lg:inline">{mac ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
       {used ? <CommandPalette open={open} setOpen={setOpen} /> : null}
     </>

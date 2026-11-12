@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import { KIND_LABEL, NAME, QUIZ_KINDS, conceptHref, formatStamp, joinSegments } from '@/lib/routes';
@@ -109,7 +109,7 @@ function GateResult({ gate }: { gate: Gate }) {
         <h1 className="type-display-l mt-2">{gate.unlocks ? `${gate.unlocks} unlocked` : 'Course checkpoint passed'}</h1>
         <p className="mt-3 text-base text-(--card-muted)">{gate.hard_correct} correct on the toughest questions. Your plan now opens the next module.</p>
         {gate.unlocks ? (
-          <Link href="/plan" className="mt-5 flex min-h-14 items-center gap-3 rounded-[16px] bg-proof px-4 py-3 font-semibold text-proof-foreground transition-opacity hover:opacity-90">
+          <Link href="/plan" className="mt-5 flex min-h-14 items-center gap-3 rounded-[4px] bg-proof px-4 py-3 font-semibold text-proof-foreground transition-opacity hover:opacity-90">
             <StatusIcon status="not_seen" size={22} />
             <span className="flex-1">{gate.unlocks}</span>
             <span className="text-[13px] font-medium">Now open in {NAME.skills}</span>
@@ -259,7 +259,7 @@ export default function Quiz() {
             <h2 id="revisit-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Topics worth revisiting</h2>
             <ul className="grid gap-2">
               {topics.map(([id, name]) => (
-                <li key={id} className="flex min-h-14 items-center gap-3 rounded-[16px] bg-raised px-4 py-2">
+                <li key={id} className="flex min-h-14 items-center gap-3 rounded-[4px] bg-raised px-4 py-2">
                   <StatusIcon status="review" size={22} />
                   <span className="flex-1 font-semibold">{name}</span>
                   <Link href={conceptHref(id)} className="text-[15px] font-semibold underline underline-offset-4">Review<span className="sr-only"> {name}</span></Link>
@@ -312,7 +312,7 @@ export default function Quiz() {
         <Options q={q} choice={choice} onChoose={setChoice} graded={graded} />
 
         {graded && q.answered ? (
-          <div role="status" className={cn('flex items-start gap-3 rounded-[20px] border bg-card p-4 animate-in fade-in slide-in-from-bottom-2 duration-200', q.correct ? 'border-foreground' : 'border-attention')}>
+          <div role="status" className={cn('flex items-start gap-3 rounded-[4px] border bg-card p-4 animate-in fade-in slide-in-from-bottom-2 duration-200', q.correct ? 'border-foreground' : 'border-attention')}>
             {q.correct ? (
               <span className="grid size-7 flex-none place-items-center rounded-full bg-proof text-proof-foreground animate-pop" aria-hidden="true">
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Code2, Target, Trophy } from 'lucide-react';
+import { ArrowLeft, BookOpen, Code2, Target, Trophy } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { LANGUAGE_LABEL, hours } from '@/lib/routes';

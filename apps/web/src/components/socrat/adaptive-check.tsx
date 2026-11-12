@@ -222,7 +222,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
         <div key={shown.item} className="grid gap-5 animate-in fade-in duration-200">
           <DifficultyMeter band={shown.band} of={top} reason={testout ? PACE[shown.reason ?? ''] : history.length ? (history[history.length - 1].correct ? 'harder after a right answer' : 'easier after a miss') : 'starting just below your level'} />
           {shown.micro_lesson ? (
-            <p className="rounded-[16px] bg-raised px-4 py-3 text-[15px]">
+            <p className="rounded-[4px] bg-raised px-4 py-3 text-[15px]">
               A few misses in a row. Quick refresher before the next one: <Link href={conceptHref(shown.concept)} className="font-semibold underline underline-offset-4">reread the key idea</Link>.
             </p>
           ) : null}
@@ -241,7 +241,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
           </div>
         </div>
       ) : feedback ? (
-        <div role="status" className={cn('flex items-start gap-3 rounded-[20px] border bg-card p-4', feedback.outcome === 'correct' ? 'border-foreground' : 'border-attention')}>
+        <div role="status" className={cn('flex items-start gap-3 rounded-[4px] border bg-card p-4', feedback.outcome === 'correct' ? 'border-foreground' : 'border-attention')}>
           {feedback.outcome === 'correct' ? null : <AttentionIcon size={28} />}
           <div className="grid gap-2">
             <p className="font-bold">{feedback.outcome === 'correct' ? 'Correct' : feedback.outcome === 'skipped' ? 'Noted: you have not learned this yet' : 'Incorrect'}</p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from '@/components/icons';
 import type { Case } from '@/lib/types';
 import { AttentionIcon } from '@/components/socrat/states';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -19,7 +19,7 @@ const CASE_LABEL: Record<string, string> = {
 function CaseDetail({ c, index }: { c: Case; index: number }) {
   const ok = c.status === 'passed' || c.status === 'executed';
   return (
-    <Collapsible defaultOpen={!ok && index < 3} className="rounded-[16px] border">
+    <Collapsible defaultOpen={!ok && index < 3} className="rounded-[4px] border">
       <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-[15px]">
         <span className="flex items-center gap-2.5">
           <CaseMark ok={ok} />
@@ -49,7 +49,7 @@ function HiddenSummary({ cases }: { cases: Case[] }) {
   const failed = hidden.filter(({ c }) => c.status !== 'passed');
   const slowest = Math.max(...hidden.map(({ c }) => c.wall_ms || 0));
   return (
-    <Collapsible defaultOpen={failed.length > 0} className="rounded-[16px] border">
+    <Collapsible defaultOpen={failed.length > 0} className="rounded-[4px] border">
       <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-[15px]">
         <span className="flex items-center gap-2.5">
           <CaseMark ok={!failed.length} />

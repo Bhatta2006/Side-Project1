@@ -2,22 +2,24 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
-import { Toggle as TogglePrimitive } from "radix-ui"
+import { Slot, Toggle as TogglePrimitive } from "radix-ui"
+
+import { useInk, useMergedRef } from "@/lib/ink/react"
+import { toggleRecipe, type ToggleTone } from "@/lib/ink/recipes/toggle-ink"
+import { cn } from "@/lib/utils"
 
 const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-[state=on]:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "relative isolate inline-flex shrink-0 items-center justify-center gap-2 font-hand font-bold whitespace-nowrap transition-[translate] duration-(--ll-dur-press) ease-out active:translate-y-(--ll-press-sink) [&[data-pressed]:not([data-pressed=false])]:translate-y-(--ll-press-sink) disabled:pointer-events-none disabled:text-pencil-text forced-colors:data-[state=on]:bg-[Highlight] forced-colors:data-[state=on]:text-[HighlightText] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not(.absolute):not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-transparent",
-        outline: "border border-border-strong bg-transparent hover:bg-muted",
+        default: "",
+        outline: "",
       },
       size: {
-        default:
-          "h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        default: "h-9 min-w-9 px-2 text-base compact:h-8 compact:min-w-8 calm:h-7 calm:min-w-7",
+        sm: "h-8 min-w-8 px-1.5 text-[15px] compact:h-7 compact:min-w-7 calm:h-7 calm:min-w-7",
+        lg: "h-10 min-w-10 px-2.5 text-[17px] compact:h-9 compact:min-w-9 calm:h-8 calm:min-w-8",
       },
     },
     defaultVariants: {
@@ -29,17 +31,46 @@ const toggleVariants = cva(
 
 function Toggle({
   className,
-  variant = "default",
-  size = "default",
+  variant,
+  size,
+  tone,
+  seed,
+  asChild,
+  disabled,
+  children,
+  ref,
   ...props
 }: React.ComponentProps<typeof TogglePrimitive.Root> &
-  VariantProps<typeof toggleVariants>) {
+  VariantProps<typeof toggleVariants> & {
+    tone?: ToggleTone
+    seed?: string | number
+  }) {
+  const v = variant ?? "default"
+  const forced = "data-focus-visible" in props
+  const { hostRef, hostProps, node } = useInk({
+    recipe: toggleRecipe,
+    params: { variant: v, disabled: !!disabled, tone, invalid: props["aria-invalid"] === true || props["aria-invalid"] === "true" },
+    kind: "toggle",
+    seed,
+    layers: forced ? "all" : undefined,
+  })
   return (
     <TogglePrimitive.Root
       data-slot="toggle"
-      className={cn(toggleVariants({ variant, size, className }))}
+      data-variant={v}
+      data-size={size ?? "default"}
+      data-ink-sink="self"
+      ref={useMergedRef<HTMLButtonElement>(hostRef, ref)}
+      {...hostProps}
+      asChild={asChild}
+      disabled={disabled}
+      className={cn(toggleVariants({ variant: v, size, className }))}
       {...props}
-    />
+    >
+      {!asChild && node}
+      {asChild ? <Slot.Slottable>{children}</Slot.Slottable> : children}
+      {asChild && node}
+    </TogglePrimitive.Root>
   )
 }
 

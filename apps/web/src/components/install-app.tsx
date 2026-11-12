@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, Share, SquarePlus } from 'lucide-react';
+import { Download, Share, SquarePlus } from '@/components/icons';
 import { registerServiceWorker, useInstall } from '@/lib/pwa';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';

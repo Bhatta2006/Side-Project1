@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Link2, RefreshCw, Unlink } from 'lucide-react';
+import { Link2, RefreshCw, Unlink } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import type { CodeforcesAccount } from '@/lib/types';
@@ -23,7 +23,7 @@ function ago(seconds: number | null): string {
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-[16px] bg-raised px-3 py-2.5">
+    <div className="rounded-[4px] bg-raised px-3 py-2.5">
       <p className="text-[13px] text-muted-foreground">{label}</p>
       <p className="text-base font-semibold tabular-nums">{value}</p>
     </div>
@@ -98,7 +98,7 @@ export default function CodeforcesLink() {
             </Button>
           </form>
         )}
-        {error ? <p role="alert" className="flex items-center gap-2 rounded-[16px] border border-attention px-3 py-2 text-sm"><AttentionIcon size={20} /> {error}</p> : null}
+        {error ? <p role="alert" className="flex items-center gap-2 rounded-[4px] border border-attention px-3 py-2 text-sm"><AttentionIcon size={20} /> {error}</p> : null}
       </CardContent>
     </Card>
   );

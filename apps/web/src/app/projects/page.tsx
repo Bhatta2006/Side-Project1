@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
@@ -75,7 +75,7 @@ function MilestoneForm({ project, milestone, onDone }: { project: string; milest
 /** A small disclosure for reference text that most visits do not need open. */
 function Fold({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <details className="group rounded-[16px] bg-raised">
+    <details className="group rounded-[4px] bg-raised">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-[14px] font-semibold [&::-webkit-details-marker]:hidden">
         {title}
         <ChevronDown className="size-4 flex-none transition-transform group-open:rotate-180" aria-hidden="true" />
@@ -106,7 +106,7 @@ function ProjectCard({ project, onChange }: { project: ProjectView; onChange: ()
         </div>
       </header>
 
-      {project.preparing ? <p className="rounded-[16px] bg-raised p-4 text-[15px] text-muted-foreground">Some of its lessons are still being written. It opens when they are ready.</p> : null}
+      {project.preparing ? <p className="rounded-[4px] bg-raised p-4 text-[15px] text-muted-foreground">Some of its lessons are still being written. It opens when they are ready.</p> : null}
 
       <ol className="grid">
         {project.milestones.map((m, i) => {
@@ -128,7 +128,7 @@ function ProjectCard({ project, onChange }: { project: ProjectView; onChange: ()
                   <span className="sr-only">Milestone {i + 1}{m.done ? ', done' : !m.available ? ', locked' : ''}: </span>{m.title}
                 </p>
                 {open ? (
-                  <div className="grid gap-4 rounded-[16px] border p-4">
+                  <div className="grid gap-4 rounded-[4px] border p-4">
                     <MilestoneForm project={project.id} milestone={m} onDone={onChange} />
                     {project.self_review.length ? (
                       <Fold title="Before you submit, ask yourself">

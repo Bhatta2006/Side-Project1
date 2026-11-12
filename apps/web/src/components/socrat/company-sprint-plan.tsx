@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Lock } from 'lucide-react';
+import { Check, Lock } from '@/components/icons';
 import { conceptHref, formatDate } from '@/lib/routes';
 import type { CompanySprintView, CompanySprintWeek } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ function Week({ week, current }: { week: CompanySprintWeek; current: boolean }) 
           <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
             {week.concepts.map(c => (
               <li key={c.id}>
-                <Link href={conceptHref(c.id)} className="flex min-h-11 items-center gap-2.5 rounded-[14px] px-2 text-[15px] transition-colors hover:bg-raised">
+                <Link href={conceptHref(c.id)} className="flex min-h-11 items-center gap-2.5 rounded-[4px] px-2 text-[15px] transition-colors hover:bg-raised">
                   <StatusIcon status={statusFromBand(c.band)} size={22} />
                   <span className={cn('min-w-0 flex-1', c.done && 'text-muted-foreground')}>{c.title}</span>
                   {c.done ? <Check className="size-4 text-primary" aria-label="Finished" /> : null}

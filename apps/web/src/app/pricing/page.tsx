@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Check, Minus } from 'lucide-react';
+import { Check, Minus } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { Currency, Interval, money, subscribe } from '@/lib/billing';
 import { PLAN_BLURB, PLAN_NAME, PLUS_WAS_INR } from '@/lib/plans';

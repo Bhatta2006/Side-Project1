@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { destination, useSession } from '@/lib/session';
 import type { Features } from '@/lib/types';
@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/socrat/states';
 import { EmailAuth } from './email-auth';
 import { Wordmark } from '@/components/socrat/wordmark';
 import { ArrowCircle, Button } from '@/components/ui/button';
+import { Paper } from '@/components/ui/paper';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -88,7 +89,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
           : ['neutral', null];
 
   return (
-    <div className="login-page margin-rule min-h-dvh px-5 py-4 [--margin-x:20px] sm:px-8 sm:[--margin-x:40px] lg:px-10 lg:py-6 lg:[--margin-x:88px]">
+    <div className="login-page ll-desk min-h-dvh px-5 py-4 [--margin-x:20px] sm:px-8 sm:[--margin-x:40px] lg:px-10 lg:py-6 lg:[--margin-x:88px]">
       <div className="mx-auto mb-6 flex max-w-[1400px] items-center justify-between gap-4 pl-5 sm:pl-8 lg:mb-4 lg:pl-[108px]">
         <Link href="/" aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
         <Link href="/" className="inline-flex min-h-11 items-center gap-2 rounded-full px-2 text-[15px] font-medium text-muted-foreground hover:text-foreground">
@@ -98,15 +99,15 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
 
       <div className="mx-auto grid max-w-[1400px] items-center gap-10 pl-5 sm:pl-8 lg:min-h-[calc(100dvh-120px)] lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:pl-[108px]">
         <section aria-labelledby="login-story-title" className="relative order-last flex flex-col gap-6 lg:order-none">
-          <h2 id="login-story-title" className="text-[44px] leading-[0.98] font-semibold tracking-[-0.055em] sm:text-[56px] lg:text-[76px]">Learn it.<br /><span className="hl hl-draw">Then prove it.</span></h2>
+          <h2 id="login-story-title" className="font-script text-[52px] leading-[1.02] sm:text-[64px] lg:text-[88px]">Learn it.<br /><span className="hl hl-draw">Then prove it.</span></h2>
           <p className="max-w-sm text-[17px] text-muted-foreground">A tutor that asks before it tells. A plan that follows your evidence.</p>
           <div className="relative mt-2 hidden w-[260px] lg:block">
             <LiveSoc mood={mood} say={line} bubbleSide="right" />
           </div>
-          <p className="font-hand hidden -rotate-3 text-[24px] text-pen lg:block">psst, the first question is on me ↗</p>
+          <p className="font-script hidden -rotate-3 text-[26px] text-red lg:block">psst, the first question is on me ↗</p>
         </section>
 
-        <section className="login-panel paper flex flex-col justify-center rounded-[28px] p-6 sm:p-8 lg:p-12" aria-labelledby="login-title">
+        <Paper as="section" stock="paper" tape="top" seed="login-panel" className="login-panel flex flex-col justify-center p-6 sm:p-8 lg:p-12" aria-labelledby="login-title">
           <div className="mx-auto w-full max-w-md">
             <h1 id="login-title" className="type-display-l">Log in</h1>
             <p className="mt-3 text-base text-muted-foreground">{features?.email_login ? 'Log in, or create an account with Google or your email.' : 'New to Socrat? Logging in creates your account.'}</p>
@@ -138,7 +139,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
                 </p>
               ) : null}
               {features?.dev_login ? (
-                <form onSubmit={devLogin} className="grid gap-4 rounded-[20px] border border-dashed border-border-strong p-5">
+                <form onSubmit={devLogin} className="grid gap-4 rounded-[4px] border border-dashed border-border-strong p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium">Simulated learner</p>
                     <span className="font-hand text-[19px] text-pen">development only</span>
@@ -161,7 +162,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
             </div>
             <p className="mt-8 text-sm text-muted-foreground">Socrat stores your learning data to plan your practice. You can export or delete it in Settings at any time.</p>
           </div>
-        </section>
+        </Paper>
       </div>
     </div>
   );

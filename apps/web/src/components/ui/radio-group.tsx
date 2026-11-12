@@ -1,41 +1,69 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui"
 
-function RadioGroup({
-  className,
-  ...props
-}: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
+import { useInk, useMergedRef } from "@/lib/ink/react"
+import { REVEAL_DASH, REVEAL_WHEN_CHECKED, markTouched } from "@/lib/ink/recipes/draw-on-ink"
+import { radioRecipe } from "@/lib/ink/recipes/radio-group-ink"
+import { cn } from "@/lib/utils"
+
+const RadioGroupContext = React.createContext({ invalid: false, disabled: false })
+
+function RadioGroup({ className, ...props }: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
+  const invalid = props["aria-invalid"] === true || props["aria-invalid"] === "true"
+  const group = React.useMemo(() => ({ invalid, disabled: !!props.disabled }), [invalid, props.disabled])
   return (
-    <RadioGroupPrimitive.Root
-      data-slot="radio-group"
-      className={cn("grid w-full gap-2", className)}
-      {...props}
-    />
+    <RadioGroupContext.Provider value={group}>
+      <RadioGroupPrimitive.Root
+        data-slot="radio-group"
+        className={cn("grid gap-3 data-[orientation=horizontal]:flex data-[orientation=horizontal]:flex-wrap data-[orientation=horizontal]:gap-x-6", className)}
+        {...props}
+      />
+    </RadioGroupContext.Provider>
   )
 }
 
 function RadioGroupItem({
   className,
+  seed,
+  disabled,
+  ref,
+  onClickCapture,
   ...props
-}: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {
+}: React.ComponentProps<typeof RadioGroupPrimitive.Item> & {
+  seed?: string | number
+}) {
+  const group = React.useContext(RadioGroupContext)
+  const invalid = props["aria-invalid"] === true || props["aria-invalid"] === "true" || (group.invalid && props["aria-invalid"] === undefined)
+  const off = !!disabled || group.disabled
+  const { hostRef, hostProps, node } = useInk({ recipe: radioRecipe, params: { disabled: off, invalid }, kind: "radio", seed })
   return (
     <RadioGroupPrimitive.Item
       data-slot="radio-group-item"
+      ref={useMergedRef<HTMLButtonElement>(hostRef, ref)}
+      {...hostProps}
+      disabled={disabled}
+      onClickCapture={(e) => {
+        markTouched(e)
+        onClickCapture?.(e)
+      }}
       className={cn(
-        "group/radio-group-item peer relative flex aspect-square size-4 shrink-0 rounded-full border border-border-strong outline-none group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-border-strong after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-primary dark:data-checked:bg-primary",
+        "peer relative isolate aspect-square size-4 shrink-0 after:absolute after:-inset-2 disabled:cursor-not-allowed",
+        REVEAL_DASH,
+        REVEAL_WHEN_CHECKED,
+        "group-hover/field:[&>svg_[data-layer=hover]]:visible group-hover/field:[&>svg_[data-layer=hover]]:opacity-100",
+        "has-[+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:visible has-[+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:opacity-100",
+        "has-[+input+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:visible has-[+input+[data-slot=label]:hover]:[&>svg_[data-layer=hover]]:opacity-100",
         className
       )}
       {...props}
     >
+      {node}
       <RadioGroupPrimitive.Indicator
         data-slot="radio-group-indicator"
-        className="flex size-4 items-center justify-center"
-      >
-        <span className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-foreground" />
-      </RadioGroupPrimitive.Indicator>
+        className="pointer-events-none absolute inset-0 hidden place-content-center leading-none font-bold forced-colors:grid forced-colors:before:content-['●']"
+      />
     </RadioGroupPrimitive.Item>
   )
 }

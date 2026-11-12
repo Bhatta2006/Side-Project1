@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Pause, Play, RotateCcw } from 'lucide-react';
+import { Pause, Play, RotateCcw } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 
 export interface Run {

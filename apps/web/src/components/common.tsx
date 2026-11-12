@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import type { Band } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -94,7 +94,7 @@ export function Loading({ label = 'Loading', variant = 'page' }: { label?: strin
         <div className="grid content-start gap-6">
           <Skeleton className="h-40 w-full rounded-card" />
           <Lines count={5} />
-          <Skeleton className="h-36 w-full rounded-[20px]" />
+          <Skeleton className="h-36 w-full rounded-[4px]" />
           <Lines count={4} />
         </div>
         <Skeleton className="hidden h-64 w-full rounded-card lg:block" />
@@ -104,7 +104,7 @@ export function Loading({ label = 'Loading', variant = 'page' }: { label?: strin
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="grid content-start gap-5">
           <Lines count={4} />
-          <Skeleton className="h-24 w-full rounded-[20px]" />
+          <Skeleton className="h-24 w-full rounded-[4px]" />
           <Lines count={3} />
         </div>
         <Skeleton className="h-[420px] w-full rounded-card" />
@@ -125,7 +125,7 @@ export function Loading({ label = 'Loading', variant = 'page' }: { label?: strin
       <div className="mx-auto grid w-full max-w-2xl gap-5">
         <Skeleton className="h-1.5 w-full rounded-full" />
         <Lines count={2} />
-        {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full rounded-[20px]" />)}
+        {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full rounded-[4px]" />)}
       </div>
     ),
     form: (

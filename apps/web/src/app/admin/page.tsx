@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { notFound } from 'next/navigation';
-import { Activity, Gauge, MessageSquare, ThumbsUp, Users } from 'lucide-react';
+import { Activity, Gauge, MessageSquare, ThumbsUp, Users } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { ErrorNote, Loading, Page, PageHeader, StatCard } from '@/components/common';

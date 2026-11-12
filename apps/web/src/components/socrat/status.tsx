@@ -1,5 +1,6 @@
 import type { Band, RoadmapItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 /**
  * The status system: one shape, label and colour per learning state, used everywhere a skill,
@@ -39,69 +40,34 @@ export function statusFromRoadmap(item: Pick<RoadmapItem, 'status' | 'lesson_don
   }
 }
 
+/** Each state as a hand-drawn mark in its own ink: pencil for not yet, blue pen for work in progress,
+ *  green for a passed check, highlighter for mastered, red pen for what needs another look. */
+const MARK: Record<Status, { icon: string; className: string; dashed?: boolean; dab?: boolean }> = {
+  not_seen: { icon: 'circle', className: 'text-pencil-mark', dashed: true },
+  locked: { icon: 'lock', className: 'text-pencil' },
+  read: { icon: 'circle-dot', className: 'text-ink-you' },
+  assumed: { icon: 'circle-question-mark', className: 'text-pencil' },
+  practised: { icon: 'circle-play', className: 'text-ink-you' },
+  learned: { icon: 'circle-check', className: 'text-green' },
+  mastered: { icon: 'badge-check', className: 'text-ink', dab: true },
+  review: { icon: 'rotate-ccw-clock', className: 'text-orange-text' },
+  needs_practice: { icon: 'triangle-alert', className: 'text-red' },
+};
+
 export function StatusIcon({ status, size = 20, className, title }: { status: Status; size?: number; className?: string; title?: string }) {
-  const common = { fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-  const shape = {
-    not_seen: <circle cx="12" cy="12" r="8.5" stroke="var(--status-muted, var(--muted-foreground))" strokeDasharray="3 2.6" {...common} />,
-    locked: (
-      <g {...common} stroke="var(--status-muted, var(--muted-foreground))">
-        <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
-        <rect x="8.5" y="11.5" width="7" height="5" rx="1.2" />
-        <path d="M9.75 11.5V10a2.25 2.25 0 0 1 4.5 0v1.5" />
-      </g>
-    ),
-    read: (
-      <g {...common} stroke="currentColor">
-        <circle cx="12" cy="12" r="8.5" />
-        <circle cx="12" cy="12" r="2" fill="currentColor" data-fill="" stroke="none" />
-      </g>
-    ),
-    assumed: (
-      <g opacity="0.6" {...common} stroke="currentColor">
-        <circle cx="12" cy="12" r="8.5" />
-        <path d="M3.5 12a8.5 8.5 0 0 0 17 0Z" fill="currentColor" data-fill="" />
-      </g>
-    ),
-    practised: <circle cx="12" cy="12" r="8" stroke="var(--status-practised, var(--primary))" fill="none" strokeWidth="2.5" />,
-    learned: (
-      <g fill="none" stroke="var(--status-practised, var(--primary))" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="8" strokeWidth="2.5" />
-        <path d="M8.6 12.2l2.3 2.3 4.5-4.6" strokeWidth="2" />
-      </g>
-    ),
-    mastered: (
-      <g>
-        <circle cx="12" cy="12" r="9" fill="var(--proof)" stroke="var(--proof-stroke)" strokeWidth="1.5" data-fill="" />
-        <path d="M8 12.2l2.7 2.7L16 9.6" fill="none" stroke="var(--proof-foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </g>
-    ),
-    review: (
-      <g>
-        <circle cx="12" cy="12" r="8.5" fill="none" stroke="var(--proof-stroke)" strokeWidth="3.6" strokeDasharray="0.1 3.6" strokeLinecap="round" />
-        <circle cx="12" cy="12" r="8.5" fill="none" stroke="var(--proof)" strokeWidth="2.4" strokeDasharray="0.1 3.6" strokeLinecap="round" />
-      </g>
-    ),
-    needs_practice: (
-      <g {...common} stroke="var(--attention)">
-        <path d="M10.3 4.4a2 2 0 0 1 3.4 0l7 12.1a2 2 0 0 1-1.7 3H5a2 2 0 0 1-1.7-3Z" />
-        <path d="M12 9.5v4" />
-        <circle cx="12" cy="16.6" r="0.6" fill="var(--attention)" data-fill="" />
-      </g>
-    ),
-  }[status];
+  const mark = MARK[status];
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      className={cn('status-icon flex-none', className)}
+    <span
+      className={cn('status-icon relative inline-grid flex-none place-items-center', mark.className, mark.dashed && 'opacity-80', className)}
+      style={{ width: size, height: size }}
       role={title ? 'img' : undefined}
       aria-label={title}
       aria-hidden={title ? undefined : true}
       data-status={status}
     >
-      {shape}
-    </svg>
+      {mark.dab ? <span className="absolute inset-[8%] -rotate-6 rounded-[45%_55%_50%_40%] bg-hi" aria-hidden="true" /> : null}
+      <Icon name={mark.icon} size={size} seed={status} className={cn('relative', mark.dashed && '[stroke-dasharray:2_2.5]')} />
+    </span>
   );
 }
 

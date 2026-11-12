@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Maximize } from 'lucide-react';
+import { ChevronDown, Maximize } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, conceptHref, formatStamp } from '@/lib/routes';
@@ -309,7 +309,7 @@ function Report({ view }: { view: AssessmentView }) {
           <p className="mt-1 text-sm text-muted-foreground">Status after this assessment, with the mastery estimate before and after.</p>
           <ul className="mt-4 grid gap-3">
             {report.topics.map(t => (
-              <li key={t.id} className="grid gap-2 rounded-[16px] bg-raised p-4">
+              <li key={t.id} className="grid gap-2 rounded-[4px] bg-raised p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Link href={conceptHref(t.id)} className="font-semibold underline-offset-4 hover:underline">{t.title}</Link>
                   <span className="text-sm font-semibold tabular-nums">{t.correct} of {t.total}</span>
@@ -328,7 +328,7 @@ function Report({ view }: { view: AssessmentView }) {
             {report.focus.length ? (
               <ul className="mt-3 grid gap-3">
                 {report.focus.map(f => (
-                  <li key={f.id} className="grid gap-2 rounded-[16px] bg-raised p-4">
+                  <li key={f.id} className="grid gap-2 rounded-[4px] bg-raised p-4">
                     <p className="flex items-center gap-2 font-semibold"><AttentionIcon size={20} /> {f.title}</p>
                     <div className="flex flex-wrap gap-2">
                       <Button asChild size="sm"><Link href={conceptHref(f.id)}>Practice this</Link></Button>

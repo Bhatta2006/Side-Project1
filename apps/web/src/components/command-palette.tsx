@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { BookOpen, Building2, CalendarCheck, ChartNoAxesColumn, ExternalLink, House, Route, Settings, Shapes, SquareCode, Timer } from 'lucide-react';
+import { BookOpen, Building2, CalendarCheck, ChartNoAxesColumn, ExternalLink, House, Route, Settings, Shapes, SquareCode, Timer } from '@/components/icons';
 import { api } from '@/lib/api';
 import { NAME, conceptHref } from '@/lib/routes';
 import type { LibraryProblem } from '@/lib/types';

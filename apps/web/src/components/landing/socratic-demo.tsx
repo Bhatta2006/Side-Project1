@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X } from '@/components/icons';
 import { prefersReducedMotion } from '@/lib/motion';
 import { Soc } from '@/components/socrat/illustration';
 import { cn } from '@/lib/utils';
@@ -91,7 +91,7 @@ export function SocraticDemo({ className }: { className?: string }) {
         Sample session. A learner asks why their two-sum solution times out. Soc replies with a question
         instead of the answer, the learner switches to a hash map lookup, and all four hidden tests pass with one hint used.
       </figcaption>
-      <div aria-hidden="true" className="overflow-hidden rounded-[24px] border bg-card shadow-floating">
+      <div aria-hidden="true" className="overflow-hidden rounded-[4px] border bg-card shadow-floating">
         <div className="flex items-center gap-2 border-b px-4 py-3">
           <span className="size-2.5 rounded-full bg-border-strong" />
           <span className="size-2.5 rounded-full bg-border-strong" />
@@ -163,7 +163,7 @@ export function SocraticDemo({ className }: { className?: string }) {
         aria-hidden="true"
         data-step
         data-hidden={step < LAST}
-        className="font-hand absolute -bottom-10 right-6 rotate-[-5deg] rounded-[12px] border-2 border-pen bg-card px-3.5 py-1 text-[24px] text-pen shadow-[3px_3px_0_var(--pen)] sm:-right-5"
+        className="font-hand absolute -bottom-10 right-6 rotate-[-5deg] rounded-[4px] border-2 border-pen bg-card px-3.5 py-1 text-[24px] text-pen shadow-[3px_3px_0_var(--pen)] sm:-right-5"
       >
         solved it! hash maps ✓
       </span>

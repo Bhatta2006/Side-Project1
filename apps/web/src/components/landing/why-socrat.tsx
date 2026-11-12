@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Check, Minus } from 'lucide-react';
+import { Check, Minus } from '@/components/icons';
 import { ArrowCircle, Button } from '@/components/ui/button';
 
 /**

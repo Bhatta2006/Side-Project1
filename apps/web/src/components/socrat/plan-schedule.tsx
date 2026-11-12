@@ -38,7 +38,7 @@ export function NextTwoWeeks({ days }: { days: PlanView['days'] }) {
           const today = index === 0;
           const date = new Date(`${day.date}T00:00:00`);
           return (
-            <li key={day.date} className="grid grid-cols-[3rem_1fr] gap-3 rounded-[16px] py-2">
+            <li key={day.date} className="grid grid-cols-[3rem_1fr] gap-3 rounded-[4px] py-2">
               <div
                 className={cn(
                   'grid h-12 w-12 place-content-center rounded-[14px] text-center leading-none',

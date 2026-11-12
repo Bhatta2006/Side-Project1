@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Bug, Lightbulb, MessageSquareHeart, PenLine } from 'lucide-react';
+import { Bug, Lightbulb, MessageSquareHeart, PenLine } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { Category } from '@/components/report-problem';
