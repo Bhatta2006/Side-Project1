@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import type { PlacementQuestion, PlacementSummary } from '@/lib/types';
@@ -37,7 +37,7 @@ function PlanBuilding({ step }: { step: number }) {
           const done = i < step;
           const now = i === step;
           return (
-            <li key={label} className={`flex min-h-12 items-center gap-3 rounded-[16px] px-4 transition-all duration-500 motion-reduce:transition-none ${i > step ? 'opacity-35' : 'opacity-100'} ${now ? 'bg-raised' : ''}`}>
+            <li key={label} className={`flex min-h-12 items-center gap-3 rounded-[4px] px-4 transition-all duration-500 motion-reduce:transition-none ${i > step ? 'opacity-35' : 'opacity-100'} ${now ? 'bg-raised' : ''}`}>
               <span className={`grid size-6 flex-none place-items-center rounded-full border-2 transition-colors duration-500 ${done ? 'border-primary bg-primary text-primary-foreground' : now ? 'border-primary' : 'border-border'}`} aria-hidden="true">
                 {done ? <Check className="size-3.5" strokeWidth={3} /> : now ? <span className="size-2 animate-pulse rounded-full bg-primary motion-reduce:animate-none" /> : null}
               </span>
@@ -146,7 +146,7 @@ export default function Placement() {
             <p className="mt-1 text-[15px] text-muted-foreground">Placement suggests you know these. They are not counted as learned yet: each gets a short, harder confirmation check on your plan. Pass it and the skill counts; miss it and you learn it properly, no harm done.</p>
             <ul className="mt-4 grid gap-2">
               {summary.known_concepts.map(c => (
-                <li key={c} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-[16px] bg-raised px-4 py-2.5">
+                <li key={c} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-[4px] bg-raised px-4 py-2.5">
                   <span className="font-semibold">{c}</span>
                   <StatusLabel status="assumed" muted className="text-[13px]" />
                 </li>

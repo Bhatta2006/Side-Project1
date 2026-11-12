@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, ChevronRight, Flame } from 'lucide-react';
+import { ArrowRight, ChevronRight, Flame } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import { KIND_LABEL, NAME, PACE_LABEL, activityHref, conceptHref, formatDate } from '@/lib/routes';
@@ -25,6 +25,10 @@ import { Card } from '@/components/ui/card';
 import { CommunityCard } from '@/components/community-link';
 import { LaunchGift } from '@/components/launch-gift-host';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// Decorations from the large sticker and doodle catalogues load on their own, after the page.
+const Doodle = dynamic(() => import('@/components/ui/doodle').then(m => m.Doodle), { ssr: false });
+const Sticker = dynamic(() => import('@/components/ui/sticker').then(m => m.Sticker), { ssr: false });
 
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
 // otherwise sits in Today's first load. An early openSignal still opens it once it arrives.
@@ -94,7 +98,7 @@ function GrowBar({ value, label }: { value: number; label: string }) {
 function SessionRow({ activity, done }: { activity: Activity; done: boolean }) {
   return (
     <li>
-      <Link href={activityHref(activity.id)} className="group flex min-h-14 items-center gap-3 rounded-[16px] px-3 py-2 transition-colors hover:bg-raised">
+      <Link href={activityHref(activity.id)} className="group flex min-h-14 items-center gap-3 rounded-[4px] px-3 py-2 transition-colors hover:bg-raised">
         <StatusIcon status={done ? 'practised' : 'not_seen'} size={22} />
         <span className="min-w-0 flex-1">
           <span className={cn('block font-semibold', done && 'text-muted-foreground')}>{activity.title}</span>
@@ -158,6 +162,8 @@ export default function TodayPage() {
   const learned = today.progress.finished;
   const mastered = today.progress.mastered ?? 0;
   const complete = today.progress.complete === true;
+  // Soc's mood on the next-step card: sleepy after days away, a wink on a new day, proud once the goal is reached.
+  const heroMood = today.days_away >= 3 ? 'sleepy' : today.minutes.reached ? 'proud' : today.done.length === 0 ? 'wink' : 'happy';
   const assessmentOpen = assessment && (assessment.state === 'available' || assessment.state === 'in_progress');
   const queue = next ? [...today.queue].sort((x, y) => Number(y.id === next.id) - Number(x.id === next.id)) : today.queue;
   const session = [...today.done.map(a => ({ a, done: true })), ...queue.map(a => ({ a, done: false }))];
@@ -215,21 +221,28 @@ export default function TodayPage() {
         {/* 3. Hero: the next recommended activity. */}
         <Reveal index={1} className="col-span-12 lg:col-span-8">
           {next ? (
-            <Card tone="hero" data-tour="today-next" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
-              {/* Soc on his books, cheering the next step on. */}
-              <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[230px] sm:block lg:right-12 lg:w-[250px]">
-                <SocFigure books mood="happy" idle className="h-auto w-full drop-shadow-[0_18px_24px_rgb(0_0_0/0.25)]" />
+            <Card tone="hero" tape="corner" seed="today-next" data-tour="today-next" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
+              {/* Soc on his books, waving the next step on, with a note pointing at him. */}
+              <div aria-hidden="true" className="pointer-events-none absolute right-4 -bottom-3 hidden w-[170px] sm:block lg:w-[190px] xl:right-6 xl:w-[220px] 2xl:right-12 2xl:w-[250px]">
+                <div className="absolute -top-14 -left-6 flex items-end gap-0 xl:-top-16 xl:-left-24">
+                  <span className="font-script text-[22px] whitespace-nowrap text-red -rotate-6 xl:text-[24px]">you&apos;ve got this</span>
+                  <Doodle name="arrow-bounce" size={44} rotate={70} seed="today-arrow" className="-mb-6 -scale-x-100" />
+                </div>
+                <SocFigure books mood={heroMood} idle className="h-auto w-full" />
               </div>
-              <div className="pointer-events-none absolute top-6 right-6 hidden font-hand text-[24px] text-white/90 rotate-6 lg:block" aria-hidden="true">you&apos;ve got this ↓</div>
-              <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[58%]">
+              <div aria-hidden="true" className="pointer-events-none absolute right-5 bottom-2 sm:hidden">
+                <SocFigure size={84} mood={heroMood === 'happy' ? 'curious' : heroMood} />
+              </div>
+              <Sticker name="highlighter" size={56} rotate={-14} seed="today-hl" className="absolute -top-6 right-8 hidden sm:block xl:right-14" />
+              <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[60%] xl:max-w-[54%]">
                 <p className="type-label text-(--card-muted)">{today.minutes.reached ? `Daily goal reached. Keep going or stop here.` : `Today, goal ${today.minutes.goal} min`}</p>
                 <div>
                   <h2 id="next-heading" className="type-display-m max-w-[20ch] break-words">{next.title}</h2>
                   <p className="mt-3 max-w-md text-base text-(--card-muted)">{next.reason || 'Next in your plan.'}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge>{CHIP[next.kind] ?? KIND_LABEL[next.kind]}</Badge>
-                  {next.minutes ? <Badge>{next.minutes} min</Badge> : null}
+                  <Badge variant="outline">{CHIP[next.kind] ?? KIND_LABEL[next.kind]}</Badge>
+                  {next.minutes ? <Badge variant="outline">{next.minutes} min</Badge> : null}
                 </div>
                 <div className="mt-auto">
                   <Button asChild variant="ink" size="lg">
@@ -288,21 +301,21 @@ export default function TodayPage() {
 
         {/* Talk to your tutor: beside the hero (8 + 4 columns). */}
         <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
-          <Card className="relative h-full min-h-72 overflow-hidden lg:min-h-80" aria-labelledby="soc-heading">
+          <Card tone="raised" tape="top" seed="today-ask" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="soc-heading">
             <div className="relative flex h-full flex-col gap-4 px-(--card-spacing)">
-              <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">stuck? talk to me</p>
+              <p className="font-script origin-left -rotate-2 text-[24px] text-red">stuck? talk to me</p>
               <div className="max-w-[55%]">
                 <h2 id="soc-heading" className="type-display-m">Ask Soc</h2>
                 <p className="mt-3 text-base text-muted-foreground">Get unstuck, ask questions, or request a hint.</p>
               </div>
               {/* A bigger target for pointer users; keyboard users have the Ask Soc button below. */}
-              <button type="button" tabIndex={-1} aria-hidden="true" onClick={() => setAskSoc(n => n + 1)} className="absolute -top-2 right-(--card-spacing) rounded-full">
-                <Soc size={120} mood="curious" />
+              <button type="button" tabIndex={-1} aria-hidden="true" onClick={() => setAskSoc(n => n + 1)} className="absolute top-12 right-(--card-spacing) rounded-full">
+                <Soc size={84} mood="curious" />
               </button>
-              <button type="button" data-tour="tutor" onClick={() => setAskSoc(n => n + 1)} className="group/ask mt-auto flex h-14 items-center justify-between gap-3 rounded-full border border-border-strong bg-card pr-2 pl-6 text-[17px] font-medium transition-colors hover:border-foreground/40" aria-haspopup="dialog">
+              <Button type="button" variant="outline" size="lg" data-tour="tutor" onClick={() => setAskSoc(n => n + 1)} className="mt-auto w-full justify-between" aria-haspopup="dialog">
                 Ask Soc
-                <span className="grid size-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--primary-glow)] transition-transform group-hover/ask:translate-x-0.5"><ArrowRight className="size-5" aria-hidden="true" /></span>
-              </button>
+                <ArrowCircle />
+              </Button>
             </div>
           </Card>
         </Reveal>
@@ -426,7 +439,7 @@ export default function TodayPage() {
                       <ul className="grid gap-1 sm:grid-cols-2">
                         {recs.topics.map(t => (
                           <li key={t.id}>
-                            <Link href={conceptHref(t.id)} className="-mx-2 flex min-h-12 items-start gap-3 rounded-[14px] px-2 py-2 transition-colors hover:bg-raised">
+                            <Link href={conceptHref(t.id)} className="-mx-2 flex min-h-12 items-start gap-3 rounded-[4px] px-2 py-2 transition-colors hover:bg-raised">
                               <StatusIcon status={statusFromBand(t.band)} size={22} className="mt-0.5" />
                               <span className="min-w-0">
                                 <span className="block font-semibold">{t.title}</span>

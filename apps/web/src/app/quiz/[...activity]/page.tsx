@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import { KIND_LABEL, NAME, QUIZ_KINDS, conceptHref, formatStamp, joinSegments } from '@/lib/routes';
@@ -109,7 +109,7 @@ function GateResult({ gate }: { gate: Gate }) {
         <h1 className="type-display-l mt-2">{gate.unlocks ? `${gate.unlocks} unlocked` : 'Course checkpoint passed'}</h1>
         <p className="mt-3 text-base text-(--card-muted)">{gate.hard_correct} correct on the toughest questions. Your plan now opens the next module.</p>
         {gate.unlocks ? (
-          <Link href="/plan" className="mt-5 flex min-h-14 items-center gap-3 rounded-[16px] bg-proof px-4 py-3 font-semibold text-proof-foreground transition-opacity hover:opacity-90">
+          <Link href="/plan" className="mt-5 flex min-h-14 items-center gap-3 rounded-[4px] bg-proof px-4 py-3 font-semibold text-proof-foreground transition-opacity hover:opacity-90">
             <StatusIcon status="not_seen" size={22} />
             <span className="flex-1">{gate.unlocks}</span>
             <span className="text-[13px] font-medium">Now open in {NAME.skills}</span>
@@ -237,7 +237,8 @@ export default function Quiz() {
       <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
         <QuizHeader title={title} topic={topic} value={100} />
         {session.gate ? <GateResult gate={session.gate} /> : (
-          <section data-tone={percent >= 80 ? 'hero' : undefined} className={cn('mb-8', percent >= 80 && 'rounded-card bg-forest p-6 text-forest-foreground lg:p-8 animate-pop')}>
+          <section data-tone={percent >= 80 ? 'hero' : undefined} className={cn('relative mb-8 sm:pr-[150px] lg:pr-[160px]', percent >= 80 && 'overflow-hidden rounded-card bg-forest p-6 text-forest-foreground lg:p-8 animate-pop')}>
+            <div aria-hidden="true" className={cn('pointer-events-none absolute right-6 hidden w-[120px] sm:block', percent >= 80 ? 'bottom-4' : 'top-0')}><SocFigure mood={percent >= 80 ? 'proud' : percent >= 50 ? 'happy' : 'curious'} idle className="h-auto w-full" /></div>
             {percent >= 80 ? <span className="mb-4 grid size-12 place-items-center rounded-full bg-proof text-proof-foreground" aria-hidden="true"><svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span> : null}
             <p className={cn('text-[15px]', percent >= 80 ? 'text-(--card-muted)' : 'text-muted-foreground')}>{title} complete</p>
             <h1 className="type-display-l mt-2">{right} of {total} correct</h1>
@@ -259,7 +260,7 @@ export default function Quiz() {
             <h2 id="revisit-heading" className="mb-3 font-display text-xl font-semibold tracking-[-0.03em]">Topics worth revisiting</h2>
             <ul className="grid gap-2">
               {topics.map(([id, name]) => (
-                <li key={id} className="flex min-h-14 items-center gap-3 rounded-[16px] bg-raised px-4 py-2">
+                <li key={id} className="flex min-h-14 items-center gap-3 rounded-[4px] bg-raised px-4 py-2">
                   <StatusIcon status="review" size={22} />
                   <span className="flex-1 font-semibold">{name}</span>
                   <Link href={conceptHref(id)} className="text-[15px] font-semibold underline underline-offset-4">Review<span className="sr-only"> {name}</span></Link>
@@ -299,6 +300,9 @@ export default function Quiz() {
   const graded = session.feedback === 'immediate';
   const isLast = index >= total - 1;
   const answered = session.questions.filter(item => item.answered).length;
+  // Correct answers in a row, ending at this question.
+  let streak = 0;
+  for (let i = Math.min(index, total - 1); i >= 0 && session.questions[i]?.correct; i--) streak++;
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
       {guard}
@@ -312,14 +316,10 @@ export default function Quiz() {
         <Options q={q} choice={choice} onChoose={setChoice} graded={graded} />
 
         {graded && q.answered ? (
-          <div role="status" className={cn('flex items-start gap-3 rounded-[20px] border bg-card p-4 animate-in fade-in slide-in-from-bottom-2 duration-200', q.correct ? 'border-foreground' : 'border-attention')}>
-            {q.correct ? (
-              <span className="grid size-7 flex-none place-items-center rounded-full bg-proof text-proof-foreground animate-pop" aria-hidden="true">
-                <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-              </span>
-            ) : <AttentionIcon size={28} />}
+          <div role="status" className={cn('flex items-start gap-3 rounded-[4px] border bg-card p-4 animate-in fade-in slide-in-from-bottom-2 duration-200', q.correct ? 'border-foreground' : 'border-attention')}>
+            <SocFigure size={44} mood={!q.correct ? 'worried' : streak >= 3 ? 'surprised' : 'happy'} className="-my-1 flex-none" />
             <div>
-              <p className="font-bold">{q.correct ? 'Correct' : 'Incorrect'}</p>
+              <p className="font-bold">{q.correct ? (streak >= 3 ? `Correct, ${streak} in a row` : 'Correct') : 'Incorrect'}</p>
               {q.explanation ? <p className="mt-1 text-[15px] text-muted-foreground">{q.explanation}</p> : null}
             </div>
           </div>

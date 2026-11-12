@@ -61,7 +61,7 @@ export function AdaptingCard({ today, onDecided, onAsk, className }: { today: To
         {list.length ? (
           <ul className="grid gap-2">
             {list.map(e => (
-              <li key={e.key} className="grid gap-1 rounded-[16px] border px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4">
+              <li key={e.key} className="grid gap-1 rounded-[4px] border px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4">
                 <div className="min-w-0">
                   <p className="text-[14px] text-muted-foreground"><span className="font-semibold text-foreground">Noticed:</span> {e.noticed}</p>
                   <p className="text-[15px]"><span className="font-semibold">Changed:</span> {e.changed}</p>
@@ -75,7 +75,7 @@ export function AdaptingCard({ today, onDecided, onAsk, className }: { today: To
           <ul className="grid gap-2" aria-label="Things to look at">
             {nudges.map(n => (
               <li key={n.kind + n.title}>
-                <Link href={n.href} className={cn('block rounded-[16px] border px-4 py-3 transition-colors hover:bg-raised', n.severity === 'high' && 'border-attention')}>
+                <Link href={n.href} className={cn('block rounded-[4px] border px-4 py-3 transition-colors hover:bg-raised', n.severity === 'high' && 'border-attention')}>
                   <span className="font-semibold">{n.title}</span>
                   <span className="block text-[14px] text-muted-foreground">{n.body}</span>
                 </Link>

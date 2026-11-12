@@ -69,7 +69,7 @@ export function EmailAuth({ onSignedIn, onBusy }: { onSignedIn: () => Promise<vo
   const action = { login: 'Log in', signup: 'Send code', verify: 'Create account', forgot: 'Send code', reset: 'Save and log in' }[step];
 
   return (
-    <form onSubmit={submit} className="grid gap-4 rounded-[20px] border border-border-strong p-5" aria-labelledby="email-auth-title" noValidate>
+    <form onSubmit={submit} className="grid gap-4" aria-labelledby="email-auth-title" noValidate>
       <h2 id="email-auth-title" className="font-medium">{title}</h2>
       {notice ? <SuccessLine>{notice}</SuccessLine> : null}
 

@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, MessageCircle } from 'lucide-react';
+import { ChevronDown, MessageCircle } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, hours } from '@/lib/routes';
@@ -247,7 +247,7 @@ export default function PlanPage() {
                           const here = c.concept === plan.current_concept;
                           return (
                             <li key={c.concept}>
-                              <Link href={conceptHref(c.concept)} transitionTypes={['nav-forward']} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[20px] bg-raised px-4 py-3.5 transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_5%)]', here && 'ring-1 ring-primary')}>
+                              <Link href={conceptHref(c.concept)} transitionTypes={['nav-forward']} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[4px] bg-raised px-4 py-3.5 transition-colors hover:bg-[color-mix(in_srgb,var(--raised),var(--foreground)_5%)]', here && 'ring-1 ring-primary')}>
                                 <span className="min-w-0 flex-1 basis-48">
                                   <span className="font-semibold">{c.title}</span>
                                   {c.why ? <span className="block text-[13px] text-muted-foreground">{c.why}</span> : null}

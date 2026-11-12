@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Undo2 } from 'lucide-react';
+import { Undo2 } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { Button } from '@/components/ui/button';

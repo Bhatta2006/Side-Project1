@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Check, RotateCw } from 'lucide-react';
+import { Check, RotateCw } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Illustration } from './illustration';
@@ -33,7 +33,7 @@ export function ErrorState({ message, retry, title = 'Something went wrong', cla
   message: ReactNode; retry?: () => void; title?: string; className?: string; actions?: ReactNode;
 }) {
   return (
-    <div role="alert" className={cn('my-4 flex flex-wrap items-start gap-3 rounded-[20px] border border-attention bg-card px-4 py-4', className)}>
+    <div role="alert" className={cn('my-4 flex flex-wrap items-start gap-3 rounded-[4px] border border-attention bg-card px-4 py-4', className)}>
       <AttentionIcon className="mt-0.5" />
       <div className="min-w-0 flex-1">
         <p className="font-semibold">{title}</p>

@@ -21,5 +21,7 @@
   },
   "menuColor": "default",
   "menuAccent": "subtle",
-  "registries": {}
+  "registries": {
+    "@looseleaf": "https://kevintngo.github.io/looseleaf/r/{name}.json"
+  }
 }

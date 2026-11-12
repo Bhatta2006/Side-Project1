@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Check, Copy, Play } from 'lucide-react';
+import { Check, Copy, Play } from '@/components/icons';
 import { LANGUAGE_LABEL } from '@/lib/routes';
 
 const RUNNABLE = new Set(['python', 'py', 'cpp', 'java']);

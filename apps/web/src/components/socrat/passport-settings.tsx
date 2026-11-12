@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Copy, ExternalLink, Share2 } from 'lucide-react';
+import { Copy, ExternalLink, Share2 } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import type { PassportSettings } from '@/lib/types';

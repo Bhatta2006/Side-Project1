@@ -7,12 +7,15 @@ import { PaywallHost } from '@/components/paywall-host';
 import { REDUCE_MOTION_SCRIPT } from '@/lib/motion';
 import Shell from '@/components/shell';
 import { ThemeProvider } from '@/components/theme-provider';
+import { PALETTE_BOOT_SCRIPT } from '@/lib/palette-boot';
+import { PaletteSync } from '@/lib/palette';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { WebVitals } from '@/components/web-vitals';
 import { ErrorReporter } from '@/components/error-reporter';
 import { PwaSetup } from '@/components/install-app';
 import { LEGAL } from '@/lib/legal';
+import { InkProvider } from '@/lib/ink/react';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-F12E455TW1';
 
@@ -64,8 +67,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F6F5F0' },
-    { media: '(prefers-color-scheme: dark)', color: '#121318' },
+    { color: '#a8c8bb' },
   ],
 };
 
@@ -76,19 +78,24 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_SCRIPT }} />
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
         <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');` }} />
+        {/* The learner's colours, before the first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: PALETTE_BOOT_SCRIPT }} />
       </head>
       <body>
         <WebVitals />
         <ErrorReporter />
         <PwaSetup />
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange>
+          <InkProvider textures={['linen']}>
           <TooltipProvider delayDuration={200}>
             <SessionProvider>
               <Shell>{children}</Shell>
               <PaywallHost />
+              <PaletteSync />
             </SessionProvider>
             <Toaster closeButton position="bottom-right" />
           </TooltipProvider>
+          </InkProvider>
         </ThemeProvider>
       </body>
     </html>

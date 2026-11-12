@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, conceptHref } from '@/lib/routes';

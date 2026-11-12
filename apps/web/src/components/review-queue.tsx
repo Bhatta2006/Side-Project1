@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, CircleAlert, CircleMinus, FileCheck2, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, CircleAlert, CircleMinus, FileCheck2, Loader2, ShieldCheck, XCircle } from '@/components/icons';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,7 @@ const GATE_ICON: Record<GateStatus, { icon: typeof CheckCircle2; tone: string; l
 };
 
 function Code({ children }: { children: string }) {
-  return <pre className="max-h-72 overflow-auto rounded-[16px] bg-raised p-3 font-mono text-xs leading-relaxed">{children}</pre>;
+  return <pre className="max-h-72 overflow-auto rounded-[4px] bg-raised p-3 font-mono text-xs leading-relaxed">{children}</pre>;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -191,7 +191,7 @@ export function ReviewQueue() {
                 ) : null}
                 {open.review ? (
                   <Section title="Earlier review">
-                    <p className="rounded-[16px] bg-raised p-3 text-sm">{open.review.notes} <span className="text-muted-foreground">— {open.review.by}, {open.review.at}</span></p>
+                    <p className="rounded-[4px] bg-raised p-3 text-sm">{open.review.notes} <span className="text-muted-foreground">— {open.review.by}, {open.review.at}</span></p>
                   </Section>
                 ) : null}
                 <Section title="Statement"><Markdown source={p.statement} /></Section>

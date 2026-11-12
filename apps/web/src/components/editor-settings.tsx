@@ -1,6 +1,6 @@
 'use client';
 
-import { Minus, Plus, Settings2 } from 'lucide-react';
+import { Minus, Plus, Settings2 } from '@/components/icons';
 import type { EditorPrefs } from '@/lib/editor-prefs';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

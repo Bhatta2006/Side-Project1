@@ -13,7 +13,7 @@ const count = (text: string) => (text.trim() ? text.trim().split(/\s+/).length :
 /** How a rubric grade reads to the learner: points per criterion, the grader's notes, feedback. */
 export function GradeCard({ grade }: { grade: Grade }) {
   return (
-    <div className="grid gap-2 rounded-[16px] bg-raised p-4 text-[15px]" aria-live="polite">
+    <div className="grid gap-2 rounded-[4px] bg-raised p-4 text-[15px]" aria-live="polite">
       <p className="font-semibold">Graded {Math.round(grade.score * 100)}% against the rubric</p>
       <ul className="grid gap-1.5">
         {grade.criteria.map(c => (
@@ -69,7 +69,7 @@ function PromptCard({ concept, prompt, onGraded }: { concept: string; prompt: Wr
       {result ? (
         <>
           <GradeCard grade={result.grade} />
-          <details className="rounded-[16px] border p-4 text-[15px]">
+          <details className="rounded-[4px] border p-4 text-[15px]">
             <summary className="cursor-pointer font-medium">A model answer</summary>
             <p className="mt-2 whitespace-pre-line">{result.model_answer}</p>
           </details>

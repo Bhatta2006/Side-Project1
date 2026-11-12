@@ -1,128 +1,109 @@
+"use client"
+
 import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
 
-// Paper cards: white sheets on the notebook, a hairline and a soft lift (flat in dark mode).
-const cardVariants = cva(
-  "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-card py-(--card-spacing) text-[15px] [--card-spacing:20px] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 lg:[--card-spacing:24px] data-[size=sm]:[--card-spacing:16px] data-[size=sm]:has-data-[slot=card-footer]:pb-0",
-  {
-    variants: {
-      tone: {
-        surface: "border bg-card text-card-foreground shadow-[0_1px_0_rgb(21_22_30/0.03),0_12px_30px_-20px_rgb(21_22_30/0.22)] dark:shadow-none",
-        hero: "bg-forest text-forest-foreground shadow-[0_18px_40px_-22px_rgb(35_64_232/0.7)] dark:shadow-none [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] [--card-line:color-mix(in_srgb,var(--forest-foreground),transparent_55%)] lg:[--card-spacing:32px] [--card-spacing:24px]",
-        violet: "bg-violet text-violet-foreground [--card-muted:color-mix(in_srgb,var(--violet-foreground),transparent_8%)] [--card-line:color-mix(in_srgb,var(--violet-foreground),transparent_55%)]",
-        lilac: "bg-secondary text-secondary-foreground [--card-muted:color-mix(in_srgb,var(--secondary-foreground),transparent_22%)] [--card-line:color-mix(in_srgb,var(--secondary-foreground),transparent_50%)]",
-        cream: "bg-cream text-cream-foreground [--card-muted:color-mix(in_srgb,var(--cream-foreground),transparent_22%)] [--card-line:color-mix(in_srgb,var(--cream-foreground),transparent_50%)]",
-        raised: "bg-raised text-foreground",
-        outlined: "border border-border-strong bg-transparent text-foreground",
-      },
-    },
-    defaultVariants: { tone: "surface" },
-  }
-)
+import { Paper, type PaperProps } from "@/components/ui/paper"
+import { useInk, useMergedRef } from "@/lib/ink/react"
+import { cardRuleRecipe, type CardRuleStyle } from "@/lib/ink/recipes/card-ink"
+import { cn } from "@/lib/utils"
 
-function Card({
-  className,
-  size = "default",
-  tone = "surface",
-  ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" } & VariantProps<typeof cardVariants>) {
+/** Socrat card tones from before Looseleaf, each mapped onto a paper stock. */
+type CardTone = "surface" | "hero" | "violet" | "lilac" | "cream" | "raised" | "outlined"
+const TONE_STOCK: Record<CardTone, NonNullable<PaperProps["stock"]>> = {
+  surface: "card",
+  hero: "sticky-yellow",
+  violet: "sticky-blue",
+  lilac: "sticky-blue",
+  cream: "sticky-yellow",
+  raised: "slip",
+  outlined: "paper",
+}
+
+type CardProps = Omit<PaperProps, "size"> & {
+  tone?: CardTone | null
+  /** "sm" tightens the padding; a pair is the sheet size Paper draws an edge at. */
+  size?: PaperProps["size"] | "default" | "sm"
+}
+
+function Card({ className, stock, rules = "none", tone, size, ...props }: CardProps) {
+  const compact = size === "sm"
+  const paperSize = Array.isArray(size) ? (size as PaperProps["size"]) : undefined
   return (
-    <div
+    <Paper
       data-slot="card"
-      data-size={size}
-      data-tone={tone}
-      // A labelled card is a region; ARIA does not allow names on generic elements.
-      role={props.role ?? (props['aria-label'] || props['aria-labelledby'] ? 'region' : undefined)}
-      className={cn(cardVariants({ tone }), className)}
+      data-tone={tone ?? "surface"}
+      data-size={compact ? "sm" : "default"}
+      stock={stock ?? TONE_STOCK[tone ?? "surface"]}
+      rules={rules}
+      size={paperSize}
+      className={cn("group/card flex flex-col text-card-foreground", compact ? "gap-4 py-4 [--card-spacing:16px] [&>[data-slot^=card-]]:px-4" : "gap-6 py-6 [--card-spacing:24px] lg:[--card-spacing:28px]", className)}
       {...props}
     />
   )
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+type RuleProps = {
+  rule?: CardRuleStyle
+}
+
+const hasClass = (className: string | undefined, name: string) => !!className && className.split(/\s+/).includes(name)
+
+function useDivider(edge: "top" | "bottom", drawn: boolean, rule: CardRuleStyle, ref: React.Ref<HTMLElement> | undefined) {
+  const { hostRef, hostProps, node } = useInk({ recipe: cardRuleRecipe, params: { edge, style: rule }, kind: "rule" })
+  const merged = useMergedRef<HTMLElement>(drawn ? hostRef : undefined, ref)
+  return { ref: merged, hostProps: drawn && node ? hostProps : {}, node: drawn ? node : null }
+}
+
+function CardHeader({ className, rule = "pencil", ref, children, ...props }: React.ComponentProps<"div"> & RuleProps) {
+  const d = useDivider("bottom", hasClass(className, "border-b"), rule, ref as React.Ref<HTMLElement> | undefined)
   return (
     <div
       data-slot="card-header"
+      ref={d.ref as React.Ref<HTMLDivElement>}
+      {...d.hostProps}
       className={cn(
-        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)",
+        "@container/card-header relative isolate grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:border-transparent [.border-b]:pb-6",
         className
       )}
       {...props}
-    />
+    >
+      {d.node}
+      {children}
+    </div>
   )
 }
 
-function CardTitle({
-  className,
-  as: Tag = "h3",
-  ...props
-}: React.ComponentProps<"h3"> & { as?: "h2" | "h3" | "div" }) {
-  return (
-    <Tag
-      data-slot="card-title"
-      className={cn(
-        "font-display text-lg leading-snug font-bold tracking-[-0.02em] group-data-[size=sm]/card:text-base",
-        className
-      )}
-      {...props}
-    />
-  )
+function CardTitle({ className, as: Tag = "div", ...props }: React.ComponentProps<"div"> & { as?: "h2" | "h3" | "div" }) {
+  return <Tag data-slot="card-title" className={cn("font-script text-[1.7rem] leading-none font-semibold", className)} {...props} />
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-description"
-      className={cn("text-sm text-muted-foreground group-data-[tone=hero]/card:text-(--card-muted) group-data-[tone=lilac]/card:text-(--card-muted) group-data-[tone=violet]/card:text-(--card-muted) group-data-[tone=cream]/card:text-(--card-muted)", className)}
-      {...props}
-    />
-  )
+  return <div data-slot="card-description" className={cn("text-sm text-muted-foreground", className)} {...props} />
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className
-      )}
-      {...props}
-    />
-  )
+  return <div data-slot="card-action" className={cn("col-start-2 row-span-2 row-start-1 self-start justify-self-end", className)} {...props} />
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("px-(--card-spacing)", className)}
-      {...props}
-    />
-  )
+  return <div data-slot="card-content" className={cn("px-6", className)} {...props} />
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
+function CardFooter({ className, rule = "pencil", ref, children, ...props }: React.ComponentProps<"div"> & RuleProps) {
+  const d = useDivider("top", hasClass(className, "border-t"), rule, ref as React.Ref<HTMLElement> | undefined)
   return (
     <div
       data-slot="card-footer"
-      className={cn(
-        "flex items-center border-t p-(--card-spacing)",
-        className
-      )}
+      ref={d.ref as React.Ref<HTMLDivElement>}
+      {...d.hostProps}
+      className={cn("relative isolate flex items-center px-6 [.border-t]:border-transparent [.border-t]:pt-6", className)}
       {...props}
-    />
+    >
+      {d.node}
+      {children}
+    </div>
   )
 }
 
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
-  cardVariants,
-}
+export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent }
+export type { CardProps, CardTone }

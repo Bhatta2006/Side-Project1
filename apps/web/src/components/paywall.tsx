@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
-import { Check, Lock, Minus, ShieldCheck } from 'lucide-react';
+import { Check, Lock, Minus, ShieldCheck } from '@/components/icons';
 import { explain, openPaywall } from '@/lib/api';
 import { money, subscribe } from '@/lib/billing';
 import { PLAN_NAME, PLUS_WAS_INR } from '@/lib/plans';
@@ -103,7 +103,7 @@ export function PaywallDialog({ reason, status, onClose }: { reason: string; sta
           <DialogDescription className="mt-1.5 text-[15px]">{copy.body}</DialogDescription>
         </div>
 
-        <section aria-label={`${PLAN_NAME[plan]} plan`} className="mx-6 rounded-[18px] border-[1.5px] border-proof-stroke bg-proof text-proof-foreground p-4">
+        <section aria-label={`${PLAN_NAME[plan]} plan`} className="mx-6 rounded-[4px] border-[1.5px] border-proof-stroke bg-proof text-proof-foreground p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-display text-lg font-bold">{PLAN_NAME[plan]}</p>
             <span className="rounded-full bg-proof-foreground px-2.5 py-0.5 text-[11px] font-bold text-proof">{plan === 'plus' ? 'Founding price · most popular' : 'Interview season'}</span>

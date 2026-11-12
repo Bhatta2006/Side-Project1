@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import type { CompanySprintOverview, CompanySprintView } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -56,7 +56,7 @@ export function CompanySprintSetup({ overview, onStarted }: { overview: CompanyS
                 type="button"
                 aria-pressed={company === c.slug}
                 onClick={() => setCompany(c.slug)}
-                className={cn('flex min-h-11 w-full items-center justify-between gap-2 rounded-[14px] px-3 py-2 text-left text-[15px] transition-colors hover:bg-raised', company === c.slug && 'bg-primary font-bold text-primary-foreground hover:bg-primary')}
+                className={cn('flex min-h-11 w-full items-center justify-between gap-2 rounded-[4px] px-3 py-2 text-left text-[15px] transition-colors hover:bg-raised', company === c.slug && 'bg-primary font-bold text-primary-foreground hover:bg-primary')}
               >
                 <span className="truncate">{c.name}</span>
                 <span className="text-[13px] tabular-nums">{c.questions}<span className="sr-only"> questions</span></span>

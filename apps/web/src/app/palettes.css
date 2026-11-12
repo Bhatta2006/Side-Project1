@@ -1,0 +1,85 @@
+/*
+ * Colour palettes, in preview. Nothing here applies until <html> carries data-palette (and, for the
+ * dark desk, data-mode="dark"); without them the app keeps its classic sage, yellow and orange.
+ * Each palette names seven colours; the rule after the list feeds them into the Looseleaf tokens.
+ *   desk: the table the notebook lies on    sheet: the hero sticky note    marker: primary buttons
+ *   hi: the highlighter    you: the blue pen (links, focus)    red: the red pen    night: the dark desk
+ */
+html[data-palette="classic"] { --pal-desk: #a8c8bb; --pal-desk-deep: #93b4a7; --pal-sheet: #f7e38a; --pal-marker: #df6b3c; --pal-hi: #f8dc4c; --pal-hi-deep: #a87f0c; --pal-you: #2c4f9e; --pal-red: #c2412d; --pal-night: #1c2622; }
+html[data-palette="tide"] { --pal-desk: #9ec3c9; --pal-desk-deep: #87afb6; --pal-sheet: #cfe7ec; --pal-marker: #6cc3b5; --pal-hi: #b6edd8; --pal-hi-deep: #2c7a66; --pal-you: #1f5f8b; --pal-red: #c4513a; --pal-night: #13232a; }
+html[data-palette="lilac"] { --pal-desk: #c5bcd8; --pal-desk-deep: #b2a8c9; --pal-sheet: #e6dcf6; --pal-marker: #b997ea; --pal-hi: #f8c6dc; --pal-hi-deep: #a33f73; --pal-you: #4b3a9a; --pal-red: #c0396b; --pal-night: #1e1a2a; }
+html[data-palette="meadow"] { --pal-desk: #b7c99e; --pal-desk-deep: #a3b78a; --pal-sheet: #e6efc7; --pal-marker: #8fcb7b; --pal-hi: #fde58a; --pal-hi-deep: #8a6d0c; --pal-you: #2f5d8a; --pal-red: #b5462f; --pal-night: #1a2417; }
+html[data-palette="riso"] { --pal-desk: #efc8c0; --pal-desk-deep: #e3b3aa; --pal-sheet: #cfe3ff; --pal-marker: #ff93a6; --pal-hi: #a3e6cb; --pal-hi-deep: #237a5b; --pal-you: #2b48c7; --pal-red: #d93a2b; --pal-night: #261b20; }
+html[data-palette="dusk"] { --pal-desk: #8fa3c4; --pal-desk-deep: #7c90b3; --pal-sheet: #dfe6f7; --pal-marker: #f2a59c; --pal-hi: #ffd98a; --pal-hi-deep: #9a6a0a; --pal-you: #2c4f9e; --pal-red: #c2412d; --pal-night: #151b29; }
+
+html[data-palette] {
+  --ll-desk: var(--pal-desk);
+  --ll-desk-deep: var(--pal-desk-deep);
+  --ll-sticky-yellow: var(--pal-sheet);
+  --ll-marker: var(--pal-marker);
+  --ll-hi: var(--pal-hi);
+  --ll-hi-deep: var(--pal-hi-deep);
+  --ll-ink-you: var(--pal-you);
+  --ll-focus: var(--pal-you);
+  --ll-link-hover: color-mix(in oklab, var(--pal-you), black 25%);
+  --ll-red: var(--pal-red);
+  --ll-rule-red: color-mix(in oklab, var(--pal-red) 70%, white);
+}
+
+/* The dark desk: charcoal paper, light ink, the palette's colours dimmed into the dark. */
+html[data-palette][data-mode="dark"] {
+  color-scheme: dark;
+  --ll-desk: var(--pal-night);
+  --ll-desk-deep: color-mix(in oklab, var(--pal-night), black 20%);
+  --ll-paper: #25272b;
+  --ll-paper-shade: #2e3135;
+  --ll-slip: #2a2c31;
+  --ll-card: #282a2e;
+  --ll-graph: #26292c;
+  --ll-check: #263029;
+  --ll-pad: #23252a;
+  --ll-photo: #2c2e33;
+  --ll-kraft: #4a3f30;
+  --ll-ink: #ece6d9;
+  --ll-ink-soft: #d9d2c3;
+  --ll-ink-muted: #c9c3b6;
+  --ll-pencil: #a3a6ad;
+  --ll-pencil-text: #b0b3b9;
+  --ll-pencil-mark: #62666e;
+  --ll-pad-rule: #3a3f4a;
+  --ll-rule-blue: #3b4a5e;
+  --ll-sticky-yellow: color-mix(in oklab, var(--pal-sheet) 20%, #25272b);
+  --ll-sticky-green: color-mix(in oklab, #cfe6a8 16%, #25272b);
+  --ll-sticky-orange: color-mix(in oklab, #f7c08e 16%, #25272b);
+  --ll-sticky-pink: color-mix(in oklab, #f6b8b0 16%, #25272b);
+  --ll-sticky-blue: color-mix(in oklab, #bcd8f0 16%, #25272b);
+  --ll-ink-you: color-mix(in oklab, var(--pal-you) 45%, white);
+  --ll-focus: color-mix(in oklab, var(--pal-you) 45%, white);
+  --ll-red: color-mix(in oklab, var(--pal-red) 70%, white);
+  --ll-green: #7cc48e;
+  /* The highlighter dims into the dark so light ink stays readable on it. */
+  --ll-hi: color-mix(in oklab, var(--pal-hi) 40%, #25272b);
+  --ll-hi-select: color-mix(in srgb, var(--pal-hi) 32%, transparent);
+  /* The paper keeps its grain: on charcoal stock it reads like a slate. */
+  --ll-tape: rgb(255 255 255 / 0.14);
+  --ll-tape-edge: rgb(255 255 255 / 0.18);
+  --ll-shade: 0 0 0;
+  --ll-shadow-k: 2;
+  --primary-foreground: #1b1a17;
+  --sidebar-primary-foreground: #1b1a17;
+}
+
+/* Soc, stickers and the logo are printed things: they keep their light-paper colours on any desk. */
+html[data-mode="dark"] :is([data-slot="soc"], [data-slot="sticker"]) {
+  --ll-ink: #2a2420;
+  --ll-ink-soft: #4a423b;
+  --ll-paper: #f8f5ee;
+  --ll-paper-shade: #ece6da;
+  --ll-slip: #fbf8f1;
+  --ll-photo: #fffdf6;
+  --ll-pencil: #6b6660;
+  --ll-pencil-mark: #8e887f;
+  --ll-red: #c2412d;
+}
+/* Buttons filled with the marker keep dark ink, so their labels stay readable. */
+html[data-mode="dark"] [data-ink-sink][data-variant="default"] { --ll-ink: #1b1a17; }

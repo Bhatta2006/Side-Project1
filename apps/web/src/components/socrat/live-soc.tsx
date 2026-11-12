@@ -75,7 +75,7 @@ export function LiveSoc({
         ref={ref}
         type="button"
         onClick={() => setPoke(p => ((p ?? -1) + 1) % POKES.length)}
-        className="group block w-full rounded-[32px] outline-offset-4"
+        className="group block w-full rounded-[4px] outline-offset-4"
         aria-label="Soc, the tutor. Click for a question."
       >
         <SocFigure
@@ -89,7 +89,7 @@ export function LiveSoc({
       </button>
       <div aria-live="polite" className={cn('pointer-events-none absolute top-[2%] w-max max-w-[min(15rem,70vw)]', bubbleSide === 'left' ? 'right-[78%]' : 'left-[78%]')}>
         {line ? (
-          <p key={line} className="soc-bubble font-hand animate-in fade-in zoom-in-90 rounded-[22px] border-2 border-[var(--soc-outline)] bg-card px-4 py-2.5 text-[22px] leading-tight text-foreground shadow-[3px_3px_0_var(--soc-outline)] duration-300" data-side={bubbleSide}>
+          <p key={line} className="soc-bubble font-hand animate-in fade-in zoom-in-90 rounded-[4px] border-2 border-[var(--soc-outline)] bg-card px-4 py-2.5 text-[22px] leading-tight text-foreground shadow-[3px_3px_0_var(--soc-outline)] duration-300" data-side={bubbleSide}>
             {line}
           </p>
         ) : null}

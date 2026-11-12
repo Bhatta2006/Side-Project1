@@ -2,10 +2,11 @@
 
 import { cn } from '@/lib/utils';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ApiError, api, explain, stream } from '@/lib/api';
 import type { ChatMessage, Proposal, ProposalsView } from '@/lib/types';
 import { ProposalList } from '@/components/socrat/proposals';
-import { ArrowLeft, BookOpen, Check, History, Lightbulb, SendHorizontal, SquarePen, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, History, Lightbulb, SendHorizontal, SquarePen, ThumbsDown, ThumbsUp, X } from '@/components/icons';
 import { prefersReducedMotion } from '@/lib/motion';
 import { Soc } from '@/components/socrat/illustration';
 import Markdown from './markdown';
@@ -67,6 +68,13 @@ export default function Assistant({ scope, title, language, context, onSent, ope
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // A reply just landed: Soc looks pleased for a moment, then settles.
+  const [cheer, setCheer] = useState(false);
+  useEffect(() => {
+    if (!cheer) return;
+    const t = window.setTimeout(() => setCheer(false), 2600);
+    return () => window.clearTimeout(t);
+  }, [cheer]);
   const [confirmReveal, setConfirmReveal] = useState(false);
   // Whether the server would show the full solution now, and what is left if not.
   const [reveal, setReveal] = useState<{ ok: boolean; needs: string } | null>(null);
@@ -193,6 +201,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
     if (intent === 'chat' && !message) return;
     setBusy(true);
     setError('');
+    setCheer(false);
     setConfirmReveal(false);
     const extra = context?.() ?? { code: '', newAttempt: false };
     const shown = message || (intent === 'hint' ? "I'd like a hint." : 'Please walk me through the full solution.');
@@ -228,6 +237,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
         }
       }
       if (!finished) throw new ApiError(0, 'request_failed');
+      setCheer(true);
       if (proposed) loadProposals();
       refreshReveal();
       onSent?.();
@@ -269,20 +279,23 @@ export default function Assistant({ scope, title, language, context, onSent, ope
   }
 
   const level = ladder.revealed ? 5 : ladder.ceiling ?? 0;
-  return (
+  // Into <body>: the page's main column is its own stacking layer, so inside it the panel would
+  // sit under the phone tab bar.
+  return createPortal(
     <section
       className={cn(
-        'fixed inset-x-0 bottom-0 z-[60] flex h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-t-card border bg-card pb-[env(safe-area-inset-bottom)] text-card-foreground shadow-floating animate-in fade-in slide-in-from-bottom-2 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:h-[min(680px,calc(100dvh-6rem))] sm:w-[420px] sm:rounded-card sm:pb-0',
+        // Sized to its content: small when the chat is new, growing with it up to a cap.
+        'fixed inset-x-0 bottom-0 z-[60] flex max-h-[85dvh] flex-col overflow-hidden rounded-t-card border bg-card pb-[env(safe-area-inset-bottom)] text-card-foreground shadow-floating animate-in fade-in slide-in-from-bottom-2 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:max-h-[min(560px,calc(100dvh-6rem))] sm:w-[360px] sm:rounded-card sm:pb-0',
       )}
       role="dialog"
       aria-label={title}
       onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
     >
-      <header className="flex items-center justify-between gap-3 border-b px-4 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <Soc size={44} mood={busy ? 'thinking' : 'neutral'} />
+      <header className="flex flex-none items-center justify-between gap-2 border-b px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Soc size={32} mood={busy ? 'thinking' : error ? 'confused' : cheer ? 'happy' : 'neutral'} />
           <div className="min-w-0">
-            <h2 className="font-display text-lg font-semibold tracking-[-0.02em]">{title}</h2>
+            <h2 className="truncate text-[16px] leading-tight font-semibold">{title}</h2>
             {problem ? (
               <div className="mt-1 flex items-center gap-2">
                 <div className="flex gap-0.5" aria-hidden="true">
@@ -290,18 +303,18 @@ export default function Assistant({ scope, title, language, context, onSent, ope
                 </div>
                 <p className="text-xs text-muted-foreground">{LEVEL_TEXT[level]}</p>
               </div>
-            ) : <p className="text-[13px] text-muted-foreground">Asks before it tells. Knows your plan.</p>}
+            ) : null}
           </div>
         </div>
         <div className="flex flex-none items-center">
           <Button variant="ghost" size="icon-sm" onClick={() => void newChat()} disabled={busy || (!messages.length && !archived)} aria-label="New chat" title="New chat"><SquarePen /></Button>
           <Button variant="ghost" size="icon-sm" onClick={() => (view === 'history' ? setView('chat') : showHistory())} aria-pressed={view === 'history'} aria-label="Chat history" title="Chat history"><History /></Button>
           <Button variant="ghost" size="icon-sm" onClick={() => (view === 'context' ? setView('chat') : showContext())} aria-pressed={view === 'context'} aria-label="What Soc knows" title="What Soc knows"><BookOpen /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close tutor"><X /></Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} aria-label="Close tutor"><X /></Button>
         </div>
       </header>
       {view === 'history' ? (
-        <div className="chat-page flex-1 overflow-y-auto px-4 py-4">
+        <div className="chat-page min-h-0 flex-1 overflow-y-auto px-4 py-3">
           <button type="button" onClick={() => setView('chat')} className="mb-3 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold"><ArrowLeft className="size-4" /> Back to chat</button>
           <h3 className="font-hand mb-2 text-[24px] leading-none text-pen">your chats</h3>
           {chats === null ? <Thinking label="Finding your chats" /> : !chats.length ? (
@@ -324,7 +337,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           <Button type="button" variant="outline" size="sm" className="mt-4" disabled={busy || (!messages.length && !archived)} onClick={() => void newChat()}><SquarePen data-icon="inline-start" /> Start a new chat</Button>
         </div>
       ) : view === 'context' ? (
-        <div className="chat-page flex-1 overflow-y-auto px-4 py-4">
+        <div className="chat-page min-h-0 flex-1 overflow-y-auto px-4 py-3">
           <button type="button" onClick={() => setView('chat')} className="mb-3 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold"><ArrowLeft className="size-4" /> Back to chat</button>
           <h3 className="font-hand text-[24px] leading-none text-pen">what soc knows</h3>
           <p className="mt-1 mb-3 text-[13px] text-muted-foreground">Soc reads this before every reply, plus the last {socContext?.history_turns ?? 12} messages of this chat{problem ? ' and the code in your editor' : ''}. Nothing else.</p>
@@ -344,7 +357,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           )}
         </div>
       ) : archived ? (
-        <div className="chat-page flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        <div className="chat-page min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-[14px_18px_12px_16px] border-2 border-dashed border-border-strong bg-card px-3 py-2 text-sm">
             <span>An earlier chat (read-only)</span>
             <span className="flex gap-1">
@@ -358,13 +371,10 @@ export default function Assistant({ scope, title, language, context, onSent, ope
         </div>
       ) : null}
       {/* The conversation is written on a ruled page with a red margin. */}
-      <div ref={scroller} hidden={view !== 'chat' || Boolean(archived)} className="chat-page flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
+      <div ref={scroller} hidden={view !== 'chat' || Boolean(archived)} className="chat-page min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3" aria-live="polite">
         {!messages.length ? (
-          <div className="text-[15px] text-muted-foreground">
-            <div className="mb-3 flex items-end gap-3">
-              <Soc size={84} mood="curious" />
-              <p className="font-hand pb-2 text-[22px] leading-tight text-pen">{problem ? 'show me what you tried.' : 'hi! ask me anything.'}</p>
-            </div>
+          <div className="text-[14px] leading-snug text-muted-foreground">
+            <p className="font-hand mb-1.5 text-[20px] leading-tight text-pen">{problem ? 'show me what you tried.' : 'hi! ask me anything.'}</p>
             {problem
               ? 'Tell me what you tried and where it breaks. Hints get more specific as you keep working. Run your code or explain your thinking to unlock the next level.'
               : scope === 'general'
@@ -373,9 +383,9 @@ export default function Assistant({ scope, title, language, context, onSent, ope
                   ? "Let's shape your roadmap together. I'll ask a few questions, then suggest changes you can accept or skip. Nothing changes without your yes."
                   : 'Ask about this lesson, an idea that feels fuzzy, or what to focus on next.'}
             {!problem ? (
-              <div className="mt-4 grid gap-2">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {STARTERS[scope === 'general' || scope === 'plan' ? scope : 'concept'].map(s => (
-                  <Button key={s} type="button" variant="outline" size="sm" className="h-auto min-h-11 justify-start rounded-[16px] py-2.5 text-left font-medium whitespace-normal" disabled={busy || !loaded} onClick={() => send('chat', s)}>
+                  <Button key={s} type="button" variant="outline" size="sm" className="h-auto min-h-9 rounded-full px-3 py-1.5 text-left text-[13px] font-medium whitespace-normal" disabled={busy || !loaded} onClick={() => send('chat', s)}>
                     {s}
                   </Button>
                 ))}
@@ -436,7 +446,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           </div>
         ) : null}
       </div>
-      {error ? <p role="alert" className="mx-4 mb-2 rounded-[16px] border border-attention px-3 py-2 text-sm">{error}</p> : null}
+      {error ? <p role="alert" className="mx-4 mb-2 rounded-[4px] border border-attention px-3 py-2 text-sm">{error}</p> : null}
       {problem ? (
         <div className="flex flex-wrap items-center gap-2 border-t px-4 pt-3">
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => send('hint')}><Lightbulb data-icon="inline-start" /> Give me a hint</Button>
@@ -453,21 +463,22 @@ export default function Assistant({ scope, title, language, context, onSent, ope
           ) : null}
         </div>
       ) : null}
-      <form className="flex items-end gap-2 border-t p-3" onSubmit={e => { e.preventDefault(); send('chat'); }}>
+      <form className="flex flex-none items-end gap-2 border-t p-2.5" onSubmit={e => { e.preventDefault(); send('chat'); }}>
         <label className="sr-only" htmlFor={`assistant-${scope}`}>Message</label>
         <Textarea
           id={`assistant-${scope}`}
           ref={input}
-          className="max-h-40 min-h-12 flex-1 resize-none py-2.5"
-          rows={2}
+          className="field-sizing-content max-h-32 min-h-10 flex-1 resize-none py-2"
+          rows={1}
           maxLength={4000}
           value={draft}
           placeholder={problem ? 'What did you try? Where does it break?' : 'Ask a question…'}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send('chat'); } }}
         />
-        <Button size="icon-lg" disabled={busy || !draft.trim()} aria-label="Send message"><SendHorizontal /></Button>
+        <Button size="icon" disabled={busy || !draft.trim()} aria-label="Send message"><SendHorizontal /></Button>
       </form>
-    </section>
+    </section>,
+    document.body,
   );
 }

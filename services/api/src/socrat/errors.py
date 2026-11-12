@@ -12,17 +12,17 @@ import logging
 import time
 import traceback
 from collections import defaultdict, deque
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, case, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from socrat.auth import require_csrf, require_session
 from socrat.config import Settings
-from socrat.models import ErrorReport, now
+from socrat.models import ErrorReport, User, now
 
 log = logging.getLogger("socrat.errors")
 router = APIRouter(prefix="/api/v1")
@@ -74,6 +74,8 @@ def store(
                 row.detail = detail or row.detail
                 if row.status == "resolved":
                     row.status = "open"  # it came back
+                    row.resolved_at = None
+                    row.resolved_by = None
     except SQLAlchemyError:
         log.warning(json.dumps({"event": "error_report_not_stored"}))
 
@@ -234,17 +236,42 @@ def problem_report(body: ProblemReport, request: Request):
     return {"received": True}
 
 
-def recent(db: Session, limit: int = 50) -> list[dict]:
-    rows = db.scalars(
-        select(ErrorReport)
-        .where(ErrorReport.status == "open")
-        .order_by(ErrorReport.last_at.desc())
-        .limit(limit)
+def _person(user: User | None) -> dict | None:
+    if user is None:
+        return None
+    return dict(
+        id=user.id, name=user.display_name or "Learner", email=user.email or user.admin_email
     )
+
+
+def category_of(row: ErrorReport) -> str | None:
+    return (row.detail or {}).get("category") if row.source == "learner" else None
+
+
+def learner_text(row: ErrorReport) -> str:
+    """The learner's own words, without the "[bug] " prefix the queue shows."""
+    category = category_of(row)
+    prefix = f"[{category}] " if category else ""
+    return row.message[len(prefix) :] if prefix and row.message.startswith(prefix) else row.message
+
+
+def recent(db: Session, limit: int = 50, status: str = "open") -> list[dict]:
+    """The admin queue: open items newest first, or resolved ones by when they were resolved."""
+    query = select(ErrorReport).where(ErrorReport.status == status)
+    if status == "resolved":
+        query = query.order_by(
+            ErrorReport.resolved_at.desc().nulls_last(), ErrorReport.last_at.desc()
+        )
+    else:
+        query = query.order_by(ErrorReport.last_at.desc())
+    rows = list(db.scalars(query.limit(limit)))
+    ids = {r.user_id for r in rows if r.user_id} | {r.resolved_by for r in rows if r.resolved_by}
+    people = {u.id: u for u in db.scalars(select(User).where(User.id.in_(ids)))} if ids else {}
     return [
         dict(
             id=r.id,
             source=r.source,
+            category=category_of(r),
             message=r.message,
             route=r.route,
             count=r.count,
@@ -252,7 +279,110 @@ def recent(db: Session, limit: int = 50) -> list[dict]:
             last_at=r.last_at,
             request_id=(r.detail or {}).get("request_id"),
             stack=(r.detail or {}).get("stack", "")[:1500],
-            reporter=r.user_id,
+            reporter=_person(people.get(r.user_id)) if r.user_id else None,
+            resolved_at=r.resolved_at,
+            resolved_by=_person(people.get(r.resolved_by)) if r.resolved_by else None,
+            thanks_seen_at=r.thanks_seen_at,
         )
         for r in rows
     ]
+
+
+def _count(value: Any) -> int:
+    """A SQL count or sum as an int (a sum over no rows is NULL)."""
+    return int(value or 0)
+
+
+def reporter_log(db: Session) -> dict:
+    """Learner reports per reporter: how many they sent and how many were solved."""
+    solved = func.sum(case((ErrorReport.status == "resolved", 1), else_=0))
+    rows = db.execute(
+        select(
+            ErrorReport.user_id,
+            func.count(ErrorReport.id),
+            solved,
+            func.max(ErrorReport.first_at),
+        )
+        .where(ErrorReport.source == "learner", ErrorReport.user_id.is_not(None))
+        .group_by(ErrorReport.user_id)
+        .order_by(func.count(ErrorReport.id).desc(), func.max(ErrorReport.first_at).desc())
+    ).all()
+    ids = [r[0] for r in rows]
+    people = {u.id: u for u in db.scalars(select(User).where(User.id.in_(ids)))} if ids else {}
+    reporters = [
+        dict(
+            reporter=_person(people.get(user_id)),
+            reported=_count(reported),
+            solved=_count(done),
+            open=_count(reported) - _count(done),
+            last_reported_at=last,
+        )
+        for user_id, reported, done, last in rows
+        if user_id in people
+    ]
+    return dict(
+        reporters=reporters,
+        totals=dict(
+            reporters=len(reporters),
+            reported=sum(r["reported"] for r in reporters),
+            solved=sum(r["solved"] for r in reporters),
+            open=sum(r["open"] for r in reporters),
+        ),
+    )
+
+
+@router.get("/problem-reports/thanks")
+def thanks(request: Request):
+    """The signed-in learner's resolved reports they have not yet been thanked for."""
+    if not request.app.state.settings.report_thanks_enabled:
+        return {"items": []}
+    with Session(request.app.state.engine) as db:
+        session = require_session(request, db)
+        rows = db.scalars(
+            select(ErrorReport)
+            .where(
+                ErrorReport.user_id == session.user_id,
+                ErrorReport.source == "learner",
+                ErrorReport.status == "resolved",
+                ErrorReport.thanks_seen_at.is_(None),
+            )
+            .order_by(ErrorReport.resolved_at.desc().nulls_last())
+            .limit(5)
+        )
+        return {
+            "items": [
+                dict(
+                    id=r.id,
+                    category=category_of(r),
+                    message=learner_text(r)[:200],
+                    resolved_at=r.resolved_at,
+                )
+                for r in rows
+            ]
+        }
+
+
+class ThanksSeen(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ids: list[str] = Field(min_length=1, max_length=20)
+
+
+@router.post("/problem-reports/thanks/seen")
+def thanks_seen(body: ThanksSeen, request: Request):
+    """The learner closed the thank-you note: only their own reports are marked."""
+    with Session(request.app.state.engine) as db, db.begin():
+        session = require_session(request, db)
+        require_csrf(request, session)
+        rows = db.scalars(
+            select(ErrorReport).where(
+                ErrorReport.id.in_(body.ids),
+                ErrorReport.user_id == session.user_id,
+                ErrorReport.status == "resolved",
+            )
+        )
+        stamp = now()
+        marked = 0
+        for row in rows:
+            row.thanks_seen_at = stamp
+            marked += 1
+        return {"marked": marked}

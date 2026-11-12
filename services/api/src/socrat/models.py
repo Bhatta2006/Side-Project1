@@ -539,6 +539,11 @@ class ErrorReport(Base):
     status: Mapped[str] = mapped_column(String(12), default="open")  # open | resolved
     first_at: Mapped[int] = mapped_column(Integer, default=now)
     last_at: Mapped[int] = mapped_column(Integer, default=now)
+    # When and by which admin it was last resolved; a recurring error that returns clears both.
+    resolved_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    resolved_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # A learner report's reporter dismissed the thank-you note for its resolution.
+    thanks_seen_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 # ---------------------------------------------------------------- adaptive quiz runtime

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { notFound } from 'next/navigation';
-import { Activity, Gauge, MessageSquare, ThumbsUp, Users } from 'lucide-react';
+import { Activity, Gauge, MessageSquare, ThumbsUp, Users } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { ErrorNote, Loading, Page, PageHeader, StatCard } from '@/components/common';
@@ -53,36 +53,116 @@ interface AICosts {
   prices: { input_per_mtok: number; output_per_mtok: number };
 }
 
-interface ErrorItem { id: string; source: 'server' | 'browser' | 'learner'; message: string; route: string; count: number; first_at: number; last_at: number; request_id?: string; stack: string; reporter: string | null }
+interface Person { id: string; name: string; email: string | null }
+
+interface ErrorItem {
+  id: string;
+  source: 'server' | 'browser' | 'learner';
+  category: string | null;
+  message: string;
+  route: string;
+  count: number;
+  first_at: number;
+  last_at: number;
+  request_id?: string;
+  stack: string;
+  reporter: Person | null;
+  resolved_at: number | null;
+  resolved_by: Person | null;
+  thanks_seen_at: number | null;
+}
+
+interface ReportLog {
+  reporters: { reporter: Person; reported: number; solved: number; open: number; last_reported_at: number }[];
+  totals: { reporters: number; reported: number; solved: number; open: number };
+}
 
 const SOURCE_LABEL = { server: 'Server', browser: 'Browser', learner: 'Learner report' } as const;
+const CATEGORY_LABEL: Record<string, string> = { bug: 'Bug', content: 'Content', idea: 'Idea', feedback: 'Feedback', other: 'Other' };
+const stamp = (t: number) => new Date(t * 1000).toLocaleString();
+const who = (p: Person) => (p.email ? `${p.name} · ${p.email}` : p.name);
 
-/** Open errors and learner reports, newest first; resolving hides one until it happens again. */
-function Errors({ items, onResolve }: { items: ErrorItem[] | null; onResolve: (id: string) => void }) {
-  if (!items) return null;
+/** Errors and learner reports: open ones to fix, resolved ones as a record of who fixed what. */
+function Errors({ open, resolved, onResolve, onShowResolved }: {
+  open: ErrorItem[] | null;
+  resolved: ErrorItem[] | null;
+  onResolve: (id: string) => void;
+  onShowResolved: () => void;
+}) {
+  const [tab, setTab] = useState<'open' | 'resolved'>('open');
+  if (!open) return null;
+  const items = tab === 'open' ? open : resolved;
   return (
     <Card className="mt-6 gap-0 overflow-hidden pb-0">
       <CardHeader className="pb-3">
-        <CardTitle>Errors and reports</CardTitle>
-        <CardDescription>Server exceptions, browser crashes and "Report a problem" messages, grouped. A resolved error reopens if it happens again.</CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>Errors and reports</CardTitle>
+            <CardDescription>Server exceptions, browser crashes and learner reports. A resolved error reopens if it happens again; a resolved learner report thanks its reporter.</CardDescription>
+          </div>
+          <div className="inline-flex gap-1" role="group" aria-label="Which reports">
+            <Button size="sm" variant={tab === 'open' ? 'default' : 'outline'} aria-pressed={tab === 'open'} onClick={() => setTab('open')}>Open ({open.length})</Button>
+            <Button size="sm" variant={tab === 'resolved' ? 'default' : 'outline'} aria-pressed={tab === 'resolved'} onClick={() => { setTab('resolved'); onShowResolved(); }}>Resolved</Button>
+          </div>
+        </div>
       </CardHeader>
-      {items.length ? (
+      {!items ? <CardContent className="pb-6 text-sm text-muted-foreground">Loading…</CardContent> : items.length ? (
         <ul className="grid divide-y border-t">
           {items.map(e => (
             <li key={e.id} className="grid gap-1.5 px-4 py-3 text-sm">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-semibold">{SOURCE_LABEL[e.source]}{e.count > 1 ? ` · ${e.count} times` : ''}</span>
-                <span className="text-xs text-muted-foreground">{e.route || 'no page'} · last {new Date(e.last_at * 1000).toLocaleString()}</span>
+                <span className="font-semibold">
+                  {SOURCE_LABEL[e.source]}{e.category ? ` · ${CATEGORY_LABEL[e.category] ?? e.category}` : ''}{e.count > 1 ? ` · ${e.count} times` : ''}
+                </span>
+                <span className="text-xs text-muted-foreground">{e.route || 'no page'} · {e.source === 'learner' ? `sent ${stamp(e.first_at)}` : `last ${stamp(e.last_at)}`}</span>
               </div>
+              {e.reporter ? <p className="text-[13px]"><span className="text-muted-foreground">Reported by </span><span className="font-semibold">{who(e.reporter)}</span></p> : null}
               <p className="break-words">{e.message}</p>
               {e.stack ? (
                 <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">Stack{e.request_id ? ` (request ${e.request_id})` : ''}</summary><pre className="io-block mt-2 max-h-60 overflow-auto whitespace-pre-wrap">{e.stack}</pre></details>
               ) : null}
-              <div><Button size="sm" variant="outline" onClick={() => onResolve(e.id)}>Mark resolved</Button></div>
+              {tab === 'open' ? (
+                <div><Button size="sm" variant="outline" onClick={() => onResolve(e.id)}>{e.reporter ? 'Mark resolved and thank them' : 'Mark resolved'}</Button></div>
+              ) : (
+                <p className="text-[13px] text-muted-foreground">
+                  Resolved{e.resolved_at ? ` ${stamp(e.resolved_at)}` : ''}{e.resolved_by ? ` by ${e.resolved_by.name}` : ''}
+                  {e.reporter ? (e.thanks_seen_at ? ` · they saw the thank-you ${stamp(e.thanks_seen_at)}` : ' · thank-you not seen yet') : ''}
+                </p>
+              )}
             </li>
           ))}
         </ul>
-      ) : <CardContent className="pb-6 text-sm text-muted-foreground">No open errors.</CardContent>}
+      ) : <CardContent className="pb-6 text-sm text-muted-foreground">{tab === 'open' ? 'No open errors.' : 'Nothing resolved yet.'}</CardContent>}
+    </Card>
+  );
+}
+
+/** Who reports problems, and how many of their reports were solved. */
+function ReportersLog({ log }: { log: ReportLog | null }) {
+  if (!log) return null;
+  const t = log.totals;
+  return (
+    <Card className="mt-6 gap-0 overflow-hidden pb-0">
+      <CardHeader className="pb-3">
+        <CardTitle>Reporters</CardTitle>
+        <CardDescription>{t.reported} learner reports from {t.reporters} {t.reporters === 1 ? 'person' : 'people'}: {t.solved} solved, {t.open} open.</CardDescription>
+      </CardHeader>
+      {log.reporters.length ? (
+        <Table>
+          <TableHeader><TableRow><TableHead className="pl-4">Learner</TableHead><TableHead className="text-right">Reported</TableHead><TableHead className="text-right">Solved</TableHead><TableHead className="text-right">Open</TableHead><TableHead className="pr-4 text-right">Last report</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {log.reporters.map(r => (
+              <TableRow key={r.reporter.id}>
+                <TableCell className="pl-4 whitespace-normal"><span className="font-semibold">{r.reporter.name}</span>{r.reporter.email ? <span className="block text-xs text-muted-foreground">{r.reporter.email}</span> : null}</TableCell>
+                <TableCell className="text-right tabular-nums">{r.reported}</TableCell>
+                <TableCell className="text-right tabular-nums">{r.solved}</TableCell>
+                <TableCell className="text-right tabular-nums">{r.open}</TableCell>
+                <TableCell className="pr-4 text-right text-xs text-muted-foreground">{new Date(r.last_reported_at * 1000).toLocaleDateString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : <CardContent className="pb-6 text-sm text-muted-foreground">No learner reports yet.</CardContent>}
     </Card>
   );
 }
@@ -183,8 +263,14 @@ export default function Admin() {
   const [error, setError] = useState('');
   const [costs, setCosts] = useState<AICosts | null>(null);
   const [errorItems, setErrorItems] = useState<ErrorItem[] | null>(null);
+  const [resolvedItems, setResolvedItems] = useState<ErrorItem[] | null>(null);
+  const [reportLog, setReportLog] = useState<ReportLog | null>(null);
+  const loadResolved = () => { api.get<{ items: ErrorItem[] }>('/admin/errors?status=resolved').then(r => setResolvedItems(r.items)).catch(() => undefined); };
+  const loadLog = () => { api.get<ReportLog>('/admin/reports/log').then(setReportLog).catch(() => undefined); };
   const resolve = (id: string) => {
-    api.post(`/admin/errors/${id}/resolve`, {}).then(() => setErrorItems(items => items?.filter(e => e.id !== id) ?? null)).catch(e => setError(explain(e)));
+    api.post(`/admin/errors/${id}/resolve`, {})
+      .then(() => { setErrorItems(items => items?.filter(e => e.id !== id) ?? null); setResolvedItems(null); loadLog(); })
+      .catch(e => setError(explain(e)));
   };
 
   useEffect(() => {
@@ -194,6 +280,7 @@ export default function Admin() {
       .catch(e => (e instanceof ApiError && e.status === 403 ? setForbidden(true) : setError(explain(e))));
     api.get<AICosts>('/admin/ai-costs').then(setCosts).catch(() => undefined);
     api.get<{ items: ErrorItem[] }>('/admin/errors').then(r => setErrorItems(r.items)).catch(() => undefined);
+    api.get<ReportLog>('/admin/reports/log').then(setReportLog).catch(() => undefined);
   }, [allowed, profile?.admin]);
 
   // Not on the allow-list: the page does not exist, as far as they can tell.
@@ -285,7 +372,8 @@ export default function Admin() {
         </Card>
       </div>
 
-      <Errors items={errorItems} onResolve={resolve} />
+      <Errors open={errorItems} resolved={resolvedItems} onResolve={resolve} onShowResolved={loadResolved} />
+      <ReportersLog log={reportLog} />
       <Costs costs={costs} />
 
       <Card className="mt-6 gap-0 overflow-hidden pb-0">

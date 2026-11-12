@@ -1,11 +1,11 @@
-import { BadgeCheck, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, ShieldCheck } from '@/components/icons';
 import type { PassportView } from '@/lib/types';
 import { LANGUAGE_LABEL } from '@/lib/routes';
 import { Wordmark } from '@/components/socrat/wordmark';
 
 function Stat({ value, label, hint }: { value: number; label: string; hint?: string }) {
   return (
-    <div className="rounded-[20px] border bg-card p-4">
+    <div className="rounded-[4px] border bg-card p-4">
       <p className="font-display text-4xl leading-none font-semibold tracking-[-0.04em] tabular-nums">{value}</p>
       <p className="mt-2 text-sm font-semibold">{label}</p>
       {hint ? <p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p> : null}
