@@ -79,7 +79,8 @@ def test_artifact_validation_and_compiler_boundaries():
     dark, _ = artifact.compile_document(HTML, "frame-id", "http://localhost:3000", "dark")
     assert "color-scheme:dark" in dark and "--primary: #4A63FF" in dark
     light, _ = artifact.compile_document(HTML, "frame-id", "http://localhost:3000")
-    assert "--primary: #2340E8" in light
+    # Light uses the Looseleaf marker as its primary; the explainer gets the variable and its value.
+    assert "--primary: var(--ll-marker)" in light and "--ll-marker: #df6b3c" in light
     # Proof (highlighter yellow) is a host concept and never reaches generated documents.
     assert "--proof" not in dark and "--proof" not in light and "#F7E33E" not in dark + light
     for bad in [

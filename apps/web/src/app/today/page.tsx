@@ -160,6 +160,8 @@ export default function TodayPage() {
   const learned = today.progress.finished;
   const mastered = today.progress.mastered ?? 0;
   const complete = today.progress.complete === true;
+  // Soc's mood on the next-step card: sleepy after days away, a wink on a new day, proud once the goal is reached.
+  const heroMood = today.days_away >= 3 ? 'sleepy' : today.minutes.reached ? 'proud' : today.done.length === 0 ? 'wink' : 'happy';
   const assessmentOpen = assessment && (assessment.state === 'available' || assessment.state === 'in_progress');
   const queue = next ? [...today.queue].sort((x, y) => Number(y.id === next.id) - Number(x.id === next.id)) : today.queue;
   const session = [...today.done.map(a => ({ a, done: true })), ...queue.map(a => ({ a, done: false }))];
@@ -224,10 +226,10 @@ export default function TodayPage() {
                   <span className="font-script text-[22px] whitespace-nowrap text-red -rotate-6 xl:text-[24px]">you&apos;ve got this</span>
                   <Doodle name="arrow-bounce" size={44} rotate={70} seed="today-arrow" className="-mb-6 -scale-x-100" />
                 </div>
-                <SocFigure books mood="happy" idle className="h-auto w-full" />
+                <SocFigure books mood={heroMood} idle className="h-auto w-full" />
               </div>
               <div aria-hidden="true" className="pointer-events-none absolute right-5 bottom-2 sm:hidden">
-                <SocFigure size={84} mood="curious" />
+                <SocFigure size={84} mood={heroMood === 'happy' ? 'curious' : heroMood} />
               </div>
               <Sticker name="highlighter" size={56} rotate={-14} seed="today-hl" className="absolute -top-6 right-8 hidden sm:block xl:right-14" />
               <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[60%] xl:max-w-[54%]">

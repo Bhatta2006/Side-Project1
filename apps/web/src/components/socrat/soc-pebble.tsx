@@ -153,7 +153,9 @@ function page(s: ShapeSpec): Part[] {
   const top = Math.min(66, s.cy + s.ry * 1.14 + 1);
   const d = `M6 ${top + 0.6} L58 ${top - 0.4} L59 71 L5 71 Z`;
   return [
-    ['f', 'paper', d], ['s', d, 0.8],
+    // 'slip', not 'paper': the engine merges same-colour fills into the layer where the colour first
+    // appears, so a 'paper' page drawn first would pull Soc's white eyes and hands under the stone.
+    ['f', 'slip', d], ['s', d, 0.8],
     ['c', 'rule-blue', `M8 ${r1(top + 4)} L56 ${r1(top + 3.4)} M7.6 ${r1(top + 7.2)} L56.6 ${r1(top + 6.6)}`, 0.35],
     ['c', 'rule-red', `M12 ${r1(top + 0.6)} L11.8 71`, 0.35],
   ];
@@ -393,23 +395,76 @@ const MOOD_HANDS: Partial<Record<SocMood, HandPose>> = {
   confused: 'shrug',
 };
 
-export function socStoneArt(mood: SocMood = 'neutral', o: { gaze?: Gaze; page?: boolean; crop?: boolean; hands?: HandPose } = {}): ArtDef {
+/** Moods whose eyes are open, so a blink frame means something (happy, proud, sleepy already squint). */
+const BLINKS: ReadonlySet<SocMood> = new Set<SocMood>(['neutral', 'curious', 'thinking', 'surprised', 'confused', 'worried', 'angry', 'wink']);
+
+/**
+ * The face with its open eyes shut: the same brows and marks, eyes as short closed curves.
+ * Wink keeps its already-closed eye and shuts the open one.
+ */
+function closedFace(s: ShapeSpec, mood: SocMood, gaze: Gaze): Part[] {
+  const open = stoneFace(s, mood, gaze).filter(p => !(p[0] === 'f' && p[1] === 'paper'));
+  const think = mood === 'thinking' ? [-1.4, -1.6] : [0, 0];
+  const x = s.eyes[0] + gaze.x * 1.8 + think[0], y = s.eyes[1] + gaze.y * 1.4 + think[1];
+  const shut = (cx: number) => `M${r1(cx - 2.6)} ${r1(y + 0.2)} Q${r1(cx)} ${r1(y + 1.6)} ${r1(cx + 2.6)} ${r1(y + 0.2)}`;
+  const eyes = mood === 'wink' ? shut(x - 3.3) : `${shut(x - 3.3)} ${shut(x + 3.3)}`;
+  return [...open, ['c', 'paper', eyes, 0.7]];
+}
+
+/** The second drawing of a gesture: where the hands and the mood's props move to on the beat. */
+function beatHands(pose: HandPose, parts: Part[]): Part[] {
+  switch (pose) {
+    case 'wave': return xf(parts, { cx: 12, cy: 46, rot: -18 });
+    case 'thumbs': return xf(parts, { cx: 54, cy: 46, rot: -10, dy: -1.6 });
+    case 'chin': return xf(parts, { cx: 41, cy: 58, rot: 7 });
+    case 'shrug': return xf(parts, { dy: -2.2 });
+    case 'steeple': return xf(parts, { cx: 32, cy: 58, k: 1.04, dy: -0.6 });
+    default: return parts;
+  }
+}
+
+function beatExtra(mood: SocMood, parts: Part[]): Part[] {
+  if (!parts.length) return parts;
+  switch (mood) {
+    case 'happy':
+    case 'proud': return xf(parts, { cx: 52, cy: 14, k: 1.22, rot: 12 });
+    case 'sleepy':
+    case 'thinking': return xf(parts, { dy: -2.4, dx: 0.8 });
+    case 'worried': return xf(parts, { dy: 2.6 });
+    case 'curious':
+    case 'confused': return xf(parts, { cx: 52, cy: 12, rot: 14 });
+    default: return xf(parts, { cx: 55, cy: 12, k: 1.18 });
+  }
+}
+
+/** Which drawing of Soc: the resting one, the blink, or the gesture's second beat. */
+type Frame = 'base' | 'blink' | 'beat';
+
+export function socStoneArt(
+  mood: SocMood = 'neutral',
+  o: { gaze?: Gaze; page?: boolean; crop?: boolean; hands?: HandPose; frame?: Frame } = {},
+): ArtDef {
   const s = SHAPES.round;
   const gaze = o.gaze ?? { x: 0, y: 0 };
+  const frame = o.frame ?? 'base';
   const stone: Part[] = [
     ['f', 'ink', s.d],
     ['f', 'pencil-mark', crescent(s, 200, 250, 0.8, 0.09, 0.6, 0.6)],
     flecks(scatter(s, 40, 'round-fleck', 0.2, 0.5), 'pencil-mark'),
     flecks(scatter(s, 14, 'round-mica', 0.18, 0.34), 'paper'),
-    ...stoneFace(s, mood, gaze),
   ];
+  // The face is drawn last, so a blink frame is the same drawing up to the eyes and lines up exactly.
+  const face = xf(frame === 'blink' ? closedFace(s, mood, gaze) : stoneFace(s, mood, gaze), { cx: s.cx, cy: s.cy, k: 1.14 });
   const grown = xf(stone, { cx: s.cx, cy: s.cy, k: 1.14 });
   const pose = o.hands ?? 'none';
   if (o.crop) {
     // The stone alone, centred in a square: what an avatar needs.
-    return { grid: [48, 48], nibK: 0.05, shade: false, parts: xf([...grown, ...(pose === 'steeple' || pose === 'chin' ? hands(pose) : [])], { dx: -8, dy: -16, k: 1 }), tilt: s.tilt, tags: ['soc'] };
+    const own = pose === 'steeple' || pose === 'chin' ? hands(pose) : [];
+    return { grid: [48, 48], nibK: 0.05, shade: false, parts: xf([...grown, ...own, ...face], { dx: -8, dy: -16, k: 1 }), tilt: s.tilt, tags: ['soc'] };
   }
-  const parts: Part[] = [...(o.page ? page(s) : []), ...grown, ...hands(pose), ...stoneExtra(mood)];
+  const handParts = frame === 'beat' ? beatHands(pose, hands(pose)) : hands(pose);
+  const extraParts = frame === 'beat' ? beatExtra(mood, stoneExtra(mood)) : stoneExtra(mood);
+  const parts: Part[] = [...(o.page ? page(s) : []), ...grown, ...handParts, ...extraParts, ...face];
   return { grid: [64, 72], nibK: 0.05, shade: false, parts, tilt: s.tilt, tags: ['soc'] };
 }
 
@@ -444,24 +499,49 @@ export function SocStone({
   const q = (v: number | undefined) => Math.round(Math.max(-1, Math.min(1, v ?? 0)) * 2) / 2;
   const gaze = { x: q(look?.x), y: q(look?.y) };
   const pose = handsProp === false ? 'none' : (handsProp ?? (size === undefined || size >= 56 ? MOOD_HANDS[mood] : undefined) ?? 'none');
-  const art = socStoneArt(mood, { gaze, page: books, crop, hands: pose });
-  const [gw, gh] = art.grid as readonly [number, number];
   const width = size ?? 220;
-  const px = Math.max(16, Math.round((width * gh) / gw));
-  const res = memo(`soc-stone|${hash(JSON.stringify(art.parts))}|${px}|${uid}`, () => drawMascot(art, px, 'soc', { idPrefix: `ss-${uid}` }), 300);
-  return (
+  // Tiny avatars stay still; from 32px he blinks, and with room for hands or props he gestures.
+  const blinks = width >= 32 && BLINKS.has(mood);
+  const gestures = !crop && (pose !== 'none' || stoneExtra(mood).length > 0);
+  const draw = (frame: Frame) => {
+    const art = socStoneArt(mood, { gaze, page: books, crop, hands: pose, frame });
+    const [gw, gh] = art.grid as readonly [number, number];
+    const px = Math.max(16, Math.round((width * gh) / gw));
+    // Every frame shares one seed, so the lines they have in common are drawn identically.
+    return memo(`soc-stone|${hash(JSON.stringify(art.parts))}|${px}|${uid}`, () => drawMascot(art, px, 'soc', { idPrefix: `ss-${uid}` }), 300);
+  };
+  // 0 to 1, steady for this Soc: offsets its blink and gesture so a page of Socs is not in step.
+  const shift = ([...uid].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7) % 100) / 100;
+  const base = draw('base');
+  const blink = blinks ? draw('blink') : null;
+  const beat = gestures ? draw('beat') : null;
+  const frame = (res: { w: number; h: number; svg: string }, kind: Frame) => (
     <svg
-      data-slot="soc"
-      data-mood={mood}
+      data-frame={kind}
       viewBox={`0 0 ${res.w} ${res.h}`}
-      width={size}
-      className={cn('block shrink-0 select-none overflow-visible ll-drop-sticker', idle && 'soc-idle', className)}
-      style={style}
-      role={title ? 'img' : undefined}
-      aria-label={title}
-      aria-hidden={title ? undefined : true}
+      className={kind === 'base' ? 'soc-frame block h-auto w-full overflow-visible' : 'soc-frame pointer-events-none absolute inset-0 h-full w-full overflow-visible'}
+      aria-hidden="true"
       focusable="false"
       dangerouslySetInnerHTML={{ __html: res.svg }}
     />
+  );
+  return (
+    <span
+      // A new mood remounts the figure, so its reaction plays once.
+      key={mood}
+      data-slot="soc"
+      data-mood={mood}
+      data-pose={pose}
+      data-gestures={gestures ? '' : undefined}
+      className={cn('soc relative block shrink-0 select-none ll-drop-sticker', idle && 'soc-idle', className)}
+      style={{ width: size, '--soc-shift': shift, ...style } as React.CSSProperties}
+      role={title ? 'img' : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+    >
+      {frame(base, 'base')}
+      {beat ? frame(beat, 'beat') : null}
+      {blink ? frame(blink, 'blink') : null}
+    </span>
   );
 }
