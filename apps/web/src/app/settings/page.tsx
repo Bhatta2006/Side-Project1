@@ -67,8 +67,8 @@ function useActiveSection() {
 
 function SectionNav({ active, onPick }: { active: string; onPick: (id: string) => void }) {
   return (
-    <nav aria-label="Settings sections" className="sticky top-16 z-10 -mx-4 border-b bg-background/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:top-24 lg:mx-0 lg:self-start lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
-      <ul className="no-scrollbar flex gap-1 overflow-x-auto lg:grid lg:overflow-visible">
+    <nav aria-label="Settings sections" className="sticky top-16 z-10 min-w-0 -mx-4 border-b bg-background/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:top-24 lg:mx-0 lg:self-start lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+      <ul className="no-scrollbar scroll-edge-fade flex gap-1 overflow-x-auto lg:grid lg:overflow-visible lg:[mask-image:none]">
         {NAV.map(n => (
           <li key={n.id} className="flex-none">
             <a
@@ -270,7 +270,7 @@ export default function Settings() {
   return (
     <Page>
       <PageHeader eyebrow="make it yours" title={NAME.settings} description="Changes to your schedule update your plan straight away." actions={<Soc size={88} mood="wink" className="hidden sm:block" />} />
-      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
         <SectionNav active={section} onPick={setSection} />
         <div className="grid min-w-0 gap-10">
         <div id="appearance" className="scroll-mt-32"><Appearance /></div>

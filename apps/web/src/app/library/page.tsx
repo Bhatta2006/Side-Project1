@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from '@/components/icons';
-import { api, explain } from '@/lib/api';
+import { api, explain, PAGE_MS } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, conceptHref } from '@/lib/routes';
 import type { Contest, Level as PracticeLevel, LibraryProblem, Recommendations } from '@/lib/types';
@@ -129,8 +129,8 @@ export default function Library() {
   }, []);
   useEffect(() => {
     if (!allowed) return;
-    api.get<Meta>('/library/meta').then(setMeta).catch(e => setError(explain(e)));
-    api.get<Recommendations>('/library/recommendations?limit=6').then(r => {
+    api.cached<Meta>('/library/meta', PAGE_MS).then(setMeta).catch(e => setError(explain(e)));
+    api.cached<Recommendations>('/library/recommendations?limit=6', PAGE_MS).then(r => {
       setRecs(r);
       // Rated rounds only once the learner is ready for them (or has linked Codeforces).
       if (r.codeforces || r.level.rating >= 1100) {

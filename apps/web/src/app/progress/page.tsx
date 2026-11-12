@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown } from '@/components/icons';
-import { api, explain } from '@/lib/api';
+import { api, explain, PAGE_MS } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, PACE_LABEL, conceptHref, formatDate, hours } from '@/lib/routes';
 import type { AssessmentStatus, ProgressView } from '@/lib/types';
@@ -45,8 +45,8 @@ export default function ProgressPage() {
 
   const load = useCallback(() => {
     setError('');
-    api.get<ProgressView>('/progress').then(setData).catch(e => setError(explain(e)));
-    api.get<{ current: AssessmentStatus }>('/assessments').then(r => setAssessment(r.current)).catch(() => undefined);
+    api.cached<ProgressView>('/progress', PAGE_MS).then(setData).catch(e => setError(explain(e)));
+    api.cached<{ current: AssessmentStatus }>('/assessments', PAGE_MS).then(r => setAssessment(r.current)).catch(() => undefined);
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
   // The open section lives in the URL hash, so a link or a refresh lands where the learner was.

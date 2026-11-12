@@ -18,7 +18,7 @@ export function LaunchGift() {
   useEffect(() => {
     const done = holdTour();
     release.current = done;
-    api.get<BillingStatus>('/billing/status')
+    api.cached<BillingStatus>('/billing/status')
       .then(s => {
         if (!s.promo || s.promo.seen) return done();
         setEndsAt(s.promo.ends_at);

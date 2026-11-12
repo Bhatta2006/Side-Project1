@@ -29,7 +29,7 @@ function Tabs({ className, orientation = "horizontal", ...props }: React.Compone
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit max-w-full items-end justify-start overflow-x-auto overflow-y-hidden [scrollbar-width:none] text-muted-foreground aria-[orientation=horizontal]:h-11 aria-[orientation=horizontal]:pt-1 aria-[orientation=vertical]:h-fit aria-[orientation=vertical]:flex-col aria-[orientation=vertical]:items-stretch",
+  "group/tabs-list scroll-edge-fade inline-flex w-fit max-w-full items-end justify-start overflow-x-auto overflow-y-hidden [scrollbar-width:none] text-muted-foreground aria-[orientation=horizontal]:h-11 aria-[orientation=horizontal]:pt-1 aria-[orientation=vertical]:h-fit aria-[orientation=vertical]:flex-col aria-[orientation=vertical]:items-stretch",
   {
     variants: {
       variant: {
