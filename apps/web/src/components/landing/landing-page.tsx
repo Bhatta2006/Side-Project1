@@ -9,6 +9,7 @@ import { destination, useSession } from '@/lib/session';
 import type { Course } from '@/lib/types';
 import { Illustration, Soc, type IllustrationName } from '@/components/socrat/illustration';
 import { LiveSoc } from '@/components/socrat/live-soc';
+import { SocSprite, SocSpriteEager } from '@/components/socrat/soc-sprite';
 import type { SocMood } from '@/components/socrat/soc';
 import { StatusIcon } from '@/components/socrat/status';
 import { Wordmark } from '@/components/socrat/wordmark';
@@ -106,6 +107,8 @@ export function LandingPage() {
 
   return (
     <div className="landing ll-desk min-h-dvh text-foreground">
+      {/* Dozens of small Socs wearing a few faces: each face is drawn once, and only the hero's is in the HTML. */}
+      <SocSprite>
       <header
         className="landing-nav fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4"
         onKeyDown={event => { if (event.key === 'Escape' && menu) { setMenu(false); event.currentTarget.querySelector<HTMLButtonElement>('[data-menu-button]')?.focus(); } }}
@@ -172,7 +175,7 @@ export function LandingPage() {
               </Reveal>
             </div>
             <div className="relative mx-auto w-full max-w-[300px] sm:max-w-[360px] lg:mr-0 lg:max-w-[420px]">
-              <LiveSoc mood={chosen?.mood ?? 'worried'} say={chosen?.say ?? null} />
+              <SocSpriteEager><LiveSoc mood={chosen?.mood ?? 'worried'} say={chosen?.say ?? null} /></SocSpriteEager>
             </div>
           </div>
           <Illustration name="bulb" className="drift pointer-events-none absolute top-28 right-[38%] hidden size-16 opacity-70 lg:block" />
@@ -338,6 +341,7 @@ export function LandingPage() {
       </footer>
 
       <FollowSoc heroId="hero" />
+      </SocSprite>
     </div>
   );
 }

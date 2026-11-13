@@ -12,6 +12,7 @@ import { memo } from '@/lib/ink/art-draw';
 import { spline, xf, type P } from '@/lib/ink/art/mascots/body';
 import type { ArtColour, ArtDef, Part } from '@/lib/ink/art/types';
 import type { SocMood } from './soc';
+import { useSocSprite } from './soc-sprite';
 
 export type PebbleShape = 'river' | 'round' | 'skimmer' | 'tall' | 'chipped' | 'lumpy';
 export type PebbleFinish = 'plain' | 'basalt' | 'granite' | 'quartz' | 'drawn' | 'brows';
@@ -504,12 +505,21 @@ export function SocStone({
   // Tiny avatars stay still; from 32px he blinks, and with room for hands or props he gestures.
   const blinks = width >= 32 && BLINKS.has(mood);
   const gestures = !crop && (pose !== 'none' || stoneExtra(mood).length > 0);
-  const draw = (frame: Frame) => {
+  // At rest (eyes centred), a Soc on a page with a sprite points at one shared copy of its drawing.
+  // Once his eyes follow the pointer he changes drawing as he looks around, so he draws his own.
+  const sprite = useSocSprite();
+  const shared = gaze.x === 0 && gaze.y === 0 ? sprite : null;
+  const draw = (frame: Frame): { w: number; h: number; svg: string; use?: string } => {
     const art = socStoneArt(mood, { gaze, page: books, crop, hands: pose, frame });
     const [gw, gh] = art.grid as readonly [number, number];
     const px = Math.max(16, Math.round((width * gh) / gw));
+    const key = hash(JSON.stringify(art.parts));
     // Every frame shares one seed, so the lines they have in common are drawn identically.
-    return memo(`soc-stone|${hash(JSON.stringify(art.parts))}|${px}|${uid}`, () => drawMascot(art, px, 'soc', { idPrefix: `ss-${uid}` }), 300);
+    if (shared) {
+      const id = `soc-${key}-${px}`;
+      return { ...shared(id, () => drawMascot(art, px, 'soc', { idPrefix: id })), use: id };
+    }
+    return memo(`soc-stone|${key}|${px}|${uid}`, () => drawMascot(art, px, 'soc', { idPrefix: `ss-${uid}` }), 300);
   };
   // 0 to 1, steady for this Soc: offsets its blink and gesture so a page of Socs is not in step.
   const shift = ([...uid].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7) % 100) / 100;
@@ -520,14 +530,14 @@ export function SocStone({
   const base = draw('base');
   const blink = blinks ? draw('blink') : null;
   const beat = gestures ? draw('beat') : null;
-  const frame = (res: { w: number; h: number; svg: string }, kind: Frame) => (
+  const frame = (res: { w: number; h: number; svg: string; use?: string }, kind: Frame) => (
     <svg
       data-frame={kind}
       viewBox={`0 0 ${res.w} ${res.h}`}
       className={kind === 'base' ? 'soc-frame block h-auto w-full overflow-visible' : 'soc-frame pointer-events-none absolute inset-0 h-full w-full overflow-visible'}
       aria-hidden="true"
       focusable="false"
-      dangerouslySetInnerHTML={{ __html: res.svg }}
+      {...(res.use ? { children: <use href={`#${res.use}`} /> } : { dangerouslySetInnerHTML: { __html: res.svg } })}
     />
   );
   return (
