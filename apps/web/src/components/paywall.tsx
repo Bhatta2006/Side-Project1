@@ -44,7 +44,7 @@ function Mark({ value }: { value: boolean | string }) {
 export function PlanCompare({ highlight = 'plus', className }: { highlight?: PlanId; className?: string }) {
   const cols: PlanId[] = ['free', 'plus', 'pro'];
   return (
-    <table className={cn('w-full border-separate border-spacing-0 text-left text-[13px]', className)}>
+    <table className={cn('w-full border-separate border-spacing-0 text-left text-[13px] [&_td]:[overflow-wrap:break-word] [&_th]:[overflow-wrap:break-word]', className)}>
       <thead>
         <tr>
           <th scope="col" className="py-2 pr-2 font-medium text-muted-foreground"><span className="sr-only">Feature</span></th>

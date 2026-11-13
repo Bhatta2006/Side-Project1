@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { api, explain } from '@/lib/api';
+import { api, explain, PAGE_MS } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME } from '@/lib/routes';
 import type { PlanView } from '@/lib/types';
@@ -20,7 +20,7 @@ export default function GraphPage() {
   const [error, setError] = useState('');
   const load = useCallback(() => {
     setError('');
-    api.get<PlanView>('/plan').then(setPlan).catch(e => setError(explain(e)));
+    api.cached<PlanView>('/plan', PAGE_MS).then(setPlan).catch(e => setError(explain(e)));
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
 

@@ -25,7 +25,7 @@ export function PaywallHost() {
 
   useEffect(() => {
     if (!profile) return setStatus(null);
-    api.get<BillingStatus>('/billing/status').then(s => {
+    api.cached<BillingStatus>('/billing/status').then(s => {
       setStatus(s);
       // Right after sign-in, once per account: the plans, before the learner settles into Free.
       let seen = true;

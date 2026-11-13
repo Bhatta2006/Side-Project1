@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, MessageCircle } from '@/components/icons';
-import { api, explain } from '@/lib/api';
+import { api, explain, PAGE_MS } from '@/lib/api';
 import { useGuard } from '@/lib/session';
 import { NAME, PACE_LABEL, STYLE_LABEL, activityHref, conceptHref, formatDate, hours } from '@/lib/routes';
 import type { PlanView, ProjectView, RoadmapItem } from '@/lib/types';
@@ -96,8 +96,8 @@ export default function PlanPage() {
 
   const load = useCallback(() => {
     setError('');
-    api.get<PlanView>('/plan').then(setPlan).catch(e => setError(explain(e)));
-    api.get<{ projects: ProjectView[] }>('/projects').then(r => setProjects(r.projects)).catch(() => undefined);
+    api.cached<PlanView>('/plan', PAGE_MS).then(setPlan).catch(e => setError(explain(e)));
+    api.cached<{ projects: ProjectView[] }>('/projects', PAGE_MS).then(r => setProjects(r.projects)).catch(() => undefined);
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
 

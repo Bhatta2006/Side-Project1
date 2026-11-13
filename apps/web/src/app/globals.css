@@ -87,7 +87,7 @@
   --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-shake: shake 0.32s var(--ease-soft);
   --animate-pop: ll-pop var(--ll-dur-pop) var(--ll-ease-pop) both;
-  --animate-reveal: reveal 0.5s var(--ease-soft) var(--reveal-delay, 0ms) both;
+  --animate-reveal: reveal 0.5s var(--ease-soft) var(--reveal-delay, 0ms) backwards;
   --animate-pulse-slow: pulse-slow 2s ease-in-out infinite;
   --font-script: "Kevin Sans Script", "Kevin Sans", "Bradley Hand", cursive;
   --font-type: "Kevin Sans Type", "Kevin Sans", "Bradley Hand", cursive;
@@ -1158,7 +1158,7 @@ html.dark {
   from { outline-color: transparent; }
   to { outline-color: var(--primary); }
 }
-.animate-unlock { outline: 2px solid var(--primary); outline-offset: 2px; animation: unlock-ring 320ms var(--ease-soft) 200ms both; }
+.animate-unlock { outline: 2px solid var(--primary); outline-offset: 2px; animation: unlock-ring 320ms var(--ease-soft) 200ms backwards; }
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(*), ::view-transition-new(*), ::view-transition-group(*) { animation-duration: 0s !important; animation-delay: 0s !important; }
@@ -1230,7 +1230,7 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
    2. Idle Socs (`idle`) keep a gentle loop for their mood, and repeat their gesture now and then.
    3. Every Soc 32px and up blinks. Reduced motion stops all of it and keeps the resting drawing.
 --------------------------------------------------------------------------------------------- */
-.soc { --soc-ease: cubic-bezier(0.34, 1.4, 0.5, 1); --soc-wait: calc(2.2s + var(--soc-shift, 0) * 2.4s); transform-origin: 50% 92%; }
+.soc { --soc-ease: cubic-bezier(0.34, 1.4, 0.5, 1); transform-origin: 50% 92%; }
 
 /* 1. Reactions, and 2. the idle loop each mood settles into (set as variables, combined below). */
 .soc { --soc-react: soc-nod 0.6s ease-out; --soc-loop: soc-bob 5s ease-in-out 0.6s infinite; animation: var(--soc-react); }
@@ -1250,16 +1250,15 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
 .soc [data-frame="beat"], .soc [data-frame="blink"] { opacity: 0; }
 .soc[data-gestures] [data-frame="beat"] { animation: soc-beat-on 0.34s step-end 0.12s 4; }
 .soc[data-gestures] [data-frame="base"] { animation: soc-beat-off 0.34s step-end 0.12s 4; }
-.soc.soc-idle[data-gestures] [data-frame="beat"] { animation: soc-beat-on 0.34s step-end 0.12s 4, soc-beat-idle-on 9.6s step-end var(--soc-wait) infinite; }
-.soc.soc-idle[data-gestures] [data-frame="base"] { animation: soc-beat-off 0.34s step-end 0.12s 4, soc-beat-idle-off 9.6s step-end var(--soc-wait) infinite; }
-.soc [data-frame="blink"] { animation: soc-blink-frame 4.8s step-end var(--soc-wait) infinite; }
+/* The blink and an idle Soc's repeated gesture are set from lib/soc-blink.ts (a short timer per Soc), not endless
+   animations: an animation that never rests keeps every frame of the page busy while scrolling, for something that
+   happens a couple of times a cycle. */
+.soc.soc-idle[data-gestures][data-beating] [data-frame="beat"] { opacity: 1; }
+.soc.soc-idle[data-gestures][data-beating] [data-frame="base"] { opacity: 0; }
+.soc[data-blinking] [data-frame="blink"] { opacity: 1; }
 
 @keyframes soc-beat-on { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes soc-beat-off { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
-/* Twice in a row, early in the 9.6 s cycle, clear of the blink at 94% of each 4.8 s. */
-@keyframes soc-beat-idle-on { 0% { opacity: 0; } 20% { opacity: 1; } 23.5% { opacity: 0; } 27% { opacity: 1; } 30.5%, 100% { opacity: 0; } }
-@keyframes soc-beat-idle-off { 0% { opacity: 1; } 20% { opacity: 0; } 23.5% { opacity: 1; } 27% { opacity: 0; } 30.5%, 100% { opacity: 1; } }
-@keyframes soc-blink-frame { 0% { opacity: 0; } 94% { opacity: 1; } 97%, 100% { opacity: 0; } }
 
 @keyframes soc-nod { 40% { transform: translateY(2%) rotate(-2deg); } }
 @keyframes soc-hop { 25% { transform: translateY(-14%) scale(0.95, 1.06); } 55% { transform: translateY(0) scale(1.07, 0.93); } 78% { transform: scale(0.98, 1.02); } }
@@ -1300,7 +1299,7 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
   padding: 0 0.1em;
   margin: 0 -0.05em;
 }
-.hl-draw { animation: hl-draw 0.9s var(--ease-soft) 0.35s both; }
+.hl-draw { animation: hl-draw 0.9s var(--ease-soft) 0.35s backwards; }
 @keyframes hl-draw { from { background-size: 0% 0.6em; } }
 .dark .hl { color: #15161E; background-size: 100% 0.92em; background-position: 0 65%; }
 .dark .hl-draw { animation-name: hl-draw-dark; }
@@ -1845,4 +1844,23 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
 :root {
   --ll-veil-base: 35%;
   --ll-veil-desk: 30%;
+}
+
+/* A row that scrolls sideways (tabs, chips) fades at an edge only while there is more to see that
+   way, so a half-shown last item reads as "scroll for more" instead of cut off. Driven by the row's
+   own scroll position; where scroll timelines are unsupported, or the row fits, nothing fades. */
+@property --fade-start { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --fade-end { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@keyframes scroll-edge-fade {
+  0% { --fade-start: 0px; --fade-end: 28px; }
+  10% { --fade-start: 28px; }
+  90% { --fade-end: 28px; }
+  100% { --fade-start: 28px; --fade-end: 0px; }
+}
+@utility scroll-edge-fade {
+  @supports (animation-timeline: scroll()) {
+    mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+    animation: scroll-edge-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
 }

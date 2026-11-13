@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from '@/components/icons';
 import { api } from '@/lib/api';
+import { prefetchRoute } from '@/lib/prefetch';
 import { NAV, navFor, navItems, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { PLAN_NAME } from '@/lib/plans';
@@ -191,7 +192,7 @@ function useAssessmentReady(learning: boolean) {
   useEffect(() => {
     // Only an active learner has an assessment; elsewhere the call can only fail.
     if (!learning) return;
-    api.get<{ current: { state: string } }>('/assessments')
+    api.cached<{ current: { state: string } }>('/assessments')
       .then(r => setReady(r.current.state === 'available' || r.current.state === 'in_progress'))
       .catch(() => setReady(false));
   }, [pathname, learning]);
@@ -213,7 +214,7 @@ function PlanCard() {
   const pathname = usePathname();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   useEffect(() => {
-    api.get<BillingStatus>('/billing/status').then(setStatus).catch(() => setStatus(null));
+    api.cached<BillingStatus>('/billing/status').then(setStatus).catch(() => setStatus(null));
   }, [pathname]); // re-read after checkout or cancelling
   if (!status?.enabled) return null;
   const { plan } = status;
@@ -261,7 +262,7 @@ function AppSidebar({ active, ready }: { active: NavKey | null; ready: boolean }
                   return (
                     <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton asChild isActive={current} tooltip={item.label} size="lg" className="text-[17px]">
-                        <Link href={item.href} data-tour={item.key} aria-current={current ? 'page' : undefined}>
+                        <Link href={item.href} onPointerEnter={() => prefetchRoute(item.href)} onFocus={e => { if (e.currentTarget.matches(':focus-visible')) prefetchRoute(item.href); }} data-tour={item.key} aria-current={current ? 'page' : undefined}>
                           <Icon strokeWidth={1.75} aria-hidden="true" />
                           <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                         </Link>
@@ -319,6 +320,7 @@ function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean })
             <li key={item.key}>
               <Link
                 href={item.href}
+                onPointerDown={() => prefetchRoute(item.href)}
                 data-tour={item.key}
                 aria-current={current ? 'page' : undefined}
                 className={cn('relative grid h-full min-w-0 content-center justify-items-center gap-0.5 px-0.5 text-[12px] leading-tight text-ink-muted', current && 'font-bold text-ink')}

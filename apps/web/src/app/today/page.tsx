@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronRight, Flame } from '@/components/icons';
-import { api, explain } from '@/lib/api';
+import { api, explain, PAGE_MS } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
 import { KIND_LABEL, NAME, PACE_LABEL, activityHref, conceptHref, formatDate } from '@/lib/routes';
 import type { Activity, AssessmentStatus, PlanView, Recommendations, Today } from '@/lib/types';
@@ -133,10 +133,10 @@ export default function TodayPage() {
 
   const load = useCallback(() => {
     setError('');
-    api.get<Today>('/today').then(setToday).catch(e => setError(explain(e)));
-    api.get<Recommendations>('/library/recommendations?limit=4').then(setRecs).catch(() => undefined);
-    api.get<PlanView>('/plan').then(setPlan).catch(() => undefined);
-    api.get<{ current: AssessmentStatus }>('/assessments').then(r => setAssessment(r.current)).catch(() => undefined);
+    api.cached<Today>('/today', PAGE_MS).then(setToday).catch(e => setError(explain(e)));
+    api.cached<Recommendations>('/library/recommendations?limit=4', PAGE_MS).then(setRecs).catch(() => undefined);
+    api.cached<PlanView>('/plan', PAGE_MS).then(setPlan).catch(() => undefined);
+    api.cached<{ current: AssessmentStatus }>('/assessments', PAGE_MS).then(r => setAssessment(r.current)).catch(() => undefined);
   }, []);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
   // The open section lives in the URL hash, so a link or a refresh lands where the learner was.

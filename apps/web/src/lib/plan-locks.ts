@@ -8,7 +8,7 @@ import type { BillingStatus } from './types';
 export function usePlanLocks(): (concept: string) => boolean {
   const [free, setFree] = useState<Set<string> | null>(null);
   useEffect(() => {
-    api.get<BillingStatus>('/billing/status')
+    api.cached<BillingStatus>('/billing/status')
       .then(s => setFree(s.enabled && s.free_concepts ? new Set(s.free_concepts) : null))
       .catch(() => setFree(null));
   }, []);
