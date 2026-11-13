@@ -5,6 +5,7 @@ import './globals.css';
 import { SessionProvider } from '@/lib/session';
 import { PaywallHost } from '@/components/paywall-host';
 import { REDUCE_MOTION_SCRIPT } from '@/lib/motion';
+import { PERF_BOOT_SCRIPT, PerfGovernor } from '@/lib/perf';
 import Shell from '@/components/shell';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PALETTE_BOOT_SCRIPT } from '@/lib/palette-boot';
@@ -76,6 +77,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${GeistSans.variable} ${delicious.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: REDUCE_MOTION_SCRIPT }} />
+        {/* Light rendering for devices that cannot keep up, decided before the first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: PERF_BOOT_SCRIPT }} />
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
         <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');` }} />
         {/* The learner's colours, before the first paint. */}
@@ -83,6 +86,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <WebVitals />
+        <PerfGovernor />
         <ErrorReporter />
         <PwaSetup />
         <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange>

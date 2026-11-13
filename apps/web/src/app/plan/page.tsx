@@ -134,8 +134,8 @@ export default function PlanPage() {
         </header>
       </Reveal>
 
-      <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
-        <div className="grid min-w-0 content-start gap-4 lg:col-span-8 lg:gap-6">
+      <div className="grid gap-4 xl:grid-cols-12 lg:gap-6">
+        <div className="grid min-w-0 content-start gap-4 xl:col-span-8 lg:gap-6">
           <MentorLog />
           {pending.length ? (
             <Card id="proposals" aria-labelledby="proposals-heading">
@@ -277,7 +277,7 @@ export default function PlanPage() {
           <Card size="sm" aria-label="Status legend"><div className="px-(--card-spacing)"><StatusLegend only={['not_seen', 'read', 'assumed', 'practised', 'mastered', 'review', 'locked']} /></div></Card>
         </div>
 
-        <aside className="grid min-w-0 content-start gap-4 lg:col-span-4 lg:gap-6">
+        <aside className="grid min-w-0 content-start gap-4 xl:col-span-4 lg:gap-6">
           <div id="review">
             <Disclosure id="review-heading" title={plan.weekly_review_ready ? 'Your weekly review (new)' : 'Weekly review'} defaultOpen={plan.weekly_review_ready}>
               <WeeklyReviewPanel onChanged={load} />

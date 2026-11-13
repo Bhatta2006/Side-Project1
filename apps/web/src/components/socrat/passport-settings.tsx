@@ -82,7 +82,7 @@ export function PassportSettingsCard() {
       {error ? <ErrorNote message={error} className="mt-4" /> : null}
 
       <Dialog open={preview} onOpenChange={setPreview}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader><DialogTitle>Passport preview</DialogTitle></DialogHeader>
           {data ? <PassportCard passport={data.preview} headingLevel={2} /> : null}
         </DialogContent>

@@ -9,7 +9,7 @@ failing schedules a short cooldown with targeted reviews.
 import random
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
@@ -52,15 +52,43 @@ def fitting(catalog: Catalog, concept: str, language: str) -> list[QuizItem]:
 OPEN_TEST_SECONDS = 20 * 60  # a check touched this recently still counts as being taken
 
 
+def last_finished(db: Session, enrollment: Enrollment) -> int:
+    """When the learner last finished a check, test or weekly assessment (0 if never)."""
+    from socrat.models import QuizEngineSession, WeeklyAssessment
+
+    stamps = (
+        db.scalar(
+            select(func.max(QuizSession.completed_at)).where(
+                QuizSession.enrollment_id == enrollment.id,
+                ~QuizSession.activity_id.like("review:%"),
+            )
+        ),
+        db.scalar(
+            select(func.max(QuizEngineSession.completed_at)).where(
+                QuizEngineSession.enrollment_id == enrollment.id
+            )
+        ),
+        db.scalar(
+            select(func.max(WeeklyAssessment.finished_at)).where(
+                WeeklyAssessment.enrollment_id == enrollment.id
+            )
+        ),
+    )
+    return max((int(s) for s in stamps if s), default=0)
+
+
 def open_test(db: Session, enrollment: Enrollment, now: int) -> bool:
     """Whether the learner is in the middle of a graded check or test right now.
 
     The tutor steps back while one is open, so a question cannot be answered by asking Soc.
-    An abandoned check stops counting after ``OPEN_TEST_SECONDS``.
+    An abandoned check stops counting after ``OPEN_TEST_SECONDS``, and at once when the
+    learner finishes another check after it: a learner takes one test at a time, so an
+    unfinished one older than the last finish (a duplicate start, a check they left) is
+    not being taken any more.
     """
     from socrat.models import QuizEngineSession
 
-    since = now - OPEN_TEST_SECONDS
+    since = max(now - OPEN_TEST_SECONDS, last_finished(db, enrollment))
     legacy = db.scalar(
         select(QuizSession.id).where(
             QuizSession.enrollment_id == enrollment.id,

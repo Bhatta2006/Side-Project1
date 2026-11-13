@@ -777,8 +777,10 @@ html.dark {
     color: var(--ll-selection-text);
     background-color: var(--ll-hi-select);
     text-shadow: none; }
-  /* One focus ring everywhere: 2 px, 2 px offset, in both themes. */
-  :focus-visible:not([tabindex="-1"]):not(.cm-content) { outline: 2px solid var(--ring) !important; outline-offset: 2px; }
+  /* One focus ring everywhere: 2 px, 2 px offset, in both themes. A control that draws its own
+     inked focus mark (a tab's ring, the search field's underline) is left to it: with both, the
+     straight outline sat a few pixels off the drawn one and read as a misaligned double border. */
+  :focus-visible:not([tabindex="-1"]):not(.cm-content):not([data-ink-ready]:has(> svg[data-ink] [data-layer="focus"])):not([data-ink-ready]:has(> svg[data-ink] [data-layer="focus"]) > :is(input, textarea, select)) { outline: 2px solid var(--ring) !important; outline-offset: 2px; }
   .cm-editor.cm-focused { outline: 2px solid var(--ring); outline-offset: 2px; }
   :target { scroll-margin-top: 80px; }
   *, ::before, ::after {
@@ -1865,3 +1867,55 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
     animation-timeline: scroll(self inline);
   }
 }
+
+/* ------------------------------------------------------------------------------------------
+   Light rendering (html[data-perf="lite"]), set by lib/perf.ts.
+
+   The notebook look is paid for in paint: every sheet of paper is five stacked backgrounds
+   (three of them texture tiles), every inked stroke is drawn through a grain mask, and shadows,
+   blend modes and filters sit on top. A phone or laptop with a weak GPU cannot repaint that at
+   60 frames a second, and the page lags while scrolling. Light rendering keeps the layout, the
+   colours, the type and the drawings, and drops what only adds texture: paper is one flat
+   colour, strokes are solid, shadows are a single hairline, nothing blends or blurs, and nothing
+   animates for ever. It turns itself on for devices that report little memory or few cores, or
+   that are measured dropping frames, and the learner can force either mode in Settings.
+   ------------------------------------------------------------------------------------------ */
+html[data-perf="lite"], html[data-perf="lite"] :is([data-ll-scope], [data-theme]) {
+  --ll-blend: normal;
+  --ll-shadow-k: 0.5;
+  --ll-misreg-k: 0;
+  --ll-jitter-k: 0;
+  --grain: none;
+  --ll-tex-relief: none; --ll-tex-slip: none; --ll-tex-fibre: none; --ll-tex-cloud: none;
+  --ll-tex-mottle: none; --ll-tex-linen: none; --ll-tex-kraft: none;
+  /* One shadow instead of two or three stacked ones. */
+  --ll-shadow-loose: 0 1px 2px rgb(var(--ll-shade) / 0.14);
+  --ll-shadow-lift: 0 1px 2px rgb(var(--ll-shade) / 0.18);
+  --ll-shadow-slip: 0 1px 1px rgb(var(--ll-shade) / 0.16);
+  --ll-shadow-card: 0 1px 2px rgb(var(--ll-shade) / 0.16);
+  --ll-shadow-pad: 0 1px 2px rgb(var(--ll-shade) / 0.16);
+  --ll-shadow-check: 0 1px 2px rgb(var(--ll-shade) / 0.16);
+  --ll-shadow-paper: 0 1px 2px rgb(var(--ll-shade) / 0.16);
+  --ll-shadow-sticky: 0 1px 2px rgb(var(--ll-shade) / 0.18);
+  --ll-drop-sheet: none;
+  --ll-drop-sticker: none;
+  --ll-paper-light: none;
+  --ll-desk-vignette: none;
+  --ll-overlay-dim: rgb(var(--ll-shade) / 0.3);
+}
+/* Paper and desk: a flat colour, no texture tiles. */
+html[data-perf="lite"] :is(.ll-paper::before, .ll-face) { background-image: none; }
+html[data-perf="lite"] .ll-desk { background-image: none; }
+html[data-perf="lite"] .grain::before { display: none; }
+html[data-perf="lite"] .paper { box-shadow: 0 1px 2px rgb(58 44 30 / 0.2); }
+/* Strokes are drawn solid: a grain mask makes the browser rasterise each one off screen first. */
+html[data-perf="lite"] svg [mask^="url(#ll-"] { mask: none; }
+/* No blur, blend or filter anywhere. */
+html[data-perf="lite"] *, html[data-perf="lite"] *::before, html[data-perf="lite"] *::after { backdrop-filter: none !important; mix-blend-mode: normal !important; }
+html[data-perf="lite"] :is(.ll-drop-sheet, .ll-drop-sticker, .soc g[filter]) { filter: none; }
+html[data-perf="lite"] .landing .glass-nav { background: var(--card); }
+/* Nothing loops for ever; one-off entrances and feedback still play. */
+html[data-perf="lite"] :is(.ll-boil, .ll-boil-x, .drift, .drift-slow, .marquee-y, .marquee-x, .loop-ladder > span, .loop-tick, .loop-slide, .loop-check, .loop-type, .soc-walk, .soc-scribble path, .soc-eyes) { animation: none; }
+html[data-perf="lite"] .loop-type { width: auto; }
+html[data-perf="lite"] .soc.soc-idle { animation: var(--soc-react); }
+html[data-perf="lite"] :is(.doodle-scroll, .doodle-load) :is([data-ink], [data-fill]) { animation: none; }

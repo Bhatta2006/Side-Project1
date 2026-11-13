@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, Download, LogOut } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useReducedMotion } from '@/lib/motion';
+import { usePerfSetting } from '@/lib/perf';
 import { useGuard, useSession } from '@/lib/session';
 import { LANGUAGE_LABEL, NAME, hours } from '@/lib/routes';
 import type { BillingStatus, Course, Language, Profile } from '@/lib/types';
@@ -136,6 +137,7 @@ function AppSection() {
 
 function Appearance() {
   const motion = useReducedMotion();
+  const perf = usePerfSetting();
   const { profile, refresh } = useSession();
   return (
     <Section id="appearance-heading" title="Appearance" description="Colours, motion and reminders.">
@@ -150,6 +152,15 @@ function Appearance() {
               </p>
             </div>
             <Switch id="reduce-motion" checked={motion.setting} onCheckedChange={motion.set} aria-describedby="reduce-motion-help" />
+          </div>
+          <div className="flex items-start justify-between gap-4 py-5">
+            <div>
+              <label htmlFor="light-rendering" className="font-semibold">Light rendering</label>
+              <p id="light-rendering-help" className="text-sm text-muted-foreground">
+                Flat paper, simpler shadows and no looping animation, for a smoother page on slower devices. {perf.setting === 'auto' ? (perf.lite ? 'Turned on by itself for this device.' : 'Turns on by itself if this device struggles.') : ''}
+              </p>
+            </div>
+            <Switch id="light-rendering" checked={perf.lite} onCheckedChange={on => perf.set(on ? 'lite' : 'full')} aria-describedby="light-rendering-help" />
           </div>
           <div className="flex items-start justify-between gap-4 py-5">
             <div>

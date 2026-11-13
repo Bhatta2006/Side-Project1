@@ -107,7 +107,7 @@ export default function ProgressPage() {
 
         <SolvedBoard />
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-4 lg:gap-6">
           <StatCard value={mastered} icon={<StatusIcon status="mastered" size={28} />} label="Skills mastered" hint="Evidence from checks, judged code and reviews passed the mastery threshold." />
           <StatCard value={due} icon={<StatusIcon status="review" size={28} />} label="Reviews due" hint="Spaced reviews that are due now." />
           <StatCard value={weak} icon={<StatusIcon status="needs_practice" size={28} />} label="Need practice" hint="Recent results show these are not holding yet." />
@@ -223,7 +223,7 @@ export default function ProgressPage() {
           </TabsContent>
 
           {/* Profile and sharing: what Socrat knows about you and what others can see. */}
-          <TabsContent value="share" className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+          <TabsContent value="share" className="grid gap-4 xl:grid-cols-2 lg:gap-6">
             <PassportSettingsCard />
             <LearnerProfileCard />
           </TabsContent>
