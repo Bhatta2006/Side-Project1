@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
+from socrat.auth import device_hash
 from socrat.database import record_event
 from socrat.learn.routes import catalog, engine, user_of
 from socrat.models import BillingPlan, LaunchGrant, Subscription, now
@@ -103,13 +104,14 @@ def prices():
 
 @router.get("/status")
 def status(request: Request):
-    with Session(engine(request)) as db:
+    with Session(engine(request)) as db, db.begin():
         user = user_of(request, db)
         stamp = now()
+        # The dashboard asks for this as it opens, which is where the launch offer is handed out.
+        grant = entitlements.claim_launch_promo(db, user, device_hash(request), stamp)
         plan = entitlements.plan_of(db, user.id, stamp)
         sub = db.get(Subscription, user.id)
         paid = sub is not None and plan != "free"
-        grant = db.scalar(select(LaunchGrant).where(LaunchGrant.user_id == user.id))
         promo = (
             dict(ends_at=grant.expires_at, seen=grant.seen_at is not None)
             if grant and grant.expires_at > stamp and not paid

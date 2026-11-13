@@ -20,6 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from socrat import entitlements, errors
 from socrat.adaptive.routes import router as adaptive_router
+from socrat.admin.accounts import router as admin_accounts_router
 from socrat.admin.routes import router as admin_router
 from socrat.assessments.routes import router as assessments_router
 from socrat.auth import COOKIE, establish_session, require_csrf, require_session
@@ -40,6 +41,7 @@ from socrat.library import autosync
 from socrat.library.routes import router as library_router
 from socrat.mentor.routes import router as mentor_router
 from socrat.models import User
+from socrat.notifications import router as notifications_router
 from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
 from socrat.schema_revision import SCHEMA_REVISION
@@ -123,6 +125,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(library_router)
     app.include_router(assessments_router)
     app.include_router(admin_router)
+    app.include_router(admin_accounts_router)
+    app.include_router(notifications_router)
     app.include_router(coursegen_router)
     app.include_router(style_router)
     app.include_router(mentor_router)

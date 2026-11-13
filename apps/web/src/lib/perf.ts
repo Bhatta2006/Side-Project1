@@ -40,14 +40,15 @@ function weakDevice(): boolean {
   return Boolean((n.deviceMemory && n.deviceMemory <= 4) || (n.hardwareConcurrency && n.hardwareConcurrency <= 4) || n.connection?.saveData);
 }
 
-// A frame slower than this missed at least one refresh on a 60 Hz screen, with some slack.
-const SLOW_FRAME_MS = 34;
+// A frame slower than this is under 20 frames a second: lag anyone can see, not a single missed
+// refresh. The bar is high on purpose, so a good device having a busy moment is left alone.
+const SLOW_FRAME_MS = 50;
 // One sampling window: this many frames of scrolling.
 const WINDOW_FRAMES = 45;
 // A window is bad when this share of its frames were slow.
-const BAD_SHARE = 0.3;
+const BAD_SHARE = 0.4;
 // This many bad windows (not necessarily in a row) switch the device to light rendering.
-const BAD_WINDOWS = 3;
+const BAD_WINDOWS = 4;
 // Frames are sampled for this long after the last scroll or touch movement.
 const ACTIVE_MS = 400;
 
@@ -58,7 +59,8 @@ const ACTIVE_MS = 400;
  */
 export function PerfGovernor() {
   useEffect(() => {
-    if (isLite() || read(KEY) === 'full') return;
+    // A development build is several times slower than production and would measure as a weak device.
+    if (process.env.NODE_ENV !== 'production' || isLite() || read(KEY) === 'full') return;
     let frame = 0;
     let last = 0;
     let activeUntil = 0;

@@ -8,7 +8,6 @@ from fastapi import HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from socrat import entitlements
 from socrat.database import record_event
 from socrat.models import LoginSession, User
 
@@ -86,7 +85,6 @@ def establish_session(
             user = db.scalar(select(User).where(User.email == email, User.issuer == "email"))
             if user is not None:
                 user.issuer, user.subject = issuer, subject
-        created = user is None
         if user is None:
             user = User(issuer=issuer, subject=subject)
             db.add(user)
@@ -97,13 +95,14 @@ def establish_session(
         ):
             user.email = email
         db.flush()
-        if created:
-            entitlements.grant_launch_promo(db, user, device_hash(request))
         user_id = user.id
     return open_session(request, response, user_id)
 
 
 def open_session(request: Request, response, user_id: str):
+    # Every signed-in browser carries a device id (the cookie is set below): the launch offer is
+    # one per device, and it is claimed later, when the learner reaches the dashboard.
+    device_hash(request)
     """Start a session for an authenticated user and set its cookie on ``response``."""
     settings = request.app.state.settings
     with Session(request.app.state.engine) as db, db.begin():

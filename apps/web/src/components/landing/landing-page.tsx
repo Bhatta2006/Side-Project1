@@ -22,7 +22,7 @@ import { CommunityButton, CommunityCard } from '@/components/community-link';
 import { InstallAppButton } from '@/components/install-app';
 import { SocraticDemo } from '@/components/landing/socratic-demo';
 import { FollowSoc } from '@/components/landing/follow-soc';
-import { ProductFilm } from '@/components/landing/product-film';
+import { ProductPlays } from '@/components/landing/product-plays';
 import { AskColumns, FeatureCards, SourcesStrip } from '@/components/landing/motion-sections';
 import { cn } from '@/lib/utils';
 
@@ -32,7 +32,7 @@ const GOALS: { id: string; label: string; mood: SocMood; say: string; cta: strin
   { id: 'zero', label: 'Learn to code from zero', mood: 'happy', say: 'Lovely. So what is a variable, really?', cta: 'Start from zero', href: '/start?course=zero' },
   { id: 'interview', label: 'Crack DSA interviews', mood: 'curious', say: 'Why does a hash map make it fast?', cta: 'Prep for interviews', href: '/start?course=dsa' },
   { id: 'competitive', label: 'Win coding contests', mood: 'proud', say: 'Can you prove it runs in time?', cta: 'Train for contests', href: '/start?course=cp' },
-  { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then watch a day with me, just below.', cta: 'See how it works', href: '#film' },
+  { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then play a day with me, just below.', cta: 'See how it works', href: '#film' },
 ];
 
 const PATHS = [
@@ -115,8 +115,8 @@ export function LandingPage() {
       >
         <Paper stock="slip" tilt={false} seed="landing-header" className="relative mx-auto flex h-16 max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" aria-label="Socrat home" className="rounded-full"><Wordmark /></Link>
-          <nav aria-label="Site" className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
-            {links.map(([href, label]) => <a key={href} href={href} className="rounded-[3px] px-3 py-1.5 text-[17px] text-ink transition-colors hover:bg-hi-select">{label}</a>)}
+          <nav aria-label="Site" className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 xl:flex">
+            {links.map(([href, label]) => <a key={href} href={href} className="rounded-[3px] px-3 py-1.5 text-[17px] whitespace-nowrap text-ink transition-colors hover:bg-hi-select">{label}</a>)}
           </nav>
           <div className="flex items-center gap-1 sm:gap-3">
             <Button asChild variant="outline" className="hidden sm:inline-flex"><Link href="/login">Log in</Link></Button>
@@ -186,14 +186,15 @@ export function LandingPage() {
           </a>
         </section>
 
-        {/* A day with Soc, as a short film: it replaces the live demo, so it costs nothing to show. */}
+        {/* A day with Soc, as six plays the visitor runs by pressing: nothing plays on its own, and
+            nothing calls the API, so it costs nothing to show. */}
         <section id="film" data-soc="hide" aria-labelledby="film-title" className="mx-auto max-w-[1500px] scroll-mt-20 px-5 pt-6 pb-20 sm:px-8 lg:pr-10 lg:pb-28 lg:pl-[128px]">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 id="film-title" className="type-display-l max-w-[16ch]">Watch a day with Soc.</h2>
-            <p className="font-hand -rotate-2 text-[24px] text-pen">40 seconds. no sign-up.</p>
+            <h2 id="film-title" className="type-display-l max-w-[16ch]">Play a day with Soc.</h2>
+            <p className="font-hand -rotate-2 text-[24px] text-pen">six plays. you press. no sign-up.</p>
           </div>
           <InView className="mt-10">
-            <ProductFilm className="mx-auto max-w-[1080px] rotate-[-0.4deg]" />
+            <ProductPlays className="mx-auto max-w-[1080px]" />
           </InView>
         </section>
 
