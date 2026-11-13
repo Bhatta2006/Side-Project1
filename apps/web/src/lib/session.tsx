@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, setCsrf } from './api';
+import { api, clearApiCache, setCsrf } from './api';
+import { prefetchRoute } from './prefetch';
 import type { Features, Profile } from './types';
 
 interface SessionValue {
@@ -28,6 +29,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // The page's own data and the billing status (sidebar, paywall, plan locks) start now, next to
+    // the session check, instead of after it: one round trip less before a signed-in page shows.
+    prefetchRoute(window.location.pathname);
+    api.prefetch('/billing/status');
     Promise.all([refresh(), api.get<Features>('/features').then(setFeatures).catch(() => undefined)]).finally(() =>
       setLoading(false),
     );
@@ -37,6 +42,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await api.post('/auth/logout').catch(() => undefined);
     setProfile(null);
     setCsrf('');
+    clearApiCache();
     // Drafts (onboarding name, answers) belong to the learner who signed out, not the next one.
     try { sessionStorage.clear(); } catch { /* storage unavailable */ }
   }, []);

@@ -198,7 +198,7 @@ export function LandingPage() {
         </section>
 
         {/* The problem, stated plainly, beside a replay of Soc teaching. */}
-        <section id="statement" data-soc="thinking|Finding answers is easy. Knowing why?" data-soc-x="left" aria-labelledby="statement-title" className="mx-auto grid max-w-[1500px] scroll-mt-20 items-center gap-14 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:py-32 lg:pr-10 lg:pl-[128px]">
+        <section id="statement" data-soc="thinking|Finding answers is easy. Knowing why?" data-soc-x="left" aria-labelledby="statement-title" className="mx-auto grid max-w-[1500px] scroll-mt-20 grid-cols-1 items-center gap-14 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:py-32 lg:pr-10 lg:pl-[128px]">
           <div>
             <h2 id="statement-title" className="text-[44px] leading-[0.98] font-semibold tracking-[-0.055em] sm:text-[64px] lg:text-[84px]">
               More tutorials won&apos;t fix that. <span className="hl">Proving what you can do</span> will.

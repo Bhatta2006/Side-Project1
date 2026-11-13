@@ -87,9 +87,16 @@ export function LiveSoc({
           className="h-auto w-full transition-transform duration-300 ease-[var(--ease-soft)] group-active:scale-[0.98]"
         />
       </button>
-      <div aria-live="polite" className={cn('pointer-events-none absolute top-[2%] w-max max-w-[min(15rem,70vw)]', bubbleSide === 'left' ? 'right-[78%]' : 'left-[78%]')}>
+      {/* Beside him on wide screens; on a phone there is no room beside him, so the bubble sits over his top corner, inside the screen. */}
+      <div
+        aria-live="polite"
+        className={cn(
+          'pointer-events-none absolute top-[2%] w-max max-w-[min(15rem,70vw)] max-sm:top-[-6%] max-sm:max-w-[72%]',
+          bubbleSide === 'left' ? 'right-[78%] max-sm:right-auto max-sm:left-0' : 'left-[78%] max-sm:left-auto max-sm:right-0',
+        )}
+      >
         {line ? (
-          <p key={line} className="soc-bubble font-hand animate-in fade-in zoom-in-90 rounded-[4px] border-2 border-[var(--soc-outline)] bg-card px-4 py-2.5 text-[22px] leading-tight text-foreground shadow-[3px_3px_0_var(--soc-outline)] duration-300" data-side={bubbleSide}>
+          <p key={line} className="soc-bubble font-hand animate-in fade-in zoom-in-90 rounded-[4px] border-2 border-[var(--soc-outline)] bg-card px-4 py-2.5 text-[22px] leading-tight max-sm:px-3 max-sm:py-2 max-sm:text-[19px] text-foreground shadow-[3px_3px_0_var(--soc-outline)] duration-300" data-side={bubbleSide}>
             {line}
           </p>
         ) : null}

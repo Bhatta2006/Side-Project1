@@ -13,26 +13,74 @@ export function setCsrf(token: string) {
   csrf = token;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, quiet = false): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (method !== 'GET') headers['X-CSRF-Token'] = csrf;
-  const response = await fetch(`/api/v1${path}`, {
-    method,
-    headers,
-    credentials: 'same-origin',
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (response.status === 204) return undefined as T;
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    if (response.status === 401 && path !== '/me' && !path.startsWith('/auth')) toLogin();
-    const code = data?.error?.code ?? 'request_failed';
-    // Any locked feature, from any page, opens the paywall (components/paywall.tsx).
-    if (response.status === 402 || code === 'chat_week_limit') openPaywall(code);
-    throw new ApiError(response.status, code);
+  // A write can change anything a cached read holds (plan, billing, assessments): forget them all.
+  // Except the few background posts that only mark something read, which every visit would send.
+  const clears = method !== 'GET' && !KEEPS_CACHE.test(path);
+  if (clears) cache.clear();
+  try {
+    const response = await fetch(`/api/v1${path}`, {
+      method,
+      headers,
+      credentials: 'same-origin',
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    if (response.status === 204) return undefined as T;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new ApiError(response.status, data?.error?.code ?? 'request_failed');
+      if (!quiet) react(error, path);
+      throw error;
+    }
+    return data as T;
+  } finally {
+    if (clears) cache.clear();
   }
-  return data as T;
+}
+
+/** Posts that change nothing a cached read holds: the mentor note's refresh and "seen" marks. */
+const KEEPS_CACHE = /^\/(mentor\/refresh|adaptive\/weekly-review\/seen|problem-reports\/thanks\/seen)$/;
+
+/** What a failed call does to the page: sign-in on 401, the paywall on locked features. */
+function react(error: ApiError, path: string) {
+  if (error.status === 401 && path !== '/me' && !path.startsWith('/auth')) toLogin();
+  // Any locked feature, from any page, opens the paywall (components/paywall.tsx).
+  if (error.status === 402 || error.code === 'chat_week_limit') openPaywall(error.code);
+}
+
+/**
+ * Shared reads. Several parts of a page ask for the same thing (billing status: the sidebar, the
+ * paywall, the plan locks...), and a page's data can be asked for before the session check ends.
+ * One request serves them all while it is fresh; any write clears the lot; failures are never kept.
+ * A quiet (prefetched) read has no side effects of its own: the first real caller gets them.
+ */
+type Entry = { at: number; quiet: boolean; promise: Promise<unknown> };
+/** How long a page's own data may be reused: long enough to cover the session check and a quick back-and-forth. */
+export const PAGE_MS = 15_000;
+const PREFETCH_MS = PAGE_MS;
+const cache = new Map<string, Entry>();
+
+function shared<T>(path: string, maxAgeMs: number, quiet: boolean): Promise<T> {
+  const hit = cache.get(path);
+  if (hit && Date.now() - hit.at < maxAgeMs) {
+    const promise = hit.promise as Promise<T>;
+    if (!hit.quiet || quiet) return promise;
+    return promise.catch((error: unknown) => {
+      if (error instanceof ApiError) react(error, path);
+      throw error;
+    });
+  }
+  const entry: Entry = { at: Date.now(), quiet, promise: request<T>('GET', path, undefined, quiet) };
+  cache.set(path, entry);
+  entry.promise.catch(() => { if (cache.get(path) === entry) cache.delete(path); });
+  return entry.promise as Promise<T>;
+}
+
+export function clearApiCache() {
+  cache.clear();
 }
 
 export const PAYWALL_EVENT = 'socrat:paywall';
@@ -50,6 +98,10 @@ function toLogin() {
 
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
+  /** A read shared with everyone else asking for it within maxAgeMs (default 30 s). */
+  cached: <T>(path: string, maxAgeMs = 30_000) => shared<T>(path, maxAgeMs, false),
+  /** Starts a read early (no redirects or paywall); a later cached() call picks it up. */
+  prefetch: (path: string) => { void shared(path, PREFETCH_MS, true).catch(() => undefined); },
   post: <T>(path: string, body: unknown = {}) => request<T>('POST', path, body),
   put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),

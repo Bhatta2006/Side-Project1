@@ -1,22 +1,24 @@
-// Renders the installable-app icons from the Socrat mark (src/app/icon.svg's design).
+// Renders the favicon and installable-app icons from public/icons/owl.svg.
 // Run from apps/web after changing the mark: node scripts/make-icons.mjs
+// src/app/favicon.ico is the pack's .ico, copied as-is (sharp cannot write .ico).
+import { readFileSync } from 'node:fs';
 import sharp from 'sharp';
 
-const mark = (size, pad) => {
-  const inner = size - pad * 2;
-  const s = inner / 32;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-<rect width="${size}" height="${size}" rx="${pad ? 0 : size * 0.28}" fill="#0E0D14"/>
-<g transform="translate(${pad} ${pad}) scale(${s})"><path d="M16 4.5a6.25 6.25 0 0 0 0 12.5Z" fill="#7D39EB"/><path d="M16 15a6.25 6.25 0 0 1 0 12.5Z" fill="#F4F2FA"/></g></svg>`;
+// Crop the viewBox to the owl's circle so it sits centred.
+const owl = readFileSync('public/icons/owl.svg', 'utf8').replace(/viewBox="[^"]*" width="\d+" height="\d+"/, 'viewBox="107 75 876 876"');
+
+const render = async (file, size, pad = 0, bg) => {
+  const inner = await sharp(Buffer.from(owl)).resize(size - pad * 2, size - pad * 2).png().toBuffer();
+  await sharp({ create: { width: size, height: size, channels: 4, background: bg ?? { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: inner, top: pad, left: pad }])
+    .png()
+    .toFile(file);
+  console.log(file);
 };
 
-const out = [
-  ['icon-192.png', 192, 0],
-  ['icon-512.png', 512, 0],
-  ['maskable-512.png', 512, 96], // keeps the mark inside the safe zone
-  ['apple-touch-icon.png', 180, 18],
-];
-for (const [name, size, pad] of out) {
-  await sharp(Buffer.from(mark(size, pad))).png().toFile(`public/icons/${name}`);
-  console.log(`public/icons/${name}`);
-}
+await render('src/app/icon.png', 512);
+await render('public/icons/icon-48.png', 48);
+await render('public/icons/icon-192.png', 192);
+await render('public/icons/icon-512.png', 512);
+await render('public/icons/maskable-512.png', 512, 72, '#292420'); // keeps the owl inside the safe zone
+await render('public/icons/apple-touch-icon.png', 180, 10, '#F6F5F0'); // iOS paints transparency black

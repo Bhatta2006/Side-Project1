@@ -5,6 +5,7 @@
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
+import { watchFigure } from '@/lib/soc-blink';
 import { useEnsureInkDefs } from '@/lib/ink/react';
 import { drawMascot } from '@/lib/ink/art/mascot-draw';
 import { memo } from '@/lib/ink/art-draw';
@@ -522,6 +523,10 @@ export function SocStone({
   };
   // 0 to 1, steady for this Soc: offsets its blink and gesture so a page of Socs is not in step.
   const shift = ([...uid].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7) % 100) / 100;
+  const figure = React.useRef<HTMLSpanElement>(null);
+  // His blink, and (when idle with hands to move) his repeated gesture: see lib/soc-blink.ts.
+  const beats = Boolean(idle && gestures);
+  React.useEffect(() => (figure.current && (blinks || beats) ? watchFigure(figure.current, shift, { blinks, beats }) : undefined), [blinks, beats, shift, mood]);
   const base = draw('base');
   const blink = blinks ? draw('blink') : null;
   const beat = gestures ? draw('beat') : null;
@@ -539,6 +544,7 @@ export function SocStone({
     <span
       // A new mood remounts the figure, so its reaction plays once.
       key={mood}
+      ref={figure}
       data-slot="soc"
       data-mood={mood}
       data-pose={pose}
