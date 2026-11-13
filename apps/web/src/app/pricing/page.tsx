@@ -71,7 +71,7 @@ export default function PricingPage() {
       </div>
       {error ? <ErrorNote message={error} className="mt-4" /> : null}
       {done ? <div className="mt-4"><SuccessLine>You&apos;re on {PLAN_NAME[status?.plan ?? 'plus']}. Everything in it is unlocked.</SuccessLine></div> : null}
-      <div className="mt-8 grid items-stretch gap-5 md:grid-cols-3">
+      <div className="mt-8 grid items-stretch gap-5 lg:grid-cols-3">
         {PLANS.map(plan => {
           const minor = plan.id === 'free' ? 0 : prices?.[plan.id]?.[interval]?.[currency];
           const current = status?.plan === plan.id;

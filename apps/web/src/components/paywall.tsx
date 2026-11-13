@@ -96,7 +96,7 @@ export function PaywallDialog({ reason, status, onClose }: { reason: string; sta
 
   return (
     <Dialog open onOpenChange={next => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto p-0 sm:max-w-[560px]">
+      <DialogContent className="gap-0 p-0 sm:max-w-[560px]">
         <div className="px-6 pt-6 pb-4">
           <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Lock className="size-3.5" aria-hidden="true" /> {status.plan === 'plus' ? `You're a ${PLAN_NAME.plus}` : "You're on Free"}</p>
           <DialogTitle className="mt-2 font-display text-2xl font-bold tracking-[-0.03em]">{copy.title}</DialogTitle>

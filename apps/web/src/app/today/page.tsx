@@ -219,7 +219,7 @@ export default function TodayPage() {
 
       <div className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
         {/* 3. Hero: the next recommended activity. */}
-        <Reveal index={1} className="col-span-12 lg:col-span-8">
+        <Reveal index={1} className="col-span-12 xl:col-span-8">
           {next ? (
             <Card tone="hero" tape="corner" seed="today-next" data-tour="today-next" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
               {/* Soc on his books, waving the next step on, with a note pointing at him. */}
@@ -299,8 +299,11 @@ export default function TodayPage() {
           )}
         </Reveal>
 
-        {/* Talk to your tutor: beside the hero (8 + 4 columns). */}
-        <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
+        {/* Talk to your tutor: beside the hero (8 + 4 columns) once the page is wide enough. With the
+            sidebar open a 1024 px laptop leaves this column about 250 px, which squeezed the text
+            into a sliver beside Soc; below xl the hero takes the full row and Ask Soc is the
+            floating button. */}
+        <Reveal index={2} className="col-span-12 hidden xl:col-span-4 xl:block">
           <Card tone="raised" tape="top" seed="today-ask" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="soc-heading">
             <div className="relative flex h-full flex-col gap-4 px-(--card-spacing)">
               <p className="font-script origin-left -rotate-2 text-[24px] text-red">stuck? talk to me</p>

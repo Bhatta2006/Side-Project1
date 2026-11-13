@@ -333,6 +333,7 @@ export function LandingPage() {
             <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
             <Link href="/refunds" className="hover:text-foreground">Refunds</Link>
             <Link href="/terms" className="hover:text-foreground">Terms</Link>
+            <Link href="/changelog" className="hover:text-foreground">Change log</Link>
             <Link href="/attribution" className="hover:text-foreground">Attribution</Link>
           </nav>
           <CommunityButton variant="ghost" size="sm" label="WhatsApp community" />
