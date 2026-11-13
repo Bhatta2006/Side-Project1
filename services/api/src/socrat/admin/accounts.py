@@ -6,7 +6,7 @@ Every change here is written to the audit log under the admin who made it.
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete, func, select
+from sqlalchemy import CursorResult, delete, func, select
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
@@ -176,7 +176,8 @@ def sign_out_user(user_id: str, request: Request):
     with Session(engine(request)) as db, db.begin():
         admin_user = require_admin(request, db, write=True)
         user = _target(db, user_id)
-        ended = db.execute(delete(LoginSession).where(LoginSession.user_id == user.id)).rowcount
+        result = db.execute(delete(LoginSession).where(LoginSession.user_id == user.id))
+        ended = result.rowcount if isinstance(result, CursorResult) else 0
         record_event(db, admin_user.id, "admin.user_signed_out", user_id)
         return dict(ended=ended or 0)
 
