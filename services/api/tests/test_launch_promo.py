@@ -25,15 +25,23 @@ def new_device(api):
     api.cookies.clear()
 
 
+def arrive(api, subject="ada", name="Ada"):
+    """Sign up, finish onboarding and open the dashboard, which is where the offer is claimed."""
+    headers = login(api, subject=subject, name=name)
+    onboard(api, headers)
+    assert api.get("/api/v1/billing/status").status_code == 200
+    return headers
+
+
 def grants(api):
     with Session(api.app.state.engine) as db:
         return db.scalar(select(func.count()).select_from(LaunchGrant))
 
 
-def test_first_signups_get_plus_for_a_month_and_no_more_than_the_cap(promo):
+def test_first_learners_to_reach_the_dashboard_get_plus_for_a_month_up_to_the_cap(promo):
     for n in range(5):
         new_device(promo)
-        login(promo, subject=f"learner{n}", name=f"L{n}")
+        arrive(promo, subject=f"learner{n}", name=f"L{n}")
     assert grants(promo) == 3
     with Session(promo.app.state.engine) as db:
         rows = db.scalars(select(LaunchGrant).order_by(LaunchGrant.slot)).all()
@@ -46,24 +54,36 @@ def test_first_signups_get_plus_for_a_month_and_no_more_than_the_cap(promo):
         assert entitlements.plan_of(db, late.id) == "free"
 
 
-def test_signing_in_again_does_not_grant_and_existing_accounts_are_not_eligible(
+def test_the_grant_waits_for_the_dashboard_and_is_made_once(promo):
+    headers = login(promo, subject="new", name="New")
+    assert grants(promo) == 0  # signing up alone does not start the month
+    assert promo.get("/api/v1/billing/status").json()["promo"] is None  # no plan yet
+    assert grants(promo) == 0
+    onboard(promo, headers)
+    first = promo.get("/api/v1/billing/status").json()["promo"]
+    assert first and grants(promo) == 1
+    login(promo, subject="new", name="New")  # signing in again, opening it again
+    again = promo.get("/api/v1/billing/status").json()["promo"]
+    assert again["ends_at"] == first["ends_at"] and grants(promo) == 1
+
+
+def test_an_account_from_before_the_offer_gets_it_on_its_next_visit(
     client,  # noqa: F811
     monkeypatch,
 ):
+    monkeypatch.setattr(entitlements, "ENABLED", True)
     monkeypatch.setattr(entitlements, "NO_PROMO_ISSUERS", set())
-    login(client, subject="early", name="Early")  # promo off: an account from before launch
-    monkeypatch.setattr(entitlements, "LAUNCH_PROMO_SLOTS", 20)
-    login(client, subject="early", name="Early")
+    arrive(client, subject="early", name="Early")  # offer off: nothing to claim
     assert grants(client) == 0
-    new_device(client)
-    login(client, subject="new", name="New")
-    login(client, subject="new", name="New")
+    monkeypatch.setattr(entitlements, "LAUNCH_PROMO_SLOTS", 20)
+    status = client.get("/api/v1/billing/status").json()
+    assert status["plan"] == "plus" and status["promo"]["seen"] is False
     assert grants(client) == 1
 
 
 def test_local_dev_sign_ins_never_use_a_slot(client, monkeypatch):  # noqa: F811
     monkeypatch.setattr(entitlements, "LAUNCH_PROMO_SLOTS", 20)
-    login(client)
+    arrive(client)
     assert grants(client) == 0
 
 
@@ -109,7 +129,8 @@ def test_status_reports_the_offer_once_and_unlocks_content(promo):
 
 
 def test_a_paid_plan_wins_over_the_offer(promo):
-    login(promo)
+    headers = login(promo)
+    onboard(promo, headers)
     with Session(promo.app.state.engine) as db, db.begin():
         uid = db.scalar(select(User.id))
         db.add(
@@ -125,34 +146,35 @@ def test_a_paid_plan_wins_over_the_offer(promo):
         )
     status = promo.get("/api/v1/billing/status").json()
     assert status["plan"] == "pro" and status["promo"] is None
+    assert grants(promo) == 0  # a paying learner leaves the slot for someone else
 
 
 def test_one_device_gets_one_grant_whichever_account_signs_up(promo):
-    headers = login(promo, subject="google-one", name="One")
+    headers = arrive(promo, subject="google-one", name="One")
     assert promo.post("/api/v1/auth/logout", headers=headers).status_code == 204
-    login(promo, subject="google-two", name="Two")  # same browser, another account
-    login(promo, subject="google-three", name="Three")
+    arrive(promo, subject="google-two", name="Two")  # same browser, another account
+    arrive(promo, subject="google-three", name="Three")
     assert grants(promo) == 1
     new_device(promo)
-    login(promo, subject="google-four", name="Four")
+    arrive(promo, subject="google-four", name="Four")
     assert grants(promo) == 2
 
 
 def test_a_forged_device_cookie_is_replaced_not_trusted(promo):
     promo.cookies.set("socrat_device", "x")  # too short to be one of ours
-    login(promo, subject="a", name="A")
+    arrive(promo, subject="a", name="A")
     minted = [c.value for c in promo.cookies.jar if c.name == "socrat_device" and c.value != "x"]
     assert minted and len(minted[0]) >= 32
-    login(promo, subject="b", name="B")
+    arrive(promo, subject="b", name="B")
     assert grants(promo) == 1
 
 
 def test_deleting_the_account_keeps_the_slot_and_the_device_used(promo):
-    login(promo, subject="leaver", name="Leaver")
+    arrive(promo, subject="leaver", name="Leaver")
     with Session(promo.app.state.engine) as db, db.begin():
         db.delete(db.scalar(select(User).where(User.subject == "leaver")))
     with Session(promo.app.state.engine) as db:
         row = db.scalar(select(LaunchGrant))
         assert row is not None and row.user_id is None and row.device_hash
-    login(promo, subject="returner", name="Returner")  # same browser, new account
+    arrive(promo, subject="returner", name="Returner")  # same browser, new account
     assert grants(promo) == 1

@@ -123,6 +123,9 @@ services:
       SOCRAT_EXPLAINER_CHECKER_SECRET_FILE: /run/secrets/explainer_checker_secret
       # Paid plans (Razorpay Subscriptions). The key id is public; the secrets are mounted files.
       SOCRAT_BILLING_ENABLED: "${SOCRAT_BILLING_ENABLED:-false}"
+      # Launch offer: the first N learners to reach the dashboard get Plus free for a month. 0 = off.
+      SOCRAT_LAUNCH_PROMO_SLOTS: "${SOCRAT_LAUNCH_PROMO_SLOTS:-20}"
+      SOCRAT_LAUNCH_PROMO_DAYS: "${SOCRAT_LAUNCH_PROMO_DAYS:-30}"
       SOCRAT_RAZORPAY_KEY_ID: "${SOCRAT_RAZORPAY_KEY_ID:-}"
       SOCRAT_RAZORPAY_KEY_SECRET_FILE: /run/secrets/razorpay_key_secret
       SOCRAT_RAZORPAY_WEBHOOK_SECRET_FILE: /run/secrets/razorpay_webhook_secret

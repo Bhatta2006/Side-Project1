@@ -16,6 +16,7 @@ from socrat.catalog.registry import Catalog
 from socrat.models import (
     AssistantMessage,
     AssistantThread,
+    Enrollment,
     LaunchGrant,
     PlaygroundJob,
     Subscription,
@@ -63,15 +64,15 @@ def plan_of(db: Session, user_id: str, stamp: int | None = None) -> str:
 def grant_launch_promo(
     db: Session, user: User, device: str, stamp: int | None = None
 ) -> LaunchGrant | None:
-    """Give a brand-new account one of the launch slots, if any are left. Call it only where an
-    account is created, never on sign-in, so existing learners are not eligible.
+    """Give this account one of the launch slots, if any are left. Use ``claim_launch_promo``,
+    which decides whether the account is due one.
 
-    Each attempt claims the next slot number inside a savepoint; if another signup took that
+    Each attempt claims the next slot number inside a savepoint; if another learner took that
     number first, the primary key rejects it and we try the next. Slots above the cap are never
-    written, so the cap holds under concurrent signups.
+    written, so the cap holds under concurrent requests.
 
     ``device`` is the hash of the browser's device cookie: a device that already holds a grant
-    gets no second one, whichever account signs up on it."""
+    gets no second one, whichever account uses it."""
     if LAUNCH_PROMO_SLOTS <= 0 or user.issuer in NO_PROMO_ISSUERS:
         return None
     if db.scalar(select(LaunchGrant.slot).where(LaunchGrant.device_hash == device)) is not None:
@@ -100,6 +101,34 @@ def grant_launch_promo(
                 return None
             continue
     return None
+
+
+def claim_launch_promo(
+    db: Session, user: User, device: str, stamp: int | None = None
+) -> LaunchGrant | None:
+    """The learner's launch grant, made now if they are due one and a slot is left.
+
+    Called when the learner opens the dashboard. The month starts there, not at sign-up: an
+    account is due a grant once its placement is finished (an active enrollment), so the free
+    month is not spent on onboarding, and an account created before the offer was switched on
+    still gets its slot the next time it comes in. A learner already on a paid plan is skipped,
+    leaving the slot for someone the offer helps. Safe to call on every visit: an account holds
+    at most one grant, ever."""
+    existing = db.scalar(select(LaunchGrant).where(LaunchGrant.user_id == user.id))
+    if existing is not None:
+        return existing
+    if LAUNCH_PROMO_SLOTS <= 0 or user.issuer in NO_PROMO_ISSUERS:
+        return None
+    at = stamp or now()
+    active = db.scalar(
+        select(Enrollment.id).where(Enrollment.user_id == user.id, Enrollment.status == "active")
+    )
+    if active is None:
+        return None
+    sub = db.get(Subscription, user.id)
+    if sub is not None and sub.plan in PLANS and sub.current_end > at:
+        return None
+    return grant_launch_promo(db, user, device, at)
 
 
 def free_concepts(catalog: Catalog) -> set[str]:

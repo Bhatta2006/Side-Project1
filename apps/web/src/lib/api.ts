@@ -165,6 +165,8 @@ const MESSAGES: Record<string, string> = {
   csrf_rejected: 'Your session token expired. Reload the page.',
   language_not_offered: 'That course is not offered in this language.',
   placement_in_progress: 'Finish the placement check first.',
+  cannot_delete_self: 'You cannot delete your own account here. Use Settings.',
+  cannot_delete_admin: 'An admin account cannot be deleted here.',
   already_enrolled: 'Finish your current course first. Continue it from Today.',
   validation_failed: 'Some details are not valid. Check the form and try again.',
   authentication_required: 'Your session ended. Sign in again.',

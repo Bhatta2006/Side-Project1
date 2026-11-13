@@ -205,6 +205,7 @@ const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false }
 // The sticker catalogue is large and the shell shows one rocket, so it loads on its own.
 const Sticker = dynamic(() => import('@/components/ui/sticker').then(m => m.Sticker), { ssr: false });
 const ReportThanks = dynamic(() => import('@/components/report-thanks').then(m => m.ReportThanks), { ssr: false });
+const AdminNotes = dynamic(() => import('@/components/admin-notes').then(m => m.AdminNotes), { ssr: false });
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 const ownTutor = (path: string) => path === '/today' || path === '/plan' || path.startsWith('/learn/') || /^\/problems\/[^/]+$/.test(path);
 /** Checks and tests are proof of what the learner knows on their own: no tutor on these. */
@@ -367,7 +368,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
         </header>
       )}
       <main id="main" tabIndex={-1} className="outline-none"><PageTransition>{children}</PageTransition></main>
-      {profile ? <><ReportProblem /><ReportThanks /></> : null}
+      {profile ? <><ReportProblem /><ReportThanks /><AdminNotes /></> : null}
     </div>
   );
 }
@@ -420,6 +421,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       {/* Soc is one tap away everywhere; pages with their own tutor (lesson, problem, plan, today) mount a scoped one. */}
       {ownTutor(pathname) || examRoute(pathname) ? null : <Assistant scope="general" title="Ask Soc" />}
       <ReportThanks />
+      <AdminNotes />
     </SidebarProvider>
   );
 }

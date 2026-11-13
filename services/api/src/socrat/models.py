@@ -770,6 +770,20 @@ class GenerationJob(Base):
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
+class UserNotification(Base):
+    """A note an admin sent to a learner. Shown once in the app; ``seen_at`` is when they
+    closed it."""
+
+    __tablename__ = "user_notifications"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    body: Mapped[str] = mapped_column(Text)
+    sent_by: Mapped[str | None] = mapped_column(String(36), nullable=True)  # the admin's user id
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    seen_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
 class LaunchGrant(Base):
     """Free Plus for one of the first signups at launch. The slot number is the primary key and
     only slots 1..SOCRAT_LAUNCH_PROMO_SLOTS are ever written, so two racing signups cannot share

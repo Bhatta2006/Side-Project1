@@ -1876,8 +1876,7 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
    blend modes and filters sit on top. A phone or laptop with a weak GPU cannot repaint that at
    60 frames a second, and the page lags while scrolling. Light rendering keeps the layout, the
    colours, the type and the drawings, and drops what only adds texture: paper is one flat
-   colour, strokes are solid, shadows are a single hairline, nothing blends or blurs, and nothing
-   animates for ever. It turns itself on for devices that report little memory or few cores, or
+   colour, strokes are solid, shadows are a single hairline, and nothing blends or blurs. It turns itself on for devices that report little memory or few cores, or
    that are measured dropping frames, and the learner can force either mode in Settings.
    ------------------------------------------------------------------------------------------ */
 html[data-perf="lite"], html[data-perf="lite"] :is([data-ll-scope], [data-theme]) {
@@ -1914,8 +1913,9 @@ html[data-perf="lite"] svg [mask^="url(#ll-"] { mask: none; }
 html[data-perf="lite"] *, html[data-perf="lite"] *::before, html[data-perf="lite"] *::after { backdrop-filter: none !important; mix-blend-mode: normal !important; }
 html[data-perf="lite"] :is(.ll-drop-sheet, .ll-drop-sticker, .soc g[filter]) { filter: none; }
 html[data-perf="lite"] .landing .glass-nav { background: var(--card); }
-/* Nothing loops for ever; one-off entrances and feedback still play. */
-html[data-perf="lite"] :is(.ll-boil, .ll-boil-x, .drift, .drift-slow, .marquee-y, .marquee-x, .loop-ladder > span, .loop-tick, .loop-slide, .loop-check, .loop-type, .soc-walk, .soc-scribble path, .soc-eyes) { animation: none; }
-html[data-perf="lite"] .loop-type { width: auto; }
+/* The paint-heavy loops stop (the boiling line redraws its background on every step). Loops that
+   only move or fade something, such as the landing marquees and the little feature drawings, are
+   left running: the compositor moves them without repainting, so they cost a slow device nothing
+   and the page would look broken without them. */
+html[data-perf="lite"] :is(.ll-boil, .ll-boil-x, .soc-scribble path, .soc-eyes) { animation: none; }
 html[data-perf="lite"] .soc.soc-idle { animation: var(--soc-react); }
-html[data-perf="lite"] :is(.doodle-scroll, .doodle-load) :is([data-ink], [data-fill]) { animation: none; }
