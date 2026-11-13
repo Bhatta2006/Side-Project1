@@ -92,7 +92,7 @@ export default function ProgressPage() {
 
         {/* Hero: course completion. */}
         <Paper as="section" stock="sticky-yellow" tape="both" tilt={-0.3} seed="evidence-hero" className="flex flex-wrap items-center gap-6 p-6 text-ink lg:gap-8 lg:p-8" data-tone="hero" data-tour="evidence-course" aria-labelledby="course-heading">
-          <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[150px] xl:block"><SocFigure books mood="proud" idle className="h-auto w-full" /></div>
+          <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[150px] xl:block"><SocFigure books mood="proud" still className="h-auto w-full" /></div>
           <Ring value={data.progress.percent} size={104} stroke={6} label={<span className="font-display text-3xl">{data.progress.percent}%</span>} ariaLabel={`Course ${data.progress.percent} percent complete`} />
           <div className="min-w-0 flex-1 xl:pr-[180px]">
             <p className="font-script origin-left -rotate-2 text-[24px] text-red">look how far you&apos;ve come</p>

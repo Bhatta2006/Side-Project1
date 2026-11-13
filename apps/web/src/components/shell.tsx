@@ -27,6 +27,7 @@ import {
 } from '@/components/icons';
 import { api } from '@/lib/api';
 import { prefetchRoute } from '@/lib/prefetch';
+import { pauseHoverWhileScrolling } from '@/lib/scroll-hover';
 import { NAV, navFor, navItems, type NavKey } from '@/lib/routes';
 import { useSession } from '@/lib/session';
 import { PLAN_NAME } from '@/lib/plans';
@@ -382,6 +383,8 @@ export default function Shell({ children }: { children: ReactNode }) {
     try { saved = localStorage.getItem(COLLAPSE_KEY); } catch { /* per-viewer nicety only */ }
     setOpen(saved === null ? window.matchMedia('(min-width: 1024px)').matches : saved !== 'true');
   }, []);
+  // Hover effects firing as the page moves under the pointer were the main cause of scroll jank.
+  useEffect(() => pauseHoverWhileScrolling(), []);
   const ready = useAssessmentReady(learning);
 
   if (!learning) return <MarketingShell>{children}</MarketingShell>;
@@ -399,7 +402,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       <SidebarInset id="main" tabIndex={-1} className="min-w-0 pb-24 outline-none max-md:before:block md:pb-0">
         <InkTiles tiles={SHEET_TILES} />
         <DevBanner />
-        <header style={{ viewTransitionName: 'app-header' }} className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-line-soft bg-paper/95 px-4 backdrop-blur-[2px] lg:px-8">
+        <header style={{ viewTransitionName: 'app-header' }} className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-line-soft bg-paper px-4 lg:px-8">
           <SidebarTrigger className="hidden md:inline-flex" />
           <Link href="/today" className="md:hidden" aria-label="Socrat, Today"><Wordmark size={24} /></Link>
           <div className="min-w-0 flex-1"><CommandMenu /></div>
