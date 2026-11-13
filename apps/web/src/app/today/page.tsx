@@ -228,10 +228,10 @@ export default function TodayPage() {
                   <span className="font-script text-[22px] whitespace-nowrap text-red -rotate-6 xl:text-[24px]">you&apos;ve got this</span>
                   <Doodle name="arrow-bounce" size={44} rotate={70} seed="today-arrow" className="-mb-6 -scale-x-100" />
                 </div>
-                <SocFigure books mood={heroMood} idle className="h-auto w-full" />
+                <SocFigure books mood={heroMood} still className="h-auto w-full" />
               </div>
               <div aria-hidden="true" className="pointer-events-none absolute right-5 bottom-2 sm:hidden">
-                <SocFigure size={84} mood={heroMood === 'happy' ? 'curious' : heroMood} />
+                <SocFigure size={84} mood={heroMood === 'happy' ? 'curious' : heroMood} still />
               </div>
               <Sticker name="highlighter" size={56} rotate={-14} seed="today-hl" className="absolute -top-6 right-8 hidden sm:block xl:right-14" />
               <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[60%] xl:max-w-[54%]">
@@ -257,7 +257,7 @@ export default function TodayPage() {
           ) : (
             <Card tone="hero" data-tour="today-next" className="relative" aria-labelledby="next-heading">
               <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[200px] sm:block">
-                <SocFigure books mood={today.study_day ? 'proud' : 'sleepy'} idle className="h-auto w-full" />
+                <SocFigure books mood={today.study_day ? 'proud' : 'sleepy'} still className="h-auto w-full" />
               </div>
               <div className="relative flex flex-col gap-4 px-(--card-spacing) sm:max-w-[60%]">
                 <h2 id="next-heading" className="type-display-m">{complete ? `${today.course.title} complete` : today.study_day ? 'Done for today' : 'Rest day'}</h2>

@@ -1235,7 +1235,8 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
 /* 1. Reactions, and 2. the idle loop each mood settles into (set as variables, combined below). */
 .soc { --soc-react: soc-nod 0.6s ease-out; --soc-loop: soc-bob 5s ease-in-out 0.6s infinite; animation: var(--soc-react); }
 .soc.soc-idle { animation: var(--soc-react), var(--soc-loop); }
-.soc[data-mood="happy"] { --soc-react: soc-hop 0.75s var(--soc-ease); --soc-loop: soc-bounce 2.6s ease-in-out 0.75s infinite; }
+/* A still Soc never moves: large figures on scrolling pages (Today, Skills) stay cheap to paint. */
+.soc.soc-still { animation: none; }.soc[data-mood="happy"] { --soc-react: soc-hop 0.75s var(--soc-ease); --soc-loop: soc-bounce 2.6s ease-in-out 0.75s infinite; }
 .soc[data-mood="proud"] { --soc-react: soc-puff 0.8s var(--soc-ease); --soc-loop: soc-bounce 2.6s ease-in-out 0.8s infinite; }
 .soc[data-mood="curious"] { --soc-react: soc-tilt 0.8s var(--soc-ease); --soc-loop: soc-ponder 4.6s ease-in-out 0.8s infinite; }
 .soc[data-mood="confused"] { --soc-react: soc-wobble 0.9s ease-in-out; --soc-loop: soc-ponder 4.6s ease-in-out 0.9s infinite; }

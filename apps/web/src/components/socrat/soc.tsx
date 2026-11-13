@@ -326,6 +326,8 @@ export function SocFigure(props: {
   books?: boolean;
   look?: Look;
   idle?: boolean;
+  /** No motion at all (see SocStone). */
+  still?: boolean;
   /** Width in px. Height follows the figure's proportions. */
   size?: number;
   className?: string;

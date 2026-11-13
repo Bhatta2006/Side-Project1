@@ -476,6 +476,7 @@ export function SocStone({
   look,
   books = false,
   idle = false,
+  still = false,
   hands: handsProp,
   size,
   className,
@@ -486,6 +487,8 @@ export function SocStone({
   look?: Gaze;
   books?: boolean;
   idle?: boolean;
+  /** No motion at all: no entrance reaction, idle loop, blink or gesture. For large Socs on busy pages. */
+  still?: boolean;
   /** A hand pose, or false for none. By default the mood picks one when Soc is 56px or larger. */
   hands?: HandPose | false;
   size?: number;
@@ -503,8 +506,8 @@ export function SocStone({
   const pose = handsProp === false ? 'none' : (handsProp ?? (size === undefined || size >= 56 ? MOOD_HANDS[mood] : undefined) ?? 'none');
   const width = size ?? 220;
   // Tiny avatars stay still; from 32px he blinks, and with room for hands or props he gestures.
-  const blinks = width >= 32 && BLINKS.has(mood);
-  const gestures = !crop && (pose !== 'none' || stoneExtra(mood).length > 0);
+  const blinks = !still && width >= 32 && BLINKS.has(mood);
+  const gestures = !still && !crop && (pose !== 'none' || stoneExtra(mood).length > 0);
   // At rest (eyes centred), a Soc on a page with a sprite points at one shared copy of its drawing.
   // Once his eyes follow the pointer he changes drawing as he looks around, so he draws his own.
   const sprite = useSocSprite();
@@ -525,7 +528,7 @@ export function SocStone({
   const shift = ([...uid].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7) % 100) / 100;
   const figure = React.useRef<HTMLSpanElement>(null);
   // His blink, and (when idle with hands to move) his repeated gesture: see lib/soc-blink.ts.
-  const beats = Boolean(idle && gestures);
+  const beats = Boolean(idle && !still && gestures);
   React.useEffect(() => (figure.current && (blinks || beats) ? watchFigure(figure.current, shift, { blinks, beats }) : undefined), [blinks, beats, shift, mood]);
   const base = draw('base');
   const blink = blinks ? draw('blink') : null;
@@ -549,7 +552,7 @@ export function SocStone({
       data-mood={mood}
       data-pose={pose}
       data-gestures={gestures ? '' : undefined}
-      className={cn('soc relative block shrink-0 select-none ll-drop-sticker', idle && 'soc-idle', className)}
+      className={cn('soc relative block shrink-0 select-none ll-drop-sticker', idle && !still && 'soc-idle', still && 'soc-still', className)}
       style={{ width: size, '--soc-shift': shift, ...style } as React.CSSProperties}
       role={title ? 'img' : undefined}
       aria-label={title}

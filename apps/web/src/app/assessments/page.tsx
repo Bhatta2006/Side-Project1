@@ -121,7 +121,7 @@ function Upcoming({ status }: { status: AssessmentStatus }) {
 function Available({ status, onStart, busy }: { status: AssessmentStatus; onStart: (timed: boolean) => void; busy: boolean }) {
   return (
     <section className="relative flex flex-col gap-5 overflow-hidden rounded-card bg-forest p-6 text-forest-foreground [--card-muted:color-mix(in_srgb,var(--forest-foreground),transparent_18%)] lg:p-8" data-tone="hero" aria-labelledby="available-heading">
-      <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[180px] lg:block"><SocFigure books mood="thinking" idle className="h-auto w-full" /></div>
+      <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[180px] lg:block"><SocFigure books mood="thinking" still className="h-auto w-full" /></div>
       <div className="flex flex-wrap gap-2"><Badge>Available</Badge><Badge>Week {status.week.split('-W')[1]}</Badge></div>
       <h2 id="available-heading" className="type-display-l">{NAME.assessment}</h2>
       <p className="max-w-2xl text-base lg:pr-[200px]">

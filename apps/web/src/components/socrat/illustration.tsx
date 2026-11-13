@@ -182,6 +182,6 @@ export function Illustration({ name, className, draw = 'scroll' }: { name: Illus
  * focused (see .soc-avatar in globals.css). `mood` matches the moment: happy on a pass, thinking
  * while he waits, worried on an error.
  */
-export function Soc({ size = 48, className, label, mood = 'neutral' }: { size?: number; className?: string; label?: string; mood?: SocMood }) {
-  return <SocFigure size={size} mood={mood} title={label} className={cn('soc-avatar flex-none', className)} />;
+export function Soc({ size = 48, className, label, mood = 'neutral', still }: { size?: number; className?: string; label?: string; mood?: SocMood; still?: boolean }) {
+  return <SocFigure size={size} mood={mood} still={still} title={label} className={cn('soc-avatar flex-none', className)} />;
 }
