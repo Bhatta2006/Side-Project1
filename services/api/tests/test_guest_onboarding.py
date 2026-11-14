@@ -3,10 +3,10 @@
 from test_learner_api import ORIGIN, client, login, onboard  # noqa: F401
 
 
-def guest(client):
-    response = client.post("/api/v1/auth/guest", headers={"Origin": ORIGIN})
+def guest(http):
+    response = http.post("/api/v1/auth/guest", headers={"Origin": ORIGIN})
     assert response.status_code == 200
-    me = client.get("/api/v1/me").json()
+    me = http.get("/api/v1/me").json()
     assert me["guest"] is True
     return {"Origin": ORIGIN, "X-CSRF-Token": me["csrf_token"]}
 
