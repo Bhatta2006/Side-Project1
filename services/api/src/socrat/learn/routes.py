@@ -16,7 +16,7 @@ from socrat.assistant import budget
 from socrat.assistant import service as assistant
 from socrat.assistant.gateway import make_provider
 from socrat.assistant.tools import Toolbox
-from socrat.auth import COOKIE, GUEST_ISSUER, require_csrf, require_session
+from socrat.auth import COOKIE, require_csrf, require_session
 from socrat.catalog import generated, practice, shape
 from socrat.catalog.registry import Catalog, CatalogError, default_catalog
 from socrat.database import record_event
@@ -200,7 +200,6 @@ def profile_view(
     return dict(
         id=user.id,
         admin=admin,
-        guest=user.issuer == GUEST_ISSUER,
         display_name=user.display_name,
         birth_year=user.birth_year,
         timezone=user.timezone,

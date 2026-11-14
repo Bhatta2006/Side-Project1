@@ -63,8 +63,6 @@ export type Requirement = 'signed-in' | 'enrolled' | 'active';
 /** Where a learner belongs given what a page requires; null when they may stay. */
 export function destination(profile: Profile | null, need: Requirement): string | null {
   if (!profile) return '/login';
-  // A guest only ever sees setup and the placement check; the app needs a real account.
-  if (profile.guest) return need === 'enrolled' && profile.enrollment ? null : profile.enrollment ? '/placement' : '/start';
   if (need === 'signed-in') return null;
   if (!profile.enrollment) return '/start';
   if (need === 'enrolled') return null;
