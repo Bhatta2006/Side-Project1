@@ -2,50 +2,66 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check } from '@/components/icons';
 import { api, explain } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 import { useGuard, useSession } from '@/lib/session';
-import type { PlacementQuestion, PlacementSummary } from '@/lib/types';
+import type { PlacementQuestion } from '@/lib/types';
 import { ErrorNote, Loading } from '@/components/common';
 import { Choice } from '@/components/choice';
-import { StatusLabel } from '@/components/socrat/status';
-import { ArrowCircle, Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { codeSpans } from '@/components/markdown';
 import { SocFigure } from '@/components/socrat/soc';
+import { GoogleMark, PlanBuildingRun, WELCOME_KEY } from '@/components/socrat/plan-building';
 
-const BUILD_STEPS = [
-  'Reading your answers',
-  'Finding the edge of what you know',
-  'Building your personalised plan',
-  'Soc is getting ready',
-];
-const BUILD_STEP_MS = 900;
+/** A guest's plan is ready: signing in keeps it. Google returns to /start, which plays the build. */
+function SavePlan() {
+  const { features, profile, refresh } = useSession();
+  const router = useRouter();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const remember = () => { try { sessionStorage.setItem(WELCOME_KEY, '1'); } catch { /* storage unavailable */ } };
 
-/** Shown between the last answer and the summary while the plan is put together. */
-function PlanBuilding({ step }: { step: number }) {
+  async function devSignIn() {
+    setBusy(true);
+    setError('');
+    try {
+      const name = profile?.display_name?.trim() || 'learner';
+      const subject = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64) || 'learner';
+      await api.post('/auth/dev-login', { subject, display_name: name });
+      remember();
+      await refresh();
+      router.replace('/start');
+    } catch (e) {
+      setError(explain(e));
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="mx-auto grid w-full max-w-md justify-items-center gap-8 px-4 pt-16 pb-32 text-center sm:px-6 md:pt-24" role="status" aria-live="polite">
-      <SocFigure books mood="happy" idle size={150} />
-      <div className="grid gap-1">
-        <p className="font-hand -rotate-2 text-[22px] text-pen">one moment</p>
-        <h1 className="type-display-m">Making your plan</h1>
+    <div className="mx-auto grid w-full max-w-md gap-8 px-4 pt-12 pb-32 sm:px-6 md:pt-20">
+      <div className="grid justify-items-start gap-3">
+        <SocFigure books mood="happy" idle size={130} />
+        <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">nicely done</p>
+        <h1 className="type-display-l">Save your <span className="hl hl-draw">plan</span></h1>
+        <p className="text-base text-muted-foreground">Placement is done. Sign in so your plan and progress are kept, then we build it for you.</p>
       </div>
-      <ol className="grid w-full gap-2 text-left">
-        {BUILD_STEPS.map((label, i) => {
-          const done = i < step;
-          const now = i === step;
-          return (
-            <li key={label} className={`flex min-h-12 items-center gap-3 rounded-[4px] px-4 transition-all duration-500 motion-reduce:transition-none ${i > step ? 'opacity-35' : 'opacity-100'} ${now ? 'bg-raised' : ''}`}>
-              <span className={`grid size-6 flex-none place-items-center rounded-full border-2 transition-colors duration-500 ${done ? 'border-primary bg-primary text-primary-foreground' : now ? 'border-primary' : 'border-border'}`} aria-hidden="true">
-                {done ? <Check className="size-3.5" strokeWidth={3} /> : now ? <span className="size-2 animate-pulse rounded-full bg-primary motion-reduce:animate-none" /> : null}
-              </span>
-              <span className={now ? 'font-semibold' : 'text-muted-foreground'}>{label}</span>
-            </li>
-          );
-        })}
-      </ol>
+      <div className="grid gap-3">
+        {features?.oidc_login ? (
+          <Button asChild size="lg" className="w-full"><a href="/api/v1/auth/login" onClick={remember}><GoogleMark /> Continue with Google</a></Button>
+        ) : null}
+        {features?.email_login ? (
+          <Button asChild variant="outline" size="lg" className="w-full"><Link href="/login?next=/start" onClick={remember}>Use email instead</Link></Button>
+        ) : null}
+        {features?.dev_login ? (
+          <Button type="button" variant="outline" size="lg" className="w-full" disabled={busy} onClick={() => void devSignIn()}>Continue as a simulated learner (development)</Button>
+        ) : null}
+      </div>
+      <p className="text-[13px] text-muted-foreground">
+        By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms of service</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
+      </p>
+      {error ? <ErrorNote message={error} /> : null}
     </div>
   );
 }
@@ -61,39 +77,26 @@ const noCopy = {
 
 export default function Placement() {
   const allowed = useGuard('enrolled');
-  const { refresh } = useSession();
+  const { profile, refresh } = useSession();
+  const router = useRouter();
   const [state, setState] = useState<PlacementQuestion | null>(null);
-  const [summary, setSummary] = useState<PlacementSummary | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  // -1: not building; 0..n: the build step on screen. Only a just-finished placement plays it.
-  const [building, setBuilding] = useState(-1);
+  // After the last answer: guests save their plan first, signed-in learners watch it being built.
+  const [phase, setPhase] = useState<'questions' | 'building' | 'save'>('questions');
+  const guest = Boolean(profile?.guest);
 
-  const finish = useCallback(async (animate = false) => {
-    if (!animate) {
-      setSummary(await api.get<PlacementSummary>('/placement/summary'));
-      await refresh();
-      return;
+  const finish = useCallback((justFinished: boolean) => {
+    if (guest) setPhase('save');
+    else if (justFinished) setPhase('building');
+    else {
+      // Just signed in from the save screen (the app shell remounts this page): /start plays the build.
+      let welcome = false;
+      try { welcome = sessionStorage.getItem(WELCOME_KEY) === '1'; } catch { /* storage unavailable */ }
+      router.replace(welcome ? '/start' : '/today');
     }
-    setBuilding(0);
-    const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const pace = reduced ? 250 : BUILD_STEP_MS;
-    const ready = api.get<PlacementSummary>('/placement/summary');
-    for (let i = 1; i <= BUILD_STEPS.length; i++) {
-      await new Promise(r => setTimeout(r, pace));
-      setBuilding(i);
-    }
-    try {
-      setSummary(await ready);
-    } catch (e) {
-      setError(explain(e));
-    } finally {
-      setBuilding(-1);
-    }
-    // Last: refreshing the session re-checks the guard, which would cut the sequence short.
-    await refresh();
-  }, [refresh]);
+  }, [guest, router]);
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -101,9 +104,9 @@ export default function Placement() {
     loaded.current = true;
     api
       .get<PlacementQuestion>('/placement')
-      .then(async q => {
+      .then(q => {
         setState(q);
-        if (q.done) await finish();
+        if (q.done) finish(false);
       })
       .catch(e => setError(explain(e)));
   }, [allowed, finish]);
@@ -116,7 +119,7 @@ export default function Placement() {
       const next = await api.post<PlacementQuestion>('/placement/answer', { item: state.question.id, choice: answer });
       setState(next);
       setChoice(null);
-      if (next.done) await finish(true);
+      if (next.done) finish(true);
     } catch (e) {
       setError(explain(e));
     } finally {
@@ -124,42 +127,11 @@ export default function Placement() {
     }
   }
 
-  if (building >= 0) return <PlanBuilding step={building} />;
+  if (phase === 'save') return <SavePlan />;
+  // Refreshing the session last: it re-checks the guard, which would cut the sequence short.
+  if (phase === 'building') return <PlanBuildingRun onDone={() => { void refresh().then(() => router.replace('/today')); }} />;
 
-  if (!summary && (!allowed || (!state && !error))) return <Loading variant="quiz" label="Loading the placement check" />;
-
-  if (summary) {
-    return (
-      <div className="mx-auto w-full max-w-2xl px-4 pt-10 pb-32 sm:px-6 md:pt-16">
-        <SocFigure books mood="happy" idle size={170} className="mb-4" />
-        <p className="text-[15px] text-muted-foreground">Placement complete. {summary.correct} of {summary.asked} answered correctly.</p>
-        <h1 className="type-display-l mt-2">Your plan is <span className="hl hl-draw">ready</span></h1>
-        <p className="mt-3 text-base text-muted-foreground">
-          {summary.starting_concept ? <>You start with <strong className="text-foreground">{summary.starting_concept}</strong>, at the edge of what you know.</> : 'You answered everything we asked. Short confirmation checks prove it before anything counts as learned.'}
-        </p>
-        {summary.weak_concepts?.length ? (
-          <p className="mt-2 text-[15px] text-muted-foreground">Placement caught gaps in {summary.weak_concepts.join(', ')}. Your plan picks up there.</p>
-        ) : null}
-        {summary.known_concepts.length ? (
-          <section className="mt-8 paper rounded-card p-5 lg:p-6" aria-labelledby="skip-heading">
-            <h2 id="skip-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Lessons you can skip, once confirmed</h2>
-            <p className="mt-1 text-[15px] text-muted-foreground">Placement suggests you know these. They are not counted as learned yet: each gets a short, harder confirmation check on your plan. Pass it and the skill counts; miss it and you learn it properly, no harm done.</p>
-            <ul className="mt-4 grid gap-2">
-              {summary.known_concepts.map(c => (
-                <li key={c} className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-[4px] bg-raised px-4 py-2.5">
-                  <span className="font-semibold">{c}</span>
-                  <StatusLabel status="assumed" muted className="text-[13px]" />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        <Button asChild size="lg" className="mt-8">
-          <Link href="/today">See your plan<ArrowCircle /></Link>
-        </Button>
-      </div>
-    );
-  }
+  if (!allowed || (!state && !error)) return <Loading variant="quiz" label="Loading the placement check" />;
 
   const q = state?.question;
   return (

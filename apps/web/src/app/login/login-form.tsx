@@ -56,7 +56,7 @@ export function LoginForm({ initialFeatures }: { initialFeatures: Features | nul
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (!loading && profile) router.replace(destination(profile, 'active') ?? requestedPath() ?? '/today');
+    if (!loading && profile && !profile.guest) router.replace(destination(profile, 'active') ?? requestedPath() ?? '/today');
   }, [loading, profile, router]);
 
   async function signedIn() {

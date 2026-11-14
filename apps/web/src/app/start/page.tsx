@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, Code2, Target, Trophy } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Progress } from '@/components/ui/progress';
 import { Soc } from '@/components/socrat/illustration';
+import { PlanBuildingRun, WELCOME_KEY } from '@/components/socrat/plan-building';
 
 const MINUTES = [15, 20, 30, 45, 60, 90, 120] as const;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -30,17 +31,6 @@ const ORDER: Step[] = ['about', 'course', 'level', 'language', 'schedule', 'revi
 const COURSE_ICON: Record<string, typeof BookOpen> = { zero: BookOpen, dsa: Target, cp: Trophy };
 const DRAFT_KEY = 'socrat:onboarding';
 const MIN_AGE = 13;
-
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
-      <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z" />
-      <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z" />
-      <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z" />
-      <path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z" />
-    </svg>
-  );
-}
 
 function detectTimezone() {
   try {
@@ -81,8 +71,8 @@ function Summary({ label, value, onEdit }: { label: string; value: string; onEdi
 const retryable = (message: string) => !/age|valid|details|already/i.test(message);
 
 export default function Start() {
-  const { profile, features, loading, refresh } = useSession();
-  const allowed = !loading; // the questions come first; signing in happens at the end
+  const { profile, loading, refresh } = useSession();
+  const allowed = !loading; // the questions and placement come first; signing in happens after
   const router = useRouter();
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [step, setStep] = useState<Step>('about');
@@ -91,9 +81,8 @@ export default function Start() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [restored, setRestored] = useState(false);
-  // Set once a signed-out learner heads to sign in: on return the plan is created from the saved answers.
-  const [pending, setPending] = useState(false);
-  const finishing = useRef(false);
+  // Back from signing in after placement: play the plan being built instead of a list.
+  const [welcome, setWelcome] = useState(false);
 
   const [name, setName] = useState('');
   const [birthYear, setBirthYear] = useState('');
@@ -118,10 +107,17 @@ export default function Start() {
     if (!profile) return;
     // A finished course may start the next one (the API refuses unless the course is done).
     const moving = new URLSearchParams(window.location.search).get('next') === '1';
-    if (profile.enrollment && !moving) { router.replace(profile.enrollment.status === 'placement' ? '/placement' : '/today'); return; }
+    if (profile.enrollment && !moving) {
+      let returning = false;
+      // Cleared when the animation ends, not here: effects may run twice.
+      try { returning = sessionStorage.getItem(WELCOME_KEY) === '1'; } catch { /* storage unavailable */ }
+      if (returning && !profile.guest && profile.enrollment.status === 'active') { setWelcome(true); return; }
+      if (!welcome) router.replace(profile.enrollment.status !== 'active' || profile.guest ? '/placement' : '/today');
+      return;
+    }
     setName(n => n || profile.display_name || '');
     if (profile.birth_year) setStep(s => (s === 'about' ? 'course' : s));
-  }, [profile, router]);
+  }, [profile, router, welcome]);
 
   // Choices survive moving between steps and a reload within this browser session.
   useEffect(() => {
@@ -146,7 +142,6 @@ export default function Start() {
       if (typeof saved.targetRole === 'string') setTargetRole(saved.targetRole);
       if (typeof saved.targetRating === 'string') setTargetRating(saved.targetRating);
       if (typeof saved.motivation === 'string') setMotivation(saved.motivation);
-      if (saved.pending === true) setPending(true);
       const savedStep = saved.step as Step;
       // Never skip the profile step for an incomplete profile.
       if ((profile?.birth_year || (saved.name && saved.birthYear)) && ORDER.includes(savedStep) && savedStep !== 'about' && (savedCourse || savedStep === 'course')) setStep(savedStep);
@@ -155,9 +150,9 @@ export default function Start() {
   useEffect(() => {
     if (!restored) return;
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, name, birthYear, course: course?.id, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation, pending }));
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, name, birthYear, course: course?.id, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation }));
     } catch { /* per-viewer nicety only */ }
-  }, [restored, step, name, birthYear, course, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation, pending]);
+  }, [restored, step, name, birthYear, course, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation]);
 
   const thisYear = new Date().getFullYear();
   const years = useMemo(() => Array.from({ length: 90 }, (_, i) => thisYear - 13 - i), [thisYear]);
@@ -193,19 +188,19 @@ export default function Start() {
 
   async function enroll(event: React.FormEvent) {
     event.preventDefault();
-    if (!profile) { setPending(true); return; } // show the sign-in options
-    await submitPlan();
-  }
-
-  async function devSignIn() {
-    setError('');
-    try {
-      const subject = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64) || 'learner';
-      await api.post('/auth/dev-login', { subject, display_name: name.trim() });
-      await refresh();
-    } catch (e) {
-      setError(explain(e));
+    if (!profile) { // a guest session holds the plan and placement until they sign in
+      setBusy(true);
+      setError('');
+      try {
+        await api.post('/auth/guest');
+        await refresh();
+      } catch (e) {
+        setError(explain(e));
+        setBusy(false);
+        return;
+      }
     }
+    await submitPlan();
   }
 
   async function submitPlan() {
@@ -227,47 +222,22 @@ export default function Start() {
       router.replace(result.status === 'placement' ? '/placement' : '/today');
     } catch (e) {
       setError(explain(e));
-      setPending(false);
       setBusy(false);
     }
   }
 
-  // Back from signing in with a finished set of answers: create the plan without asking again.
-  useEffect(() => {
-    if (!restored || !pending || !profile || finishing.current || !course || !language || !level) return;
-    if (!profile.birth_year && !birthYear) return;
-    finishing.current = true;
-    void submitPlan();
-  });
-
-  if (!allowed || !courses) return error ? <div className="mx-auto max-w-2xl p-6"><ErrorNote message={error} /></div> : <Loading variant="form" label="Loading setup" />;
-
-  // Sign in first: the plan, the placement check and every answer are kept from the start.
-  if (!profile) {
+  if (welcome) {
     return (
-      <div className="mx-auto grid w-full max-w-md gap-8 px-4 pt-12 pb-32 sm:px-6 md:pt-20">
-        <div className="grid justify-items-start gap-3">
-          <Soc size={112} mood="curious" />
-          <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">before we start</p>
-          <h1 className="type-display-l">Make your <span className="hl hl-draw">Socrat</span> account</h1>
-          <p className="text-base text-muted-foreground">A few questions and a short placement check follow. Signing in first means none of it is lost.</p>
-        </div>
-        <div className="grid gap-3">
-          {features?.oidc_login ? (
-            <Button asChild size="lg" className="w-full"><a href="/api/v1/auth/login"><GoogleMark /> Continue with Google</a></Button>
-          ) : null}
-          {features?.dev_login ? (
-            <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => void devSignIn()}>Continue as a simulated learner (development)</Button>
-          ) : null}
-          {features && !features.oidc_login && !features.dev_login ? <p className="text-[15px] text-muted-foreground">Sign-in is not configured on this server.</p> : null}
-        </div>
-        <p className="text-[13px] text-muted-foreground">
-          By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms of service</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
-        </p>
-        {error ? <ErrorNote message={error} /> : null}
-      </div>
+      <PlanBuildingRun
+        onDone={() => {
+          try { sessionStorage.removeItem(WELCOME_KEY); } catch { /* storage unavailable */ }
+          router.replace('/today');
+        }}
+      />
     );
   }
+
+  if (!allowed || !courses) return error ? <div className="mx-auto max-w-2xl p-6"><ErrorNote message={error} /></div> : <Loading variant="form" label="Loading setup" />;
 
   const position = ORDER.indexOf(step);
   const back = position > (profile?.birth_year ? 1 : 0) ? () => setStep(ORDER[position - 1]) : undefined;
@@ -307,6 +277,7 @@ export default function Start() {
               </label>
             ) : null}
             <Button size="lg" className="justify-self-start" disabled={busy || !birthYear || !name.trim()} aria-busy={busy}>Continue<ArrowCircle loading={busy} /></Button>
+            {!profile || profile.guest ? <p className="text-[15px] text-muted-foreground">Already have an account? <a href="/login" className="font-semibold underline underline-offset-4">Log in</a></p> : null}
           </form>
         ) : null}
 
@@ -432,28 +403,9 @@ export default function Start() {
               <Summary label="Study time" value={`${hours(minutes)} on ${weekdays.map(i => DAYS[i]).join(', ')}`} onEdit={() => setStep('schedule')} />
               {targetDate ? <Summary label="Target date" value={new Date(`${targetDate}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })} onEdit={() => setStep('schedule')} /> : null}
             </dl>
-            {!profile && pending ? (
-              <div className="paper grid gap-4 rounded-card p-5" role="region" aria-label="Sign in to save your plan">
-                <div>
-                  <h2 className="font-display text-xl font-bold tracking-[-0.02em]">Save your plan</h2>
-                  <p className="mt-1 text-[15px] text-muted-foreground">Sign in so your plan and progress are kept. Your answers are already filled in.</p>
-                </div>
-                {features?.oidc_login ? (
-                  <Button asChild variant="outline" size="lg" className="w-full"><a href="/api/v1/auth/login"><GoogleMark /> Continue with Google</a></Button>
-                ) : null}
-                {features?.dev_login ? (
-                  <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => void devSignIn()}>Continue as {name.trim() || 'a simulated learner'} (development)</Button>
-                ) : null}
-                {features && !features.oidc_login && !features.dev_login ? <p className="text-[15px] text-muted-foreground">Sign-in is not configured on this server.</p> : null}
-                <p className="text-[13px] text-muted-foreground">
-                  By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms of service</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
-                </p>
-              </div>
-            ) : (
-              <Button size="lg" className="justify-self-start" disabled={busy || !level || !language} aria-busy={busy}>
-                {busy ? 'Creating your plan' : profile ? 'Create my plan' : 'Save my plan'}<ArrowCircle loading={busy} />
-              </Button>
-            )}
+            <Button size="lg" className="justify-self-start" disabled={busy || !level || !language} aria-busy={busy}>
+              {busy ? 'Creating your plan' : 'Create my plan'}<ArrowCircle loading={busy} />
+            </Button>
             {!level || !language ? <p className="text-sm text-muted-foreground">Choose a level and a language first.</p> : null}
           </form>
         ) : null}
