@@ -11,6 +11,8 @@ evidence for the concepts before it. Placement is deliberately hard to pass:
 - Once the search settles, ``SPOT_CHECKS`` earlier concepts the search only inferred are
   tested too. A miss there pulls the frontier back to that concept, so the plan starts
   at the learner's real gap rather than past it.
+- Three misses (or "not sure yet") in a row end the check early: the learner has shown where
+  their gap is, and more hard questions would only drag on. The frontier stays where it was.
 - However well a learner does, at most ``SKIP_CAP`` of the path can be placed as known:
   nobody tests out of the whole course.
 """
@@ -21,7 +23,8 @@ from dataclasses import dataclass, field
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import QuizItem
 
-MAX_QUESTIONS = 15  # placement should feel short: at most 15 questions
+MAX_QUESTIONS = 10  # placement should feel short: at most 10 questions
+STOP_AFTER_MISSES = 3  # misses in a row that end the check early
 SKIP_CAP = 0.6  # most of the path placement may mark as assumed known
 CONFIRM = 2  # correct answers a concept needs before placement believes it
 SPOT_CHECKS = 2  # inferred concepts below the frontier that are tested anyway
@@ -152,6 +155,14 @@ def answer(catalog: Catalog, state: PlacementState, choice: int) -> bool:
     probe = state.pending
     index = probe["index"]
     state.asked.append({"concept": probe["concept"], "item": probe["item"], "correct": correct})
+    recent = state.asked[-STOP_AFTER_MISSES:]
+    if len(recent) == STOP_AFTER_MISSES and not any(x["correct"] for x in recent):
+        # The gap is found: stop here, below the miss, rather than keep asking hard questions.
+        state.hi = min(state.hi, index)
+        state.lo = min(state.lo, state.hi)
+        state.hi = state.lo
+        state.pending = None
+        return correct
     same = [x for x in state.asked if x["concept"] == probe["concept"]]
     budget = len(state.asked) < MAX_QUESTIONS
     if correct and len(same) < CONFIRM and budget and _candidates(catalog, state, probe["concept"]):

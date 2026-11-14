@@ -342,8 +342,7 @@ function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean })
 }
 
 function MarketingShell({ children }: { children: ReactNode }) {
-  const { profile: session } = useSession();
-  const profile = session?.guest ? null : session; // guests get the signed-out header
+  const { profile } = useSession();
   const pathname = usePathname();
   const ownChrome = pathname === '/' || pathname === '/login';
   return (
@@ -356,7 +355,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
             <Link href={profile ? '/today' : '/'} aria-label="Socrat home"><Wordmark /></Link>
             <nav className="flex items-center gap-2" aria-label="Site">
               {profile ? <FeedbackButton /> : null}
-              {profile || (session?.guest && pathname === '/placement') ? (
+              {profile ? (
                 ['/start', '/placement'].includes(pathname) ? null : <Button asChild size="sm"><Link href="/today">Open app</Link></Button>
               ) : (
                 <>
@@ -377,7 +376,7 @@ function MarketingShell({ children }: { children: ReactNode }) {
 export default function Shell({ children }: { children: ReactNode }) {
   const { profile } = useSession();
   const pathname = usePathname();
-  const learning = Boolean(profile?.enrollment && profile.enrollment.status === 'active' && !profile.guest);
+  const learning = Boolean(profile?.enrollment && profile.enrollment.status === 'active');
   const [open, setOpen] = useState(true);
   useEffect(() => {
     // Tablets start on the icon rail so the page keeps its width; a saved choice wins.

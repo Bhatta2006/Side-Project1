@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, explain } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -12,59 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { codeSpans } from '@/components/markdown';
-import { SocFigure } from '@/components/socrat/soc';
-import { GoogleMark, PlanBuildingRun, WELCOME_KEY } from '@/components/socrat/plan-building';
-
-/** A guest's plan is ready: signing in keeps it. Google returns to /start, which plays the build. */
-function SavePlan() {
-  const { features, profile, refresh } = useSession();
-  const router = useRouter();
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const remember = () => { try { sessionStorage.setItem(WELCOME_KEY, '1'); } catch { /* storage unavailable */ } };
-
-  async function devSignIn() {
-    setBusy(true);
-    setError('');
-    try {
-      const name = profile?.display_name?.trim() || 'learner';
-      const subject = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64) || 'learner';
-      await api.post('/auth/dev-login', { subject, display_name: name });
-      remember();
-      await refresh();
-      router.replace('/start');
-    } catch (e) {
-      setError(explain(e));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="mx-auto grid w-full max-w-md gap-8 px-4 pt-12 pb-32 sm:px-6 md:pt-20">
-      <div className="grid justify-items-start gap-3">
-        <SocFigure books mood="happy" idle size={130} />
-        <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">nicely done</p>
-        <h1 className="type-display-l">Save your <span className="hl hl-draw">plan</span></h1>
-        <p className="text-base text-muted-foreground">Placement is done. Sign in so your plan and progress are kept, then we build it for you.</p>
-      </div>
-      <div className="grid gap-3">
-        {features?.oidc_login ? (
-          <Button asChild size="lg" className="w-full"><a href="/api/v1/auth/login" onClick={remember}><GoogleMark /> Continue with Google</a></Button>
-        ) : null}
-        {features?.email_login ? (
-          <Button asChild variant="outline" size="lg" className="w-full"><Link href="/login?next=/start" onClick={remember}>Use email instead</Link></Button>
-        ) : null}
-        {features?.dev_login ? (
-          <Button type="button" variant="outline" size="lg" className="w-full" disabled={busy} onClick={() => void devSignIn()}>Continue as a simulated learner (development)</Button>
-        ) : null}
-      </div>
-      <p className="text-[13px] text-muted-foreground">
-        By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms of service</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
-      </p>
-      {error ? <ErrorNote message={error} /> : null}
-    </div>
-  );
-}
+import { PlanBuildingRun } from '@/components/socrat/plan-building';
 
 /** Placement questions are answered, not looked up: no copying, cutting, pasting or selecting. */
 const noCopy = {
@@ -77,26 +24,19 @@ const noCopy = {
 
 export default function Placement() {
   const allowed = useGuard('enrolled');
-  const { profile, refresh } = useSession();
+  const { refresh } = useSession();
   const router = useRouter();
   const [state, setState] = useState<PlacementQuestion | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  // After the last answer: guests save their plan first, signed-in learners watch it being built.
-  const [phase, setPhase] = useState<'questions' | 'building' | 'save'>('questions');
-  const guest = Boolean(profile?.guest);
+  // After the last answer the plan is built on screen, in place of a list of results.
+  const [building, setBuilding] = useState(false);
 
   const finish = useCallback((justFinished: boolean) => {
-    if (guest) setPhase('save');
-    else if (justFinished) setPhase('building');
-    else {
-      // Just signed in from the save screen (the app shell remounts this page): /start plays the build.
-      let welcome = false;
-      try { welcome = sessionStorage.getItem(WELCOME_KEY) === '1'; } catch { /* storage unavailable */ }
-      router.replace(welcome ? '/start' : '/today');
-    }
-  }, [guest, router]);
+    if (justFinished) setBuilding(true);
+    else router.replace('/today');
+  }, [router]);
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -127,9 +67,8 @@ export default function Placement() {
     }
   }
 
-  if (phase === 'save') return <SavePlan />;
   // Refreshing the session last: it re-checks the guard, which would cut the sequence short.
-  if (phase === 'building') return <PlanBuildingRun onDone={() => { void refresh().then(() => router.replace('/today')); }} />;
+  if (building) return <PlanBuildingRun onDone={() => { void refresh().then(() => router.replace('/today')); }} />;
 
   if (!allowed || (!state && !error)) return <Loading variant="quiz" label="Loading the placement check" />;
 

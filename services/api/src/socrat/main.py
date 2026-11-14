@@ -23,7 +23,7 @@ from socrat.adaptive.routes import router as adaptive_router
 from socrat.admin.accounts import router as admin_accounts_router
 from socrat.admin.routes import router as admin_router
 from socrat.assessments.routes import router as assessments_router
-from socrat.auth import COOKIE, establish_session, require_csrf, require_session, start_guest
+from socrat.auth import COOKIE, establish_session, require_csrf, require_session
 from socrat.billing import router as billing_router
 from socrat.catalog import generated
 from socrat.catalog.registry import default_catalog
@@ -300,13 +300,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if user is not None and not user.display_name:
                     user.display_name = body.display_name
         return response
-
-    @app.post("/api/v1/auth/guest")
-    def guest_login(request: Request):
-        """Setup and the placement check run before sign-in; the guest is merged at sign-in."""
-        if not (settings.oidc_issuer or settings.dev_login_enabled or settings.email_login_enabled):
-            raise HTTPException(404, "not_found")
-        return start_guest(request, JSONResponse({"authenticated": True}))
 
     @app.get("/api/v1/auth/login")
     async def oidc_login(request: Request):

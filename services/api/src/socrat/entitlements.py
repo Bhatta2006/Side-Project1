@@ -45,7 +45,7 @@ PLANS = {
 LAUNCH_PROMO_SLOTS = 0
 LAUNCH_PROMO_DAYS = 30
 # Test and local sign-ins never use up a launch slot.
-NO_PROMO_ISSUERS = {"local-development", "eval", "guest"}
+NO_PROMO_ISSUERS = {"local-development", "eval"}
 
 
 def plan_of(db: Session, user_id: str, stamp: int | None = None) -> str:

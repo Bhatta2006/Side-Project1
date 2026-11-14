@@ -27,8 +27,6 @@ export interface Enrollment {
 export interface Profile {
   id: string;
   admin: boolean;
-  /** Answering setup and placement before signing in; merged into the real account at sign-in. */
-  guest?: boolean;
   display_name: string | null;
   birth_year: number | null;
   timezone: string | null;

@@ -9,17 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from socrat.database import record_event
-from socrat.models import Enrollment, LoginSession, User
+from socrat.models import LoginSession, User
 
 COOKIE = "socrat_session"
 # A random id for the browser, kept across sign-outs and accounts. Only its hash is stored, and
 # only to allow one launch-offer grant per device.
 DEVICE_COOKIE = "socrat_device"
 DEVICE_SECONDS = 2 * 365 * 86400
-# A visitor answering the setup questions and the placement check before signing in. The guest
-# account is merged into the real one at sign-in (see ``adopt_guest``) and never reaches the app.
-GUEST_ISSUER = "guest"
-GUEST_SECONDS = 2 * 86400
 
 
 def device_hash(request: Request) -> str:
@@ -103,40 +99,7 @@ def establish_session(
     return open_session(request, response, user_id)
 
 
-def start_guest(request: Request, response):
-    """Open a short session for a new guest account, so setup and placement come before sign-in."""
-    with Session(request.app.state.engine) as db, db.begin():
-        user = User(issuer=GUEST_ISSUER, subject=secrets.token_urlsafe(24))
-        db.add(user)
-        db.flush()
-        user_id = user.id
-    return open_session(request, response, user_id, ttl=GUEST_SECONDS)
-
-
-def adopt_guest(db: Session, guest_id: str, user_id: str):
-    """Hand a guest's answers and placement to the account that just signed in, then drop the guest.
-
-    A returning learner who already has a plan keeps theirs; the guest's is discarded.
-    """
-    guest = db.get(User, guest_id)
-    user = db.get(User, user_id)
-    if guest is None or user is None or guest.issuer != GUEST_ISSUER or guest_id == user_id:
-        return
-    has_plan = db.scalar(select(Enrollment.id).where(Enrollment.user_id == user_id).limit(1))
-    if has_plan is None:
-        for enrollment in db.scalars(select(Enrollment).where(Enrollment.user_id == guest_id)):
-            enrollment.user_id = user_id
-        if user.birth_year is None and guest.birth_year is not None:
-            user.birth_year = guest.birth_year
-        if not user.display_name and guest.display_name:
-            user.display_name = guest.display_name
-        if user.timezone == "UTC" and guest.timezone != "UTC":
-            user.timezone = guest.timezone
-    db.flush()
-    db.delete(guest)
-
-
-def open_session(request: Request, response, user_id: str, ttl: int | None = None):
+def open_session(request: Request, response, user_id: str):
     # Every signed-in browser carries a device id (the cookie is set below): the launch offer is
     # one per device, and it is claimed later, when the learner reaches the dashboard.
     device_hash(request)
@@ -145,25 +108,21 @@ def open_session(request: Request, response, user_id: str, ttl: int | None = Non
     with Session(request.app.state.engine) as db, db.begin():
         old = db.get(LoginSession, token_hash(request.cookies.get(COOKIE, "")))
         if old:
-            guest_id = old.user_id
             db.delete(old)
-            if old.expires_at > int(time.time()):
-                adopt_guest(db, guest_id, user_id)
-        ttl = ttl or settings.session_ttl_seconds
         token = secrets.token_urlsafe(48)
         db.add(
             LoginSession(
                 token_hash=token_hash(token),
                 user_id=user_id,
                 csrf_token=secrets.token_urlsafe(32),
-                expires_at=int(time.time()) + ttl,
+                expires_at=int(time.time()) + settings.session_ttl_seconds,
             )
         )
         record_event(db, user_id, "auth.login")
     response.set_cookie(
         COOKIE,
         token,
-        max_age=ttl,
+        max_age=settings.session_ttl_seconds,
         httponly=True,
         secure=settings.secure,
         samesite="lax",

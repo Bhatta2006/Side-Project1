@@ -140,3 +140,16 @@ def test_today_starts_at_the_frontier_not_with_confirmations():
     assert {plan.queue[i].concept for i in confirms} == set(known)
     first_lesson = next(i for i, a in enumerate(plan.queue) if a.kind == "lesson")
     assert first_lesson < min(confirms)
+
+
+def test_three_misses_in_a_row_end_placement_early():
+    cat = default_catalog()
+    path = [
+        c for c in cat.closure(cat.course_concepts("dsa")) if cat.concept(c).status != "planned"
+    ]
+    start = cat.course("dsa").levels[1].start_concept
+    state = placement.start(cat, path, f"dsa:{start}", seed=7, language="python")
+    while not state.done:
+        placement.answer(cat, state, -1)  # "not sure yet"
+    assert len(state.asked) == placement.STOP_AFTER_MISSES
+    assert state.frontier == 0
