@@ -74,7 +74,7 @@ Create a **`production` environment** (Settings → Environments) and add requir
 | `SOCRAT_OIDC_ISSUER` | yes | `https://accounts.google.com` |
 | `SOCRAT_OIDC_CLIENT_ID` | yes | OIDC client id |
 | `SOCRAT_BILLING_ENABLED` | for paid plans | `true` turns on Free/Plus/Pro limits and checkout; default `false` |
-| `SOCRAT_LAUNCH_PROMO_SLOTS` | no | How many of the first learners to reach the dashboard get Plus free for 30 days; default `20`, `0` turns the offer off |
+| `SOCRAT_LAUNCH_PROMO_SLOTS` | no | How many of the first learners to reach the dashboard get Plus free for 30 days; default `0` (off; the offer closed after the first 20 signups) |
 | `SOCRAT_RAZORPAY_KEY_ID` | for paid plans | Razorpay Key ID (`rzp_live_...`). Public, so a variable, not a secret |
 | `SOCRAT_EMAIL_FROM` | for email sign-in | `Socrat <no-reply@your-verified-domain>`; email sign-in stays hidden until this and the `resend_api_key` secret are set |
 | `SOCRAT_AI_PROVIDER` | recommended | `openai` (any OpenAI-compatible endpoint) or `anthropic`; default `openai` |
