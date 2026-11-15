@@ -14,6 +14,11 @@ import { AttentionIcon } from '@/components/socrat/states';
 import { ReasonChip } from '@/components/socrat/reason-chip';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { useSession } from '@/lib/session';
+import { FeedbackSheet, KeyHint, RUN_GLOW, RunTally, StampButton, praise, runOf, useAnswerKeys, type PracticeItem } from '@/components/socrat/answer-flow';
+import { PracticeRound } from '@/components/socrat/practice-round';
+
+type Question = NonNullable<AdaptiveSession['current']>;
 
 const BANDS = 5;
 const key = (activityId: string) => `socrat:adaptive:${activityId}`;
@@ -63,6 +68,13 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
   const shownAt = useRef(Date.now());
   const testout = mode === 'testout';
   const top = testout ? 7 : BANDS;
+  // Lesson feel (features.lesson_feel): the answered question stays on screen under a sheet,
+  // and misses come back once, as practice, before the results. Test-outs keep results to the end.
+  const { features } = useSession();
+  const feel = features?.lesson_feel === true && !testout;
+  const [asked, setAsked] = useState<{ question: Question; choice: number | null } | null>(null);
+  const [missed, setMissed] = useState<PracticeItem[]>([]);
+  const [practised, setPractised] = useState(false);
 
   const starting = useRef('');
   const start = useCallback(async (retry = false) => {
@@ -116,6 +128,11 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
         return;
       }
       if (result.outcome !== 'skipped') setHistory(h => [...h, { band, correct: result.outcome === 'correct' }]);
+      const question = session.current;
+      setAsked({ question, choice: picked });
+      if (result.outcome === 'wrong' && result.answer !== null) {
+        setMissed(m => [...m, { key: `${question.item}:${m.length}`, prompt: codeSpans(question.prompt), code: question.code, options: question.options, answer: result.answer!, explanation: result.explanation }]);
+      }
       setFeedback(result);
       if (result.session.finished) try { sessionStorage.removeItem(key(activityId)); } catch { /* ignore */ }
     } catch (e) {
@@ -128,10 +145,27 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
   function proceed() {
     if (feedback) setSession(feedback.session);
     setFeedback(null);
+    setAsked(null);
     setChoice(null);
   }
 
+  const live = feedback ? null : session?.current ?? null;
+  const run = runOf(history.map(h => h.correct));
+  useAnswerKeys({
+    enabled: feel && Boolean(live || feedback) && !busy,
+    count: live?.options.length ?? 0,
+    onPick: i => setChoice(i),
+    onSubmit: () => {
+      if (feedback) proceed();
+      else if (choice !== null) void answer(choice);
+    },
+  });
+
   if (!session) return error ? <ErrorNote message={error} retry={() => start(true)} /> : <Loading variant="quiz" label="Loading the questions" />;
+
+  if (feel && session.finished && !feedback && missed.length && !practised) {
+    return <PracticeRound items={missed} onDone={() => setPractised(true)} />;
+  }
 
   if (session.finished && !feedback) {
     const trail = session.results ?? history;
@@ -207,6 +241,67 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
           {!passed ? <Button asChild size="lg" variant="outline"><Link href={conceptHref(concept)}>Read the lesson again</Link></Button> : null}
           <Button asChild size="lg" variant="outline"><Link href="/progress">{NAME.evidence}</Link></Button>
         </div>
+      </div>
+    );
+  }
+
+  if (feel) {
+    const question = feedback ? asked?.question ?? null : session.current;
+    const count = history.length + (feedback ? 0 : 1);
+    return (
+      <div className="grid gap-5">
+        <div className="grid gap-2">
+          <Progress value={(100 * history.length) / session.max_items} aria-label={`${history.length} answered, up to ${session.max_items}`} tone={run >= RUN_GLOW ? 'hi' : undefined} />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground tabular-nums">Question {count} · up to {session.max_items} · stops early once Socrat is sure</p>
+            <RunTally run={run} />
+          </div>
+        </div>
+        {question ? (
+          <div key={question.item} className="grid gap-5 animate-in fade-in duration-200">
+            <DifficultyMeter band={question.band} of={top} reason={history.length > (feedback ? 1 : 0) ? (history[history.length - (feedback ? 2 : 1)].correct ? 'harder after a right answer' : 'easier after a miss') : 'starting just below your level'} />
+            {question.micro_lesson && !feedback ? (
+              <p className="rounded-[4px] bg-raised px-4 py-3 text-[15px]">
+                A few misses in a row. Quick refresher before the next one: <Link href={conceptHref(question.concept)} className="font-semibold underline underline-offset-4">reread the key idea</Link>.
+              </p>
+            ) : null}
+            <h1 className="type-title text-balance">{codeSpans(question.prompt)}</h1>
+            {question.code ? <pre className="code-block">{question.code}</pre> : null}
+            <div className="grid gap-3" role="radiogroup" aria-label="Answer choices">
+              {question.options.map((option, i) => {
+                const tone = feedback && feedback.answer === i ? 'correct' : feedback && asked?.choice === i ? 'wrong' : 'idle';
+                return (
+                  <Choice key={i} role="radio" aria-checked={(feedback ? asked?.choice : choice) === i} selected={!feedback && choice === i} tone={tone} marker={String.fromCharCode(65 + i)} disabled={Boolean(feedback)} onClick={() => setChoice(i)}>
+                    <span className="choice-title whitespace-pre-wrap">{option}</span>
+                  </Choice>
+                );
+              })}
+            </div>
+            {!feedback ? (
+              <>
+                {choice !== null ? <ConfidencePicker value={sure} onChange={setSure} /> : null}
+                <div className="flex flex-wrap items-center gap-3">
+                  <StampButton disabled={busy || choice === null} aria-busy={busy} onClick={() => answer(choice)}>Check</StampButton>
+                  <Button size="lg" variant="ghost" disabled={busy} onClick={() => answer(null)}>I haven&apos;t learned this yet</Button>
+                </div>
+                <KeyHint count={question.options.length} />
+              </>
+            ) : (
+              <FeedbackSheet
+                key={`${question.item}:sheet`}
+                tone={feedback.outcome === 'correct' ? 'correct' : feedback.outcome === 'wrong' ? 'wrong' : 'neutral'}
+                title={feedback.outcome === 'correct' ? praise(run, history.length) : feedback.outcome === 'skipped' ? 'Noted: not learned yet' : 'Not quite'}
+                action={feedback.session.finished ? (missed.length ? 'Practise the misses' : 'See results') : 'Continue'}
+                onContinue={proceed}
+              >
+                {feedback.outcome === 'wrong' && feedback.answer !== null ? <p>Answer: <span className="font-semibold">{question.options[feedback.answer]}</span>. It comes back once at the end, for practice.</p> : null}
+                {feedback.explanation ? <p className="text-muted-foreground">{feedback.explanation}</p> : null}
+                {feedback.misconception ? <p>Socrat noted a common mix-up here and will target it next.</p> : null}
+              </FeedbackSheet>
+            )}
+          </div>
+        ) : null}
+        {error ? <ErrorNote message={error} /> : null}
       </div>
     );
   }

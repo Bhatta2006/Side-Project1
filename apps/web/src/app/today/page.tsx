@@ -24,11 +24,12 @@ import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Doodle } from '@/components/ui/doodle';
-import { Sticker } from '@/components/ui/sticker';
 import { CommunityCard } from '@/components/community-link';
 import { LessonProgress } from '@/components/socrat/lesson-progress';
 import { usePreparing } from '@/lib/preparing';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// The sticker catalogue is large (lib/ink/art/stickers): load it after the page paints.
+const Sticker = dynamic(() => import('@/components/ui/sticker').then(m => m.Sticker), { ssr: false });
 
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
 // otherwise sits in Today's first load. An early openSignal still opens it once it arrives.

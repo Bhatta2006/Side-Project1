@@ -309,6 +309,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "try_tutor": settings.try_tutor_enabled,
             "learning_requests": settings.learning_requests_enabled,
             "lite_mode": settings.lite_mode_enabled,
+            "lesson_feel": settings.lesson_feel_enabled,
         }
 
     @app.post("/api/v1/auth/dev-login")

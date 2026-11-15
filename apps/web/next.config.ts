@@ -41,6 +41,12 @@ const config: NextConfig = {
       { source: '/runtimes/:name/:file+', headers: [
         { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
       ] },
+      // Paper and pen textures (lib/ink/textures*.generated.ts). They used to be inlined in
+      // every page's JavaScript; as files they load in parallel and stay cached. The names
+      // carry no version, so a day fresh, then refreshed in the background.
+      { source: '/ink/:file*', headers: [
+        { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+      ] },
     ];
   },
 };

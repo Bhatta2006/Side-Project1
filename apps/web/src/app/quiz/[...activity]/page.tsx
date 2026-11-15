@@ -22,6 +22,8 @@ import { codeSpans } from '@/components/markdown';
 import { UpgradeBanner } from '@/components/paywall';
 import { SocFigure } from '@/components/socrat/soc';
 import { useExamGuard } from '@/components/socrat/soc-moment';
+import { FeedbackSheet, KeyHint, RUN_GLOW, RunTally, StampButton, praise, runOf, useAnswerKeys } from '@/components/socrat/answer-flow';
+import { PracticeRound } from '@/components/socrat/practice-round';
 
 function Options({ q, choice, onChoose, graded }: { q: QuizQuestion; choice: number | null; onChoose(i: number): void; graded: boolean }) {
   return (
@@ -55,7 +57,7 @@ function Options({ q, choice, onChoose, graded }: { q: QuizQuestion; choice: num
 }
 
 /** Focus header: back, title, question count and a thin bar. */
-function QuizHeader({ title, topic, count, value }: { title: string; topic?: string; count?: string; value: number }) {
+function QuizHeader({ title, topic, count, value, run = 0 }: { title: string; topic?: string; count?: string; value: number; run?: number }) {
   return (
     <div className="mb-8">
       <div className="mb-4 flex items-center gap-3">
@@ -65,7 +67,8 @@ function QuizHeader({ title, topic, count, value }: { title: string; topic?: str
         <p className="min-w-0 flex-1 truncate font-semibold">{title}{topic ? <span className="font-medium text-muted-foreground">, {topic}</span> : null}</p>
         {count ? <p className="flex-none text-sm font-semibold text-muted-foreground tabular-nums">{count}</p> : null}
       </div>
-      <Progress value={value} aria-label="Progress" />
+      <Progress value={value} aria-label="Progress" tone={run >= RUN_GLOW ? 'hi' : undefined} />
+      <RunTally run={run} className="mt-3" />
     </div>
   );
 }
@@ -206,6 +209,29 @@ export default function Quiz() {
   const showResults = Boolean(session?.completed && (session.feedback === 'at_end' || index === total));
   const percent = Math.round((session?.score ?? 0) * 100);
 
+  // Lesson feel: sheet, run counter, keys and a practice round of misses (features.lesson_feel).
+  const feel = features?.lesson_feel === true;
+  const [practice, setPractice] = useState(false);
+  const immediate = session?.feedback === 'immediate';
+  const current = session && !showResults && total ? session.questions[Math.min(index, total - 1)] : null;
+  const run = immediate && session ? runOf(session.questions.filter(item => item.answered).map(item => item.correct === true)) : 0;
+  function advance() {
+    if (!session) return;
+    if (index < total - 1) return setIndex(index + 1);
+    if (feel && session.questions.some(item => item.correct === false && item.answer !== undefined)) setPractice(true);
+    else setIndex(total);
+  }
+  useAnswerKeys({
+    enabled: feel && Boolean(current) && !practice && !busy,
+    count: current?.options.length ?? 0,
+    onPick: i => { if (current && !current.answered) setChoice(i); },
+    onSubmit: () => {
+      if (!current) return;
+      if (!current.answered) void answer();
+      else if (immediate) advance();
+    },
+  });
+
   if (upgrade) {
     return (
       <div className="mx-auto max-w-3xl p-6">
@@ -240,6 +266,20 @@ export default function Quiz() {
 
   const title = KIND_LABEL[kind] ?? 'Quiz';
   const topic = kind === 'checkpoint' ? 'mixed questions from this module' : session.questions[0]?.concept_title;
+
+  if (practice && !showResults) {
+    const missed = session.questions.filter(q => q.correct === false && q.answer !== undefined);
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
+        {guard}
+        <QuizHeader title={title} topic={topic} value={100} />
+        <PracticeRound
+          items={missed.map(q => ({ key: q.id, prompt: codeSpans(q.prompt), code: q.code, options: q.options, answer: q.answer!, explanation: q.explanation }))}
+          onDone={() => { setPractice(false); setIndex(total); }}
+        />
+      </div>
+    );
+  }
 
   if (showResults) {
     const wrong = session.questions.filter(q => q.correct === false);
@@ -314,7 +354,7 @@ export default function Quiz() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
       {guard}
-      <QuizHeader title={title} topic={topic} count={session.gate ? undefined : `Question ${Math.min(index + 1, total)} of ${total}`} value={total ? (100 * answered) / total : 0} />
+      <QuizHeader title={title} topic={topic} count={session.gate ? undefined : `Question ${Math.min(index + 1, total)} of ${total}`} value={total ? (100 * answered) / total : 0} run={feel ? run : 0} />
       {session.gate ? <GateMeter gate={session.gate} asked={Math.min(index + 1, total)} /> : null}
 
       <div key={q.id} className="grid gap-5 animate-in fade-in duration-200">
@@ -323,7 +363,20 @@ export default function Quiz() {
         {q.code ? <pre className="code-block">{q.code}</pre> : null}
         <Options q={q} choice={choice} onChoose={setChoice} graded={graded} />
 
-        {graded && q.answered ? (
+        {feel && graded && q.answered ? (
+          <FeedbackSheet
+            key={q.id}
+            tone={q.correct ? 'correct' : 'wrong'}
+            title={q.correct ? praise(run, index) : 'Not quite'}
+            action={!isLast ? 'Continue' : session.questions.some(item => item.correct === false) ? 'Practise the misses' : 'See results'}
+            onContinue={advance}
+          >
+            {!q.correct && q.answer !== undefined ? <p>Answer: <span className="font-semibold">{q.options[q.answer]}</span>. It comes back once at the end, for practice.</p> : null}
+            {q.explanation ? <p className="text-muted-foreground">{q.explanation}</p> : null}
+          </FeedbackSheet>
+        ) : null}
+
+        {!feel && graded && q.answered ? (
           <div role="status" className={cn('flex items-start gap-3 rounded-[4px] border bg-card p-4 animate-in fade-in slide-in-from-bottom-2 duration-200', q.correct ? 'border-foreground' : 'border-attention')}>
             {q.correct ? (
               <span className="grid size-7 flex-none place-items-center rounded-full bg-proof text-proof-foreground animate-pop" aria-hidden="true">
@@ -339,7 +392,14 @@ export default function Quiz() {
 
         {!q.answered && choice !== null ? <ConfidencePicker value={sure} onChange={setSure} /> : null}
 
-        <div className="flex flex-wrap items-center gap-3">
+        {feel ? (
+          !q.answered ? (
+            <div className="grid gap-3">
+              <div><StampButton disabled={busy || choice === null} aria-busy={busy} onClick={answer}>Check</StampButton></div>
+              <KeyHint count={q.options.length} />
+            </div>
+          ) : null
+        ) : <div className="flex flex-wrap items-center gap-3">
           {!q.answered ? (
             <Button size="lg" disabled={busy || choice === null} aria-busy={busy} onClick={answer}>Check answer</Button>
           ) : graded ? (
@@ -348,7 +408,7 @@ export default function Quiz() {
             </Button>
           ) : null}
           {choice === null && !q.answered ? <p className="text-sm text-muted-foreground">Choose an answer to check it.</p> : null}
-        </div>
+        </div>}
         {error ? <ErrorNote message={error} /> : null}
       </div>
     </div>

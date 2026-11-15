@@ -53,7 +53,6 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Kbd } from '@/components/ui/kbd';
 import { Paper } from '@/components/ui/paper';
-import { Sticker } from '@/components/ui/sticker';
 import { Tally } from '@/components/ui/tally';
 import {
   Sidebar,
@@ -220,6 +219,8 @@ function useAssessmentReady(learning: boolean) {
 const Assistant = dynamic(() => import('@/components/assistant'), { ssr: false });
 // The first-visit tour is not needed to paint the page, so it loads after it.
 const Tour = dynamic(() => import('@/components/tour').then(m => m.Tour), { ssr: false });
+// The sticker catalogue is large (lib/ink/art/stickers); only the free plan card draws one.
+const Sticker = dynamic(() => import('@/components/ui/sticker').then(m => m.Sticker), { ssr: false });
 const COLLAPSE_KEY = 'socrat:sidebar-collapsed';
 const ownTutor = (path: string) => path === '/today' || path === '/plan' || path.startsWith('/learn/') || /^\/problems\/[^/]+$/.test(path);
 /** Checks and tests are proof of what the learner knows on their own: no tutor on these. */

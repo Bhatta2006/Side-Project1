@@ -281,6 +281,9 @@ class Settings(DatabaseSettings):
     youtube_transcripts: bool = False
     # Lite mode on slow or metered connections: heavy web parts load only when asked for.
     lite_mode_enabled: bool = False
+    # Lesson feel (item 2 of docs/research/duolingo-teardown.md): answer feedback in a bottom
+    # sheet, a run counter, keyboard answering and a practice round of missed questions.
+    lesson_feel_enabled: bool = False
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)

@@ -1681,3 +1681,41 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
     color: var(--ll-ink-you);
   }
 }
+/* Lesson feel (components/socrat/answer-flow.tsx), behind features.lesson_feel.
+   A pressable stamp: a solid, unblurred ink ledge the face sinks into. Plain CSS, nothing drawn. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border: 2px solid var(--soc-outline);
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-family: var(--font-hand);
+  font-size: 17px;
+  font-weight: 700;
+  box-shadow: 0 4px 0 var(--soc-outline);
+  transition: translate 80ms ease-out, box-shadow 80ms ease-out;
+  touch-action: manipulation;
+}
+.stamp:active:not(:disabled) { translate: 0 4px; box-shadow: 0 0 0 var(--soc-outline); }
+.stamp:focus-visible { outline: 3px solid var(--highlight); outline-offset: 3px; }
+.stamp:disabled { cursor: not-allowed; background: var(--muted); color: var(--muted-foreground); border-color: var(--border-strong); box-shadow: 0 4px 0 var(--border-strong); }
+.dark .stamp:not(:disabled) { border-color: var(--foreground); box-shadow: 0 4px 0 var(--foreground); }
+.dark .stamp:active:not(:disabled) { box-shadow: 0 0 0 var(--foreground); }
+
+/* The answer sheet: highlighter for right, red pen for wrong. */
+.feedback-sheet { background: var(--card); border-color: var(--foreground); }
+.feedback-sheet[data-tone="correct"] { background: color-mix(in oklab, var(--highlight) 24%, var(--card)); border-color: var(--highlight); }
+.feedback-sheet[data-tone="wrong"] { background: color-mix(in oklab, var(--pen) 12%, var(--card)); border-color: var(--pen); }
+.feedback-sheet .feedback-mark { background: var(--foreground); color: var(--card); }
+.feedback-sheet[data-tone="wrong"] .feedback-mark { background: var(--pen); color: #fff; }
+.dark .feedback-sheet[data-tone="wrong"] .feedback-mark { color: #15161E; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp { transition: none; }
+  .stamp:active:not(:disabled) { translate: none; }
+}

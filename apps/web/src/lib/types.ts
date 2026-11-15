@@ -133,6 +133,8 @@ export interface Features {
   learning_requests?: boolean;
   /** Learners may choose lite mode (heavy parts load on request). */
   lite_mode?: boolean;
+  /** Answer sheet, run counter, keyboard answering and a practice round of misses. */
+  lesson_feel?: boolean;
 }
 
 export interface Course {
