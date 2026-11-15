@@ -62,7 +62,7 @@ export default function TransferPage() {
     <Card>
       <div className="grid gap-4 px-(--card-spacing)">
         <h2 className="font-display text-xl font-semibold tracking-[-0.03em]">Now solve it</h2>
-        <p className="text-[15px] text-muted-foreground">Write and submit the solution yourself. Asking the tutor about this problem, before or during, means this check does not count; you can take a new one tomorrow.</p>
+        <p className="text-[15px] text-muted-foreground">Write and submit the solution yourself. Asking the tutor about this problem, before or during, means this check does not count; you can take a new one later.</p>
         <div><Button asChild><Link href={`/problems/${problem}?check=${encodeURIComponent(`/transfer/${concept.split(':').join('/')}`)}`}>Open the problem</Link></Button></div>
       </div>
     </Card>
@@ -93,8 +93,18 @@ export default function TransferPage() {
           <Card>
             <div className="grid gap-3 px-(--card-spacing)">
               <h2 className="font-display text-xl font-semibold">Not this time</h2>
-              <p>That problem needed <span className="font-semibold">{result.answer}</span>. A new problem opens {formatStamp(result.retry_at!)}.</p>
-              <div>{back}</div>
+              {/* No wait in Relaxed or Balanced (Settings > How strict): offer the next problem now. */}
+              {(result.retry_at ?? 0) * 1000 <= Date.now() ? (
+                <>
+                  <p>That problem needed <span className="font-semibold">{result.answer}</span>. Try another one whenever you like; it will be a different problem.</p>
+                  <div className="flex flex-wrap gap-3"><Button onClick={() => { setResult(null); setChoice(null); load(); }}>Try a new problem</Button>{back}</div>
+                </>
+              ) : (
+                <>
+                  <p>That problem needed <span className="font-semibold">{result.answer}</span>. A new problem opens {formatStamp(result.retry_at!)}.</p>
+                  <div>{back}</div>
+                </>
+              )}
             </div>
           </Card>
         )

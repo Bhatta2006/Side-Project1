@@ -11,7 +11,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from socrat import entitlements
+from socrat import entitlements, learning_mode
 from socrat.assistant import budget
 from socrat.assistant import service as assistant
 from socrat.assistant.gateway import make_provider
@@ -62,6 +62,8 @@ class ProfileUpdate(Strict):
     locale: str | None = Field(default=None, max_length=16)
     # "palette:mode", as offered in Settings > Appearance > Colours.
     appearance: str | None = Field(default=None, max_length=32)
+    # How strict Socrat is: Settings > Learning > How strict should Socrat be?
+    learning_mode: Literal["relaxed", "balanced", "strict"] | None = None
 
     @field_validator("appearance")
     @classmethod
@@ -243,6 +245,7 @@ def profile_view(
         reminders=user.reminders,
         can_remind=bool(user.email),
         appearance=user.appearance,
+        learning_mode=learning_mode.normalize(user.learning_mode),
         enrollment=None
         if enrollment is None
         else dict(
@@ -341,6 +344,8 @@ def update_me(body: ProfileUpdate, request: Request):
             user.locale = body.locale
         if body.appearance is not None:
             user.appearance = body.appearance
+        if body.learning_mode is not None:
+            user.learning_mode = body.learning_mode
         if body.reminders is not None:
             if body.reminders and not user.email:
                 raise HTTPException(409, "reminders_need_email")

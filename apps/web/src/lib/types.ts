@@ -99,8 +99,12 @@ export interface Profile {
   can_remind?: boolean;
   /** The learner's colours, "palette:mode" (lib/palette.ts); null is Classic in light. */
   appearance?: string | null;
+  /** How strict Socrat is with this learner (Settings > How strict). */
+  learning_mode?: LearningMode;
   enrollment: Enrollment | null;
 }
+
+export type LearningMode = 'relaxed' | 'balanced' | 'strict';
 
 export type PlanId = 'free' | 'plus' | 'pro';
 export interface BillingStatus {

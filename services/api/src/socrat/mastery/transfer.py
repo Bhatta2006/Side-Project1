@@ -81,15 +81,17 @@ def status(
     state: ConceptState,
     available: bool,
     now: int,
+    cooldown: int = COOLDOWN,
 ) -> str | None:
     """verified | pending (unseen problem named, solve outstanding) | wait (cooling down after a
-    miss) | due (ready to take) | None (nothing to do: not mastered, or no unseen problem)."""
+    miss) | due (ready to take) | None (nothing to do: not mastered, or no unseen problem).
+    ``cooldown`` is the learner's chosen wait after a miss (see socrat.learning_mode)."""
     if verified:
         return "verified"
     outcome = outcome or {}
     if outcome.get("state") == "pending":
         return "pending"
-    if outcome.get("state") == "failed" and now < int(outcome.get("at", 0)) + COOLDOWN:
+    if outcome.get("state") == "failed" and now < int(outcome.get("at", 0)) + cooldown:
         return "wait"  # even if the miss pulled mastery down: it cannot be dodged by failing
     return "due" if state.mastered(now) and available else None
 

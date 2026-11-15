@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from socrat import entitlements, localize
+from socrat import entitlements, learning_mode, localize
 from socrat.assessments import service as assessments
 from socrat.assistant import engine, socratic
 from socrat.assistant.gateway import Provider, ProviderError, ToolRunner, ToolSpec, Turn, complete
@@ -243,6 +243,9 @@ def learner_sections(
         "next_up": "\n".join(upcoming) or "Nothing scheduled.",
         "recent_results": recent_text or "No results yet.",
         "adaptive": adaptive_section(db, catalog, enrollment, plan, states, now),
+        # The strictness the learner chose in Settings: sets the tutor's manner, never what
+        # the server lets it reveal (that stays with reveal_rule and the help ladder).
+        "how_strict": learning_mode.policy(user.learning_mode).tutor_line,
     }
     # How this learner asked to be taught in a course they made themselves (structured picks).
     how = audience.tutor_block(db, user, enrollment)
@@ -445,7 +448,7 @@ def prepare(
         ladder = socratic.advance(ladder, message, new_attempt)
         failed = failed_submits(db, user.id, problem.id)
         if intent in {"reveal", "reveal_confirmed"}:
-            ok, why = socratic.reveal_eligibility(ladder, failed)
+            ok, why = reveal_rule(user.learning_mode, ladder, failed)
             if not ok:
                 reveal_blocked = why
             elif intent == "reveal_confirmed":
@@ -758,10 +761,21 @@ def reveal_view(db: Session, user_id: str, scope: str, state: dict | None) -> di
     if not scope.startswith("problem:"):
         return None
     ladder = socratic.Ladder.from_dict(state)
-    ok, needs = socratic.reveal_eligibility(
-        ladder, failed_submits(db, user_id, scope.removeprefix("problem:"))
+    user = db.get(User, user_id)
+    ok, needs = reveal_rule(
+        user.learning_mode if user else None,
+        ladder,
+        failed_submits(db, user_id, scope.removeprefix("problem:")),
     )
     return {"ok": ok, "needs": "" if ok else needs}
+
+
+def reveal_rule(mode: str | None, ladder: socratic.Ladder, failed: int) -> tuple[bool, str]:
+    """The reveal rule for the learner's chosen strictness (socrat.learning_mode)."""
+    policy = learning_mode.policy(mode)
+    return socratic.reveal_eligibility(
+        ladder, failed, policy.reveal_min_failed_submits, policy.reveal_needs_hint_ladder
+    )
 
 
 def thread_view(db: Session, user_id: str, scope: str) -> dict:

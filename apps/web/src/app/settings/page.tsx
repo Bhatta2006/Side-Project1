@@ -8,10 +8,10 @@ import { useReducedMotion } from '@/lib/motion';
 import { useGuard, useSession } from '@/lib/session';
 import { useCourse } from '@/lib/course';
 import { LANGUAGE_LABEL, NAME, hours } from '@/lib/routes';
-import type { BillingStatus, Course, Language, Profile } from '@/lib/types';
+import type { BillingStatus, Course, Language, LearningMode, Profile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
-import { Pill } from '@/components/choice';
+import { Choice, Pill } from '@/components/choice';
 import { TOUR_EVENT } from '@/components/tour-event';
 import CodeforcesLink from '@/components/codeforces-link';
 import { SuccessLine } from '@/components/socrat/states';
@@ -46,6 +46,7 @@ function Section({ id, title, description, children, className }: { id: string; 
 }
 
 const NAV = [
+  { id: 'learning', label: 'How strict' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'schedule', label: 'Profile and schedule' },
   { id: 'connections', label: 'Plan and connections' },
@@ -188,6 +189,39 @@ function Appearance() {
   );
 }
 
+const MODES: { id: LearningMode; title: string; body: string }[] = [
+  { id: 'relaxed', title: 'Relaxed', body: 'Every module stays open, retries are instant, and Soc helps readily. Checkpoints still show what you can do on your own.' },
+  { id: 'balanced', title: 'Balanced', body: 'Pass a checkpoint to open the next module, retry straight away with new questions, and see a full solution after one real attempt.' },
+  { id: 'strict', title: 'Strict', body: 'A day between checkpoint retries, full solutions only after two attempts and working through hints, and a demanding Soc.' },
+];
+
+/** How strict Socrat is: the learner's choice (services/api socrat/learning_mode.py). */
+function LearningStyle() {
+  const { profile, refresh } = useSession();
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState<LearningMode | null>(null);
+  const current = profile?.learning_mode ?? 'balanced';
+  async function pick(mode: LearningMode) {
+    if (mode === current || saving) return;
+    setSaving(mode);
+    setError('');
+    try { await api.patch('/me', { learning_mode: mode }); await refresh(); } catch (e) { setError(explain(e)); } finally { setSaving(null); }
+  }
+  return (
+    <Section id="learning-heading" title="How strict should Socrat be?" description="Change it any time. Your progress always shows what you did on your own and what you did with help.">
+      <div role="radiogroup" aria-labelledby="learning-heading" className="grid max-w-2xl gap-3">
+        {MODES.map(m => (
+          <Choice key={m.id} role="radio" aria-checked={current === m.id} selected={current === m.id} disabled={saving !== null} onClick={() => void pick(m.id)}>
+            <span className="choice-title block">{m.title}{m.id === 'balanced' ? <span className="ml-2 text-sm font-normal text-muted-foreground">Default</span> : null}</span>
+            <span className="mt-0.5 block text-sm text-muted-foreground">{m.body}</span>
+          </Choice>
+        ))}
+      </div>
+      {error ? <ErrorNote message={error} className="mt-3" /> : null}
+    </Section>
+  );
+}
+
 export default function Settings() {
   const allowed = useGuard('enrolled');
   const { profile, refresh, signOut } = useSession();
@@ -279,6 +313,7 @@ export default function Settings() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10">
         <SectionNav active={section} onPick={setSection} />
         <div className="grid min-w-0 gap-10">
+        <div id="learning" className="scroll-mt-32"><LearningStyle /></div>
         <div id="appearance" className="scroll-mt-32"><Appearance /></div>
 
         <form id="schedule" onSubmit={save} data-tour="settings-schedule" className="scroll-mt-32">

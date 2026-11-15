@@ -13,7 +13,7 @@ from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
 
-from socrat import entitlements
+from socrat import entitlements, learning_mode
 from socrat.catalog.registry import Catalog
 from socrat.database import record_event
 from socrat.learn import streaks
@@ -286,8 +286,17 @@ def days_away(db: Session, user: User, enrollment: Enrollment, now: int) -> int:
     )
 
 
+def mode_policy(db: Session, enrollment: Enrollment) -> learning_mode.Policy:
+    """The strictness the enrolled learner chose (Settings > Learning)."""
+    user = db.get(User, enrollment.user_id)
+    return learning_mode.policy(user.learning_mode if user else None)
+
+
 def gate_cooldowns(db: Session, enrollment: Enrollment) -> dict[str, int]:
-    """Failed, not-yet-passed gates -> when the next attempt opens."""
+    """Failed, not-yet-passed gates -> when the next attempt opens. Empty when the learner's
+    mode lets them retry straight away."""
+    if not mode_policy(db, enrollment).checkpoint_cooldown:
+        return {}
     rows = db.scalars(
         select(ActivityRecord).where(
             ActivityRecord.enrollment_id == enrollment.id,
@@ -308,15 +317,17 @@ def locked_concepts(
     """
     from socrat.learn import transfers
 
-    states, completed = states_for(db, enrollment), completed_for(db, enrollment)
-    locked = gates.locked_concepts(
-        catalog,
-        enrollment.course_id,
-        states,
-        completed,
-        now,
-        transfers.current(db, catalog, enrollment, states, completed, now).blocking,
-    )
+    locked: dict[str, str] = {}
+    if mode_policy(db, enrollment).locks_modules:
+        states, completed = states_for(db, enrollment), completed_for(db, enrollment)
+        locked = gates.locked_concepts(
+            catalog,
+            enrollment.course_id,
+            states,
+            completed,
+            now,
+            transfers.current(db, catalog, enrollment, states, completed, now).blocking,
+        )
     for concept in entitlements.plan_locked(db, catalog, enrollment.user_id, now):
         locked[concept] = entitlements.PLAN_GATE
     return locked
@@ -472,6 +483,7 @@ def build_for(
         cooldowns=gate_cooldowns(db, enrollment),
         adaptive=adaptive,
         transfer=transfers.current(db, catalog, enrollment, states, completed, now),
+        locks=mode_policy(db, enrollment).locks_modules,
     )
     return plan, adaptive
 

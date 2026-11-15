@@ -59,6 +59,7 @@ def current(
     now: int,
 ) -> Transfer:
     """Status of every concept with a check, and the modules a missing check holds shut."""
+    cooldown = learn.mode_policy(db, enrollment).transfer_cooldown
     scope = learn.curriculum(catalog, enrollment)
     outcomes = {
         r.activity_id.removeprefix("transfer:"): r.outcome or {}
@@ -87,7 +88,12 @@ def current(
                 transfer.choices(catalog, concept, "", scope, known) is not None
             )
         mark = transfer.status(
-            outcome, verified, states.get(concept, mastery.ConceptState()), available, now
+            outcome,
+            verified,
+            states.get(concept, mastery.ConceptState()),
+            available,
+            now,
+            cooldown,
         )
         if mark:
             result[concept] = mark
@@ -127,7 +133,8 @@ def view(db: Session, catalog: Catalog, enrollment: Enrollment, concept: str, no
     if mark == "pending":
         return {**base, "state": "solve", "problem": outcome["problem"]}
     if mark == "wait":
-        return {**base, "state": "wait", "retry_at": int(outcome["at"]) + transfer.COOLDOWN}
+        wait = learn.mode_policy(db, enrollment).transfer_cooldown
+        return {**base, "state": "wait", "retry_at": int(outcome["at"]) + wait}
     if mark != "due":
         return base
     problem_id = transfer.pick(
@@ -190,7 +197,7 @@ def classify(
     return dict(
         correct=False,
         state="wait",
-        retry_at=now + transfer.COOLDOWN,
+        retry_at=now + learn.mode_policy(db, enrollment).transfer_cooldown,
         answer=catalog.concept(concept).title,
     )
 

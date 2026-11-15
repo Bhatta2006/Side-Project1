@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from socrat import entitlements
+from socrat import entitlements, learning_mode
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import QuizItem
 from socrat.learn import service as learn
@@ -253,6 +253,8 @@ def open_session(
             raise learn.lock_error(locked[gates.module_concepts(catalog, target)[0]])
         record = db.get(ActivityRecord, (enrollment.id, activity_id))
         retry_at = int((record.outcome or {}).get("retry_at", 0)) if record else 0
+        if not learn.mode_policy(db, enrollment).checkpoint_cooldown:
+            retry_at = 0  # a wait set in strict mode ends once the learner leaves strict mode
         if record is not None and record.completed_at is None and retry_at > now:
             # Cooling down after a miss: show the last attempt's results instead.
             last = db.scalar(
@@ -324,6 +326,13 @@ def gate_view(db: Session, catalog: Catalog, session: QuizSession, language: str
     position = keys.index(module_key)
     unlocks = keys[position + 1] if position + 1 < len(keys) else None
     pool = gate_pool(catalog, module_key, language)
+    enrollment = db.get(Enrollment, session.enrollment_id)
+    policy = learn.mode_policy(db, enrollment) if enrollment else learning_mode.policy(None)
+    retry_at = outcome.get("retry_at") if record and record.completed_at is None else None
+    if not policy.checkpoint_cooldown:
+        retry_at = None
+    if not policy.locks_modules:
+        unlocks = None  # every module is already open in this learner's mode
     return dict(
         max_items=gates.MAX_ITEMS,
         max_strikes=gates.MAX_STRIKES,
@@ -336,7 +345,7 @@ def gate_view(db: Session, catalog: Catalog, session: QuizSession, language: str
         pass_score=gates.PASS_SCORE,
         score=state.score if session.completed_at else None,
         passed=bool(record and record.completed_at) if session.completed_at else None,
-        retry_at=outcome.get("retry_at") if record and record.completed_at is None else None,
+        retry_at=retry_at,
         attempts=int(outcome.get("attempts", 0)),
         module=gates_title(catalog, module_key),
         unlocks=gates_title(catalog, unlocks) if unlocks else None,
@@ -515,7 +524,7 @@ def finish(
                 "score": state.score,
                 "passed": False,
                 "attempts": attempts,
-                "retry_at": now + gates.COOLDOWN_SECONDS,
+                "retry_at": now + learning_mode.policy(user.learning_mode).checkpoint_cooldown,
             }
             learn.bump_daily(db, user, now, minutes=round(elapsed / 60))
     elif session.activity_id.startswith("quiz:"):

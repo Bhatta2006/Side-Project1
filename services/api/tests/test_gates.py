@@ -123,6 +123,8 @@ def answer_gate(client, headers, gate: str, right: bool) -> dict:  # noqa: F811
 def test_gate_locks_the_next_module_until_passed(client, monkeypatch):  # noqa: F811
     headers = login(client)
     onboard(client, headers)  # Programming from Zero, brand new: active immediately
+    # The day-long wait after a miss is the strict mode's rule (socrat.learning_mode).
+    assert client.patch("/api/v1/me", json={"learning_mode": "strict"}, headers=headers).status_code == 200
     catalog = default_catalog()
     first, second = gates.module_keys(catalog, "zero")[:2]
     locked_concept = gates.module_concepts(catalog, second)[0]

@@ -32,9 +32,11 @@ def master(client, concept=CONCEPT):
         learn.set_state(db, enrollment, concept, mastered(now()), now())
 
 
-def learner(client):
+def learner(client, mode=None):
     headers = login(client)
     onboard(client, headers)
+    if mode:  # the day-long wait after a miss is Strict's rule (socrat.learning_mode)
+        client.patch("/api/v1/me", json={"learning_mode": mode}, headers=headers)
     master(client)
     return headers
 
@@ -221,7 +223,7 @@ def test_old_proof_lapses_and_is_shown_again_on_a_problem_the_learner_has_not_me
 
 
 def test_naming_the_wrong_technique_ends_the_attempt_and_the_problem_is_not_reused(client):
-    headers = learner(client)
+    headers = learner(client, "strict")
     view = check(client)
     missed = classify(client, headers, view, wrong_choice(view)).json()
     assert missed["correct"] is False and missed["answer"] == view["title"]
@@ -240,7 +242,7 @@ def test_naming_the_wrong_technique_ends_the_attempt_and_the_problem_is_not_reus
 
 
 def test_tutor_help_makes_the_solve_a_miss(client):
-    headers = learner(client)
+    headers = learner(client, "strict")
     view = check(client)
     assert classify(client, headers, view, CONCEPT).status_code == 200
     pid = view["problem"]["id"]

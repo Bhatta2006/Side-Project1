@@ -74,10 +74,22 @@ def advance(ladder: Ladder, message: str, new_attempt: bool) -> Ladder:
     return Ladder(4, ladder.turns_at_ceiling + 1, False)
 
 
-def reveal_eligibility(ladder: Ladder, failed_submits: int) -> tuple[bool, str]:
+def reveal_eligibility(
+    ladder: Ladder,
+    failed_submits: int,
+    min_failed: int = REVEAL_MIN_FAILED_SUBMITS,
+    needs_hint_ladder: bool = True,
+) -> tuple[bool, str]:
+    """May the tutor walk through the full solution? The defaults are the strict rule; a
+    learner who chose a gentler mode (socrat.learning_mode) needs only real failed attempts."""
     if ladder.revealed:
         return True, "already_revealed"
-    if failed_submits >= REVEAL_MIN_FAILED_SUBMITS and ladder.ceiling >= 3:
+    if not needs_hint_ladder:
+        if failed_submits >= min_failed:
+            return True, "tried_it"
+        left = min_failed - failed_submits
+        return False, f"submit {left} attempt{'' if left == 1 else 's'} first"
+    if failed_submits >= min_failed and ladder.ceiling >= 3:
         return True, "struggled_after_attempts"
     if (
         failed_submits >= 1

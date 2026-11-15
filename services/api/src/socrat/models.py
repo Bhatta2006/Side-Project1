@@ -74,6 +74,9 @@ class User(Base):
     reminders_unanswered: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # The learner's colours as "palette:mode" (e.g. "tide:dark"); null is Classic in light.
     appearance: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # How strict Socrat is with this learner: relaxed | balanced | strict (see
+    # socrat.learning_mode). Null means the default, balanced.
+    learning_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
 
 class LoginSession(Base):

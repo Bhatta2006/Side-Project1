@@ -318,7 +318,10 @@ def build_plan(
     cooldowns: dict[str, int] | None = None,
     adaptive: Adaptive | None = None,
     transfer: transfers.Transfer | None = None,
+    locks: bool = True,
 ) -> Plan:
+    """``locks`` is False when the learner chose a mode that keeps every module open;
+    checkpoints are still planned, they just stop holding later modules shut."""
     if not weekdays:
         raise ValueError("at least one study weekday is required")
     adaptive = adaptive or Adaptive(course_id=course_id or "")
@@ -357,14 +360,16 @@ def build_plan(
         path = ordered(catalog, path, score)
     cooldowns = cooldowns or {}
     transfer = transfer or transfers.Transfer()
+    if not locks:  # nothing is held shut, so no check is "holding the next module"
+        transfer = transfers.Transfer(transfer.status, frozenset())
     gate_targets = (
         gates.locked_modules(catalog, course_id, states, completed, now, transfer.blocking)
-        if course_id
+        if course_id and locks
         else {}
     )
     locked = (
         gates.locked_concepts(catalog, course_id, states, completed, now, transfer.blocking)
-        if course_id
+        if course_id and locks
         else {}
     )
     locked_minutes = 0
