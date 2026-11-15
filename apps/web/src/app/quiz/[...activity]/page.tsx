@@ -24,6 +24,7 @@ import { SocFigure } from '@/components/socrat/soc';
 import { useExamGuard } from '@/components/socrat/soc-moment';
 import { FeedbackSheet, KeyHint, RUN_GLOW, RunTally, StampButton, praise, runOf, useAnswerKeys } from '@/components/socrat/answer-flow';
 import { PracticeRound } from '@/components/socrat/practice-round';
+import { SessionEnd } from '@/components/socrat/session-end';
 
 function Options({ q, choice, onChoose, graded }: { q: QuizQuestion; choice: number | null; onChoose(i: number): void; graded: boolean }) {
   return (
@@ -212,6 +213,8 @@ export default function Quiz() {
   // Lesson feel: sheet, run counter, keys and a practice round of misses (features.lesson_feel).
   const feel = features?.lesson_feel === true;
   const [practice, setPractice] = useState(false);
+  // Server-arranged end screens before the detailed results (features.session_end).
+  const [ended, setEnded] = useState(false);
   const immediate = session?.feedback === 'immediate';
   const current = session && !showResults && total ? session.questions[Math.min(index, total - 1)] : null;
   const run = immediate && session ? runOf(session.questions.filter(item => item.answered).map(item => item.correct === true)) : 0;
@@ -277,6 +280,15 @@ export default function Quiz() {
           items={missed.map(q => ({ key: q.id, prompt: codeSpans(q.prompt), code: q.code, options: q.options, answer: q.answer!, explanation: q.explanation }))}
           onDone={() => { setPractice(false); setIndex(total); }}
         />
+      </div>
+    );
+  }
+
+  if (showResults && features?.session_end && !ended) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-32 sm:px-6 md:pt-8">
+        <QuizHeader title={title} topic={topic} value={100} />
+        <SessionEnd activityId={activityId} right={session.questions.filter(q => q.correct).length} total={total} onDone={() => setEnded(true)} />
       </div>
     );
   }

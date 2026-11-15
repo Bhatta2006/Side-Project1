@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Check, Lock, Minus, ShieldCheck } from '@/components/icons';
 import { explain, openPaywall } from '@/lib/api';
 import { money, subscribe } from '@/lib/billing';
@@ -74,6 +74,7 @@ export function PaywallDialog({ reason, status, onClose }: { reason: string; sta
   const { refresh } = useSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const later = useRef<HTMLButtonElement>(null);
 
   const copy = PAYWALL_REASON[reason] ?? PAYWALL_REASON.upgrade_required;
   const plan = copy.plan === 'pro' || status.plan === 'plus' ? 'pro' : 'plus';
@@ -96,7 +97,11 @@ export function PaywallDialog({ reason, status, onClose }: { reason: string; sta
 
   return (
     <Dialog open onOpenChange={next => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto p-0 sm:max-w-[560px]">
+      <DialogContent
+        className="max-h-[92dvh] gap-0 overflow-y-auto p-0 sm:max-w-[560px]"
+        // Never start on the pay button: a stray Enter (say, from a quiz) must not open checkout.
+        onOpenAutoFocus={e => { e.preventDefault(); later.current?.focus(); }}
+      >
         <div className="px-6 pt-6 pb-4">
           <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><Lock className="size-3.5" aria-hidden="true" /> {status.plan === 'plus' ? `You're a ${PLAN_NAME.plus}` : "You're on Free"}</p>
           <DialogTitle className="mt-2 font-display text-2xl font-bold tracking-[-0.03em]">{copy.title}</DialogTitle>
@@ -129,7 +134,7 @@ export function PaywallDialog({ reason, status, onClose }: { reason: string; sta
           <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" aria-hidden="true" /> Secure checkout by Razorpay · cancel any time</p>
           <div className="flex gap-2">
             <Button asChild variant="ghost" size="sm" onClick={() => onClose()}><Link href="/pricing">Compare plans</Link></Button>
-            <Button variant="ghost" size="sm" onClick={() => onClose()}>Maybe later</Button>
+            <Button ref={later} variant="ghost" size="sm" onClick={() => onClose()}>Maybe later</Button>
           </div>
         </div>
       </DialogContent>

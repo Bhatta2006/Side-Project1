@@ -1700,6 +1700,7 @@ html[data-reduce-motion="true"]::view-transition-old(*), html[data-reduce-motion
   box-shadow: 0 4px 0 var(--soc-outline);
   transition: translate 80ms ease-out, box-shadow 80ms ease-out;
   touch-action: manipulation;
+  text-decoration: none;
 }
 .stamp:active:not(:disabled) { translate: 0 4px; box-shadow: 0 0 0 var(--soc-outline); }
 .stamp:focus-visible { outline: 3px solid var(--highlight); outline-offset: 3px; }

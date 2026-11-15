@@ -135,6 +135,8 @@ export interface Features {
   lite_mode?: boolean;
   /** Answer sheet, run counter, keyboard answering and a practice round of misses. */
   lesson_feel?: boolean;
+  /** Server-arranged end of a session: evidence, streak, next step. */
+  session_end?: boolean;
 }
 
 export interface Course {
@@ -249,6 +251,18 @@ export interface AdaptiveAnswer {
   explanation: string | null;
   misconception: string | null;
   session: AdaptiveSession;
+}
+
+/** One screen after a session, picked and ordered by the server (learn/session_end.py). */
+export type EndScreen =
+  | { kind: 'evidence'; concept: string | null; title: string | null; status: 'mastered' | 'shown_alone' | 'building' | null; independent?: number; assisted?: number }
+  | { kind: 'streak'; current: number; longest: number; freezes: number; first_day: boolean; milestone: boolean; week: { day: string; studied: boolean; scheduled: boolean; today: boolean }[] }
+  | { kind: 'badge'; id: string; title: string; description: string }
+  | { kind: 'next'; goal_reached: boolean; minutes_done: number; minutes_goal: number; activity: { id: string; kind: ActivityKind; concept: string | null; title: string; minutes: number; reason?: string | null } | null };
+
+export interface SessionEndView {
+  arrangement: string;
+  screens: EndScreen[];
 }
 
 export interface Revision {

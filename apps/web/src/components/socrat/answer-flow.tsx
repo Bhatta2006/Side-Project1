@@ -69,6 +69,8 @@ export function useAnswerKeys({ enabled, count, onPick, onSubmit }: {
     if (!enabled) return;
     function onKey(e: KeyboardEvent) {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat || typing(e.target)) return;
+      // A dialog (the paywall, a confirm) owns the keyboard while it is open.
+      if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return;
       const { count, onPick, onSubmit } = latest.current;
       if (e.key === 'Enter') {
         const el = e.target instanceof HTMLElement ? e.target : null;

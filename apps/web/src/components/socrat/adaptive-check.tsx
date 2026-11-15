@@ -17,6 +17,7 @@ import { Progress } from '@/components/ui/progress';
 import { useSession } from '@/lib/session';
 import { FeedbackSheet, KeyHint, RUN_GLOW, RunTally, StampButton, praise, runOf, useAnswerKeys, type PracticeItem } from '@/components/socrat/answer-flow';
 import { PracticeRound } from '@/components/socrat/practice-round';
+import { SessionEnd } from '@/components/socrat/session-end';
 
 type Question = NonNullable<AdaptiveSession['current']>;
 
@@ -75,6 +76,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
   const [asked, setAsked] = useState<{ question: Question; choice: number | null } | null>(null);
   const [missed, setMissed] = useState<PracticeItem[]>([]);
   const [practised, setPractised] = useState(false);
+  const [ended, setEnded] = useState(false); // server-arranged end screens (features.session_end)
 
   const starting = useRef('');
   const start = useCallback(async (retry = false) => {
@@ -165,6 +167,10 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
 
   if (feel && session.finished && !feedback && missed.length && !practised) {
     return <PracticeRound items={missed} onDone={() => setPractised(true)} />;
+  }
+
+  if (session.finished && !feedback && features?.session_end && !ended) {
+    return <SessionEnd activityId={activityId} right={history.filter(h => h.correct).length} total={history.length || undefined} onDone={() => setEnded(true)} />;
   }
 
   if (session.finished && !feedback) {

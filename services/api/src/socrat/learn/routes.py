@@ -22,7 +22,7 @@ from socrat.catalog.registry import Catalog, CatalogError, default_catalog
 from socrat.database import record_event
 from socrat.execution.protocol import ResultEnvelope
 from socrat.judge import service as judge
-from socrat.learn import placement, playground, quizzes, resources, transfers, views
+from socrat.learn import placement, playground, quizzes, resources, session_end, transfers, views
 from socrat.learn import service as learn
 from socrat.mastery.model import ConceptState, band
 from socrat.models import (
@@ -689,6 +689,20 @@ def today(request: Request):
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db)
         return views.today_view(db, catalog(), user, active(db, user), now())
+
+
+class SessionEndRequest(Strict):
+    activity: str = Field(min_length=1, max_length=200)
+
+
+@router.post("/session-end")
+def end_of_session(body: SessionEndRequest, request: Request):
+    """The screens after a session, picked and ordered by the server (learn/session_end.py)."""
+    if not request.app.state.settings.session_end_enabled:
+        raise HTTPException(404, "not_found")
+    with Session(engine(request)) as db, db.begin():
+        user = user_of(request, db, write=True)
+        return session_end.arrange(db, catalog(), user, active(db, user), body.activity, now())
 
 
 @router.get("/me/preparing")

@@ -310,6 +310,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "learning_requests": settings.learning_requests_enabled,
             "lite_mode": settings.lite_mode_enabled,
             "lesson_feel": settings.lesson_feel_enabled,
+            "session_end": settings.session_end_enabled,
         }
 
     @app.post("/api/v1/auth/dev-login")
