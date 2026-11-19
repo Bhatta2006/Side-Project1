@@ -266,15 +266,31 @@ def minutes_by_day(db: Session, user: User) -> dict[date, int]:
     return {date.fromisoformat(day): minutes or 0 for day, minutes in rows}
 
 
+def streak_start(enrollment: Enrollment) -> date:
+    return date.fromtimestamp(enrollment.created_at) - timedelta(days=1)
+
+
+def streak_goal(enrollment: Enrollment) -> dict | None:
+    """The streak goal the learner committed to (``streak_plus_enabled``), if any."""
+    goal = (enrollment.adaptive or {}).get("streak_goal")
+    return dict(goal) if isinstance(goal, dict) and goal.get("days") in streaks.GOALS else None
+
+
 def streak(db: Session, user: User, enrollment: Enrollment, now: int) -> dict:
     """Consecutive scheduled study days with activity; earned freezes cover missed days."""
-    return streaks.compute(
+    out = streaks.compute(
         minutes_by_day(db, user),
         local_day(user, now),
         set(enrollment.weekdays),
-        date.fromtimestamp(enrollment.created_at) - timedelta(days=1),
+        streak_start(enrollment),
         enrollment.minutes_per_day,
     )
+    if streaks.EXTRAS:
+        goal = streak_goal(enrollment)
+        out["goal"] = (
+            {"days": goal["days"], "reached": out["current"] >= goal["days"]} if goal else None
+        )
+    return out
 
 
 def days_away(db: Session, user: User, enrollment: Enrollment, now: int) -> int:

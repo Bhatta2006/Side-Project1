@@ -51,6 +51,8 @@ export function SessionEnd({ activityId, right, total, onDone }: { activityId: s
   );
 }
 
+const KEPT = { frozen: 'covered by a freeze', saved: 'saved by Socrat', repaired: 'earned back' } as const;
+
 const STATUS: Record<'mastered' | 'shown_alone' | 'building', string> = {
   mastered: 'mastered',
   shown_alone: 'shown on your own',
@@ -79,7 +81,7 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
     case 'streak':
       return (
         <div className="grid gap-4">
-          <p className="type-label text-muted-foreground">{screen.first_day ? 'Day one' : 'Your streak'}</p>
+          <p className="type-label text-muted-foreground">{screen.earned_back ? 'Streak earned back' : screen.first_day ? 'Day one' : 'Your streak'}</p>
           <h1 className="type-display-l">
             {screen.current} study {screen.current === 1 ? 'day' : 'days'} in a row
           </h1>
@@ -90,13 +92,13 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
               return (
                 <li key={d.day} className="grid justify-items-center gap-1.5">
                   <span className={cn('grid size-10 place-items-center rounded-full border-2 text-sm font-bold',
-                    d.studied ? 'border-foreground bg-[var(--highlight)] text-[#15161E]' : d.scheduled ? 'border-dashed border-border-strong' : 'border-transparent bg-raised/60',
+                    d.studied ? 'border-foreground bg-[var(--highlight)] text-[#15161E]' : d.kept ? 'border-foreground border-double border-[3px]' : d.scheduled ? 'border-dashed border-border-strong' : 'border-transparent bg-raised/60',
                     d.today && 'ring-2 ring-foreground ring-offset-2 ring-offset-background')}
                   >
                     {d.studied ? <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> : null}
                   </span>
                   <span className="text-[13px] text-muted-foreground" aria-hidden="true">{label}</span>
-                  <span className="sr-only">{name}: {d.studied ? 'studied' : d.scheduled ? 'a study day' : 'a rest day'}</span>
+                  <span className="sr-only">{name}: {d.studied ? 'studied' : d.kept ? KEPT[d.kept] : d.scheduled ? 'a study day' : 'a rest day'}</span>
                 </li>
               );
             })}
@@ -109,6 +111,9 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
                 : `Your longest is ${screen.longest}. Rest days never break it.`}
             {screen.freezes ? ` ${screen.freezes} ${screen.freezes === 1 ? 'freeze' : 'freezes'} saved for a missed study day.` : ''}
           </p>
+          {screen.goal ? (
+            <p className="text-[15px]">{screen.goal.reached ? `You reached your ${screen.goal.days}-day goal.` : `Goal: ${Math.min(screen.current, screen.goal.days)} of ${screen.goal.days} days.`}</p>
+          ) : null}
         </div>
       );
     case 'badge':
@@ -154,11 +159,44 @@ function Actions({ screen, last, onForward, onDetails }: { screen: EndScreen; la
       </div>
     );
   }
+  if (screen.kind === 'streak' && screen.offer_goal?.length) {
+    return <GoalChoice ref={button} goals={screen.offer_goal} again={!!screen.goal?.reached} onDone={onForward} />;
+  }
   return (
     <div className="flex flex-wrap items-center gap-3">
       <StampButton ref={button} onClick={onForward}>
         {screen.kind === 'streak' && screen.first_day ? "I'll be back" : last ? 'See your answers' : 'Continue'}
       </StampButton>
+    </div>
+  );
+}
+
+/** The day-one commitment (features.streak_plus): pick a streak goal, or not now. */
+function GoalChoice({ ref, goals, again, onDone }: { ref: React.Ref<HTMLButtonElement>; goals: (7 | 14 | 30)[]; again: boolean; onDone(): void }) {
+  const [busy, setBusy] = useState(false);
+  async function pick(days: 7 | 14 | 30) {
+    setBusy(true);
+    try {
+      await api.put('/streak/goal', { days });
+    } catch {
+      // A goal is a nicety: the session still ends cleanly if it could not be saved.
+    } finally {
+      onDone();
+    }
+  }
+  return (
+    <div className="grid gap-3">
+      <p className="text-[15px] font-semibold">{again ? 'Set your next goal?' : 'Commit to a streak goal?'}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        {goals.map((days, i) =>
+          i === 0 ? (
+            <StampButton key={days} ref={ref} disabled={busy} onClick={() => void pick(days)}>{days} days</StampButton>
+          ) : (
+            <Button key={days} variant="outline" size="lg" disabled={busy} onClick={() => void pick(days)}>{days} days</Button>
+          ),
+        )}
+        <Button variant="ghost" size="lg" disabled={busy} onClick={onDone}>Not now</Button>
+      </div>
     </div>
   );
 }

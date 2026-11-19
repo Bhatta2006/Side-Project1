@@ -138,6 +138,7 @@ export interface Features {
   /** Server-arranged end of a session: evidence, streak, next step. */
   session_end?: boolean;
   daily_review?: boolean;
+  streak_plus?: boolean;
 }
 
 export interface Course {
@@ -257,7 +258,7 @@ export interface AdaptiveAnswer {
 /** One screen after a session, picked and ordered by the server (learn/session_end.py). */
 export type EndScreen =
   | { kind: 'evidence'; concept: string | null; title: string | null; status: 'mastered' | 'shown_alone' | 'building' | null; independent?: number; assisted?: number }
-  | { kind: 'streak'; current: number; longest: number; freezes: number; first_day: boolean; milestone: boolean; week: { day: string; studied: boolean; scheduled: boolean; today: boolean }[] }
+  | { kind: 'streak'; current: number; longest: number; freezes: number; first_day: boolean; milestone: boolean; week: { day: string; studied: boolean; scheduled: boolean; today: boolean; kept?: 'frozen' | 'saved' | 'repaired' | null }[]; goal?: { days: 7 | 14 | 30; reached: boolean } | null; offer_goal?: (7 | 14 | 30)[] | null; earned_back?: boolean }
   | { kind: 'badge'; id: string; title: string; description: string }
   | { kind: 'next'; goal_reached: boolean; minutes_done: number; minutes_goal: number; activity: { id: string; kind: ActivityKind; concept: string | null; title: string; minutes: number; reason?: string | null } | null };
 
@@ -372,7 +373,19 @@ export interface Streak {
   frozen: string[];
   week_minutes: number;
   week_goal: number;
+  /** Streak upgrade (features.streak_plus): days covered by a save or earned back, recent. */
+  saved?: string[];
+  repaired?: string[];
+  /** A missed study day that can still be earned back by studying `minutes` by `by`. */
+  earn_back?: { missed: string; by: string; keep: number; minutes: number; done_today: number } | null;
+  repaired_today?: boolean;
+  goal?: { days: 7 | 14 | 30; reached: boolean } | null;
 }
+
+export type StreakDayStatus = 'studied' | 'frozen' | 'saved' | 'repaired' | 'missed' | 'rest' | 'today' | 'planned' | 'future' | 'none';
+
+/** GET /streak/calendar: one month of streak days. */
+export interface StreakCalendar { month: string; earliest: string; latest: string; days: { day: string; status: StreakDayStatus; minutes: number }[] }
 
 export interface ProgressNumbers {
   total: number;

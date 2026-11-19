@@ -4,13 +4,14 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown } from '@/components/icons';
 import { api, explain } from '@/lib/api';
-import { useGuard } from '@/lib/session';
+import { useGuard, useSession } from '@/lib/session';
 import { useCourse } from '@/lib/course';
 import { cn } from '@/lib/utils';
 import { NAME, PACE_LABEL, conceptHref, formatDate, hours } from '@/lib/routes';
 import type { AssessmentStatus, ProgressView } from '@/lib/types';
 import { ErrorNote, Loading, Page, Ring, StatCard } from '@/components/common';
 import { SolvedBoard } from '@/components/socrat/solved-board';
+import { StreakCalendar } from '@/components/socrat/streak-calendar';
 import { EmptyState } from '@/components/socrat/states';
 import { LearnerProfileCard } from '@/components/socrat/learner-profile';
 import { PassportSettingsCard } from '@/components/socrat/passport-settings';
@@ -37,6 +38,7 @@ type TabId = (typeof TABS)[number];
 
 export default function ProgressPage() {
   const allowed = useGuard('active');
+  const flags = useSession().features;
   const { features } = useCourse();
   const [data, setData] = useState<ProgressView | null>(null);
   const [assessment, setAssessment] = useState<AssessmentStatus | null>(null);
@@ -219,6 +221,7 @@ export default function ProgressPage() {
                 <span className="sr-only">Levels: none, under 15 minutes, under 30, under 60, an hour or more.</span>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">{data.streak.current}-day streak. Longest {data.streak.longest} days.</p>
+              {flags?.streak_plus ? <StreakCalendar /> : null}
             </section>
           </TabsContent>
 

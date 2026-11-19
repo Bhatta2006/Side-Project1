@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from socrat.catalog.registry import Catalog
 from socrat.database import record_event
-from socrat.learn import achievements
+from socrat.learn import achievements, streaks
 from socrat.learn import service as learn
 from socrat.models import AuditEvent, DailyActivity, Enrollment, User
 
@@ -116,7 +116,32 @@ def streak_screen(db: Session, user: User, enrollment: Enrollment, now: int) -> 
         "freezes": streak["freezes"],
         "first_day": current == 1,
         "milestone": current in MILESTONES,
-        "week": week_of(db, user, enrollment, today),
+        "week": _kept(week_of(db, user, enrollment, today), streak),
+        **_extras(streak),
+    }
+
+
+def _kept(week: list[dict], streak: dict) -> list[dict]:
+    """With the streak upgrade on, mark days a freeze, a save or an earn-back kept."""
+    if not streaks.EXTRAS:
+        return week
+    kept = {
+        **{d: "frozen" for d in streak.get("frozen") or []},
+        **{d: "saved" for d in streak.get("saved") or []},
+        **{d: "repaired" for d in streak.get("repaired") or []},
+    }
+    return [{**d, "kept": kept.get(d["day"])} for d in week]
+
+
+def _extras(streak: dict) -> dict:
+    """With the streak upgrade on: the goal, a goal offered on day one, and a repair done."""
+    if not streaks.EXTRAS:
+        return {}
+    goal = streak.get("goal")
+    return {
+        "goal": goal,
+        "offer_goal": list(streaks.GOALS) if goal is None or goal["reached"] else None,
+        "earned_back": bool(streak.get("repaired_today")),
     }
 
 

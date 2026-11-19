@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronRight, Flame } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard, useSession } from '@/lib/session';
+import { StreakExtras } from '@/components/socrat/streak-extras';
 import { useCourse } from '@/lib/course';
 import { useI18n } from '@/lib/i18n';
 import { KIND_LABEL, NAME, PACE_LABEL, activityHref, conceptHref, formatDate } from '@/lib/routes';
@@ -535,6 +536,7 @@ export default function TodayPage() {
                   <p className="text-sm text-muted-foreground">
                     {fresh ? `A ${today.minutes.goal}-minute session is all it takes. Your week goal is ${today.streak.week_goal} min.` : `${today.minutes.done} of ${today.minutes.goal} min today. ${today.streak.week_minutes} of ${today.streak.week_goal} min this week.`}
                   </p>
+                  {features?.streak_plus ? <StreakExtras streak={today.streak} /> : null}
                 </div>
               </Card>
 
