@@ -1,16 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { api, explain } from '@/lib/api';
-import { useGuard } from '@/lib/session';
+import { useGuard, useSession } from '@/lib/session';
 import { activityHref, conceptHref } from '@/lib/routes';
 import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { EmptyState } from '@/components/socrat/states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { DailyReviewCard } from '@/components/socrat/daily-review';
+import type { DailyReview } from '@/lib/types';
 
 /** One scheduled review (GET /reviews), master prompt 9.6. */
 interface ReviewItem {
@@ -84,12 +86,23 @@ export default function ReviewsPage() {
   const allowed = useGuard('active');
   const [scope, setScope] = useState<'course' | 'all'>('course');
   const [queue, setQueue] = useState<Queue | null>(null);
+  const [daily, setDaily] = useState<DailyReview | null>(null);
   const [error, setError] = useState('');
+  const { features } = useSession();
+  const withDaily = features?.daily_review === true;
+
+  const latest = useRef(0);
 
   const load = useCallback(() => {
     setError('');
-    api.get<Queue>(`/reviews?scope=${scope}`).then(setQueue).catch(e => setError(explain(e)));
-  }, [scope]);
+    const call = ++latest.current; // only the newest load may write: no stale overwrite
+    const mine = <T,>(set: (value: T) => void) => (value: T) => { if (call === latest.current) set(value); };
+    // Both lists at once; the Daily Review is optional and never blocks the page.
+    void Promise.all([
+      api.get<Queue>(`/reviews?scope=${scope}`).then(mine(setQueue)).catch(e => mine(setError)(explain(e))),
+      withDaily ? api.get<DailyReview>('/daily-review').then(mine(setDaily)).catch(() => mine(setDaily)(null)) : null,
+    ]);
+  }, [scope, withDaily]);
   useEffect(() => { if (allowed) load(); }, [allowed, load]);
 
   if (!allowed || (!queue && !error)) return <Loading label="Loading your reviews" />;
@@ -101,6 +114,7 @@ export default function ReviewsPage() {
         title="Reviews"
         description={`Short recall checks, spaced further apart each time you get them right. Your plan fits in up to ${queue.daily_limit} a day.`}
       />
+      {withDaily && daily ? <DailyReviewCard review={daily} /> : null}
       <div className="mb-6 inline-flex rounded-full bg-raised p-1" role="group" aria-label="Which reviews">
         {(['course', 'all'] as const).map(s => (
           <button

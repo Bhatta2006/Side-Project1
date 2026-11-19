@@ -388,7 +388,7 @@ Small (S) is a few days, medium (M) one to two weeks, large (L) longer.
 | 1 | **Learning-style setting** (Relaxed, Balanced, Strict) controlling gates, retry waits, hint limits and tutor tone. Default: Balanced, with no blocking cooldowns | Owner rule; removes the most annoying friction | M |
 | 2 | **Lesson feel pass** (built 2026-11-16 behind `lesson_feel_enabled`; see the progress log in `docs/implementation/universal-engine-plan.md`): feedback bottom sheet, end-of-lesson retry of misses, combo, keyboard flow, pressable stamped buttons | Duolingo's core "this is easy and fun" feeling | M |
 | 3 | **End-of-lesson sequence** (built 2026-11-16 behind `session_end_enabled`; see the progress log in `docs/implementation/universal-engine-plan.md`) led by evidence, then streak and next step | Peak-end moment; the commitment point | S–M |
-| 4 | **Daily Review queue** backed by a simple recall-half-life model | Best-evidenced retention lever (+12% engagement at Duolingo) | M–L |
+| 4 | **Daily Review queue** (built 2026-11-19 behind `daily_review_enabled`, weights not yet fitted; see the progress log in `docs/implementation/universal-engine-plan.md`) backed by a simple recall-half-life model | Best-evidenced retention lever (+12% engagement at Duolingo) | M–L |
 | 5 | **Streak upgrade**: day-1 commitment, goal, calendar, repair and earn-back, automatic freeze for at-risk learners | The first 7 days decide retention | M |
 | 6 | **Web push and email reminders** at a chosen time, goal-specific copy, comeback flow | Socrat's biggest missing channel | M |
 | 7 | **Guest first lesson, then "save your progress"**, A/B against sign-in first | First win before any form | M |

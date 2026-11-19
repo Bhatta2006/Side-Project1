@@ -137,6 +137,7 @@ export interface Features {
   lesson_feel?: boolean;
   /** Server-arranged end of a session: evidence, streak, next step. */
   session_end?: boolean;
+  daily_review?: boolean;
 }
 
 export interface Course {
@@ -1012,3 +1013,16 @@ export interface TryProblem {
   tests: { index: number; input: string; expected: string; public: boolean }[];
   max_turns: number;
 }
+
+/** GET /daily-review (item 4): practised concepts most likely forgotten, by a recall model. */
+export interface DailyReviewItem {
+  concept: string;
+  title: string;
+  activity: string;
+  recall: number;
+  state: 'probably faded' | 'fading' | 'starting to fade';
+  half_life_days: number;
+  reason: string;
+}
+
+export interface DailyReview { model: string; daily_limit: number; refreshed_today: number; items: DailyReviewItem[] }

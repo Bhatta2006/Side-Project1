@@ -41,6 +41,7 @@ from socrat.email_auth import router as email_auth_router
 from socrat.engine.routes import router as engine_router
 from socrat.explainer.routes import router as explainer_router
 from socrat.lab.routes import router as lab_router
+from socrat.learn.daily_review import router as daily_review_router
 from socrat.learn.graded_routes import router as graded_router
 from socrat.learn.memory import router as memory_router
 from socrat.learn.preview import router as preview_router
@@ -145,6 +146,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(maintenance_router)
     app.include_router(engine_costs_router)
     app.include_router(reviews_router)
+    app.include_router(daily_review_router)
     app.include_router(tasks_router)
     app.include_router(tasks_admin)
     app.include_router(locale_public)
@@ -311,6 +313,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "lite_mode": settings.lite_mode_enabled,
             "lesson_feel": settings.lesson_feel_enabled,
             "session_end": settings.session_end_enabled,
+            "daily_review": settings.daily_review_enabled,
         }
 
     @app.post("/api/v1/auth/dev-login")

@@ -287,6 +287,9 @@ class Settings(DatabaseSettings):
     # The end of a session (item 3): what was proved, then the streak, then the next step,
     # arranged by the server (learn/session_end.py).
     session_end_enabled: bool = False
+    # The Daily Review (item 4): practised concepts most likely forgotten, ordered by a
+    # recall half-life model (learn/recall.py, learn/daily_review.py).
+    daily_review_enabled: bool = False
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)
