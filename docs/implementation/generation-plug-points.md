@@ -38,6 +38,12 @@ shared publicly by their maker) are never written from one learner's brief. For 
 shapes that learner's own sessions: planner order, quiz selection, tutor. That is the layer's
 side, read from `Enrollment.learner_plan` and the layer's own data.
 
+Two code guards back this up (`coursegen/brain/privacy.py`): a shareable course is generated from
+`shared_intent(intent)` (Lesson 0 door and gaps sentences, age, deadline and hours removed), and
+`leaks(db, course_id)` keeps a course private when its maker's own words (8-word runs), email or
+full name appear in anything learners read. If the layer ever adds text to a shared course's
+prompts, `leaks` will catch a copy of the maker's words, but the rule above is the real guard.
+
 **Per-learner data generation already stores for the layer to read:**
 
 | Where | What | Writer |
@@ -65,6 +71,10 @@ and bump `schema_revision.py` and `tests/test_quiz_runtime_tables.py`.
 | `route.route(db, catalog, user_id, row, intent)` | called first in `requests.begin` when `settings.course_brain`. Serves an existing course (`row.status = "matched"`) or says why a course must be built, and which root units it uses |
 | `route.attach(db, course_id)` | called by `requests.publish`: stamps root, spec, `serve` on a built course |
 | `route.granted(db, user_id, course_id)` | `POST /enrollments`: lets a served learner enrol and copies their private overlay |
+| `route.family(db, spec)` / `route.joined` | a shareable course is built under `<topic>-<spec key[:8]>` (`-vN`); a request with the same spec while it is being written is `joined` instead of building again |
+| `privacy.shared_intent / leaks` | learner-only parts removed from a shareable course's request; leakage gate run at publish and before serving |
+| `units.correct(db, base, unit_id, reason)` | withdraw a unit revision, research a corrected one, rewrite every live lesson pinned to it |
+| `GET /api/v1/admin/brain/roots`, `/units`, `/matches/{request_id}`; `POST /units/{id}/correct` | owner views and the correction action (`brain/routes.py`) |
 | `spec.derive / is_private / overlay` | request -> hard spec / private flag / learner-only overlay (code only) |
 | `roots.resolve` | any subject -> one root, created on demand; synonyms folded; merges redirect |
 | `units.ensure / load / block / pin / quarantine` | root material: research once, load for prompts, record which revision a lesson used, withdraw |
@@ -80,4 +90,4 @@ need: put it in `spec.overlay`, never in `CourseSpec`.
 |---|---|---|---|
 | `outline` | the course | "" | waits (state `queued`, stage `waiting`, no attempt counted) up to `UNIT_WAIT_SECONDS` while its root units are researched, then plans from `Brief.subject_material` |
 | `research` | `root:<root id>` | unit key | priority 0, one open job per unit (unique open-job index) |
-| `package` | the course | concept id | loads root units of `Brief.units`, pins them, then the learner hook |
+| `package` | the course | concept id | waits like `outline` while a unit it rests on is being re-researched after a correction (a routine refresh is not waited for); loads root units of `Brief.units`, pins them (replacing a pin to an older revision), then the learner hook |

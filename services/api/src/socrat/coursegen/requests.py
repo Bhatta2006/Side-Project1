@@ -388,21 +388,47 @@ def begin(db: Session, settings, user_id: str, row: LearningRequest, parsed) -> 
             record_event(db, user_id, "learning_request.matched", row.id)
             db.flush()
             return
-    course_id = intents.slug(parsed.subject, user_id, row.key)
+    shared = decision is not None and decision.family_id is not None
+    # A course the brain may share: one id per spec (so concurrent learners meet on it) and
+    # generated without this learner's private parts (their door, gaps, age, deadline).
+    course_id = decision.family_id if shared else intents.slug(parsed.subject, user_id, row.key)
+
+    def join() -> None:
+        from socrat.coursegen import brain
+
+        # A concurrent request with this exact spec started the course first: wait for it.
+        brain.joined(db, row.id, course_id)
+        row.intent = parsed.model_dump(mode="json")
+        row.course_id, row.status, row.updated_at = course_id, "matched", now()
+        record_event(db, user_id, "learning_request.matched", row.id)
+        db.flush()
+
     if course_id in catalog().courses or jobs.active(db, course_id) is not None:
+        if shared:
+            return join()
         raise HTTPException(409, "generation_in_progress")
+    source = parsed
+    if shared:
+        from socrat.coursegen.brain import privacy
+
+        source = intents.Intent.model_validate(privacy.shared_intent(parsed.model_dump()))
     brief = intents.to_brief(
-        parsed, course_id, settings.learning_request_budget_usd, row.material or ""
+        source, course_id, settings.learning_request_budget_usd, row.material or ""
     )
     if decision is not None and decision.units:
         brief = brief.model_copy(update={"units": decision.units})
-    jobs.enqueue(
-        db,
-        "outline",
-        course_id,
-        {"brief": brief.model_dump(mode="json"), "learning_request": row.id},
-        user_id,
-    )
+    try:
+        jobs.enqueue(
+            db,
+            "outline",
+            course_id,
+            {"brief": brief.model_dump(mode="json"), "learning_request": row.id},
+            user_id,
+        )
+    except jobs.AlreadyQueued:
+        if not shared:
+            raise
+        return join()
     row.intent = parsed.model_dump(mode="json")
     row.course_id, row.status, row.updated_at = course_id, "confirmed", now()
     record_event(db, user_id, "learning_request.confirmed", row.id)
@@ -468,12 +494,16 @@ def publish(request_id: str, request: Request):
         row = db.get(LearningRequest, request_id)
         if row is None or row.user_id != user.id or not row.course_id:
             raise HTTPException(404, "not_found")
-        if row.status == "matched":
-            return view(db, row)  # an existing course, already published by its maker
         course = db.get(GeneratedCourse, row.course_id)
+        if row.status == "matched" and (course is None or course.status != "review"):
+            # An existing course, already published by its maker, or one whose outline is
+            # still being written (the plan screen keeps polling).
+            return view(db, row)
         if course is None:
             raise HTTPException(409, "outline_not_ready")
-        if course.owner_id != user.id:
+        # A learner the brain joined to a course still in review may release it too: it was
+        # generated for their exact spec, and its maker would publish it unchanged.
+        if course.owner_id != user.id and row.status != "matched":
             raise HTTPException(404, "not_found")
         if course.status == "review":
             try:
@@ -596,6 +626,17 @@ def cancel(request_id: str, request: Request):
     _enabled(request)
     with Session(engine(request)) as db, db.begin():
         user, row = _owned_course(db, request, request_id)
+        from socrat.models import CourseMatch
+
+        others = db.scalar(
+            select(func.count())
+            .select_from(CourseMatch)
+            .where(CourseMatch.course_id == row.course_id, CourseMatch.user_id != user.id)
+        )
+        if others:
+            # Other learners were given this course: its lessons are no longer one person's
+            # to stop.
+            raise HTTPException(409, "course_shared")
         waiting = db.scalars(
             select(GenerationJob).where(
                 GenerationJob.course_id == row.course_id, GenerationJob.state == "queued"

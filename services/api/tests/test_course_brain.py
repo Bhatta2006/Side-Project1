@@ -1,6 +1,8 @@
 """The course brain: subject roots, request specs, and serving an existing course to a second
 compatible learner without generating again (docs/implementation/course-brain-plan.md)."""
 
+import json
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,6 +17,7 @@ from socrat.coursegen.brain.spec import derive, is_private, topic_of
 from socrat.models import (
     CourseMatch,
     Enrollment,
+    GeneratedConcept,
     GeneratedCourse,
     GenerationJob,
     LearningRequest,
@@ -162,7 +165,13 @@ def build(client, course_id, owner, live=True):  # noqa: F811
         ],
     )
     with Session(client.app.state.engine) as db, db.begin():
-        generated.save_course(db, default_catalog(), course, status="review")
+        outline = db.scalars(
+            select(GenerationJob).where(
+                GenerationJob.course_id == course_id, GenerationJob.kind == "outline"
+            )
+        ).first()
+        brief = outline.input["brief"] if outline else None  # what run_outline stores
+        generated.save_course(db, default_catalog(), course, status="review", brief=brief)
         db.get(GeneratedCourse, course_id).owner_id = owner
         for job in db.scalars(select(GenerationJob).where(GenerationJob.course_id == course_id)):
             job.state = "done"  # as the worker leaves it once the outline is saved
@@ -228,26 +237,143 @@ def test_second_compatible_learner_gets_the_first_learners_course(brain):
         assert MYSTERY not in str(shared.payload) + str(shared.brief) + str(shared.spec)
 
 
-def test_incompatible_or_unready_courses_are_not_served(brain):
+def test_a_course_still_being_written_is_joined_not_built_again(brain):
     ada = login(brain, "ada", "Ada")
     adult(brain, ada)
     first = ask(brain, ada, DETECTIVE)
-    build(brain, first["course_id"], me(brain), live=False)  # roadmap only, no lesson yet
-    brain.post(f"{URL}/{first['id']}/publish", json={}, headers=ada)
+    ada_id = me(brain)
 
+    # While Ada's outline is being written, Bob's compatible request waits for the same course.
     bob = login(brain, "bob", "Bob")
     adult(brain, bob)
-    waiting = ask(brain, bob, MYSTERY, subject="First-degree equations")
-    assert waiting["status"] == "confirmed" and waiting["course_id"] != first["course_id"]
-    drills = ask(brain, bob, DRILLS, minutes_per_day=None, goal="Pass the algebra exam.")
-    assert drills["status"] == "confirmed"
+    early = ask(brain, bob, MYSTERY, subject="First-degree equations")
+    assert (early["status"], early["course_id"]) == ("matched", first["course_id"])
     with Session(brain.app.state.engine) as db:
-        why = db.scalar(select(CourseMatch).where(CourseMatch.request_id == waiting["id"]))
-        assert why.outcome == "extend_and_new"  # Ada's research for the topic is still open
-        assert why.candidates[0]["why"] == "first lesson not ready"
+        outlines = db.scalars(select(GenerationJob).where(GenerationJob.kind == "outline")).all()
+        assert len(outlines) == 1  # one outline for both learners
+        why = db.scalar(select(CourseMatch).where(CourseMatch.request_id == early["id"]))
+        assert why.outcome == "joined" and "still being written" in why.reason
+
+    # Ada's outline is saved (in review, first lesson not written). Bob presses Start: he may
+    # release the course built for his exact spec; then it is the shared course for both.
+    build(brain, first["course_id"], ada_id, live=False)
+    released = brain.post(f"{URL}/{early['id']}/publish", json={}, headers=bob).json()
+    assert released["published"] and released["enroll"]["course"] == first["course_id"]
+    with Session(brain.app.state.engine) as db:
+        assert db.get(GeneratedCourse, first["course_id"]).serve == "shared"
+
+    # Ada cannot cancel lessons another learner is now waiting for.
+    ada = login(brain, "ada", "Ada")
+    stop = brain.post(f"{URL}/{first['id']}/cancel", json={}, headers=ada)
+    assert stop.status_code == 409 and stop.json()["error"]["code"] == "course_shared"
+
+    # A different experience is never joined.
+    bob = login(brain, "bob", "Bob")
+    drills = ask(brain, bob, DRILLS, minutes_per_day=None, goal="Pass the algebra exam.")
+    assert drills["status"] == "confirmed" and drills["course_id"] != first["course_id"]
+    with Session(brain.app.state.engine) as db:
         drill = db.scalar(select(CourseMatch).where(CourseMatch.request_id == drills["id"]))
         failed = set(drill.candidates[0]["failed"])
         assert {"frame", "assessment"} <= failed
+
+
+def test_a_failed_first_lesson_is_not_joined(brain):
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    first = ask(brain, ada, DETECTIVE)
+    build(brain, first["course_id"], me(brain), live=False)
+    brain.post(f"{URL}/{first['id']}/publish", json={}, headers=ada)
+    with Session(brain.app.state.engine) as db, db.begin():
+        for job in db.scalars(
+            select(GenerationJob).where(
+                GenerationJob.course_id == first["course_id"], GenerationJob.kind == "package"
+            )
+        ):
+            job.state = "dead"
+
+    bob = login(brain, "bob", "Bob")
+    adult(brain, bob)
+    second = ask(brain, bob, DETECTIVE)
+    assert second["status"] == "confirmed"
+    assert second["course_id"] == first["course_id"] + "-v2"  # the next version of the family
+
+
+def test_a_concurrent_request_that_loses_the_race_joins(brain, monkeypatch):
+    import sys
+
+    brain_route = sys.modules["socrat.coursegen.brain.route"]  # the module, not route()
+
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    first = ask(brain, ada, DETECTIVE)
+    # Bob's routing ran before Ada's outline was visible: it found the id free.
+    monkeypatch.setattr(brain_route, "family", lambda db, wanted: (first["course_id"], False))
+    bob = login(brain, "bob", "Bob")
+    adult(brain, bob)
+    second = ask(brain, bob, DETECTIVE)
+    assert (second["status"], second["course_id"]) == ("matched", first["course_id"])
+    with Session(brain.app.state.engine) as db:
+        why = db.scalar(select(CourseMatch).where(CourseMatch.request_id == second["id"]))
+        assert why.outcome == "joined" and "concurrent" in why.reason
+
+
+def test_shared_courses_carry_no_learner_only_details(brain):
+    door = "Introduce each new idea through this everyday scenario: Grandma Rukmini bakes bread."
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    first = ask(
+        brain,
+        ada,
+        DETECTIVE,
+        style_request=door + " Patch these gaps early: sign_flip. Keep it playful.",
+        deadline="2030-01-01",
+    )
+    with Session(brain.app.state.engine) as db:
+        outline = db.scalars(select(GenerationJob).where(GenerationJob.kind == "outline")).one()
+        brief = outline.input["brief"]
+        assert "Rukmini" not in json.dumps(brief) and "sign_flip" not in json.dumps(brief)
+        assert "playful" in brief["style_request"]
+        assert "Deadline" not in brief["notes"]
+        # Ada's own record keeps what she asked for.
+        assert "Rukmini" in db.get(LearningRequest, first["id"]).intent["style_request"]
+
+
+def test_a_course_showing_its_makers_words_is_kept_private(brain):
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    first = ask(brain, ada, DETECTIVE)
+    build(brain, first["course_id"], me(brain))
+    with Session(brain.app.state.engine) as db, db.begin():
+        row = db.get(GeneratedCourse, first["course_id"])
+        # The outline quotes the request word for word.
+        row.payload = dict(row.payload, description="As asked: " + DETECTIVE)
+    brain.post(f"{URL}/{first['id']}/publish", json={}, headers=ada)
+    with Session(brain.app.state.engine) as db:
+        row = db.get(GeneratedCourse, first["course_id"])
+        assert row.serve == "private"
+        match = db.scalar(select(CourseMatch).where(CourseMatch.request_id == first["id"]))
+        assert "kept private" in match.reason
+
+
+def test_a_lesson_added_later_that_leaks_stops_serving(brain):
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    first = ask(brain, ada, DETECTIVE)
+    build(brain, first["course_id"], me(brain))
+    brain.post(f"{URL}/{first['id']}/publish", json={}, headers=ada)
+    with Session(brain.app.state.engine) as db, db.begin():
+        assert db.get(GeneratedCourse, first["course_id"]).serve == "shared"
+        concept = db.get(GeneratedConcept, (first["course_id"], "what-is-ml"))
+        concept.payload = dict(concept.payload, lesson=concept.payload["lesson"] + DETECTIVE)
+
+    bob = login(brain, "bob", "Bob")
+    adult(brain, bob)
+    second = ask(brain, bob, DETECTIVE)
+    assert second["course_id"] != first["course_id"]
+    with Session(brain.app.state.engine) as db:
+        assert db.get(GeneratedCourse, first["course_id"]).serve == "private"
+        why = db.scalar(select(CourseMatch).where(CourseMatch.request_id == second["id"]))
+        assert why.candidates[0]["why"].startswith("kept private")
 
 
 def test_private_requests_build_privately_and_are_never_served(brain):

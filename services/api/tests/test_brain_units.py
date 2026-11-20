@@ -23,6 +23,7 @@ from socrat.models import (
     ConceptUnitPin,
     CourseMatch,
     Enrollment,
+    GeneratedConcept,
     GeneratedCourse,
     GenerationJob,
     RootUnit,
@@ -388,3 +389,92 @@ def test_the_outline_is_planned_from_the_stored_material(brain, offline_links):
         if "<subject_material>" in p
     ]
     assert inside and not any("detective" in part.lower() for part in inside)
+
+
+def test_a_correction_withdraws_researches_again_and_rewrites(brain, offline_links):
+    engine, settings = brain.app.state.engine, brain.app.state.settings
+    settings.admin_subjects = ["boss"]
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    first = ask(brain, ada, DETECTIVE)
+    with Session(engine) as db:
+        job_id = research_job(db).id
+    asyncio.run(run_research(engine, settings, job_id, Script().make))
+    build(brain, first["course_id"], me(brain))
+    brain.post(f"{URL}/{first['id']}/publish", json={}, headers=ada)
+    with Session(engine) as db, db.begin():
+        old = unitstore.current(db, "mathematics", "equation-linear.beginner")
+        unitstore.pin(db, first["course_id"], "what-is-ml", [old])
+        old_id = old.id
+
+    boss = login(brain, "boss", "Boss")
+    fixed = brain.post(
+        f"/api/v1/admin/brain/units/{old_id}/correct",
+        json={"reason": "seed-1 used the wrong sign in its hint"},
+        headers=boss,
+    )
+    assert fixed.status_code == 200, fixed.text
+    body = fixed.json()
+    assert body["courses"] == [first["course_id"]]
+    assert body["rewrites"] == [f"{first['course_id']}:what-is-ml"]
+    audit = brain.get("/api/v1/admin/brain/units?root=mathematics", headers=boss).json()
+    assert audit["items"][0]["status"] == "quarantined"
+    why = brain.get(f"/api/v1/admin/brain/matches/{first['id']}", headers=boss).json()
+    assert why["outcome"] == "extend_and_new" and "request" in why["private"]
+    assert DETECTIVE not in json.dumps(why)  # private fields are named, never shown
+
+    with Session(engine) as db:
+        concept = db.get(GeneratedConcept, (first["course_id"], "what-is-ml"))
+        assert concept.payload["status"] == "planned"  # nobody is served the old lesson
+        rewrite = db.scalars(
+            select(GenerationJob).where(
+                GenerationJob.kind == "package",
+                GenerationJob.course_id == first["course_id"],
+                GenerationJob.target == "what-is-ml",
+                GenerationJob.state == "queued",
+            )
+        ).first()
+        assert rewrite.input["trigger"] == "quarantine"
+        fresh = db.scalars(
+            select(GenerationJob).where(
+                GenerationJob.kind == "research", GenerationJob.state == "queued"
+            )
+        ).one()
+        assert fresh.input["correction"].startswith("seed-1")
+        rewrite_id, fresh_id = rewrite.id, fresh.id
+
+    # The rewrite waits for the corrected revision instead of writing from nothing.
+    asyncio.run(jobs.run_package(engine, settings, default_catalog(), rewrite_id, Script().make))
+    with Session(engine) as db:
+        assert db.get(GenerationJob, rewrite_id).stage == "waiting"
+
+    script = Script()
+    asyncio.run(run_research(engine, settings, fresh_id, script.make))
+    with Session(engine) as db, db.begin():
+        new = unitstore.current(db, "mathematics", "equation-linear.beginner")
+        assert new.revision == 2 and new.quality["correction"].startswith("seed-1")
+        assert unitstore.waiting(db, ["mathematics/equation-linear.beginner"]) == []
+        # Rewritten from revision 2: the pin moves and the course is servable again.
+        unitstore.pin(db, first["course_id"], "what-is-ml", [new])
+        pins = db.scalars(select(ConceptUnitPin)).all()
+        assert [p.unit_id for p in pins] == [new.id]
+        assert unitstore.courses_on_quarantined_units(db, [first["course_id"]]) == set()
+
+
+def test_a_routine_refresh_does_not_hold_up_new_courses(brain, offline_links):
+    engine, settings = brain.app.state.engine, brain.app.state.settings
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    ask(brain, ada, DETECTIVE)
+    with Session(engine) as db:
+        job_id = research_job(db).id
+    asyncio.run(run_research(engine, settings, job_id, Script().make))
+    with Session(engine) as db, db.begin():
+        unit = unitstore.current(db, "mathematics", "equation-linear.beginner")
+        unit.review_after = 1  # stale
+        got, job = unitstore.ensure(
+            db, "mathematics", unit.unit_key, {"topic": "equation linear"}, None
+        )
+        assert got is not None and job is not None and job.input["refresh"] is True
+        # The stale revision is still served meanwhile: nothing waits for the refresh.
+        assert unitstore.waiting(db, [unitstore.ref("mathematics", unit.unit_key)]) == []

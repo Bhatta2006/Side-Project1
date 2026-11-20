@@ -700,6 +700,15 @@ async def run_package(
         course_id, concept_id, data = job.course_id, job.target, job.input
         brief = Brief.model_validate(need(db.get(GeneratedCourse, course_id)).brief)
         course = need(generated.course(db, course_id))
+        if brief.units:
+            from socrat.coursegen.brain import units as unitstore
+
+            # A correction withdrew the unit this lesson rests on: wait for its new revision
+            # rather than rewrite from nothing (bounded, like the outline's wait).
+            pending = unitstore.waiting(db, brief.units)
+            if pending and now() - job.created_at < UNIT_WAIT_SECONDS:
+                _defer(engine, job_id, pending)
+                return
     concept = next((c for c in course.concepts if c.id == concept_id), None)
     if concept is None or concept.status != "planned":
         if data.get("trigger") == "first":

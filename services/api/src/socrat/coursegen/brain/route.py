@@ -22,9 +22,10 @@ from socrat.coursegen.brain.spec import (
     is_private,
     overlay,
 )
-from socrat.models import CourseMatch, GeneratedCourse, LearningRequest, now
+from socrat.models import CourseMatch, GeneratedCourse, GenerationJob, LearningRequest, now
 
-SERVED = ("reuse", "reuse_adapted")
+# joined: the learner shares a compatible course that is still being generated.
+SERVED = ("reuse", "reuse_adapted", "joined")
 BUILT = ("from_material", "extend_and_new", "new", "private_new")
 BANDS = ("bite", "standard", "long")
 
@@ -38,6 +39,9 @@ class Decision:
     candidates: list[dict] = field(default_factory=list)
     adaptations: list[str] = field(default_factory=list)
     units: list[str] = field(default_factory=list)  # root unit refs a built course is made from
+    # The id a shareable course is built under: the same for every request with this spec,
+    # so two learners asking at once meet on one course (see ``family``). None: private.
+    family_id: str | None = None
 
     @property
     def served(self) -> bool:
@@ -199,6 +203,14 @@ def decide(db: Session, catalog, user_id: str, wanted: CourseSpec, private: bool
             entry |= {"eligible": False, "why": "written from a withdrawn (quarantined) unit"}
         else:
             entry["eligible"] = True
+        if entry["eligible"] and not failed and row.serve == "shared":
+            # Lessons are added after the course was marked shareable: check them again.
+            from socrat.coursegen.brain import privacy
+
+            found = privacy.leaks(db, row.id)
+            if found:
+                row.serve = "private"
+                entry |= {"eligible": False, "why": "kept private: " + "; ".join(found)[:300]}
         entry["passed"] = not failed and entry["eligible"]
         if failed:
             entry["failed"] = failed
@@ -248,6 +260,12 @@ def route(db: Session, catalog, user_id: str, row: LearningRequest, intent: dict
                 if job is not None
                 else "new"
             )
+            course_id, in_flight = family(db, wanted)
+            if in_flight:
+                decision.outcome, decision.course_id = "joined", course_id
+                decision.reason = f"{course_id} has this exact spec and is still being written"
+            else:
+                decision.family_id = course_id
     match = db.scalar(select(CourseMatch).where(CourseMatch.request_id == row.id))
     if match is None:
         match = CourseMatch(request_id=row.id, user_id=user_id)
@@ -266,6 +284,77 @@ def route(db: Session, catalog, user_id: str, row: LearningRequest, intent: dict
     match.created_at = now()
     db.flush()
     return decision
+
+
+def _latest(db: Session, course_id: str, kind: str, target: str = "") -> GenerationJob | None:
+    return db.scalars(
+        select(GenerationJob)
+        .where(
+            GenerationJob.course_id == course_id,
+            GenerationJob.kind == kind,
+            GenerationJob.target == target,
+        )
+        .order_by(GenerationJob.created_at.desc())
+        .limit(1)
+    ).first()
+
+
+def first_concept(course) -> str:
+    order = [cid for m in course.modules for cid in m.concepts]
+    start = course.levels[0].start_concept if course.levels else None
+    return start.split(":")[-1] if start else (order[0] if order else "")
+
+
+def joinable(db: Session, row: GeneratedCourse | None, outline: GenerationJob | None) -> bool:
+    """A course of the same spec that another learner can wait for instead of building again:
+    its outline is being written, or its first lesson is. A course that failed, was withdrawn,
+    is kept private, or is ready (then ``decide`` would have served it, so something rules it
+    out) is not joined."""
+    from socrat.catalog import generated
+    from socrat.coursegen import jobs
+    from socrat.coursegen.brain import units as unitstore
+
+    if row is None:
+        return outline is not None and outline.state in jobs.OPEN
+    if (
+        row.moderation != "ok"
+        or row.serve == "private"
+        or row.status not in ("review", "published")
+    ):
+        return False
+    if unitstore.courses_on_quarantined_units(db, [row.id]):
+        return False
+    course = generated.course(db, row.id)
+    if course is None or first_ready(course):
+        return False
+    lesson = _latest(db, row.id, "package", first_concept(course))
+    return lesson is None or lesson.state in (*jobs.OPEN, "done")
+
+
+def family(db: Session, wanted: CourseSpec) -> tuple[str, bool]:
+    """(course id, in flight). Every shareable request with this spec maps to the same id; the
+    first free version is returned when no version can be joined."""
+    from socrat.coursegen.brain.roots import slug
+
+    base = f"{slug(wanted.topic)[:40].strip('-')}-{wanted.key()[:8]}"
+    for n in range(1, 50):
+        course_id = base if n == 1 else f"{base}-v{n}"
+        row = db.get(GeneratedCourse, course_id)
+        outline = _latest(db, course_id, "outline")
+        if row is None and outline is None:
+            return course_id, False
+        if joinable(db, row, outline):
+            return course_id, True
+    return f"{base}-{now() % 1_000_000}", False
+
+
+def joined(db: Session, request_id: str, course_id: str) -> None:
+    """A concurrent request built the same course first: this request waits for it instead."""
+    match = db.scalar(select(CourseMatch).where(CourseMatch.request_id == request_id))
+    if match is not None:
+        match.outcome, match.course_id = "joined", course_id
+        match.reason = f"{course_id} was started by a concurrent request with this exact spec"
+        db.flush()
 
 
 def built(db: Session, request_id: str, course_id: str) -> None:
@@ -289,6 +378,13 @@ def attach(db: Session, course_id: str) -> None:
         return
     row.root_id, row.spec, row.spec_key = match.root_id, match.spec, match.spec_key
     row.serve = "private" if match.outcome == "private_new" else "shared"
+    if row.serve == "shared":
+        from socrat.coursegen.brain import privacy
+
+        found = privacy.leaks(db, course_id)
+        if found:
+            row.serve = "private"
+            match.reason = (match.reason + "; kept private: " + "; ".join(found))[:500]
 
 
 def granted(db: Session, user_id: str, course_id: str) -> CourseMatch | None:

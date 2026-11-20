@@ -36,15 +36,43 @@ checked by the same math checker learners are graded with); the outline job wait
 plans from `Brief.subject_material`; each lesson pins the unit revision it was written from;
 `units.quarantine` makes courses written from a withdrawn unit ineligible for new learners. Outcomes
 now distinguish `from_material` (no research) and `extend_and_new`. The learner-layer plug point is
-`brain/learner.py`; its contract is in `generation-plug-points.md`. Still not built: a scoper that
-splits a topic into several units, refresh of stale units, the correction re-write path, in-flight
-course sharing (family ids) and the leakage gate.
+`brain/learner.py`; its contract is in `generation-plug-points.md`.
 
-Deliberate deviations from the plan below, for this first milestone: a shared child keeps the first learner as
-`owner_id` (so every existing ownership path keeps working) instead of being ownerless; there are no
-deterministic family ids yet, so two learners asking at the same moment still build two courses (only a
-course whose first lesson is live is served); root units, the research job, unit pins, corrections and the
-shingle leakage gate (PRs D-F) are not built.
+Built third (same flag), tested in `test_course_brain.py` and `test_brain_units.py`:
+
+- **Privacy for shared courses** (`brain/privacy.py`). A course the brain may share is generated
+  from `shared_intent(intent)`: the Lesson 0 door sentence, the "patch these gaps" sentence, age,
+  deadline and hours per week are removed (they stay in the learner's own request and overlay). The
+  leakage gate `leaks(db, course_id)` compares everything a learner of the course can read (outline,
+  lessons, problems) with its maker's request text, material and onboarding draft (8-word runs), their
+  email and their full display name (two words or more). It runs in `attach` (at publish) and again
+  in `decide` before a shared course is served, because lessons are added after publish; a hit sets
+  `serve="private"` and records why.
+- **In-flight joining** (family ids). A shareable request is built under a deterministic id
+  `<topic slug>-<spec key[:8]>` (`-v2`, `-v3` for later versions). A second request with the same
+  spec, arriving while that course's outline or first lesson is still being written, is `joined`
+  (a served outcome, request status `matched`) instead of building a second course. A request that
+  loses the race at enqueue (`AlreadyQueued`, or the id already taken) also joins. A joined learner
+  may publish a course still in review (it was built for their exact spec). A course whose first
+  lesson failed, was withdrawn or kept private is not joined: the next version is built. The maker
+  can no longer cancel a course other learners were given (`409 course_shared`).
+- **Correction path** (`units.correct`, `POST /api/v1/admin/brain/units/{id}/correct`). Withdraws the
+  unit revision, queues research for a new revision with the reason in the extractor prompt, and
+  sends every live lesson pinned to it back to planned through the existing `quality.quarantine`
+  rewrite. The rewrite (`run_package`) and new outlines wait for the corrected revision (bounded by
+  `UNIT_WAIT_SECONDS`); a routine refresh of a still-valid unit is never waited for. Re-pinning to
+  the new revision drops the old pin, so the course becomes servable again.
+- **Owner views**: `GET /api/v1/admin/brain/roots`, `/units?root=`, `/matches/{request_id}` (the
+  decision with every candidate and check; the learner-only overlay is listed by field name only).
+
+Still not built: a scoper that splits a topic into several units; a scheduled refresh of stale units
+(a stale unit is refreshed only when a later request needs it); an admin web page for the endpoints
+above; ownerless shared courses.
+
+Deliberate deviation from the plan below: a shared child keeps the first learner as `owner_id` (so every
+existing ownership path keeps working) instead of being ownerless; owner-only actions that would affect
+other learners (cancel) are refused once the course is shared. `regenerate` is still owner-only and
+only acts on courses in review, before anyone else can be enrolled.
 
 ---
 

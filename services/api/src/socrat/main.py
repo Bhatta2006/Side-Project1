@@ -28,6 +28,7 @@ from socrat.catalog import generated
 from socrat.catalog.registry import default_catalog
 from socrat.config import Settings
 from socrat.coursegen import jobs as coursegen_jobs
+from socrat.coursegen.brain.routes import router as brain_router
 from socrat.coursegen.cost_routes import router as engine_costs_router
 from socrat.coursegen.diagnostic_routes import router as diagnostic_router
 from socrat.coursegen.maintain_routes import router as maintenance_router
@@ -133,6 +134,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(session_router)
     app.include_router(assessments_router)
     app.include_router(admin_router)
+    app.include_router(brain_router)
     app.include_router(coursegen_router)
     app.include_router(learning_requests_router)
     app.include_router(engine_router)

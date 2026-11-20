@@ -58,16 +58,19 @@ def current(db: Session, root_id: str, unit_key: str) -> RootUnit | None:
 
 
 def research_job(db: Session, root_id: str, unit_key: str) -> GenerationJob | None:
-    return db.scalars(
-        select(GenerationJob)
-        .where(
-            GenerationJob.course_id == job_course(root_id),
-            GenerationJob.kind == KIND,
-            GenerationJob.target == unit_key[:80],
-        )
-        .order_by(GenerationJob.created_at.desc())
-        .limit(1)
-    ).first()
+    """The open research job for this unit if there is one (at most one, by the open-job
+    index), else the most recent. Open first: two jobs can share a creation second."""
+    from socrat.coursegen import jobs
+
+    query = select(GenerationJob).where(
+        GenerationJob.course_id == job_course(root_id),
+        GenerationJob.kind == KIND,
+        GenerationJob.target == unit_key[:80],
+    )
+    running = db.scalars(query.where(GenerationJob.state.in_(jobs.OPEN)).limit(1)).first()
+    if running is not None:
+        return running
+    return db.scalars(query.order_by(GenerationJob.created_at.desc()).limit(1)).first()
 
 
 def ensure(
@@ -100,15 +103,20 @@ def ensure(
 
 
 def waiting(db: Session, refs: list[str]) -> list[str]:
-    """The unit refs whose research is still queued or running."""
+    """The unit refs worth waiting for: research is queued or running and there is no
+    validated revision to use meanwhile. A routine refresh of a usable unit is not waited for;
+    a correction is (the old revision was quarantined, so there is none to use)."""
     from socrat.coursegen import jobs
 
     out = []
     for value in refs:
         root_id, unit_key = parse_ref(value)
         job = research_job(db, root_id, unit_key)
-        if job is not None and job.state in jobs.OPEN:
-            out.append(value)
+        if job is None or job.state not in jobs.OPEN:
+            continue
+        if (job.input or {}).get("refresh") and current(db, root_id, unit_key) is not None:
+            continue
+        out.append(value)
     return out
 
 
@@ -153,10 +161,26 @@ def block(db: Session, units: list[RootUnit], limit: int = 12000) -> str:
 
 
 def pin(db: Session, course_id: str, concept_id: str, units: list[RootUnit]) -> None:
-    """Record which unit revisions this lesson is written from. Idempotent."""
+    """Record which unit revisions this lesson is written from. Idempotent. A lesson rewritten
+    from a newer revision of the same unit drops its pin to the older one, so a corrected
+    course stops counting as written from the withdrawn revision."""
     for unit in units:
+        older = db.scalars(
+            select(ConceptUnitPin)
+            .join(RootUnit, RootUnit.id == ConceptUnitPin.unit_id)
+            .where(
+                ConceptUnitPin.course_id == course_id,
+                ConceptUnitPin.concept_id == concept_id,
+                RootUnit.root_id == unit.root_id,
+                RootUnit.unit_key == unit.unit_key,
+                RootUnit.id != unit.id,
+            )
+        ).all()
+        for stale in older:
+            db.delete(stale)
         if db.get(ConceptUnitPin, (course_id, concept_id, unit.id)) is None:
             db.add(ConceptUnitPin(course_id=course_id, concept_id=concept_id, unit_id=unit.id))
+    db.flush()
 
 
 def pinned_courses(db: Session, unit_id: str) -> list[tuple[str, str]]:
@@ -176,6 +200,53 @@ def quarantine(db: Session, unit_id: str, reason: str) -> list[str]:
     unit.status = "quarantined"
     unit.quality = {**(unit.quality or {}), "quarantined": {"reason": reason[:300], "at": now()}}
     return sorted({course for course, _ in pinned_courses(db, unit_id)})
+
+
+def correct(db: Session, base, unit_id: str, reason: str, user_id: str | None = None) -> dict:
+    """A unit revision turned out wrong (a source was corrected, a learner or reviewer found an
+    error). Withdraw it, research a new revision with the reason in hand, and rewrite every
+    live lesson written from it. No commit; the caller owns it.
+
+    New learners are not served courses on the withdrawn revision from this moment
+    (``route.decide``). Learners already enrolled keep their course and their evidence; each
+    affected lesson goes back to planned and is rewritten (``quality.quarantine``, the same path
+    as a lesson learners reported), and the rewrite waits for the new revision."""
+    from socrat.coursegen import jobs, quality
+    from socrat.models import GeneratedConcept
+
+    unit = db.get(RootUnit, unit_id)
+    if unit is None:
+        raise ValueError(f"unknown unit {unit_id}")
+    courses = quarantine(db, unit_id, reason)
+    data = {
+        "root": unit.root_id,
+        "unit_key": unit.unit_key,
+        "topic": unit.topic,
+        "depth": unit.depth,
+        "language": unit.language,
+        "audience": (unit.quality or {}).get("audience", "general"),
+        "refresh": True,
+        "correction": reason[:300],
+    }
+    job = jobs.enqueue_once(db, KIND, job_course(unit.root_id), data, user_id, unit.unit_key[:80])
+    job = job or research_job(db, unit.root_id, unit.unit_key)
+    rewrites = []
+    for course_id, concept_id in pinned_courses(db, unit_id):
+        row = db.get(GeneratedConcept, (course_id, concept_id))
+        if row is None or (row.payload or {}).get("status") != "live":
+            continue
+        if jobs.active(db, course_id, concept_id) is not None:
+            continue
+        quality.quarantine(
+            db, base, course_id, concept_id, "source_correction", [f"Source correction: {reason}"]
+        )
+        rewrites.append(f"{course_id}:{concept_id}")
+    return {
+        "unit": unit_id,
+        "courses": courses,
+        "rewrites": rewrites,
+        "research_job": job.id if job else None,
+    }
 
 
 def courses_on_quarantined_units(db: Session, course_ids: list[str]) -> set[str]:
