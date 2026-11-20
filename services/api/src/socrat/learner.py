@@ -320,6 +320,15 @@ def misconceptions_for(db: Session, qualified: str) -> dict[str, str]:
         for item in (unit.content or {}).get("misconceptions") or []:
             if isinstance(item, dict) and item.get("id"):
                 out[str(item["id"])] = str(item.get("belief") or "")[:200]
+    # A lesson written without root units tags with its outline's own ids (backlog 4.3).
+    from socrat.catalog import generated
+    from socrat.coursegen.package import outline_tags
+
+    course = generated.course(db, course_id)
+    concept = next((c for c in course.concepts if c.id == concept_id), None) if course else None
+    if concept is not None:
+        for key, belief in outline_tags(concept).items():
+            out.setdefault(key, belief)
     return out
 
 

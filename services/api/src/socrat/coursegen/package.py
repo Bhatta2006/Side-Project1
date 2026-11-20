@@ -185,6 +185,13 @@ Reply with one JSON object only:
            "explanation": "...", "difficulty": 1}]}"""
 
 
+def outline_tags(concept) -> dict[str, str]:
+    """Misconception ids from the concept's own outline (``<concept>_m<n>`` -> belief; ``catalog.schema.TAG``), for a
+    lesson written without root units (backlog 4.3). Stable while the outline is."""
+    beliefs = concept.outline.misconceptions if concept.outline else []
+    return {f"{concept.id[:58]}_m{n}": b[:200] for n, b in enumerate(beliefs, 1)}
+
+
 def tags_block(allowed: dict[str, str], marked: bool) -> str:
     """Quiz instructions for tagging wrong options with known misconception ids, or ""."""
     if not allowed:

@@ -406,6 +406,15 @@ class Settings(DatabaseSettings):
     # One model call in a job a learner waits on (gen_waiting_learner) may take this long; past
     # it the call fails and the job retries (backlog 7).
     gen_waiting_timeout_seconds: float = Field(default=120, ge=10, le=3600)
+    # After a lesson is released, write parallel review items for it (backlog 4.2): reviews
+    # then ask the same skill in a new context instead of repeating the check. Off by default.
+    gen_review_variants: bool = False
+    # When a module's last lesson is released, write its exam (backlog 4.1): harder, mixed and
+    # transfer items its checkpoint draws on. Off by default.
+    gen_module_exams: bool = False
+    # A lesson written without root units tags its quiz options with the concept outline's own
+    # misconceptions (backlog 4.3), so a wrong answer is recorded as that belief. Off by default.
+    gen_outline_tags: bool = False
     # Critic reviews per outline job. Each "revise" costs a full new outline round; with 1, the
     # outline revised after the first review is kept without a second review. 0: the critic
     # still reviews (logged for the owner and the learner) but never asks for a rewrite, so the

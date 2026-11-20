@@ -87,10 +87,14 @@ def open_test(db: Session, enrollment: Enrollment, now: int) -> bool:
 
 
 def gate_pool(catalog: Catalog, module_key: str, language: str) -> list[tuple[str, QuizItem]]:
+    # The concepts' own items, and the module exam's harder mixed ones (backlog 4.1).
     return [
         (c, q)
         for c in gates.module_concepts(catalog, module_key)
-        for q in fitting(catalog, c, language)
+        for q in [
+            *fitting(catalog, c, language),
+            *(x for x in catalog.concept(c).exam_items if x.fits(language)),
+        ]
     ]
 
 
@@ -187,6 +191,12 @@ def choose_items(
     if kind in {"review", "remedial"}:
         quiz = list(fitting(catalog, target, enrollment.language))
         rng.shuffle(quiz)
+        if kind == "review":
+            # Parallel items first (backlog 4.2), those not seen lately before the rest.
+            seen = recent or set()
+            fresh = [v for v in catalog.concept(target).review_items if v.fits(enrollment.language)]
+            rng.shuffle(fresh)
+            quiz = sorted([*fresh, *quiz], key=lambda q: (q.id in seen, not q.id.startswith("v-")))
         return [[target, q.id] for q in quiz[: 3 if kind == "review" else 4]]
     if kind == "probe":
         # The concept plus its direct prerequisites, two mid-difficulty items each.
@@ -295,7 +305,7 @@ def open_session(
             enrollment,
             activity_id,
             now // 86400 if kind != "checkpoint" else now,
-            recent_items(db, enrollment, now) if kind in {"checkpoint", "quiz"} else None,
+            recent_items(db, enrollment, now) if kind in {"checkpoint", "quiz", "review"} else None,
             gentle=kind == "quiz"
             and learn.session_one_for(db, enrollment).get(target) == "difficulty",
         ),

@@ -16,6 +16,9 @@ Remove a line only when the check it names has run.
 | Session one (2.4), served overlay (3.3) | No real learner session; scripted evidence only | a live learner doing session one, on a built and on a served course |
 | Refresh sweep (3.6) | Not run in a real worker loop | start the worker with `SOCRAT_BRAIN_REFRESH_SWEEP_SECONDS` set and an old unit |
 
+| Review variants (4.2), module exams (4.1), outline tags (4.3) | Scripted only: no live model has written variants or an exam | one live course with `gen_review_variants`, `gen_module_exams`, `gen_outline_tags` on |
+| Module exams (4.1) | A learner taking a checkpoint that mixes exam items (only the pool is checked) | a checkpoint session in a test or a live run |
+
 ## Real infrastructure
 
 | Area | Not verified | To close it |

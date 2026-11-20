@@ -1112,6 +1112,9 @@ async def run_package(
                 ctx = f"{ctx}\n\n{unitstore.block(db, found, 10000)}"
                 unitstore.pin(db, course_id, concept_id, found)
                 known = unitstore.misconceptions(found)
+    if not known and settings.gen_outline_tags:
+        # No root units behind this lesson: tag with the outline's own misconceptions (4.3).
+        known = pkg.outline_tags(concept)
     # Plug point for the learner layer (socrat/learner, docs/implementation/
     # generation-plug-points.md): a private course's lessons may be shaped by its one learner's
     # module brief. Shared courses never are: their lessons are read by everyone.
@@ -1264,6 +1267,13 @@ async def run_package(
             generated.store_concept(db, base, course_id, live_, pack_, job_id=job_id)
             if exercise:
                 enqueue_once(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
+            if settings.gen_module_exams:
+                from socrat.coursegen import exams
+
+                if module := exams.module_complete(course, concept_id):
+                    enqueue_once(db, "exam", course_id, {"trigger": "release"}, None, module)
+            if settings.gen_review_variants:
+                enqueue_once(db, "variants", course_id, {"trigger": "release"}, None, concept_id)
             if project_due(db, course, concept_id):
                 enqueue_once(db, "project", course_id, {"trigger": "release"}, None, concept.module)
         event = {"role": "system", "event": "released", "calls": calls}
@@ -1674,6 +1684,14 @@ async def run_once(
             await run_project(engine, settings, base, job_id, make)
         elif kind == "outline":
             await run_outline(engine, settings, base, job_id, make)
+        elif kind == "exam":
+            from socrat.coursegen.exams import run_exam
+
+            await run_exam(engine, settings, base, job_id, make)
+        elif kind == "variants":
+            from socrat.coursegen.variants import run_variants
+
+            await run_variants(engine, settings, base, job_id, make)
         elif kind == "research":
             from socrat.coursegen.brain.researcher import run_research
 

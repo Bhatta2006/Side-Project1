@@ -74,6 +74,11 @@ def carry(old: Concept | None, new: Concept) -> Concept:
         used_old.add(oi)
 
     retired = [q for q in old.retired_quiz if q.id not in claimed]
+    # Review variants a rewrite dropped stay resolvable for sessions that used them.
+    kept = {q.id for q in (*new.review_items, *new.exam_items)}
+    retired += [
+        q for q in (*old.review_items, *old.exam_items) if q.id not in kept and q.id not in claimed
+    ]
     for o in previous:
         if o.id not in claimed:
             retired.append(

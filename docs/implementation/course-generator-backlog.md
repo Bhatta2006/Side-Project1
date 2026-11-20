@@ -255,17 +255,30 @@ works only in review. Decide with the owner whether shared courses should become
 
 ## 4. Quizzes and assessments
 
-### 4.1 Exam writer (module or final)
+### 4.1 Exam writer (module or final) (done 2026-11-20, flag `gen_module_exams`)
+`coursegen/exams.py`: when a release completes a module, one `exam` job writes 5-10 items, difficulty 3-5, at least 2
+mixing concepts; code settles keys and rejects the whole set when it is too small or does not mix. Items are stored
+on their first concept (`Concept.exam_items`, ids `x-`) and the checkpoint draws on them (`gate_pool`), so the gate's
+rules and the learner's strictness apply unchanged (4.4). The last module's exam also tests the learner's
+`final_task` (2.1). No separate final exam: the course-level `moduletest` is unchanged. Tests
+`test_module_exams.py`. Original item:
 No generator writes module or final exams. Checkpoints draw from the concept quiz items (`learn/quizzes.gate_pool`),
 so they cannot ask harder, mixed or transfer questions. Proposal: an `exam` package kind per module (and a final one
 built from `outcome_spec.final_task`, item 2.1), keyed by code like concept quizzes (`keyed.py`), mixing concepts,
 with difficulty bands; gate it behind a flag.
 
-### 4.2 Item variants for reviews
+### 4.2 Item variants for reviews (done 2026-11-20, flag `gen_review_variants`)
+`coursegen/variants.py`: after a release one `variants` job writes up to 2 parallel items per quiz item (same skill,
+new context); code settles keys, drops copies and items naming no original; stored as `Concept.review_items` (ids
+`v-`), dropped ones retired by `revisions.carry`. `review:` activities (and so the session-one retrieval) put unseen
+variants first. Test `test_review_variants.py`. Original item:
 Reviews and session-one retrieval reuse the same items. Generate a few parallel variants per concept (same skill,
 new context) so a review is not a repeat.
 
-### 4.3 Misconception tags on older lessons
+### 4.3 Misconception tags on older lessons (done 2026-11-20, flag `gen_outline_tags`)
+A lesson written without root units now offers the quiz writer its outline's own misconceptions as tag ids
+(`package.outline_tags`: `<concept>_m<n>`), and `learner.misconceptions_for` resolves them. Lessons already written
+get tags when they are next rewritten (no backfill rewrite). Test in `test_module_exams.py`. Original item:
 Quizzes are tagged only for lessons written from root units; earlier lessons carry no tags and the tutor's tag
 for them is dropped (`learner-memory.md` 7).
 

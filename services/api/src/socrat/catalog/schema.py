@@ -392,6 +392,12 @@ class Concept(Model):
     # Quiz items a rewrite dropped: never offered again, but still resolvable so open
     # sessions, placements and stored attempts keep working (catalog/revisions.carry).
     retired_quiz: list[QuizItem] = Field(default_factory=list, max_length=40)
+    # Parallel items (same skill, new context) that reviews prefer, so a review is not a
+    # repeat of the check (coursegen/variants.py, backlog 4.2). Never part of the concept check.
+    review_items: list[QuizItem] = Field(default_factory=list, max_length=16)
+    # Module-exam items stored on the first concept they test (coursegen/exams.py, backlog 4.1):
+    # harder, mixed items the module checkpoint draws on with the concepts' own quiz items.
+    exam_items: list[QuizItem] = Field(default_factory=list, max_length=6)
     citations: list[Citation] = Field(default_factory=list, max_length=40)
     provenance: Provenance | None = None
     outline: Outline | None = None
@@ -439,7 +445,7 @@ class Concept(Model):
         """The quiz item stored under ``item_id`` (current, renamed or retired). A live item
         wins over a retired one with the same id: a rewrite may bring a question back before
         ``catalog.revisions.carry`` tidies the retired list."""
-        for q in (*self.quiz, *self.retired_quiz):
+        for q in (*self.quiz, *self.retired_quiz, *self.review_items, *self.exam_items):
             if q.matches(item_id):
                 return q
         raise KeyError(f"concept {self.id} has no quiz item {item_id}")
