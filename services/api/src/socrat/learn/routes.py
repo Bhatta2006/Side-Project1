@@ -1382,7 +1382,9 @@ async def assistant_message(body: MessageInput, request: Request):
     provider = budget.Metered(
         make_provider(settings), bind, settings, user_id=user_id, feature="tutor"
     )
-    toolbox = Toolbox(bind, cat, user_id, engine_tools=engine_tools)
+    toolbox = Toolbox(
+        bind, cat, user_id, engine_tools=engine_tools, profile_tools=settings.learner_profile
+    )
 
     async def events():
         async for event, data in assistant.stream_reply(

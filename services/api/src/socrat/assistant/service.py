@@ -447,6 +447,12 @@ def prepare(
         sections["current_lesson"] = f"{concept.title}: {concept.summary}\n" + "\n".join(
             concept.key_points
         )
+        # Ids record_observation accepts for this lesson (the root units it was written from).
+        known = learner_memory.misconceptions_for(db, qualified)
+        if known:
+            sections["known_misconceptions"] = "\n".join(
+                f"{tag}: {belief}" for tag, belief in list(known.items())[:8]
+            )
         sections["help_policy"] = (
             "ALLOWED_LEVEL: 5 — general concept teaching (not a graded problem)."
         )

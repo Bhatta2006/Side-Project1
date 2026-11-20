@@ -45,6 +45,7 @@ def snap(concepts, prerequisites=None, calibration=None, prefs=None):
         prefs=prefs or {},
         calibration=calibration,
         noticed=(),
+        beliefs={},
         states={},
         skill={},
         stuck={},

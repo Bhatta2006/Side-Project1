@@ -77,6 +77,9 @@ class User(Base):
     # How strict Socrat is with this learner: relaxed | balanced | strict (see
     # socrat.learning_mode). Null means the default, balanced.
     learning_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Preferences about the person, across courses, each with who set it, an undo log and the
+    # tutor's pending suggestions (socrat.learner, docs/implementation/learner-memory.md).
+    learner_profile: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class LoginSession(Base):

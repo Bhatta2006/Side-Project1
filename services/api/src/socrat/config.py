@@ -343,10 +343,14 @@ class Settings(DatabaseSettings):
     # A learner's first lesson takes the search's best-ranked sources as they are, without the
     # researcher's model call: one step fewer before the author starts. Links are still checked.
     gen_fast_first_lesson: bool = False
-    # Lessons of a course private to its owner are fitted to that learner: the authors get the
-    # learner brief (socrat.learner, docs/implementation/learner-memory.md) and the strategist
-    # the learner's stage on the concept. A shared course is never fitted to one learner.
+    # Lessons of a course private to its owner are fitted to that learner: generation's hook
+    # (coursegen/brain/learner.py) adds the learner brief (socrat.learner,
+    # docs/implementation/learner-memory.md). A shared course is never fitted to one learner.
     gen_learner_brief: bool = False
+    # The learner's own preferences across courses (socrat.learner_profile): seeded from Lesson 0
+    # at claim, readable and editable at /api/v1/learner/profile with an undo log, and the tutor
+    # may suggest a change the learner accepts or declines. Off: nothing is stored or shown.
+    learner_profile: bool = False
     # The learner may read their first lesson's draft once it has passed the lesson gates,
     # labelled as still being checked, while its quiz is written and the fact check and review
     # run. Read-only: nothing is marked done from a draft. Never for a course with safety

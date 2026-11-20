@@ -33,8 +33,9 @@ Suggested keys (generation passes them through unchanged, the lesson author read
 |---|---|---|---|
 | `lesson_block(db, course_id, now)` | `jobs.run_package`, after the pedagogical-strategy block and root material, only when `settings.gen_learner_brief` (off by default) | the course is **private** to one learner (owner set, `serve != "shared"`, not public) and that learner has an enrollment in it | built; tested with a fake layer (`tests/test_brain_units.py::test_learner_layer_shapes_private_lessons_only`) and with the real layer (`tests/test_learner_generation.py`) |
 | `brief_for(db, enrollment, now, purpose)` | any generation code that needs the raw dict | as above | built |
-| outline for a learner's new private course | `jobs.run_outline`, before the architect call | private course, learner already has other enrollments | **not built**: needs a user-level brief (`brief_for_user(db, user_id, now)`) because a new course has no enrollment yet. Add it to `brain/learner.py`, never call the layer from `run_outline` directly |
-| quiz generation (`quiz` role in `run_package`) | `run_package` | private course | **not built**: use `brief_for(..., "quiz")` in the same place as `lesson_block` |
+| outline for a learner's new private course | `jobs.run_outline`, before the architect call | private course (`private_owner`) | **hook not built; the layer side is ready**: `learner.user_brief(db, user_id, now, purpose="outline")` returns `{schema, purpose, delivery, shown_elsewhere, other_courses, starting_sample?}`, no enrollment needed, same size and `<`/`>` guarantees. Add `brief_for_user(db, user_id, now)` to `brain/learner.py` calling it (through `layer()`, guarded like `brief_for`); never call the layer from `run_outline` directly |
+| first lessons before the owner enrols | `lesson_block`, when `owner_enrollment` is None | private course | **not built; layer side ready**: fall back to `user_brief(db, owner, now, purpose="module")` so the first lessons are fitted too |
+| quiz generation (`quiz` role in `run_package`) | `run_package` | private course | **not built; layer side ready**: `brief_for(..., "quiz")` in the same place as `lesson_block`. Its `misconceptions` entries carry `belief` when the id comes from a pinned unit, so a distractor can target it |
 
 **Privacy rule (enforced in one place, `private_owner`).** A learner's brief may shape the lessons
 of a course only that learner reads. Shared courses (served by the brain to other learners, or
@@ -60,13 +61,17 @@ prompts, `leaks` will catch a copy of the maker's words, but the rule above is t
 **Misconceptions for generated courses.** `catalog.misconceptions` is empty for generated courses,
 so tutor misconception tags are dropped today. Root units now carry misconceptions with stable
 snake_case ids (`root_units.content.misconceptions[].id`) and every lesson written from a unit is
-pinned to it (`concept_unit_pins`). A tutor tag can be resolved as: concept -> pins -> unit ->
-misconception id. Not wired yet; it belongs to the layer's step 1.
+pinned to it (`concept_unit_pins`). **Wired (layer):** `learner.misconceptions_for(db,
+"course:concept")` resolves concept -> pins -> units -> `{id: belief}`; the tutor sees those ids
+for the lesson in scope and `record_observation` stores one only when it is in that list (or the
+catalog's). For the quiz builder: give generated distractors these same ids in
+`details["misconception"]` when grading, and they flow into the learner's brief.
 
-**Migrations.** `0051_course_brain` is taken by generation (roots, aliases, matches, root units,
-sources, pins; new columns on `generated_courses` and `enrollments`). The layer's
-`users.learner_profile` migration must be `0052_...` with `down_revision = "0051_course_brain"`,
-and bump `schema_revision.py` and `tests/test_quiz_runtime_tables.py`.
+**Migrations.** `0051_course_brain` is generation's (roots, aliases, matches, root units,
+sources, pins; new columns on `generated_courses` and `enrollments`). `0052_learner_profile` is
+the layer's (`users.learner_profile`, done). Generation's next one is `0053`, with
+`down_revision = "0052_learner_profile"`; bump `schema_revision.py` and
+`tests/test_quiz_runtime_tables.py`.
 
 ## 2. The course brain (`coursegen/brain/`)
 

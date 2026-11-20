@@ -1,3 +1,3 @@
 """Supported schema head for readiness and recovery checks."""
 
-SCHEMA_REVISION = "0051_course_brain"
+SCHEMA_REVISION = "0052_learner_profile"

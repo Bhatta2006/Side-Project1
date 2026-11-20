@@ -3,15 +3,18 @@
 How to plug a feature into it: docs/implementation/learner-memory.md.
 
 Every consumer (the tutor, course generation, quizzes, anything later) reads the learner through
-``snapshot`` and, for a model prompt, ``brief`` then ``render``. Nothing here writes or scores:
-mastery still moves only through ``learn.service.record_evidence`` and reading signals only
-through ``learn.memory.note``. This module composes the existing builders (mastery, skill
-profile, stuck detector, mentor, Lesson 0 profile) so there is one shape to depend on.
+``snapshot`` (or ``user_brief`` when there is no enrollment yet) and, for a model prompt,
+``brief`` then ``render``. Nothing here writes or scores: mastery still moves only through
+``learn.service.record_evidence``, reading signals only through ``learn.memory.note``, and stored
+preferences only through ``learner_profile.set_pref``. This module composes the existing builders
+(mastery, skill profile, stuck detector, mentor, Lesson 0 profile) into one shape.
 """
 
 import json
+import statistics
 from dataclasses import dataclass, field
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from socrat.catalog.registry import Catalog
@@ -35,7 +38,10 @@ ONBOARDING = {
 INTENT = ("age", "register", "approach", "balance")  # the learner's validated picks
 # Enrollment.learner_plan (the brain's per-learner overlay) field -> preference key.
 PLAN = {"mode": "course_mode", "door": "analogy_domain", "tone": "tone"}
-PURPOSES = ("module", "quiz", "tutor")
+PURPOSES = ("module", "quiz", "tutor", "outline")
+MANY = 2  # lessons with repeated "simpler" (or "deeper") taps before it is a preference
+SLOW, FAST = 1.5, 0.7  # median time against plan, over at least SPEED_CONCEPTS concepts
+SPEED_CONCEPTS = 3
 
 
 @dataclass(frozen=True)
@@ -72,6 +78,7 @@ class Snapshot:
     prefs: dict[str, Pref]
     calibration: dict | None  # the Lesson 0 sample: a prior, never evidence
     noticed: tuple[dict, ...]  # learn.memory items (code-built, no learner text)
+    beliefs: dict[str, str]  # misconception id -> the belief, for ids this learner has missed
     # The parts the views are built from, for a consumer that needs more (the tutor does).
     states: dict[str, ConceptState] = field(repr=False)
     skill: dict = field(repr=False)  # concept -> adaptive.profile.SkillProfile
@@ -126,6 +133,12 @@ def snapshot(
             feel=feel.get(c),
         )
     prefix = f"{enrollment.course_id}:"
+    signals = memory.signals(db, enrollment)
+    beliefs: dict[str, str] = {}
+    for c, v in concepts.items():
+        if v.misconceptions:
+            known = misconceptions_for(db, c)
+            beliefs.update({t: known[t] for t in v.misconceptions if t in known})
     intent, profile = _origin(db, user, enrollment)
     # A course the brain served this learner was made by someone else: their own Lesson 0
     # details were copied to the enrollment instead (coursegen/brain/spec.overlay).
@@ -142,12 +155,11 @@ def snapshot(
             for c in catalog.concepts
             if c.startswith(prefix)
         },
-        prefs=_prefs(db, user, enrollment, now, intent, profile, plan),
+        prefs=_prefs(db, user, enrollment, now, intent, profile, plan, signals, skill),
         calibration=(profile or {}).get("calibration") or plan.get("calibration") or None,
         # Empty until lesson signals are recorded (SOCRAT_LESSON_SIGNALS), as the tutor had it.
-        noticed=tuple(memory.remembered(db, catalog, enrollment))
-        if memory.signals(db, enrollment)
-        else (),
+        noticed=tuple(memory.remembered(db, catalog, enrollment)) if signals else (),
+        beliefs=beliefs,
         states=states,
         skill=skill,
         stuck=stuck,
@@ -185,6 +197,8 @@ def _prefs(
     intent: dict,
     profile: dict | None,
     plan: dict | None = None,
+    signals: dict | None = None,
+    skill: dict | None = None,
 ) -> dict[str, Pref]:
     from socrat.adaptive import service as adaptive
     from socrat.learn import service as learn
@@ -197,8 +211,9 @@ def _prefs(
         if value not in (None, "", [], {}):
             offered.setdefault(key, {})[source] = value
 
-    offer("strictness", "learner", user.learning_mode)
-    offer("strictness", "default", "balanced")
+    _person(user, offer)
+    for key, value in observed(signals or {}, skill or {}).items():
+        offer(key, "observed", value)
     offer("path_style", "learner", data.get("style"))
     offer("path_style", "default", "balanced")
     offer("learning_style", "learner", data.get(STYLE_KEY))
@@ -214,11 +229,121 @@ def _prefs(
     offer("pace", "onboarding", (plan.get("calibration") or {}).get("pace_level"))
     for (section, name), key in ONBOARDING.items():  # ... their own profile wins when both exist
         offer(key, "onboarding", ((profile or {}).get(section) or {}).get(name))
+    return _resolve(offered)
+
+
+def _person(user: User, offer) -> None:
+    """What holds for the person in every course: strictness and their stored preferences."""
+    from socrat.learner_profile import stored
+
+    offer("strictness", "learner", user.learning_mode)
+    offer("strictness", "default", "balanced")
+    for key, item in stored(user).items():
+        offer(key, item["source"], item["value"])
+
+
+def _resolve(offered: dict[str, dict[str, object]]) -> dict[str, Pref]:
     resolved = {}
     for key, by in offered.items():
         source = next(s for s in SOURCES if s in by)
         resolved[key] = Pref(by[source], source)
     return resolved
+
+
+def observed(signals: dict[str, dict], skill: dict) -> dict[str, str]:
+    """Preferences read from behaviour by code, never stored: recomputed on every snapshot, so
+    they follow the learner and need no undo. ``signals``: lesson -> reading counters
+    (``learn.memory.signals``); ``skill``: concept -> ``SkillProfile``."""
+    out: dict[str, str] = {}
+    simpler = sum(1 for s in signals.values() if s.get("simpler", 0) >= MANY)
+    deeper = sum(1 for s in signals.values() if s.get("deeper", 0) >= MANY)
+    if simpler >= MANY and simpler > deeper:
+        out["explanation_length"] = "short_3_sentences"
+    elif deeper >= MANY and deeper > simpler:
+        out["explanation_length"] = "long_worked_examples"
+    speeds = [p.speed for p in skill.values() if getattr(p, "speed", None) is not None]
+    if len(speeds) >= SPEED_CONCEPTS:
+        middle = statistics.median(speeds)
+        out["pace"] = "slow" if middle > SLOW else "fast" if middle < FAST else "medium"
+    return out
+
+
+def misconceptions_for(db: Session, qualified: str) -> dict[str, str]:
+    """Misconception id -> belief for a generated concept, from the root units its lesson was
+    written from (``concept_unit_pins``; generation-plug-points.md). Empty when not pinned."""
+    from socrat.models import ConceptUnitPin, RootUnit
+
+    course_id, _, concept_id = qualified.partition(":")
+    units = db.scalars(
+        select(RootUnit)
+        .join(ConceptUnitPin, ConceptUnitPin.unit_id == RootUnit.id)
+        .where(ConceptUnitPin.course_id == course_id, ConceptUnitPin.concept_id == concept_id)
+    )
+    out: dict[str, str] = {}
+    for unit in units:
+        for item in (unit.content or {}).get("misconceptions") or []:
+            if isinstance(item, dict) and item.get("id"):
+                out[str(item["id"])] = str(item.get("belief") or "")[:200]
+    return out
+
+
+def user_brief(
+    db: Session, user_id: str, now: int, purpose: str = "outline", budget: int = 3500
+) -> dict:
+    """A brief for work that has no enrollment yet: the outline of a learner's new private
+    course, or its first lessons before they enrol. The person's preferences, their latest
+    Lesson 0 sample, and what they already show in their other courses. {} for no such user."""
+    from socrat.catalog import generated
+    from socrat.catalog.registry import default_catalog
+    from socrat.learn import service as learn
+    from socrat.models import OnboardingDraft
+
+    if purpose not in PURPOSES:
+        raise ValueError(f"unknown purpose {purpose!r}")
+    user = db.get(User, user_id)
+    if user is None:
+        return {}
+    offered: dict[str, dict[str, object]] = {}
+
+    def offer(key: str, source: str, value: object) -> None:
+        if value not in (None, "", [], {}):
+            offered.setdefault(key, {})[source] = value
+
+    _person(user, offer)
+    catalog = generated.merged(default_catalog())
+    shown: set[str] = set()
+    courses: list[str] = []
+    for enrollment in db.scalars(select(Enrollment).where(Enrollment.user_id == user_id)):
+        if enrollment.course_id in catalog.courses:
+            courses.append(catalog.course(enrollment.course_id).title)
+        for concept, state in learn.states_for(db, enrollment).items():
+            if concept in catalog.concepts and state.evidence_count and state.mastered(now):
+                shown.add(catalog.concept(concept).title)
+    draft = db.scalars(
+        select(OnboardingDraft)
+        .where(OnboardingDraft.user_id == user_id, OnboardingDraft.profile.is_not(None))
+        .order_by(OnboardingDraft.updated_at.desc())
+        .limit(1)
+    ).first()
+    calibration = ((draft.profile if draft else None) or {}).get("calibration") or {}
+    sample = {
+        k: calibration.get(k) for k in ("concept_probed", "outcome", "detected_gaps", "pace_level")
+    }
+    limit = 12
+    while True:
+        out = _clean(
+            dict(
+                schema=BRIEF_SCHEMA,
+                purpose=purpose,
+                delivery={k: p.value for k, p in _resolve(offered).items()},
+                shown_elsewhere=sorted(shown)[:limit],
+                other_courses=courses[:limit],
+                **({"starting_sample": sample} if calibration.get("calibrated") else {}),
+            )
+        )
+        if len(json.dumps(out, ensure_ascii=False)) <= budget or limit == 0:
+            return out
+        limit //= 2
 
 
 def brief(
@@ -285,6 +410,7 @@ def _brief(snap: Snapshot, concepts: list[str] | None, limit: int) -> dict:
         ][:limit],
         misconceptions=[
             dict(concept=c, tag=tag, misses=n)
+            | ({"belief": snap.beliefs[tag]} if snap.beliefs.get(tag) else {})
             for n, c, tag in sorted(
                 ((n, v.concept, tag) for v in views for tag, n in v.misconceptions.items()),
                 key=lambda m: -m[0],

@@ -9,7 +9,7 @@ from test_learning_requests import MODEL_INTENT
 
 from socrat import limits, onboarding
 from socrat.assistant.gateway import Event, usage_event
-from socrat.models import LearningRequest, OnboardingDraft
+from socrat.models import LearningRequest, OnboardingDraft, User
 
 URL = "/api/v1/onboarding"
 ANON = {"Origin": ORIGIN}
@@ -141,6 +141,7 @@ def test_lesson0_end_to_end(client, model):
     assert client.post(f"{URL}/{did}/claim", json={"minutes": 25}, headers=ada).status_code == 409
     client.patch("/api/v1/me", json={"birth_year": 2004}, headers=ada)
     assert client.post(f"{URL}/{did}/claim", json={"minutes": 7}, headers=ada).status_code == 422
+    client.app.state.settings.learner_profile = True  # Lesson 0 seeds the learner's preferences
     claimed = client.post(f"{URL}/{did}/claim", json={"minutes": 25}, headers=ada).json()
     req = claimed["request"]
     assert req["status"] == "confirmed" and req["course_id"]
@@ -158,6 +159,9 @@ def test_lesson0_end_to_end(client, model):
         row = db.get(OnboardingDraft, did)
         prof = row.profile
         assert db.get(LearningRequest, req["id"]).user_id == row.user_id
+        seeded = (db.get(User, row.user_id).learner_profile or {}).get("prefs", {})
+        assert seeded["analogy_domain"]["value"] == "Split trip expenses"
+        assert seeded["analogy_domain"]["source"] == "onboarding"
     assert prof["learner_goal"]["learning_mode"] == "builder"
     assert prof["personalization"]["primary_analogy_domain"] == "Split trip expenses"
     cal = prof["calibration"]

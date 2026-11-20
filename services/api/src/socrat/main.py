@@ -54,6 +54,7 @@ from socrat.learn.session_routes import router as session_router
 from socrat.learn.streak_routes import router as streak_router
 from socrat.learn.tasks import admin as tasks_admin
 from socrat.learn.tasks import router as tasks_router
+from socrat.learner_profile import router as learner_profile_router
 from socrat.localize.routes import admin as locale_admin
 from socrat.localize.routes import public as locale_public
 from socrat.mentor.routes import router as mentor_router
@@ -158,6 +159,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sections_router)
     app.include_router(preview_router)
     app.include_router(memory_router)
+    app.include_router(learner_profile_router)
     app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)
