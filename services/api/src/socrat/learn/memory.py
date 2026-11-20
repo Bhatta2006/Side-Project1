@@ -139,14 +139,6 @@ def remembered(db: Session, cat: Catalog, enrollment: Enrollment) -> list[dict]:
     return [item for _, item in items[:LINES]]
 
 
-def tutor_block(db: Session, cat: Catalog, enrollment: Enrollment) -> str:
-    """The memory for the tutor's context; empty when there is nothing to say, and empty
-    until lesson signals are being recorded (the flag is off): then nothing changes."""
-    if not signals(db, enrollment):
-        return ""
-    return "\n".join(item["text"] for item in remembered(db, cat, enrollment))
-
-
 def _enabled(request: Request) -> None:
     if not request.app.state.settings.lesson_signals:
         raise HTTPException(404, "not_found")

@@ -9,6 +9,10 @@ Then read `docs/implementation/universal-engine-plan.md` (strategy, phase table,
 Working on onboarding (`/start`, Lesson 0) or on course generation after it? Read
 `docs/implementation/onboarding-handoff.md`: the contract between the two modules.
 
+Anything that reads or adapts to the learner (generation, quizzes, tutor, new features)? Read
+`docs/implementation/learner-memory.md` and go through `socrat.learner`, never the stores directly.
+Update that file in the same change.
+
 Short version of the rules:
 - Work on branch `feat/universal-engine`. Push with `git push origin feat/universal-engine`.
   Never force-push, never push to `main`, never merge `main` into the branch.

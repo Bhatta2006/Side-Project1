@@ -91,8 +91,9 @@ def build_profiles(
     enrollment: Enrollment,
     states: dict[str, ConceptState],
     now: int,
+    rows: dict[str, list[profiles.EvidenceRow]] | None = None,
 ) -> dict[str, profiles.SkillProfile]:
-    rows = evidence_rows(db, enrollment)
+    rows = evidence_rows(db, enrollment) if rows is None else rows
     ratings = concept_ratings(db, catalog, enrollment)
     verdicts = failed_verdicts(db, catalog, enrollment.user_id)
     from socrat.learn import memory

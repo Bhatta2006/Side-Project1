@@ -72,7 +72,9 @@ profile = profile_for(db, learning_request_id)   # dict, or None if not from Les
 ```
 
 Do not query `onboarding_drafts` directly; its other columns will change while onboarding is
-fixed. Check `profile["meta"]["schema"] == "lesson0-profile/1"`. Onboarding bumps the version on
+fixed. Generation usually does not need to call this itself: `socrat.learner` reads the profile
+and hands its fields to every module as preferences (`docs/implementation/learner-memory.md`).
+Its field mapping is `learner.ONBOARDING`; update it when the schema version is bumped. Check `profile["meta"]["schema"] == "lesson0-profile/1"`. Onboarding bumps the version on
 any change a reader must know about and says so in this file.
 
 ### 3.2 Profile shape, `lesson0-profile/1`
