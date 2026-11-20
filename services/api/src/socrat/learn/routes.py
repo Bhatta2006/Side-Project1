@@ -497,7 +497,11 @@ def enroll(body: EnrollInput, request: Request):
         raise HTTPException(404, "unknown_course")
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
-        if private_courses(db).get(body.course, user.id) != user.id:
+        from socrat.coursegen import brain
+
+        # A course the brain served this learner is theirs to take, though another learner made it.
+        served = brain.granted(db, user.id, body.course)
+        if private_courses(db).get(body.course, user.id) != user.id and served is None:
             raise HTTPException(404, "unknown_course")
         if user.birth_year is None:
             raise HTTPException(409, "profile_incomplete")
@@ -543,6 +547,10 @@ def enroll(body: EnrollInput, request: Request):
             body.weekdays,
             now(),
         )
+        if served is not None:
+            # What applies only to them (their words, minutes, Lesson 0 signals), kept here
+            # and never on the shared course.
+            enrollment.match_id, enrollment.learner_plan = served.id, dict(served.private or {})
         record_event(db, user.id, "enrollment.created", enrollment.id)
         return dict(id=enrollment.id, status=enrollment.status)
 

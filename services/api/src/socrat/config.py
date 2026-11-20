@@ -259,6 +259,10 @@ class Settings(DatabaseSettings):
     # take (their own, and ones other learners chose to share); a fit is offered to start at
     # once instead of building again. Private courses are never compared. Off: always build.
     request_matching: bool = False
+    # The course brain (coursegen/brain): a confirmed request is placed under a subject root and
+    # served an existing course whose hard requirements match it, instead of generating again.
+    # Off: every request builds its own course, exactly as before.
+    course_brain: bool = False
     # Per learner, per process (see limits.py); 0 turns a limit off.
     simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
     diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)

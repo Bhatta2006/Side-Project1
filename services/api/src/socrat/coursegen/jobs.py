@@ -96,7 +96,7 @@ AUTO_RETRIES = 1
 
 
 def priority_of(kind: str, data: dict) -> int:
-    if kind == "outline":
+    if kind in ("outline", "research"):  # an outline waits on its research: same urgency
         return PRIORITY["outline"]
     if data.get("urgent"):  # the lesson the learner is standing in front of
         return PRIORITY["first"]
@@ -255,6 +255,25 @@ def _note(engine: Engine, job_id: str, entry: dict, cost: float = 0.0, **fields)
             setattr(job, name, value)
 
 
+# How long an outline waits for root-unit research before it plans without it.
+UNIT_WAIT_SECONDS = 600
+UNIT_POLL_SECONDS = 10
+
+
+def _defer(engine: Engine, job_id: str, pending: list[str]) -> None:
+    """Hand the job back to the queue while its research runs. Not a failure: no attempt is
+    counted and nothing is paid."""
+    with Session(engine) as db, db.begin():
+        job = need(db.get(GenerationJob, job_id))
+        job.state, job.stage = "queued", "waiting"
+        job.not_before, job.updated_at = now() + UNIT_POLL_SECONDS, now()
+        if not any(e.get("event") == "waiting_research" for e in job.log):
+            job.log = [
+                *job.log,
+                {"role": "system", "event": "waiting_research", "units": pending, "at": now()},
+            ]
+
+
 async def run_outline(
     engine: Engine, settings: Settings, base: Catalog, job_id: str, make=make_provider
 ) -> None:
@@ -262,6 +281,20 @@ async def run_outline(
         job = need(db.get(GenerationJob, job_id))
         brief = Brief.model_validate(job.input["brief"])
         owner = job.created_by if job.input.get("learning_request") else None
+        if brief.units:
+            from socrat.coursegen.brain import units as unitstore
+
+            # Root units being researched for this course: wait for them (a bounded time),
+            # so the outline is planned from validated material instead of paying twice.
+            pending = unitstore.waiting(db, brief.units)
+            if pending and now() - job.created_at < UNIT_WAIT_SECONDS:
+                _defer(engine, job_id, pending)
+                return
+            found = unitstore.load(db, brief.units)
+            if found and not brief.subject_material:
+                brief = brief.model_copy(
+                    update={"subject_material": unitstore.block(db, found, 19000)}
+                )
         stored = generated.course(db, brief.id)
         fresh = not job.input.get("revise") and not job.input.get("notes")
         reusable = reusable_outline(db, job_id, job.input["brief"]) if fresh else None
@@ -699,6 +732,25 @@ async def run_package(
 
     # The Pedagogical Strategist's plan, from the evidence library (deterministic).
     ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, 'unknown', adapter))}"
+    if brief.units:
+        from socrat.coursegen.brain import units as unitstore
+
+        # The validated root material this lesson is written from, and a pin recording which
+        # revision, so a later correction can find every lesson it touches.
+        with Session(engine) as db, db.begin():
+            found = unitstore.load(db, brief.units)
+            if found:
+                ctx = f"{ctx}\n\n{unitstore.block(db, found, 10000)}"
+                unitstore.pin(db, course_id, concept_id, found)
+    # Plug point for the learner layer (socrat/learner, docs/implementation/
+    # generation-plug-points.md): a private course's lessons may be shaped by its one learner's
+    # module brief. Shared courses never are: their lessons are read by everyone.
+    from socrat.coursegen.brain import learner as learner_hook
+
+    with Session(engine) as db:
+        shaped = learner_hook.lesson_block(db, course_id, now())
+    if shaped:
+        ctx = f"{ctx}\n\n{shaped}"
     # Lesson pages sized for this learner (style/pages.py), decided by code from the request.
     paging = None
     if settings.gen_lesson_pages:
@@ -1182,6 +1234,10 @@ async def run_once(
             await run_project(engine, settings, base, job_id, make)
         elif kind == "outline":
             await run_outline(engine, settings, base, job_id, make)
+        elif kind == "research":
+            from socrat.coursegen.brain.researcher import run_research
+
+            await run_research(engine, settings, job_id, make, http)
         else:
             raise ValueError(f"unknown job kind {kind}")
     except execute.Unavailable as exc:

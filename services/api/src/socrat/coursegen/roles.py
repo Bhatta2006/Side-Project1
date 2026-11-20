@@ -36,6 +36,7 @@ ROLES = {
     "grader",  # learners' free-text answers and project milestones
     "stylist",  # a free-text learning wish -> a style spec
     "researcher",  # finds open, public sources for a concept
+    "extractor",  # sources -> a root unit's reusable material (coursegen/brain/researcher.py)
     "diagnostic",  # a short placement quiz for a learner's own course
     "experience",  # picks registered visuals/labs for a lesson (never writes code)
     "intent",  # a learner's free-text request -> a structured intent

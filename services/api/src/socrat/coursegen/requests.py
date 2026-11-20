@@ -375,12 +375,27 @@ def begin(db: Session, settings, user_id: str, row: LearningRequest, parsed) -> 
     and Lesson 0 onboarding (``socrat.onboarding``)."""
     if parsed.blocked:
         raise HTTPException(422, "request_blocked")
+    decision = None
+    if settings.course_brain:
+        from socrat.coursegen import brain
+
+        # An existing course that meets every hard requirement is served as it is: no outline,
+        # no research, no first lesson to write. The decision is kept in course_matches.
+        decision = brain.route(db, catalog(), user_id, row, parsed.model_dump(mode="json"))
+        if decision.served:
+            row.intent = parsed.model_dump(mode="json")
+            row.course_id, row.status, row.updated_at = decision.course_id, "matched", now()
+            record_event(db, user_id, "learning_request.matched", row.id)
+            db.flush()
+            return
     course_id = intents.slug(parsed.subject, user_id, row.key)
     if course_id in catalog().courses or jobs.active(db, course_id) is not None:
         raise HTTPException(409, "generation_in_progress")
     brief = intents.to_brief(
         parsed, course_id, settings.learning_request_budget_usd, row.material or ""
     )
+    if decision is not None and decision.units:
+        brief = brief.model_copy(update={"units": decision.units})
     jobs.enqueue(
         db,
         "outline",
@@ -391,6 +406,10 @@ def begin(db: Session, settings, user_id: str, row: LearningRequest, parsed) -> 
     row.intent = parsed.model_dump(mode="json")
     row.course_id, row.status, row.updated_at = course_id, "confirmed", now()
     record_event(db, user_id, "learning_request.confirmed", row.id)
+    if decision is not None:
+        from socrat.coursegen import brain
+
+        brain.built(db, row.id, course_id)
     db.flush()
 
 
@@ -449,6 +468,8 @@ def publish(request_id: str, request: Request):
         row = db.get(LearningRequest, request_id)
         if row is None or row.user_id != user.id or not row.course_id:
             raise HTTPException(404, "not_found")
+        if row.status == "matched":
+            return view(db, row)  # an existing course, already published by its maker
         course = db.get(GeneratedCourse, row.course_id)
         if course is None:
             raise HTTPException(409, "outline_not_ready")
@@ -457,6 +478,9 @@ def publish(request_id: str, request: Request):
         if course.status == "review":
             try:
                 generated.publish(db, default_catalog(), row.course_id)
+                from socrat.coursegen import brain
+
+                brain.attach(db, row.course_id)  # no-op unless the brain routed this request
             except (ValueError, CatalogError) as exc:
                 raise HTTPException(422, "outline_invalid") from exc
             # The first lessons start now, so they are ready (or nearly) by the time the
