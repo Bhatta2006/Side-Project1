@@ -101,6 +101,16 @@ services:
       SOCRAT_OPENAI_MODEL: "${SOCRAT_OPENAI_MODEL:-}"
       SOCRAT_OPENAI_API_KEY_FILE: /run/secrets/ai_api_key
       SOCRAT_AI_TIMEOUT_SECONDS: "${SOCRAT_AI_TIMEOUT_SECONDS:-60}"
+      # Gemini on Vertex (SOCRAT_AI_PROVIDER=vertex): the key is the same mounted ai_api_key file.
+      SOCRAT_VERTEX_PROJECT: "${SOCRAT_VERTEX_PROJECT:-}"
+      SOCRAT_VERTEX_LOCATION: "${SOCRAT_VERTEX_LOCATION:-global}"
+      SOCRAT_VERTEX_MODEL: "${SOCRAT_VERTEX_MODEL:-}"
+      SOCRAT_VERTEX_API_KEY_FILE: /run/secrets/ai_api_key
+      # Lesson 0 to the learner's first lesson (docs/implementation/lesson0-generation-plan.md).
+      SOCRAT_GEN_LEARNER_PLAN: "${SOCRAT_GEN_LEARNER_PLAN:-false}"
+      SOCRAT_GEN_LEARNER_BRIEF: "${SOCRAT_GEN_LEARNER_BRIEF:-false}"
+      SOCRAT_GEN_WAITING_LEARNER: "${SOCRAT_GEN_WAITING_LEARNER:-false}"
+      SOCRAT_SESSION_ONE_ADAPTATION: "${SOCRAT_SESSION_ONE_ADAPTATION:-false}"
       # LLM cost guardrails: SOCRAT_AI_ENABLED=false is the kill switch. Set the prices to your
       # provider's per-million-token prices so budgets and the /admin spend card are accurate.
       # Defaults: GPT-5.4 mini ($0.75 input, $4.50 output).
@@ -197,7 +207,7 @@ services:
       # The worker touches the heartbeat file every loop; stale means hung, not just "up".
       test: ["CMD", "python", "-m", "socrat.worker", "--check"]
       interval: 30s
-      timeout: 5s
+      timeout: 30s  # the check imports the app: ~8 s on 0.5 CPU
       retries: 3
       start_period: 30s
     read_only: true
@@ -284,6 +294,8 @@ services:
       APP_HOST: "${APP_HOST:?Set APP_HOST}"
       SANDBOX_HOST: "${SANDBOX_HOST:?Set SANDBOX_HOST}"
       TLS_EMAIL: "${TLS_EMAIL:?Set TLS_EMAIL for certificate expiry notices}"
+    extra_hosts:
+      - "${APP_HOST}:127.0.0.1"
     ports:
       - 80:80
       - 443:443
@@ -303,7 +315,8 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - "wget -q --spider --no-check-certificate --header=Host:$${APP_HOST} https://127.0.0.1/api/health/live"
+        # By name, so Caddy can pick the certificate (SNI); extra_hosts keeps it on loopback.
+        - "wget -q --spider https://$${APP_HOST}/api/health/live"
       interval: 15s
       timeout: 5s
       retries: 8
