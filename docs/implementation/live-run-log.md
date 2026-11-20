@@ -188,3 +188,27 @@ Findings, each now fixed in code:
   (SELECT, GROUP BY, HAVING) as products. All-caps words are now ignored by that check.
 - `first_lesson_early` fired in every run (2.2 works live); one `first_lesson_requeued` (the repair round changed
   module 1).
+
+---
+
+# Live run 4: reduced benchmark of the main path (2026-11-20, owner asked for main goals only)
+
+`scripts/dev/bench_claim_to_today.py`, Vertex `gemini-3.8-flash`, brain off, main-path flags on, builder mode, 25
+minutes, three learners at once, at `46adb37` (all fixes from live run 3 in). Total model cost $2.66.
+
+| goal | T1 roadmap s | T2 first lesson s | outline $ | first lessons $ | modules/concepts |
+|---|---|---|---|---|---|
+| exam (GCSE chemistry) | 51 | 151 | 0.17 | 0.38 | 6/18 |
+| non-programming (sheet music) | 54 | 181 | 0.15 | 0.36 | 5/15 |
+| SQL | 54 | 308 | 0.34 | 1.20 | 6/16 |
+
+- **All three reached a first lesson**, the exam and non-programming goals for the first time. The roadmap target
+  (<= 60 s) is met on all three; the first-lesson target (<= 150 s) is met on the exam goal only.
+- `first_lesson_early` fired on all three (2.2 live). SQL: the critic's repair round changed module 1, so the first
+  lesson was cancelled mid-write (`plan_changed`: the cancelled job did not release) and written again
+  (`first_lesson_requeued`); that second lesson took a polish and a revision round. That is the 308 s and $1.20.
+- **Finding, fixed after this run:** `outcome_rejected` still fired on music and SQL because the added-requirement
+  check read the subject's own terms in *success criteria* as additions ("Common Table Expressions", "Coda",
+  "1st/2nd endings"). The check now applies to the `final_task` only, where it still caught a real addition in this
+  run ("integrate ... into Python", which the learner never asked for). Test in `test_roadmap.py`.
+- Cost: first lessons $0.36-0.38 when nothing is redone, about 2.5x the $0.15 target (owner accepted for now).

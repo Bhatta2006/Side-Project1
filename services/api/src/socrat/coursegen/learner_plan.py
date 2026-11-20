@@ -379,7 +379,9 @@ def from_architect(plan: LearnerPlan, reply: dict, concepts: set[str]) -> tuple[
                 if not first or first in NOT_VERBS:
                     problems.append(f"success criterion does not start with a verb: {s[:80]!r}")
             given = " ".join([plan.request, plan.door or "", plan.deliverable])
-            for text in [spec.final_task, *spec.success]:
+            # The deliverable only: success criteria name the subject's own terms (CTEs, Coda,
+            # 1st/2nd endings), which the live benchmark kept rejecting (2026-11-20).
+            for text in [spec.final_task]:
                 # All-caps words are the subject's own vocabulary (SELECT, GROUP BY, DNA), not a
                 # product the learner did not ask for (live run 2026-11-20 rejected SQL keywords).
                 if deliverable(ALL_CAPS.sub("", text), given)[1]:

@@ -460,3 +460,9 @@ def test_a_reused_outline_still_starts_the_learners_first_lesson(client, monkeyp
     with Session(state.engine) as db:
         queued = {j.course_id for j in db.query(GenerationJob).filter_by(kind="package")}
     assert queued == {"ai-basics", "ai-basics-two"}
+
+
+def test_success_criteria_may_name_the_subjects_own_terms():
+    plan = planned_brief().plan
+    terms = outcome(plan, success=["Compose queries using Common Table Expressions (CTEs)"])
+    assert lp.from_architect(plan, {"outcome_spec": terms}, {"loss"})[1] == []
