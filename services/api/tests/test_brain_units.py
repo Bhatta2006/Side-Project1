@@ -335,10 +335,21 @@ def test_learner_layer_shapes_private_lessons_only(brain, monkeypatch):
         assert db.get(GeneratedCourse, shared["course_id"]).serve == "shared"
         assert learner_hook.lesson_block(db, shared["course_id"], 0) == ""
 
+    # The strategist reads the owner's stage on the concept (backlog 6), private courses only.
+    stage = types.SimpleNamespace(stage="developing")
+    fake.snapshot = lambda db, enrollment, now: types.SimpleNamespace(
+        concepts={f"{first['course_id']}:what-is-ml": stage}
+    )
+    with Session(engine) as db:
+        assert learner_hook.concept_stage(db, first["course_id"], "what-is-ml", 0) == "developing"
+        assert learner_hook.concept_stage(db, shared["course_id"], "what-is-ml", 0) == "unknown"
+
     # A broken layer never blocks a lesson.
     fake.brief = lambda *a, **k: 1 / 0
+    fake.snapshot = lambda *a, **k: 1 / 0
     with Session(engine) as db:
         assert learner_hook.lesson_block(db, first["course_id"], 0) == ""
+        assert learner_hook.concept_stage(db, first["course_id"], "what-is-ml", 0) == "unknown"
         assert db.scalars(select(Enrollment)).first() is not None
 
 

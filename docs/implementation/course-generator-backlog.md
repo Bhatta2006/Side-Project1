@@ -304,10 +304,17 @@ setting, never hard-code strictness.
 ## 6. Learner layer gaps that touch generation (`learner-memory.md` 7)
 
 - A course shared later keeps lessons fitted to its owner; lessons written while private are not rewritten.
-- The strategist gets a fixed `"unknown"` stage in `run_package`; passing `snap.concepts[c].stage` needs a second
-  hook function in `brain/learner.py`.
-- Mastery does not carry between courses; `user_brief.shown_elsewhere` only names titles.
-- Lesson 0 `detected_gaps` are model labels; mapping is the deterministic matcher (item 2.1 adds `gap_map`).
+  **Owner decision needed (2026-11-20):** not a privacy leak (`privacy.leaks` stops serving a course that shows its
+  maker's words), only fit. The fix is a rewrite of the released lessons when the course goes public, about $0.30 a
+  lesson; behind a flag if wanted.
+- **Done 2026-11-20:** the strategist gets the owner's stage on the concept (`brain.learner.concept_stage`, through
+  `learner.snapshot`, private courses only, under `gen_learner_brief`); "unknown" otherwise. Test in
+  `test_brain_units.py`.
+- Mastery does not carry between courses; `user_brief.shown_elsewhere` only names titles. **Needs a design:**
+  generated courses share no concept identity; the candidates are root-unit concept keys (brain courses) or the
+  code matcher (`learner_plan.teaching`). Not started.
+- **Done (2.1):** Lesson 0 gaps are mapped by the architect's checked `gap_map`, with the deterministic matcher as
+  the fallback.
 
 ---
 

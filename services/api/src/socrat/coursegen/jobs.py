@@ -1097,7 +1097,13 @@ async def run_package(
     from socrat.engine import strategy
 
     # The Pedagogical Strategist's plan, from the evidence library (deterministic).
-    ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, 'unknown', adapter))}"
+    stage = "unknown"
+    if settings.gen_learner_brief:  # the owner's own stage on it (private courses only)
+        from socrat.coursegen.brain import learner as stage_hook
+
+        with Session(engine) as db:
+            stage = stage_hook.concept_stage(db, course_id, concept_id, now())
+    ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, stage, adapter))}"
     # Misconception ids of the root units this lesson rests on: the quiz may tag wrong options
     # with them, so a learner's wrong answer is recorded as that misconception.
     known: dict[str, str] = {}

@@ -151,3 +151,19 @@ def outline_block(db: Session, user_id: str | None, request_id: str | None, stam
     if not user_id or not builds_private(db, request_id):
         return ""
     return wrap(brief_for_user(db, user_id, stamp, "outline"), "outline")
+
+
+def concept_stage(db: Session, course_id: str, concept_id: str, stamp: int) -> str:
+    """The private course owner's evidence stage on this concept (``Snapshot.concepts[c].stage``:
+    unknown | emerging | developing | proficient | demonstrated), for the lesson strategist
+    (backlog 6). "unknown" for a shared course, before enrolment, or without the layer."""
+    mod = layer()
+    enrollment = owner_enrollment(db, course_id)
+    if mod is None or enrollment is None:
+        return "unknown"
+    try:
+        view = mod.snapshot(db, enrollment, stamp).concepts.get(f"{course_id}:{concept_id}")
+    except Exception:
+        log.exception("learner layer failed for enrollment %s", enrollment.id)
+        return "unknown"
+    return str(getattr(view, "stage", "") or "unknown")
