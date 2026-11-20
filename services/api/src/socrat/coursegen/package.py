@@ -560,7 +560,9 @@ def _common_lesson_checks(course: Course, text: str) -> list[str]:
     fences = set(re.findall(r"^```([a-zA-Z+#]*)", text, re.MULTILINE)) - {""}
     # A course without code (maths, a language, drawing) gets no program listings at all.
     code = shape.effective(course).studio == "code"
-    allowed = (set(course.languages) if code else set()) | {"text", "math", "plaintext"}
+    # SQL is shown, not run, until it is a course language with its own checker (backlog 2.8;
+    # owner decision 2026-11-20 after the benchmark: SQL fences cost a round in most SQL runs).
+    allowed = (set(course.languages) | {"sql"} if code else set()) | {"text", "math", "plaintext"}
     stray = {f for f in fences if f.lower() not in allowed}
     if stray:
         problems.append(f"Code blocks in {sorted(stray)} are outside the course languages.")

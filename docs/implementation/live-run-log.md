@@ -149,3 +149,42 @@ Not driven: publish, enrol, Today, the web `/start` page.
 Publish, enrol, Today and the session-one branches; backlog 2.2 (first lesson before the critic) and 2.3
 (computed minutes, session gate) against the live model (run A predates them; run B had no plan, so neither
 applied); the web `/start` page; a second learner served from a published shared course.
+
+---
+
+# Live run 3: claim -> Today benchmark (2026-11-20, backlog 2.5)
+
+`scripts/dev/bench_claim_to_today.py` against a local API on Vertex `gemini-3.8-flash`, brain off, flags on
+(`gen_learner_plan`, `gen_learner_brief`, `gen_waiting_learner`, `session_one_adaptation`, `learner_profile`),
+`SOCRAT_GEN_RUNNER_CONCURRENCY=4`, three learners at a time. Code: the working tree with backlog 2.1-2.4 and the
+first-lesson gate, *before* the three fixes listed at the end (the API was started before them).
+
+| goal | mode | min | T1 s | T2 s | outline end s | outline $ | first lessons $ | modules/concepts | note |
+|---|---|---|---|---|---|---|---|---|---|
+| sql | sprint | 10 | 48 | 108 | 46 | 0.125 | 0.265 | 4/11 | smoke run, alone |
+| sql | sprint | 10 | 39 | 103 | 37 | 0.121 | 0.305 | 4/12 | |
+| sql | sprint | 25 | 51 | 120 | 50 | 0.149 | 0.299 | 4/11 | |
+| sql | builder | 10 | 208 | 286 | 206 | 0.150 | 0.298 | 6/18 | slow outline under parallel load |
+| sql | builder | 25 | 54 | 343 | 52 | 0.175 | 1.123 | 6/17 | first package failed (wrong Python wrapper caught by the fact checker), retried |
+| sql | explorer | 10 | 81 | never | 137 | 0.361 | 1.207 | 7/21 | first lesson never under 16 min in 3 rounds: not released, twice |
+
+The other 13 configurations (exam and music goals, sql/explorer/25) never started: `POST /onboarding` is rate
+limited per visitor (`onboarding_per_hour = 12`) and every run came from 127.0.0.1. The owner stopped the
+benchmark there (spent $4.72 for these runs). **Not measured:** the exam and non-programming goals.
+
+Against the proposed targets (roadmap <= 60 s, first lesson <= 150 s, outline <= $0.25, first lesson <= $0.15):
+sprint meets the time targets (T1 39-51 s, T2 103-120 s); builder and explorer do not; outline cost meets the target
+except explorer; first-lesson cost is about double the target everywhere ($0.27-0.31 when nothing fails).
+
+Findings, each now fixed in code:
+
+- **Session gate made a 10-minute first lesson unreleasable** (sql/explorer/10): 6-7 quiz items already take 6-7
+  computed minutes, and the author never got the reading under ~10 minutes. The first-lesson gate now sends a
+  lesson back only while rounds remain; on the last round it is released and the job log says
+  `first_lesson_gate_waived` with the issues.
+- **SQL fences** cost a round in almost every SQL run, and once led to SQL wrapped in wrong Python. Owner decision:
+  ```` ```sql ```` is shown (not run) in a code course until backlog 2.8 makes SQL a real language.
+- **`outcome_rejected` in every run:** the "names what the learner did not ask for" check read SQL keywords
+  (SELECT, GROUP BY, HAVING) as products. All-caps words are now ignored by that check.
+- `first_lesson_early` fired in every run (2.2 works live); one `first_lesson_requeued` (the repair round changed
+  module 1).

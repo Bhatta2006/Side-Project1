@@ -26,6 +26,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from dataclasses import replace
 
 from fastapi import HTTPException
@@ -436,7 +437,13 @@ async def run_outline(
         _note(
             engine,
             job_id,
-            {"role": "architect", "round": attempt, "event": "skeleton", "plan": titles(outline)},
+            {
+                "role": "architect",
+                "round": attempt,
+                "event": "skeleton",
+                "plan": titles(outline),
+                "ms": reply.ms,
+            },
         )
         # The critic's review of the skeleton, run while the details are written (and, for a
         # waiting learner, while their first lesson starts).
@@ -588,6 +595,40 @@ async def run_outline(
     await _save_outline(engine, settings, base, job_id, kept, best, owner, keep_written=same)
 
 
+INTRO_WORDS = 150  # the door belongs in the opening, not somewhere in the lesson
+
+
+def first_lesson_issues(brief: Brief, course, live, personal: bool) -> list[str]:
+    """The first-lesson gate for a Lesson 0 learner (backlog 2.5), code only: it fits the
+    session; and, when it was written for them (``personal``), it opens with their door, keeps an
+    asked-for code language, and gives them something to do with a key. Empty for any other
+    lesson. Not checked by code: that one example sits outside the door."""
+    first = course.modules[0].concepts[:1] if course.modules else []
+    plan = brief.plan
+    if plan is None or first != [live.id]:
+        return []
+    issues = [over] if (over := first_session_over(brief, course, live)) else []
+    if not personal:
+        return issues
+    if plan.door:
+        door = learner_plan._tokens(plan.door)
+        opening = learner_plan._tokens(" ".join(live.lesson.split()[:INTRO_WORDS]))
+        if door and len(door & opening) * 2 < len(door):
+            issues.append(
+                "Open the lesson with the learner's everyday scenario (the door) in the first "
+                "few sentences, then map it to the formal term."
+            )
+    for c in plan.constraints:
+        lang = c.enforced_as.removeprefix("languages=")
+        if c.enforced_as.startswith("languages=") and shape.effective(course).studio == "code":
+            fences = {f.lower() for f in re.findall(r"^```([a-zA-Z+#]*)", live.lesson, re.M)}
+            if lang not in fences:
+                issues.append(f"The learner asked for {lang}: show the code in {lang}.")
+    if not live.quiz:
+        issues.append("Give the learner something to do: at least one keyed check item.")
+    return issues
+
+
 def first_session_over(brief: Brief, course, live) -> str:
     """A Lesson 0 learner's first lesson must fit their session (computed minutes, 10%
     slack); the reason it does not, or ""."""
@@ -725,6 +766,7 @@ def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, lis
             "verdict": verdict,
             "summary": str((review.data or {}).get("summary", review.problem))[:1000],
             "issues": found,
+            "ms": review.ms,
         },
         review.cost_usd,
     )
@@ -1086,6 +1128,7 @@ async def run_package(
     # Lesson 0 (Brief.plan): only while the course is still read by its learner alone, so a
     # course shared later stops carrying their words, door and sample.
     probe: list[str] = []
+    personal = False  # written for this learner (their Lesson 0 plan reached the prompts)
     if brief.plan is not None:
         with Session(engine) as db:
             personal = learner_hook.private_owner(db, course_id) is not None
@@ -1390,9 +1433,15 @@ async def run_package(
             # The matched Lesson 0 gap must be checked: the quiz goes back without it.
             problems["quiz"] = [*problems.get("quiz", []), "Add the probe item (probe: true)."]
             live = None
-        if live is not None and (over := first_session_over(brief, course, live)):
-            problems["lesson"] = [*problems.get("lesson", []), over]
-            live = None
+        if live is not None and (gate := first_lesson_issues(brief, course, live, personal)):
+            if attempt < rounds:
+                problems["lesson"] = [*problems.get("lesson", []), *gate]
+                live = None
+            else:
+                # Last round: a lesson that misses the fit is better than none (benchmark
+                # 2026-11-20: a 10-minute first lesson never got under 16 minutes in 3 rounds).
+                entry = {"role": "system", "event": "first_lesson_gate_waived", "issues": gate}
+                _note(engine, job_id, entry)
         output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}
         if live is not None and pack is not None and code:
             pack, ran = await pkg.run_code(executor, live, pack)

@@ -313,6 +313,9 @@ NOT_VERBS = {"the", "a", "an", "to", "understand", "understanding", "know", "kno
 NOT_VERBS |= {"awareness", "familiarity", "able", "be", "basic", "good", "students"}
 
 
+ALL_CAPS = re.compile(r"\b[A-Z][A-Z0-9_]+\b")
+
+
 def _norm(text: str) -> str:
     return " ".join(text.lower().split())
 
@@ -339,7 +342,9 @@ def from_architect(plan: LearnerPlan, reply: dict, concepts: set[str]) -> tuple[
                     problems.append(f"success criterion does not start with a verb: {s[:80]!r}")
             given = " ".join([plan.request, plan.door or "", plan.deliverable])
             for text in [spec.final_task, *spec.success]:
-                if deliverable(text, given)[1]:
+                # All-caps words are the subject's own vocabulary (SELECT, GROUP BY, DNA), not a
+                # product the learner did not ask for (live run 2026-11-20 rejected SQL keywords).
+                if deliverable(ALL_CAPS.sub("", text), given)[1]:
                     problems.append(f"names what the learner did not ask for: {text[:80]!r}")
             if not problems:
                 update["outcome"] = spec

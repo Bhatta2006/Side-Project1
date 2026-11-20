@@ -223,8 +223,13 @@ def test_a_private_lesson_is_written_for_its_learner_and_probes_the_gap(
         json={"concepts": ["what-is-ml"]},
         headers=login(client, subject="boss", name="Boss"),
     )
+    fitted = lesson()  # opens with the door and shows Python, as the first-lesson gate asks
+    fitted["lesson"] = (
+        "## Cricket scores\n\nCricket scores from past matches can predict the next one.\n\n"
+        "```python\nprint(sum([4, 6, 1]))\n```\n\n" + fitted["lesson"]
+    )
     script = Scripted(
-        author=[lesson()],
+        author=[fitted],
         quiz=[QUIZ, PROBE_QUIZ],
         atoms=[ATOMS],
         facts=[{"claims": []}],

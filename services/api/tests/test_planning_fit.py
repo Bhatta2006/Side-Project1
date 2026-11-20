@@ -79,3 +79,12 @@ def test_a_maths_lesson_may_not_carry_program_listings():
         "outside the course languages" in i
         for i in pkg.check_lesson(code_course.concepts[0], code_course, {"lesson": lesson})
     )
+    shown = lesson.replace("```python", "```sql")  # SQL is shown in a code course (backlog 2.8)
+    assert not any(
+        "outside the course languages" in i
+        for i in pkg.check_lesson(code_course.concepts[0], code_course, {"lesson": shown})
+    )
+    assert any(
+        "outside the course languages" in i
+        for i in pkg.check_lesson(concept, course, {"lesson": shown})
+    )

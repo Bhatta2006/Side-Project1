@@ -316,6 +316,9 @@ def test_an_outcome_is_kept_only_when_it_carries_every_ask_and_adds_nothing():
     assert "start with a verb" in lp.from_architect(plan, {"outcome_spec": vague}, ids)[1][0]
     added = outcome(plan, final_task="Deploy a model to Kubernetes.")
     assert "did not ask for" in lp.from_architect(plan, {"outcome_spec": added}, ids)[1][0]
+    # The subject's own keywords are not additions (live run: SQL criteria were rejected).
+    keywords = outcome(plan, success=["Write SELECT queries with GROUP BY and HAVING"])
+    assert lp.from_architect(plan, {"outcome_spec": keywords}, ids)[1] == []
 
 
 def test_an_ambiguous_gap_gives_no_probe_and_an_unnamed_one_falls_back_to_code():
