@@ -1653,12 +1653,14 @@ async def run_once(
     if job_id is None:
         return False
     beat = None
+    waiting = None
     try:
         with Session(engine) as db:
             job = need(db.get(GenerationJob, job_id))
             kind, urgent = job.kind, job.priority <= WAITING_PRIORITY
         if fast and urgent:
             beat = asyncio.create_task(_heartbeat(engine, job_id))
+            waiting = roles.WAITING.set(True)  # this job's calls get the short timeout
         if kind == "package":
             await run_package(engine, settings, base, job_id, make, http, executor)
         elif kind == "exercise":
@@ -1703,6 +1705,8 @@ async def run_once(
     finally:
         if beat is not None:
             beat.cancel()
+        if waiting is not None:
+            roles.WAITING.reset(waiting)
     return True
 
 

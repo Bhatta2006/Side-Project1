@@ -104,3 +104,20 @@ def test_without_the_flag_nothing_is_stored_for_a_resume(client, monkeypatch):  
     asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), Planner().make))
     with Session(state.engine) as db:
         assert db.get(GenerationJob, job_id).output is None
+
+
+def test_a_job_a_learner_waits_on_cuts_slow_model_calls():
+    """Backlog 7: a live call took 567 s; inside a waiting job each call is capped."""
+    from socrat.config import Settings
+    from socrat.coursegen import roles
+
+    settings = Settings(environment="test", gen_waiting_timeout_seconds=120)
+    assert (
+        roles.role_settings(settings, "author").ai_timeout_seconds == settings.gen_timeout_seconds
+    )
+    token = roles.WAITING.set(True)
+    try:
+        assert roles.role_settings(settings, "author").ai_timeout_seconds == 120
+        assert roles.role_settings(settings, "onboarding").ai_timeout_seconds == 25  # shorter stays
+    finally:
+        roles.WAITING.reset(token)

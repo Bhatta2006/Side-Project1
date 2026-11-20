@@ -403,6 +403,9 @@ class Settings(DatabaseSettings):
     # The worker touches this file every loop; `python -m socrat.worker --check` fails when stale.
     worker_heartbeat_file: str = ""
     gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
+    # One model call in a job a learner waits on (gen_waiting_learner) may take this long; past
+    # it the call fails and the job retries (backlog 7).
+    gen_waiting_timeout_seconds: float = Field(default=120, ge=10, le=3600)
     # Critic reviews per outline job. Each "revise" costs a full new outline round; with 1, the
     # outline revised after the first review is kept without a second review. 0: the critic
     # still reviews (logged for the owner and the learner) but never asks for a rewrite, so the

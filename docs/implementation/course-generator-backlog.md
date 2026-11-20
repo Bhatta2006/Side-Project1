@@ -300,9 +300,9 @@ setting, never hard-code strictness.
 
 ## 7. Known risks in what is built
 
-- **Live run 2 (2026-11-20):** a single model call can take ~570 s (B4). With `gen_waiting_learner` the heartbeat
-  keeps that job alive, so the learner waits the whole call. Consider a shorter `ROLE_TIMEOUT` for jobs a learner
-  waits on (priority <= 1), with the normal retry.
+- **Live run 2 (2026-11-20):** a single model call can take ~570 s (B4). **Fixed 2026-11-20:** with
+  `gen_waiting_learner`, every call in a job a learner waits on (priority <= 1) is cut at
+  `gen_waiting_timeout_seconds` (default 120 s; `roles.WAITING`, set by the worker) and the job retries.
 - **`course_brain` drops Lesson 0 entirely** for a new shared course (B1) until 3.3 is built: keep it off.
 - **SQL courses are `python` code courses** (A1, B2): lessons wrap SQL in python fences or are sent back for
   ```` ```sql ````. Item 2.8 fixes the root cause; until then, allowing `sql` as a display-only fence is a one-line
