@@ -268,6 +268,27 @@ def observed(signals: dict[str, dict], skill: dict) -> dict[str, str]:
     return out
 
 
+def tutored_concepts(db: Session, user_id: str, since: int, until: int) -> set[str]:
+    """Concepts (qualified) the learner asked the tutor about between ``since`` and ``until``:
+    their own messages in a concept thread. Counts as help for session one (backlog 2.4, owner
+    decision 2026-11-20); problem threads are not counted here (submissions record their help)."""
+    from socrat.models import AssistantMessage, AssistantThread
+
+    rows = db.scalars(
+        select(AssistantThread.scope)
+        .join(AssistantMessage, AssistantMessage.thread_id == AssistantThread.id)
+        .where(
+            AssistantThread.user_id == user_id,
+            AssistantThread.scope.like("concept:%"),
+            AssistantMessage.role == "user",
+            AssistantMessage.created_at >= since,
+            AssistantMessage.created_at < until,
+        )
+        .distinct()
+    )
+    return {scope.removeprefix("concept:") for scope in rows}
+
+
 def misconceptions_for(db: Session, qualified: str) -> dict[str, str]:
     """Misconception id -> belief for a generated concept, from the root units its lesson was
     written from (``concept_unit_pins``; generation-plug-points.md). Empty when not pinned."""

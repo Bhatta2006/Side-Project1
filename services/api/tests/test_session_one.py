@@ -108,3 +108,87 @@ def test_enrolment_asks_for_it_only_for_a_lesson0_course_with_the_flag_on(client
     client.app.state.settings.session_one_adaptation = False
     onboard(client, login(client, subject="cy", name="Cy"), course="basics", session_minutes=10)
     assert "adapt_first_session" not in goal("Cy")
+
+
+# ------------------------------------------------------------------ backlog 2.4
+
+
+def test_tutor_turns_that_day_count_as_help():
+    assert session_one([check(0.9)], {ARRAYS}) == {ARRAYS: "helped"}
+    assert session_one([check(0.9)], {"algo:pairs"}) == {ARRAYS: "independent"}
+
+
+def test_the_learner_layer_reads_tutor_turns_in_a_window(client):  # noqa: F811
+    from sqlalchemy.orm import Session
+    from test_learner_api import login
+
+    from socrat import learner
+    from socrat.models import AssistantMessage, AssistantThread, User
+
+    login(client, subject="ada", name="Ada")
+    with Session(client.app.state.engine) as db, db.begin():
+        ada = db.query(User).one().id
+        for scope, role, at in (
+            (f"concept:{ARRAYS}", "user", 100),
+            ("concept:algo:pairs", "assistant", 100),  # the tutor talking alone is not help
+            ("concept:algo:lookup", "user", 900),  # outside the window
+            ("problem:arr-easy", "user", 100),  # submissions record their own help
+        ):
+            thread = AssistantThread(user_id=ada, scope=scope, ladder={})
+            db.add(thread)
+            db.flush()
+            db.add(AssistantMessage(thread_id=thread.id, role=role, content="?", created_at=at))
+    with Session(client.app.state.engine) as db:
+        assert learner.tutored_concepts(db, ada, 0, 500) == {ARRAYS}
+
+
+def test_difficulty_offers_at_most_one_bridge():
+    pairs = "algo:pairs"
+    history = [check(0.9, probe_missed=True), check(0.9, concept=pairs, probe_missed=True)]
+    done = DONE | {f"lesson:{pairs}", f"quiz:{pairs}"}
+    found = plan(completed=done, history=history, adaptive=ON).needs_repair
+    assert list(found) == [ARRAYS]  # one proposal, for the first concept that was hard
+    assert plan(completed=done, history=history, adaptive=Adaptive("algo")).needs_repair == {}
+
+
+def test_a_hard_concept_gets_a_smaller_easier_check():
+    from test_adaptive_engine import catalog
+
+    from socrat.models import Enrollment
+
+    cat, enrollment = catalog(), Enrollment(id="e1", language="python")
+    full = quizzes.choose_items(cat, enrollment, f"quiz:{ARRAYS}", 1)
+    gentle = quizzes.choose_items(cat, enrollment, f"quiz:{ARRAYS}", 1, gentle=True)
+    pool = quizzes.fitting(cat, ARRAYS, "python")
+    levels = sorted({q.difficulty for q in pool})[:2]
+    assert gentle and len(gentle) <= min(len(full), quizzes.GENTLE_ITEMS)
+    assert all(quizzes.item(cat, c, i).difficulty in levels for c, i in gentle)
+    hardest = max(quizzes.item(cat, c, i).difficulty for c, i in full)
+    assert max(quizzes.item(cat, c, i).difficulty for c, i in gentle) < hardest
+
+
+def test_the_tutor_ladder_starts_one_rung_along_after_difficulty(client, monkeypatch):  # noqa: F811
+    from sqlalchemy.orm import Session
+    from test_adaptive_engine import catalog
+    from test_learner_api import login, onboard
+
+    from socrat.assistant import service
+    from socrat.models import AssistantThread, User
+
+    ada = login(client, subject="ada", name="Ada")
+    onboard(client, ada, course="algo")
+    state = client.app.state
+
+    def ceiling(verdict):
+        monkeypatch.setattr(service.learn, "session_one_for", lambda db, e: {ARRAYS: verdict})
+        with Session(state.engine) as db, db.begin():
+            db.query(AssistantThread).delete()
+            user = db.query(User).one()
+            service.prepare(
+                db, catalog(), state.settings, user, "problem:arr-easy", "ok", "", "", False, NOW
+            )
+            thread = db.query(AssistantThread).one()
+            return thread.ladder["state"]["ceiling"]
+
+    assert ceiling("difficulty") == 1
+    assert ceiling("independent") == 0

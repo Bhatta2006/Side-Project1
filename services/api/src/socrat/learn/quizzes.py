@@ -157,13 +157,19 @@ def gate_rng(enrollment: Enrollment, session_key: str, step: int) -> random.Rand
 # ---------------------------------------------------------------- sessions
 
 
+GENTLE_ITEMS = 3  # a concept that was hard in session one: a smaller check
+
+
 def choose_items(
     catalog: Catalog,
     enrollment: Enrollment,
     activity_id: str,
     seed: int,
     recent: set[str] | None = None,
+    gentle: bool = False,
 ) -> list[list[str]]:
+    """``gentle``: the concept was hard in session one, so its check is smaller and easier
+    (3 items from its two easiest difficulty levels, the probe item kept if it has one)."""
     kind, _, target = activity_id.partition(":")
     rng = random.Random(f"{enrollment.id}:{activity_id}:{seed}")
     if kind == "quiz":
@@ -173,6 +179,10 @@ def choose_items(
             fitting(catalog, target, enrollment.language),
             key=lambda q: (q.id in seen, q.difficulty, rng.random()),
         )
+        if gentle and quiz:
+            easy = sorted({q.difficulty for q in quiz})[:2]
+            band = [q for q in quiz if q.difficulty in easy or q.probe]
+            return [[target, q.id] for q in band[:GENTLE_ITEMS]]
         return [[target, q.id] for q in quiz[:5]]
     if kind in {"review", "remedial"}:
         quiz = list(fitting(catalog, target, enrollment.language))
@@ -286,6 +296,8 @@ def open_session(
             activity_id,
             now // 86400 if kind != "checkpoint" else now,
             recent_items(db, enrollment, now) if kind in {"checkpoint", "quiz"} else None,
+            gentle=kind == "quiz"
+            and learn.session_one_for(db, enrollment).get(target) == "difficulty",
         ),
         answers={},
         created_at=now,

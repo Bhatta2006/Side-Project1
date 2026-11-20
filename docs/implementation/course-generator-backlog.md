@@ -122,7 +122,9 @@ the written lesson at plan time, not stored. Tests in `test_true_session_budget.
   whether changing minutes per day in settings should clear or update it.
 - **Done when:** a 10-minute learner's day 1 sums to <= 10 computed minutes; a too-long first lesson goes back.
 
-### 2.4 PR 6 rest: smaller quiz band, Ladder ceiling, bridge proposal
+### 2.4 PR 6 rest: smaller quiz band, Ladder ceiling, bridge proposal (done 2026-11-20)
+Built behind `session_one_adaptation`; tutor turns count as help (owner decision). Details in
+`lesson0-generation-plan.md` (PR 6 rest). The new-context review item waits on 4.2. Original item:
 - After "difficulty" in session one: a smaller quiz band for that concept and the tutor's Ladder ceiling lowered
   one level (`assistant/socratic.py` start ceiling); at most one bridge concept through the existing proposal flow
   (`evolve.insert_bridge`, learner accepts).

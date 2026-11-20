@@ -412,6 +412,15 @@ def prepare(
             raise HTTPException(404, "not_found")
         problem = catalog.problem(problem_id)
         ladder = socratic.Ladder.from_dict(thread.ladder.get("state"))
+        if not thread.ladder.get("state") and enrollment is not None:
+            # Hard in session one (lesson0 plan 4.E): the ladder starts one rung along, so a
+            # concrete hint comes one effort sooner. Reveal rules are unchanged.
+            owner = catalog.problems[problem_id][0]
+            if (
+                learn.session_one_for(db, enrollment).get(f"{owner}:{problem.concepts[0]}")
+                == "difficulty"
+            ):
+                ladder = socratic.Ladder(ceiling=1)
         attempts = (
             db.scalar(
                 select(func.count())

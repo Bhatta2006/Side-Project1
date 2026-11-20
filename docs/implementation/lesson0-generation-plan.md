@@ -102,12 +102,19 @@ i.e. a Lesson 0 course). A wrong answer on the probe item marks that concept's q
 or a second missed check -> the `example` support step before moving on (`session_one_example`); passed with
 help recorded that day -> a `review` retrieval before the next concept (`session_one_retrieval`); passed on their
 own -> one `stretch` item placed after the next concept's work (`session_one_stretch`). Completed work and
-evidence are only read. Tests `services/api/tests/test_session_one.py`. Not built from PR 6: a smaller quiz band
-and a lowered Ladder ceiling after difficulty, and the bridge proposal; "help" is seen only where it is recorded
-(code submissions and labs record hints, quizzes and lessons do not), so in a quiz-only course success is always
-"independent". The review quiz reuses the concept's items: not a guaranteed new context.
+evidence are only read. Tests `services/api/tests/test_session_one.py`.
 
-Still to build, in order: PR 6 rest (above), PR 7 (benchmark and gate),
+**PR 6 rest, built 2026-11-20** (same flag, same tests): after "difficulty", the concept's next check is smaller and
+easier (`quizzes.choose_items(gentle=True)`: at most `GENTLE_ITEMS = 3` items from its two easiest difficulty levels,
+the probe item kept); a tutor thread on one of its problems starts the Ladder one rung along (`Ladder(ceiling=1)`,
+so a concrete hint comes one effort sooner; reveal rules unchanged), which is how "ceiling lowered one level" was
+read; and the first such concept with a weak prerequisite gets `needs_repair`, so the existing proposal flow
+offers a refresher and, for a generated course's owner, a bridge lesson (`evolve.insert_bridge` on accept), at most
+one per session one. "Help" now also counts the learner's own tutor turns on the concept that day (owner decision,
+read through `socrat.learner.tutored_concepts`). Still open: the review reuses the concept's own items (a "new
+context" item needs generated variants, backlog 4.2).
+
+Still to build, in order: PR 7 (benchmark and gate),
 PR 8 (optional SQL checker).
 
 ---

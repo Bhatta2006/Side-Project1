@@ -13,6 +13,7 @@ Status log (newest first):
 
 | Date | Step | What changed |
 |---|---|---|
+| 2026-11-20 | G (generation) | Session-one help (backlog 2.4, owner decision): `learner.tutored_concepts(db, user_id, since, until)` returns the concepts the learner messaged the tutor about (their own turns in `concept:<q>` threads; problem threads are left out, submissions record their own help). `learn.service.first_day_tutored` reads it for the first study day and `planner.engine.session_one` counts those concepts as `helped`. Read only, no new store, behind `SOCRAT_SESSION_ONE_ADAPTATION`. Tests: `test_session_one.py`. |
 | 2026-11-20 | G (generation) | Session-one adaptation (Lesson 0 plan PR 6, behind `SOCRAT_SESSION_ONE_ADAPTATION`, off): a wrong answer on a Lesson 0 probe item writes `evidence.details["probe_missed"] = true`; `learn.service.history_for` now also returns each row's `at` and `details`, which `planner.engine.session_one` reads (the planner's own evidence path, not `socrat.learner`, as before). No new store. Tests: `test_session_one.py`. |
 | 2026-11-20 | G (generation) | Generation's hooks built: `outline_block` (outline of a private course, through `user_brief`), first-lesson fallback to `user_brief` before the owner enrols, `quiz_block` (quiz prompt only), and quiz options tagged with root-unit misconception ids, graded into `details["misconception"]`. All behind `SOCRAT_GEN_LEARNER_BRIEF` except the tags (they hold no learner data). Tests: `test_learner_hooks.py`. |
 | 2026-11-20 | 3, 4, 5 | Rebased on generation's `f56d0ae`. **Step 3:** `users.learner_profile` (migration `0052_learner_profile`), `learner_profile.set_pref` / `undo` / `seed_from_lesson0` (called at the Lesson 0 claim), learner routes under `/api/v1/learner/profile`. **Step 4:** preferences read from behaviour (`learner.observed`), and the tutor tool `suggest_preference`, which only adds a pending suggestion the learner accepts or declines. **Misconceptions** of generated lessons resolve through unit pins (`learner.misconceptions_for`); the tutor sees them and may tag one. **Step 5 (light):** `learner.user_brief` for work with no enrollment (outline, first lessons) lists what the learner already shows in other courses. The writes, routes and tutor tool are behind `SOCRAT_LEARNER_PROFILE` (off). |
@@ -53,6 +54,8 @@ b = learner.user_brief(db, user_id, now, purpose="outline")   # {} for an unknow
 `delivery` is the person's preferences (stored ones and strictness); `shown_elsewhere` is the
 titles of concepts they have mastered with evidence in any of their courses; `starting_sample`
 is their latest calibrated Lesson 0. Same size limit and `<`/`>` guarantee as `brief`.
+
+Tutor help on concepts in a time window: `learner.tutored_concepts(db, user_id, since, until)` (a set of qualified concept ids; the learner's own turns only).
 
 Misconceptions of a generated lesson: `learner.misconceptions_for(db, "course:concept")` gives
 `{id: belief}` from the root units the lesson was written from (`concept_unit_pins`).

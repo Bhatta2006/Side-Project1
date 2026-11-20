@@ -161,11 +161,12 @@ SESSION_ONE_WINDOW = 40  # learn.service.history_for's limit: a full window is p
 CHECK_PASS = 0.8
 
 
-def session_one(history: list[dict]) -> dict[str, str]:
+def session_one(history: list[dict], tutored: set[str] | frozenset = frozenset()) -> dict[str, str]:
     """How each concept checked on the learner's first study day went (lesson0-generation-plan.md
     4.E): ``difficulty`` (the probe was missed, or a second check missed), ``helped`` (passed, with
     help recorded on that concept that day), ``independent`` (passed without help). A single miss
-    is left to the failed-check refresh. Empty once the history window no longer reaches day one."""
+    is left to the failed-check refresh. Empty once the history window no longer reaches day one.
+    ``tutored``: concepts the learner asked the tutor about that day, which count as help."""
     if not history or len(history) >= SESSION_ONE_WINDOW or "at" not in history[0]:
         return {}
     day_one = [x for x in history if x["at"] < history[0]["at"] + DAY]
@@ -178,7 +179,7 @@ def session_one(history: list[dict]) -> dict[str, str]:
         ):
             out[concept] = "difficulty"
         elif checks[-1]["score"] >= CHECK_PASS:
-            helped = any(x.get("assistance", 0) > 0 for x in own)
+            helped = concept in tutored or any(x.get("assistance", 0) > 0 for x in own)
             out[concept] = "helped" if helped else "independent"
     return out
 
@@ -371,6 +372,7 @@ def build_plan(
     locks: bool = True,
     strict: bool = False,
     computed: bool = False,
+    tutored: set[str] | frozenset = frozenset(),
 ) -> Plan:
     """``locks`` is False when the learner chose a mode that keeps every module open;
     checkpoints are still planned, they just stop holding later modules shut. ``strict``: a
@@ -484,7 +486,8 @@ def build_plan(
     confirms: list[Activity] = []
     frontier_end: int | None = None
     # Session-one adaptation, for an enrollment that asked for it (a Lesson 0 course).
-    first_day = session_one(history) if adaptive.goal.get("adapt_first_session") else {}
+    first_day = session_one(history, tutored) if adaptive.goal.get("adapt_first_session") else {}
+    bridged = False  # after session one, at most one bridge proposal (lesson0 plan 4.E)
     stretches: list[Activity] = []  # wait for the next concept's work, then follow it
     for qualified in path:
         state = states.get(qualified, ConceptState())
@@ -603,6 +606,10 @@ def build_plan(
             if (state.failures >= 1 and state.mean < 0.5) or stuck is not None:
                 if weak:
                     needs_repair[qualified] = weak
+            elif after == "difficulty" and weak and not bridged:
+                # Offered, not done: the learner accepts a refresher or a bridge lesson.
+                needs_repair[qualified] = weak
+                bridged = True
             for weak_concept, for_concept in sorted(repairs):
                 if for_concept == qualified and f"remedial:{weak_concept}" not in completed:
                     queue.append(

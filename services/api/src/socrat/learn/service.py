@@ -504,8 +504,32 @@ def build_for(
         locks=mode_policy(db, enrollment).locks_modules,
         strict=session_budget(enrollment) <= STRICT_MINUTES,
         computed=bool((enrollment.goal or {}).get("session_minutes")),
+        tutored=first_day_tutored(db, enrollment, history_for(db, enrollment)),
     )
     return plan, adaptive
+
+
+def first_day_tutored(db: Session, enrollment: Enrollment, history: list[dict]) -> set[str]:
+    """Concepts the learner asked the tutor about on their first study day; empty unless the
+    enrollment adapts after session one."""
+    if not (enrollment.goal or {}).get("adapt_first_session") or not history:
+        return set()
+    if "at" not in history[0]:
+        return set()
+    from socrat import learner
+
+    start = history[0]["at"]
+    return learner.tutored_concepts(db, enrollment.user_id, start, start + mastery.DAY)
+
+
+def session_one_for(db: Session, enrollment: Enrollment) -> dict[str, str]:
+    """``planner.engine.session_one`` for this enrollment, or {} when it does not adapt."""
+    if not (enrollment.goal or {}).get("adapt_first_session"):
+        return {}
+    from socrat.planner.engine import session_one
+
+    history = history_for(db, enrollment)
+    return session_one(history, first_day_tutored(db, enrollment, history))
 
 
 STRICT_MINUTES = 10  # at or under this, a day holds only what fits (plus its first item)
