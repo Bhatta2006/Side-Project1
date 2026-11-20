@@ -157,11 +157,14 @@ existing ones.
 | `waiting` | no saved plan yet | keep the skeleton / loading |
 | `roadmap_ready` | plan saved; the first lesson is being written | show the plan; Start can wait or show "your first lesson is being written" |
 | `first_lesson_ready` | the learner's first lesson is written | enable "Start learning" |
-| `first_lesson_failed` | its last job failed, died or was cancelled; `retry: true` | offer a retry (`POST /learning-requests/{id}/regenerate`) |
+| `first_lesson_failed` | its last job failed, died or was cancelled; `retry: true` | offer a retry (`POST /learning-requests/{id}/concepts/{start.concept}/regenerate`) |
 
 `concept` is the first activity's concept id (the start level's start concept, else the first in
 course order); `minutes` is the request's minutes per day. A course the brain served is
-`first_lesson_ready` at once. The web page is not changed yet: that is onboarding's call. Tests:
+`first_lesson_ready` at once. **Wired 2026-11-20 (owner asked generation to do it):** `/start` keeps
+polling until the first lesson is ready or failed, shows "Your first lesson is being written" meanwhile, enables
+Start learning only at `first_lesson_ready` (or when an older server sends no `start`), offers Try again at
+`first_lesson_failed`, and after publish offers `level_suggestion` (Start there / Start from the beginning). Tests:
 `services/api/tests/test_start_state.py`.
 
 **`level_suggestion` (generation, 2026-11-20; nothing above changed).** `null`, or `{level, start, reason}`

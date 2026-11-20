@@ -48,7 +48,12 @@ type Plan = {
   job: { state: string } | null;
   skeleton: { title: string; modules: { title: string; lessons: string[] }[] } | null;
   blueprint: { title: string; tagline: string; modules: { id: string; title: string; concepts: { id: string; title: string }[] }[] } | null;
+  // When the learner can start (onboarding-handoff.md 3.3): their first lesson is written.
+  start?: { state: 'waiting' | 'roadmap_ready' | 'first_lesson_ready' | 'first_lesson_failed'; concept: string | null; retry: boolean };
+  // A later level Lesson 0 suggests once the course is published; only ever an offer.
+  level_suggestion?: { level: string; start: string; reason: string } | null;
 };
+const SETTLED = new Set(['first_lesson_ready', 'first_lesson_failed']);
 type Step = 'goal' | 'mode' | 'door' | 'time' | 'win' | 'snag' | 'reveal' | 'save' | 'plan';
 
 const STEPS: Step[] = ['goal', 'mode', 'door', 'time', 'win', 'snag', 'reveal', 'save'];
@@ -95,6 +100,7 @@ export default function Start() {
   const [result, setResult] = useState<Result | null>(null);
   const [note, setNote] = useState('');
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [offer, setOffer] = useState<Plan | null>(null);
   const [birthYear, setBirthYear] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -217,18 +223,33 @@ export default function Start() {
     let alive = true;
     const look = () => api.get<Plan>(`/learning-requests/${draft.request_id}`).then(p => { if (alive) setPlan(p); }).catch(() => undefined);
     void look();
-    const timer = setInterval(() => { if (!plan?.blueprint) void look(); }, 2500);
+    // Until the first lesson is written (or its writing failed), not just until the plan exists.
+    const settled = !!plan?.start && SETTLED.has(plan.start.state);
+    const timer = setInterval(() => { if (!settled) void look(); }, 2500);
     return () => { alive = false; clearInterval(timer); };
-  }, [step, draft?.request_id, plan?.blueprint]);
+  }, [step, draft?.request_id, plan?.start?.state]);
+
+  async function enrol(published: Plan, level?: string) {
+    await api.post('/enrollments', level ? { ...published.enroll, level } : published.enroll);
+    try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
+    await refresh();
+    router.push('/today');
+  }
 
   async function begin() {
     if (!plan) return;
     await act(async () => {
       const published = await api.post<Plan>(`/learning-requests/${plan.id}/publish`, {});
-      await api.post('/enrollments', published.enroll);
-      try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
-      await refresh();
-      router.push('/today');
+      // A later start is only offered; the learner chooses (backlog 2.7).
+      if (published.level_suggestion) setOffer(published);
+      else await enrol(published);
+    });
+  }
+
+  async function retryFirstLesson() {
+    if (!plan?.start?.concept) return;
+    await act(async () => {
+      setPlan(await api.post<Plan>(`/learning-requests/${plan.id}/concepts/${plan.start!.concept}/regenerate`, {}));
     });
   }
 
@@ -421,7 +442,28 @@ export default function Start() {
               ))}
             </ol>
             {plan?.job?.state === 'failed' ? <ErrorNote message="The plan could not be written. Try again in a moment." /> : null}
-            {plan?.blueprint ? <Button size="lg" className="justify-self-start" disabled={busy} aria-busy={busy} onClick={() => void begin()}>Start learning<ArrowCircle loading={busy} /></Button> : null}
+            {plan?.blueprint && plan.start?.state === 'roadmap_ready' ? (
+              <Loading variant="inline" label="Your first lesson is being written" />
+            ) : null}
+            {plan?.start?.state === 'first_lesson_failed' ? (
+              <div className="grid gap-3">
+                <ErrorNote message="Your first lesson could not be written this time." />
+                {plan.start.retry ? <Button variant="outline" className="justify-self-start" disabled={busy} onClick={() => void retryFirstLesson()}>Try again</Button> : null}
+              </div>
+            ) : null}
+            {offer?.level_suggestion ? (
+              <div className="grid gap-3 rounded-[4px] border bg-card p-4" role="group" aria-label="Where to start">
+                <p className="text-sm">{offer.level_suggestion.reason}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={busy} onClick={() => void act(() => enrol(offer, offer.level_suggestion!.level))}>Start there</Button>
+                  <Button variant="outline" disabled={busy} onClick={() => void act(() => enrol(offer))}>Start from the beginning</Button>
+                </div>
+              </div>
+            ) : null}
+            {/* Older servers send no ``start``: the plan alone is enough to begin, as before. */}
+            {plan?.blueprint && !offer && (!plan.start || plan.start.state === 'first_lesson_ready') ? (
+              <Button size="lg" className="justify-self-start" disabled={busy} aria-busy={busy} onClick={() => void begin()}>Start learning<ArrowCircle loading={busy} /></Button>
+            ) : null}
           </div>
         ) : null}
       </div>
