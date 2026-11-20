@@ -134,7 +134,8 @@ Built behind `session_one_adaptation`; tutor turns count as help (owner decision
 - The `review` retrieval reuses the concept's own quiz items; a "new context" item needs generated variants.
 - **Done when:** the three branches of plan 4.E produce the specified next-session items from scripted evidence.
 
-### 2.5 PR 7: benchmark and first-lesson quality gate
+### 2.5 PR 7: benchmark and first-lesson quality gate (done 2026-11-20, partly measured)
+Built: the script, `ms` on the skeleton and critic log entries, and the gate (`jobs.first_lesson_issues`: session fit, door in the first 150 words, an asked-for code language, a keyed check; sent back while rounds remain, waived and logged on the last). Measured: 6 SQL runs (`live-run-log.md` live run 3); the exam and non-programming goals were not run (owner stopped at $4.72). To finish the table, rerun the script with `SOCRAT_ONBOARDING_PER_HOUR=1000` on the API. Not checked by code: one example outside the door. Original item:
 - `scripts/dev/bench_claim_to_today.py`: three goals (SQL, an exam, a non-programming one) x three modes x 10/25
   minutes, run against the real worker; report T1 (roadmap), T2 (first lesson live), outline end, cost by job kind
   from `GenerationJob.log[].at` and `cost_usd`; cross-check with `/api/v1/admin/engine-costs`. Add `ms` to the
@@ -145,7 +146,14 @@ Built behind `session_one_adaptation`; tutor turns count as help (owner decision
 - Targets to measure against (proposals, not facts): roadmap <= 60 s, first lesson <= 150 s, outline <= $0.25, first
   lesson <= $0.15. Append results to `live-run-log.md`.
 
-### 2.6 The acceptance test, claim -> Today
+### 2.6 The acceptance test, claim -> Today (done 2026-11-20)
+`services/api/tests/test_claim_to_today.py`: two learners through the real routes (onboarding, claim, the
+outline and package jobs, publish, enrol, `/today`) with one scripted model that writes only from what its
+prompts carry. Learner A (door "Split trip expenses", snag missed once) gets the door and the gap in the
+author's `<learner>` block, a lesson that opens with the door, a probe item, `session_minutes` at enrolment and
+Today's `next` on that lesson; learner B (another door, no miss) gets the other door and no probe, and the rest
+of the lesson is identical. Not covered: the concept route's view of the probe (checked on the catalog).
+Original item:
 One test (plan section 8): a single learner answer (a door or a gap) traced through claim -> outline (scripted) ->
 first lesson prompt (as quoted data) -> released lesson (door intro, probe item) -> publish -> enrol with
 `session_minutes` -> `/today` `next` is the first lesson -> the concept returns the probe. Changing the answer
@@ -157,6 +165,7 @@ the profile's `calibration` to choose the start level (code, not a model), and n
 Lesson 0 alone. **Where:** `coursegen/requests.view` (`enroll.level`), `learner_plan.py`. Coordinate with onboarding.
 
 ### 2.8 PR 8 (optional): SQL checker
+Stopgap since 2026-11-20 (owner decision): a code course accepts ```` ```sql ```` blocks for display (`package._common_lesson_checks`); nothing runs them.
 A `harness/` capability on stdlib `sqlite3` so a "write the query" exercise is graded by running the learner's
 query and the reference on a fixture table. Until then SQL practice is predict-the-result items with a key.
 **Where:** `harness/`, `coursegen/exercise.py`, `catalog/schema.py` (`Language` or a `grader` field).
