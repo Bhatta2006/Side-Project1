@@ -1,7 +1,8 @@
 """Adaptive roadmap API: Socrat proposes, the learner decides, and the plan follows."""
 
 import math
-from datetime import date, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -196,7 +197,10 @@ def test_falling_behind_a_deadline_offers_choices_and_one_choice_retires_the_res
     remaining = client.get("/api/v1/plan").json()["remaining_minutes"]
     with Session(client.app.state.engine) as db, db.begin():
         enrollment(db).weekdays = [0, 2, 4]  # three days a week leaves room to add more
-    target = date.today() + timedelta(days=math.ceil(remaining / 300 * 7))
+    # The plan counts days in the learner's zone (onboard: Asia/Kolkata), not the machine's:
+    # on a UTC runner after 18:30 the two dates differ and the deadline would be a day off.
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    target = today + timedelta(days=math.ceil(remaining / 300 * 7))
     response = client.patch(
         "/api/v1/enrollments/current", json={"target_date": target.isoformat()}, headers=headers
     )

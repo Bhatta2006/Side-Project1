@@ -1,21 +1,20 @@
 """Content review queue: validate, request changes, approve into the course."""
 
-import shutil
 from pathlib import Path
 
+import content_fixture
 import yaml
 from test_learner_api import client, login  # noqa: F401  (client is a fixture)
 from test_validate import problem
 
-from socrat.catalog.registry import CONTENT_ROOT
-
 
 def setup(client, tmp_path: Path) -> tuple[dict, Path, Path]:  # noqa: F811
+    # The synthetic packs (basics, algo): no course ships with the app any more.
     courses = tmp_path / "courses"
-    shutil.copytree(CONTENT_ROOT, courses)
+    content_fixture.write(courses, tmp_path / "tests")
     drafts = tmp_path / "drafts" / "basics"
     drafts.mkdir(parents=True)
-    draft = problem(id="triangle-total", concepts=["for-loops"])
+    draft = problem(id="triangle-total", concepts=["loops"])
     (drafts / "triangle-total.yaml").write_text(
         yaml.safe_dump(draft, sort_keys=False), encoding="utf-8"
     )
@@ -35,7 +34,7 @@ def test_only_admins_see_the_queue(client, tmp_path):  # noqa: F811
 def test_failing_gates_block_approval(client, tmp_path):  # noqa: F811
     headers, _, drafts = setup(client, tmp_path)
     path = drafts / "triangle-total.yaml"
-    broken = problem(id="triangle-total", concepts=["for-loops"], brute="print(0)")
+    broken = problem(id="triangle-total", concepts=["loops"], brute="print(0)")
     path.write_text(yaml.safe_dump(broken, sort_keys=False), encoding="utf-8")
     checked = client.post("/api/v1/admin/drafts/triangle-total/validate", headers=headers).json()
     assert checked["status"] == "failing"
