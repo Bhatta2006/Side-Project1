@@ -34,7 +34,8 @@ Remove a line only when the check it names has run.
 | Area | Not verified | To close it |
 |---|---|---|
 | Admin "Course brain" tab (3.7) | Typechecked only; never opened in a browser | open `/admin` -> Course brain as an admin |
-| `/start` page | Does not read `view.start` or `view.level_suggestion` yet (onboarding's page) | onboarding wires them; a browser pass |
+| `/start` page | Wired to `view.start` and `level_suggestion` (2026-11-20); typechecked, never driven in a browser (Lesson 0 needs a model, the e2e server has none) | a browser pass against a live or scripted model |
+| Staging | The four main-path flags are on in the compose file; no AI provider or key is configured there | add `SOCRAT_AI_PROVIDER` and its key as staging secrets, then one learner through `/start` |
 | E2E and visual specs | Still onboard into removed courses; red | re-seed with a generated course (backlog 5) |
 
 ## Known red tests (not caused by this work)

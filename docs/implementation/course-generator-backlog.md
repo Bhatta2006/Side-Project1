@@ -17,6 +17,23 @@ explain, code verifies; say what is not verified; stage specific paths only; nev
 Run tests from the repo root:
 `uv run --project services/api pytest services/api/tests/<file> -q --basetemp .cache/pt/<dir> -p no:cacheprovider`.
 
+## Owner decisions, 2026-11-20 (read first)
+
+**Focus: the main path only** (Lesson 0 -> plan -> first lesson -> Today -> lessons and checks), so anyone can learn.
+
+- **Keep:** the Lesson 0 -> generation pipeline (section 2), the `/start` page (wired, see `onboarding-handoff.md` 3.3),
+  the e2e specs, a reduced benchmark of the main goals, first-lesson cost (accepted at ~$0.30 for now).
+- **Halted** (built ones stay in the code, flags off): the course brain (section 3, incl. 3.8), module exams, review
+  variants and outline tags (4.1-4.3), the SQL checker (2.8), the learner profile screen, the section 6 leftovers
+  (rewrite on share, cross-course mastery), the brain concurrency test and benchmark.
+- **Dropped:** item 2.9 (extra constraint kinds, the stylist reading the raw request, Lesson 0 lesson pages).
+- **2.4:** after a hard first session, tutor hints come sooner (as built).
+- **1.3:** the staging and production compose files fix `SOCRAT_ENVIRONMENT` to `staging` / `production`, so the
+  config refuses `SOCRAT_GEN_RELAXED_GATES` there; only a deployment outside these files needs checking.
+- **Staging:** `gen_learner_plan`, `gen_learner_brief`, `gen_waiting_learner`, `session_one_adaptation` on by default
+  in `infra/runtime/staging/compose.yaml`. Staging still needs `SOCRAT_AI_PROVIDER` and its key as secrets before
+  any course can be generated there (not in the compose file today).
+
 ---
 
 ## 0. Where it stands

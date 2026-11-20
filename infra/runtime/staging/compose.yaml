@@ -77,6 +77,12 @@ services:
       SOCRAT_DASHBOARD_ENABLED: "${SOCRAT_DASHBOARD_ENABLED:-false}"
       SOCRAT_REMINDERS_ENABLED: "${SOCRAT_REMINDERS_ENABLED:-false}"
       SOCRAT_TUTOR_ENABLED: "${SOCRAT_TUTOR_ENABLED:-false}"
+      # Lesson 0 -> a course fitted to its learner (course-generator-backlog.md section 8, owner
+      # approved for staging 2026-11-20). Generation also needs SOCRAT_AI_PROVIDER and its key.
+      SOCRAT_GEN_LEARNER_PLAN: "${SOCRAT_GEN_LEARNER_PLAN:-true}"
+      SOCRAT_GEN_LEARNER_BRIEF: "${SOCRAT_GEN_LEARNER_BRIEF:-true}"
+      SOCRAT_GEN_WAITING_LEARNER: "${SOCRAT_GEN_WAITING_LEARNER:-true}"
+      SOCRAT_SESSION_ONE_ADAPTATION: "${SOCRAT_SESSION_ONE_ADAPTATION:-true}"
       SOCRAT_TUTOR_MODEL_ENABLED: "false"
       SOCRAT_TUTOR_ADVISOR_SHADOW_ENABLED: "false"
       SOCRAT_EXECUTION_ENABLED: "false"
