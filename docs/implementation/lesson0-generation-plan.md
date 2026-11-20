@@ -43,7 +43,18 @@ Deviations from the text below: no `Constraint` kinds `format`, `syllabus`, `oth
 because `private_owner` decides it at write time. A probe miss does not yet enqueue the `example` support
 activity (PR 6). Not run against a live model.
 
-Still to build, in order: PR 2 (roadmap first, lazy detail), PR 3 (readiness field), PR 4 (true time budget),
+**PR 2 (roadmap first, lazy detail), partly built** (same flag, since it applies only to a brief with a
+plan; tests `services/api/tests/test_roadmap.py`): the architect is told the mode's caps (Sprint 4 modules /
+12 concepts, Builder 6 / 18, Explorer 8 / 24) and code rejects a roadmap over them (`roadmap_issues`); only
+module 1 is detailed in the outline job; `to_course` keeps an undetailed concept as `planned` with
+`outline=None`; `jobs.detail_if_missing` details the concept (and up to three more undetailed concepts of its
+module, one DETAILER call, one retry) at the start of its package job and stores them; a concept that cannot be
+detailed fails the package job (normal retry). A published roadmap enrols and serves Today, progress and the
+course list; an undetailed concept is locked, never an error. Not built from PR 2: `outcome_spec` and
+`gap_map` in the architect reply, the critic running without blocking the learner (a `revise` still redoes the
+outline as for admin briefs), and starting the first lesson in parallel with the critic.
+
+Still to build, in order: the rest of PR 2 (above), PR 3 (readiness field), PR 4 (true time budget),
 PR 5 (retry safety), PR 6 (session-one adaptation, including the probe miss), PR 7 (benchmark and gate),
 PR 8 (optional SQL checker).
 

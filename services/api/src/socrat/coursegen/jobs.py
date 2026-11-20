@@ -61,6 +61,7 @@ from socrat.coursegen.outline import (
     from_course,
     merge_details,
     needs_detail,
+    roadmap_issues,
     skeleton_of,
     tidy,
     titles,
@@ -398,8 +399,11 @@ async def run_outline(
         early: roles.Reply | None = (
             None  # the critic's review of the skeleton, run while the details are written
         )
-        if needs_detail(outline):
-            work: list[Any] = [_detail(engine, settings, brief, outline, issues, make)]
+        lazy = brief.plan is not None  # a learner's roadmap: module 1 now, the rest later
+        if needs_detail(outline, first_only=lazy):
+            work: list[Any] = [
+                _detail(engine, settings, brief, outline, issues, make, first_only=lazy)
+            ]
             if reviews < max(1, settings.gen_outline_reviews):
                 reviews += 1
                 work.append(
@@ -434,7 +438,8 @@ async def run_outline(
                 generated.extend(
                     base, [*(c for c in generated.courses(db) if c.id != brief.id), course]
                 )
-            if found_graph := graph_issues(course, adapter):
+            found_graph = [*graph_issues(course, adapter), *roadmap_issues(brief, outline)]
+            if found_graph:
                 raise ValueError("; ".join(found_graph))
         except (ValueError, CatalogError) as exc:
             issues = [f"The outline failed validation: {exc}"]
@@ -558,7 +563,13 @@ def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, lis
 
 
 async def _detail(
-    engine: Engine, settings: Settings, brief: Brief, outline: dict, issues: list[str], make
+    engine: Engine,
+    settings: Settings,
+    brief: Brief,
+    outline: dict,
+    issues: list[str],
+    make,
+    first_only: bool = False,
 ) -> tuple[list[str], float]:
     """Writes every concept's details into ``outline``, a few concepts per call and all calls in
     parallel, so the slowest call stays short; a chunk whose reply is unusable is asked once
@@ -585,9 +596,10 @@ async def _detail(
         return missing, cost
 
     # A malformed module is left alone here: to_course rejects it with a readable reason.
+    modules = outline.get("modules", [])
     chunks = [
         (m["id"], ids[i : i + DETAIL_CHUNK])
-        for m in outline.get("modules", [])
+        for m in (modules[:1] if first_only else modules)
         if isinstance(m, dict)
         and isinstance(m.get("id"), str)
         and isinstance(m.get("concepts"), list)
@@ -731,6 +743,88 @@ def _job_cost(engine: Engine, job_id: str) -> float:
         return need(db.get(GenerationJob, job_id)).cost_usd
 
 
+async def detail_if_missing(
+    engine: Engine,
+    settings: Settings,
+    base: Catalog,
+    job_id: str,
+    brief: Brief,
+    course,
+    concept_id: str,
+    make,
+):
+    """A learner's roadmap details module 1 only; a later concept gets its details here, just
+    before its first lesson is written (lesson0-generation-plan.md 5.2). The concept and the
+    other undetailed concepts of its module, up to ``DETAIL_CHUNK``, in one DETAILER call (one
+    retry for the ones left out). Returns the course as stored afterwards. A concept that still
+    has no details is a normal package failure (retry, regenerate)."""
+    from socrat.catalog.schema import Concept
+
+    concept = next((c for c in course.concepts if c.id == concept_id), None)
+    if concept is None or concept.outline is not None or concept.status != "planned":
+        return course
+    by_id = {c.id: c for c in course.concepts}
+    module = next(m for m in course.modules if concept_id in m.concepts)
+    ids = [concept_id] + [
+        cid
+        for cid in module.concepts
+        if cid != concept_id and by_id[cid].outline is None and by_id[cid].status == "planned"
+    ]
+    ids = ids[:DETAIL_CHUNK]
+    skeleton = from_course(course)
+    missing, cost = ids, 0.0
+    for _ in range(2):
+        reply = await roles.ask(
+            engine,
+            settings,
+            "architect",
+            DETAILER,
+            detail_prompt(brief, skeleton, module.id, missing),
+            8000,
+            make,
+        )
+        cost += reply.cost_usd
+        missing = merge_details(skeleton, missing, reply.data or {})
+        if not missing:
+            break
+    written = {
+        c["id"]: c
+        for m in skeleton["modules"]
+        for c in m["concepts"]
+        if c["id"] in ids and c["id"] not in missing
+    }
+    done = []
+    with Session(engine) as db, db.begin():
+        for cid, c in written.items():
+            planned = by_id[cid]
+            outline = {
+                "depth": c.get("depth", "practitioner"),
+                "objectives": c["objectives"],
+                "misconceptions": c.get("misconceptions", []),
+                "assessment": c["assessment"],
+                **{
+                    k: c[k]
+                    for k in ("category", "related", "evidence", "expected", "practice")
+                    if k in c
+                },
+            }
+            try:
+                updated = Concept.model_validate(
+                    {**planned.model_dump(mode="json"), "outline": outline}
+                )
+                generated.store_concept(
+                    db, base, course.id, updated, None, reason="detail", job_id=job_id
+                )
+                done.append(cid)
+            except (ValueError, CatalogError) as exc:
+                log.warning("details for %s:%s rejected: %s", course.id, cid, exc)
+        stored = need(generated.course(db, course.id))
+    _note(engine, job_id, {"role": "architect", "event": "detailed", "concepts": done}, cost)
+    if concept_id not in done:
+        raise ValueError(f"no details could be written for {course.id}:{concept_id}")
+    return stored
+
+
 async def run_package(
     engine: Engine,
     settings: Settings,
@@ -754,6 +848,9 @@ async def run_package(
             if pending and now() - job.created_at < UNIT_WAIT_SECONDS:
                 _defer(engine, job_id, pending)
                 return
+    course = await detail_if_missing(
+        engine, settings, base, job_id, brief, course, concept_id, make
+    )
     concept = next((c for c in course.concepts if c.id == concept_id), None)
     if concept is None or concept.status != "planned":
         if data.get("trigger") == "first":

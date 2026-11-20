@@ -66,6 +66,25 @@ class Brief(BaseModel):
 
 def to_course(brief: Brief, outline: dict) -> Course:
     """Raises ValueError with a readable reason when the outline breaks the schema."""
+    # A learner's roadmap (Brief.plan) details its first module only; a concept without
+    # details stays planned with no outline until ``jobs.detail_if_missing`` writes it.
+    lazy = brief.plan is not None
+
+    def details(c: dict) -> dict | None:
+        if lazy and not (c.get("objectives") and c.get("assessment")):
+            return None
+        return {
+            "depth": c.get("depth", "practitioner"),
+            "objectives": c["objectives"],
+            "misconceptions": c.get("misconceptions", []),
+            "assessment": c["assessment"],
+            **{
+                k: c[k]
+                for k in ("category", "related", "evidence", "expected", "practice")
+                if k in c
+            },
+        }
+
     try:
         modules = outline["modules"]
         concepts = [
@@ -78,17 +97,7 @@ def to_course(brief: Brief, outline: dict) -> Course:
                 "difficulty": c["difficulty"],
                 "estimated_minutes": c["estimated_minutes"],
                 "status": "planned",
-                "outline": {
-                    "depth": c.get("depth", "practitioner"),
-                    "objectives": c["objectives"],
-                    "misconceptions": c.get("misconceptions", []),
-                    "assessment": c["assessment"],
-                    **{
-                        k: c[k]
-                        for k in ("category", "related", "evidence", "expected", "practice")
-                        if k in c
-                    },
-                },
+                "outline": details(c),
             }
             for m in modules
             for c in m["concepts"]
@@ -342,6 +351,46 @@ def brief_text(brief: Brief) -> str:
     return f"{head}\n\nBuild the course around this material:\n{notes}" if notes else head
 
 
+# A learner's course is a roadmap sized by their Lesson 0 mode, not a full syllabus
+# (lesson0-generation-plan.md 4.B): (modules, concepts) at most. Beyond is a later expansion.
+CAPS = {"sprint": (4, 12), "builder": (6, 18), "explorer": (8, 24)}
+
+
+def caps(brief: Brief) -> tuple[int, int] | None:
+    if brief.plan is None:
+        return None
+    return CAPS.get(brief.plan.mode or "builder", CAPS["builder"])
+
+
+def roadmap_rules(brief: Brief) -> str:
+    top = caps(brief)
+    if top is None:
+        return ""
+    return (
+        f"Roadmap for one learner: at most {top[0]} modules and {top[1]} concepts in all, "
+        "whatever the rule above says about full courses; anything more is a later expansion, "
+        "listed under assumptions. Each module has a clear purpose and its summary names the "
+        "observable milestone it ends with. Give every concept its title, summary, "
+        "prerequisites, difficulty and minutes; its details are written separately, the first "
+        "module's now and the rest just before the learner reaches them."
+    )
+
+
+def roadmap_issues(brief: Brief, outline: dict) -> list[str]:
+    """The size caps a learner's roadmap must keep (code, not the critic)."""
+    top = caps(brief)
+    if top is None:
+        return []
+    modules = [m for m in outline.get("modules", []) if isinstance(m, dict)]
+    concepts = sum(len(m.get("concepts") or []) for m in modules)
+    found = []
+    if len(modules) > top[0]:
+        found.append(f"{len(modules)} modules; this learner's roadmap has at most {top[0]}")
+    if concepts > top[1]:
+        found.append(f"{concepts} concepts; this learner's roadmap has at most {top[1]}")
+    return found
+
+
 def architect_prompt(
     brief: Brief,
     catalog: Catalog,
@@ -350,6 +399,8 @@ def architect_prompt(
 ) -> str:
     parts = [brief_text(brief), *([styles.block(brief.style)] if brief.style else [])]
     parts.append(GRANULARITY)
+    if rules := roadmap_rules(brief):
+        parts.append(rules)
     if previous is not None:
         parts.append("Your previous outline:\n" + json.dumps(previous, indent=1))
     if issues:
@@ -369,10 +420,12 @@ def critic_prompt(brief: Brief, outline: dict) -> str:
     )
 
 
-def needs_detail(outline: dict) -> bool:
+def needs_detail(outline: dict, first_only: bool = False) -> bool:
     """True when the architect planned the skeleton only (the usual case); an outline that
-    already carries every concept's objectives and assessment is used as it is."""
-    concepts = [c for m in outline.get("modules", []) for c in m.get("concepts", [])]
+    already carries every concept's objectives and assessment is used as it is. ``first_only``:
+    a learner's roadmap, where only the first module is detailed now."""
+    modules = outline.get("modules", [])
+    concepts = [c for m in (modules[:1] if first_only else modules) for c in m.get("concepts", [])]
     return any(not (c.get("objectives") and c.get("assessment")) for c in concepts)
 
 
