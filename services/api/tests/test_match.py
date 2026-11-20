@@ -93,7 +93,10 @@ def test_a_private_course_is_never_matched_and_a_shared_one_can_be_started(on):
     assert on.post(f"{URL}/{wish['id']}/confirm", json={}, headers=bob).json()["status"] == (
         "matched"
     )
-    assert on.post(f"{URL}/{wish['id']}/publish", headers=bob).status_code == 404
+    # Publishing a matched request (the plan screen always does) is a no-op: Ada's course is
+    # already published and Bob gets the same view back.
+    again = on.post(f"{URL}/{wish['id']}/publish", headers=bob)
+    assert again.status_code == 200 and again.json()["status"] == "matched"
     with Session(on.app.state.engine) as db:
         assert len(db.scalars(select(GenerationJob)).all()) == jobs_before  # nothing generated
         row = db.get(LearningRequest, wish["id"])

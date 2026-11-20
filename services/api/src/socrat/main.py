@@ -28,6 +28,7 @@ from socrat.catalog import generated
 from socrat.catalog.registry import default_catalog
 from socrat.config import Settings
 from socrat.coursegen import jobs as coursegen_jobs
+from socrat.coursegen.brain.routes import router as brain_router
 from socrat.coursegen.cost_routes import router as engine_costs_router
 from socrat.coursegen.diagnostic_routes import router as diagnostic_router
 from socrat.coursegen.maintain_routes import router as maintenance_router
@@ -53,6 +54,7 @@ from socrat.learn.session_routes import router as session_router
 from socrat.learn.streak_routes import router as streak_router
 from socrat.learn.tasks import admin as tasks_admin
 from socrat.learn.tasks import router as tasks_router
+from socrat.learner_profile import router as learner_profile_router
 from socrat.localize.routes import admin as locale_admin
 from socrat.localize.routes import public as locale_public
 from socrat.mentor.routes import router as mentor_router
@@ -133,6 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(session_router)
     app.include_router(assessments_router)
     app.include_router(admin_router)
+    app.include_router(brain_router)
     app.include_router(coursegen_router)
     app.include_router(learning_requests_router)
     app.include_router(engine_router)
@@ -156,6 +159,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sections_router)
     app.include_router(preview_router)
     app.include_router(memory_router)
+    app.include_router(learner_profile_router)
     app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)

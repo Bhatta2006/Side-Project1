@@ -19,6 +19,7 @@ import { useSession } from '@/lib/session';
 const CourseBuilder = dynamic(() => import('@/components/course-builder').then(m => m.CourseBuilder), { ssr: false });
 const EngineUpkeep = dynamic(() => import('@/components/engine-upkeep').then(m => m.EngineUpkeep), { ssr: false });
 const StyleLab = dynamic(() => import('@/components/style-lab').then(m => m.StyleLab), { ssr: false });
+const BrainAdmin = dynamic(() => import('@/components/brain-admin').then(m => m.BrainAdmin), { ssr: false });
 
 interface Overview {
   funnel: { step: string; learners: number; share: number }[];
@@ -215,12 +216,14 @@ export default function Admin() {
           <TabsTrigger value="courses">Courses</TabsTrigger>
           <TabsTrigger value="styles">Learning styles</TabsTrigger>
           <TabsTrigger value="upkeep">Upkeep</TabsTrigger>
+          <TabsTrigger value="brain">Course brain</TabsTrigger>
         </TabsList>
         <TabsContent value="users"><AdminUsers /></TabsContent>
         <TabsContent value="review"><ReviewQueue /></TabsContent>
         <TabsContent value="courses"><CourseBuilder /></TabsContent>
         <TabsContent value="styles"><StyleLab /></TabsContent>
         <TabsContent value="upkeep"><EngineUpkeep /></TabsContent>
+        <TabsContent value="brain"><BrainAdmin /></TabsContent>
         <TabsContent value="metrics">
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

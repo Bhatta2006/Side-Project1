@@ -259,6 +259,19 @@ class Settings(DatabaseSettings):
     # take (their own, and ones other learners chose to share); a fit is offered to start at
     # once instead of building again. Private courses are never compared. Off: always build.
     request_matching: bool = False
+    # The course brain (coursegen/brain): a confirmed request is placed under a subject root and
+    # served an existing course whose hard requirements match it, instead of generating again.
+    # Off: every request builds its own course, exactly as before.
+    course_brain: bool = False
+    # With course_brain off: still decide and record each request's match ("shadow" rows in
+    # course_matches: what would have been served) without changing anything (backlog 3.1).
+    course_brain_shadow: bool = False
+    # The scoper (backlog 3.5): a top-level unit's research also splits its topic into 2-5
+    # units, each researched once, and later courses are built from all of them. Off: one unit.
+    brain_scoper: bool = False
+    # The worker queues research for units past their refresh date (backlog 3.6), at most
+    # this often; 0 turns the sweep off (a stale unit is then refreshed only when needed).
+    brain_refresh_sweep_seconds: int = Field(default=0, ge=0, le=7 * 24 * 3600)
     # Per learner, per process (see limits.py); 0 turns a limit off.
     simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
     diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)
@@ -339,6 +352,32 @@ class Settings(DatabaseSettings):
     # A learner's first lesson takes the search's best-ranked sources as they are, without the
     # researcher's model call: one step fewer before the author starts. Links are still checked.
     gen_fast_first_lesson: bool = False
+    # Lessons of a course private to its owner are fitted to that learner: generation's hook
+    # (coursegen/brain/learner.py) adds the learner brief (socrat.learner,
+    # docs/implementation/learner-memory.md). A shared course is never fitted to one learner.
+    gen_learner_brief: bool = False
+    # Lesson 0 reaches the course (docs/implementation/lesson0-generation-plan.md): the outline
+    # job reads the onboarding profile once into Brief.plan (the learner's words verbatim, the
+    # asks code recognises, their door and calibration); a private course is planned and
+    # written with it, explicit asks are enforced on the style, and a matched Lesson 0 gap gets
+    # one probe quiz item. Shared courses never carry a plan.
+    gen_learner_plan: bool = False
+    # A learner waiting on a job (an outline, their first lesson) is not left behind a crash
+    # or a queue of background lessons (lesson0-generation-plan.md 5.2, PR 5): such jobs beat
+    # a heartbeat and are re-claimed after STALE_SECONDS_WAITING instead of an hour; a second
+    # worker slot takes only them; an outline job resumes from its last valid outline instead
+    # of paying the architect again.
+    gen_waiting_learner: bool = False
+    # After session one of a Lesson 0 course (lesson0-generation-plan.md 4.E, PR 6): a missed
+    # probe or a second missed check puts a worked example first; success with help adds a short
+    # retrieval; independent success adds one stretch item after the next concept. Stamped on
+    # the enrollment's goal at enrolment (``adapt_first_session``), so turning it off later
+    # leaves existing enrollments as they were. Off: nothing changes.
+    session_one_adaptation: bool = False
+    # The learner's own preferences across courses (socrat.learner_profile): seeded from Lesson 0
+    # at claim, readable and editable at /api/v1/learner/profile with an undo log, and the tutor
+    # may suggest a change the learner accepts or declines. Off: nothing is stored or shown.
+    learner_profile: bool = False
     # The learner may read their first lesson's draft once it has passed the lesson gates,
     # labelled as still being checked, while its quiz is written and the fact check and review
     # run. Read-only: nothing is marked done from a draft. Never for a course with safety
@@ -364,6 +403,18 @@ class Settings(DatabaseSettings):
     # The worker touches this file every loop; `python -m socrat.worker --check` fails when stale.
     worker_heartbeat_file: str = ""
     gen_timeout_seconds: float = Field(default=600, ge=30, le=3600)
+    # One model call in a job a learner waits on (gen_waiting_learner) may take this long; past
+    # it the call fails and the job retries (backlog 7).
+    gen_waiting_timeout_seconds: float = Field(default=120, ge=10, le=3600)
+    # After a lesson is released, write parallel review items for it (backlog 4.2): reviews
+    # then ask the same skill in a new context instead of repeating the check. Off by default.
+    gen_review_variants: bool = False
+    # When a module's last lesson is released, write its exam (backlog 4.1): harder, mixed and
+    # transfer items its checkpoint draws on. Off by default.
+    gen_module_exams: bool = False
+    # A lesson written without root units tags its quiz options with the concept outline's own
+    # misconceptions (backlog 4.3), so a wrong answer is recorded as that belief. Off by default.
+    gen_outline_tags: bool = False
     # Critic reviews per outline job. Each "revise" costs a full new outline round; with 1, the
     # outline revised after the first review is kept without a second review. 0: the critic
     # still reviews (logged for the owner and the learner) but never asks for a rewrite, so the

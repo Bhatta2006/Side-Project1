@@ -5,6 +5,7 @@ so the reply is parsed and schema-checked here, and a malformed reply becomes fe
 the next round instead of a crash.
 """
 
+import contextvars
 import hashlib
 import json
 import re
@@ -36,12 +37,14 @@ ROLES = {
     "grader",  # learners' free-text answers and project milestones
     "stylist",  # a free-text learning wish -> a style spec
     "researcher",  # finds open, public sources for a concept
+    "extractor",  # sources -> a root unit's reusable material (coursegen/brain/researcher.py)
     "diagnostic",  # a short placement quiz for a learner's own course
     "experience",  # picks registered visuals/labs for a lesson (never writes code)
     "intent",  # a learner's free-text request -> a structured intent
     "onboarding",  # Lesson 0: starter scenarios and a two-step calibration
     "translator",  # lesson text -> another language, under placeholder and glossary checks
     "weekly",  # hard, execution-verified weekly exam questions
+    "scoper",  # a topic -> the units a course on it needs (coursegen/brain/scoper.py)
 }
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {
@@ -71,6 +74,10 @@ ROLE_EFFORT = {
 # rules reading) instead of holding a visitor for the generation timeout. A live Vertex run
 # saw one doors call take 62 s.
 ROLE_TIMEOUT = {"onboarding": 25.0, "intent": 30.0}
+# Set by the worker while it runs a job a learner is waiting on (``gen_waiting_learner``): every
+# call in it is cut at ``gen_waiting_timeout_seconds`` and the job retries, instead of one call
+# holding the learner up to the generation timeout (a live run saw a 567 s call).
+WAITING: contextvars.ContextVar[bool] = contextvars.ContextVar("waiting", default=False)
 
 
 # Model tiers: a strong model where judgement decides the result, a fast cheap one where
@@ -88,6 +95,7 @@ ROLE_TIER = {
     "reviewer": "strong",
     # Reading and sorting, not reasoning.
     "researcher": "fast",
+    "scoper": "fast",
     "stylist": "fast",
     "intent": "fast",
     "onboarding": "fast",  # a visitor is waiting on it
@@ -126,6 +134,10 @@ def role_settings(settings: Settings, role: str, escalate: bool = False) -> Sett
         "ai_effort": ROLE_EFFORT.get(role, DEFAULT_EFFORT),
         "ai_timeout_seconds": ROLE_TIMEOUT.get(role, settings.gen_timeout_seconds),
     }
+    if WAITING.get():
+        update["ai_timeout_seconds"] = min(
+            update["ai_timeout_seconds"], settings.gen_waiting_timeout_seconds
+        )
     tier = tier_of(role, escalate)
     strong = "strong" in settings.gen_tiers
     if role == "reviser" and role not in settings.gen_roles and not strong:

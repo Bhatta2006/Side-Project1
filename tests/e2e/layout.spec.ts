@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 /** No route may scroll sideways at 320, 390, 768 or 1440 px (reflow, not shrink). */
 const ROUTES = [
   '/today', '/plan', '/assessments', '/playground', '/progress', '/settings',
-  '/learn/zero/programs-and-output', '/quiz/zero/programs-and-output', '/problems/double-it',
+  '/learn/basics/values', '/quiz/basics/values', '/problems/double-it',
 ];
 
 async function enrolled(page: Page) {
@@ -12,7 +12,7 @@ async function enrolled(page: Page) {
   const profile = await (await page.request.get('/api/v1/me')).json();
   const headers = { Origin: origin, 'X-CSRF-Token': profile.csrf_token };
   await page.request.patch('/api/v1/me', { headers, data: { birth_year: 2000, timezone: 'UTC' } });
-  await page.request.post('/api/v1/enrollments', { headers, data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4] } });
+  await page.request.post('/api/v1/enrollments', { headers, data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4] } });
 }
 
 test('no page-level horizontal overflow at four widths', async ({ page }, info) => {

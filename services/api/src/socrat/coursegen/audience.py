@@ -108,14 +108,19 @@ def frame_line(brief: dict | None) -> str:
     )
 
 
-def _own_block(db: Session, user: User, course: GeneratedCourse) -> str:
-    """How the learner who made this course asked to be taught (their validated picks)."""
-    request = db.scalars(
+def own_request(db: Session, user_id: str, course_id: str) -> LearningRequest | None:
+    """The learner's latest request that became this course, if they made it."""
+    return db.scalars(
         select(LearningRequest)
-        .where(LearningRequest.user_id == user.id, LearningRequest.course_id == course.id)
+        .where(LearningRequest.user_id == user_id, LearningRequest.course_id == course_id)
         .order_by(LearningRequest.created_at.desc())
         .limit(1)
     ).first()
+
+
+def _own_block(db: Session, user: User, course: GeneratedCourse) -> str:
+    """How the learner who made this course asked to be taught (their validated picks)."""
+    request = own_request(db, user.id, course.id)
     if request is None:
         return ""
     try:

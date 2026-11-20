@@ -14,6 +14,8 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 from socrat.catalog import dialect
 from socrat.catalog.shape import CourseShape
 
+TAG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # a misconception id
+
 Slug = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
 Ref = Annotated[str, Field(pattern=r"^([a-z][a-z0-9-]{0,63}:)?[a-z][a-z0-9-]{0,63}$")]
 # Evidence a competency asks for, in the master prompt's terms (9.2), beyond mere exposure.
@@ -129,6 +131,38 @@ class QuizItem(Model):
     former_ids: list[Slug] = Field(default_factory=list)
     # Languages this item is valid for; empty means all (use for language-specific syntax).
     languages: list[Language] = Field(default_factory=list)
+    # Generated courses: per authored option, the misconception id a learner who picks it
+    # shows ("" for the answer and for untagged options). Ids come from the root units the
+    # lesson was written from (generation keeps only those), so grading can tag the evidence.
+    misconceptions: list[str] | None = None
+    # Generated courses: the item that checks, unaided, a gap the learner's Lesson 0 showed
+    # (coursegen/learner_plan.py). None for every other item.
+    probe: bool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _tags(cls, data):
+        """Tags that do not line up with the options, or sit on the answer, are dropped rather
+        than failing the item: a tag is a hint for the learner record, never part of the key."""
+        if not isinstance(data, dict) or data.get("misconceptions") is None:
+            return data
+        tags, options = data.get("misconceptions"), data.get("options")
+        if not isinstance(tags, list) or not isinstance(options, list) or len(tags) != len(options):
+            return {k: v for k, v in data.items() if k != "misconceptions"}
+        answer = data.get("answer")
+        clean = [
+            str(t) if isinstance(t, str) and TAG.match(t) and i != answer else ""
+            for i, t in enumerate(tags)
+        ]
+        if not any(clean):
+            return {k: v for k, v in data.items() if k != "misconceptions"}
+        return {**data, "misconceptions": clean}
+
+    def trap(self, seed: str, choice: int) -> str:
+        """The misconception the learner's displayed choice shows, or ""."""
+        if not self.misconceptions or not 0 <= choice < len(self.options):
+            return ""
+        return self.misconceptions[self.order(seed)[choice]]
 
     def matches(self, item_id: str) -> bool:
         return item_id == self.id or item_id in self.former_ids
@@ -358,6 +392,12 @@ class Concept(Model):
     # Quiz items a rewrite dropped: never offered again, but still resolvable so open
     # sessions, placements and stored attempts keep working (catalog/revisions.carry).
     retired_quiz: list[QuizItem] = Field(default_factory=list, max_length=40)
+    # Parallel items (same skill, new context) that reviews prefer, so a review is not a
+    # repeat of the check (coursegen/variants.py, backlog 4.2). Never part of the concept check.
+    review_items: list[QuizItem] = Field(default_factory=list, max_length=16)
+    # Module-exam items stored on the first concept they test (coursegen/exams.py, backlog 4.1):
+    # harder, mixed items the module checkpoint draws on with the concepts' own quiz items.
+    exam_items: list[QuizItem] = Field(default_factory=list, max_length=6)
     citations: list[Citation] = Field(default_factory=list, max_length=40)
     provenance: Provenance | None = None
     outline: Outline | None = None
@@ -405,7 +445,7 @@ class Concept(Model):
         """The quiz item stored under ``item_id`` (current, renamed or retired). A live item
         wins over a retired one with the same id: a rewrite may bring a question back before
         ``catalog.revisions.carry`` tidies the retired list."""
-        for q in (*self.quiz, *self.retired_quiz):
+        for q in (*self.quiz, *self.retired_quiz, *self.review_items, *self.exam_items):
             if q.matches(item_id):
                 return q
         raise KeyError(f"concept {self.id} has no quiz item {item_id}")

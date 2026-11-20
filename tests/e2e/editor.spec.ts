@@ -1,21 +1,16 @@
 import { expect, test } from '@playwright/test';
+import { dismissPlans, enrollSignedIn } from './helpers/learner';
 /** Editor preferences persist per browser; reset restores the starter and saves at once. */
 test('editor settings, reset and the resizable split', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'the split pane is a wide-screen feature');
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('/login');
   await page.getByLabel('Your name').fill(`editor-${Date.now()}`);
-  await page.getByRole('button', { name: 'Log in' }).click();
-  await page.getByLabel('What should we call you?').fill('Ada');
-  await page.getByLabel('Year you were born').selectOption('2001');
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: /Programming from Zero/ }).click();
-  await page.getByRole('button', { name: /never written code/ }).click();
-  await page.getByRole('button', { name: 'Python', exact: true }).click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: 'Create my plan' }).click();
-  await expect(page).toHaveURL(/\/today$/);
+  await page.locator('form', { has: page.getByLabel('Your name') }).getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(/\/start$/);
+  await enrollSignedIn(page);
   await page.goto('/problems/double-it');
+  await dismissPlans(page);
   const content = page.locator('.cm-content');
   await expect(content).toBeVisible();
   const starter = await content.innerText();
@@ -40,6 +35,7 @@ test('editor settings, reset and the resizable split', async ({ page }, info) =>
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
   await expect(sep).toHaveAttribute('aria-valuenow', String(before + 10));
   await page.reload();
+  await dismissPlans(page);
   await expect(page.locator('.cm-editor')).toHaveCSS('font-size', '16px');
   await expect(content).not.toContainText('changed');
   await expect(sep).toHaveAttribute('aria-valuenow', String(before + 10));

@@ -14,13 +14,13 @@ test('quiz answers can carry an optional confidence', async ({ page }, testInfo)
   await page.request.patch('/api/v1/me', { headers, data: { birth_year: 2000, timezone: 'UTC' } });
   const enrolled = await page.request.post('/api/v1/enrollments', {
     headers,
-    data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4, 5, 6] },
+    data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4, 5, 6] },
   });
   expect(enrolled.ok()).toBeTruthy();
-  await page.request.post('/api/v1/activities/lesson:zero:programs-and-output/complete', { headers });
+  await page.request.post('/api/v1/activities/lesson:basics:values/complete', { headers });
 
   await page.emulateMedia({ reducedMotion: 'reduce' }); // stable layout, as the other suites do
-  await page.goto('/quiz/quiz/zero/programs-and-output');
+  await page.goto('/quiz/quiz/basics/values');
   await page.getByRole('button', { name: 'Maybe later' }).click({ timeout: 8_000 }).catch(() => undefined);
   const sure = page.getByRole('group', { name: /How sure are you/ });
   await expect(sure).toHaveCount(0); // only after an option is chosen

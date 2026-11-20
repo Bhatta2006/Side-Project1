@@ -157,8 +157,55 @@ def concept_pace(
     return overall, ""
 
 
+SESSION_ONE_WINDOW = 40  # learn.service.history_for's limit: a full window is past session one
+CHECK_PASS = 0.8
+
+
+def session_one(history: list[dict], tutored: set[str] | frozenset = frozenset()) -> dict[str, str]:
+    """How each concept checked on the learner's first study day went (lesson0-generation-plan.md
+    4.E): ``difficulty`` (the probe was missed, or a second check missed), ``helped`` (passed, with
+    help recorded on that concept that day), ``independent`` (passed without help). A single miss
+    is left to the failed-check refresh. Empty once the history window no longer reaches day one.
+    ``tutored``: concepts the learner asked the tutor about that day, which count as help."""
+    if not history or len(history) >= SESSION_ONE_WINDOW or "at" not in history[0]:
+        return {}
+    day_one = [x for x in history if x["at"] < history[0]["at"] + DAY]
+    out: dict[str, str] = {}
+    for concept in dict.fromkeys(x["concept"] for x in day_one if x["kind"] == "quiz"):
+        own = [x for x in day_one if x["concept"] == concept]
+        checks = [x for x in own if x["kind"] == "quiz"]
+        if any((x.get("details") or {}).get("probe_missed") for x in checks) or (
+            sum(x["score"] < CHECK_PASS for x in checks) >= 2
+        ):
+            out[concept] = "difficulty"
+        elif checks[-1]["score"] >= CHECK_PASS:
+            helped = concept in tutored or any(x.get("assistance", 0) > 0 for x in own)
+            out[concept] = "helped" if helped else "independent"
+    return out
+
+
 def _minutes(value: float, pace: Pace, style: str = "balanced") -> int:
     return max(3, int(math.ceil(value * PACE_FACTOR[pace] * STYLE_FACTOR[style] / 5) * 5))
+
+
+# Computed minutes for a written concept (lesson0-generation-plan.md 3.4): reading speed,
+# per quiz item, one attempt at a problem, and feedback after each check.
+READ_WORDS_PER_MINUTE = 180
+QUIZ_ITEM_MINUTES = 0.75
+ATTEMPT_MINUTES = 6
+FEEDBACK_MINUTES = 2
+
+
+def written_minutes(lesson: str, quiz_items: int) -> dict[str, int] | None:
+    """{"lesson", "quiz", "problem"} minutes computed from what is written; None while the
+    lesson is not written (the estimate stands)."""
+    if not lesson:
+        return None
+    return {
+        "lesson": max(1, math.ceil(len(lesson.split()) / READ_WORDS_PER_MINUTE)),
+        "quiz": math.ceil(quiz_items * QUIZ_ITEM_MINUTES) + FEEDBACK_MINUTES if quiz_items else 0,
+        "problem": ATTEMPT_MINUTES + FEEDBACK_MINUTES,
+    }
 
 
 def concept_activities(
@@ -170,9 +217,13 @@ def concept_activities(
     support: str | None = None,
     support_reason: str = "",
     support_code: str = "stuck_support",
+    computed: bool = False,
 ) -> list[Activity]:
+    """``computed``: a learner with a true session length (Lesson 0) gets the written
+    concept's computed minutes instead of shares of its estimate."""
     concept = catalog.concept(qualified)
     est = concept.estimated_minutes
+    real = written_minutes(concept.lesson, len(concept.quiz)) if computed else None
     order = {"easy": 0, "medium": 1, "hard": 2}
     problems = sorted(
         (catalog.problem(p) for p in concept.problems), key=lambda p: (order[p.difficulty], p.id)
@@ -189,7 +240,7 @@ def concept_activities(
             "lesson",
             qualified,
             concept.title,
-            _minutes(est * 0.3, pace, style),
+            real["lesson"] if real else _minutes(est * 0.3, pace, style),
             reason="Learn the idea first.",
         ),
         Activity(
@@ -197,7 +248,7 @@ def concept_activities(
             "quiz",
             qualified,
             f"{concept.title} check",
-            _minutes(est * 0.15, pace, style),
+            max(1, real["quiz"]) if real else _minutes(est * 0.15, pace, style),
             reason="A quick check that the idea landed.",
         ),
     ]
@@ -218,7 +269,7 @@ def concept_activities(
         )
         # After a missed check, re-teach before the retake (the retake is pointless without
         # it); support for a concept not yet checked follows the check.
-        retake = support_code == "failed_check_refresh" or state.failures > 0
+        retake = support_code in ("failed_check_refresh", "lesson0_gap") or state.failures > 0
         items.insert(1 if retake else len(items), step)
     share = est * 0.55 / max(1, len(problems))
     items += [
@@ -227,7 +278,7 @@ def concept_activities(
             "problem",
             qualified,
             p.title,
-            _minutes(max(10, share), pace, style),
+            real["problem"] if real else _minutes(max(10, share), pace, style),
             reason=f"Practice {concept.title} on your own ({p.difficulty}).",
         )
         for p in problems
@@ -319,9 +370,14 @@ def build_plan(
     adaptive: Adaptive | None = None,
     transfer: transfers.Transfer | None = None,
     locks: bool = True,
+    strict: bool = False,
+    computed: bool = False,
+    tutored: set[str] | frozenset = frozenset(),
+    gaps: set[str] | frozenset = frozenset(),
 ) -> Plan:
     """``locks`` is False when the learner chose a mode that keeps every module open;
-    checkpoints are still planned, they just stop holding later modules shut."""
+    checkpoints are still planned, they just stop holding later modules shut. ``strict``: a
+    short session (10 minutes) holds only what fits, never an item 40% over the rest."""
     if not weekdays:
         raise ValueError("at least one study weekday is required")
     adaptive = adaptive or Adaptive(course_id=course_id or "")
@@ -430,6 +486,10 @@ def build_plan(
     # plan opens on the first concept they do not know, never back at the start of the path.
     confirms: list[Activity] = []
     frontier_end: int | None = None
+    # Session-one adaptation, for an enrollment that asked for it (a Lesson 0 course).
+    first_day = session_one(history, tutored) if adaptive.goal.get("adapt_first_session") else {}
+    bridged = False  # after session one, at most one bridge proposal (lesson0 plan 4.E)
+    stretches: list[Activity] = []  # wait for the next concept's work, then follow it
     for qualified in path:
         state = states.get(qualified, ConceptState())
         concept = catalog.concept(qualified)
@@ -457,14 +517,20 @@ def build_plan(
         if concept.status == "planned":
             # Outlined but not generated yet: on the roadmap and in the forecast, never queued.
             locked_minutes += sum(
-                a.minutes for a in concept_activities(catalog, qualified, state, pace, style)
+                a.minutes
+                for a in concept_activities(
+                    catalog, qualified, state, pace, style, computed=computed
+                )
             )
             roadmap.append({**entry_base, "status": "preparing"})
             continue
         if qualified in locked:
             # Behind a gate: shown on the roadmap and counted in the forecast, not scheduled.
             locked_minutes += sum(
-                a.minutes for a in concept_activities(catalog, qualified, state, pace, style)
+                a.minutes
+                for a in concept_activities(
+                    catalog, qualified, state, pace, style, computed=computed
+                )
             )
             roadmap.append({**entry_base, "status": "locked", "locked_by": locked[qualified]})
             continue
@@ -508,13 +574,33 @@ def build_plan(
                 and f"quiz:{qualified}" not in completed
                 and state.failures > 0
             )
+            after = first_day.get(qualified)
+            if (
+                support is None
+                and after == "difficulty"
+                and f"example:{qualified}" not in completed
+            ):
+                support, support_code = "example", "session_one_example"
+                support_reason = "That check was hard; a worked example first, then on."
+            if support is None and qualified in gaps and f"example:{qualified}" not in completed:
+                # A shared course has no probe for this learner's Lesson 0 gap (backlog 3.3).
+                support, support_code = "example", "lesson0_gap"
+                support_reason = "Lesson 0 showed this can trip you up; a worked example first."
             if support is None and failed_check and f"explain:{qualified}" not in completed:
                 support, support_code = "explain", "failed_check_refresh"
                 support_reason = (
                     "Your check missed; a different explanation first, then a fresh check."
                 )
             activities = concept_activities(
-                catalog, qualified, state, c_pace, style, support, support_reason, support_code
+                catalog,
+                qualified,
+                state,
+                c_pace,
+                style,
+                support,
+                support_reason,
+                support_code,
+                computed=computed,
             )
             pending = [a for a in activities if a.id not in completed]
             status = "upcoming"
@@ -525,6 +611,10 @@ def build_plan(
             if (state.failures >= 1 and state.mean < 0.5) or stuck is not None:
                 if weak:
                     needs_repair[qualified] = weak
+            elif after == "difficulty" and weak and not bridged:
+                # Offered, not done: the learner accepts a refresher or a bridge lesson.
+                needs_repair[qualified] = weak
+                bridged = True
             for weak_concept, for_concept in sorted(repairs):
                 if for_concept == qualified and f"remedial:{weak_concept}" not in completed:
                     queue.append(
@@ -542,6 +632,37 @@ def build_plan(
             queue.extend(pending)
             if frontier_end is None and pending:
                 frontier_end = len(queue)
+            if pending and stretches:
+                queue.extend(stretches)
+                stretches = []
+            if after == "helped" and f"review:{qualified}" not in completed:
+                queue.append(
+                    Activity(
+                        f"review:{qualified}",
+                        "review",
+                        qualified,
+                        f"Review: {concept.title}",
+                        REVIEW_MINUTES,
+                        reason="You got there with help; a short retrieval makes it yours.",
+                        code="session_one_retrieval",
+                    )
+                )
+            if (
+                after == "independent"
+                and not overrides.get("stretch")
+                and f"stretch:{qualified}" not in completed
+            ):
+                stretches.append(
+                    Activity(
+                        f"stretch:{qualified}",
+                        "stretch",
+                        qualified,
+                        f"Stretch: a harder {concept.title} problem",
+                        _minutes(10, c_pace, style),
+                        reason="You did that on your own; one item a step above, after the next idea.",
+                        code="session_one_stretch",
+                    )
+                )
             if overrides.get("stretch") and pending and f"stretch:{qualified}" not in completed:
                 queue.append(
                     Activity(
@@ -642,6 +763,7 @@ def build_plan(
                 code="transfer",
             )
         )
+    queue.extend(stretches)  # no later concept had work left
     if confirms:
         at = len(queue) if frontier_end is None else frontier_end
         queue = queue[:at] + confirms + queue[at:]
@@ -704,7 +826,8 @@ def build_plan(
                 ).to_dict()
             )
             budget -= REVIEW_MINUTES
-        while pending_queue and (budget >= pending_queue[0].minutes * 0.6 or not items):
+        fit = 1.0 if strict else 0.6
+        while pending_queue and (budget >= pending_queue[0].minutes * fit or not items):
             activity = pending_queue.pop(0)
             items.append(activity.to_dict())
             budget -= activity.minutes

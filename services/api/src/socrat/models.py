@@ -77,6 +77,9 @@ class User(Base):
     # How strict Socrat is with this learner: relaxed | balanced | strict (see
     # socrat.learning_mode). Null means the default, balanced.
     learning_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Preferences about the person, across courses, each with who set it, an undo log and the
+    # tutor's pending suggestions (socrat.learner, docs/implementation/learner-memory.md).
+    learner_profile: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class LoginSession(Base):
@@ -123,6 +126,10 @@ class Enrollment(Base):
     # Learner-approved roadmap overrides, path style and adaptive bookkeeping
     # (see socrat.adaptive.proposals). Only an accepted proposal or the learner writes here.
     adaptive: Mapped[dict] = mapped_column(JSON, default=dict)
+    # The course brain (migration 0051): the decision that brought the learner here and what
+    # applies only to them (their own words, time budget, Lesson 0 signals). Never shared.
+    match_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    learner_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class ConceptState(Base):
@@ -756,6 +763,139 @@ class GeneratedCourse(Base):
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     # Bumped on every change to the course or its concepts; the catalog cache keys on it.
     updated_at: Mapped[int] = mapped_column(Integer, default=now)
+    # The course brain (coursegen.brain, migration 0051). NULL on courses made before it.
+    # root_id: the subject this course belongs to. spec: the hard requirements it was built
+    # for (coursegen.brain.spec.CourseSpec); spec_key: their hash. serve: "shared" lets the
+    # brain serve it to another learner whose request it satisfies; "private" never.
+    root_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    spec: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    spec_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    serve: Mapped[str | None] = mapped_column(String(8), nullable=True)
+
+
+class SubjectRoot(Base):
+    """A broad subject (mathematics, physics, carnatic-music) that generated courses live
+    under. Created on demand for any subject a learner asks for; ``merged_into`` redirects a
+    duplicate root to the one that is kept."""
+
+    __tablename__ = "subject_roots"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    title: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(16), default="active")  # active | merged
+    merged_into: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)  # request id
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class SubjectAlias(Base):
+    """A normalised name ("maths", "math") for exactly one root."""
+
+    __tablename__ = "subject_aliases"
+    alias: Mapped[str] = mapped_column(String(120), primary_key=True)
+    root_id: Mapped[str] = mapped_column(ForeignKey("subject_roots.id", ondelete="CASCADE"))
+    source: Mapped[str] = mapped_column(String(16), default="request")  # seed | request | admin
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class RootUnit(Base):
+    """Reusable teaching material for one narrow topic at one depth under a subject root, written
+    once by the research job (coursegen/brain/research.py) from public sources and validated by
+    code before any course may use it. A new revision never changes an older one: courses pin
+    the revision their lessons were written from (``ConceptUnitPin``)."""
+
+    __tablename__ = "root_units"
+    __table_args__ = (
+        UniqueConstraint("root_id", "unit_key", "revision", name="uq_root_unit_revision"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    root_id: Mapped[str] = mapped_column(
+        ForeignKey("subject_roots.id", ondelete="CASCADE"), index=True
+    )
+    unit_key: Mapped[str] = mapped_column(String(120))  # "equation-linear.beginner"
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    topic: Mapped[str] = mapped_column(String(160))
+    depth: Mapped[str] = mapped_column(String(16))
+    language: Mapped[str] = mapped_column(String(16), default="en")
+    # validated: usable by any course. failed: did not pass validation (kept for the admin).
+    # quarantined: withdrawn after a correction; courses pinned to it are not served to new learners.
+    status: Mapped[str] = mapped_column(String(16), default="validated")
+    concepts: Mapped[list] = mapped_column(JSON, default=list)
+    content: Mapped[dict] = mapped_column(JSON, default=dict)
+    quality: Mapped[dict] = mapped_column(JSON, default=dict)
+    digest: Mapped[str] = mapped_column(String(64), default="")
+    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    retrieved_at: Mapped[int] = mapped_column(Integer, default=now)
+    review_after: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class Source(Base):
+    """A public page some root unit was written from: a reference, never a copy. Only our own
+    paraphrase (and, for openly licensed pages, a short passage) is kept, in the unit."""
+
+    __tablename__ = "sources"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # sha256 of the url
+    url: Mapped[str] = mapped_column(String(500))
+    title: Mapped[str] = mapped_column(String(300), default="")
+    license: Mapped[str] = mapped_column(String(40), default="")
+    status: Mapped[str] = mapped_column(String(8), default="ok")  # ok | gone | changed
+    retrieved_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class UnitSource(Base):
+    """Which source backs which unit, in what role, and what it supports (our paraphrase)."""
+
+    __tablename__ = "unit_sources"
+    unit_id: Mapped[str] = mapped_column(
+        ForeignKey("root_units.id", ondelete="CASCADE"), primary_key=True
+    )
+    source_id: Mapped[str] = mapped_column(
+        ForeignKey("sources.id", ondelete="CASCADE"), primary_key=True
+    )
+    n: Mapped[int] = mapped_column(Integer, default=1)  # the [n] items cite
+    role: Mapped[str] = mapped_column(String(16), default="explain")
+    supports: Mapped[str] = mapped_column(String(400), default="")
+    retained: Mapped[str] = mapped_column(String(12), default="paraphrase")  # | excerpt
+
+
+class ConceptUnitPin(Base):
+    """A lesson of a generated course was written from this root unit revision. Answers "which
+    courses does a correction to this unit touch" without reading any JSON."""
+
+    __tablename__ = "concept_unit_pins"
+    course_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    concept_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    unit_id: Mapped[str] = mapped_column(
+        ForeignKey("root_units.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class CourseMatch(Base):
+    """Why a learning request got the course it got: the brain's decision, every candidate it
+    considered with each check's result, and what belongs only to this learner (``private``).
+    One row per request, so routing the same request again never decides twice."""
+
+    __tablename__ = "course_matches"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    request_id: Mapped[str] = mapped_column(
+        ForeignKey("learning_requests.id", ondelete="CASCADE"), unique=True
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    root_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    spec: Mapped[dict] = mapped_column(JSON)
+    spec_key: Mapped[str] = mapped_column(String(64))
+    # reuse | reuse_adapted (served) | from_material (built from stored root units) |
+    # extend_and_new (root units researched first) | new | private_new
+    outcome: Mapped[str] = mapped_column(String(16))
+    units: Mapped[list] = mapped_column(JSON, default=list)  # root unit refs the course uses
+    course_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    reason: Mapped[str] = mapped_column(String(500), default="")
+    candidates: Mapped[list] = mapped_column(JSON, default=list)
+    adaptations: Mapped[list] = mapped_column(JSON, default=list)
+    private: Mapped[dict] = mapped_column(JSON, default=dict)  # never copied to a shared row
+    matcher_version: Mapped[str] = mapped_column(String(16), default="")
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
 class GeneratedConcept(Base):

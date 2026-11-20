@@ -181,8 +181,43 @@ TOOLS += [
                 "concept": CONCEPT,
                 "understanding": {"type": "string", "enum": ["shaky", "missing"]},
                 "note": {"type": "string", "description": "What you saw, in a few words."},
+                "misconception": {
+                    "type": "string",
+                    "description": "Optional: the id of the misconception you saw, only one "
+                    "listed for this concept in your context. Anything else is ignored.",
+                },
             },
             "required": ["concept", "understanding", "note"],
+        },
+    ),
+]
+# Offered only when SOCRAT_LEARNER_PROFILE is on (socrat.learner_profile).
+PROFILE_TOOLS: list[ToolSpec] = [
+    ToolSpec(
+        "suggest_preference",
+        "Suggest a change to how the learner is taught in every course, when the conversation "
+        "shows it (they keep asking for shorter answers, an example domain clicks). This changes "
+        "NOTHING by itself: the learner accepts or declines it in their profile. Keys: "
+        "explanation_length (short_3_sentences, medium_one_page, long_worked_examples), tone "
+        "(direct, direct_and_encouraging, curious_and_thorough), analogy_domain (a few words), "
+        "pace (fast, medium, slow), friction_limit (1-6 tries before you step in).",
+        {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "enum": [
+                        "explanation_length",
+                        "tone",
+                        "analogy_domain",
+                        "pace",
+                        "friction_limit",
+                    ],
+                },
+                "value": {"type": ["string", "integer"]},
+                "reason": {"type": "string", "description": "One sentence to the learner: why."},
+            },
+            "required": ["key", "value", "reason"],
         },
     ),
 ]
@@ -198,6 +233,7 @@ LABELS = {
     "propose_plan_change": "Suggesting a change to your plan",
     "propose_goal": "Drafting your goal",
     "record_observation": "Noting that for your plan",
+    "suggest_preference": "Suggesting a change to how you're taught",
     "math_check": "Checking the math",
 }
 
@@ -227,17 +263,25 @@ def resolve_concept(catalog: Catalog, value: str) -> str | None:
 
 
 class Toolbox:
-    def __init__(self, bind: Engine, catalog: Catalog, user_id: str, engine_tools: bool = False):
+    def __init__(
+        self,
+        bind: Engine,
+        catalog: Catalog,
+        user_id: str,
+        engine_tools: bool = False,
+        profile_tools: bool = False,
+    ):
         self.bind = bind
         self.catalog = catalog
         self.user_id = user_id
+        self.profile_tools = profile_tools
         # The harness's verified capabilities (admins only while the engine is tested).
         self.verified = (
             {c.tool_name: c for c in harness.capabilities().values() if c.tutor}
             if engine_tools
             else {}
         )
-        self.specs = [*TOOLS] + [
+        self.specs = [*TOOLS, *(PROFILE_TOOLS if profile_tools else [])] + [
             ToolSpec(c.tool_name, c.summary, c.parameters) for c in self.verified.values()
         ]
 
@@ -536,7 +580,15 @@ class Toolbox:
         return self._propose(db, enrollment, now, "goal", "Set your goal", reason, payload)
 
     def _record_observation(
-        self, db, user, enrollment, now, concept: str, understanding: str, note: str
+        self,
+        db,
+        user,
+        enrollment,
+        now,
+        concept: str,
+        understanding: str,
+        note: str,
+        misconception: str = "",
     ):
         if enrollment is None or enrollment.status != "active":
             return "Error: the learner has no active plan yet."
@@ -555,7 +607,13 @@ class Toolbox:
         )
         if (recent or 0) >= OBSERVATIONS_PER_DAY:
             return "Already noted enough about this concept today."
-        tag = f"{resolved.split(':', 1)[1]}-repair"
+        from socrat import learner
+
+        # A misconception id is kept only when it is a known one: the catalog's own list, or
+        # one of the root units this generated lesson was written from (learner-memory.md).
+        allowed = self.catalog.misconceptions | set(learner.misconceptions_for(db, resolved))
+        tag = misconception if misconception in allowed else ""
+        tag = tag or f"{resolved.split(':', 1)[1]}-repair"
         learn.record_evidence(
             db,
             enrollment,
@@ -566,7 +624,22 @@ class Toolbox:
             now,
             details={
                 "note": str(note)[:200],
-                **({"misconception": tag} if tag in self.catalog.misconceptions else {}),
+                **({"misconception": tag} if tag in allowed else {}),
             },
         )
         return {"noted": self.catalog.concept(resolved).title, "understanding": understanding}
+
+    def _suggest_preference(self, db, user, enrollment, now, key: str, value, reason: str):
+        if not self.profile_tools:
+            return "Error: unknown tool."
+        from socrat import learner_profile
+
+        try:
+            item = learner_profile.suggest(user, key, value, reason, now)
+        except ValueError:
+            return "Error: that is not a preference value the learner can choose."
+        return {
+            "suggested": item["key"],
+            "value": item["value"],
+            "status": "waiting for the learner",
+        }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Maximize } from '@/components/icons';
 import { api, explain } from '@/lib/api';
 import { useGuard } from '@/lib/session';
@@ -187,8 +188,10 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
     }
   }
 
-  return (
-    // Covers the whole app (navigation included) until the exam ends.
+  // Covers the whole app (navigation included) until the exam ends. Portalled to <body> so no
+  // stacking context in the app shell can put the sidebar above it and swallow the learner's clicks.
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div className="fixed inset-0 z-[70] overflow-y-auto bg-background">
     {guard}
     {!inside ? (
@@ -289,7 +292,8 @@ function Attempt({ view, setView }: { view: AssessmentView; setView: (v: Assessm
         </section>
       </aside>
     </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

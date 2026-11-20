@@ -90,6 +90,8 @@ def history_for(db: Session, enrollment: Enrollment, limit: int = 40) -> list[di
             elapsed_seconds=row.elapsed_seconds,
             expected_seconds=row.expected_seconds,
             concept=row.concept,
+            at=row.created_at,
+            details=row.details or {},
         )
         for row in reversed(rows)
     ]
@@ -494,14 +496,57 @@ def build_for(
         today,
         now,
         set(enrollment.weekdays),
-        enrollment.minutes_per_day,
+        session_budget(enrollment),
         course_id=enrollment.course_id,
         cooldowns=gate_cooldowns(db, enrollment),
         adaptive=adaptive,
         transfer=transfers.current(db, catalog, enrollment, states, completed, now),
         locks=mode_policy(db, enrollment).locks_modules,
+        strict=session_budget(enrollment) <= STRICT_MINUTES,
+        computed=bool((enrollment.goal or {}).get("session_minutes")),
+        tutored=first_day_tutored(db, enrollment, history_for(db, enrollment)),
+        gaps=_lesson0_gaps(catalog, enrollment),
     )
     return plan, adaptive
+
+
+def _lesson0_gaps(catalog: Catalog, enrollment: Enrollment) -> set[str]:
+    from socrat import learner
+
+    return learner.lesson0_gaps(catalog, enrollment)
+
+
+def first_day_tutored(db: Session, enrollment: Enrollment, history: list[dict]) -> set[str]:
+    """Concepts the learner asked the tutor about on their first study day; empty unless the
+    enrollment adapts after session one."""
+    if not (enrollment.goal or {}).get("adapt_first_session") or not history:
+        return set()
+    if "at" not in history[0]:
+        return set()
+    from socrat import learner
+
+    start = history[0]["at"]
+    return learner.tutored_concepts(db, enrollment.user_id, start, start + mastery.DAY)
+
+
+def session_one_for(db: Session, enrollment: Enrollment) -> dict[str, str]:
+    """``planner.engine.session_one`` for this enrollment, or {} when it does not adapt."""
+    if not (enrollment.goal or {}).get("adapt_first_session"):
+        return {}
+    from socrat.planner.engine import session_one
+
+    history = history_for(db, enrollment)
+    return session_one(history, first_day_tutored(db, enrollment, history))
+
+
+STRICT_MINUTES = 10  # at or under this, a day holds only what fits (plus its first item)
+
+
+def session_budget(enrollment: Enrollment) -> int:
+    """Minutes a study day is packed to: the learner's true session length when Lesson 0
+    gave one (``goal.session_minutes``), else the scheduled minutes per day."""
+    true = (enrollment.goal or {}).get("session_minutes")
+    return int(true) if isinstance(true, int) and true > 0 else enrollment.minutes_per_day
 
 
 def plan_changes(before: list | None, after: list, completed: set[str]) -> dict:

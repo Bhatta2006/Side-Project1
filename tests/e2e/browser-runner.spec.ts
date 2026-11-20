@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { dismissPlans } from './helpers/learner';
 
 /**
  * Run and Submit execute in the learner's browser: Python in Pyodide, C++ in Clang compiled to
@@ -8,13 +9,13 @@ test.describe.configure({ mode: 'serial' });
 test.setTimeout(240_000);
 const ORIGIN = 'http://localhost:3000';
 
-const GREETING_PY = 'name = input().strip()\nprint(f"Hello, {name}! Welcome to Socrat.")\n';
+// The fixture problem ``double-it`` (services/api/tests/content_fixture.py): print twice n.
+const GREETING_PY = 'n = int(input())\nprint(n * 2)\n';
 const GREETING_CPP = `#include <bits/stdc++.h>
 using namespace std;
 int main() {
-  string name; getline(cin, name);
-  while (!name.empty() && isspace((unsigned char)name.back())) name.pop_back();
-  cout << "Hello, " << name << "! Welcome to Socrat." << endl;
+  long long n; cin >> n;
+  cout << n * 2 << endl;
 }
 `;
 
@@ -27,7 +28,7 @@ async function signUp(page: Page) {
   const headers = { Origin: ORIGIN, 'X-CSRF-Token': me.csrf_token };
   await page.request.patch('/api/v1/me', { data: { birth_year: 2001, timezone: 'Asia/Kolkata' }, headers });
   const enrolled = await page.request.post('/api/v1/enrollments', {
-    data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 45, weekdays: [0, 1, 2, 3, 4, 5, 6] },
+    data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 45, weekdays: [0, 1, 2, 3, 4, 5, 6] },
     headers,
   });
   expect(enrolled.ok()).toBeTruthy();
@@ -39,6 +40,7 @@ async function runWith(page: Page, headers: Record<string, string>, language: 'p
   expect(saved.ok()).toBeTruthy();
   await page.evaluate(() => localStorage.clear());
   await page.goto('/problems/double-it');
+  await dismissPlans(page);
   const select = page.getByRole('combobox').filter({ hasText: /Python|C\+\+/ }).first();
   await select.selectOption(language);
   await expect(page.locator('.cm-content')).toContainText(source.split('\n')[0].slice(0, 20));
@@ -94,6 +96,7 @@ test('drafts typed in the editor survive a reload before they reach the server',
   test.skip(info.project.name !== 'desktop', 'storage behaviour is the same on phones');
   await signUp(page);
   await page.goto('/problems/double-it');
+  await dismissPlans(page);
   const content = page.locator('.cm-content');
   await expect(content).toBeVisible();
   // Block the autosave, type, and reload: the local copy comes back and is saved.

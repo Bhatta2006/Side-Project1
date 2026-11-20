@@ -7,6 +7,7 @@ failing schedules a short cooldown with targeted reviews.
 """
 
 import random
+from collections import Counter
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -86,10 +87,14 @@ def open_test(db: Session, enrollment: Enrollment, now: int) -> bool:
 
 
 def gate_pool(catalog: Catalog, module_key: str, language: str) -> list[tuple[str, QuizItem]]:
+    # The concepts' own items, and the module exam's harder mixed ones (backlog 4.1).
     return [
         (c, q)
         for c in gates.module_concepts(catalog, module_key)
-        for q in fitting(catalog, c, language)
+        for q in [
+            *fitting(catalog, c, language),
+            *(x for x in catalog.concept(c).exam_items if x.fits(language)),
+        ]
     ]
 
 
@@ -156,13 +161,19 @@ def gate_rng(enrollment: Enrollment, session_key: str, step: int) -> random.Rand
 # ---------------------------------------------------------------- sessions
 
 
+GENTLE_ITEMS = 3  # a concept that was hard in session one: a smaller check
+
+
 def choose_items(
     catalog: Catalog,
     enrollment: Enrollment,
     activity_id: str,
     seed: int,
     recent: set[str] | None = None,
+    gentle: bool = False,
 ) -> list[list[str]]:
+    """``gentle``: the concept was hard in session one, so its check is smaller and easier
+    (3 items from its two easiest difficulty levels, the probe item kept if it has one)."""
     kind, _, target = activity_id.partition(":")
     rng = random.Random(f"{enrollment.id}:{activity_id}:{seed}")
     if kind == "quiz":
@@ -172,10 +183,20 @@ def choose_items(
             fitting(catalog, target, enrollment.language),
             key=lambda q: (q.id in seen, q.difficulty, rng.random()),
         )
+        if gentle and quiz:
+            easy = sorted({q.difficulty for q in quiz})[:2]
+            band = [q for q in quiz if q.difficulty in easy or q.probe]
+            return [[target, q.id] for q in band[:GENTLE_ITEMS]]
         return [[target, q.id] for q in quiz[:5]]
     if kind in {"review", "remedial"}:
         quiz = list(fitting(catalog, target, enrollment.language))
         rng.shuffle(quiz)
+        if kind == "review":
+            # Parallel items first (backlog 4.2), those not seen lately before the rest.
+            seen = recent or set()
+            fresh = [v for v in catalog.concept(target).review_items if v.fits(enrollment.language)]
+            rng.shuffle(fresh)
+            quiz = sorted([*fresh, *quiz], key=lambda q: (q.id in seen, not q.id.startswith("v-")))
         return [[target, q.id] for q in quiz[: 3 if kind == "review" else 4]]
     if kind == "probe":
         # The concept plus its direct prerequisites, two mid-difficulty items each.
@@ -284,7 +305,9 @@ def open_session(
             enrollment,
             activity_id,
             now // 86400 if kind != "checkpoint" else now,
-            recent_items(db, enrollment, now) if kind in {"checkpoint", "quiz"} else None,
+            recent_items(db, enrollment, now) if kind in {"checkpoint", "quiz", "review"} else None,
+            gentle=kind == "quiz"
+            and learn.session_one_for(db, enrollment).get(target) == "difficulty",
         ),
         answers={},
         created_at=now,
@@ -441,6 +464,9 @@ def answer(
         raise HTTPException(409, "already_answered")
     correct = q.is_correct(session.id, choice)  # choice is a display position
     entry = {"choice": choice, "correct": correct}
+    trap = "" if correct else q.trap(session.id, choice)
+    if trap:  # the wrong option this learner picked is a known misconception
+        entry["misconception"] = trap
     if confidence is not None:
         entry["confidence"] = confidence
     session.answers = {**session.answers, item_id: entry}
@@ -467,6 +493,13 @@ def answer(
     return dict(finished=finished, correct=correct)
 
 
+def _is_probe(catalog: Catalog, concept: str, item_id: str) -> bool:
+    try:
+        return bool(item(catalog, concept, item_id).probe)
+    except Exception:  # an item that no longer resolves is not a probe
+        return False
+
+
 def finish(
     db: Session,
     catalog: Catalog,
@@ -489,8 +522,26 @@ def finish(
     for concept, item_id in session.items:
         if (c := (session.answers.get(item_id) or {}).get("confidence")) is not None:
             rated.setdefault(concept, []).append(int(c))
+    # The misconception most often shown by wrong answers, per concept (tagged options only).
+    traps: dict[str, Counter[str]] = {}
+    probed: set[str] = set()  # concepts whose Lesson 0 probe item was answered wrong
+    for concept, item_id in session.items:
+        answered = session.answers.get(item_id) or {}
+        if tag := answered.get("misconception"):
+            traps.setdefault(concept, Counter())[tag] += 1
+        if answered and not answered.get("correct") and _is_probe(catalog, concept, item_id):
+            probed.add(concept)
     for concept, results in per_concept.items():
         sure = rated.get(concept, [])
+        details = (
+            {"confidence": round((sum(sure) / len(sure) - 1) / 3, 3), "rated": len(sure)}
+            if sure
+            else {}
+        )
+        if concept in traps:
+            details["misconception"] = traps[concept].most_common(1)[0][0]
+        if concept in probed:
+            details["probe_missed"] = True
         learn.record_evidence(
             db,
             enrollment,
@@ -501,10 +552,9 @@ def finish(
             now,
             elapsed_seconds=elapsed,
             expected_seconds=expected,
-            # Mean stated confidence on a 0-1 scale, when the learner rated their answers.
-            details={"confidence": round((sum(sure) / len(sure) - 1) / 3, 3), "rated": len(sure)}
-            if sure
-            else None,
+            # Mean stated confidence on a 0-1 scale, when the learner rated their answers, and
+            # the misconception their wrong answers showed.
+            details=details or None,
         )
     if session.activity_id.startswith("checkpoint:"):
         state = gate_state(catalog, session, enrollment.language, exhausted=True)

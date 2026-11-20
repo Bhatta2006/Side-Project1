@@ -1,11 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { enrolled } from './helpers/learner';
 
 /** WCAG 2.1 A/AA checks on every main page, light and dark. Serious or critical issues fail. */
 const PAGES = [
   '/today', '/plan', '/assessments', '/progress', '/settings',
-  '/learn/zero/programs-and-output', '/problems/double-it', '/quiz/zero/programs-and-output',
-  '/quiz/checkpoint/zero/first-steps',
+  '/learn/basics/values', '/problems/double-it', '/quiz/basics/values',
+  '/quiz/checkpoint/basics/start',
 ];
 
 async function audit(page: Page, label: string, found: string[]) {
@@ -34,18 +35,12 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.goto('/login');
     await audit(page, `${scheme} /login`, found);
     await page.getByLabel('Your name').fill(`a11y ${scheme} ${Date.now()}`);
-    await page.getByRole('button', { name: 'Log in' }).click();
-    await expect(page.getByLabel('What should we call you?')).toBeVisible();
+    await page.locator('form', { has: page.getByLabel('Your name') }).getByRole('button', { name: 'Log in' }).click();
+    await expect(page).toHaveURL(/\/start$/);
     await audit(page, `${scheme} /start`, found);
-    await page.getByLabel('What should we call you?').fill('Ada');
-    await page.getByLabel('Year you were born').selectOption('2001');
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByRole('button', { name: /Programming from Zero/ }).click();
-    await page.getByRole('button', { name: /never written code/ }).click();
-    await page.getByRole('button', { name: 'Python', exact: true }).click();
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByRole('button', { name: 'Create my plan' }).click();
-    await expect(page).toHaveURL(/\/today$/);
+    // Lesson 0 needs a model to go further; the rest of the pages are audited as an enrolled learner.
+    await page.context().clearCookies();
+    await enrolled(page, `a11y-${scheme}-${Date.now()}`);
     for (const path of PAGES) {
       await page.goto(path);
       await page.waitForLoadState('networkidle');

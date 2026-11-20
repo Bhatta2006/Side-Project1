@@ -33,7 +33,9 @@ def settle(raw: dict) -> dict:
         return raw  # validation reports the missing options
     texts: list[str] = []
     flagged: list[int] = []
+    tags: list[str] = []
     for index, option in enumerate(options):
+        tags.append(str(option.get("misconception") or "") if isinstance(option, dict) else "")
         if isinstance(option, dict):
             text = option.get("text")
             if not isinstance(text, str):
@@ -69,7 +71,10 @@ def settle(raw: dict) -> dict:
         raise TypeError("mark which option is correct")
     if len(claims) > 1:
         raise TypeError("the marked option and the answer disagree; give one correct option")
-    return {**raw, "options": texts, "answer": claims.pop()}
+    out = {**raw, "options": texts, "answer": claims.pop()}
+    if any(tags):  # a marked option may carry the misconception it shows
+        out["misconceptions"] = tags
+    return out
 
 
 def marked(item: dict) -> dict:

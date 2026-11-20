@@ -79,6 +79,44 @@ def _enabled(request: Request) -> None:
         raise HTTPException(404, "not_found")
 
 
+FAILED_STATES = ("failed", "dead", "cancelled")
+
+
+def _true_minutes(meta: GeneratedCourse | None) -> int | None:
+    """The learner's true session length, for a course generated from a Lesson 0 plan."""
+    plan = ((meta.brief or {}) if meta is not None else {}).get("plan") or {}
+    minutes = plan.get("session_minutes")
+    return minutes if isinstance(minutes, int) and 5 <= minutes <= 120 else None
+
+
+def first_concept(stored, level_id: str | None) -> str | None:
+    """The concept the learner's first activity is on: the chosen level's start concept, else
+    the first concept in course order (as the planner opens a new enrollment)."""
+    level = next((lv for lv in stored.levels if lv.id == level_id), None) or (
+        stored.levels[0] if stored.levels else None
+    )
+    if level is not None and level.start_concept:
+        return level.start_concept.split(":")[-1]
+    return next((cid for m in stored.modules for cid in m.concepts), None)
+
+
+def start_state(stored, latest: dict, level_id: str | None, base: dict) -> dict:
+    """``view.start`` from data ``view`` already loaded: waiting (no plan yet), roadmap_ready
+    (plan saved, first lesson being written), first_lesson_ready, first_lesson_failed (its
+    latest job failed, died or was cancelled; ``retry``: the regenerate endpoint applies)."""
+    cid = first_concept(stored, level_id)
+    concept = next((c for c in stored.concepts if c.id == cid), None)
+    out = dict(base, concept=cid)
+    if concept is None:
+        return out
+    if concept.status != "planned":
+        return dict(out, state="first_lesson_ready", retry=False)
+    job = latest.get(cid)
+    if job is not None and job.state in FAILED_STATES:
+        return dict(out, state="first_lesson_failed", retry=True)
+    return dict(out, state="roadmap_ready", retry=False)
+
+
 def view(db: Session, row: LearningRequest) -> dict:
     out = dict(
         id=row.id,
@@ -95,9 +133,19 @@ def view(db: Session, row: LearningRequest) -> dict:
         published=False,
         diagnostic="none",
         enroll=None,
+        # A later level the learner may choose (Lesson 0, backlog 2.7); never applied for them.
+        level_suggestion=None,
         ready=0,
         total=0,
         community=None,
+        # When the learner can safely start (lesson0-generation-plan.md 5.3): their first
+        # activity is a written lesson. Additive; clients that ignore it use ``published``.
+        start=dict(
+            state="waiting",
+            concept=None,
+            minutes=(row.intent or {}).get("minutes_per_day"),
+            retry=False,
+        ),
     )
     if row.course_id:
         stored = generated.course(db, row.course_id)
@@ -130,7 +178,18 @@ def view(db: Session, row: LearningRequest) -> dict:
                 weekdays=list(range(7)),
                 # The date they asked to be ready by, so the plan is paced against it.
                 **({"target_date": due} if (due := _deadline(row.intent)) else {}),
+                # A Lesson 0 course (Brief.plan): days are packed to the true session length
+                # instead of the rounded-up budget above.
+                **({"session_minutes": true} if (true := _true_minutes(meta)) else {}),
             )
+            if diagnosed is None and meta is not None and (meta.brief or {}).get("plan"):
+                from socrat.coursegen import learner_plan
+
+                try:
+                    plan = learner_plan.LearnerPlan.model_validate(meta.brief["plan"])
+                except ValueError:
+                    plan = None
+                out["level_suggestion"] = learner_plan.suggest_level(plan, stored)
         if stored is not None:
             by_id = {c.id: c for c in stored.concepts}
             latest: dict[str, GenerationJob] = {}
@@ -174,6 +233,7 @@ def view(db: Session, row: LearningRequest) -> dict:
                     for m in stored.modules
                 ],
             )
+            out["start"] = start_state(stored, latest, diagnosed, out["start"])
         job = db.scalars(
             select(GenerationJob)
             .where(GenerationJob.course_id == row.course_id, GenerationJob.kind == "outline")
@@ -375,22 +435,72 @@ def begin(db: Session, settings, user_id: str, row: LearningRequest, parsed) -> 
     and Lesson 0 onboarding (``socrat.onboarding``)."""
     if parsed.blocked:
         raise HTTPException(422, "request_blocked")
-    course_id = intents.slug(parsed.subject, user_id, row.key)
+    decision = None
+    if not settings.course_brain and settings.course_brain_shadow:
+        from socrat.coursegen.brain.route import shadow
+
+        # Shadow mode: record what the brain would decide; nothing changes for the learner.
+        shadow(db, catalog(), user_id, row, parsed.model_dump(mode="json"))
+    if settings.course_brain:
+        from socrat.coursegen import brain
+
+        # An existing course that meets every hard requirement is served as it is: no outline,
+        # no research, no first lesson to write. The decision is kept in course_matches.
+        decision = brain.route(db, catalog(), user_id, row, parsed.model_dump(mode="json"))
+        if decision.served:
+            row.intent = parsed.model_dump(mode="json")
+            row.course_id, row.status, row.updated_at = decision.course_id, "matched", now()
+            record_event(db, user_id, "learning_request.matched", row.id)
+            db.flush()
+            return
+    shared = decision is not None and decision.family_id is not None
+    # A course the brain may share: one id per spec (so concurrent learners meet on it) and
+    # generated without this learner's private parts (their door, gaps, age, deadline).
+    course_id = decision.family_id if shared else intents.slug(parsed.subject, user_id, row.key)
+
+    def join() -> None:
+        from socrat.coursegen import brain
+
+        # A concurrent request with this exact spec started the course first: wait for it.
+        brain.joined(db, row.id, course_id)
+        row.intent = parsed.model_dump(mode="json")
+        row.course_id, row.status, row.updated_at = course_id, "matched", now()
+        record_event(db, user_id, "learning_request.matched", row.id)
+        db.flush()
+
     if course_id in catalog().courses or jobs.active(db, course_id) is not None:
+        if shared:
+            return join()
         raise HTTPException(409, "generation_in_progress")
+    source = parsed
+    if shared:
+        from socrat.coursegen.brain import privacy
+
+        source = intents.Intent.model_validate(privacy.shared_intent(parsed.model_dump()))
     brief = intents.to_brief(
-        parsed, course_id, settings.learning_request_budget_usd, row.material or ""
+        source, course_id, settings.learning_request_budget_usd, row.material or ""
     )
-    jobs.enqueue(
-        db,
-        "outline",
-        course_id,
-        {"brief": brief.model_dump(mode="json"), "learning_request": row.id},
-        user_id,
-    )
+    if decision is not None and decision.units:
+        brief = brief.model_copy(update={"units": decision.units})
+    try:
+        jobs.enqueue(
+            db,
+            "outline",
+            course_id,
+            {"brief": brief.model_dump(mode="json"), "learning_request": row.id},
+            user_id,
+        )
+    except jobs.AlreadyQueued:
+        if not shared:
+            raise
+        return join()
     row.intent = parsed.model_dump(mode="json")
     row.course_id, row.status, row.updated_at = course_id, "confirmed", now()
     record_event(db, user_id, "learning_request.confirmed", row.id)
+    if decision is not None:
+        from socrat.coursegen import brain
+
+        brain.built(db, row.id, course_id)
     db.flush()
 
 
@@ -450,13 +560,22 @@ def publish(request_id: str, request: Request):
         if row is None or row.user_id != user.id or not row.course_id:
             raise HTTPException(404, "not_found")
         course = db.get(GeneratedCourse, row.course_id)
+        if row.status == "matched" and (course is None or course.status != "review"):
+            # An existing course, already published by its maker, or one whose outline is
+            # still being written (the plan screen keeps polling).
+            return view(db, row)
         if course is None:
             raise HTTPException(409, "outline_not_ready")
-        if course.owner_id != user.id:
+        # A learner the brain joined to a course still in review may release it too: it was
+        # generated for their exact spec, and its maker would publish it unchanged.
+        if course.owner_id != user.id and row.status != "matched":
             raise HTTPException(404, "not_found")
         if course.status == "review":
             try:
                 generated.publish(db, default_catalog(), row.course_id)
+                from socrat.coursegen import brain
+
+                brain.attach(db, row.course_id)  # no-op unless the brain routed this request
             except (ValueError, CatalogError) as exc:
                 raise HTTPException(422, "outline_invalid") from exc
             # The first lessons start now, so they are ready (or nearly) by the time the
@@ -572,6 +691,17 @@ def cancel(request_id: str, request: Request):
     _enabled(request)
     with Session(engine(request)) as db, db.begin():
         user, row = _owned_course(db, request, request_id)
+        from socrat.models import CourseMatch
+
+        others = db.scalar(
+            select(func.count())
+            .select_from(CourseMatch)
+            .where(CourseMatch.course_id == row.course_id, CourseMatch.user_id != user.id)
+        )
+        if others:
+            # Other learners were given this course: its lessons are no longer one person's
+            # to stop.
+            raise HTTPException(409, "course_shared")
         waiting = db.scalars(
             select(GenerationJob).where(
                 GenerationJob.course_id == row.course_id, GenerationJob.state == "queued"

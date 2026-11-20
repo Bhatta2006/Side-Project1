@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from socrat import entitlements, learning_mode, localize
+from socrat import learner as learner_memory
 from socrat.assessments import service as assessments
 from socrat.assistant import engine, socratic
 from socrat.assistant.gateway import Provider, ProviderError, ToolRunner, ToolSpec, Turn, complete
@@ -171,6 +172,7 @@ def learner_sections(
     course = catalog.course(enrollment.course_id)
     plan = learn.plan_for(db, catalog, user, enrollment, now, record=False)
     states = learn.states_for(db, enrollment)
+    snap = learner_memory.snapshot(db, enrollment, now, catalog=catalog, user=user, states=states)
     groups: dict[str, list[str]] = {
         "strong": [],
         "developing": [],
@@ -226,7 +228,7 @@ def learner_sections(
         "mastery": mastery or "No scored evidence yet.",
         "next_up": "\n".join(upcoming) or "Nothing scheduled.",
         "recent_results": recent_text or "No results yet.",
-        "adaptive": adaptive_section(db, catalog, enrollment, plan, states, now),
+        "adaptive": adaptive_section(db, catalog, enrollment, plan, snap),
         # The strictness the learner chose in Settings: sets the tutor's manner, never what
         # the server lets it reveal (that stays with reveal_rule and the help ladder).
         "how_strict": learning_mode.policy(user.learning_mode).tutor_line,
@@ -237,23 +239,18 @@ def learner_sections(
         sections["how_you_asked_to_learn"] = how
     # What the reading and the practice showed that scores do not (learn/memory.py). Built
     # by code from counters and results: no learner-written text, so nothing to obey.
-    from socrat.learn import memory
-
-    noticed = memory.tutor_block(db, catalog, enrollment)
-    if noticed:
-        sections["what_socrat_has_noticed"] = noticed
+    if snap.noticed:
+        sections["what_socrat_has_noticed"] = "\n".join(item["text"] for item in snap.noticed)
     return sections
 
 
-def adaptive_section(db: Session, catalog: Catalog, enrollment, plan, states, now: int) -> str:
+def adaptive_section(db: Session, catalog: Catalog, enrollment, plan, snap) -> str:
     """What the planner sees: stuck signals, trends, mistakes, deadline, pending changes."""
     from socrat.adaptive import proposals
-    from socrat.adaptive import service as adaptive
 
     if enrollment.status != "active":
         return ""
-    skill = adaptive.build_profiles(db, catalog, enrollment, states, now)
-    stuck = adaptive.stuck_map(skill, now)
+    skill, stuck = snap.skill, snap.stuck
     lines = [f"Path style: {plan.style}; goal focus: {plan.focus}."]
     forecast = plan.forecast
     if forecast.get("target_date"):
@@ -415,6 +412,17 @@ def prepare(
             raise HTTPException(404, "not_found")
         problem = catalog.problem(problem_id)
         ladder = socratic.Ladder.from_dict(thread.ladder.get("state"))
+        if not thread.ladder.get("state") and enrollment is not None:
+            # Hard in session one (lesson0 plan 4.E): the ladder starts one rung along, so a
+            # concrete hint comes one effort sooner. Reveal rules are unchanged.
+            owner = catalog.problems[problem_id][0]
+            qualified = f"{owner}:{problem.concepts[0]}"
+            from socrat import learner as learner_layer
+
+            if learn.session_one_for(db, enrollment).get(
+                qualified
+            ) == "difficulty" or qualified in learner_layer.lesson0_gaps(catalog, enrollment):
+                ladder = socratic.Ladder(ceiling=1)
         attempts = (
             db.scalar(
                 select(func.count())
@@ -450,6 +458,12 @@ def prepare(
         sections["current_lesson"] = f"{concept.title}: {concept.summary}\n" + "\n".join(
             concept.key_points
         )
+        # Ids record_observation accepts for this lesson (the root units it was written from).
+        known = learner_memory.misconceptions_for(db, qualified)
+        if known:
+            sections["known_misconceptions"] = "\n".join(
+                f"{tag}: {belief}" for tag, belief in list(known.items())[:8]
+            )
         sections["help_policy"] = (
             "ALLOWED_LEVEL: 5 — general concept teaching (not a graded problem)."
         )

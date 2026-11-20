@@ -69,7 +69,13 @@ def _error(exc: BaseException) -> ProviderError:
     return ProviderError("provider_unreachable")
 
 
-_FAILURES = (httpx.TransportError, OSError)
+_FAILURES: tuple[type[BaseException], ...] = (httpx.TransportError, OSError)
+try:  # google-genai 3.x sends through httpx2, whose errors do not subclass httpx's
+    import httpx2
+
+    _FAILURES += (httpx2.TransportError,)
+except ImportError:  # pragma: no cover - older google-genai on plain httpx
+    pass
 
 
 def _failures() -> tuple[type[BaseException], ...]:

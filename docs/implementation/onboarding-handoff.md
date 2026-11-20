@@ -72,7 +72,9 @@ profile = profile_for(db, learning_request_id)   # dict, or None if not from Les
 ```
 
 Do not query `onboarding_drafts` directly; its other columns will change while onboarding is
-fixed. Check `profile["meta"]["schema"] == "lesson0-profile/1"`. Onboarding bumps the version on
+fixed. Generation usually does not need to call this itself: `socrat.learner` reads the profile
+and hands its fields to every module as preferences (`docs/implementation/learner-memory.md`).
+Its field mapping is `learner.ONBOARDING`; update it when the schema version is bumped. Check `profile["meta"]["schema"] == "lesson0-profile/1"`. Onboarding bumps the version on
 any change a reader must know about and says so in this file.
 
 ### 3.2 Profile shape, `lesson0-profile/1`
@@ -146,6 +148,37 @@ uses only these fields of `coursegen.requests.view`. Keep them, or tell onboardi
 If generation changes when a learner can start (for example Module 1 ready before the full
 outline), extend `view` with a new field and tell onboarding; do not change the meaning of the
 existing ones.
+
+**New field for onboarding (generation, 2026-11-20; nothing above changed).** `view.start` =
+`{state, concept, minutes, retry}`:
+
+| `state` | Meaning | Suggested `/start` behaviour |
+|---|---|---|
+| `waiting` | no saved plan yet | keep the skeleton / loading |
+| `roadmap_ready` | plan saved; the first lesson is being written | show the plan; Start can wait or show "your first lesson is being written" |
+| `first_lesson_ready` | the learner's first lesson is written | enable "Start learning" |
+| `first_lesson_failed` | its last job failed, died or was cancelled; `retry: true` | offer a retry (`POST /learning-requests/{id}/concepts/{start.concept}/regenerate`) |
+
+`concept` is the first activity's concept id (the start level's start concept, else the first in
+course order); `minutes` is the request's minutes per day. A course the brain served is
+`first_lesson_ready` at once. **Wired 2026-11-20 (owner asked generation to do it):** `/start` keeps
+polling until the first lesson is ready or failed, shows "Your first lesson is being written" meanwhile, enables
+Start learning only at `first_lesson_ready` (or when an older server sends no `start`), offers Try again at
+`first_lesson_failed`, and after publish offers `level_suggestion` (Start there / Start from the beginning). Tests:
+`services/api/tests/test_start_state.py`.
+
+**`level_suggestion` (generation, 2026-11-20; nothing above changed).** `null`, or `{level, start, reason}`
+once the course is published, when the Lesson 0 snag was solved first try (no hint), showed no gap and was not
+slow. It is an **offer**: `enroll.level` stays the course's first level, because placement treats every concept
+a later level skips as known, and one 90-second sample must not make anything known. If the learner accepts,
+send `enroll` with `level` replaced by `level_suggestion.level`; the skipped concepts are then placed as likely
+known and confirmed by a short check once written. `reason` is ready to show. Tests:
+`services/api/tests/test_level_suggestion.py`.
+
+**`enroll.session_minutes` (generation, 2026-11-20).** For a course generated from a Lesson 0 plan,
+the view's `enroll` object also carries `session_minutes` (the learner's true 10/25/60).
+`POST /api/v1/enrollments` accepts it, so `/start` posting `published.enroll` unchanged keeps working and
+now gets ten-minute days for a ten-minute learner. No web change is needed.
 
 ## 4. Live-run findings that belong to generation
 

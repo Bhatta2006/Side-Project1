@@ -3,6 +3,13 @@ import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { dismissPlans } from './helpers/learner';
+
+/** Open a page and close the first-visit plans dialog, which hides the rest of the page. */
+async function open(page: Page, url: string) {
+  await page.goto(url);
+  await dismissPlans(page);
+}
 
 const python = path.resolve('.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const fixture = JSON.parse(execFileSync(python, ['-c', "import sys,json;from socrat.explainer.artifact import compile_document; h,c=compile_document(sys.stdin.read(),'visual-fixture','http://localhost:3000'); print(json.dumps(dict(html=h,csp=c)))"], {
@@ -17,7 +24,7 @@ async function enrolled(page: Page) {
   const profile = await (await page.request.get('/api/v1/me')).json();
   const headers = { Origin: origin, 'X-CSRF-Token': profile.csrf_token };
   expect((await page.request.patch('/api/v1/me', { headers, data: { birth_year: 2000, timezone: 'Asia/Kolkata' } })).ok()).toBe(true);
-  expect((await page.request.post('/api/v1/enrollments', { headers, data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0,1,2,3,4,5,6] } })).ok()).toBe(true);
+  expect((await page.request.post('/api/v1/enrollments', { headers, data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0,1,2,3,4,5,6] } })).ok()).toBe(true);
 }
 
 async function mockVisual(page: Page) {
@@ -37,7 +44,7 @@ function job(request: string, status: string, error: string | null = null) {
 }
 
 test('generated visual is embedded, interactive, editable, keyboard operable and isolated', async ({ page }, info) => {
-  await enrolled(page); await mockVisual(page); await page.goto('/playground');
+  await enrolled(page); await mockVisual(page); await open(page, '/playground');
   const request = 'Explain how equal groups create a product. Let me edit the multiplier.';
   await page.getByLabel('Your question', { exact: true }).fill(request);
   const sent = page.waitForRequest(r => r.url().endsWith('/playground/generate'));
@@ -99,7 +106,7 @@ test('saved visual reopens after a preview error without another generation', as
   let generations = 0;
   page.on('request', request => { if (request.url().endsWith('/playground/generate')) generations++; });
   await page.route('**/api/v1/playground/artifacts/visual-fixture', route => route.fulfill({ json: artifact(request) }));
-  await page.goto('/playground'); await page.getByLabel('Your question', { exact: true }).fill(request);
+  await open(page, '/playground'); await page.getByLabel('Your question', { exact: true }).fill(request);
   await page.getByRole('button', { name: 'Generate', exact: true }).click();
   await expect(page.locator('iframe')).toHaveCSS('opacity', '1');
   const frame = page.frames().find(f => f.url().startsWith(frameURL))!;
@@ -118,7 +125,7 @@ test('visual receives the dashboard theme in light and dark modes', async ({ pag
   await enrolled(page); await mockVisual(page);
   for (const theme of ['light','dark'] as const) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
-    await page.goto('/playground');
+    await open(page, '/playground');
     await page.getByLabel('Your question', { exact: true }).fill('Explain multiplication visually');
     await page.getByRole('button', { name: 'Generate', exact: true }).click();
     await expect(page.getByText('Step 1 of 4', { exact: true })).toBeVisible();
@@ -133,14 +140,16 @@ test('visual receives the dashboard theme in light and dark modes', async ({ pag
 });
 
 test('course search stays scoped and generation sends the free request without preset data', async ({ page }) => {
-  await enrolled(page); await mockVisual(page); await page.goto('/today');
+  await enrolled(page); await mockVisual(page); await open(page, '/today');
   await expect(page.getByRole('link', { name: 'Start lesson' })).toBeVisible();
   await page.keyboard.press('Control+k');
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('option', { name: /Programs and output/ })).toBeVisible();
+  await expect(dialog.getByRole('option', { name: /^Values/ })).toBeVisible();
   await dialog.getByPlaceholder('Search lessons and pages…').fill('Binary search');
   await expect(dialog.getByText('No results. Try another word.')).toBeVisible(); await page.keyboard.press('Escape');
-  await page.getByRole('link', { name: /Ask about any concept|visually$/ }).first().click();
+  // Today's Playground card sits in a tab; the sidebar link is the stable way there.
+  await page.getByRole('link', { name: 'Playground', exact: true }).first().click();
+  await dismissPlans(page);
   const request = 'Explain the phases of the Moon with an interactive orbit';
   await page.getByLabel('Your question', { exact: true }).fill(request);
   const sent = page.waitForRequest(r => r.url().endsWith('/playground/generate'));
@@ -150,7 +159,7 @@ test('course search stays scoped and generation sends the free request without p
 });
 
 test('failed generation preserves the request and reporting removes a saved visual', async ({ page }) => {
-  await enrolled(page); await mockVisual(page); await page.goto('/playground');
+  await enrolled(page); await mockVisual(page); await open(page, '/playground');
   const request = 'Explain multiplication with editable groups';
   await page.getByLabel('Your question', { exact: true }).fill(request);
   await page.route('**/api/v1/playground/generate', route => route.fulfill({ status: 202, json: job(request, 'failed', 'playground_generation_invalid') }));

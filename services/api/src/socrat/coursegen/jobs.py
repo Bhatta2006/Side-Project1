@@ -26,8 +26,8 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from dataclasses import replace
-from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import CursorResult, Engine, func, or_, select, update
@@ -39,7 +39,17 @@ from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.catalog.schema import Citation
 from socrat.config import Settings
-from socrat.coursegen import execute, fetch, research, roles, search, validation, youtube
+from socrat.coursegen import (
+    execute,
+    fetch,
+    learner_plan,
+    prefetch,
+    research,
+    roles,
+    search,
+    validation,
+    youtube,
+)
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -52,6 +62,7 @@ from socrat.coursegen.outline import (
     from_course,
     merge_details,
     needs_detail,
+    roadmap_issues,
     skeleton_of,
     tidy,
     titles,
@@ -66,6 +77,11 @@ ROUNDS = 3  # architect attempts per job; the critic sees every valid one
 DETAIL_CONCURRENCY = 12  # detail calls at the same time
 DETAIL_CHUNK = 4  # concepts per detail call: small replies keep the slowest call short
 STALE_SECONDS = 3600  # a running job this old was orphaned by a crash or restart
+# With ``gen_waiting_learner``: a job a learner waits on (priority <= WAITING_PRIORITY)
+# beats every HEARTBEAT_SECONDS, so silence this long means its worker is gone.
+STALE_SECONDS_WAITING = 120
+HEARTBEAT_SECONDS = 20
+WAITING_PRIORITY = 1
 POLL_SECONDS = 2
 MAX_ATTEMPTS = 3  # transient failures before a job is dead
 BACKOFF_SECONDS = (60, 300, 900)  # wait before the next try, by attempt
@@ -96,7 +112,7 @@ AUTO_RETRIES = 1
 
 
 def priority_of(kind: str, data: dict) -> int:
-    if kind == "outline":
+    if kind in ("outline", "research"):  # an outline waits on its research: same urgency
         return PRIORITY["outline"]
     if data.get("urgent"):  # the lesson the learner is standing in front of
         return PRIORITY["first"]
@@ -217,14 +233,30 @@ def enqueue_once(
         return None
 
 
-def claim(engine: Engine) -> str | None:
-    """Atomically take the oldest queued (or orphaned) job; safe with several API processes."""
+def claim(
+    engine: Engine, waiting_fast: bool = False, max_priority: int | None = None
+) -> str | None:
+    """Atomically take the oldest queued (or orphaned) job; safe with several API processes.
+    ``waiting_fast``: a running job a learner waits on is orphaned after
+    ``STALE_SECONDS_WAITING`` of silence (it beats a heartbeat), not an hour.
+    ``max_priority``: take only jobs this urgent (the learner-facing worker slot)."""
     stamp = now()
     paused = select(GeneratedCourse.id).where(GeneratedCourse.paused != "")
+    orphaned = (GenerationJob.state == "running") & (
+        GenerationJob.updated_at < stamp - STALE_SECONDS
+    )
+    if waiting_fast:
+        orphaned = orphaned | (
+            (GenerationJob.state == "running")
+            & (GenerationJob.priority <= WAITING_PRIORITY)
+            & (GenerationJob.updated_at < stamp - STALE_SECONDS_WAITING)
+        )
     claimable = or_(
         (GenerationJob.state == "queued") & (GenerationJob.not_before <= stamp),
-        (GenerationJob.state == "running") & (GenerationJob.updated_at < stamp - STALE_SECONDS),
+        orphaned,
     ) & GenerationJob.course_id.not_in(paused)
+    if max_priority is not None:
+        claimable = claimable & (GenerationJob.priority <= max_priority)
     with Session(engine) as db, db.begin():
         candidates = db.scalars(
             select(GenerationJob.id)
@@ -255,6 +287,25 @@ def _note(engine: Engine, job_id: str, entry: dict, cost: float = 0.0, **fields)
             setattr(job, name, value)
 
 
+# How long an outline waits for root-unit research before it plans without it.
+UNIT_WAIT_SECONDS = 600
+UNIT_POLL_SECONDS = 10
+
+
+def _defer(engine: Engine, job_id: str, pending: list[str]) -> None:
+    """Hand the job back to the queue while its research runs. Not a failure: no attempt is
+    counted and nothing is paid."""
+    with Session(engine) as db, db.begin():
+        job = need(db.get(GenerationJob, job_id))
+        job.state, job.stage = "queued", "waiting"
+        job.not_before, job.updated_at = now() + UNIT_POLL_SECONDS, now()
+        if not any(e.get("event") == "waiting_research" for e in job.log):
+            job.log = [
+                *job.log,
+                {"role": "system", "event": "waiting_research", "units": pending, "at": now()},
+            ]
+
+
 async def run_outline(
     engine: Engine, settings: Settings, base: Catalog, job_id: str, make=make_provider
 ) -> None:
@@ -262,13 +313,71 @@ async def run_outline(
         job = need(db.get(GenerationJob, job_id))
         brief = Brief.model_validate(job.input["brief"])
         owner = job.created_by if job.input.get("learning_request") else None
+        if brief.units:
+            from socrat.coursegen.brain import units as unitstore
+
+            # Root units being researched for this course: wait for them (a bounded time),
+            # so the outline is planned from validated material instead of paying twice.
+            pending = unitstore.waiting(db, brief.units)
+            if pending and now() - job.created_at < UNIT_WAIT_SECONDS:
+                _defer(engine, job_id, pending)
+                return
+            found = unitstore.load(db, brief.units)
+            if found and not brief.subject_material:
+                brief = brief.model_copy(
+                    update={"subject_material": unitstore.block(db, found, 19000)}
+                )
+        plan_event = None
+        if settings.gen_learner_plan and brief.plan is None and owner is not None:
+            from socrat.coursegen.brain import learner as learner_hook
+
+            request_id = job.input.get("learning_request")
+            # Lesson 0 reaches the course: read once, here, for a course only its maker reads.
+            if learner_hook.builds_private(db, request_id):
+                plan, status, why = learner_plan.plan_for(db, request_id)
+                plan_event = {"role": "system", "event": f"profile_{status}"}
+                if why:
+                    plan_event["why"] = why
+                if plan is not None:
+                    langs = learner_plan.languages(plan, list(brief.languages))
+                    brief = brief.model_copy(update={"plan": plan, "languages": langs})
         stored = generated.course(db, brief.id)
         fresh = not job.input.get("revise") and not job.input.get("notes")
-        reusable = reusable_outline(db, job_id, job.input["brief"]) if fresh else None
+        # A personal plan is part of the reuse key: a fitted outline is never another's.
+        key = brief.model_dump(mode="json") if brief.plan is not None else job.input["brief"]
+        reusable = reusable_outline(db, job_id, key) if fresh else None
+        resumed = job.output if job.output and "outline" in job.output else None
+    if plan_event is not None:
+        _note(engine, job_id, plan_event)
     if reusable is not None:
         source_id, architect = reusable
         if await _reuse(engine, base, job_id, brief, owner, source_id, architect, settings):
             return
+    if settings.gen_waiting_learner and fresh and isinstance(resumed, dict):
+        # This job already paid for a valid outline before it was interrupted: save that one,
+        # with the brief exactly as it was prepared for it (style, the learner's constraints).
+        try:
+            prepared = Brief.model_validate(resumed["brief"])
+            course = to_course(prepared, resumed["outline"])
+            notes = [str(n) for n in resumed.get("notes") or []][:30]
+            kept = prepared.model_copy(update={"review_notes": notes})
+        except (ValueError, KeyError, TypeError):
+            course = None
+        if course is not None:
+            _note(engine, job_id, {"role": "system", "event": "resumed_from_stored_outline"})
+            await _save_outline(
+                engine, settings, base, job_id, kept, course, owner, keep_written=True
+            )
+            return
+    if settings.gen_learner_brief:
+        from socrat.coursegen.brain import learner as learner_hook
+
+        # A course only its maker will read is planned with their brief (what they already
+        # show elsewhere, their preferences, their Lesson 0 sample). Never stored on the course.
+        with Session(engine) as db:
+            shaped = learner_hook.outline_block(db, owner, job.input.get("learning_request"), now())
+        if shaped:
+            brief = brief.model_copy(update={"learner_brief": shaped[:6000]})
     if brief.style is None and brief.style_request.strip():
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
         brief = brief.model_copy(update={"style": spec})
@@ -277,6 +386,14 @@ async def run_outline(
         brief = brief.model_copy(
             update={"style": styles.for_session(brief.style, brief.session_minutes)}
         )
+    if brief.plan is not None and brief.plan.constraints:
+        # What the learner explicitly asked for is written by code over the stylist's reading.
+        base_style = brief.style or styles.StyleSpec()
+        enforced, unmet = learner_plan.enforce(base_style, brief.plan)
+        if enforced != base_style:  # a default style is set only when an ask needs one
+            brief = brief.model_copy(update={"style": enforced})
+        if unmet:
+            _note(engine, job_id, {"role": "system", "event": "constraint_unmet", "issues": unmet})
     previous = (
         skeleton_of(from_course(stored)) if stored is not None and job.input.get("revise") else None
     )
@@ -287,6 +404,11 @@ async def run_outline(
     issues = [job.input["notes"]] if job.input.get("notes") else []
     best = None
     reviews = 0
+    lazy = brief.plan is not None  # a learner's roadmap: module 1 now, the rest later
+    repaired = False  # a learner's roadmap gets one repair round, no more
+    later_notes: list[str] = []  # critic notes on later modules, for their detailer
+    plan = brief.plan  # with the outcome and gap map code accepted from the kept outline
+    early_saved: list | None = None  # module 1 as saved before the critic answered
     for attempt in range(1, ROUNDS + 1):
         with Session(engine) as db:
             if spent(db, brief.id) >= brief.budget_usd:
@@ -316,16 +438,21 @@ async def run_outline(
         _note(
             engine,
             job_id,
-            {"role": "architect", "round": attempt, "event": "skeleton", "plan": titles(outline)},
+            {
+                "role": "architect",
+                "round": attempt,
+                "event": "skeleton",
+                "plan": titles(outline),
+                "ms": reply.ms,
+            },
         )
-        early: roles.Reply | None = (
-            None  # the critic's review of the skeleton, run while the details are written
-        )
-        if needs_detail(outline):
-            work: list[Any] = [_detail(engine, settings, brief, outline, issues, make)]
+        # The critic's review of the skeleton, run while the details are written (and, for a
+        # waiting learner, while their first lesson starts).
+        early: asyncio.Task | None = None
+        if needs_detail(outline, first_only=lazy):
             if reviews < max(1, settings.gen_outline_reviews):
                 reviews += 1
-                work.append(
+                early = asyncio.ensure_future(
                     roles.ask(
                         engine,
                         settings,
@@ -336,8 +463,9 @@ async def run_outline(
                         make,
                     )
                 )
-            (missing, cost), *rest = await asyncio.gather(*work)
-            early = rest[0] if rest else None
+            missing, cost = await _detail(
+                engine, settings, brief, outline, issues, make, first_only=lazy
+            )
             reply.cost_usd += cost
             if missing:
                 issues = [f"No details could be written for: {', '.join(missing[:20])}"]
@@ -347,7 +475,7 @@ async def run_outline(
                     {"role": "architect", "round": attempt, "issues": issues},
                     reply.cost_usd,
                 )
-                issues += _review(engine, job_id, attempt, early)[1] if early else []
+                issues += _review(engine, job_id, attempt, await early)[1] if early else []
                 continue
         tidy(outline, base, brief.adapter)
         try:
@@ -357,7 +485,8 @@ async def run_outline(
                 generated.extend(
                     base, [*(c for c in generated.courses(db) if c.id != brief.id), course]
                 )
-            if found_graph := graph_issues(course, adapter):
+            found_graph = [*graph_issues(course, adapter), *roadmap_issues(brief, outline)]
+            if found_graph:
                 raise ValueError("; ".join(found_graph))
         except (ValueError, CatalogError) as exc:
             issues = [f"The outline failed validation: {exc}"]
@@ -367,9 +496,27 @@ async def run_outline(
                 {"role": "architect", "round": attempt, "issues": issues},
                 reply.cost_usd,
             )
-            issues += _review(engine, job_id, attempt, early)[1] if early else []
+            issues += _review(engine, job_id, attempt, await early)[1] if early else []
             continue
         best = course
+        if brief.plan is not None:
+            ids = {c.id for c in course.concepts}
+            plan, rejected = learner_plan.from_architect(brief.plan, reply.data, ids)
+            if rejected:  # left out, never guessed; the roadmap stands
+                note = {"role": "system", "event": "outcome_rejected", "issues": rejected[:10]}
+                _note(engine, job_id, note)
+        if settings.gen_waiting_learner:
+            # A crash or restart from here on resumes from this outline (no second architect
+            # bill); the critic's verdicts so far are in the log.
+            prepared = brief.model_copy(update={"plan": plan}).model_dump(
+                mode="json", exclude={"learner_brief"}
+            )
+            _note(
+                engine,
+                job_id,
+                {"role": "system", "event": "outline_stored", "round": attempt},
+                output={"outline": outline, "notes": later_notes, "brief": prepared},
+            )
         _note(
             engine,
             job_id,
@@ -384,8 +531,14 @@ async def run_outline(
             },
             reply.cost_usd,
         )
+        if lazy and owner is not None and settings.gen_waiting_learner and early_saved is None:
+            # A waiting learner's first lesson starts now, not after the critic (backlog 2.2).
+            first = brief.model_copy(update={"plan": plan})
+            await _store_outline(engine, settings, base, job_id, first, best, owner)
+            early_saved = module_one(best)
+            _note(engine, job_id, {"role": "system", "event": "first_lesson_early"})
         if early is not None:
-            review = early
+            review = await early
         elif reviews >= max(1, settings.gen_outline_reviews):
             # The architect has answered every review it was given; keep this revision.
             _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
@@ -398,6 +551,18 @@ async def run_outline(
         verdict, found = _review(engine, job_id, attempt, review)
         if verdict == "pass":
             break
+        if lazy:
+            # A learner is waiting (lesson0-generation-plan.md 5.2): what concerns module 1 or the
+            # whole course gets one repair round; what concerns later modules waits for them
+            # and is handed to the detailer when that module is detailed.
+            fix_now, later_notes = split_review(outline, found)
+            if not fix_now or repaired:
+                entry = {"event": "kept_for_learner", "open": fix_now, "deferred": later_notes}
+                _note(engine, job_id, {"role": "system", **entry})
+                break
+            repaired = True
+            issues = fix_now
+            continue
         if settings.gen_outline_reviews == 0:
             # Advisory review: the findings are in the log, the outline stands.
             _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
@@ -412,12 +577,124 @@ async def run_outline(
             error="No valid outline after all rounds; see the log.",
         )
         return
+    kept = brief.model_copy(update={"review_notes": later_notes[:30], "plan": plan})
+    same = early_saved is not None and module_one(best) == early_saved
+    if early_saved is not None and not same:
+        # The repair round changed module 1: the first lesson started on the old one stops,
+        # and the save below queues it again.
+        with Session(engine) as db, db.begin():
+            for open_job in db.scalars(
+                select(GenerationJob).where(
+                    GenerationJob.course_id == brief.id,
+                    GenerationJob.kind == "package",
+                    GenerationJob.state.in_(("queued", "running")),
+                )
+            ):
+                if (open_job.input or {}).get("trigger") == "first":
+                    open_job.state, open_job.updated_at = "cancelled", now()
+                    open_job.error = prefetch.PLAN_CHANGED  # written again from the new plan
+        _note(engine, job_id, {"role": "system", "event": "first_lesson_requeued"})
+    await _save_outline(engine, settings, base, job_id, kept, best, owner, keep_written=same)
+
+
+INTRO_WORDS = 150  # the door belongs in the opening, not somewhere in the lesson
+
+
+def first_lesson_issues(brief: Brief, course, live, personal: bool) -> list[str]:
+    """The first-lesson gate for a Lesson 0 learner (backlog 2.5), code only: it fits the
+    session; and, when it was written for them (``personal``), it opens with their door, keeps an
+    asked-for code language, and gives them something to do with a key. Empty for any other
+    lesson. Not checked by code: that one example sits outside the door."""
+    first = course.modules[0].concepts[:1] if course.modules else []
+    plan = brief.plan
+    if plan is None or first != [live.id]:
+        return []
+    issues = [over] if (over := first_session_over(brief, course, live)) else []
+    if not personal:
+        return issues
+    if plan.door:
+        door = learner_plan._tokens(plan.door)
+        opening = learner_plan._tokens(" ".join(live.lesson.split()[:INTRO_WORDS]))
+        if door and len(door & opening) * 2 < len(door):
+            issues.append(
+                "Open the lesson with the learner's everyday scenario (the door) in the first "
+                "few sentences, then map it to the formal term."
+            )
+    for c in plan.constraints:
+        lang = c.enforced_as.removeprefix("languages=")
+        if c.enforced_as.startswith("languages=") and shape.effective(course).studio == "code":
+            fences = {f.lower() for f in re.findall(r"^```([a-zA-Z+#]*)", live.lesson, re.M)}
+            if lang not in fences:
+                issues.append(f"The learner asked for {lang}: show the code in {lang}.")
+    if not live.quiz:
+        issues.append("Give the learner something to do: at least one keyed check item.")
+    return issues
+
+
+def first_session_over(brief: Brief, course, live) -> str:
+    """A Lesson 0 learner's first lesson must fit their session (computed minutes, 10%
+    slack); the reason it does not, or ""."""
+    from socrat.planner.engine import written_minutes
+
+    minutes = brief.plan.session_minutes if brief.plan else None
+    first = course.modules[0].concepts[:1] if course.modules else []
+    real = written_minutes(live.lesson, len(live.quiz))
+    if not minutes or first != [live.id] or real is None:
+        return ""
+    total = real["lesson"] + real["quiz"]
+    if total <= minutes * 1.1:
+        return ""
+    return (
+        f"This first session takes {total} minutes (reading {real['lesson']}, check "
+        f"{real['quiz']}); the learner has {minutes}. Cut the lesson to one idea that fits."
+    )
+
+
+def module_one(course) -> list:
+    """Module 1 as the learner's first lesson is written from it."""
+    by_id = {c.id: c for c in course.concepts}
+    first = course.modules[0].concepts if course.modules else []
+    return [by_id[cid].model_dump(mode="json", exclude={"status"}) for cid in first]
+
+
+async def _store_outline(
+    engine: Engine,
+    settings: Settings,
+    base: Catalog,
+    job_id: str,
+    brief: Brief,
+    best,
+    owner,
+    keep_written: bool = False,
+) -> None:
+    """Save the outline and queue the learner's first lesson. ``keep_written``: a lesson
+    already written for this outline (started before the critic answered) is kept."""
     best = _with_applied(engine, settings, job_id, best, owner)
     with Session(engine) as db, db.begin():
-        generated.save_course(db, base, best, status="review", brief=brief.model_dump(mode="json"))
+        stored = generated.course(db, brief.id) if keep_written else None
+        if stored is not None:
+            written = {c.id: c for c in stored.concepts if c.status != "planned"}
+            best = best.model_copy(
+                update={"concepts": [written.get(c.id, c) for c in best.concepts]}
+            )
+        stored_brief = brief.model_dump(mode="json", exclude={"learner_brief"})
+        generated.save_course(db, base, best, status="review", brief=stored_brief)
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
             early_first_lesson(db, settings, best)
+
+
+async def _save_outline(
+    engine: Engine,
+    settings: Settings,
+    base: Catalog,
+    job_id: str,
+    brief: Brief,
+    best,
+    owner,
+    keep_written: bool = False,
+) -> None:
+    await _store_outline(engine, settings, base, job_id, brief, best, owner, keep_written)
     _note(engine, job_id, {"role": "system", "event": "outline_saved"}, state="done")
 
 
@@ -455,6 +732,24 @@ def _with_applied(engine: Engine, settings: Settings, job_id: str, course, owner
     return widened
 
 
+def split_review(outline: dict, found: list[str]) -> tuple[list[str], list[str]]:
+    """(fix now, later) for a learner's roadmap. An issue whose "where" names a module after
+    the first, or a concept in one, can wait for that module's details; anything else (module
+    1, the course as a whole, or no clear place) is fixed before the learner starts."""
+    modules = [m for m in outline.get("modules", []) if isinstance(m, dict)]
+    later_ids = {
+        str(x)
+        for m in modules[1:]
+        for x in [m.get("id"), *[c.get("id") for c in m.get("concepts", []) if isinstance(c, dict)]]
+        if x
+    }
+    now, later = [], []
+    for issue in found:
+        where = issue.split(":", 1)[0].strip()
+        (later if where in later_ids else now).append(issue)
+    return now, later
+
+
 def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, list[str]]:
     """Records a critic reply in the job log; returns its verdict and issues as fix notes.
     The issues are empty for a pass."""
@@ -473,6 +768,7 @@ def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, lis
             "verdict": verdict,
             "summary": str((review.data or {}).get("summary", review.problem))[:1000],
             "issues": found,
+            "ms": review.ms,
         },
         review.cost_usd,
     )
@@ -480,7 +776,13 @@ def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, lis
 
 
 async def _detail(
-    engine: Engine, settings: Settings, brief: Brief, outline: dict, issues: list[str], make
+    engine: Engine,
+    settings: Settings,
+    brief: Brief,
+    outline: dict,
+    issues: list[str],
+    make,
+    first_only: bool = False,
 ) -> tuple[list[str], float]:
     """Writes every concept's details into ``outline``, a few concepts per call and all calls in
     parallel, so the slowest call stays short; a chunk whose reply is unusable is asked once
@@ -507,9 +809,10 @@ async def _detail(
         return missing, cost
 
     # A malformed module is left alone here: to_course rejects it with a readable reason.
+    modules = outline.get("modules", [])
     chunks = [
         (m["id"], ids[i : i + DETAIL_CHUNK])
-        for m in outline.get("modules", [])
+        for m in (modules[:1] if first_only else modules)
         if isinstance(m, dict)
         and isinstance(m.get("id"), str)
         and isinstance(m.get("concepts"), list)
@@ -591,6 +894,10 @@ async def _reuse(
             )
             if owner is not None:
                 need(db.get(GeneratedCourse, brief.id)).owner_id = owner
+                if settings is not None:
+                    # As for a new outline: the learner's first lesson starts now, or their
+                    # start screen waits on a lesson nobody is writing (live run 2026-11-20).
+                    early_first_lesson(db, settings, course)
     except (ValueError, CatalogError):
         return False
     entry = {
@@ -653,6 +960,88 @@ def _job_cost(engine: Engine, job_id: str) -> float:
         return need(db.get(GenerationJob, job_id)).cost_usd
 
 
+async def detail_if_missing(
+    engine: Engine,
+    settings: Settings,
+    base: Catalog,
+    job_id: str,
+    brief: Brief,
+    course,
+    concept_id: str,
+    make,
+):
+    """A learner's roadmap details module 1 only; a later concept gets its details here, just
+    before its first lesson is written (lesson0-generation-plan.md 5.2). The concept and the
+    other undetailed concepts of its module, up to ``DETAIL_CHUNK``, in one DETAILER call (one
+    retry for the ones left out). Returns the course as stored afterwards. A concept that still
+    has no details is a normal package failure (retry, regenerate)."""
+    from socrat.catalog.schema import Concept
+
+    concept = next((c for c in course.concepts if c.id == concept_id), None)
+    if concept is None or concept.outline is not None or concept.status != "planned":
+        return course
+    by_id = {c.id: c for c in course.concepts}
+    module = next(m for m in course.modules if concept_id in m.concepts)
+    ids = [concept_id] + [
+        cid
+        for cid in module.concepts
+        if cid != concept_id and by_id[cid].outline is None and by_id[cid].status == "planned"
+    ]
+    ids = ids[:DETAIL_CHUNK]
+    skeleton = from_course(course)
+    missing, cost = ids, 0.0
+    for _ in range(2):
+        reply = await roles.ask(
+            engine,
+            settings,
+            "architect",
+            DETAILER,
+            detail_prompt(brief, skeleton, module.id, missing, brief.review_notes or None),
+            8000,
+            make,
+        )
+        cost += reply.cost_usd
+        missing = merge_details(skeleton, missing, reply.data or {})
+        if not missing:
+            break
+    written = {
+        c["id"]: c
+        for m in skeleton["modules"]
+        for c in m["concepts"]
+        if c["id"] in ids and c["id"] not in missing
+    }
+    done = []
+    with Session(engine) as db, db.begin():
+        for cid, c in written.items():
+            planned = by_id[cid]
+            outline = {
+                "depth": c.get("depth", "practitioner"),
+                "objectives": c["objectives"],
+                "misconceptions": c.get("misconceptions", []),
+                "assessment": c["assessment"],
+                **{
+                    k: c[k]
+                    for k in ("category", "related", "evidence", "expected", "practice")
+                    if k in c
+                },
+            }
+            try:
+                updated = Concept.model_validate(
+                    {**planned.model_dump(mode="json"), "outline": outline}
+                )
+                generated.store_concept(
+                    db, base, course.id, updated, None, reason="detail", job_id=job_id
+                )
+                done.append(cid)
+            except (ValueError, CatalogError) as exc:
+                log.warning("details for %s:%s rejected: %s", course.id, cid, exc)
+        stored = need(generated.course(db, course.id))
+    _note(engine, job_id, {"role": "architect", "event": "detailed", "concepts": done}, cost)
+    if concept_id not in done:
+        raise ValueError(f"no details could be written for {course.id}:{concept_id}")
+    return stored
+
+
 async def run_package(
     engine: Engine,
     settings: Settings,
@@ -667,11 +1056,29 @@ async def run_package(
         course_id, concept_id, data = job.course_id, job.target, job.input
         brief = Brief.model_validate(need(db.get(GeneratedCourse, course_id)).brief)
         course = need(generated.course(db, course_id))
+        if brief.units:
+            from socrat.coursegen.brain import units as unitstore
+
+            # A correction withdrew the unit this lesson rests on: wait for its new revision
+            # rather than rewrite from nothing (bounded, like the outline's wait).
+            pending = unitstore.waiting(db, brief.units)
+            if pending and now() - job.created_at < UNIT_WAIT_SECONDS:
+                _defer(engine, job_id, pending)
+                return
+    course = await detail_if_missing(
+        engine, settings, base, job_id, brief, course, concept_id, make
+    )
     concept = next((c for c in course.concepts if c.id == concept_id), None)
     if concept is None or concept.status != "planned":
         if data.get("trigger") == "first":
             # Queued before the learner had approved the plan; they changed it meanwhile.
-            _note(engine, job_id, {"role": "system", "event": "plan_changed"}, state="cancelled")
+            _note(
+                engine,
+                job_id,
+                {"role": "system", "event": "plan_changed"},
+                state="cancelled",
+                error=prefetch.PLAN_CHANGED,
+            )
             return
         raise ValueError(f"{course_id}:{concept_id} is not planned")
     from socrat.engine import design
@@ -698,7 +1105,64 @@ async def run_package(
     from socrat.engine import strategy
 
     # The Pedagogical Strategist's plan, from the evidence library (deterministic).
-    ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, 'unknown', adapter))}"
+    stage = "unknown"
+    if settings.gen_learner_brief:  # the owner's own stage on it (private courses only)
+        from socrat.coursegen.brain import learner as stage_hook
+
+        with Session(engine) as db:
+            stage = stage_hook.concept_stage(db, course_id, concept_id, now())
+    ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, stage, adapter))}"
+    # Misconception ids of the root units this lesson rests on: the quiz may tag wrong options
+    # with them, so a learner's wrong answer is recorded as that misconception.
+    known: dict[str, str] = {}
+    if brief.units:
+        from socrat.coursegen.brain import units as unitstore
+
+        # The validated root material this lesson is written from, and a pin recording which
+        # revision, so a later correction can find every lesson it touches.
+        with Session(engine) as db, db.begin():
+            found = unitstore.load(db, brief.units)
+            if found:
+                ctx = f"{ctx}\n\n{unitstore.block(db, found, 10000)}"
+                unitstore.pin(db, course_id, concept_id, found)
+                known = unitstore.misconceptions(found)
+    if not known and settings.gen_outline_tags:
+        # No root units behind this lesson: tag with the outline's own misconceptions (4.3).
+        known = pkg.outline_tags(concept)
+    # Plug point for the learner layer (socrat/learner, docs/implementation/
+    # generation-plug-points.md): a private course's lessons may be shaped by its one learner's
+    # module brief. Shared courses never are: their lessons are read by everyone.
+    # Off until SOCRAT_GEN_LEARNER_BRIEF is set (learner-memory.md).
+    from socrat.coursegen.brain import learner as learner_hook
+
+    shaped = quizzed = ""
+    if settings.gen_learner_brief:
+        with Session(engine) as db:
+            shaped = learner_hook.lesson_block(db, course_id, now())
+            quizzed = learner_hook.quiz_block(db, course_id, now())
+    if shaped:
+        ctx = f"{ctx}\n\n{shaped}"
+    # Lesson 0 (Brief.plan): only while the course is still read by its learner alone, so a
+    # course shared later stops carrying their words, door and sample.
+    probe: list[str] = []
+    personal = False  # written for this learner (their Lesson 0 plan reached the prompts)
+    if brief.plan is not None:
+        with Session(engine) as db:
+            personal = learner_hook.private_owner(db, course_id) is not None
+        if personal:
+            mapped = learner_plan.gap_concepts(brief.plan, course)
+            probe = [gap for gap, cid in mapped.items() if cid == concept_id][:1]
+            block = learner_plan.data_block(brief.plan, probe)
+            ctx = f"{ctx}\n\n{block}\n{learner_plan.LESSON_RULES}"
+    quiz_extra = "\n\n".join(
+        part
+        for part in (
+            pkg.tags_block(known, settings.gen_marked_answers),
+            quizzed,
+            learner_plan.PROBE_RULE if probe else "",
+        )
+        if part
+    )
     # Lesson pages sized for this learner (style/pages.py), decided by code from the request.
     paging = None
     if settings.gen_lesson_pages:
@@ -809,9 +1273,21 @@ async def run_package(
         needed = sorted({"python", *course.languages})
         exercise = wants and executor.available(needed) == needed
         with Session(engine) as db, db.begin():
+            mine = need(db.get(GenerationJob, job_id))
+            if settings.gen_waiting_learner and mine.state == "cancelled":
+                # Stopped while it ran (its plan changed): its lesson is not released.
+                mine.log = [*mine.log, {"role": "system", "event": "plan_changed", "at": now()}]
+                return
             generated.store_concept(db, base, course_id, live_, pack_, job_id=job_id)
             if exercise:
                 enqueue_once(db, "exercise", course_id, {"trigger": "release"}, None, concept_id)
+            if settings.gen_module_exams:
+                from socrat.coursegen import exams
+
+                if module := exams.module_complete(course, concept_id):
+                    enqueue_once(db, "exam", course_id, {"trigger": "release"}, None, module)
+            if settings.gen_review_variants:
+                enqueue_once(db, "variants", course_id, {"trigger": "release"}, None, concept_id)
             if project_due(db, course, concept_id):
                 enqueue_once(db, "project", course_id, {"trigger": "release"}, None, concept.module)
         event = {"role": "system", "event": "released", "calls": calls}
@@ -899,6 +1375,8 @@ async def run_package(
                 example += "\n\n" + pkg.TASKS.format()
             if course.sections:
                 example += "\n\n" + pkg.entries_block(course)
+            if quiz_extra:
+                example += "\n\n" + quiz_extra
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             quiz_rules = pkg.QUIZ_MARKED if settings.gen_marked_answers else pkg.QUIZ
             asked["quiz"] = (quiz_rules + note, prompt, 6000)
@@ -940,7 +1418,7 @@ async def run_package(
             if reply.data is None:
                 notes[name] = [reply.problem]
             elif name == "quiz":
-                quiz = reply.data
+                quiz = pkg.keep_tags(reply.data, set(known))
             else:
                 atoms = reply.data
         cost = sum(r.cost_usd for r in replies.values())
@@ -975,6 +1453,19 @@ async def run_package(
             course.sections,
         )
         pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version, code)
+        if probe and live is not None and not any(q.probe for q in live.quiz):
+            # The matched Lesson 0 gap must be checked: the quiz goes back without it.
+            problems["quiz"] = [*problems.get("quiz", []), "Add the probe item (probe: true)."]
+            live = None
+        if live is not None and (gate := first_lesson_issues(brief, course, live, personal)):
+            if attempt < rounds:
+                problems["lesson"] = [*problems.get("lesson", []), *gate]
+                live = None
+            else:
+                # Last round: a lesson that misses the fit is better than none (benchmark
+                # 2026-11-20: a 10-minute first lesson never got under 16 minutes in 3 rounds).
+                entry = {"role": "system", "event": "first_lesson_gate_waived", "issues": gate}
+                _note(engine, job_id, entry)
         output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}
         if live is not None and pack is not None and code:
             pack, ran = await pkg.run_code(executor, live, pack)
@@ -1160,15 +1651,40 @@ def project_due(db: Session, course, released: str) -> bool:
     return not any(set(p["concepts"]) == covers for p in stored)
 
 
+async def _heartbeat(engine: Engine, job_id: str) -> None:
+    """Keep a learner-facing job visibly alive while it runs (``gen_waiting_learner``)."""
+    while True:
+        await asyncio.sleep(HEARTBEAT_SECONDS)
+        with Session(engine) as db, db.begin():
+            db.execute(
+                update(GenerationJob)
+                .where(GenerationJob.id == job_id, GenerationJob.state == "running")
+                .values(updated_at=now())
+            )
+
+
 async def run_once(
-    engine: Engine, settings: Settings, base: Catalog, make=make_provider, http=None, executor=None
+    engine: Engine,
+    settings: Settings,
+    base: Catalog,
+    make=make_provider,
+    http=None,
+    executor=None,
+    max_priority: int | None = None,
 ) -> bool:
-    job_id = claim(engine)
+    fast = bool(getattr(settings, "gen_waiting_learner", False))
+    job_id = claim(engine, waiting_fast=fast, max_priority=max_priority)
     if job_id is None:
         return False
+    beat = None
+    waiting = None
     try:
         with Session(engine) as db:
-            kind = need(db.get(GenerationJob, job_id)).kind
+            job = need(db.get(GenerationJob, job_id))
+            kind, urgent = job.kind, job.priority <= WAITING_PRIORITY
+        if fast and urgent:
+            beat = asyncio.create_task(_heartbeat(engine, job_id))
+            waiting = roles.WAITING.set(True)  # this job's calls get the short timeout
         if kind == "package":
             await run_package(engine, settings, base, job_id, make, http, executor)
         elif kind == "exercise":
@@ -1182,6 +1698,18 @@ async def run_once(
             await run_project(engine, settings, base, job_id, make)
         elif kind == "outline":
             await run_outline(engine, settings, base, job_id, make)
+        elif kind == "exam":
+            from socrat.coursegen.exams import run_exam
+
+            await run_exam(engine, settings, base, job_id, make)
+        elif kind == "variants":
+            from socrat.coursegen.variants import run_variants
+
+            await run_variants(engine, settings, base, job_id, make)
+        elif kind == "research":
+            from socrat.coursegen.brain.researcher import run_research
+
+            await run_research(engine, settings, job_id, make, http)
         else:
             raise ValueError(f"unknown job kind {kind}")
     except execute.Unavailable as exc:
@@ -1206,15 +1734,43 @@ async def run_once(
     except Exception as exc:  # a failed job must never stop the loop
         log.exception("generation job %s failed", job_id)
         retry_or_bury(engine, job_id, "crashed", f"{type(exc).__name__}: {exc}")
+    finally:
+        if beat is not None:
+            beat.cancel()
+        if waiting is not None:
+            roles.WAITING.reset(waiting)
     return True
 
 
-async def run_forever(engine: Engine, settings: Settings, catalog) -> None:
-    """``catalog`` is a callable returning the current file catalog."""
+async def _loop(engine: Engine, settings: Settings, catalog, max_priority: int | None) -> None:
+    swept = 0
     while True:
+        every = getattr(settings, "brain_refresh_sweep_seconds", 0)
+        if every and max_priority is None and now() - swept >= every:
+            swept = now()
+            try:
+                from socrat.coursegen.brain import units as unitstore
+
+                with Session(engine) as db, db.begin():
+                    unitstore.refresh_stale(db)
+            except Exception:
+                log.exception("unit refresh sweep failed")
         try:
-            if not await run_once(engine, settings, catalog()):
+            if not await run_once(engine, settings, catalog(), max_priority=max_priority):
                 await asyncio.sleep(POLL_SECONDS)
         except Exception:
             log.exception("generation runner error")
             await asyncio.sleep(POLL_SECONDS)
+
+
+async def run_forever(engine: Engine, settings: Settings, catalog) -> None:
+    """``catalog`` is a callable returning the current file catalog. With
+    ``gen_waiting_learner`` a second slot takes only jobs a learner is waiting on, so a new
+    learner's plan or first lesson never queues behind lessons written ahead of time."""
+    if getattr(settings, "gen_waiting_learner", False):
+        await asyncio.gather(
+            _loop(engine, settings, catalog, None),
+            _loop(engine, settings, catalog, WAITING_PRIORITY),
+        )
+    else:
+        await _loop(engine, settings, catalog, None)

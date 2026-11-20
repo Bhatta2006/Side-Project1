@@ -107,6 +107,10 @@ class EnrollInput(Strict):
     target_role: Literal["internship", "new-grad", "mid-level", "senior"] | None = None
     target_rating: int | None = Field(default=None, ge=0, le=4000)
     motivation: str | None = Field(default=None, max_length=280)
+    # The learner's true session length from Lesson 0 (10/25/60), when it differs from the
+    # rounded-up ``minutes_per_day`` budget: days are packed to it (lesson0-generation-plan.md
+    # 3.4). Kept on ``Enrollment.goal``.
+    session_minutes: int | None = Field(default=None, ge=5, le=120)
 
     @field_validator("weekdays")
     @classmethod
@@ -497,7 +501,11 @@ def enroll(body: EnrollInput, request: Request):
         raise HTTPException(404, "unknown_course")
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
-        if private_courses(db).get(body.course, user.id) != user.id:
+        from socrat.coursegen import brain
+
+        # A course the brain served this learner is theirs to take, though another learner made it.
+        served = brain.granted(db, user.id, body.course)
+        if private_courses(db).get(body.course, user.id) != user.id and served is None:
             raise HTTPException(404, "unknown_course")
         if user.birth_year is None:
             raise HTTPException(409, "profile_incomplete")
@@ -528,9 +536,16 @@ def enroll(body: EnrollInput, request: Request):
                 target_role=body.target_role,
                 target_rating=body.target_rating,
                 motivation=body.motivation,
+                session_minutes=body.session_minutes,
             ).items()
             if v is not None
         }
+        mine = (served.private or {}) if served is not None else {}
+        if "session_minutes" not in goal and mine.get("minutes") in (10, 25, 60):
+            # Served a shared course (backlog 3.3): their Lesson 0 minutes, not the course's.
+            goal["session_minutes"] = mine["minutes"]
+        if goal.get("session_minutes") and request.app.state.settings.session_one_adaptation:
+            goal["adapt_first_session"] = True  # a Lesson 0 course: adapt after session one
         enrollment = placement.enroll(
             db,
             cat,
@@ -543,6 +558,10 @@ def enroll(body: EnrollInput, request: Request):
             body.weekdays,
             now(),
         )
+        if served is not None:
+            # What applies only to them (their words, minutes, Lesson 0 signals), kept here
+            # and never on the shared course.
+            enrollment.match_id, enrollment.learner_plan = served.id, dict(served.private or {})
         record_event(db, user.id, "enrollment.created", enrollment.id)
         return dict(id=enrollment.id, status=enrollment.status)
 
@@ -615,6 +634,14 @@ def update_enrollment(body: ScheduleUpdate, request: Request):
             enrollment.weekdays = sorted(set(body.weekdays))
             changes.append(f"{len(enrollment.weekdays)} study days a week")
         goal = dict(enrollment.goal)
+        if body.minutes_per_day is not None and goal.get("session_minutes") not in (
+            None,
+            body.minutes_per_day,
+        ):
+            # The learner's latest choice is their true session length (owner, 2026-11-20).
+            goal["session_minutes"] = body.minutes_per_day
+            if not any(c.endswith("min per study day") for c in changes):
+                changes.append(f"{body.minutes_per_day} min per study day")
         if body.clear_target_date and "target_date" in goal:
             goal.pop("target_date")
             changes.append("no target date")
@@ -1374,7 +1401,9 @@ async def assistant_message(body: MessageInput, request: Request):
     provider = budget.Metered(
         make_provider(settings), bind, settings, user_id=user_id, feature="tutor"
     )
-    toolbox = Toolbox(bind, cat, user_id, engine_tools=engine_tools)
+    toolbox = Toolbox(
+        bind, cat, user_id, engine_tools=engine_tools, profile_tools=settings.learner_profile
+    )
 
     async def events():
         async for event, data in assistant.stream_reply(

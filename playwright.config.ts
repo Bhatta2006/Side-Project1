@@ -15,6 +15,8 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     baseURL: 'http://localhost:3000',
+    // `next dev` compiles a page on its first visit; a cold compile can pass 30 s on this machine.
+    navigationTimeout: 60_000,
     trace: 'retain-on-failure',
     // Fresh learners get the first-run tour; tests skip it unless they clear this (see tour.spec.ts).
     storageState: { cookies: [], origins: [{ origin: 'http://localhost:3000', localStorage: [{ name: 'socrat:tour-seen', value: '1' }] }] },
@@ -27,7 +29,9 @@ export default defineConfig({
     {
       // A fresh database every run: a leftover file from another branch can sit at a schema
       // revision this branch does not know, and then the server cannot start.
-      command: `${executable('python')} -c "import pathlib; [pathlib.Path('socrat.e2e.db' + s).unlink(missing_ok=True) for s in ('', '-wal', '-shm')]" && ${executable('alembic')} upgrade head && ${executable('python')} scripts/content/build.py && ${executable('uvicorn')} socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000 --loop socrat.dev_loop:loop_factory`,
+      // No built-in courses ship (CLAUDE.md): the e2e server serves the API tests' synthetic packs,
+      // ``basics`` and ``algo`` (services/api/tests/content_fixture.py), written fresh each run.
+      command: `${executable('python')} -c "import pathlib, sys; [pathlib.Path('socrat.e2e.db' + s).unlink(missing_ok=True) for s in ('', '-wal', '-shm')]; sys.path.insert(0, 'services/api/tests'); import content_fixture as c; c.write(pathlib.Path('.cache/e2e-content/courses'), pathlib.Path('.cache/e2e-content/tests'))" && ${executable('alembic')} upgrade head && ${executable('uvicorn')} socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000 --loop socrat.dev_loop:loop_factory`,
       url: 'http://127.0.0.1:8000/api/health/ready',
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
@@ -35,10 +39,14 @@ export default defineConfig({
         SOCRAT_ENVIRONMENT: 'test',
         SOCRAT_DATABASE_URL: 'sqlite:///socrat.e2e.db',
         SOCRAT_DEV_LOGIN_ENABLED: 'true',
+        // The weekly exam opens only on Sundays; the test environment opens it any day.
+        SOCRAT_WEEKLY_ANY_DAY: '1',
         SOCRAT_AI_PROVIDER: 'offline',
         SOCRAT_PREWARM_CONTENT: 'true',
         SOCRAT_LITE_MODE_ENABLED: 'true',
         SOCRAT_PUBLIC_ORIGIN: 'http://localhost:3000',
+        SOCRAT_CONTENT_ROOT: path.resolve('.cache/e2e-content/courses'),
+        SOCRAT_CONTENT_TESTS: path.resolve('.cache/e2e-content/tests'),
       },
     },
     { command: 'npm run dev', url: 'http://localhost:3000', reuseExistingServer: !process.env.CI, timeout: 120_000 },

@@ -662,8 +662,15 @@ def claim(draft_id: str, body: Claim, request: Request):
             )
             db.add(row)
             db.flush()
-        begin(db, settings, user.id, row, parsed)
+        # Linked before begin, so generation can read the profile (profile_for) while routing.
         draft.user_id, draft.request_id, draft.profile = user.id, row.id, prof
+        if settings.learner_profile:
+            # The learner's preferences across courses start from Lesson 0 (learner-memory.md).
+            from socrat import learner_profile
+
+            learner_profile.seed_from_lesson0(user, prof)
+        db.flush()
+        begin(db, settings, user.id, row, parsed)
         draft.updated_at = now()
         record_event(db, user.id, "onboarding.claimed", draft.id)
         return dict(draft=draft_view(draft), request=view(db, row))
