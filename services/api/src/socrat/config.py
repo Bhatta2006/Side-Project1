@@ -353,6 +353,12 @@ class Settings(DatabaseSettings):
     # written with it, explicit asks are enforced on the style, and a matched Lesson 0 gap gets
     # one probe quiz item. Shared courses never carry a plan.
     gen_learner_plan: bool = False
+    # A learner waiting on a job (an outline, their first lesson) is not left behind a crash
+    # or a queue of background lessons (lesson0-generation-plan.md 5.2, PR 5): such jobs beat
+    # a heartbeat and are re-claimed after STALE_SECONDS_WAITING instead of an hour; a second
+    # worker slot takes only them; an outline job resumes from its last valid outline instead
+    # of paying the architect again.
+    gen_waiting_learner: bool = False
     # The learner's own preferences across courses (socrat.learner_profile): seeded from Lesson 0
     # at claim, readable and editable at /api/v1/learner/profile with an undo log, and the tutor
     # may suggest a change the learner accepts or declines. Off: nothing is stored or shown.

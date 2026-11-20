@@ -69,8 +69,18 @@ and at 10 minutes or less a day holds only what fits (the first item always). Te
 lessons (words/180, quiz items, attempts) and the `check_lesson` session-total gate; schedule changes
 (`ScheduleUpdate`) do not touch `session_minutes`.
 
+**PR 5 (retry safety and the waiting window), built behind `gen_waiting_learner` (default off):** jobs a learner
+waits on (priority <= 1: outlines, first lessons, lessons asked for again, accepted bridges) beat a heartbeat every
+20 s and are re-claimed after `STALE_SECONDS_WAITING = 120` of silence (other jobs keep the hour); `run_forever`
+runs a second slot that claims only those jobs, so a new learner's plan never queues behind background lessons;
+once an outline is valid (details written, graph checked) it is stored on the job with the brief exactly as
+prepared, and a re-run of that job saves it instead of paying the architect again. Tests
+`services/api/tests/test_waiting_learner.py`. Not covered: a crash while details are still being written re-runs
+the architect; a worker whose event loop is blocked for 2 minutes can lose its job to another worker (the job then
+runs twice; the save is idempotent, the cost is not). Not measured: the 2-minute re-claim against a real worker kill.
+
 Still to build, in order: the rest of PR 2 (above), the rest of PR 4 (above),
-PR 5 (retry safety), PR 6 (session-one adaptation, including the probe miss), PR 7 (benchmark and gate),
+PR 6 (session-one adaptation, including the probe miss), PR 7 (benchmark and gate),
 PR 8 (optional SQL checker).
 
 ---

@@ -76,6 +76,11 @@ ROUNDS = 3  # architect attempts per job; the critic sees every valid one
 DETAIL_CONCURRENCY = 12  # detail calls at the same time
 DETAIL_CHUNK = 4  # concepts per detail call: small replies keep the slowest call short
 STALE_SECONDS = 3600  # a running job this old was orphaned by a crash or restart
+# With ``gen_waiting_learner``: a job a learner waits on (priority <= WAITING_PRIORITY)
+# beats every HEARTBEAT_SECONDS, so silence this long means its worker is gone.
+STALE_SECONDS_WAITING = 120
+HEARTBEAT_SECONDS = 20
+WAITING_PRIORITY = 1
 POLL_SECONDS = 2
 MAX_ATTEMPTS = 3  # transient failures before a job is dead
 BACKOFF_SECONDS = (60, 300, 900)  # wait before the next try, by attempt
@@ -227,14 +232,30 @@ def enqueue_once(
         return None
 
 
-def claim(engine: Engine) -> str | None:
-    """Atomically take the oldest queued (or orphaned) job; safe with several API processes."""
+def claim(
+    engine: Engine, waiting_fast: bool = False, max_priority: int | None = None
+) -> str | None:
+    """Atomically take the oldest queued (or orphaned) job; safe with several API processes.
+    ``waiting_fast``: a running job a learner waits on is orphaned after
+    ``STALE_SECONDS_WAITING`` of silence (it beats a heartbeat), not an hour.
+    ``max_priority``: take only jobs this urgent (the learner-facing worker slot)."""
     stamp = now()
     paused = select(GeneratedCourse.id).where(GeneratedCourse.paused != "")
+    orphaned = (GenerationJob.state == "running") & (
+        GenerationJob.updated_at < stamp - STALE_SECONDS
+    )
+    if waiting_fast:
+        orphaned = orphaned | (
+            (GenerationJob.state == "running")
+            & (GenerationJob.priority <= WAITING_PRIORITY)
+            & (GenerationJob.updated_at < stamp - STALE_SECONDS_WAITING)
+        )
     claimable = or_(
         (GenerationJob.state == "queued") & (GenerationJob.not_before <= stamp),
-        (GenerationJob.state == "running") & (GenerationJob.updated_at < stamp - STALE_SECONDS),
+        orphaned,
     ) & GenerationJob.course_id.not_in(paused)
+    if max_priority is not None:
+        claimable = claimable & (GenerationJob.priority <= max_priority)
     with Session(engine) as db, db.begin():
         candidates = db.scalars(
             select(GenerationJob.id)
@@ -324,11 +345,26 @@ async def run_outline(
         # A personal plan is part of the reuse key: a fitted outline is never another's.
         key = brief.model_dump(mode="json") if brief.plan is not None else job.input["brief"]
         reusable = reusable_outline(db, job_id, key) if fresh else None
+        resumed = job.output if job.output and "outline" in job.output else None
     if plan_event is not None:
         _note(engine, job_id, plan_event)
     if reusable is not None:
         source_id, architect = reusable
         if await _reuse(engine, base, job_id, brief, owner, source_id, architect, settings):
+            return
+    if settings.gen_waiting_learner and fresh and isinstance(resumed, dict):
+        # This job already paid for a valid outline before it was interrupted: save that one,
+        # with the brief exactly as it was prepared for it (style, the learner's constraints).
+        try:
+            prepared = Brief.model_validate(resumed["brief"])
+            course = to_course(prepared, resumed["outline"])
+            notes = [str(n) for n in resumed.get("notes") or []][:30]
+            kept = prepared.model_copy(update={"review_notes": notes})
+        except (ValueError, KeyError, TypeError):
+            course = None
+        if course is not None:
+            _note(engine, job_id, {"role": "system", "event": "resumed_from_stored_outline"})
+            await _save_outline(engine, settings, base, job_id, kept, course, owner)
             return
     if settings.gen_learner_brief:
         from socrat.coursegen.brain import learner as learner_hook
@@ -454,6 +490,16 @@ async def run_outline(
             issues += _review(engine, job_id, attempt, early)[1] if early else []
             continue
         best = course
+        if settings.gen_waiting_learner:
+            # A crash or restart from here on resumes from this outline (no second architect
+            # bill); the critic's verdicts so far are in the log.
+            prepared = brief.model_dump(mode="json", exclude={"learner_brief"})
+            _note(
+                engine,
+                job_id,
+                {"role": "system", "event": "outline_stored", "round": attempt},
+                output={"outline": outline, "notes": later_notes, "brief": prepared},
+            )
         _note(
             engine,
             job_id,
@@ -508,10 +554,16 @@ async def run_outline(
             error="No valid outline after all rounds; see the log.",
         )
         return
+    kept = brief.model_copy(update={"review_notes": later_notes[:30]})
+    await _save_outline(engine, settings, base, job_id, kept, best, owner)
+
+
+async def _save_outline(
+    engine: Engine, settings: Settings, base: Catalog, job_id: str, brief: Brief, best, owner
+) -> None:
     best = _with_applied(engine, settings, job_id, best, owner)
     with Session(engine) as db, db.begin():
-        kept = brief.model_copy(update={"review_notes": later_notes[:30]})
-        stored_brief = kept.model_dump(mode="json", exclude={"learner_brief"})
+        stored_brief = brief.model_dump(mode="json", exclude={"learner_brief"})
         generated.save_course(db, base, best, status="review", brief=stored_brief)
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
@@ -1430,15 +1482,38 @@ def project_due(db: Session, course, released: str) -> bool:
     return not any(set(p["concepts"]) == covers for p in stored)
 
 
+async def _heartbeat(engine: Engine, job_id: str) -> None:
+    """Keep a learner-facing job visibly alive while it runs (``gen_waiting_learner``)."""
+    while True:
+        await asyncio.sleep(HEARTBEAT_SECONDS)
+        with Session(engine) as db, db.begin():
+            db.execute(
+                update(GenerationJob)
+                .where(GenerationJob.id == job_id, GenerationJob.state == "running")
+                .values(updated_at=now())
+            )
+
+
 async def run_once(
-    engine: Engine, settings: Settings, base: Catalog, make=make_provider, http=None, executor=None
+    engine: Engine,
+    settings: Settings,
+    base: Catalog,
+    make=make_provider,
+    http=None,
+    executor=None,
+    max_priority: int | None = None,
 ) -> bool:
-    job_id = claim(engine)
+    fast = bool(getattr(settings, "gen_waiting_learner", False))
+    job_id = claim(engine, waiting_fast=fast, max_priority=max_priority)
     if job_id is None:
         return False
+    beat = None
     try:
         with Session(engine) as db:
-            kind = need(db.get(GenerationJob, job_id)).kind
+            job = need(db.get(GenerationJob, job_id))
+            kind, urgent = job.kind, job.priority <= WAITING_PRIORITY
+        if fast and urgent:
+            beat = asyncio.create_task(_heartbeat(engine, job_id))
         if kind == "package":
             await run_package(engine, settings, base, job_id, make, http, executor)
         elif kind == "exercise":
@@ -1480,15 +1555,30 @@ async def run_once(
     except Exception as exc:  # a failed job must never stop the loop
         log.exception("generation job %s failed", job_id)
         retry_or_bury(engine, job_id, "crashed", f"{type(exc).__name__}: {exc}")
+    finally:
+        if beat is not None:
+            beat.cancel()
     return True
 
 
-async def run_forever(engine: Engine, settings: Settings, catalog) -> None:
-    """``catalog`` is a callable returning the current file catalog."""
+async def _loop(engine: Engine, settings: Settings, catalog, max_priority: int | None) -> None:
     while True:
         try:
-            if not await run_once(engine, settings, catalog()):
+            if not await run_once(engine, settings, catalog(), max_priority=max_priority):
                 await asyncio.sleep(POLL_SECONDS)
         except Exception:
             log.exception("generation runner error")
             await asyncio.sleep(POLL_SECONDS)
+
+
+async def run_forever(engine: Engine, settings: Settings, catalog) -> None:
+    """``catalog`` is a callable returning the current file catalog. With
+    ``gen_waiting_learner`` a second slot takes only jobs a learner is waiting on, so a new
+    learner's plan or first lesson never queues behind lessons written ahead of time."""
+    if getattr(settings, "gen_waiting_learner", False):
+        await asyncio.gather(
+            _loop(engine, settings, catalog, None),
+            _loop(engine, settings, catalog, WAITING_PRIORITY),
+        )
+    else:
+        await _loop(engine, settings, catalog, None)
