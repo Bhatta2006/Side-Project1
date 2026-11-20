@@ -109,7 +109,7 @@ class Settings(DatabaseSettings):
     # Socrat assistant. Keys may also come from ANTHROPIC_API_KEY / OPENAI_API_KEY,
     # which the official SDKs resolve themselves when these are empty. "openai" covers any
     # OpenAI-compatible endpoint (e.g. Nebius Token Factory via SOCRAT_OPENAI_BASE_URL).
-    ai_provider: Literal["anthropic", "openai", "offline"] = "offline"
+    ai_provider: Literal["anthropic", "openai", "vertex", "offline"] = "offline"
     ai_model: str = "claude-opus-5-5"
     ai_effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     ai_server_fallbacks: bool = True
@@ -127,6 +127,26 @@ class Settings(DatabaseSettings):
     # Ask OpenAI-compatible endpoints for a JSON object (response_format) on course-generation
     # calls, so a long outline cannot come back with a stray comma. Off for endpoints without it.
     openai_json_mode: bool = False
+    # Google Gemini on Vertex AI (assistant/vertex.py): the text provider ("vertex") and the
+    # image and speech capabilities any feature can call. The key is a Vertex API key; the
+    # shorter names are what the owner's .env uses. Prices default to 0 (tokens are still
+    # counted); set them to the model's real prices to make the budgets bite.
+    vertex_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        validation_alias=AliasChoices("socrat_vertex_api_key", "vertex_ai_main_gemini_api"),
+    )
+    vertex_api_key_file: str = ""
+    vertex_project: str = ""
+    vertex_location: str = "global"
+    vertex_model: str = ""  # text; roles may override it with "model" (SOCRAT_GEN_ROLES)
+    vertex_image_model: str = "gemini-3.1-flash-lite-image"
+    vertex_tts_model: str = "gemini-3.8-flash-lite-tts"
+    vertex_tts_voice: str = "Kore"
+    # "" keeps the model's default. Thinking tokens count against a call's output budget.
+    vertex_thinking_level: Literal["", "minimal", "low", "medium", "high"] = ""
+    vertex_json_mode: bool = False  # ask for application/json on course-generation calls
+    vertex_image_price_usd: float = Field(default=0.0, ge=0, le=100)  # per image
+    vertex_tts_price_usd: float = Field(default=0.0, ge=0, le=100)  # per spoken clip
     ai_timeout_seconds: float = Field(default=45, ge=5, le=120)
     ai_daily_messages: int = Field(default=150, ge=1, le=5000)
     ai_reply_tokens: int = Field(default=1500, ge=200, le=8000)
@@ -445,6 +465,9 @@ class Settings(DatabaseSettings):
             self.explainer_checker_secret,
             self.explainer_checker_secret_file,
         )
+        self.vertex_api_key = _secret_from_file(
+            "vertex_api_key", self.vertex_api_key, self.vertex_api_key_file
+        )
         self.resend_api_key = _secret_from_file(
             "resend_api_key", self.resend_api_key, self.resend_api_key_file
         )
@@ -459,6 +482,8 @@ class Settings(DatabaseSettings):
         check_tiers(self.gen_tiers)
         if self.ai_provider == "openai" and not self.openai_model:
             raise ValueError("The OpenAI provider requires SOCRAT_OPENAI_MODEL")
+        if self.ai_provider == "vertex" and not self.vertex_model:
+            raise ValueError("The Vertex provider requires SOCRAT_VERTEX_MODEL")
         if self.ai_provider == "anthropic" and not self.ai_model.startswith("claude-"):
             raise ValueError("The Anthropic provider requires a Claude model id")
 

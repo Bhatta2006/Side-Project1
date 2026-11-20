@@ -1,4 +1,4 @@
-"""Provider-neutral streaming gateway with tool use: Anthropic, OpenAI-compatible, or offline.
+"""Provider-neutral streaming gateway with tool use: Anthropic, OpenAI-compatible, Vertex, or offline.
 
 Providers turn (system, messages, tools) into a stream of text deltas and tool calls. The
 caller supplies the tool executor; policy, context and validation live outside, so swapping
@@ -434,4 +434,8 @@ def make_provider(settings: Settings, *, chat_template_kwargs: dict | None = Non
         return AnthropicProvider(settings)
     if settings.ai_provider == "openai":
         return OpenAIProvider(settings, chat_template_kwargs)
+    if settings.ai_provider == "vertex":
+        from socrat.assistant.vertex import VertexProvider
+
+        return VertexProvider(settings)
     return OfflineProvider()

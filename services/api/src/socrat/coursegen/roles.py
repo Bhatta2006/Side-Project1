@@ -45,7 +45,7 @@ ROLES = {
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {
     "provider": ("ai_provider",),
-    "model": ("ai_model", "openai_model"),
+    "model": ("ai_model", "openai_model", "vertex_model"),
     "effort": ("ai_effort",),
     "base_url": ("openai_base_url",),
     # e.g. {"thinking": true} so the reviser reasons while cheap drafts do not
@@ -244,6 +244,8 @@ async def ask(
     extra: dict[str, Any] = (
         {"response_format": {"type": "json_object"}}
         if provider.name == "openai" and tuned.openai_json_mode
+        else {"response_format": {"type": "json_object"}}
+        if provider.name == "vertex" and tuned.vertex_json_mode
         else {}
     )
     limit = max_tokens
