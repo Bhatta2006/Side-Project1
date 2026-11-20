@@ -6,6 +6,9 @@ what has not been verified, the remaining work in order, and how to commit and p
 
 Then read `docs/implementation/universal-engine-plan.md` (strategy, phase table, progress log).
 
+Continuing the course generator? Its remaining work, in order, is in
+`docs/implementation/course-generator-backlog.md`.
+
 Working on onboarding (`/start`, Lesson 0) or on course generation after it? Read
 `docs/implementation/onboarding-handoff.md`: the contract between the two modules.
 
