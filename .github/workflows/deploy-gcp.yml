@@ -84,7 +84,7 @@ jobs:
         run: |
           gcloud compute scp --project "$PROJECT" --zone "$ZONE" --quiet \
             infra/runtime/production/compose.yaml infra/runtime/production/Caddyfile \
-            scripts/operations/deploy-production.sh "$VM":/tmp/
+            scripts/operations/deploy-production.sh "$VM":
 
       - name: Deploy (health-gated, rolls back on failure)
         env:
@@ -94,8 +94,8 @@ jobs:
         run: |
           gcloud compute ssh "$VM" --project "$PROJECT" --zone "$ZONE" --quiet --command "
             set -euo pipefail
-            sudo install -m 644 /tmp/compose.yaml /tmp/Caddyfile /opt/socrat/runtime/
-            sudo install -m 755 /tmp/deploy-production.sh /opt/socrat/runtime/
+            sudo install -m 644 ~/compose.yaml ~/Caddyfile /opt/socrat/runtime/
+            sudo install -m 755 ~/deploy-production.sh /opt/socrat/runtime/
             sudo bash -c 'set -a; . /var/lib/socrat/releases/current.env; set +a
               export RELEASE_SHA=$GITHUB_SHA SOCRAT_API_IMAGE=$API_IMAGE SOCRAT_WEB_IMAGE=$WEB_IMAGE SOCRAT_EXPLAINER_IMAGE=$EXPLAINER_IMAGE
               SOCRAT_RUNTIME_DIR=/opt/socrat/runtime bash /opt/socrat/runtime/deploy-production.sh'
