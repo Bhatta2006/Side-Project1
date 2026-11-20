@@ -7,6 +7,7 @@ failing schedules a short cooldown with targeted reviews.
 """
 
 import random
+from collections import Counter
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -441,6 +442,9 @@ def answer(
         raise HTTPException(409, "already_answered")
     correct = q.is_correct(session.id, choice)  # choice is a display position
     entry = {"choice": choice, "correct": correct}
+    trap = "" if correct else q.trap(session.id, choice)
+    if trap:  # the wrong option this learner picked is a known misconception
+        entry["misconception"] = trap
     if confidence is not None:
         entry["confidence"] = confidence
     session.answers = {**session.answers, item_id: entry}
@@ -489,8 +493,20 @@ def finish(
     for concept, item_id in session.items:
         if (c := (session.answers.get(item_id) or {}).get("confidence")) is not None:
             rated.setdefault(concept, []).append(int(c))
+    # The misconception most often shown by wrong answers, per concept (tagged options only).
+    traps: dict[str, Counter[str]] = {}
+    for concept, item_id in session.items:
+        if tag := (session.answers.get(item_id) or {}).get("misconception"):
+            traps.setdefault(concept, Counter())[tag] += 1
     for concept, results in per_concept.items():
         sure = rated.get(concept, [])
+        details = (
+            {"confidence": round((sum(sure) / len(sure) - 1) / 3, 3), "rated": len(sure)}
+            if sure
+            else {}
+        )
+        if concept in traps:
+            details["misconception"] = traps[concept].most_common(1)[0][0]
         learn.record_evidence(
             db,
             enrollment,
@@ -501,10 +517,9 @@ def finish(
             now,
             elapsed_seconds=elapsed,
             expected_seconds=expected,
-            # Mean stated confidence on a 0-1 scale, when the learner rated their answers.
-            details={"confidence": round((sum(sure) / len(sure) - 1) / 3, 3), "rated": len(sure)}
-            if sure
-            else None,
+            # Mean stated confidence on a 0-1 scale, when the learner rated their answers, and
+            # the misconception their wrong answers showed.
+            details=details or None,
         )
     if session.activity_id.startswith("checkpoint:"):
         state = gate_state(catalog, session, enrollment.language, exhausted=True)

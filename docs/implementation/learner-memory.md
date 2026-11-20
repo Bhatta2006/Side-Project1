@@ -13,6 +13,7 @@ Status log (newest first):
 
 | Date | Step | What changed |
 |---|---|---|
+| 2026-11-20 | G (generation) | Generation's hooks built: `outline_block` (outline of a private course, through `user_brief`), first-lesson fallback to `user_brief` before the owner enrols, `quiz_block` (quiz prompt only), and quiz options tagged with root-unit misconception ids, graded into `details["misconception"]`. All behind `SOCRAT_GEN_LEARNER_BRIEF` except the tags (they hold no learner data). Tests: `test_learner_hooks.py`. |
 | 2026-11-20 | 3, 4, 5 | Rebased on generation's `f56d0ae`. **Step 3:** `users.learner_profile` (migration `0052_learner_profile`), `learner_profile.set_pref` / `undo` / `seed_from_lesson0` (called at the Lesson 0 claim), learner routes under `/api/v1/learner/profile`. **Step 4:** preferences read from behaviour (`learner.observed`), and the tutor tool `suggest_preference`, which only adds a pending suggestion the learner accepts or declines. **Misconceptions** of generated lessons resolve through unit pins (`learner.misconceptions_for`); the tutor sees them and may tag one. **Step 5 (light):** `learner.user_brief` for work with no enrollment (outline, first lessons) lists what the learner already shows in other courses. The writes, routes and tutor tool are behind `SOCRAT_LEARNER_PROFILE` (off). |
 | 2026-11-20 | 2 of 5 | Rebased on generation's course brain (`0051_course_brain`). The layer now answers generation's hook (`coursegen/brain/learner.py`): `snapshot(db, enrollment, now)`, `brief(snap, purpose, budget)`. Our own generation hook was dropped in favour of theirs (their privacy rule also covers brain-shared courses). The call in `run_package` is behind `SOCRAT_GEN_LEARNER_BRIEF` (off). The served learner's overlay (`enrollments.learner_plan`) is read as onboarding preferences. |
 | 2026-11-20 | 1 of 5 | `learner.snapshot` / `brief` / `render` added, reading existing data only (no migration). The tutor now reads through it (`assistant/service.learner_sections`); `learn.memory.tutor_block` removed. |
@@ -228,16 +229,12 @@ overwrite the learner's own choice, and the learner can undo it from their histo
 
 ## 7. Known gaps (verified 2026-11-20)
 
-- **Generated quizzes do not tag misconceptions yet.** The tutor now can (through unit pins), but
-  a quiz answer records a tag only when its item carries one. Generation's quiz builder should
-  give distractors the unit's misconception ids (generation-plug-points.md).
+- **Generated quizzes tag misconceptions only for lessons written from root units** (the ids
+  come from the pinned units). Quizzes written before this change carry no tags.
 - **Lessons without a pin** (written before the course brain, or with no root units) have no
   known misconceptions, so the tutor's tag for them is still dropped.
 - **Lesson 0 `detected_gaps` are model-written labels**, not concept ids. `brief` passes them
   through in `starting_sample` only; nothing maps them to concepts yet.
-- **Lessons written before the owner enrols get no brief** until generation's hook falls back to
-  `user_brief` (layer side ready; listed in generation-plug-points.md). Meanwhile they get the
-  Lesson 0 details through the course brief's prose (`style_request`, `notes`).
 - **No web screen** for the learner profile, its history or pending suggestions; the API is there.
 - **Mastery itself does not carry over between courses.** `user_brief.shown_elsewhere` tells an
   outline what the learner already shows, by title; a new course's concepts still start empty.
@@ -259,4 +256,4 @@ overwrite the learner's own choice, and the learner can undo it from their histo
 | 4 | Preferences read from behaviour (`observed`); tutor suggestions that apply only when the learner accepts | **done**. A suggestion is confirmed by the learner, not by signals: signals already move the observed value on their own |
 | 4b | Misconceptions of generated lessons resolved through unit pins; the tutor sees and tags them | **done** |
 | 5 | What carries between courses: `user_brief.shown_elsewhere` for outlines | **light version done**; mastery transfer between courses (matching concepts) waits until learners take second courses |
-| G | Generation's hooks: outline (`brief_for_user`), first-lessons fallback, quiz builder tags | **generation's**: layer side ready, see generation-plug-points.md |
+| G | Generation's hooks: outline (`brief_for_user`), first-lessons fallback, quiz builder tags | **done** (generation), behind `gen_learner_brief`; not run against a live model |

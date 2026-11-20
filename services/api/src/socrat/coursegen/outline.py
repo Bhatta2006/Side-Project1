@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Course, EvidenceType, Language, PracticeType, Ref, Slug
+from socrat.coursegen.learner_plan import OUTLINE_RULES, LearnerPlan, data_block
 from socrat.style import pages
 from socrat.style import spec as styles
 
@@ -43,6 +44,12 @@ class Brief(BaseModel):
     # learner text). Empty for courses made without the brain.
     units: list[str] = Field(default_factory=list, max_length=8)
     subject_material: str = Field(default="", max_length=20000)
+    # The learner's brief (coursegen/brain/learner.outline_block) for a course only they will
+    # read; set by the outline job for its prompts, never stored with the course.
+    learner_brief: str = Field(default="", max_length=6000)
+    # Lesson 0 for a course its learner alone reads (coursegen/learner_plan.py). Persisted with
+    # the course; prompts receive it only as a marked data block.
+    plan: LearnerPlan | None = None
     budget_usd: float = Field(default=5.0, gt=0, le=1000)
     # One concept package (all its rounds) may not cost more than this.
     concept_budget_usd: float = Field(default=2.0, gt=0, le=100)
@@ -317,8 +324,13 @@ def brief_text(brief: Brief) -> str:
     # The learner profile sizes lesson pages; the architect already reads the same facts in
     # the audience and notes, so it is left out rather than said twice.
     head = "Brief:\n" + brief.model_dump_json(
-        indent=2, exclude={"budget_usd", "material", "learner", "subject_material"}
+        indent=2,
+        exclude={"budget_usd", "material", "learner", "subject_material", "learner_brief", "plan"},
     )
+    if brief.plan is not None:
+        head += f"\n\n{data_block(brief.plan)}\n{OUTLINE_RULES}"
+    if brief.learner_brief.strip():
+        head += "\n\n" + brief.learner_brief
     if brief.subject_material.strip():
         head += (
             "\n\nValidated subject material Socrat already holds for this topic (written from "

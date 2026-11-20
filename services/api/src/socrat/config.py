@@ -347,6 +347,12 @@ class Settings(DatabaseSettings):
     # (coursegen/brain/learner.py) adds the learner brief (socrat.learner,
     # docs/implementation/learner-memory.md). A shared course is never fitted to one learner.
     gen_learner_brief: bool = False
+    # Lesson 0 reaches the course (docs/implementation/lesson0-generation-plan.md): the outline
+    # job reads the onboarding profile once into Brief.plan (the learner's words verbatim, the
+    # asks code recognises, their door and calibration); a private course is planned and
+    # written with it, explicit asks are enforced on the style, and a matched Lesson 0 gap gets
+    # one probe quiz item. Shared courses never carry a plan.
+    gen_learner_plan: bool = False
     # The learner's own preferences across courses (socrat.learner_profile): seeded from Lesson 0
     # at claim, readable and editable at /api/v1/learner/profile with an undo log, and the tutor
     # may suggest a change the learner accepts or declines. Off: nothing is stored or shown.

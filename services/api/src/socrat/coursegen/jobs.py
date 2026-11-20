@@ -39,7 +39,16 @@ from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError
 from socrat.catalog.schema import Citation
 from socrat.config import Settings
-from socrat.coursegen import execute, fetch, research, roles, search, validation, youtube
+from socrat.coursegen import (
+    execute,
+    fetch,
+    learner_plan,
+    research,
+    roles,
+    search,
+    validation,
+    youtube,
+)
 from socrat.coursegen import package as pkg
 from socrat.coursegen.outline import (
     ARCHITECT,
@@ -295,13 +304,40 @@ async def run_outline(
                 brief = brief.model_copy(
                     update={"subject_material": unitstore.block(db, found, 19000)}
                 )
+        plan_event = None
+        if settings.gen_learner_plan and brief.plan is None and owner is not None:
+            from socrat.coursegen.brain import learner as learner_hook
+
+            request_id = job.input.get("learning_request")
+            # Lesson 0 reaches the course: read once, here, for a course only its maker reads.
+            if learner_hook.builds_private(db, request_id):
+                plan, status, why = learner_plan.plan_for(db, request_id)
+                plan_event = {"role": "system", "event": f"profile_{status}"}
+                if why:
+                    plan_event["why"] = why
+                if plan is not None:
+                    langs = learner_plan.languages(plan, list(brief.languages))
+                    brief = brief.model_copy(update={"plan": plan, "languages": langs})
         stored = generated.course(db, brief.id)
         fresh = not job.input.get("revise") and not job.input.get("notes")
-        reusable = reusable_outline(db, job_id, job.input["brief"]) if fresh else None
+        # A personal plan is part of the reuse key: a fitted outline is never another's.
+        key = brief.model_dump(mode="json") if brief.plan is not None else job.input["brief"]
+        reusable = reusable_outline(db, job_id, key) if fresh else None
+    if plan_event is not None:
+        _note(engine, job_id, plan_event)
     if reusable is not None:
         source_id, architect = reusable
         if await _reuse(engine, base, job_id, brief, owner, source_id, architect, settings):
             return
+    if settings.gen_learner_brief:
+        from socrat.coursegen.brain import learner as learner_hook
+
+        # A course only its maker will read is planned with their brief (what they already
+        # show elsewhere, their preferences, their Lesson 0 sample). Never stored on the course.
+        with Session(engine) as db:
+            shaped = learner_hook.outline_block(db, owner, job.input.get("learning_request"), now())
+        if shaped:
+            brief = brief.model_copy(update={"learner_brief": shaped[:6000]})
     if brief.style is None and brief.style_request.strip():
         spec, source = await styles.interpret(engine, settings, brief.style_request, make)
         brief = brief.model_copy(update={"style": spec})
@@ -310,6 +346,14 @@ async def run_outline(
         brief = brief.model_copy(
             update={"style": styles.for_session(brief.style, brief.session_minutes)}
         )
+    if brief.plan is not None and brief.plan.constraints:
+        # What the learner explicitly asked for is written by code over the stylist's reading.
+        base_style = brief.style or styles.StyleSpec()
+        enforced, unmet = learner_plan.enforce(base_style, brief.plan)
+        if enforced != base_style:  # a default style is set only when an ask needs one
+            brief = brief.model_copy(update={"style": enforced})
+        if unmet:
+            _note(engine, job_id, {"role": "system", "event": "constraint_unmet", "issues": unmet})
     previous = (
         skeleton_of(from_course(stored)) if stored is not None and job.input.get("revise") else None
     )
@@ -447,7 +491,8 @@ async def run_outline(
         return
     best = _with_applied(engine, settings, job_id, best, owner)
     with Session(engine) as db, db.begin():
-        generated.save_course(db, base, best, status="review", brief=brief.model_dump(mode="json"))
+        stored_brief = brief.model_dump(mode="json", exclude={"learner_brief"})
+        generated.save_course(db, base, best, status="review", brief=stored_brief)
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
             early_first_lesson(db, settings, best)
@@ -741,6 +786,9 @@ async def run_package(
 
     # The Pedagogical Strategist's plan, from the evidence library (deterministic).
     ctx = f"{ctx}\n\n{strategy.brief(strategy.plan(concept, 'unknown', adapter))}"
+    # Misconception ids of the root units this lesson rests on: the quiz may tag wrong options
+    # with them, so a learner's wrong answer is recorded as that misconception.
+    known: dict[str, str] = {}
     if brief.units:
         from socrat.coursegen.brain import units as unitstore
 
@@ -751,18 +799,40 @@ async def run_package(
             if found:
                 ctx = f"{ctx}\n\n{unitstore.block(db, found, 10000)}"
                 unitstore.pin(db, course_id, concept_id, found)
+                known = unitstore.misconceptions(found)
     # Plug point for the learner layer (socrat/learner, docs/implementation/
     # generation-plug-points.md): a private course's lessons may be shaped by its one learner's
     # module brief. Shared courses never are: their lessons are read by everyone.
     # Off until SOCRAT_GEN_LEARNER_BRIEF is set (learner-memory.md).
     from socrat.coursegen.brain import learner as learner_hook
 
-    shaped = ""
+    shaped = quizzed = ""
     if settings.gen_learner_brief:
         with Session(engine) as db:
             shaped = learner_hook.lesson_block(db, course_id, now())
+            quizzed = learner_hook.quiz_block(db, course_id, now())
     if shaped:
         ctx = f"{ctx}\n\n{shaped}"
+    # Lesson 0 (Brief.plan): only while the course is still read by its learner alone, so a
+    # course shared later stops carrying their words, door and sample.
+    probe: list[str] = []
+    if brief.plan is not None:
+        with Session(engine) as db:
+            personal = learner_hook.private_owner(db, course_id) is not None
+        if personal:
+            mapped = learner_plan.gap_concepts(brief.plan, course)
+            probe = [gap for gap, cid in mapped.items() if cid == concept_id][:1]
+            block = learner_plan.data_block(brief.plan, probe)
+            ctx = f"{ctx}\n\n{block}\n{learner_plan.LESSON_RULES}"
+    quiz_extra = "\n\n".join(
+        part
+        for part in (
+            pkg.tags_block(known, settings.gen_marked_answers),
+            quizzed,
+            learner_plan.PROBE_RULE if probe else "",
+        )
+        if part
+    )
     # Lesson pages sized for this learner (style/pages.py), decided by code from the request.
     paging = None
     if settings.gen_lesson_pages:
@@ -963,6 +1033,8 @@ async def run_package(
                 example += "\n\n" + pkg.TASKS.format()
             if course.sections:
                 example += "\n\n" + pkg.entries_block(course)
+            if quiz_extra:
+                example += "\n\n" + quiz_extra
             prompt = pkg.part_prompt(ctx, lesson, quiz, notes["quiz"], example)
             quiz_rules = pkg.QUIZ_MARKED if settings.gen_marked_answers else pkg.QUIZ
             asked["quiz"] = (quiz_rules + note, prompt, 6000)
@@ -1004,7 +1076,7 @@ async def run_package(
             if reply.data is None:
                 notes[name] = [reply.problem]
             elif name == "quiz":
-                quiz = reply.data
+                quiz = pkg.keep_tags(reply.data, set(known))
             else:
                 atoms = reply.data
         cost = sum(r.cost_usd for r in replies.values())
@@ -1039,6 +1111,10 @@ async def run_package(
             course.sections,
         )
         pack, problems["atoms"] = pkg.build_atoms(course, concept, atoms, version, code)
+        if probe and live is not None and not any(q.probe for q in live.quiz):
+            # The matched Lesson 0 gap must be checked: the quiz goes back without it.
+            problems["quiz"] = [*problems.get("quiz", []), "Add the probe item (probe: true)."]
+            live = None
         output = {"lesson": lesson, "quiz": quiz, "atoms": atoms}
         if live is not None and pack is not None and code:
             pack, ran = await pkg.run_code(executor, live, pack)

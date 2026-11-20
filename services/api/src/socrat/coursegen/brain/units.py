@@ -160,6 +160,16 @@ def block(db: Session, units: list[RootUnit], limit: int = 12000) -> str:
     return f"<subject_material>\n{text}\n</subject_material>"
 
 
+def misconceptions(units: list[RootUnit]) -> dict[str, str]:
+    """id -> belief for the misconceptions the units hold (the ids quizzes may tag)."""
+    out: dict[str, str] = {}
+    for unit in units:
+        for item in (unit.content or {}).get("misconceptions", []):
+            if isinstance(item, dict) and item.get("id"):
+                out.setdefault(str(item["id"]), str(item.get("belief", ""))[:200])
+    return out
+
+
 def pin(db: Session, course_id: str, concept_id: str, units: list[RootUnit]) -> None:
     """Record which unit revisions this lesson is written from. Idempotent. A lesson rewritten
     from a newer revision of the same unit drops its pin to the older one, so a corrected

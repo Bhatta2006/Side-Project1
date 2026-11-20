@@ -14,6 +14,39 @@ Labels used throughout:
 
 Nothing here was run. In particular no model was called, so no latency or cost in this plan is new data.
 
+## Implementation status (2026-11-20)
+
+Built on `gbuild/feat/course-generator`, flag `gen_learner_plan` (default off), tests
+`services/api/tests/test_learner_plan.py`:
+
+- **PR 0 (contract loader):** `coursegen/learner_plan.py` (named so it is not confused with the learner
+  layer's `socrat/learner_profile.py`): `load` (calibrated / uncalibrated / legacy / unsupported, through
+  `onboarding.profile_for` and `PROFILE_SCHEMA` only), `resolve` (pure), `plan_for` (never raises).
+- **PR 1 (first lesson carries the learner):** `Brief.plan: LearnerPlan | None`, attached at the start of
+  `run_outline` for a request that builds a course only its maker reads (`brain.learner.builds_private`);
+  the job log records `profile_<status>`. The plan is part of the outline-reuse key. Code extracts explicit
+  asks (language, rigor, help policy, narrative frame, deadline) with their verbatim quote and **enforces**
+  rigor and tutor on the style after the stylist; an unmet narrative frame is logged (`constraint_unmet`),
+  not invented. The model's `core_deliverable` is accepted only when every tool, product or number it names
+  is in the learner's words; otherwise it becomes an assumption. The architect and critic read the plan
+  through `data_block` (escaped, marked as data) plus `OUTLINE_RULES`; the lesson author, quiz and atoms
+  read it plus `LESSON_RULES` (door first, pace as a prior). Lesson 0 gaps map to the first concept whose
+  title, summary, objectives or misconceptions cover at least half the label's words (code only); that
+  lesson's quiz must carry one item with `probe: true` (`QuizItem.probe`) or it goes back.
+- **Privacy:** a plan is attached only to private builds and used at write time only while
+  `private_owner` holds (not shared by the brain, not made public). A course shared later stops sending the
+  plan to new lessons; lessons already written keep their wording (same known gap as `learner-memory.md`).
+
+Deviations from the text below: no `Constraint` kinds `format`, `syllabus`, `other`; no architect `gap_map`
+(that is PR 2's outline change), so gap matching is the deterministic matcher alone; the stylist still reads
+`style_request`, not `request` (constraints are enforced after it instead); `personal` is not a stored field,
+because `private_owner` decides it at write time. A probe miss does not yet enqueue the `example` support
+activity (PR 6). Not run against a live model.
+
+Still to build, in order: PR 2 (roadmap first, lazy detail), PR 3 (readiness field), PR 4 (true time budget),
+PR 5 (retry safety), PR 6 (session-one adaptation, including the probe miss), PR 7 (benchmark and gate),
+PR 8 (optional SQL checker).
+
 ---
 
 ## 0. Decisions in one page
