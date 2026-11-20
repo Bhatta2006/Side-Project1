@@ -432,7 +432,8 @@ async def find(
     pictures: list[dict] = []
     for i, (head, group) in enumerate(zip(heads, found, strict=True)):
         if picks is not None:
-            order = [group[picks[i]]] if picks[i] is not None else []
+            pick = picks[i]  # a local, so the None check narrows its type
+            order = [group[pick]] if pick is not None else []
         else:
             order = [p for p in group if p.sure]
         best = next((p for p in order if p.src not in used and p.source_url not in used), None)

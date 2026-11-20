@@ -159,7 +159,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(graded_router)
     app.include_router(vitals_router)
     app.include_router(passport_router)
-    app.include_router(trial_router)
     app.include_router(onboarding_router)
     app.include_router(billing_router)
     app.include_router(email_auth_router)
