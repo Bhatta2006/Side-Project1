@@ -503,6 +503,7 @@ def build_for(
         transfer=transfers.current(db, catalog, enrollment, states, completed, now),
         locks=mode_policy(db, enrollment).locks_modules,
         strict=session_budget(enrollment) <= STRICT_MINUTES,
+        computed=bool((enrollment.goal or {}).get("session_minutes")),
     )
     return plan, adaptive
 

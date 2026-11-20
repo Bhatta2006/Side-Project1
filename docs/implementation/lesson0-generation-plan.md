@@ -53,9 +53,21 @@ detailed fails the package job (normal retry). A published roadmap enrols and se
 course list; an undetailed concept is locked, never an error. The critic no longer holds the learner up:
 issues whose "where" is a later module (or a concept in one) are stored as `Brief.review_notes` and handed to
 that module's detailer; anything about module 1 or the course as a whole gets **one** repair round, then the
-roadmap is kept (`kept_for_learner` in the job log, with what stayed open). Not built from PR 2:
-`outcome_spec` and `gap_map` in the architect reply, and starting the first lesson in parallel with the
-critic (it still starts at save, as `early_first_lesson` did before).
+roadmap is kept (`kept_for_learner` in the job log, with what stayed open).
+
+**PR 2 rest, built 2026-11-20** (tests in `test_roadmap.py`): a learner's architect reply also carries
+`outcome_spec {final_task, success[], constraints_kept[], assumptions[]}` and, when Lesson 0 found gaps, `gap_map
+[{gap, concept, confidence}]`. Code (`learner_plan.from_architect`) keeps the outcome only when every ask quote is in
+`constraints_kept`, each success criterion opens with a verb (word list, `NOT_VERBS`) and nothing names a tool,
+product or number outside the learner's words and door; a rejected outcome is left out and logged
+(`outcome_rejected`), never repaired by guessing, and costs no extra round. Both are stored on `Brief.plan`
+(`LearnerPlan.outcome`, `.gap_map`); `data_block` hands `final_task` to the lesson author. `gap_concepts` follows the
+architect where it named a gap (only `match` gives a probe; `possible`/`none` give none; a match to an unknown
+concept is dropped) and falls back to the deterministic matcher for gaps it left out. With `gen_waiting_learner`, the
+course is saved and the first lesson queued as soon as module 1 is valid (`first_lesson_early`), while the critic
+is still reading; if the one repair round changes module 1 the first-lesson job is cancelled and queued again
+(`first_lesson_requeued`), and a cancelled running job does not release its lesson. If module 1 is unchanged the
+final save keeps a lesson already written.
 
 **PR 3 (readiness field), API side built:** `view.start = {state, concept, minutes, retry}` with the four states
 of 5.3 (`coursegen/requests.start_state`), documented for onboarding in `onboarding-handoff.md` 3.3; tests
@@ -65,9 +77,13 @@ of 5.3 (`coursegen/requests.start_state`), documented for onboarding in `onboard
 `session_minutes` (the true 10/25/60); `EnrollInput.session_minutes` (optional) stores it in
 `Enrollment.goal`; `learn.service.session_budget` packs days to it instead of the rounded-up `minutes_per_day`,
 and at 10 minutes or less a day holds only what fits (the first item always). Tests
-`services/api/tests/test_true_session_budget.py`. Not built from PR 4: computed activity minutes from written
-lessons (words/180, quiz items, attempts) and the `check_lesson` session-total gate; schedule changes
-(`ScheduleUpdate`) do not touch `session_minutes`.
+`services/api/tests/test_true_session_budget.py`. **PR 4 rest, built 2026-11-20:** an enrolment with a true
+session length plans a written concept with computed minutes (`planner.engine.written_minutes`: reading
+`ceil(words/180)`, `0.75` per quiz item + `2` feedback, `6 + 2` per problem); unwritten concepts keep the ratio.
+The package job sends back a Lesson 0 learner's first lesson when lesson + check exceed `session_minutes * 1.1`
+(`jobs.first_session_over`; the gate sits with the probe check in the package job, which sees the quiz, rather than in
+`check_lesson`, which sees only the lesson). Changing minutes per day in settings now updates
+`goal.session_minutes` (owner decision 2026-11-20).
 
 **PR 5 (retry safety and the waiting window), built behind `gen_waiting_learner` (default off):** jobs a learner
 waits on (priority <= 1: outlines, first lessons, lessons asked for again, accepted bridges) beat a heartbeat every
@@ -91,8 +107,7 @@ and a lowered Ladder ceiling after difficulty, and the bridge proposal; "help" i
 (code submissions and labs record hints, quizzes and lessons do not), so in a quiz-only course success is always
 "independent". The review quiz reuses the concept's items: not a guaranteed new context.
 
-Still to build, in order: the rest of PR 2 (above), the rest of PR 4 (above),
-PR 6 rest (above), PR 7 (benchmark and gate),
+Still to build, in order: PR 6 rest (above), PR 7 (benchmark and gate),
 PR 8 (optional SQL checker).
 
 ---

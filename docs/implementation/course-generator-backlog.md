@@ -50,12 +50,22 @@ passed). Re-run the full suite before anything else (item 1.1).
 
 ## 1. Do first
 
-### 1.1 Full suite on the current head
+### 1.1 Full suite on the current head (done 2026-11-20)
+**Result at `9ee458f`:** 1081 passed, 25 skipped, 25 failed. None from generation. The 25: the two known
+(`test_explainer` theme token, `test_sourced_content`); `test_admin_drafts.py` x3, which copy `content/courses`,
+gone since the built-in courses were removed (stale tests, not fixed here); and 20 cpp/java runs in
+`test_local_backend.py` / `test_native_limits.py` because this machine has no `g++` or `java` on PATH.
+`test_lifecycle.py` is absent from this checkout. Original instruction:
 Run the whole API suite once (about 12 minutes) and confirm only the 5 known failures remain. If anything
 else is red, it is most likely `learn.service.history_for` (it now also returns `at` and `details`) or
 `planner.engine.build_plan` (new `strict` argument, session-one branch).
 
-### 1.2 First live model run (needs the owner's key)
+### 1.2 First live model run (done 2026-11-20, see `live-run-log.md` "Live run 2")
+Run A (brain off): roadmap 75 s, first lesson 196 s, outline $0.18, first lesson $0.34, 5 modules / 15 concepts,
+door in lesson 1, probe item present. Run B (brain on): Lesson 0 plan not used (B1), SQL fences rejected (B2),
+reused outline never started its first lesson (B3, fixed), a 567 s model call (B4). Still open: the second learner
+served from a *published* shared course with zero model calls (B5), and a live run of 2.2 / 2.3.
+Original instruction:
 Nothing has run against a real model. With a key (Vertex or Anthropic; ask the owner, never guess), turn on
 `learning_requests_enabled`, `gen_learner_plan`, `gen_learner_brief`, `gen_waiting_learner`,
 `session_one_adaptation` locally, go through `/start` once with the SQL goal from `onboarding-handoff.md` 4,
@@ -66,14 +76,18 @@ on and a second account asking for the same thing (it should be served, zero mod
 **Done when** the run is logged with numbers and every surprise has an item in this file.
 
 ### 1.3 Put strict lesson gates back before real learners
-Since 2026-11-11 the strict lesson gates are relaxed in the live AI API for testing. Turn them back on before
+Code status 2026-11-20: `gen_relaxed_gates` defaults to off, config refuses it in staging and production, and it
+is not set in the repo's `.env` / `.env.local`. What remains is a check of the deployed environment's variables
+(not visible from the repo). Since 2026-11-11 the strict lesson gates are relaxed in the live AI API for testing. Turn them back on before
 any real learner uses generated courses (owner's standing instruction).
 
 ---
 
 ## 2. Lesson 0 -> generation (`lesson0-generation-plan.md`)
 
-### 2.1 PR 2 rest: `outcome_spec` and `gap_map` from the architect
+### 2.1 PR 2 rest: `outcome_spec` and `gap_map` from the architect (done 2026-11-20)
+Built as specified; a rejected outcome is dropped and logged (`outcome_rejected`) rather than costing another
+architect round. Details in `lesson0-generation-plan.md` (PR 2 rest). Tests in `test_roadmap.py`.
 - **What:** the architect reply gains `outcome_spec` `{final_task, success[], constraints_kept[], assumptions[]}`
   (plan section 4.A) and `gap_map` `[{gap, concept|null, confidence: match|possible|none}]` (section 2.3).
 - **Where:** `coursegen/outline.py` (`ARCHITECT` text, the `SHAPE` reply format, `to_course`/`tidy`), `learner_plan.py`
@@ -85,14 +99,20 @@ any real learner uses generated courses (owner's standing instruction).
 - **Done when:** tests reject an outcome missing a constraint quote; an ambiguous gap gives no probe; admin
   briefs unchanged.
 
-### 2.2 PR 2 rest: first lesson in parallel with the critic
+### 2.2 PR 2 rest: first lesson in parallel with the critic (done 2026-11-20, `gen_waiting_learner`)
+Live run A measured the gain this removes: 32 s between module-1 details and the critic's answer. Tests in
+`test_roadmap.py`; `test_waiting_learner.py` now expects the course saved before a crash at the final save.
+Not measured live yet.
 Today the first lesson is queued at save (`early_first_lesson`). With `gen_waiting_learner` the learner slot
 exists, so queue the first concept's package job as soon as module 1 is valid, before the critic answers; if the
 critic's one repair round changes module 1, cancel and re-queue that job. **Where:** `jobs.run_outline`.
 **Done when:** with a scripted slow critic, the first lesson's package job starts before the critic reply; a
 repair of module 1 re-queues it once.
 
-### 2.3 PR 4 rest: computed activity minutes and the session-total gate
+### 2.3 PR 4 rest: computed activity minutes and the session-total gate (done 2026-11-20)
+Owner decision: changing minutes per day in settings updates `goal.session_minutes`. The gate lives in the package
+job (`jobs.first_session_over`), which sees the quiz; `check_lesson` sees only the lesson. Word count is read from
+the written lesson at plan time, not stored. Tests in `test_true_session_budget.py`.
 - **What:** for a written concept, minutes are computed, not estimated: reading `ceil(words / 180)`, `0.75` min per
   quiz item, a fixed attempt allowance per exercise, `2` min feedback per check (plan 3.4). Unwritten concepts keep
   the ratio. `package.check_lesson` fails a first lesson whose total exceeds `session_minutes * 1.1`.
@@ -235,6 +255,16 @@ setting, never hard-code strictness.
 ---
 
 ## 7. Known risks in what is built
+
+- **Live run 2 (2026-11-20):** a single model call can take ~570 s (B4). With `gen_waiting_learner` the heartbeat
+  keeps that job alive, so the learner waits the whole call. Consider a shorter `ROLE_TIMEOUT` for jobs a learner
+  waits on (priority <= 1), with the normal retry.
+- **`course_brain` drops Lesson 0 entirely** for a new shared course (B1) until 3.3 is built: keep it off.
+- **SQL courses are `python` code courses** (A1, B2): lessons wrap SQL in python fences or are sent back for
+  ```` ```sql ````. Item 2.8 fixes the root cause; until then, allowing `sql` as a display-only fence is a one-line
+  stopgap in `package._common_lesson_checks` (not done: owner's call).
+- **2.2:** when the repair round changes module 1, a first lesson already *released* is reset to planned by the
+  full save and written again (cost twice); a running one is cancelled and does not release.
 
 - **PR 5:** a crash while module details are being written re-runs the architect (the outline is stored only
   once valid). A worker whose event loop is blocked for 2 minutes can lose its job to another worker; the job then

@@ -80,3 +80,72 @@ A real model (the stand-in is an agent through a relay: no real latency, rate li
 refusals or token counts); resource links (replaced by "reachable"); search providers;
 payments and email; more than one learner; the visual's interaction in the browser (loaded,
 not driven); audio and video (not built).
+
+---
+
+# Live run 2: real Vertex model, Lesson 0 -> first lesson (2026-11-20, backlog 1.2)
+
+**Setup.** Real provider: Vertex, `gemini-3.8-flash`, key from the local `.env`. API only (no web), local
+SQLite, `SOCRAT_GEN_RUNNER=true` with 3 in-process slots, flags on: `learning_requests_enabled`,
+`gen_learner_plan`, `gen_learner_brief`, `gen_waiting_learner`, `session_one_adaptation`, `learner_profile`.
+Driven over HTTP by a script (dev login -> `POST /onboarding` -> `choose` (builder, door "Filtering a giant music
+playlist") -> win -> snag (two deliberate misses, then right) -> `claim` with 25 minutes -> poll `view.start`).
+Goal: "I want to learn SQL for my college project" (`onboarding-handoff.md` 4). Run A at `9ee458f` (partner's
+head, before backlog 2.1-2.3); run B with `course_brain` on, at the working tree with 2.1-2.3.
+Not driven: publish, enrol, Today, the web `/start` page.
+
+## Run A: brain off
+
+| Measure | Value | Target (backlog 2.5, proposals) |
+|---|---|---|
+| Claim -> roadmap (`roadmap_ready`) | **75 s** | <= 60 s |
+| Claim -> first lesson (`first_lesson_ready`) | **196 s** | <= 150 s |
+| Outline job cost | **$0.178** (stylist, architect skeleton + module-1 details, critic) | <= $0.25 |
+| First lesson cost (package job) | **$0.338** (researcher, author, quiz, atoms, reviewer, facts) | <= $0.15 |
+| Whole run, including Lesson 0 | $0.537 | |
+| Roadmap size | 5 modules, 15 concepts (builder cap 6 / 18) | |
+| Critic | pass in round 1 | |
+
+- Job log: `profile_calibrated`, stylist, architect skeleton, `outline_stored`, critic pass, `outline_saved`.
+  No `kept_for_learner` and no `constraint_unmet` (the goal has no explicit asks, so `constraints` is empty).
+- The door opens lesson 1 (the intro starts with a streaming-music playlist and maps it to "column projection" and
+  "row filtering"; "playlist" appears 7 times). The probe item is there:
+  `operator-precedence-compound-evaluation` (`probe: true`), for the Lesson 0 gap `operator_precedence`.
+- Timeline: skeleton at 31 s, module-1 details at 41 s, **critic answer at 73 s**: the first lesson waited
+  32 s for the critic. This is what backlog 2.2 removes (built the same day, not yet measured live).
+- Finding A1: the SQL course is a `python` code course (SQL is not a course language), so the lesson shows its
+  SQL inside ```` ```python ```` blocks. See B2.
+
+## Run B: `course_brain` on, two accounts, same goal
+
+| Measure | Account 1 | Account 2 |
+|---|---|---|
+| Brain outcome | `extend_and_new` (new root, research job) | `from_material` ("no candidate under this subject") |
+| Claim -> roadmap | 146 s (waits for the unit's research) | **5 s** (outline reused, no model call) |
+| Claim -> first lesson | **864 s** | never: no first-lesson job (bug B3, fixed) |
+| Model cost | $1.43 for the whole run (both accounts) | |
+
+- **B1, by design but blocking:** with the brain on, a first request builds a *shared* family course, so
+  `builds_private` is false and the Lesson 0 plan is not attached: no `profile_*` event, no roadmap caps
+  (7 modules / 26 concepts, over builder 6 / 18), no lazy detail, no door, no probe. The learner's overlay is stored
+  on `course_matches.private` but nothing reads it yet (backlog 3.3). **Keep `course_brain` off until 3.3 lands.**
+- **B2:** the author wrote ```` ```sql ```` blocks; `package._common_lesson_checks` rejected them ("Code blocks in
+  ['sql'] are outside the course languages") and the lesson went to a second round. Same root cause as A1: SQL is
+  not a `Language`. Backlog 2.8.
+- **B3, app bug, fixed:** account 2's outline was reused (`_reuse`) but `_reuse` never called
+  `early_first_lesson`, so its `view.start` stayed `roadmap_ready` with nothing writing the lesson; a `/start` that
+  waits for `first_lesson_ready` would wait forever. Reachable without the brain too (two identical learner briefs).
+  Fix in `jobs._reuse`; test `test_a_reused_outline_still_starts_the_learners_first_lesson` (fails without it).
+- **B4, latency:** one `reviser` call took **567 s** (7.8k in, 5.9k out), just under `gen_timeout_seconds = 600`.
+  With `gen_waiting_learner` the heartbeat keeps such a job "alive", so the 2-minute re-claim never fires; the
+  learner waits the full call. A shorter timeout for jobs a learner waits on is not built (backlog 7).
+- **B5:** account 2 was not served account 1's course: it was still in review (never published), so it is not a
+  candidate. The "second learner served with zero model calls" check needs account 1 to publish first; not run.
+- **B6, unexplained:** one `POST /api/v1/onboarding` returned 500 on a fresh server with nothing in the log; the next
+  account's identical call worked. Not reproduced.
+
+## Not tested by these runs
+
+Publish, enrol, Today and the session-one branches; backlog 2.2 (first lesson before the critic) and 2.3
+(computed minutes, session gate) against the live model (run A predates them; run B had no plan, so neither
+applied); the web `/start` page; a second learner served from a published shared course.

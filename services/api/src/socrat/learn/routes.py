@@ -630,6 +630,14 @@ def update_enrollment(body: ScheduleUpdate, request: Request):
             enrollment.weekdays = sorted(set(body.weekdays))
             changes.append(f"{len(enrollment.weekdays)} study days a week")
         goal = dict(enrollment.goal)
+        if body.minutes_per_day is not None and goal.get("session_minutes") not in (
+            None,
+            body.minutes_per_day,
+        ):
+            # The learner's latest choice is their true session length (owner, 2026-11-20).
+            goal["session_minutes"] = body.minutes_per_day
+            if not any(c.endswith("min per study day") for c in changes):
+                changes.append(f"{body.minutes_per_day} min per study day")
         if body.clear_target_date and "target_date" in goal:
             goal.pop("target_date")
             changes.append("no target date")

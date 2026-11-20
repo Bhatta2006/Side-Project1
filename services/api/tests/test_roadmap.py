@@ -286,3 +286,174 @@ def test_a_module_one_issue_gets_one_repair_round_only(client, monkeypatch):  # 
     assert "what-is-ml is thin." in script.architect[1]
     with Session(state.engine) as db:
         assert db.get(GeneratedCourse, "ai-basics") is not None  # kept after the one repair
+
+
+# ------------------------------------------------------------------ PR 2: outcome_spec, gap_map
+
+
+def outcome(plan, **change):
+    spec = {
+        "final_task": "Explain why a small model in Python fails, as a detective case.",
+        "success": ["Spot overfitting from a train/test gap", "Explain the loss in words"],
+        "constraints_kept": [f"{c.quote} -> kept" for c in plan.constraints],
+        "assumptions": [],
+    }
+    return spec | change
+
+
+def test_an_outcome_is_kept_only_when_it_carries_every_ask_and_adds_nothing():
+    plan = planned_brief().plan
+    ids = {"what-is-ml", "loss"}
+    kept, problems = lp.from_architect(plan, {"outcome_spec": outcome(plan)}, ids)
+    assert problems == [] and kept.outcome.final_task.startswith("Explain why")
+    assert "final_task" in lp.data_block(kept)  # the lesson author reads it
+
+    missing = outcome(plan, constraints_kept=["Only hints until I try -> kept"])
+    kept, problems = lp.from_architect(plan, {"outcome_spec": missing}, ids)
+    assert kept.outcome is None and "leaves out the learner's ask" in problems[0]
+
+    vague = outcome(plan, success=["Understanding of loss"])
+    assert "start with a verb" in lp.from_architect(plan, {"outcome_spec": vague}, ids)[1][0]
+    added = outcome(plan, final_task="Deploy a model to Kubernetes.")
+    assert "did not ask for" in lp.from_architect(plan, {"outcome_spec": added}, ids)[1][0]
+
+
+def test_an_ambiguous_gap_gives_no_probe_and_an_unnamed_one_falls_back_to_code():
+    brief = planned_brief()
+    course = to_course(brief, OUTLINE)
+    gap = "more_data_fixes_model"
+    assert lp.gap_concepts(brief.plan, course) == {gap: "what-is-ml"}  # code's matcher
+    for confidence in ("possible", "none"):
+        reply = {"gap_map": [{"gap": gap, "concept": "loss", "confidence": confidence}]}
+        plan, _ = lp.from_architect(brief.plan, reply, {"what-is-ml", "loss"})
+        assert lp.gap_concepts(plan, course) == {}
+    reply = {"gap_map": [{"gap": gap, "concept": "loss", "confidence": "match"}]}
+    plan, _ = lp.from_architect(brief.plan, reply, {"what-is-ml", "loss"})
+    assert lp.gap_concepts(plan, course) == {gap: "loss"}  # the architect's match wins
+    reply = {"gap_map": [{"gap": gap, "concept": "nope", "confidence": "match"}]}
+    plan, problems = lp.from_architect(brief.plan, reply, {"what-is-ml", "loss"})
+    assert plan.gap_map == [] and "unknown concept" in problems[0]
+
+
+def test_the_roadmap_stores_the_accepted_outcome_and_admin_briefs_are_not_asked(
+    client,  # noqa: F811
+    monkeypatch,
+):
+    learner_request(client, monkeypatch, profile())
+    state = client.app.state
+    plan = lp.resolve(profile())
+    reply = ROADMAP | {
+        "outcome_spec": outcome(plan),
+        "gap_map": [{"gap": "more_data_fixes_model", "concept": "loss", "confidence": "match"}],
+    }
+    script = Planner(outline=reply)
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    assert '"outcome_spec"' in script.architect[0] and '"gap_map"' in script.architect[0]
+    with Session(state.engine) as db:
+        stored = Brief.model_validate(db.get(GeneratedCourse, "ai-basics").brief).plan
+    assert stored.outcome.final_task.startswith("Explain why")
+    assert [g.concept for g in stored.gap_map] == ["loss"]
+    from socrat.coursegen.outline import architect_prompt
+
+    admin = architect_prompt(Brief.model_validate(BRIEF), default_catalog())
+    assert "outcome_spec" not in admin and "gap_map" not in admin
+
+
+# ------------------------------------------------------------------ PR 2: first lesson early
+
+
+class SlowCritic(Planner):
+    """The critic answers only after looking for the first lesson's job (a slow critic)."""
+
+    def __init__(self, engine, outlines, critic=None):
+        super().__init__(outlines[0], critic)
+        self.outlines, self.engine, self.seen = list(outlines), engine, []
+
+    def make(self, settings):
+        inner, script = super().make(settings), self
+
+        class Provider:
+            name = "anthropic"
+
+            async def converse(self, system, turns, max_tokens, *args, **kwargs):
+                if system == ARCHITECT:
+                    script.outline = script.outlines.pop(0) if script.outlines else script.outline
+                if system == CRITIC:
+                    for _ in range(50):  # give the details and the early save time to land
+                        await asyncio.sleep(0.01)
+                        if _packages(script.engine):
+                            break
+                    script.seen.append(len(_packages(script.engine)))
+                async for event in inner.converse(system, turns, max_tokens, *args, **kwargs):
+                    yield event
+
+        return Provider()
+
+
+def _packages(engine):
+    from socrat.models import GenerationJob
+
+    with Session(engine) as db:
+        return [
+            (j.target, j.state)
+            for j in db.query(GenerationJob).filter_by(kind="package").order_by("created_at")
+        ]
+
+
+def test_the_first_lesson_starts_before_the_critic_answers(client, monkeypatch):  # noqa: F811
+    learner_request(client, monkeypatch, profile())
+    state = client.app.state
+    state.settings.gen_waiting_learner = True
+    script = SlowCritic(state.engine, [ROADMAP])
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    assert script.seen == [1]  # queued while the critic was still thinking
+    assert _packages(state.engine) == [("what-is-ml", "queued")]  # not queued twice
+
+
+def test_a_module_one_repair_requeues_the_first_lesson_once(client, monkeypatch):  # noqa: F811
+    learner_request(client, monkeypatch, profile())
+    state = client.app.state
+    state.settings.gen_waiting_learner = True
+    first = ROADMAP["modules"][0]
+    changed = dict(first, concepts=[dict(first["concepts"][0], summary="Rewritten by the repair.")])
+    changed["concepts"].append(first["concepts"][1])
+    repaired = ROADMAP | {"modules": [changed, *ROADMAP["modules"][1:]]}
+    script = SlowCritic(state.engine, [ROADMAP, repaired], critic=[revise("what-is-ml")])
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    assert _packages(state.engine) == [("what-is-ml", "cancelled"), ("what-is-ml", "queued")]
+    with Session(state.engine) as db:
+        summary = generated.course(db, "ai-basics").concept("what-is-ml").summary
+    assert summary == "Rewritten by the repair."
+
+
+def test_a_repair_that_leaves_module_one_alone_keeps_the_first_lesson(client, monkeypatch):  # noqa: F811
+    learner_request(client, monkeypatch, profile())
+    state = client.app.state
+    state.settings.gen_waiting_learner = True
+    script = SlowCritic(state.engine, [ROADMAP, ROADMAP], critic=[revise("what-is-ml")])
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    assert len(script.architect) == 2
+    assert _packages(state.engine) == [("what-is-ml", "queued")]
+
+
+def test_a_reused_outline_still_starts_the_learners_first_lesson(client, monkeypatch):  # noqa: F811
+    # Live run 2026-11-20: a second learner got a reused outline and no first lesson job, so
+    # their start screen stayed at "roadmap_ready" with nothing being written.
+    from socrat.models import GenerationJob, User
+
+    state = client.app.state
+    state.settings.learning_requests_enabled = True
+    login(client, subject="ada", name="Ada")
+    monkeypatch.setattr(lp, "plan_for", lambda db, rid: (None, "legacy", ""))
+    with Session(state.engine) as db, db.begin():
+        ada = db.query(User).filter_by(display_name="Ada").one().id
+        for cid, rid in (("ai-basics", "req-1"), ("ai-basics-two", "req-2")):
+            brief = dict(BRIEF, id=cid)
+            jobs.enqueue(db, "outline", cid, {"brief": brief, "learning_request": rid}, ada)
+    script = Planner(outline=OUTLINE)
+    for _ in range(2):
+        asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    assert len(script.architect) == 1  # the second outline was reused
+    with Session(state.engine) as db:
+        queued = {j.course_id for j in db.query(GenerationJob).filter_by(kind="package")}
+    assert queued == {"ai-basics", "ai-basics-two"}

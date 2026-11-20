@@ -83,7 +83,8 @@ def test_an_interrupted_outline_resumes_without_a_second_architect_bill(
     with Session(state.engine) as db, db.begin():
         job = db.get(GenerationJob, job_id)
         assert job.state == "queued" and "outline" in job.output and "brief" in job.output
-        assert generated.course(db, "ai-basics") is None
+        # Saved before the critic answered, so the first lesson could start (backlog 2.2).
+        assert generated.course(db, "ai-basics") is not None
     with Session(state.engine) as db, db.begin():
         db.execute(update(GenerationJob).where(GenerationJob.id == job_id).values(not_before=0))
     asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))

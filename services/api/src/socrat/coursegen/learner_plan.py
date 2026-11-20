@@ -41,6 +41,23 @@ class Start(BaseModel):
     pace: Literal["fast", "medium", "slow"] | None = None
 
 
+class OutcomeSpec(BaseModel):
+    """What the course ends with (plan 4.A), written by the architect and checked by code."""
+
+    final_task: str = Field(max_length=400)
+    success: list[str] = Field(default_factory=list, max_length=6)
+    constraints_kept: list[str] = Field(default_factory=list, max_length=8)
+    assumptions: list[str] = Field(default_factory=list, max_length=6)
+
+
+class GapLink(BaseModel):
+    """A Lesson 0 gap and the concept the architect says teaches it (plan 2.3)."""
+
+    gap: str = Field(max_length=60)
+    concept: str | None = Field(default=None, max_length=80)
+    confidence: Literal["match", "possible", "none"]
+
+
 class LearnerPlan(BaseModel):
     request: str = Field(max_length=500)  # raw_input, verbatim
     deliverable: str = Field(default="", max_length=400)
@@ -50,6 +67,9 @@ class LearnerPlan(BaseModel):
     session_minutes: int | None = Field(default=None, ge=1, le=480)
     door: str | None = Field(default=None, max_length=80)
     start: Start | None = None
+    # From the architect's reply, kept only when code accepts them (``from_architect``).
+    outcome: OutcomeSpec | None = None
+    gap_map: list[GapLink] = Field(default_factory=list, max_length=4)
 
 
 # ------------------------------------------------------------------ reading the profile
@@ -251,15 +271,23 @@ def _tokens(text: str) -> set[str]:
 
 
 def gap_concepts(plan: LearnerPlan | None, course) -> dict[str, str]:
-    """gap label -> the first concept (course order) that teaches it, by token overlap with
-    the concept's title, summary, objectives and misconceptions. Only a clear match counts:
-    at least half the label's words. An unmatched gap stays a note, never a remediation."""
+    """gap label -> the concept that teaches it. The architect's ``gap_map`` decides a gap it
+    names: only a ``match`` counts, a ``possible`` or ``none`` gives no probe. A gap it left
+    out falls back to code: the first concept (course order) by token overlap with its title,
+    summary, objectives and misconceptions, at least half the label's words. An unmatched gap
+    stays a note, never a remediation."""
     if plan is None or plan.start is None or not plan.start.gaps:
         return {}
     order = [cid for m in course.modules for cid in m.concepts]
     by_id = {c.id: c for c in course.concepts}
     found: dict[str, str] = {}
+    decided = {g.gap: g for g in plan.gap_map}
     for gap in plan.start.gaps:
+        if gap in decided:
+            link = decided[gap]
+            if link.confidence == "match" and link.concept and link.concept in by_id:
+                found[gap] = link.concept
+            continue
         label = _tokens(gap)
         if not label:
             continue
@@ -275,6 +303,82 @@ def gap_concepts(plan: LearnerPlan | None, course) -> dict[str, str]:
                 found[gap] = cid
                 break
     return found
+
+
+# ------------------------------------------------------------------ the architect's outcome
+
+# ponytail: a word list, not a parser; catches "Understand X" / "The learner..." / "Knowledge
+# of", the usual non-observable openings. Swap for a POS tagger if real replies slip past it.
+NOT_VERBS = {"the", "a", "an", "to", "understand", "understanding", "know", "knowledge", "learn"}
+NOT_VERBS |= {"awareness", "familiarity", "able", "be", "basic", "good", "students"}
+
+
+def _norm(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def from_architect(plan: LearnerPlan, reply: dict, concepts: set[str]) -> tuple[LearnerPlan, list]:
+    """(plan with what code accepts of the reply's ``outcome_spec`` and ``gap_map``, problems).
+    A rejected outcome is left out, never repaired by guessing; the outline still stands."""
+    problems: list[str] = []
+    update: dict = {}
+    raw = reply.get("outcome_spec")
+    if raw is not None:
+        try:
+            spec = OutcomeSpec.model_validate(raw)
+        except ValidationError as exc:
+            spec, problems = None, [f"outcome_spec: {exc.errors()[0]['msg']}"]
+        if spec is not None:
+            kept = [_norm(k) for k in spec.constraints_kept]
+            for c in plan.constraints:
+                if not any(_norm(c.quote) in k for k in kept):
+                    problems.append(f"constraints_kept leaves out the learner's ask {c.quote!r}")
+            for s in spec.success:
+                first = (re.findall(r"[A-Za-z']+", s) or [""])[0].lower()
+                if not first or first in NOT_VERBS:
+                    problems.append(f"success criterion does not start with a verb: {s[:80]!r}")
+            given = " ".join([plan.request, plan.door or "", plan.deliverable])
+            for text in [spec.final_task, *spec.success]:
+                if deliverable(text, given)[1]:
+                    problems.append(f"names what the learner did not ask for: {text[:80]!r}")
+            if not problems:
+                update["outcome"] = spec
+    gaps = set(plan.start.gaps) if plan.start else set()
+    links = []
+    for item in reply.get("gap_map") or []:
+        try:
+            link = GapLink.model_validate(item)
+        except ValidationError:
+            problems.append(f"gap_map entry unreadable: {str(item)[:80]}")
+            continue
+        if link.gap not in gaps:
+            continue  # not a gap this learner showed
+        if link.confidence == "match" and link.concept not in concepts:
+            problems.append(f"gap_map: {link.gap} matched to unknown concept {link.concept!r}")
+            continue  # dropped: code's matcher decides this gap
+        links.append(link)
+    if links:
+        update["gap_map"] = links[:4]
+    return (plan.model_copy(update=update) if update else plan), problems
+
+
+def outcome_rules(plan: LearnerPlan) -> str:
+    """What a learner's roadmap reply adds to the outline JSON."""
+    gaps = plan.start.gaps if plan.start else []
+    text = (
+        'Also add "outcome_spec": {"final_task": "the one task the learner can do at the end, '
+        'in their terms", "success": ["observable criteria, each starting with a verb"], '
+        '"constraints_kept": ["each asks quote from the <learner> block, verbatim, with how the '
+        'course keeps it"], "assumptions": ["anything required that the learner did not say"]}. '
+        "Name no tool, product or number the learner did not give except under assumptions."
+    )
+    if gaps:
+        text += (
+            ' And "gap_map": one entry per start.gaps label, {"gap": "<label>", "concept": '
+            '"<concept id that teaches it, or null>", "confidence": "match | possible | none"}; '
+            '"match" only when that concept clearly teaches the gap.'
+        )
+    return text
 
 
 # ------------------------------------------------------------------ prompt blocks
@@ -300,6 +404,7 @@ def data_block(plan: LearnerPlan, probe: list[str] | None = None) -> str:
         "mode": plan.mode,
         "session_minutes": plan.session_minutes,
         "start": plan.start.model_dump() if plan.start else None,
+        "final_task": plan.outcome.final_task if plan.outcome else None,
         **({"probe": probe} if probe else {}),
     }
     data = {k: v for k, v in _safe(data).items() if v not in (None, "", [])}
@@ -320,6 +425,7 @@ LESSON_RULES = """This lesson is for the one learner in the <learner> block.
 - If a "door" is given, open with it in 2-3 sentences and map it to the formal term, then
   teach the idea in general and give one example outside the door.
 - Honour every "asks" quote. Fit the "session_minutes".
+- If a "final_task" is given, say in one sentence how this lesson moves toward it.
 - "start.pace": slow -> show one full worked example before the learner acts; fast -> keep it
   short and let them act sooner. It is a first guess from one sample, not a rating.
 - Never mention the block, the sample or the learner's words back to them."""

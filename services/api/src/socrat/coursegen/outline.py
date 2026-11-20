@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import Course, EvidenceType, Language, PracticeType, Ref, Slug
-from socrat.coursegen.learner_plan import OUTLINE_RULES, LearnerPlan, data_block
+from socrat.coursegen.learner_plan import OUTLINE_RULES, LearnerPlan, data_block, outcome_rules
 from socrat.style import pages
 from socrat.style import spec as styles
 
@@ -375,7 +375,7 @@ def caps(brief: Brief) -> tuple[int, int] | None:
 
 def roadmap_rules(brief: Brief) -> str:
     top = caps(brief)
-    if top is None:
+    if top is None or brief.plan is None:
         return ""
     return (
         f"Roadmap for one learner: at most {top[0]} modules and {top[1]} concepts in all, "
@@ -383,7 +383,8 @@ def roadmap_rules(brief: Brief) -> str:
         "listed under assumptions. Each module has a clear purpose and its summary names the "
         "observable milestone it ends with. Give every concept its title, summary, "
         "prerequisites, difficulty and minutes; its details are written separately, the first "
-        "module's now and the rest just before the learner reaches them."
+        "module's now and the rest just before the learner reaches them.\n"
+        + outcome_rules(brief.plan)
     )
 
 

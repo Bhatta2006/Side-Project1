@@ -187,6 +187,26 @@ def _minutes(value: float, pace: Pace, style: str = "balanced") -> int:
     return max(3, int(math.ceil(value * PACE_FACTOR[pace] * STYLE_FACTOR[style] / 5) * 5))
 
 
+# Computed minutes for a written concept (lesson0-generation-plan.md 3.4): reading speed,
+# per quiz item, one attempt at a problem, and feedback after each check.
+READ_WORDS_PER_MINUTE = 180
+QUIZ_ITEM_MINUTES = 0.75
+ATTEMPT_MINUTES = 6
+FEEDBACK_MINUTES = 2
+
+
+def written_minutes(lesson: str, quiz_items: int) -> dict[str, int] | None:
+    """{"lesson", "quiz", "problem"} minutes computed from what is written; None while the
+    lesson is not written (the estimate stands)."""
+    if not lesson:
+        return None
+    return {
+        "lesson": max(1, math.ceil(len(lesson.split()) / READ_WORDS_PER_MINUTE)),
+        "quiz": math.ceil(quiz_items * QUIZ_ITEM_MINUTES) + FEEDBACK_MINUTES if quiz_items else 0,
+        "problem": ATTEMPT_MINUTES + FEEDBACK_MINUTES,
+    }
+
+
 def concept_activities(
     catalog: Catalog,
     qualified: str,
@@ -196,9 +216,13 @@ def concept_activities(
     support: str | None = None,
     support_reason: str = "",
     support_code: str = "stuck_support",
+    computed: bool = False,
 ) -> list[Activity]:
+    """``computed``: a learner with a true session length (Lesson 0) gets the written
+    concept's computed minutes instead of shares of its estimate."""
     concept = catalog.concept(qualified)
     est = concept.estimated_minutes
+    real = written_minutes(concept.lesson, len(concept.quiz)) if computed else None
     order = {"easy": 0, "medium": 1, "hard": 2}
     problems = sorted(
         (catalog.problem(p) for p in concept.problems), key=lambda p: (order[p.difficulty], p.id)
@@ -215,7 +239,7 @@ def concept_activities(
             "lesson",
             qualified,
             concept.title,
-            _minutes(est * 0.3, pace, style),
+            real["lesson"] if real else _minutes(est * 0.3, pace, style),
             reason="Learn the idea first.",
         ),
         Activity(
@@ -223,7 +247,7 @@ def concept_activities(
             "quiz",
             qualified,
             f"{concept.title} check",
-            _minutes(est * 0.15, pace, style),
+            max(1, real["quiz"]) if real else _minutes(est * 0.15, pace, style),
             reason="A quick check that the idea landed.",
         ),
     ]
@@ -253,7 +277,7 @@ def concept_activities(
             "problem",
             qualified,
             p.title,
-            _minutes(max(10, share), pace, style),
+            real["problem"] if real else _minutes(max(10, share), pace, style),
             reason=f"Practice {concept.title} on your own ({p.difficulty}).",
         )
         for p in problems
@@ -346,6 +370,7 @@ def build_plan(
     transfer: transfers.Transfer | None = None,
     locks: bool = True,
     strict: bool = False,
+    computed: bool = False,
 ) -> Plan:
     """``locks`` is False when the learner chose a mode that keeps every module open;
     checkpoints are still planned, they just stop holding later modules shut. ``strict``: a
@@ -488,14 +513,20 @@ def build_plan(
         if concept.status == "planned":
             # Outlined but not generated yet: on the roadmap and in the forecast, never queued.
             locked_minutes += sum(
-                a.minutes for a in concept_activities(catalog, qualified, state, pace, style)
+                a.minutes
+                for a in concept_activities(
+                    catalog, qualified, state, pace, style, computed=computed
+                )
             )
             roadmap.append({**entry_base, "status": "preparing"})
             continue
         if qualified in locked:
             # Behind a gate: shown on the roadmap and counted in the forecast, not scheduled.
             locked_minutes += sum(
-                a.minutes for a in concept_activities(catalog, qualified, state, pace, style)
+                a.minutes
+                for a in concept_activities(
+                    catalog, qualified, state, pace, style, computed=computed
+                )
             )
             roadmap.append({**entry_base, "status": "locked", "locked_by": locked[qualified]})
             continue
@@ -553,7 +584,15 @@ def build_plan(
                     "Your check missed; a different explanation first, then a fresh check."
                 )
             activities = concept_activities(
-                catalog, qualified, state, c_pace, style, support, support_reason, support_code
+                catalog,
+                qualified,
+                state,
+                c_pace,
+                style,
+                support,
+                support_reason,
+                support_code,
+                computed=computed,
             )
             pending = [a for a in activities if a.id not in completed]
             status = "upcoming"
