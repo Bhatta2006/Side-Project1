@@ -1,6 +1,33 @@
 import { expect, type Page } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 
 const ORIGIN = 'http://localhost:3000';
+const PYTHON = path.resolve('.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+
+/** Give the signed-in learner a paid Founding Member (``plus``) plan for 30 days, written straight
+ * into the e2e database the way a verified Razorpay payment would leave it. */
+export async function grantPlus(page: Page) {
+  const me = await (await page.request.get('/api/v1/me')).json();
+  const id = me.id ?? me.user_id;
+  expect(id, 'the profile carries the user id').toBeTruthy();
+  execFileSync(PYTHON, ['-c', [
+    'import sqlite3, sys, time',
+    "db = sqlite3.connect('socrat.e2e.db', timeout=30)",
+    't = int(time.time())',
+    'db.execute("insert or replace into subscriptions (user_id, plan, interval, currency, status, razorpay_subscription_id, current_end, cancel_at_period_end, updated_at) values (?, \'plus\', \'month\', \'INR\', \'active\', ?, ?, 0, ?)", (sys.argv[1], "e2e-" + sys.argv[1], t + 30 * 86400, t))',
+    'db.commit()',
+  ].join('\n'), id]);
+}
+
+/** A paged lesson keeps "Mark lesson as read" on its last page (Recap): page there. */
+export async function readToEnd(page: Page) {
+  const mark = page.getByRole('button', { name: 'Mark lesson as read' });
+  for (let i = 0; i < 30 && !(await mark.isVisible()); i++) {
+    await page.getByRole('button', { name: /^(Next|Recap)$/ }).click();
+  }
+  await mark.click();
+}
 
 /** A fresh adult learner, signed in through the API, enrolled straight into a fixture course
  * (``basics`` or ``algo``). Lesson 0 onboarding has its own spec; other specs start here. */

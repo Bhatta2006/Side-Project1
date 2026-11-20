@@ -75,7 +75,13 @@ test('a learner can do a whole session with the keyboard alone', async ({ page }
   await expect(dialog).toBeHidden();
   await expect(launcher).toBeFocused();
 
-  await tabTo(page, page.getByRole('button', { name: 'Mark lesson as read' }), 200);
+  // A paged lesson keeps "Mark lesson as read" on its last page (Recap): page there by keyboard.
+  const markRead = page.getByRole('button', { name: 'Mark lesson as read' });
+  for (let i = 0; i < 30 && !(await markRead.isVisible()); i++) {
+    await tabTo(page, page.getByRole('button', { name: /^(Next|Recap)$/ }), 200);
+    await page.keyboard.press('Enter');
+  }
+  await tabTo(page, markRead, 200);
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('link', { name: 'Take concept check' }), 200);
   await page.keyboard.press('Enter');
@@ -90,6 +96,7 @@ test('a learner can do a whole session with the keyboard alone', async ({ page }
   await expect(page.getByRole('status').filter({ hasText: /Correct|Incorrect/ })).toBeVisible();
 
   await page.goto('/today');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible(); // hydrated: shortcuts work
   await page.keyboard.press('Control+k');
   const search = page.getByPlaceholder('Search lessons and pages…');
   await expect(search).toBeFocused();

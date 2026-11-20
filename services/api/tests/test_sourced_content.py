@@ -143,5 +143,5 @@ def test_a_researched_lesson_is_sent_back_until_it_cites_and_then_credits_its_so
     concept = next(c for c in detail["course"]["concepts"] if c["id"] == "what-is-ml")
     assert concept["status"] == "live" and "## Sources" in concept["lesson"]
     assert "Informed by public sources" in concept["provenance"]["attribution_md"]
-    log = detail["jobs"][0]["log"]
+    log = next(j for j in detail["jobs"] if j["kind"] == "package")["log"]
     assert any(e.get("role") == "researcher" and e["sources"][0]["n"] == 1 for e in log)

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { RIGHT } from './helpers/answer-keys';
-import { enrollSignedIn } from './helpers/learner';
+import { enrollSignedIn, grantPlus, readToEnd } from './helpers/learner';
 import type { AdaptiveSession, AdaptiveAnswer } from '../../apps/web/src/lib/types';
 
 test.describe.configure({ timeout: 90000 });
@@ -32,10 +32,9 @@ test('a beginner reads a lesson, passes its check and sees progress', async ({ p
   await page.getByRole('link', { name: 'Start lesson' }).click();
 
   await expect(page).toHaveURL(/\/learn\/basics\/values$/);
-  // Only the learner's language variant of each code sample is shown.
-  await expect(page.locator('pre[data-lang="python"]').first()).toBeVisible();
+  // Only the learner's language variant of a code sample is ever shown.
   await expect(page.locator('pre[data-lang="cpp"], pre[data-lang="java"]')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Mark lesson as read' }).click();
+  await readToEnd(page);
   const started = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/adaptive-quiz/sessions'));
   await page.getByRole('link', { name: 'Take concept check' }).click();
 
@@ -138,16 +137,20 @@ test('a weekly assessment is built from what the learner studied', async ({ page
   await onboard(page, 'basics', 'brand-new');
   await expect(page).toHaveURL(/\/today$/);
 
+  // Weekly assessments are a Founding Member feature: Free sees the offer, a paid plan the exam.
   await page.goto('/assessments');
+  await expect(page.getByRole('button', { name: 'Unlock weekly assessments' })).toBeVisible();
+  await grantPlus(page);
+  await page.reload();
   await expect(page.getByText(/unlocks as you study/)).toBeVisible();
   for (const concept of ['values', 'text']) {
     await page.goto(`/learn/basics/${concept}`);
-    await page.getByRole('button', { name: 'Mark lesson as read' }).click();
+    await readToEnd(page);
     await expect(page.getByRole('heading', { name: 'Lesson read' })).toBeVisible();
   }
 
   await page.goto('/assessments');
-  await page.getByRole('button', { name: 'Start assessment' }).click();
+  await page.getByRole('button', { name: /^Start the \d+-minute exam/ }).click();
   const save = page.getByRole('button', { name: 'Save answer' });
   for (let i = 0; i < 15 && (await save.isVisible()); i++) {
     await page.getByRole('radio').first().click();

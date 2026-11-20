@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { dismissPlans } from './helpers/learner';
 
 /**
  * Run and Submit execute in the learner's browser: Python in Pyodide, C++ in Clang compiled to
@@ -39,6 +40,7 @@ async function runWith(page: Page, headers: Record<string, string>, language: 'p
   expect(saved.ok()).toBeTruthy();
   await page.evaluate(() => localStorage.clear());
   await page.goto('/problems/double-it');
+  await dismissPlans(page);
   const select = page.getByRole('combobox').filter({ hasText: /Python|C\+\+/ }).first();
   await select.selectOption(language);
   await expect(page.locator('.cm-content')).toContainText(source.split('\n')[0].slice(0, 20));
@@ -94,6 +96,7 @@ test('drafts typed in the editor survive a reload before they reach the server',
   test.skip(info.project.name !== 'desktop', 'storage behaviour is the same on phones');
   await signUp(page);
   await page.goto('/problems/double-it');
+  await dismissPlans(page);
   const content = page.locator('.cm-content');
   await expect(content).toBeVisible();
   // Block the autosave, type, and reload: the local copy comes back and is saved.

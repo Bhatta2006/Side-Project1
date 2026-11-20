@@ -15,8 +15,9 @@ test('landing hero, paths, questions and navigation work on desktop and phone', 
   // How it works introduces the status system with shapes and labels.
   for (const label of ['Read', 'Check passed', 'Mastered']) await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('radiogroup', { name: 'Your goal' })).toBeVisible();
-  await page.getByText('Can I start without knowing how to code?', { exact: true }).click();
-  await expect(page.locator('.landing-question', { hasText: 'Can I start without knowing how to code?' })).toHaveAttribute('open', '');
+  // Questions are course-agnostic now: no course is built in, every course is generated.
+  await page.getByText('Do I need to know the subject already?', { exact: true }).click();
+  await expect(page.locator('.landing-question', { hasText: 'Do I need to know the subject already?' })).toHaveAttribute('open', '');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   // The nav floats as a pill just below the top edge.
   const nav = await page.locator('.landing-nav').boundingBox();

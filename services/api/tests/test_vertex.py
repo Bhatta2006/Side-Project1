@@ -163,6 +163,45 @@ def test_failures_become_short_codes_without_provider_text(error, code):
     assert str(raised.value) == code
 
 
+def _timeouts():
+    import httpx
+
+    found = [httpx.ReadTimeout("slow"), httpx.ConnectError("refused")]
+    try:  # google-genai 3.x sends through httpx2, whose errors are not httpx's
+        import httpx2
+
+        found += [httpx2.ReadTimeout("slow"), httpx2.ConnectError("refused")]
+    except ImportError:
+        pass
+    return found
+
+
+@pytest.mark.parametrize("mid_stream", [False, True])
+@pytest.mark.parametrize(
+    "error", _timeouts(), ids=lambda e: f"{type(e).__module__}.{type(e).__name__}"
+)
+def test_timeouts_and_transport_errors_become_provider_unreachable(error, mid_stream):
+    """Found in a live run: a Vertex read timeout escaped as a raw httpx2 error, so onboarding,
+    which falls back only on ProviderError, answered the visitor with a 500."""
+    if mid_stream:
+
+        async def broken():
+            yield chunk(types.Part(text="Hel"))
+            raise error
+
+        class Models(FakeModels):
+            async def generate_content_stream(self, **kwargs):
+                return broken()
+
+        client = NS(aio=NS(models=Models()))
+    else:
+        client, _ = fake(error=error)
+    provider = vertex.VertexProvider(settings(), client)
+    with pytest.raises(ProviderError) as raised:
+        collect(provider.converse("s", [Turn("user", "q")], 10))
+    assert str(raised.value) == "provider_unreachable"
+
+
 def test_factory_budget_name_and_configuration_checks():
     provider = make_provider(settings())
     assert isinstance(provider, vertex.VertexProvider) and provider.name == "vertex"

@@ -20,7 +20,7 @@ test('a new learner gets the tour once, and can replay it from Settings', async 
   const tour = page.getByRole('dialog', { name: 'Welcome to Socrat' });
   await expect(tour).toBeVisible();
   await page.getByRole('button', { name: 'Show me' }).click();
-  for (const title of ['Today', 'Skills', 'Practice', 'Evidence', 'Ask Soc, your tutor']) {
+  for (const title of ['Today', 'Ask Soc, your tutor', 'Skills', 'Practice', 'Playground', 'Evidence', 'Settings']) {
     await expect(page.getByRole('dialog', { name: title })).toBeVisible();
     await page.getByRole('button', { name: 'Next' }).click();
   }
@@ -37,8 +37,11 @@ test('a new learner gets the tour once, and can replay it from Settings', async 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await page.goto('/settings');
-  await page.getByRole('button', { name: 'Replay tour' }).click();
-  await expect(page.getByRole('dialog', { name: 'Welcome to Socrat' })).toBeVisible();
+  // Replay is a window event the shell's tour listens for once hydrated: retry until it lands.
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Replay tour' }).click();
+    await expect(page.getByRole('dialog', { name: 'Welcome to Socrat' })).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 30_000 });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });

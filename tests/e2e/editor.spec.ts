@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { enrollSignedIn } from './helpers/learner';
+import { dismissPlans, enrollSignedIn } from './helpers/learner';
 /** Editor preferences persist per browser; reset restores the starter and saves at once. */
 test('editor settings, reset and the resizable split', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'the split pane is a wide-screen feature');
@@ -10,6 +10,7 @@ test('editor settings, reset and the resizable split', async ({ page }, info) =>
   await expect(page).toHaveURL(/\/start$/);
   await enrollSignedIn(page);
   await page.goto('/problems/double-it');
+  await dismissPlans(page);
   const content = page.locator('.cm-content');
   await expect(content).toBeVisible();
   const starter = await content.innerText();
@@ -34,6 +35,7 @@ test('editor settings, reset and the resizable split', async ({ page }, info) =>
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
   await expect(sep).toHaveAttribute('aria-valuenow', String(before + 10));
   await page.reload();
+  await dismissPlans(page);
   await expect(page.locator('.cm-editor')).toHaveCSS('font-size', '16px');
   await expect(content).not.toContainText('changed');
   await expect(sep).toHaveAttribute('aria-valuenow', String(before + 10));

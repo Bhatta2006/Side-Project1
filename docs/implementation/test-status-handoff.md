@@ -4,8 +4,36 @@ What is tested, what fails right now and why, and what has never been run. Writt
 `gbuild/feat/course-generator`. Companion to `not-verified.md` (built but not tested end to end) and
 `course-generator-backlog.md` (owner decisions at the top: the main path first, the rest halted).
 
-**Uncommitted work in the tree:** the e2e re-seed (below): `playwright.config.ts`, 14 files under `tests/e2e/`
-and the new `tests/e2e/helpers/learner.ts`. Never commit `apps/web/next-env.d.ts` or `uv.lock`.
+Never commit `apps/web/next-env.d.ts` or `uv.lock`.
+
+## Update 2026-11-21: sections 1-3 and order items 1, 2 (desktop), 3 and 5 done
+
+- **Onboarding 500 fixed.** google-genai 3.x sends through `httpx2`, whose errors do not subclass
+  `httpx`'s, so a Vertex timeout escaped `assistant/vertex.py` raw. `_FAILURES` now includes
+  `httpx2.TransportError`; `test_vertex.py::test_timeouts_and_transport_errors_become_provider_unreachable`
+  covers httpx and httpx2, at the call and mid-stream.
+- **Live journey complete for the first time** (run 6, real Vertex, `scripts/dev/journey.mjs`, now in git
+  with `scripts/dev/live-journey-api.ps1`): goal -> Lesson 0 -> plan (**T1 176 s**) -> first lesson (**T2 177 s**)
+  -> 9-page lesson read -> concept check -> Today, 217 s, no 5xx. The script answers the first option, so the
+  check stopped early at 0 of 2 and the plan added a worked example (expected adaptation). Still never reached
+  live: a retry at `first_lesson_failed`, the `level_suggestion` offer.
+- **Full API suite on `4f51d32` + these fixes: 1219 passed, 25 skipped, 5 failed.** The 5: three in the
+  untracked `test_lifecycle.py` (known, predates), and `test_sourced_content` / `test_explainer` whose
+  expectations were stale (job order; the light theme now uses the notebook marker) - both fixed, both files
+  green. The 20 compiler failures and `test_admin_drafts.py` no longer fail. One explainer test failed once
+  while e2e ran in parallel and passed on rerun: possibly timing-sensitive under load.
+- **Desktop e2e:** the open items below are fixed (plans dialog dismissed on every first visit, paged
+  lessons read to the Recap, new tour order, reworded landing question, weekly assessments are Founding
+  Member so the spec grants `plus` via `helpers/learner.ts: grantPlus`, the playground reached from the
+  sidebar). Last full desktop run: **27 passed, 1 skipped, 1 failed**; the failure was `visuals.spec.ts`
+  timing out on a cold `next dev` compile of `/dev-gallery` (3/3 pass alone; `navigationTimeout` now 60 s).
+  The weekly spec found a real bug, fixed: the exam overlay rendered inside the app shell, so the sidebar
+  could sit above it and swallow "Save answer"; it is now portalled to `<body>`. The test environment opens
+  the weekly exam any day (`SOCRAT_WEEKLY_ANY_DAY=1` in `playwright.config.ts`). **Mobile project still
+  never run.**
+- **Environment traps:** after a pull that changes `package-lock.json`, run `npm ci` (an old Next refuses to
+  start `next dev`); `--basetemp .cache/pt/...` needs `.cache/pt` to exist; a laptop sleeping mid-suite looks
+  like a 4-hour hang (check Kernel-Power events 506/507 before debugging).
 
 ---
 
