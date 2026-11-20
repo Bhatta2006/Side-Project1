@@ -9,12 +9,13 @@ async function enrolled(page: Page) {
   const profile = await (await page.request.get('/api/v1/me')).json();
   const headers = { Origin: origin, 'X-CSRF-Token': profile.csrf_token };
   await page.request.patch('/api/v1/me', { headers, data: { birth_year: 2000, timezone: 'UTC' } });
-  await page.request.post('/api/v1/enrollments', { headers, data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4] } });
+  await page.request.post('/api/v1/enrollments', { headers, data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4] } });
 }
 
 test('a new learner gets the tour once, and can replay it from Settings', async ({ page }) => {
   await enrolled(page);
   await page.goto('/today');
+  await page.getByRole('button', { name: 'Maybe later' }).click({ timeout: 8_000 }).catch(() => undefined);
 
   const tour = page.getByRole('dialog', { name: 'Welcome to Socrat' });
   await expect(tour).toBeVisible();

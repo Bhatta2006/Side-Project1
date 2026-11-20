@@ -67,7 +67,7 @@ test('a Hindi learner sees Hindi settings and the data-use choice', async ({ pag
   await page.request.patch('/api/v1/me', { headers, data: { birth_year: 2000, timezone: 'UTC', locale: 'hi' } });
   const enrolled = await page.request.post('/api/v1/enrollments', {
     headers,
-    data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4] },
+    data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0, 1, 2, 3, 4] },
   });
   expect(enrolled.ok()).toBeTruthy();
   await page.goto('/settings');

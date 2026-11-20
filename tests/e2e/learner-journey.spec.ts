@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { outputCheckAnswers } from './helpers/answer-keys';
+import { RIGHT } from './helpers/answer-keys';
+import { enrollSignedIn } from './helpers/learner';
 import type { AdaptiveSession, AdaptiveAnswer } from '../../apps/web/src/lib/types';
 
 test.describe.configure({ timeout: 90000 });
@@ -9,32 +10,28 @@ test.describe.configure({ timeout: 90000 });
 async function signIn(page: Page, name: string) {
   await page.goto('/login');
   await page.getByLabel('Your name').fill(name);
-  await page.getByRole('button', { name: 'Log in' }).click();
+  await page.locator('form', { has: page.getByLabel('Your name') }).getByRole('button', { name: 'Log in' }).click();
   await expect(page).toHaveURL(/\/start$/);
 }
 
-async function onboard(page: Page, course: RegExp, level: RegExp) {
-  await page.getByLabel('What should we call you?').fill('Ada');
-  await page.getByLabel('Year you were born').selectOption('2001');
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: course }).click();
-  await page.getByRole('button', { name: level }).click();
-  await page.getByRole('button', { name: 'Python', exact: true }).click();
-  await page.getByRole('button', { name: '45 min' }).click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: 'Create my plan' }).click();
+/** Lesson 0 needs a model (it has its own spec); here the learner is enrolled straight into a
+ * fixture course (services/api/tests/content_fixture.py) and lands where the app sends them. */
+async function onboard(page: Page, course: 'basics' | 'algo', level: string) {
+  await enrollSignedIn(page, course, level);
+  await page.goto(level === 'brand-new' ? '/today' : '/placement');
+  await page.getByRole('button', { name: 'Maybe later' }).click({ timeout: 8_000 }).catch(() => undefined);
 }
 
 test('a beginner reads a lesson, passes its check and sees progress', async ({ page }, info) => {
   await signIn(page, `beginner-${info.project.name}-${Date.now()}`);
-  await onboard(page, /Programming from Zero/, /never written code/);
+  await onboard(page, 'basics', 'brand-new');
 
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Ada');
-  await expect(page.getByRole('heading', { name: 'Programs and output' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Values' })).toBeVisible();
   await page.getByRole('link', { name: 'Start lesson' }).click();
 
-  await expect(page).toHaveURL(/\/learn\/zero\/programs-and-output$/);
+  await expect(page).toHaveURL(/\/learn\/basics\/values$/);
   // Only the learner's language variant of each code sample is shown.
   await expect(page.locator('pre[data-lang="python"]').first()).toBeVisible();
   await expect(page.locator('pre[data-lang="cpp"], pre[data-lang="java"]')).toHaveCount(0);
@@ -42,13 +39,12 @@ test('a beginner reads a lesson, passes its check and sees progress', async ({ p
   const started = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/adaptive-quiz/sessions'));
   await page.getByRole('link', { name: 'Take concept check' }).click();
 
-  await expect(page).toHaveURL(/\/quiz\/zero\/programs-and-output$/);
+  await expect(page).toHaveURL(/\/quiz\/basics\/values$/);
   let session = await (await started).json() as AdaptiveSession;
   while (!session.finished) {
     const question = session.current!;
-    const correct = outputCheckAnswers[question.item];
-    expect(correct, `Authored answer for ${question.item}`).toBeDefined();
-    await page.getByRole('radio', { name: correct, exact: true }).click();
+    expect(question.item).toBeTruthy();
+    await page.getByRole('radio', { name: RIGHT, exact: true }).click();
     const answered = page.waitForResponse(r => r.request().method() === 'POST' && /\/adaptive-quiz\/sessions\/[^/]+\/answer$/.test(r.url()));
     await page.getByRole('button', { name: 'Check answer' }).click();
     const result = await (await answered).json() as AdaptiveAnswer;
@@ -62,7 +58,7 @@ test('a beginner reads a lesson, passes its check and sees progress', async ({ p
   await page.getByRole('link', { name: 'Continue' }).click();
 
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByText('Programs and output check', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Values check', { exact: true }).first()).toBeVisible();
   await page.goto('/progress');
   await expect(page.getByRole('heading', { name: 'Mastery by module' })).toBeVisible();
   await page.goto('/plan');
@@ -72,7 +68,7 @@ test('a beginner reads a lesson, passes its check and sees progress', async ({ p
 test('placement adapts, then practice and the Socratic tutor work', async ({ page }, info) => {
   test.setTimeout(180_000); // the tutor may call a live model
   await signIn(page, `placed-${info.project.name}-${Date.now()}`);
-  await onboard(page, /DSA for Interviews/, /know the basics of one language/);
+  await onboard(page, 'basics', 'some');
 
   await expect(page).toHaveURL(/\/placement$/);
   const ready = page.getByRole('heading', { name: 'Your plan is ready' });
@@ -87,8 +83,8 @@ test('placement adapts, then practice and the Socratic tutor work', async ({ pag
   await page.getByRole('link', { name: 'See your plan' }).click();
   await expect(page).toHaveURL(/\/today$/);
 
-  await page.goto('/problems/sum-of-multiples');
-  await expect(page.getByRole('heading', { name: 'Sum of multiples' })).toBeVisible();
+  await page.goto('/problems/sum-loop');
+  await expect(page.getByRole('heading', { name: 'Sum Loop' })).toBeVisible();
   await expect(page.getByTestId('code-editor')).toBeVisible();
   await expect(page.getByText('Draft saved')).toBeVisible();
 
@@ -115,7 +111,7 @@ test('placement adapts, then practice and the Socratic tutor work', async ({ pag
 
 test('later modules are locked behind a checkpoint that gets harder', async ({ page }, info) => {
   await signIn(page, `gate-${info.project.name}-${Date.now()}`);
-  await onboard(page, /Programming from Zero/, /never written code/);
+  await onboard(page, 'basics', 'brand-new');
   await expect(page).toHaveURL(/\/today$/);
 
   await page.goto('/plan');
@@ -139,13 +135,13 @@ test('later modules are locked behind a checkpoint that gets harder', async ({ p
 test('a weekly assessment is built from what the learner studied', async ({ page }, info) => {
   test.setTimeout(120_000);
   await signIn(page, `weekly-${info.project.name}-${Date.now()}`);
-  await onboard(page, /Programming from Zero/, /never written code/);
+  await onboard(page, 'basics', 'brand-new');
   await expect(page).toHaveURL(/\/today$/);
 
   await page.goto('/assessments');
   await expect(page.getByText(/unlocks as you study/)).toBeVisible();
-  for (const concept of ['programs-and-output', 'variables-and-types']) {
-    await page.goto(`/learn/zero/${concept}`);
+  for (const concept of ['values', 'text']) {
+    await page.goto(`/learn/basics/${concept}`);
     await page.getByRole('button', { name: 'Mark lesson as read' }).click();
     await expect(page.getByRole('heading', { name: 'Lesson read' })).toBeVisible();
   }
@@ -162,5 +158,5 @@ test('a weekly assessment is built from what the learner studied', async ({ page
   await page.getByRole('button', { name: 'Submit assessment' }).click();
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'By topic' })).toBeVisible();
-  await expect(page.getByText('Programs and output').first()).toBeVisible();
+  await expect(page.getByText('Values').first()).toBeVisible();
 });

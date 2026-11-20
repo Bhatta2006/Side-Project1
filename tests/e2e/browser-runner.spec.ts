@@ -8,13 +8,13 @@ test.describe.configure({ mode: 'serial' });
 test.setTimeout(240_000);
 const ORIGIN = 'http://localhost:3000';
 
-const GREETING_PY = 'name = input().strip()\nprint(f"Hello, {name}! Welcome to Socrat.")\n';
+// The fixture problem ``double-it`` (services/api/tests/content_fixture.py): print twice n.
+const GREETING_PY = 'n = int(input())\nprint(n * 2)\n';
 const GREETING_CPP = `#include <bits/stdc++.h>
 using namespace std;
 int main() {
-  string name; getline(cin, name);
-  while (!name.empty() && isspace((unsigned char)name.back())) name.pop_back();
-  cout << "Hello, " << name << "! Welcome to Socrat." << endl;
+  long long n; cin >> n;
+  cout << n * 2 << endl;
 }
 `;
 
@@ -27,7 +27,7 @@ async function signUp(page: Page) {
   const headers = { Origin: ORIGIN, 'X-CSRF-Token': me.csrf_token };
   await page.request.patch('/api/v1/me', { data: { birth_year: 2001, timezone: 'Asia/Kolkata' }, headers });
   const enrolled = await page.request.post('/api/v1/enrollments', {
-    data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 45, weekdays: [0, 1, 2, 3, 4, 5, 6] },
+    data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 45, weekdays: [0, 1, 2, 3, 4, 5, 6] },
     headers,
   });
   expect(enrolled.ok()).toBeTruthy();

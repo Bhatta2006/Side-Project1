@@ -27,7 +27,9 @@ export default defineConfig({
     {
       // A fresh database every run: a leftover file from another branch can sit at a schema
       // revision this branch does not know, and then the server cannot start.
-      command: `${executable('python')} -c "import pathlib; [pathlib.Path('socrat.e2e.db' + s).unlink(missing_ok=True) for s in ('', '-wal', '-shm')]" && ${executable('alembic')} upgrade head && ${executable('python')} scripts/content/build.py && ${executable('uvicorn')} socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000 --loop socrat.dev_loop:loop_factory`,
+      // No built-in courses ship (CLAUDE.md): the e2e server serves the API tests' synthetic packs,
+      // ``basics`` and ``algo`` (services/api/tests/content_fixture.py), written fresh each run.
+      command: `${executable('python')} -c "import pathlib, sys; [pathlib.Path('socrat.e2e.db' + s).unlink(missing_ok=True) for s in ('', '-wal', '-shm')]; sys.path.insert(0, 'services/api/tests'); import content_fixture as c; c.write(pathlib.Path('.cache/e2e-content/courses'), pathlib.Path('.cache/e2e-content/tests'))" && ${executable('alembic')} upgrade head && ${executable('uvicorn')} socrat.main:create_app --factory --app-dir services/api/src --host 127.0.0.1 --port 8000 --loop socrat.dev_loop:loop_factory`,
       url: 'http://127.0.0.1:8000/api/health/ready',
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
@@ -39,6 +41,8 @@ export default defineConfig({
         SOCRAT_PREWARM_CONTENT: 'true',
         SOCRAT_LITE_MODE_ENABLED: 'true',
         SOCRAT_PUBLIC_ORIGIN: 'http://localhost:3000',
+        SOCRAT_CONTENT_ROOT: path.resolve('.cache/e2e-content/courses'),
+        SOCRAT_CONTENT_TESTS: path.resolve('.cache/e2e-content/tests'),
       },
     },
     { command: 'npm run dev', url: 'http://localhost:3000', reuseExistingServer: !process.env.CI, timeout: 120_000 },

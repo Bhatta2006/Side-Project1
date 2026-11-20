@@ -17,7 +17,7 @@ async function enrolled(page: Page) {
   const profile = await (await page.request.get('/api/v1/me')).json();
   const headers = { Origin: origin, 'X-CSRF-Token': profile.csrf_token };
   expect((await page.request.patch('/api/v1/me', { headers, data: { birth_year: 2000, timezone: 'Asia/Kolkata' } })).ok()).toBe(true);
-  expect((await page.request.post('/api/v1/enrollments', { headers, data: { course: 'zero', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0,1,2,3,4,5,6] } })).ok()).toBe(true);
+  expect((await page.request.post('/api/v1/enrollments', { headers, data: { course: 'basics', language: 'python', level: 'brand-new', minutes_per_day: 30, weekdays: [0,1,2,3,4,5,6] } })).ok()).toBe(true);
 }
 
 async function mockVisual(page: Page) {
@@ -137,7 +137,7 @@ test('course search stays scoped and generation sends the free request without p
   await expect(page.getByRole('link', { name: 'Start lesson' })).toBeVisible();
   await page.keyboard.press('Control+k');
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('option', { name: /Programs and output/ })).toBeVisible();
+  await expect(dialog.getByRole('option', { name: /^Values/ })).toBeVisible();
   await dialog.getByPlaceholder('Search lessons and pages…').fill('Binary search');
   await expect(dialog.getByText('No results. Try another word.')).toBeVisible(); await page.keyboard.press('Escape');
   await page.getByRole('link', { name: /Ask about any concept|visually$/ }).first().click();

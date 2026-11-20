@@ -1,7 +1,8 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { enrollSignedIn } from './helpers/learner';
 
 /**
- * Keyboard-only walkthrough: sign-in, onboarding, a lesson, its check, the tutor and the
+ * Keyboard-only walkthrough: sign-in, a lesson, its check, the tutor and the
  * library, using Tab, Enter, Space and Escape. Every stop must show a visible focus ring.
  * Also checks that each page's headings form an outline (one h1, no skipped levels).
  */
@@ -51,28 +52,16 @@ test('a learner can do a whole session with the keyboard alone', async ({ page }
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/start$/);
 
-  await tabTo(page, page.getByLabel('What should we call you?'));
-  await page.keyboard.type('Ada');
-  await tabTo(page, page.getByLabel('Year you were born'));
-  await page.keyboard.type('2001');
-  await tabTo(page, page.getByRole('button', { name: 'Continue' }));
-  await page.keyboard.press('Enter');
-  for (const choice of [/Programming from Zero/, /never written code/]) {
-    await tabTo(page, page.getByRole('button', { name: choice }));
-    await page.keyboard.press('Enter');
-  }
-  await tabTo(page, page.getByRole('button', { name: 'Python', exact: true }));
-  await page.keyboard.press('Enter');
-  await tabTo(page, page.getByRole('button', { name: 'Continue' }));
-  await page.keyboard.press('Enter');
-  await tabTo(page, page.getByRole('button', { name: 'Create my plan' }));
-  await page.keyboard.press('Enter');
+  // Lesson 0 needs a model; this learner is enrolled straight into the fixture course.
+  await enrollSignedIn(page);
+  await page.goto('/today');
+  await page.getByRole('button', { name: 'Maybe later' }).click({ timeout: 8_000 }).catch(() => undefined);
   await expect(page).toHaveURL(/\/today$/);
   await outline(page, '/today');
 
   await tabTo(page, page.getByRole('link', { name: 'Start lesson' }));
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/learn\/zero\/programs-and-output$/);
+  await expect(page).toHaveURL(/\/learn\/basics\/values$/);
   await outline(page, 'lesson');
 
   // The tutor opens into its message box, closes on Escape and hands focus back.
@@ -90,7 +79,7 @@ test('a learner can do a whole session with the keyboard alone', async ({ page }
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('link', { name: 'Take concept check' }), 200);
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/quiz\/zero\/programs-and-output$/);
+  await expect(page).toHaveURL(/\/quiz\/basics\/values$/);
   await outline(page, 'quiz');
 
   await tabTo(page, page.getByRole('radio').first());
