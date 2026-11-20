@@ -116,6 +116,9 @@ context" item needs generated variants, backlog 4.2).
 
 **PR 7 (benchmark and gate), built 2026-11-20:** `scripts/dev/bench_claim_to_today.py`, the first-lesson gate `jobs.first_lesson_issues` (waived and logged on the last round), tests `test_first_lesson_gate.py`; results in `live-run-log.md` (live run 3, SQL goal only).
 
+**L8 (start level from calibration), built 2026-11-20 as an offer:** `view.level_suggestion`; see the backlog,
+item 2.7, for why the level is not applied automatically.
+
 **Acceptance test (section 8), built 2026-11-20:** `test_claim_to_today.py` (see the backlog, item 2.6).
 
 Still to build: PR 8 (optional SQL checker; ```` ```sql ```` is accepted for display meanwhile).

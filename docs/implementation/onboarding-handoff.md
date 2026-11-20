@@ -164,6 +164,14 @@ course order); `minutes` is the request's minutes per day. A course the brain se
 `first_lesson_ready` at once. The web page is not changed yet: that is onboarding's call. Tests:
 `services/api/tests/test_start_state.py`.
 
+**`level_suggestion` (generation, 2026-11-20; nothing above changed).** `null`, or `{level, start, reason}`
+once the course is published, when the Lesson 0 snag was solved first try (no hint), showed no gap and was not
+slow. It is an **offer**: `enroll.level` stays the course's first level, because placement treats every concept
+a later level skips as known, and one 90-second sample must not make anything known. If the learner accepts,
+send `enroll` with `level` replaced by `level_suggestion.level`; the skipped concepts are then placed as likely
+known and confirmed by a short check once written. `reason` is ready to show. Tests:
+`services/api/tests/test_level_suggestion.py`.
+
 **`enroll.session_minutes` (generation, 2026-11-20).** For a course generated from a Lesson 0 plan,
 the view's `enroll` object also carries `session_minutes` (the learner's true 10/25/60).
 `POST /api/v1/enrollments` accepts it, so `/start` posting `published.enroll` unchanged keeps working and

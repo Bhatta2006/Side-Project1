@@ -133,6 +133,8 @@ def view(db: Session, row: LearningRequest) -> dict:
         published=False,
         diagnostic="none",
         enroll=None,
+        # A later level the learner may choose (Lesson 0, backlog 2.7); never applied for them.
+        level_suggestion=None,
         ready=0,
         total=0,
         community=None,
@@ -180,6 +182,14 @@ def view(db: Session, row: LearningRequest) -> dict:
                 # instead of the rounded-up budget above.
                 **({"session_minutes": true} if (true := _true_minutes(meta)) else {}),
             )
+            if diagnosed is None and meta is not None and (meta.brief or {}).get("plan"):
+                from socrat.coursegen import learner_plan
+
+                try:
+                    plan = learner_plan.LearnerPlan.model_validate(meta.brief["plan"])
+                except ValueError:
+                    plan = None
+                out["level_suggestion"] = learner_plan.suggest_level(plan, stored)
         if stored is not None:
             by_id = {c.id: c for c in stored.concepts}
             latest: dict[str, GenerationJob] = {}

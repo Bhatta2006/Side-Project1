@@ -159,7 +159,13 @@ first lesson prompt (as quoted data) -> released lesson (door intro, probe item)
 `session_minutes` -> `/today` `next` is the first lesson -> the concept returns the probe. Changing the answer
 changes exactly those items. Not written yet; the pieces are tested separately.
 
-### 2.7 Starting level from calibration
+### 2.7 Starting level from calibration (done 2026-11-20, as an offer)
+Placement marks every concept a later level skips as placed-known without a question, so applying a level
+from Lesson 0 would break "never mark a concept known from Lesson 0 alone". Built instead:
+`learner_plan.suggest_level` (code) and `view.level_suggestion` `{level, start, reason}`; `enroll.level` is
+unchanged and the learner chooses. Rule: snag solved first try with no hint, no gap, pace not slow; the latest
+level whose start is at most one concept after the probed one (`learner_plan.teaching`, the gap matcher). Contract
+in `onboarding-handoff.md` 3.3; the `/start` page does not show it yet (onboarding's call). Original item:
 Lesson 0 runs no diagnostic, so `view.enroll.level` is the course's first level (`onboarding-handoff.md` 4.4). Use
 the profile's `calibration` to choose the start level (code, not a model), and never mark a concept known from
 Lesson 0 alone. **Where:** `coursegen/requests.view` (`enroll.level`), `learner_plan.py`. Coordinate with onboarding.

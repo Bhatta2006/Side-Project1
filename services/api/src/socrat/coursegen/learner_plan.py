@@ -278,7 +278,6 @@ def gap_concepts(plan: LearnerPlan | None, course) -> dict[str, str]:
     stays a note, never a remediation."""
     if plan is None or plan.start is None or not plan.start.gaps:
         return {}
-    order = [cid for m in course.modules for cid in m.concepts]
     by_id = {c.id: c for c in course.concepts}
     found: dict[str, str] = {}
     decided = {g.gap: g for g in plan.gap_map}
@@ -288,21 +287,60 @@ def gap_concepts(plan: LearnerPlan | None, course) -> dict[str, str]:
             if link.confidence == "match" and link.concept and link.concept in by_id:
                 found[gap] = link.concept
             continue
-        label = _tokens(gap)
-        if not label:
-            continue
-        for cid in order:
-            c = by_id.get(cid)
-            if c is None:
-                continue
-            text = f"{c.title} {c.summary}"
-            if c.outline is not None:
-                text += " " + " ".join([*c.outline.objectives, *c.outline.misconceptions])
-            hit = label & _tokens(text)
-            if hit and len(hit) * 2 >= len(label):
-                found[gap] = cid
-                break
+        if cid := teaching(course, gap):
+            found[gap] = cid
     return found
+
+
+def teaching(course, label_text: str) -> str | None:
+    """The first concept (course order) whose title, summary, objectives and misconceptions
+    cover at least half the label's words; None when none clearly does."""
+    label = _tokens(label_text)
+    if not label:
+        return None
+    by_id = {c.id: c for c in course.concepts}
+    for cid in [cid for m in course.modules for cid in m.concepts]:
+        c = by_id.get(cid)
+        if c is None:
+            continue
+        text = f"{c.title} {c.summary}"
+        if c.outline is not None:
+            text += " " + " ".join([*c.outline.objectives, *c.outline.misconceptions])
+        hit = label & _tokens(text)
+        if hit and len(hit) * 2 >= len(label):
+            return cid
+    return None
+
+
+def suggest_level(plan: LearnerPlan | None, course) -> dict | None:
+    """A later starting level to *offer* the learner (backlog 2.7), never applied by itself:
+    placement treats what a level skips as known, and Lesson 0 alone (one 90-second sample) must
+    not make anything known. Offered only when the snag was solved first try (no hint), showed
+    no gap and was not slow; the level is the latest whose start is at most one concept after the
+    one the snag probed (matched by code). None otherwise."""
+    s = plan.start if plan else None
+    if s is None or s.outcome != "first_try" or s.gaps or s.pace == "slow":
+        return None
+    probed = teaching(course, s.concept_probed)
+    order = [cid for m in course.modules for cid in m.concepts]
+    if probed is None:
+        return None
+    limit = order.index(probed) + 1
+    later = [
+        (order.index(lv.start_concept), lv)
+        for lv in course.levels
+        if lv.start_concept in order and order.index(lv.start_concept) <= limit
+    ]
+    if not later:
+        return None
+    _, level = max(later, key=lambda x: x[0])
+    title = next(c.title for c in course.concepts if c.id == level.start_concept)
+    return dict(
+        level=level.id,
+        start=level.start_concept,
+        reason=f"You solved {s.concept_probed[:80]} on your first try in Lesson 0, so you could "
+        f"start at {title}. A short check confirms it; earlier lessons stay open.",
+    )
 
 
 # ------------------------------------------------------------------ the architect's outcome

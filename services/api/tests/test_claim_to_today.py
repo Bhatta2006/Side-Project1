@@ -172,6 +172,8 @@ def journey(client, monkeypatch, web, subject, door, miss):
         for job in db.query(GenerationJob).filter_by(state="queued"):
             job.state = "cancelled"
     enroll = published.json()["enroll"]
+    # Lesson 0 alone never moves the start (backlog 2.7): a later level is only offered.
+    assert enroll["level"] == "brand-new" and "level_suggestion" in published.json()
     assert enroll["session_minutes"] == 25  # the true length travels to enrolment
     enrolled = client.post("/api/v1/enrollments", json=enroll, headers=headers)
     assert enrolled.status_code == 200, enrolled.text
