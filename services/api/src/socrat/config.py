@@ -326,6 +326,10 @@ class Settings(DatabaseSettings):
     # Streak upgrade (item 5): a streak goal, earn-back, an automatic save for a streak about
     # to break, and a calendar (learn/streaks.py, learn/streak_routes.py).
     streak_plus_enabled: bool = False
+    # Daybreak game moments (docs/implementation/gamified-ui-backlog.md, item 4): daily goal
+    # reached, level-up, streak milestones, frozen pebbles and badge stickers. Web only, all
+    # computed from evidence the server already holds; nothing new is recorded.
+    game_moments_enabled: bool = False
     community_report_hold: int = Field(default=3, ge=1, le=100)  # distinct reporters hide a course
     community_max_shared: int = Field(default=5, ge=1, le=100)  # shared courses per learner
     learning_request_budget_usd: float = Field(default=3.0, gt=0, le=100)

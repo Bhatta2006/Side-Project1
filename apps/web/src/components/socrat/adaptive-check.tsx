@@ -286,7 +286,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
             {!feedback ? (
               <>
                 {choice !== null ? <ConfidencePicker value={sure} onChange={setSure} /> : null}
-                <div className="flex flex-wrap items-center gap-3">
+                <div data-slot="answer-bar" className="flex flex-wrap items-center gap-3">
                   <StampButton disabled={busy || choice === null} aria-busy={busy} onClick={() => answer(choice)}>Check</StampButton>
                   <Button size="lg" variant="ghost" disabled={busy} onClick={() => answer(null)}>I haven&apos;t learned this yet</Button>
                 </div>

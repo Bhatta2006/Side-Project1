@@ -66,56 +66,46 @@ Read this before touching any page's look. Gaps that are built but not checked e
 | Settings: palettes grouped by look, Sounds switch | `components/palette-picker.tsx` |
 | Dev board (404 in production) | `/dev-mascots/daybreak` |
 
+## Built in slice 2 (2026-11-21)
+
+Owner decisions: Daybreak **stays the default look** (no flag on the look itself); capability quests wait for their
+own change (they need an API and a table).
+
+| Piece | Where |
+|---|---|
+| Lesson: green lesson bar (pages), one page per card, Soc's speech bubble on Check pages, sticky Next/Back bar on phones, thick reading bar, dark code blocks, tap clack on page turns | `components/lesson-pages.tsx`, `app/learn/[...concept]/page.tsx`, `app/daybreak.css` |
+| Quiz: choice tiles click with `playInDaybreak('tap')`, marigold bar on a run (`Progress` now sets `data-tone`), sticky Check bar on phones (`data-slot="answer-bar"`, also in adaptive check) | `components/choice.tsx`, `components/ui/progress.tsx`, `app/quiz/[...activity]/page.tsx`, `components/socrat/adaptive-check.tsx` |
+| Shell: nav icons drawn as game emoji (`NavIcon`, Lucide stays for Notebook), the current place as a tinted pill in the tab bar and sidebar | `components/shell.tsx` |
+| Nine more game emoji: home, map, bulb, flag, chart, gear, blocks, code, snow | `components/socrat/game-emoji.tsx` |
+| Progress: Daybreak header (Soc on the main colour, level bar from `levelFor`, four count-up stat tiles, frozen pebbles); notebook header is `.nb-only` | `components/socrat/profile-header.tsx`, `app/progress/page.tsx` |
+| Game moments behind `game_moments` (API flag, default off, test `test_game_moments.py`): daily goal reached on Today (Jade), level-up once per level (Ami), streak milestone ribbon and frozen pebbles on the session-end streak screen (Ember), Jade on the goal-reached session-end screen, badges as pebble stickers on Progress, `useCountUp` | `components/socrat/game-moments.tsx`, `lib/game.ts` (`streakMilestone`, `nextStreakMilestone`, `levelUpDue`, tested) |
+| Onboarding visuals: pebble trio on the first question (stacked above it on phones), goal names (Steady, Serious, Deep) on the time choices, Amber celebration when the plan is ready | `app/start/page.tsx` (visual only; the flow is the cofounder's) |
+| Landing and login: the notebook's tilted handwriting becomes flat bold notes in the main colour; the headline stays "Learn it. Then prove it." | `app/daybreak.css` |
+| Contrast fixes: Ruby, Lagoon and Sunset primaries darkened to pass 4.5:1 under white; dark mode keeps the light primary for fills; correct/wrong Check buttons deepened | `app/daybreak.css`, `lib/palette.ts` |
+| Dev board shows every new piece (kept as the living style board) | `/dev-mascots/daybreak` |
+
 ## Backlog, in order
 
-### 1. Owner decision first
-- **Flag or default?** Project rule: new features default off behind a flag. Daybreak is currently the default look.
-  Ask the owner whether to keep it default or gate it (for example a `daybreak_look` feature that changes the boot
-  default). Do not decide alone.
+### 1. Verify with a real course (nothing counts until this passes)
+- Everything in `not-verified.md` under "Playful look: Daybreak": Today, a lesson, a quiz, session end, Progress and the
+  shell with a generated course, at 360px, in Daybreak light, Daybreak dark and Classic.
+- Sounds on a real Android and iPhone home-screen app.
+- An axe pass. Known gap: text on the fixed game colours (white on `--db-correct`, 2.9:1) where slice 1 used it.
+- Decide with the owner when to turn `game_moments` on (`SOCRAT_GAME_MOMENTS_ENABLED=true`).
 
-### 2. Verify slice 1 with a real course (nothing below counts until this passes)
-- Today with a generated course: game strip numbers match `/today`, Path tab shows the module, current stone and
-  Start bubble, labels never overlap the stones on 360px phones.
-- A real quiz with `lesson_feel` on: sheet, combo chip, sounds, Enter to continue, focus moves to the button.
-- A real session end with `session_end` on: each screen kind (evidence, streak, badge, next) and the celebration sound
-  plays once only.
-- Sounds on a real Android and iPhone (home-screen app): first sound after a tap, silent switch, the Settings switch.
-- Dark mode in Daybreak, and a walk through the notebook palettes (Classic) to catch regressions from the ink change.
-- Contrast: white text on every palette's primary (Sunset and Lagoon are the risky ones) and the `-ink` colours on
-  their tints, to WCAG AA.
+### 2. Still to build
+- **Capability quests** with Amber (owner: later, its own change): two or three a week, each tied to proving a named
+  skill; needs a small API (quest = skill + check, done when the check passes) and an additive migration with a
+  tested downgrade. No quest for time or clicks alone.
+- **Passport**: game styling around the record (header, pebble), never on the evidence itself. Untouched so far.
+- **Lesson**: one *step* per card is done for paged reading; the scroll view and the side column (stepper, Ask Soc)
+  still use the shared restyle only.
+- Today's moments stack if both fire on one visit; show one at a time if that feels busy on a real day.
 
-### 3. Screens still to design in Daybreak (use the approved boards)
-- **Lesson page** (`app/learn/[...concept]/page.tsx`): a top progress bar with a close button, one step per card,
-  Soc in a speech bubble for the Socratic prompts, a fixed bottom Check/Continue bar (`.stamp`) on phones,
-  code blocks in Daybreak style, a tap clack on choices (`play('tap')`).
-- **Quiz page** (`app/quiz/[...activity]/page.tsx`): answer options as choice tiles with a selected state, the same
-  fixed bottom bar, the progress bar glowing marigold from `RUN_GLOW` (flat colour change, not a glow effect).
-- **Profile / Progress / Passport** (`app/progress`, `app/passport`): violet header with Soc, level bar from
-  `levelFor`, stat tiles (streak, XP, skills proven, mastered), the week calendar in ember, badges as pebble stickers.
-  Passport stays the proof record: game styling around it, never on the evidence itself.
-- **Shell and navigation** (`components/shell.tsx`): bottom tab bar and sidebar in Daybreak, custom icons drawn in the
-  game-emoji style, the active tab as a tinted pill.
-- **Onboarding `/start`**: visual only, the cofounder owns the flow (`docs/implementation/onboarding-handoff.md`).
-  Pebble trio on the first question, daily goal choices named Taste 5 / Steady 10 / Serious 20 / Deep 30
-  (`DAILY_GOALS`), a short celebration when the course plan is ready.
-- **Landing and login**: still half notebook (script headline, highlighter). Restyle to match, keeping
-  "Learn it. Then prove it." as the line.
-
-### 4. Game features still to build (each behind a flag, evidence only)
-- **Daily goal reached** moment on Today and at session end (Jade, `play('streak')`), from `minutes.reached`.
-- **Capability quests** with Amber: two or three per week, each tied to proving a named skill (needs a small API:
-  quest = skill + check, done when the check passes). No quest for time or clicks alone.
-- **Badges as pebble stickers** on the profile, from the existing badge screens.
-- **Streak milestones** (7, 30, 100) with Ember, freezes shown as frozen pebbles.
-- **Level-up moment** when `levelFor` crosses a boundary (Ami), shown once.
-- Optional: count-up animation on XP and stat tiles.
-
-### 5. Polish and housekeeping
-- More game emoji as screens need them (book, map, lightbulb, flag); same rim and flat style.
-- Replace remaining stock icons in game moments with game emoji.
+### 3. Housekeeping
 - Re-baseline the Playwright visual specs once the e2e specs are re-seeded with a generated course.
 - Check the JS budget in CI (410 KB on `gbuild/main`) with the new components and fonts.
-- Remove `/dev-mascots/daybreak` once every piece is visible on a real page, or keep it as the living style board.
+- Replace any stock icon left in a game moment with a game emoji as screens are reviewed.
 
 ## When you finish a piece
 Update this file (move the line to "Built"), update `not-verified.md`, run `npx tsc --noEmit -p apps/web`,

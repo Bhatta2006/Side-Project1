@@ -68,7 +68,7 @@
   --db-tint: #f1ecff; --db-tint-ink: #4b30c7; --db-glow: #eee8ff; --db-glow2: #ffe7d6;
 }
 :root[data-look="daybreak"][data-palette="ruby"] {
-  --db-primary: #e0364a; --db-primary-hi: #f2556a; --db-primary-lo: #c7253a; --db-ledge: #9e1b2c;
+  --db-primary: #d93448; --db-primary-hi: #f2556a; --db-primary-lo: #bf2e3f; --db-ledge: #9c2534;
   --db-tint: #ffe8eb; --db-tint-ink: #a31d2f; --db-glow: #ffe3e6; --db-glow2: #fff0da;
 }
 :root[data-look="daybreak"][data-palette="ocean"] {
@@ -76,11 +76,11 @@
   --db-tint: #e6eeff; --db-tint-ink: #1a45a6; --db-glow: #e2ecff; --db-glow2: #e2f7ff;
 }
 :root[data-look="daybreak"][data-palette="lagoon"] {
-  --db-primary: #0e9a9a; --db-primary-hi: #1bb5b2; --db-primary-lo: #0a8282; --db-ledge: #086666;
+  --db-primary: #0c8181; --db-primary-hi: #1bb5b2; --db-primary-lo: #0b7272; --db-ledge: #095d5d;
   --db-tint: #ddf6f4; --db-tint-ink: #066060; --db-glow: #dcf5f2; --db-glow2: #fff1de;
 }
 :root[data-look="daybreak"][data-palette="sunset"] {
-  --db-primary: #ea5b12; --db-primary-hi: #f7782e; --db-primary-lo: #d24b08; --db-ledge: #a63a05;
+  --db-primary: #c74d0f; --db-primary-hi: #f7782e; --db-primary-lo: #af440d; --db-ledge: #8f370b;
   --db-tint: #ffebdd; --db-tint-ink: #9a3507; --db-glow: #ffe6d2; --db-glow2: #fff3c9;
 }
 :root[data-look="daybreak"][data-palette="berry"] {
@@ -200,7 +200,7 @@
   --db-faint: #8e87a2;
   --db-shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 14px 30px -18px rgb(0 0 0 / 0.7);
   --db-shadow-lift: 0 2px 0 rgb(0 0 0 / 0.3), 0 22px 40px -20px rgb(0 0 0 / 0.75);
-  --db-primary: var(--db-primary-hi);
+  /* The filled primary keeps its light-mode value: white text on the brighter -hi fails WCAG AA. */
   --db-tint: color-mix(in oklab, var(--db-primary-hi) 20%, #1f1a2b);
   --db-tint-ink: color-mix(in oklab, var(--db-primary-hi) 55%, white);
   --db-glow: color-mix(in oklab, var(--db-primary-hi) 16%, #14111c);
@@ -312,8 +312,9 @@
   letter-spacing: 0.01em;
   box-shadow: inset 0 -3px 8px -3px rgb(40 20 10 / 0.12), 0 4px 0 var(--db-ledge);
 }
-:root[data-look="daybreak"] .stamp[data-tone="correct"] { background-color: var(--db-correct); box-shadow: inset 0 -3px 8px -3px rgb(40 20 10 / 0.12), 0 4px 0 var(--db-correct-ledge); }
-:root[data-look="daybreak"] .stamp[data-tone="wrong"] { background-color: var(--db-wrong); box-shadow: inset 0 -3px 8px -3px rgb(40 20 10 / 0.12), 0 4px 0 var(--db-wrong-ledge); }
+/* Deeper than the game colours so white button text passes WCAG AA (4.5:1). */
+:root[data-look="daybreak"] .stamp[data-tone="correct"] { background-color: #137f43; box-shadow: inset 0 -3px 8px -3px rgb(40 20 10 / 0.12), 0 4px 0 #0d5f31; }
+:root[data-look="daybreak"] .stamp[data-tone="wrong"] { background-color: #d93a42; box-shadow: inset 0 -3px 8px -3px rgb(40 20 10 / 0.12), 0 4px 0 #a8262d; }
 :root[data-look="daybreak"] .stamp:active:not(:disabled) { translate: 0 3px; box-shadow: 0 1px 0 var(--db-ledge); }
 :root[data-look="daybreak"] .stamp:disabled { background-color: var(--db-raised); background-image: none; color: var(--db-faint); box-shadow: 0 4px 0 var(--db-line-strong); }
 :root[data-look="daybreak"] .stamp:focus-visible { outline: 3px solid color-mix(in srgb, var(--db-primary) 55%, transparent); outline-offset: 3px; }
@@ -599,3 +600,181 @@
   .db-pop, .db-rise, .db-bob, .db-flicker, .db-sheet-up, .db-shake { animation: none; }
 }
 :root[data-motion="reduced"] :is(.db-pop, .db-rise, .db-bob, .db-flicker, .db-sheet-up, .db-shake) { animation: none; }
+
+/* ======================================================================================
+   Slice 2 (docs/implementation/gamified-ui-backlog.md): lesson, quiz, shell, profile,
+   game moments, onboarding and landing. Same rules: flat colour, a solid ledge, no glow.
+   ====================================================================================== */
+
+/* ---------- Lesson: a thick reading bar, one page per card, Soc's bubble, a bottom bar on phones ---------- */
+:root[data-look="daybreak"] .db-reading-bar { height: 6px; background: var(--db-primary); border-radius: 0 999px 999px 0; }
+:root[data-look="daybreak"] .db-lesson-bar {
+  position: relative;
+  flex: 1 1 160px;
+  max-width: 420px;
+  height: 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--db-line) 80%, var(--db-raised));
+  overflow: hidden;
+}
+:root[data-look="daybreak"] .db-lesson-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--db-lesson-done, 0%);
+  border-radius: 999px;
+  background: var(--db-correct);
+  box-shadow: inset 0 -3px 0 var(--db-correct-ledge);
+  transition: width 420ms cubic-bezier(.2, .9, .3, 1.2);
+}
+/* A flat band of light along the top of the fill: a paper fold, not a gloss. */
+:root[data-look="daybreak"] .db-lesson-bar > span::after { content: ""; position: absolute; top: 3px; left: 8px; right: 8px; height: 3px; border-radius: 999px; background: rgb(255 255 255 / 0.35); }
+:root[data-look="daybreak"] [data-slot="lesson-page"] {
+  padding: 22px 20px;
+  background-color: var(--db-surface);
+  background-image: var(--db-fibres-soft);
+  background-size: 260px 120px;
+  border-radius: var(--db-radius);
+  box-shadow: inset 0 0 0 2px var(--db-line), 0 4px 0 var(--db-line);
+}
+@media (min-width: 640px) { :root[data-look="daybreak"] [data-slot="lesson-page"] { padding: 28px 30px; } }
+:root[data-look="daybreak"] [data-slot="lesson-page"][data-check] { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-primary) 40%, var(--db-line)), 0 4px 0 color-mix(in srgb, var(--db-primary) 30%, var(--db-line)); }
+:root[data-look="daybreak"] [data-slot="lesson-nav"] { border-top: 0; }
+@media (max-width: 767px) {
+  :root[data-look="daybreak"] [data-slot="lesson-nav"] {
+    position: sticky;
+    bottom: calc(69px + env(safe-area-inset-bottom));
+    z-index: 20;
+    margin-inline: -16px;
+    padding: 12px 16px;
+    background: var(--db-surface);
+    box-shadow: 0 -2px 0 var(--db-line);
+  }
+  :root[data-look="daybreak"] [data-slot="lesson-nav"] > [data-slot="button"]:last-child { flex: 1; }
+}
+/* Soc's speech bubble: a white card with a tail pointing back at the pebble. */
+:root[data-look="daybreak"] .db-bubble {
+  position: relative;
+  display: inline-block;
+  max-width: 34ch;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 16px 18px 16px 6px;
+  background: var(--db-surface);
+  box-shadow: inset 0 0 0 2px var(--db-line), 0 3px 0 var(--db-line);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--db-ink);
+}
+:root[data-look="daybreak"] .db-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  bottom: 8px;
+  width: 14px;
+  height: 14px;
+  background: var(--db-surface);
+  border-left: 2px solid var(--db-line);
+  border-bottom: 2px solid var(--db-line);
+  transform: rotate(45deg) skew(8deg, 8deg);
+}
+/* Code in Daybreak: Soc's dark stone, a ledge, rounded. */
+:root[data-look="daybreak"] .code-block,
+:root[data-look="daybreak"] .prose-socrat pre {
+  background: #2b2622;
+  color: #f7f3ec;
+  border: 0;
+  box-shadow: 0 4px 0 #15110e;
+}
+:root[data-look="daybreak"] .prose-socrat :not(pre) > code {
+  padding: 0.1em 0.4em;
+  border-radius: 7px;
+  background: var(--db-tint);
+  color: var(--db-tint-ink);
+  font-size: 0.92em;
+}
+
+/* ---------- Quiz: marigold bar on a run, a fixed Check bar on phones ---------- */
+:root[data-look="daybreak"] [data-slot="progress"][data-tone="hi"] [data-slot="progress-indicator"] { background: var(--db-xp); }
+:root[data-look="daybreak"] [data-slot="quiz-head"] [data-slot="progress"] { height: 14px; }
+:root[data-look="daybreak"] [data-slot="quiz-head"] > div:first-child > a:first-child { border: 0; box-shadow: inset 0 0 0 2px var(--db-line), 0 3px 0 var(--db-line); background: var(--db-surface); }
+@media (max-width: 767px) {
+  :root[data-look="daybreak"] [data-slot="answer-bar"] {
+    position: sticky;
+    bottom: calc(69px + env(safe-area-inset-bottom));
+    z-index: 20;
+    margin-inline: -16px;
+    padding: 12px 16px;
+    background: var(--db-surface);
+    box-shadow: 0 -2px 0 var(--db-line);
+  }
+  :root[data-look="daybreak"] [data-slot="answer-bar"] .stamp { width: 100%; }
+}
+
+/* ---------- Shell: a white tab bar, game-emoji icons, the current place as a tinted pill ---------- */
+:root[data-look="daybreak"] [data-slot="mobile-nav"] { background: var(--db-surface); border-top: 2px solid var(--db-line); }
+:root[data-look="daybreak"] [data-slot="mobile-nav"]::before { display: none; }
+:root[data-look="daybreak"] [data-slot="mobile-nav-icon"] { height: 34px; width: 56px; border-radius: 999px; background: transparent; }
+:root[data-look="daybreak"] [data-slot="mobile-nav"] a[aria-current="page"] { color: var(--db-tint-ink); }
+:root[data-look="daybreak"] [data-slot="mobile-nav"] a[aria-current="page"] [data-slot="mobile-nav-icon"] {
+  background: var(--db-tint);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-primary) 45%, transparent);
+}
+:root[data-look="daybreak"] :is([data-slot="mobile-nav"] a:not([aria-current]), [data-slot="sidebar-menu-button"]:not([data-active="true"])) [data-slot="game-emoji"] { filter: saturate(0.7); opacity: 0.85; }
+:root[data-look="daybreak"] [data-slot="sidebar-menu-button"] > [data-slot="game-emoji"] { width: 24px; height: 24px; }
+:root[data-look="daybreak"] [data-slot="sidebar-menu-button"] { border-radius: 14px; font-weight: 700; }
+:root[data-look="daybreak"] [data-slot="sidebar-menu-button"][data-active="true"] {
+  background: var(--db-tint);
+  color: var(--db-tint-ink);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-primary) 45%, transparent);
+}
+
+/* ---------- Progress: the level header and stat tiles ---------- */
+:root[data-look="daybreak"] .db-profile-hero {
+  border-radius: var(--db-radius);
+  background-color: var(--db-primary);
+  background-image: var(--db-grain), var(--db-fibres);
+  background-size: 140px 140px, 220px 220px, 260px 120px;
+  color: #fff;
+  box-shadow: 0 5px 0 var(--db-ledge);
+}
+:root[data-look="daybreak"] .db-profile-hero :is(h1, p, span) { color: inherit; }
+:root[data-look="daybreak"] .db-level-track { position: relative; display: block; height: 14px; border-radius: 999px; background: rgb(255 255 255 / 0.28); overflow: hidden; }
+:root[data-look="daybreak"] .db-level-track > span { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--db-xp); box-shadow: inset 0 -3px 0 var(--db-xp-ledge); transition: width 700ms cubic-bezier(.2, .9, .3, 1.2); }
+:root[data-look="daybreak"] .db-stat { border-radius: 18px; }
+:root[data-look="daybreak"] .db-stat-streak { background: var(--db-streak-tint); color: var(--db-streak-ink); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-streak) 30%, transparent), 0 3px 0 color-mix(in srgb, var(--db-streak) 30%, transparent); }
+:root[data-look="daybreak"] .db-stat-xp { background: var(--db-xp-tint); color: var(--db-xp-ink); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-xp) 35%, transparent), 0 3px 0 color-mix(in srgb, var(--db-xp) 35%, transparent); }
+:root[data-look="daybreak"] .db-stat-correct { background: var(--db-correct-tint); color: var(--db-correct-ink); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-correct) 30%, transparent), 0 3px 0 color-mix(in srgb, var(--db-correct) 30%, transparent); }
+:root[data-look="daybreak"] .db-stat-primary { background: var(--db-tint); color: var(--db-tint-ink); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-primary) 30%, transparent), 0 3px 0 color-mix(in srgb, var(--db-primary) 30%, transparent); }
+
+/* ---------- Game moments: a card, the milestone ribbon, frozen pebbles, badge stickers ---------- */
+:root[data-look="daybreak"] .db-moment {
+  border-radius: var(--db-radius);
+  background-color: var(--db-surface);
+  background-image: var(--db-fibres-soft);
+  background-size: 260px 120px;
+  box-shadow: inset 0 0 0 2px var(--db-line), 0 4px 0 var(--db-line);
+}
+:root[data-look="daybreak"] .db-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  background: var(--db-streak-tint);
+  color: var(--db-streak-ink);
+  font-weight: 800;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--db-streak) 45%, transparent), 0 3px 0 color-mix(in srgb, var(--db-streak) 45%, transparent);
+}
+:root[data-look="daybreak"] .db-frozen > [data-slot="pebble-friend"] { filter: saturate(0.55) brightness(1.12); }
+:root[data-look="daybreak"] .db-sticker {
+  border-radius: 20px;
+  background: var(--db-surface);
+  box-shadow: inset 0 0 0 2px var(--db-line), 0 3px 0 var(--db-line);
+}
+:root[data-look="daybreak"] .db-sticker-locked > span:first-child > [data-slot="pebble-friend"] { filter: grayscale(1); opacity: 0.45; }
+
+/* ---------- Landing and login: the notebook's tilted handwriting becomes plain bold notes ---------- */
+:root[data-look="daybreak"] :is(.font-hand, .font-script) { rotate: none; }
+:root[data-look="daybreak"] :is(.font-hand, .font-script):is(.text-pen, .text-red) { color: var(--db-primary-lo); font-weight: 750; }
+:root[data-look="daybreak"] .font-hand.text-pen { font-size: 0.82em; }
+:root[data-look="daybreak"] #login-story-title { font-weight: 800; letter-spacing: -0.035em; }

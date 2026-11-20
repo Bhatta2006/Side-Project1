@@ -314,6 +314,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "session_end": settings.session_end_enabled,
             "daily_review": settings.daily_review_enabled,
             "streak_plus": settings.streak_plus_enabled,
+            "game_moments": settings.game_moments_enabled,
         }
 
     @app.post("/api/v1/auth/dev-login")

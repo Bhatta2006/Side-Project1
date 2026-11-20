@@ -22,10 +22,10 @@ export interface PalettePref { palette: PaletteId; mode: ColourMode }
  */
 export const PALETTES: readonly { id: PaletteId; look: Look; name: string; note: string; light: [string, string, string, string]; dark: [string, string, string, string] }[] = [
   { id: 'daybreak', look: 'daybreak', name: 'Daybreak', note: 'Violet and gold on warm cream.', light: ['#6c4cf5', '#8063ff', '#4b30c7', '#eee8ff'], dark: ['#8b72ff', '#a58bff', '#4b30c7', '#221b3d'] },
-  { id: 'ruby', look: 'daybreak', name: 'Ruby', note: 'Bold cherry red.', light: ['#e0364a', '#f2556a', '#9e1b2c', '#ffe3e6'], dark: ['#f2556a', '#ff7a8b', '#9e1b2c', '#3a1a21'] },
+  { id: 'ruby', look: 'daybreak', name: 'Ruby', note: 'Bold cherry red.', light: ['#d93448', '#f2556a', '#9c2534', '#ffe3e6'], dark: ['#f2556a', '#ff7a8b', '#9e1b2c', '#3a1a21'] },
   { id: 'ocean', look: 'daybreak', name: 'Ocean', note: 'Deep, calm blue.', light: ['#2f6feb', '#4c88f5', '#1a45a6', '#e2ecff'], dark: ['#4c88f5', '#7aa8ff', '#1a45a6', '#16233f'] },
-  { id: 'lagoon', look: 'daybreak', name: 'Lagoon', note: 'Fresh teal.', light: ['#0e9a9a', '#1bb5b2', '#086666', '#dcf5f2'], dark: ['#1bb5b2', '#4fd1cc', '#086666', '#10302f'] },
-  { id: 'sunset', look: 'daybreak', name: 'Sunset', note: 'Warm tangerine.', light: ['#ea5b12', '#f7782e', '#a63a05', '#ffe6d2'], dark: ['#f7782e', '#ff9a5a', '#a63a05', '#3a2214'] },
+  { id: 'lagoon', look: 'daybreak', name: 'Lagoon', note: 'Fresh teal.', light: ['#0c8181', '#1bb5b2', '#095d5d', '#dcf5f2'], dark: ['#1bb5b2', '#4fd1cc', '#086666', '#10302f'] },
+  { id: 'sunset', look: 'daybreak', name: 'Sunset', note: 'Warm tangerine.', light: ['#c74d0f', '#f7782e', '#8f370b', '#ffe6d2'], dark: ['#f7782e', '#ff9a5a', '#a63a05', '#3a2214'] },
   { id: 'berry', look: 'daybreak', name: 'Berry', note: 'Playful magenta.', light: ['#c8327e', '#de4e95', '#8a1a52', '#fce3f0'], dark: ['#de4e95', '#f07ab3', '#8a1a52', '#371a2b'] },
   { id: 'classic', look: 'notebook', name: 'Classic', note: 'Sage desk, yellow sticky, orange marker.', light: ['#a8c8bb', '#f7e38a', '#df6b3c', '#f8dc4c'], dark: ['#1c2622', '#45432f', '#df6b3c', '#77703a'] },
   { id: 'tide', look: 'notebook', name: 'Tide', note: 'Sea glass: aqua paper, sea-green pen, mint highlighter.', light: ['#9ec3c9', '#cfe7ec', '#6cc3b5', '#b6edd8'], dark: ['#13232a', '#3d4749', '#6cc3b5', '#5b7169'] },

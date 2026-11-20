@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { StampButton } from '@/components/socrat/answer-flow';
 import { Celebrate } from '@/components/socrat/celebrate';
 import { GameEmoji } from '@/components/socrat/game-emoji';
+import { StreakMilestone } from '@/components/socrat/game-moments';
+import { useSession } from '@/lib/session';
 
 /**
  * The end of a session (item 3 of docs/research/duolingo-teardown.md), behind
@@ -62,6 +64,7 @@ const STATUS: Record<'mastered' | 'shown_alone' | 'building', string> = {
 };
 
 function Screen({ screen, right, total }: { screen: EndScreen; right?: number; total?: number }) {
+  const moments = useSession().features?.game_moments === true;
   const tally = total ? `${right ?? 0} of ${total} right this session.` : null;
   switch (screen.kind) {
     case 'evidence':
@@ -120,6 +123,7 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
               );
             })}
           </ol>
+          {moments ? <StreakMilestone current={screen.current} freezes={screen.freezes ?? 0} /> : null}
           <p className="text-[15px] text-muted-foreground">
             {screen.first_day
               ? 'Come back on your next study day to make it two. Rest days never break it.'
@@ -145,6 +149,7 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
     case 'next':
       return (
         <div className="grid gap-3">
+          {moments && screen.goal_reached ? <Celebrate kind="jade" emoji="target" sound="streak" /> : null}
           <p className="type-label text-muted-foreground">{screen.goal_reached ? "Today's goal is done" : 'Up next'}</p>
           <h1 className="type-display-l text-balance">
             {screen.goal_reached ? `${screen.minutes_done} of ${screen.minutes_goal} minutes today` : screen.activity?.title ?? 'Nothing planned right now'}

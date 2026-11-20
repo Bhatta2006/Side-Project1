@@ -60,7 +60,7 @@ function Options({ q, choice, onChoose, graded }: { q: QuizQuestion; choice: num
 /** Focus header: back, title, question count and a thin bar. */
 function QuizHeader({ title, topic, count, value, run = 0 }: { title: string; topic?: string; count?: string; value: number; run?: number }) {
   return (
-    <div className="mb-8">
+    <div className="mb-8" data-slot="quiz-head">
       <div className="mb-4 flex items-center gap-3">
         <Link href="/today" transitionTypes={['nav-back']} aria-label={`Back to ${NAME.today}`} className="grid size-11 flex-none place-items-center rounded-full border border-border-strong transition-colors hover:bg-raised">
           <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -408,7 +408,7 @@ export default function Quiz() {
         {feel ? (
           !q.answered ? (
             <div className="grid gap-3">
-              <div><StampButton disabled={busy || choice === null} aria-busy={busy} onClick={answer}>Check</StampButton></div>
+              <div data-slot="answer-bar"><StampButton disabled={busy || choice === null} aria-busy={busy} onClick={answer}>Check</StampButton></div>
               <KeyHint count={q.options.length} />
             </div>
           ) : null

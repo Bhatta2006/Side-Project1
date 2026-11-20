@@ -52,3 +52,21 @@ export const DAILY_GOALS = [
 
 export const dailyGoalName = (minutes: number) =>
   [...DAILY_GOALS].reverse().find(g => minutes >= g.minutes)?.name ?? DAILY_GOALS[0].name;
+
+/** Streak days worth a moment with Ember. */
+export const STREAK_MILESTONES = [7, 30, 100] as const;
+
+/** The milestone a streak of `days` has just reached, or null. */
+export const streakMilestone = (days: number): number | null =>
+  (STREAK_MILESTONES as readonly number[]).includes(days) ? days : null;
+
+/** The next milestone above `days`, or null past the last one. */
+export const nextStreakMilestone = (days: number): number | null => STREAK_MILESTONES.find(m => m > days) ?? null;
+
+/**
+ * Whether a level-up moment is due: the level for `proven` is above the last one the learner saw.
+ * A first visit (nothing seen yet) records the level without a moment.
+ */
+export function levelUpDue(proven: number, seenIndex: number | null): boolean {
+  return seenIndex !== null && levelFor(proven).index > seenIndex;
+}

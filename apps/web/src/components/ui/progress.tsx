@@ -44,6 +44,7 @@ function Progress({
       </style>
       <ProgressPrimitive.Root
         data-slot="progress"
+        data-tone={tone}
         ref={useMergedRef<HTMLDivElement>(root.hostRef, ref)}
         {...root.hostProps}
         value={clamped}

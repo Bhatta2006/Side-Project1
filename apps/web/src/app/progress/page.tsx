@@ -21,6 +21,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowCircle, Button } from '@/components/ui/button';
 import { Paper } from '@/components/ui/paper';
 import { SocFigure } from '@/components/socrat/soc';
+import { ProfileHeader } from '@/components/socrat/profile-header';
+import { BadgeStickers } from '@/components/socrat/game-moments';
 
 // The stamp is decoration (wide screens only) and pulls in the ink renderer: load it after the page.
 const Stamp = dynamic(() => import('@/components/ui/stamp').then(m => m.Stamp), { ssr: false });
@@ -40,7 +42,7 @@ type TabId = (typeof TABS)[number];
 
 export default function ProgressPage() {
   const allowed = useGuard('active');
-  const flags = useSession().features;
+  const { features: flags, profile } = useSession();
   const { features } = useCourse();
   const [data, setData] = useState<ProgressView | null>(null);
   const [assessment, setAssessment] = useState<AssessmentStatus | null>(null);
@@ -77,7 +79,8 @@ export default function ProgressPage() {
 
   return (
     <Page wide>
-      <header className="mb-8">
+      <ProfileHeader name={profile?.display_name ?? ''} streak={data.streak.current} freezes={data.streak.freezes} proven={data.progress.finished} mastered={data.progress.mastered ?? mastered} />
+      <header className="nb-only mb-8">
         <p className="font-hand mb-2 origin-left -rotate-2 text-[22px] text-pen">{NAME.evidence}</p>
         <h1 className="type-display-l">What you have <span className="hl hl-draw">shown</span></h1>
       </header>
@@ -115,6 +118,8 @@ export default function ProgressPage() {
           <StatCard value={weak} icon={<StatusIcon status="needs_practice" size={28} />} label="Need practice" hint="Recent results show these are not holding yet." />
           {features.code ? <StatCard value={data.solves.independent_solves} label="Problems solved without help" hint={`Accepted with no hints. ${data.solves.assisted_solves} more solved with help.`} /> : null}
         </div>
+
+        {flags?.game_moments ? <BadgeStickers badges={data.achievements} /> : null}
 
         <Tabs value={tab} onValueChange={pick} className="gap-5">
           <TabsList className="w-full justify-start sm:w-fit" aria-label="Sections of your evidence">

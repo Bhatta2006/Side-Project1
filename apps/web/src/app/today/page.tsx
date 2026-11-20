@@ -19,6 +19,7 @@ import { SocFigure } from '@/components/socrat/soc';
 import { StatusIcon, statusFromBand, statusFromRoadmap } from '@/components/socrat/status';
 import { SkillPath } from '@/components/socrat/skill-path';
 import { GameBar } from '@/components/socrat/game-bar';
+import { GoalReachedMoment, LevelUpMoment } from '@/components/socrat/game-moments';
 import { usePlanLocks } from '@/lib/plan-locks';
 import { WeekStrip } from '@/components/socrat/week-strip';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -208,6 +209,8 @@ export default function TodayPage() {
           </div>
         </header>
         <GameBar streak={today.streak.current} fresh={fresh} studiedToday={today.streak.studied_today} minutesDone={today.minutes.done} minutesGoal={today.minutes.goal} learned={learned} mastered={mastered} />
+        <LevelUpMoment on={features?.game_moments === true} proven={learned} />
+        <GoalReachedMoment on={features?.game_moments === true} reached={today.minutes.reached === true} day={today.date} minutes={today.minutes.done} />
         <nav aria-label="Shortcuts" className="-mt-3 mb-6 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-muted-foreground lg:-mt-5 lg:mb-8">
           <Link href="/reviews" className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline">
             {today.reviews_due ? <><StatusIcon status="review" size={16} />{today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</> : 'Reviews'}

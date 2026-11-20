@@ -124,3 +124,8 @@ export function play(sound: GameSound, run = 0) {
       break;
   }
 }
+
+/** Plays a sound only under the Daybreak look: the notebook look stays silent. */
+export function playInDaybreak(sound: GameSound, run = 0) {
+  if (typeof document !== 'undefined' && document.documentElement.dataset.look === 'daybreak') play(sound, run);
+}
