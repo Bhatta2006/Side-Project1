@@ -540,6 +540,8 @@ def enroll(body: EnrollInput, request: Request):
             ).items()
             if v is not None
         }
+        if body.session_minutes and request.app.state.settings.session_one_adaptation:
+            goal["adapt_first_session"] = True  # a Lesson 0 course: adapt after session one
         enrollment = placement.enroll(
             db,
             cat,

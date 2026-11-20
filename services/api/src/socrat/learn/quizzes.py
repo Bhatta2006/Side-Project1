@@ -471,6 +471,13 @@ def answer(
     return dict(finished=finished, correct=correct)
 
 
+def _is_probe(catalog: Catalog, concept: str, item_id: str) -> bool:
+    try:
+        return bool(item(catalog, concept, item_id).probe)
+    except Exception:  # an item that no longer resolves is not a probe
+        return False
+
+
 def finish(
     db: Session,
     catalog: Catalog,
@@ -495,9 +502,13 @@ def finish(
             rated.setdefault(concept, []).append(int(c))
     # The misconception most often shown by wrong answers, per concept (tagged options only).
     traps: dict[str, Counter[str]] = {}
+    probed: set[str] = set()  # concepts whose Lesson 0 probe item was answered wrong
     for concept, item_id in session.items:
-        if tag := (session.answers.get(item_id) or {}).get("misconception"):
+        answered = session.answers.get(item_id) or {}
+        if tag := answered.get("misconception"):
             traps.setdefault(concept, Counter())[tag] += 1
+        if answered and not answered.get("correct") and _is_probe(catalog, concept, item_id):
+            probed.add(concept)
     for concept, results in per_concept.items():
         sure = rated.get(concept, [])
         details = (
@@ -507,6 +518,8 @@ def finish(
         )
         if concept in traps:
             details["misconception"] = traps[concept].most_common(1)[0][0]
+        if concept in probed:
+            details["probe_missed"] = True
         learn.record_evidence(
             db,
             enrollment,

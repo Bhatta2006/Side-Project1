@@ -40,8 +40,8 @@ Built on `gbuild/feat/course-generator`, flag `gen_learner_plan` (default off), 
 Deviations from the text below: no `Constraint` kinds `format`, `syllabus`, `other`; no architect `gap_map`
 (that is PR 2's outline change), so gap matching is the deterministic matcher alone; the stylist still reads
 `style_request`, not `request` (constraints are enforced after it instead); `personal` is not a stored field,
-because `private_owner` decides it at write time. A probe miss does not yet enqueue the `example` support
-activity (PR 6). Not run against a live model.
+because `private_owner` decides it at write time. A probe miss enqueues the `example` support activity since
+PR 6 (below). Not run against a live model.
 
 **PR 2 (roadmap first, lazy detail), partly built** (same flag, since it applies only to a brief with a
 plan; tests `services/api/tests/test_roadmap.py`): the architect is told the mode's caps (Sprint 4 modules /
@@ -79,8 +79,20 @@ prepared, and a re-run of that job saves it instead of paying the architect agai
 the architect; a worker whose event loop is blocked for 2 minutes can lose its job to another worker (the job then
 runs twice; the save is idempotent, the cost is not). Not measured: the 2-minute re-claim against a real worker kill.
 
+**PR 6 (session-one adaptation), planner side built behind `session_one_adaptation` (default off):** the flag is
+stamped on the enrollment at enrolment (`goal.adapt_first_session`, only when enroll carries `session_minutes`,
+i.e. a Lesson 0 course). A wrong answer on the probe item marks that concept's quiz evidence
+`details.probe_missed`. `planner.engine.session_one(history)` reads the first study day's evidence: probe missed
+or a second missed check -> the `example` support step before moving on (`session_one_example`); passed with
+help recorded that day -> a `review` retrieval before the next concept (`session_one_retrieval`); passed on their
+own -> one `stretch` item placed after the next concept's work (`session_one_stretch`). Completed work and
+evidence are only read. Tests `services/api/tests/test_session_one.py`. Not built from PR 6: a smaller quiz band
+and a lowered Ladder ceiling after difficulty, and the bridge proposal; "help" is seen only where it is recorded
+(code submissions and labs record hints, quizzes and lessons do not), so in a quiz-only course success is always
+"independent". The review quiz reuses the concept's items: not a guaranteed new context.
+
 Still to build, in order: the rest of PR 2 (above), the rest of PR 4 (above),
-PR 6 (session-one adaptation, including the probe miss), PR 7 (benchmark and gate),
+PR 6 rest (above), PR 7 (benchmark and gate),
 PR 8 (optional SQL checker).
 
 ---

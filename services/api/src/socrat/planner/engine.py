@@ -157,6 +157,32 @@ def concept_pace(
     return overall, ""
 
 
+SESSION_ONE_WINDOW = 40  # learn.service.history_for's limit: a full window is past session one
+CHECK_PASS = 0.8
+
+
+def session_one(history: list[dict]) -> dict[str, str]:
+    """How each concept checked on the learner's first study day went (lesson0-generation-plan.md
+    4.E): ``difficulty`` (the probe was missed, or a second check missed), ``helped`` (passed, with
+    help recorded on that concept that day), ``independent`` (passed without help). A single miss
+    is left to the failed-check refresh. Empty once the history window no longer reaches day one."""
+    if not history or len(history) >= SESSION_ONE_WINDOW or "at" not in history[0]:
+        return {}
+    day_one = [x for x in history if x["at"] < history[0]["at"] + DAY]
+    out: dict[str, str] = {}
+    for concept in dict.fromkeys(x["concept"] for x in day_one if x["kind"] == "quiz"):
+        own = [x for x in day_one if x["concept"] == concept]
+        checks = [x for x in own if x["kind"] == "quiz"]
+        if any((x.get("details") or {}).get("probe_missed") for x in checks) or (
+            sum(x["score"] < CHECK_PASS for x in checks) >= 2
+        ):
+            out[concept] = "difficulty"
+        elif checks[-1]["score"] >= CHECK_PASS:
+            helped = any(x.get("assistance", 0) > 0 for x in own)
+            out[concept] = "helped" if helped else "independent"
+    return out
+
+
 def _minutes(value: float, pace: Pace, style: str = "balanced") -> int:
     return max(3, int(math.ceil(value * PACE_FACTOR[pace] * STYLE_FACTOR[style] / 5) * 5))
 
@@ -432,6 +458,9 @@ def build_plan(
     # plan opens on the first concept they do not know, never back at the start of the path.
     confirms: list[Activity] = []
     frontier_end: int | None = None
+    # Session-one adaptation, for an enrollment that asked for it (a Lesson 0 course).
+    first_day = session_one(history) if adaptive.goal.get("adapt_first_session") else {}
+    stretches: list[Activity] = []  # wait for the next concept's work, then follow it
     for qualified in path:
         state = states.get(qualified, ConceptState())
         concept = catalog.concept(qualified)
@@ -510,6 +539,14 @@ def build_plan(
                 and f"quiz:{qualified}" not in completed
                 and state.failures > 0
             )
+            after = first_day.get(qualified)
+            if (
+                support is None
+                and after == "difficulty"
+                and f"example:{qualified}" not in completed
+            ):
+                support, support_code = "example", "session_one_example"
+                support_reason = "That check was hard; a worked example first, then on."
             if support is None and failed_check and f"explain:{qualified}" not in completed:
                 support, support_code = "explain", "failed_check_refresh"
                 support_reason = (
@@ -544,6 +581,37 @@ def build_plan(
             queue.extend(pending)
             if frontier_end is None and pending:
                 frontier_end = len(queue)
+            if pending and stretches:
+                queue.extend(stretches)
+                stretches = []
+            if after == "helped" and f"review:{qualified}" not in completed:
+                queue.append(
+                    Activity(
+                        f"review:{qualified}",
+                        "review",
+                        qualified,
+                        f"Review: {concept.title}",
+                        REVIEW_MINUTES,
+                        reason="You got there with help; a short retrieval makes it yours.",
+                        code="session_one_retrieval",
+                    )
+                )
+            if (
+                after == "independent"
+                and not overrides.get("stretch")
+                and f"stretch:{qualified}" not in completed
+            ):
+                stretches.append(
+                    Activity(
+                        f"stretch:{qualified}",
+                        "stretch",
+                        qualified,
+                        f"Stretch: a harder {concept.title} problem",
+                        _minutes(10, c_pace, style),
+                        reason="You did that on your own; one item a step above, after the next idea.",
+                        code="session_one_stretch",
+                    )
+                )
             if overrides.get("stretch") and pending and f"stretch:{qualified}" not in completed:
                 queue.append(
                     Activity(
@@ -644,6 +712,7 @@ def build_plan(
                 code="transfer",
             )
         )
+    queue.extend(stretches)  # no later concept had work left
     if confirms:
         at = len(queue) if frontier_end is None else frontier_end
         queue = queue[:at] + confirms + queue[at:]

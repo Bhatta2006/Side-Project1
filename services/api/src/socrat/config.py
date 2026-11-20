@@ -359,6 +359,12 @@ class Settings(DatabaseSettings):
     # worker slot takes only them; an outline job resumes from its last valid outline instead
     # of paying the architect again.
     gen_waiting_learner: bool = False
+    # After session one of a Lesson 0 course (lesson0-generation-plan.md 4.E, PR 6): a missed
+    # probe or a second missed check puts a worked example first; success with help adds a short
+    # retrieval; independent success adds one stretch item after the next concept. Stamped on
+    # the enrollment's goal at enrolment (``adapt_first_session``), so turning it off later
+    # leaves existing enrollments as they were. Off: nothing changes.
+    session_one_adaptation: bool = False
     # The learner's own preferences across courses (socrat.learner_profile): seeded from Lesson 0
     # at claim, readable and editable at /api/v1/learner/profile with an undo log, and the tutor
     # may suggest a change the learner accepts or declines. Off: nothing is stored or shown.

@@ -13,6 +13,7 @@ Status log (newest first):
 
 | Date | Step | What changed |
 |---|---|---|
+| 2026-11-20 | G (generation) | Session-one adaptation (Lesson 0 plan PR 6, behind `SOCRAT_SESSION_ONE_ADAPTATION`, off): a wrong answer on a Lesson 0 probe item writes `evidence.details["probe_missed"] = true`; `learn.service.history_for` now also returns each row's `at` and `details`, which `planner.engine.session_one` reads (the planner's own evidence path, not `socrat.learner`, as before). No new store. Tests: `test_session_one.py`. |
 | 2026-11-20 | G (generation) | Generation's hooks built: `outline_block` (outline of a private course, through `user_brief`), first-lesson fallback to `user_brief` before the owner enrols, `quiz_block` (quiz prompt only), and quiz options tagged with root-unit misconception ids, graded into `details["misconception"]`. All behind `SOCRAT_GEN_LEARNER_BRIEF` except the tags (they hold no learner data). Tests: `test_learner_hooks.py`. |
 | 2026-11-20 | 3, 4, 5 | Rebased on generation's `f56d0ae`. **Step 3:** `users.learner_profile` (migration `0052_learner_profile`), `learner_profile.set_pref` / `undo` / `seed_from_lesson0` (called at the Lesson 0 claim), learner routes under `/api/v1/learner/profile`. **Step 4:** preferences read from behaviour (`learner.observed`), and the tutor tool `suggest_preference`, which only adds a pending suggestion the learner accepts or declines. **Misconceptions** of generated lessons resolve through unit pins (`learner.misconceptions_for`); the tutor sees them and may tag one. **Step 5 (light):** `learner.user_brief` for work with no enrollment (outline, first lessons) lists what the learner already shows in other courses. The writes, routes and tutor tool are behind `SOCRAT_LEARNER_PROFILE` (off). |
 | 2026-11-20 | 2 of 5 | Rebased on generation's course brain (`0051_course_brain`). The layer now answers generation's hook (`coursegen/brain/learner.py`): `snapshot(db, enrollment, now)`, `brief(snap, purpose, budget)`. Our own generation hook was dropped in favour of theirs (their privacy rule also covers brain-shared courses). The call in `run_package` is behind `SOCRAT_GEN_LEARNER_BRIEF` (off). The served learner's overlay (`enrollments.learner_plan`) is read as onboarding preferences. |
@@ -151,7 +152,7 @@ stored (learner, mentor, observed or onboarding) and then competes by source as 
 
 | Store | Holds | Only writer |
 |---|---|---|
-| `evidence` (append-only) | every scored attempt: kind, score, hint level, time, misconception | `learn.service.record_evidence` |
+| `evidence` (append-only) | every scored attempt: kind, score, hint level, time, misconception, `probe_missed` (Lesson 0 probe item answered wrong) | `learn.service.record_evidence` |
 | `concept_states` | mastery per enrollment and concept (rebuildable from `evidence`) | `record_evidence` |
 | `activity_records` `signal:*` | reading counters (simpler, deeper, reread, question, visual) | `learn.memory.note` |
 | `enrollments.adaptive` | path style, overrides, mentor moves + undo log, learning style, streak goal | accepted proposals, mentor, settings routes |

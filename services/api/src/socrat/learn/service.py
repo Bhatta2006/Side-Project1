@@ -90,6 +90,8 @@ def history_for(db: Session, enrollment: Enrollment, limit: int = 40) -> list[di
             elapsed_seconds=row.elapsed_seconds,
             expected_seconds=row.expected_seconds,
             concept=row.concept,
+            at=row.created_at,
+            details=row.details or {},
         )
         for row in reversed(rows)
     ]
