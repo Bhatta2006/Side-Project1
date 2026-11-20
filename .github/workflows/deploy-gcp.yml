@@ -1,0 +1,102 @@
+name: deploy-gcp
+
+# Continuous delivery of gbuild/main to the GCP VM (socrat-vm, asia-south1).
+#
+# No GitHub secrets: the job signs in to Google through Workload Identity Federation. The provider
+# only accepts tokens from this repository (by id) on refs/heads/gbuild/main, and the deployer
+# service account can only push to the `socrat` Artifact Registry repo and log in to this one VM.
+# The VM keeps its own settings and secrets; a deploy only swaps the images, using the settings of
+# the release currently running (/var/lib/socrat/releases/current.env). deploy-production.sh is
+# health-gated and rolls back to the previous release on failure.
+
+on:
+  push:
+    branches: [gbuild/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-gcp
+  cancel-in-progress: false
+
+env:
+  PROJECT: the-signal-452716-u7
+  ZONE: asia-south1-a
+  VM: socrat-vm
+  REGISTRY: asia-south1-docker.pkg.dev/the-signal-452716-u7/socrat
+  # Baked into the web bundle at build time; change it together with the VM's SANDBOX_HOST.
+  SANDBOX_ORIGIN: https://34.47.186.87.nip.io
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/gbuild/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: projects/1010547597291/locations/global/workloadIdentityPools/github/providers/socrat-repo
+          service_account: socrat-deployer@the-signal-452716-u7.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - id: api
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: services/api/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/api:sha-${{ github.sha }}
+          cache-from: type=gha,scope=gcp-api
+          cache-to: type=gha,mode=max,scope=gcp-api
+
+      - id: web
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          build-args: NEXT_PUBLIC_EXPLAINER_SANDBOX_ORIGIN=${{ env.SANDBOX_ORIGIN }}
+          tags: ${{ env.REGISTRY }}/web:sha-${{ github.sha }}
+          cache-from: type=gha,scope=gcp-web
+          cache-to: type=gha,mode=max,scope=gcp-web
+
+      - id: explainer
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: services/explainer/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/explainer:sha-${{ github.sha }}
+          cache-from: type=gha,scope=gcp-explainer
+          cache-to: type=gha,mode=max,scope=gcp-explainer
+
+      - name: Upload the runtime definition and deploy script
+        run: |
+          gcloud compute scp --project "$PROJECT" --zone "$ZONE" --quiet \
+            infra/runtime/production/compose.yaml infra/runtime/production/Caddyfile \
+            scripts/operations/deploy-production.sh "$VM":/tmp/
+
+      - name: Deploy (health-gated, rolls back on failure)
+        env:
+          API_IMAGE: ${{ env.REGISTRY }}/api@${{ steps.api.outputs.digest }}
+          WEB_IMAGE: ${{ env.REGISTRY }}/web@${{ steps.web.outputs.digest }}
+          EXPLAINER_IMAGE: ${{ env.REGISTRY }}/explainer@${{ steps.explainer.outputs.digest }}
+        run: |
+          gcloud compute ssh "$VM" --project "$PROJECT" --zone "$ZONE" --quiet --command "
+            set -euo pipefail
+            sudo install -m 644 /tmp/compose.yaml /tmp/Caddyfile /opt/socrat/runtime/
+            sudo install -m 755 /tmp/deploy-production.sh /opt/socrat/runtime/
+            sudo bash -c 'set -a; . /var/lib/socrat/releases/current.env; set +a
+              export RELEASE_SHA=$GITHUB_SHA SOCRAT_API_IMAGE=$API_IMAGE SOCRAT_WEB_IMAGE=$WEB_IMAGE SOCRAT_EXPLAINER_IMAGE=$EXPLAINER_IMAGE
+              SOCRAT_RUNTIME_DIR=/opt/socrat/runtime bash /opt/socrat/runtime/deploy-production.sh'
+          "
