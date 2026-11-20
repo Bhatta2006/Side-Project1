@@ -540,7 +540,11 @@ def enroll(body: EnrollInput, request: Request):
             ).items()
             if v is not None
         }
-        if body.session_minutes and request.app.state.settings.session_one_adaptation:
+        mine = (served.private or {}) if served is not None else {}
+        if "session_minutes" not in goal and mine.get("minutes") in (10, 25, 60):
+            # Served a shared course (backlog 3.3): their Lesson 0 minutes, not the course's.
+            goal["session_minutes"] = mine["minutes"]
+        if goal.get("session_minutes") and request.app.state.settings.session_one_adaptation:
             goal["adapt_first_session"] = True  # a Lesson 0 course: adapt after session one
         enrollment = placement.enroll(
             db,

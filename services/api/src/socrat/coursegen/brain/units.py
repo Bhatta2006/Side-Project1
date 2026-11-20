@@ -102,6 +102,34 @@ def ensure(
     return unit, job or research_job(db, root_id, unit_key)
 
 
+def refresh_stale(db: Session, limit: int = 20) -> int:
+    """Queue research for validated units past their refresh date (backlog 3.6), newest
+    revision of each only, at most ``limit`` per sweep. ``ensure`` queues each once; a unit
+    whose last research failed is left for the admin. Returns how many were queued."""
+    stale = db.scalars(
+        select(RootUnit)
+        .where(RootUnit.status == "validated", RootUnit.review_after <= now())
+        .order_by(RootUnit.review_after)
+    )
+    queued, seen = 0, set()
+    for unit in stale:
+        if queued >= limit or (unit.root_id, unit.unit_key) in seen:
+            continue
+        seen.add((unit.root_id, unit.unit_key))
+        if current(db, unit.root_id, unit.unit_key) is not unit:
+            continue  # an older revision; the newest decides
+        from socrat.coursegen import jobs
+
+        open_job = research_job(db, unit.root_id, unit.unit_key)
+        if open_job is not None and open_job.state in jobs.OPEN:
+            continue  # already being refreshed
+        spec = {"topic": unit.topic, "depth": unit.depth, "language": unit.language}
+        spec["audience"] = (unit.quality or {}).get("audience", "general")
+        _, job = ensure(db, unit.root_id, unit.unit_key, spec, None)
+        queued += job is not None
+    return queued
+
+
 def waiting(db: Session, refs: list[str]) -> list[str]:
     """The unit refs worth waiting for: research is queued or running and there is no
     validated revision to use meanwhile. A routine refresh of a usable unit is not waited for;

@@ -436,6 +436,11 @@ def begin(db: Session, settings, user_id: str, row: LearningRequest, parsed) -> 
     if parsed.blocked:
         raise HTTPException(422, "request_blocked")
     decision = None
+    if not settings.course_brain and settings.course_brain_shadow:
+        from socrat.coursegen.brain.route import shadow
+
+        # Shadow mode: record what the brain would decide; nothing changes for the learner.
+        shadow(db, catalog(), user_id, row, parsed.model_dump(mode="json"))
     if settings.course_brain:
         from socrat.coursegen import brain
 

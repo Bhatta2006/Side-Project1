@@ -416,10 +416,12 @@ def prepare(
             # Hard in session one (lesson0 plan 4.E): the ladder starts one rung along, so a
             # concrete hint comes one effort sooner. Reveal rules are unchanged.
             owner = catalog.problems[problem_id][0]
-            if (
-                learn.session_one_for(db, enrollment).get(f"{owner}:{problem.concepts[0]}")
-                == "difficulty"
-            ):
+            qualified = f"{owner}:{problem.concepts[0]}"
+            from socrat import learner as learner_layer
+
+            if learn.session_one_for(db, enrollment).get(
+                qualified
+            ) == "difficulty" or qualified in learner_layer.lesson0_gaps(catalog, enrollment):
                 ladder = socratic.Ladder(ceiling=1)
         attempts = (
             db.scalar(

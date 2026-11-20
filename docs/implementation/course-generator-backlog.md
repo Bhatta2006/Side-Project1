@@ -184,22 +184,38 @@ query and the reference on a fixture table. Until then SQL practice is predict-t
 
 ## 3. Course brain (`course-brain-plan.md`)
 
-### 3.1 Shadow mode and rollout
+### 3.1 Shadow mode and rollout (done 2026-11-20, flag `course_brain_shadow`)
+With `course_brain` off, `begin` calls `brain.route.shadow`: the decision is recorded as `outcome = "shadow"` with
+`course_id` empty (nothing is granted) and `reason` starting `would_serve=<id>` or `would_build`; no unit research,
+no family id; `builds_private` treats a shadow row as private. Test in `test_course_brain.py`. Original item:
 Not built. With serving off, `route` should still run and write `course_matches` with `outcome` and `would_serve`,
 changing nothing for the learner (plan 5.6, PR B). Needed before turning `course_brain` on for real learners.
 
-### 3.2 Backfill script (PR G)
+### 3.2 Backfill script (PR G) (done 2026-11-20)
+`brain.roots.backfill` + `scripts/dev/backfill_roots.py`: root from the request's stored intent (aliases only),
+`serve = "private"`; a community (public) course only gains the root and keeps its sharing. Test: the learner's
+`view` is identical before and after. Original item:
 `scripts/dev/backfill_roots.py`: assign `root_id` to existing learner courses by `roots.resolve` on stored
 `LearningRequest.intent` (alias tables only, no model), always `serve='private'`. **Done when:** legacy rows get a
 root, nothing a learner sees changes (snapshot test of `view` for old requests).
 
-### 3.3 Delivery-time adaptation from the overlay (PR H)
+### 3.3 Delivery-time adaptation from the overlay (PR H) (done 2026-11-20)
+A served learner's overlay now reaches delivery: enrolment takes their Lesson 0 minutes as `goal.session_minutes`
+(and so session-one adaptation and computed minutes); `socrat.learner.lesson0_gaps` maps their Lesson 0 gaps to
+concepts of the shared course (code matcher), and the planner puts a worked example before that concept's check
+(`lesson0_gap`); a tutor problem thread on it starts the Ladder one rung along. Lessons are not rewritten (shared).
+Not built: the door (a shared lesson cannot carry it). Tests in `test_session_one.py`. Original item:
 `POST /enrollments` copies the served learner's private overlay into `Enrollment.learner_plan`, but nothing reads
 it. The planner and tutor should: session minutes from it (as PR 4 does for built courses), probe insertion for the
 learner's own gaps on a shared course, Ladder start. **Where:** `planner/engine.py`, `learn/service.py`, tutor.
 Read it through `socrat.learner` and record it in `learner-memory.md`.
 
-### 3.4 Reuse quality: gold set, concurrency, crash tests
+### 3.4 Reuse quality: gold set, concurrency, crash tests (gold set done 2026-11-20)
+`test_brain_compat.py`: 76 labelled pairs (6 subjects x 13 variants + theme pairs) through `derive` and
+`compatible`: 0 false reuse, 0 missed reuse. Concurrency is covered by the existing race test
+(`test_a_concurrent_request_that_loses_the_race_joins`) and crash-resume by the end of
+`test_first_request_researches_the_unit_once...`; the 8-thread test and `bench_brain.py` are not built (a real
+database and a live model). Original item:
 - A labelled gold set of at least 60 request pairs (`test_brain_compat.py`): false reuse must be 0, missed reuse
   reported; near misses (depth, rigor, language, register, tools, assessment, themed vs not) rejected.
 - `concurrent_first_requests`: 8 threads claim compatible requests on a fresh DB; one root, one family course,
@@ -207,15 +223,26 @@ Read it through `socrat.learner` and record it in `learner-memory.md`.
 - `resume_after_research_crash` (units are not researched twice).
 - `scripts/dev/bench_brain.py`: cold / from existing material / direct reuse, timed and costed separately.
 
-### 3.5 Scoper
+### 3.5 Scoper (done 2026-11-20, flag `brain_scoper`)
+`brain/scoper.py`: inside a top-level unit's research job, one fast-model call (role `scoper`, tier fast) splits the
+topic into 2-5 units, checked by code (keys, depths, prerequisites only on earlier units; any problem rejects the
+whole split); stored as `content.scope` on the unit, each part queued for research once
+(`<topic>--<part>.<depth>`); `route` adds every researched part to a new course's units (max 8). Tests in
+`test_brain_units.py`. Not run against a live model. Original item:
 Not built: a fast-model step that splits a topic into several units `{unit_key, title, depth, prerequisites}`.
 Today one unit per canonical topic and depth.
 
-### 3.6 Scheduled refresh of stale units
+### 3.6 Scheduled refresh of stale units (done 2026-11-20)
+`units.refresh_stale` (newest revision only, skips units already being refreshed, 20 per sweep), called by the
+worker loop every `SOCRAT_BRAIN_REFRESH_SWEEP_SECONDS` (0 = off, the default). Test in `test_brain_units.py`.
+Original item:
 A stale unit is refreshed only when a later request needs it. Add a periodic sweep (worker) that queues research
 for units past their refresh age.
 
-### 3.7 Admin web page
+### 3.7 Admin web page (done 2026-11-20)
+`/admin`, tab "Course brain" (`apps/web/src/components/brain-admin.tsx`): subjects, their units (status, revision,
+counts, sources, courses using them, problems) with the correction action, and "Why this course?" for a request id.
+Typechecked; not opened in a browser. Original item:
 The JSON routes exist (`/api/v1/admin/brain/roots`, `/units?root=`, `/matches/{request_id}`,
 `POST /units/{id}/correct`); there is no page. Read `apps/web/AGENTS.md` and `node_modules/next/dist/docs/`
 first (Next 16, breaking changes).

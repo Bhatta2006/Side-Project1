@@ -483,3 +483,88 @@ def test_a_routine_refresh_does_not_hold_up_new_courses(brain, offline_links):
         assert got is not None and job is not None and job.input["refresh"] is True
         # The stale revision is still served meanwhile: nothing waits for the refresh.
         assert unitstore.waiting(db, [unitstore.ref("mathematics", unit.unit_key)]) == []
+
+
+# ------------------------------------------------------------------ backlog 3.5 and 3.6
+
+SCOPE = {
+    "units": [
+        {"key": "one-step", "title": "One-step equations", "depth": "beginner"},
+        {
+            "key": "two-step",
+            "title": "Two-step equations",
+            "depth": "beginner",
+            "prerequisites": ["one-step"],
+        },
+    ]
+}
+
+
+def test_the_scoper_reply_is_checked_by_code():
+    from socrat.coursegen.brain import scoper
+
+    units, problems = scoper.check(SCOPE)
+    assert [u["key"] for u in units] == ["one-step", "two-step"] and problems == []
+    later = {"units": [SCOPE["units"][1], SCOPE["units"][0]]}  # a prerequisite listed after
+    assert scoper.check(later)[0] == [] and "earlier keys" in scoper.check(later)[1][0]
+    assert scoper.check({"units": [SCOPE["units"][0]]})[0] == []  # one unit is no split
+    bad = {"units": [SCOPE["units"][0] | {"depth": "galaxy"}, SCOPE["units"][1]]}
+    assert scoper.check(bad)[0] == []
+
+
+def test_a_scoped_topic_queues_its_parts_and_later_courses_use_them(brain, offline_links):
+    from socrat.coursegen.brain import scoper
+
+    engine, settings = brain.app.state.engine, brain.app.state.settings
+    settings.brain_scoper = True
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    ask(brain, ada, DETECTIVE)
+    inner = Script()
+
+    def make(s):
+        provider = inner.make(s)
+
+        class Provider:
+            name = "anthropic"
+
+            async def converse(self, system, turns, *args, **kwargs):
+                if system == scoper.SCOPER:
+                    yield Event("text", text=json.dumps(SCOPE))
+                    yield usage_event(10, 10)
+                    return
+                async for e in provider.converse(system, turns, *args, **kwargs):
+                    yield e
+
+        return Provider()
+
+    with Session(engine) as db:
+        job_id = research_job(db).id
+    asyncio.run(run_research(engine, settings, job_id, make))
+    with Session(engine) as db:
+        unit = db.get(RootUnit, db.get(GenerationJob, job_id).output["unit_id"])
+        assert [s["key"] for s in unit.content["scope"]] == ["one-step", "two-step"]
+        parts = sorted(
+            j.target
+            for j in db.scalars(select(GenerationJob).where(GenerationJob.kind == "research"))
+            if scoper.SUB in j.target
+        )
+        assert parts == ["equation-linear--one-step.beginner", "equation-linear--two-step.beginner"]
+
+
+def test_the_sweep_queues_research_for_stale_units_once(brain, offline_links):
+    engine, settings = brain.app.state.engine, brain.app.state.settings
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    ask(brain, ada, DETECTIVE)
+    with Session(engine) as db:
+        job_id = research_job(db).id
+    asyncio.run(run_research(engine, settings, job_id, Script().make))
+    with Session(engine) as db, db.begin():
+        assert unitstore.refresh_stale(db) == 0  # fresh
+        for unit in db.scalars(select(RootUnit)):
+            unit.review_after = 1
+    with Session(engine) as db, db.begin():
+        assert unitstore.refresh_stale(db) == 1
+    with Session(engine) as db, db.begin():
+        assert unitstore.refresh_stale(db) == 0  # already queued

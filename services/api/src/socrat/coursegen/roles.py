@@ -43,6 +43,7 @@ ROLES = {
     "onboarding",  # Lesson 0: starter scenarios and a two-step calibration
     "translator",  # lesson text -> another language, under placeholder and glossary checks
     "weekly",  # hard, execution-verified weekly exam questions
+    "scoper",  # a topic -> the units a course on it needs (coursegen/brain/scoper.py)
 }
 # Override key -> Settings field(s) it replaces for that role.
 KEYS = {
@@ -89,6 +90,7 @@ ROLE_TIER = {
     "reviewer": "strong",
     # Reading and sorting, not reasoning.
     "researcher": "fast",
+    "scoper": "fast",
     "stylist": "fast",
     "intent": "fast",
     "onboarding": "fast",  # a visitor is waiting on it

@@ -505,8 +505,15 @@ def build_for(
         strict=session_budget(enrollment) <= STRICT_MINUTES,
         computed=bool((enrollment.goal or {}).get("session_minutes")),
         tutored=first_day_tutored(db, enrollment, history_for(db, enrollment)),
+        gaps=_lesson0_gaps(catalog, enrollment),
     )
     return plan, adaptive
+
+
+def _lesson0_gaps(catalog: Catalog, enrollment: Enrollment) -> set[str]:
+    from socrat import learner
+
+    return learner.lesson0_gaps(catalog, enrollment)
 
 
 def first_day_tutored(db: Session, enrollment: Enrollment, history: list[dict]) -> set[str]:

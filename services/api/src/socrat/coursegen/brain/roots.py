@@ -9,6 +9,7 @@ admin (``merged_into``); lookups follow the redirect.
 
 import re
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -125,3 +126,32 @@ def resolve(db: Session, name: str, request_id: str | None = None) -> SubjectRoo
         except IntegrityError:
             pass
     return found
+
+
+def backfill(db: Session) -> int:
+    """Give each learner course made before the brain a root (backlog 3.2), from its request's
+    stored intent through the alias tables only (no model). Such a course is never served:
+    ``serve = "private"``, except a community course (public), which keeps its sharing and only
+    gains the root. Returns how many courses changed. No commit."""
+    from socrat.models import GeneratedCourse, LearningRequest
+
+    changed = 0
+    rows = db.scalars(
+        select(GeneratedCourse).where(
+            GeneratedCourse.root_id.is_(None), GeneratedCourse.owner_id.is_not(None)
+        )
+    )
+    for row in list(rows):
+        req = db.scalars(
+            select(LearningRequest)
+            .where(LearningRequest.course_id == row.id)
+            .order_by(LearningRequest.created_at)
+        ).first()
+        if req is None or not req.intent:
+            continue
+        row.root_id = resolve(db, name_for(req.intent), req.id).id
+        if row.visibility != "public":
+            row.serve = "private"
+        changed += 1
+    db.flush()
+    return changed

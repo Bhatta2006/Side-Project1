@@ -142,7 +142,8 @@ def builds_private(db: Session, request_id: str | None) -> bool:
     if not request_id:
         return False
     match = db.scalar(select(CourseMatch).where(CourseMatch.request_id == request_id))
-    return match is None or match.outcome == "private_new"
+    # A shadow decision changed nothing: the course is built as without the brain.
+    return match is None or match.outcome in ("private_new", "shadow")
 
 
 def outline_block(db: Session, user_id: str | None, request_id: str | None, stamp: int) -> str:

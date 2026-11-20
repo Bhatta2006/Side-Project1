@@ -252,6 +252,12 @@ def route(db: Session, catalog, user_id: str, row: LearningRequest, intent: dict
         unit, job = unitstore.ensure(db, root.id, key, decision.spec.model_dump(), user_id)
         if unit is not None or job is not None:
             decision.units = [unitstore.ref(root.id, key)]
+        from socrat.coursegen.brain import scoper
+
+        for sub in ((unit.content or {}).get("scope") or []) if unit is not None else []:
+            sub_key = scoper.sub_key(key, sub)
+            if unitstore.current(db, root.id, sub_key) is not None and len(decision.units) < 8:
+                decision.units.append(unitstore.ref(root.id, sub_key))
         if decision.outcome == "new":
             decision.outcome = (
                 "from_material"
@@ -282,6 +288,32 @@ def route(db: Session, catalog, user_id: str, row: LearningRequest, intent: dict
     match.private = overlay(row.text, intent, profile)
     match.matcher_version = VERSION
     match.created_at = now()
+    db.flush()
+    return decision
+
+
+def shadow(db: Session, catalog, user_id: str, row: LearningRequest, intent: dict) -> Decision:
+    """Shadow mode (course-brain-plan 5.6): decide as ``route`` would and record it, changing
+    nothing for the learner. No unit is researched, no family id is taken, no course is
+    granted: the row's ``outcome`` is "shadow", ``course_id`` stays empty, and what would have
+    happened is in ``reason`` ("would_serve=<id>" or "would_build") and ``candidates``."""
+    from socrat import onboarding
+
+    profile = onboarding.profile_for(db, row.id)
+    root = roots.resolve(db, roots.name_for(intent), row.id)
+    wanted = derive(row.text, intent, root.id, profile)
+    decision = decide(db, catalog, user_id, wanted, is_private(row.text, row.material))
+    would = f"would_serve={decision.course_id}" if decision.served else "would_build"
+    match = db.scalar(select(CourseMatch).where(CourseMatch.request_id == row.id))
+    if match is None:
+        match = CourseMatch(request_id=row.id, user_id=user_id)
+        db.add(match)
+    match.root_id, match.spec = root.id, wanted.model_dump(mode="json")
+    match.spec_key, match.outcome, match.course_id = wanted.key(), "shadow", None
+    match.reason = f"{would}; {decision.outcome}: {decision.reason}"[:500]
+    match.candidates, match.adaptations = decision.candidates, decision.adaptations
+    match.private = overlay(row.text, intent, profile)
+    match.matcher_version, match.created_at = VERSION, now()
     db.flush()
     return decision
 

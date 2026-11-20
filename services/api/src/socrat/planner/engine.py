@@ -269,7 +269,7 @@ def concept_activities(
         )
         # After a missed check, re-teach before the retake (the retake is pointless without
         # it); support for a concept not yet checked follows the check.
-        retake = support_code == "failed_check_refresh" or state.failures > 0
+        retake = support_code in ("failed_check_refresh", "lesson0_gap") or state.failures > 0
         items.insert(1 if retake else len(items), step)
     share = est * 0.55 / max(1, len(problems))
     items += [
@@ -373,6 +373,7 @@ def build_plan(
     strict: bool = False,
     computed: bool = False,
     tutored: set[str] | frozenset = frozenset(),
+    gaps: set[str] | frozenset = frozenset(),
 ) -> Plan:
     """``locks`` is False when the learner chose a mode that keeps every module open;
     checkpoints are still planned, they just stop holding later modules shut. ``strict``: a
@@ -581,6 +582,10 @@ def build_plan(
             ):
                 support, support_code = "example", "session_one_example"
                 support_reason = "That check was hard; a worked example first, then on."
+            if support is None and qualified in gaps and f"example:{qualified}" not in completed:
+                # A shared course has no probe for this learner's Lesson 0 gap (backlog 3.3).
+                support, support_code = "example", "lesson0_gap"
+                support_reason = "Lesson 0 showed this can trip you up; a worked example first."
             if support is None and failed_check and f"explain:{qualified}" not in completed:
                 support, support_code = "explain", "failed_check_refresh"
                 support_reason = (

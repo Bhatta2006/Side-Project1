@@ -192,3 +192,31 @@ def test_the_tutor_ladder_starts_one_rung_along_after_difficulty(client, monkeyp
 
     assert ceiling("difficulty") == 1
     assert ceiling("independent") == 0
+
+
+# ------------------------------------------------------------------ backlog 3.3 (served courses)
+
+
+def test_a_served_learners_lesson0_gap_gets_a_worked_example_before_the_check():
+    from test_adaptive_engine import catalog
+
+    from socrat import learner
+    from socrat.models import Enrollment
+
+    mine = {"calibration": {"detected_gaps": ["arrays", "medieval tax law"]}}
+    gaps = learner.lesson0_gaps(catalog(), Enrollment(course_id="algo", learner_plan=mine))
+    assert gaps == {ARRAYS}  # matched by code; the unmatched gap is left alone
+    assert learner.lesson0_gaps(catalog(), Enrollment(course_id="algo", learner_plan={})) == set()
+    from test_adaptive_engine import NOW, TODAY
+
+    from socrat.planner.engine import build_plan
+
+    cat = catalog()
+    queue = [
+        a.id
+        for a in build_plan(
+            cat, cat.course_concepts("algo"), {}, set(), [], TODAY, NOW, {0, 2, 4}, 45, gaps=gaps
+        ).queue
+    ]
+    assert queue.index(f"lesson:{ARRAYS}") < queue.index(f"example:{ARRAYS}")
+    assert queue.index(f"example:{ARRAYS}") < queue.index(f"quiz:{ARRAYS}")

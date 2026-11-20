@@ -263,6 +263,15 @@ class Settings(DatabaseSettings):
     # served an existing course whose hard requirements match it, instead of generating again.
     # Off: every request builds its own course, exactly as before.
     course_brain: bool = False
+    # With course_brain off: still decide and record each request's match ("shadow" rows in
+    # course_matches: what would have been served) without changing anything (backlog 3.1).
+    course_brain_shadow: bool = False
+    # The scoper (backlog 3.5): a top-level unit's research also splits its topic into 2-5
+    # units, each researched once, and later courses are built from all of them. Off: one unit.
+    brain_scoper: bool = False
+    # The worker queues research for units past their refresh date (backlog 3.6), at most
+    # this often; 0 turns the sweep off (a stale unit is then refreshed only when needed).
+    brain_refresh_sweep_seconds: int = Field(default=0, ge=0, le=7 * 24 * 3600)
     # Per learner, per process (see limits.py); 0 turns a limit off.
     simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
     diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)

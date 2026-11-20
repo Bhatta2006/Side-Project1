@@ -11,6 +11,12 @@ measurement. Examples are illustrative unless they come from the handoff.
 
 ## Implementation status (2026-11-20)
 
+**Update, later on 2026-11-20 (backlog section 3):** shadow mode (`course_brain_shadow`), the root backfill
+(`scripts/dev/backfill_roots.py`), the served learner's overlay at delivery (minutes, Lesson 0 gaps -> worked example
+first, Ladder start), a 76-pair gold set (0 false reuse), the scoper (`brain_scoper`), the stale-unit sweep
+(`SOCRAT_BRAIN_REFRESH_SWEEP_SECONDS`) and the admin "Course brain" tab are built. Details and what is not built:
+`course-generator-backlog.md` section 3. Ownerless shared courses (3.8) wait for the owner.
+
 Owner decisions after review: (1) use the current Lesson 0 onboarding as it is; (2) roots are **not** a
 fixed list: any subject a learner asks for gets a root on demand (`CANONICAL` in `brain/roots.py` only
 folds synonyms such as math/maths/mathematics); (3) shared community courses **are** brain candidates.

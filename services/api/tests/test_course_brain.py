@@ -420,3 +420,41 @@ def test_brain_off_changes_nothing(client):  # noqa: F811
     assert done["status"] == "confirmed"
     with Session(client.app.state.engine) as db:
         assert db.scalars(select(CourseMatch)).all() == []
+
+
+def test_shadow_mode_records_what_would_be_served_and_changes_nothing(brain):
+    ada = login(brain, "ada", "Ada")
+    adult(brain, ada)
+    first = ask(brain, ada, DETECTIVE)
+    build(brain, first["course_id"], me(brain))
+    brain.post(f"{URL}/{first['id']}/publish", json={}, headers=ada)
+    brain.app.state.settings.course_brain = False
+    brain.app.state.settings.course_brain_shadow = True
+
+    bob = login(brain, "bob", "Bob")
+    adult(brain, bob)
+    second = ask(brain, bob, MYSTERY, subject="First-degree equations")
+    assert second["status"] == "confirmed" and second["course_id"] != first["course_id"]
+    with Session(brain.app.state.engine) as db:
+        match = db.scalar(select(CourseMatch).where(CourseMatch.request_id == second["id"]))
+        assert match.outcome == "shadow" and match.course_id is None
+        assert match.reason.startswith(f"would_serve={first['course_id']}")
+        from socrat.coursegen.brain import learner as hook
+
+        assert hook.builds_private(db, second["id"])  # built as without the brain
+
+
+def test_backfill_gives_old_courses_a_root_and_changes_nothing_a_learner_sees(client):  # noqa: F811
+    client.app.state.settings.learning_requests_enabled = True
+    ada = login(client)
+    adult(client, ada)
+    done = ask(client, ada, DETECTIVE)  # brain off: a course with no root
+    build(client, done["course_id"], me(client))
+    before = client.get(f"{URL}/{done['id']}", headers=ada).json()
+    with Session(client.app.state.engine) as db, db.begin():
+        assert roots.backfill(db) == 1
+    with Session(client.app.state.engine) as db, db.begin():
+        row = db.get(GeneratedCourse, done["course_id"])
+        assert (row.root_id, row.serve) == ("mathematics", "private")
+        assert roots.backfill(db) == 0  # safe to run twice
+    assert client.get(f"{URL}/{done['id']}", headers=ada).json() == before

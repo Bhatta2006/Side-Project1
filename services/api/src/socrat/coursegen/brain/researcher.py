@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from socrat.assistant.gateway import make_provider
 from socrat.coursegen import fetch, research, roles, search
+from socrat.coursegen.brain import scoper
 from socrat.coursegen.brain import units as unitstore
 from socrat.models import GenerationJob, RootUnit, Source, SubjectRoot, UnitSource, need, now
 
@@ -211,6 +212,14 @@ async def run_research(engine, settings, job_id: str, make=make_provider, http=N
     spent += reply.cost_usd
     concepts, content, problems = validate(reply.data, cited)
     status = "failed" if _fatal(problems) else "validated"
+    subs: list[dict] = []
+    if settings.brain_scoper and status == "validated" and scoper.SUB not in data["unit_key"]:
+        subs, cost = await scoper.scope(
+            engine, settings, str(data.get("topic", "")), str(data.get("depth", "")), make
+        )
+        spent += cost
+        if subs:
+            content = {**content, "scope": subs}
     with Session(engine) as db, db.begin():
         revision = unitstore.next_revision(db, data["root"], data["unit_key"])
         unit = RootUnit(
@@ -267,6 +276,19 @@ async def run_research(engine, settings, job_id: str, make=make_provider, http=N
                 )
             )
         unit_id = unit.id
+        for sub in subs:  # each part researched once, for the next request on this topic
+            unitstore.ensure(
+                db,
+                data["root"],
+                scoper.sub_key(data["unit_key"], sub),
+                {
+                    "topic": f"{data.get('topic', '')}: {sub['title']}"[:160],
+                    "depth": sub["depth"],
+                    "language": data.get("language", "en"),
+                    "audience": data.get("audience", "general"),
+                },
+                None,
+            )
     _note(
         engine,
         job_id,

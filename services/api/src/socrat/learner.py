@@ -268,6 +268,21 @@ def observed(signals: dict[str, dict], skill: dict) -> dict[str, str]:
     return out
 
 
+def lesson0_gaps(catalog: Catalog, enrollment: Enrollment) -> set[str]:
+    """Concepts (qualified) of the enrolled course that teach the gaps this learner's Lesson 0
+    showed, for a course the brain served them (``enrollments.learner_plan``, backlog 3.3). A
+    course built for them carries a probe item instead, so this is empty there. Matched by code
+    (``learner_plan.teaching``); an unmatched gap is left alone."""
+    from socrat.coursegen import learner_plan
+
+    gaps = ((enrollment.learner_plan or {}).get("calibration") or {}).get("detected_gaps") or []
+    if not gaps or enrollment.course_id not in catalog.courses:
+        return set()
+    course = catalog.course(enrollment.course_id)
+    found = {learner_plan.teaching(course, str(g)) for g in gaps[:4]}
+    return {f"{enrollment.course_id}:{cid}" for cid in found if cid}
+
+
 def tutored_concepts(db: Session, user_id: str, since: int, until: int) -> set[str]:
     """Concepts (qualified) the learner asked the tutor about between ``since`` and ``until``:
     their own messages in a concept thread. Counts as help for session one (backlog 2.4, owner

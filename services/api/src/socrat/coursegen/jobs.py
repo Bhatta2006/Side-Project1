@@ -1707,7 +1707,18 @@ async def run_once(
 
 
 async def _loop(engine: Engine, settings: Settings, catalog, max_priority: int | None) -> None:
+    swept = 0
     while True:
+        every = getattr(settings, "brain_refresh_sweep_seconds", 0)
+        if every and max_priority is None and now() - swept >= every:
+            swept = now()
+            try:
+                from socrat.coursegen.brain import units as unitstore
+
+                with Session(engine) as db, db.begin():
+                    unitstore.refresh_stale(db)
+            except Exception:
+                log.exception("unit refresh sweep failed")
         try:
             if not await run_once(engine, settings, catalog(), max_priority=max_priority):
                 await asyncio.sleep(POLL_SECONDS)
