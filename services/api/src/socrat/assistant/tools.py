@@ -1,9 +1,9 @@
 """Tools the tutor can call to personalise a reply. Every tool is scoped to one learner.
 
-Tools read the learner's own data and the public library. The few that write never change
+Tools read the learner's own data. The few that write never change
 the roadmap directly: `propose_plan_change` and `propose_goal` only create *pending*
 proposals the learner accepts or declines on screen, `record_observation` can only flag a
-gap (it never raises mastery), and `save_problems` bookmarks problems. None of them return
+gap (it never raises mastery). None of them return
 hidden tutor notes or reference solutions for graded problems.
 """
 
@@ -21,16 +21,12 @@ from socrat.adaptive import service as adaptive
 from socrat.adaptive.suggest import Draft
 from socrat.assessments import service as assessments
 from socrat.assistant.gateway import ToolSpec
-from socrat.catalog import practice, shape
 from socrat.catalog.registry import Catalog
 from socrat.learn import service as learn
-from socrat.library import recommend
-from socrat.library import service as library
 from socrat.mastery.model import DAY, ConceptState, band
-from socrat.models import Evidence, PracticeMark, Submission, User, WeeklyAssessment
+from socrat.models import Evidence, Submission, User, WeeklyAssessment
 from socrat.models import now as clock
 
-PLATFORM = {"type": "string", "enum": ["Socrat", "LeetCode", "CSES", "Codeforces"]}
 # Learner-facing wording for mastery bands, so replies never echo internal codes.
 BAND_WORDS = {
     "not_started": "not started yet",
@@ -41,7 +37,7 @@ BAND_WORDS = {
 }
 CONCEPT = {
     "type": "string",
-    "description": "Concept id like 'dsa:two-pointers', or its name like 'two pointers'.",
+    "description": "Concept id like 'course-id:concept-id', or its name as the learner says it.",
 }
 
 TOOLS: list[ToolSpec] = [
@@ -82,57 +78,10 @@ TOOLS: list[ToolSpec] = [
         },
     ),
     ToolSpec(
-        "recommend_problems",
-        "Personalised next problems, matched to the learner's level and mastery and skipping "
-        "what they solved: Socrat's own problems (solved and judged in the app, where you can "
-        "coach them) plus LeetCode, CSES and Codeforces. Each result has a ready Markdown link "
-        "to show the learner.",
-        {
-            "type": "object",
-            "properties": {
-                "concept": {**CONCEPT, "description": "Optional: focus on one concept."},
-                "count": {"type": "integer", "description": "1-8, default 4."},
-                "platform": PLATFORM,
-                "harder": {"type": "boolean", "description": "A step above their level."},
-            },
-            "required": [],
-        },
-    ),
-    ToolSpec(
-        "search_library",
-        "Search the practice library by name, concept, platform, difficulty or rating range. "
-        "Returns names, difficulty, rating, the learner's status and Markdown links.",
-        {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Words in the problem name."},
-                "concept": CONCEPT,
-                "platform": PLATFORM,
-                "difficulty": {"type": "string", "enum": ["easy", "medium", "hard"]},
-                "rating_min": {"type": "integer"},
-                "rating_max": {"type": "integer"},
-                "unsolved_only": {"type": "boolean"},
-                "limit": {"type": "integer", "description": "1-10, default 6."},
-            },
-            "required": [],
-        },
-    ),
-    ToolSpec(
-        "next_topics",
-        "What the learner should learn next and why, from their plan and mastery.",
-        {"type": "object", "properties": {}, "required": []},
-    ),
-    ToolSpec(
         "get_concept_guide",
         "A concept's summary, key points, common pitfalls, curated reading (with links), "
-        "handbook chapters and Socrat's own practice problems, plus the learner's band on it.",
+        "and Socrat's own practice problems, plus the learner's band on it.",
         {"type": "object", "properties": {"concept": CONCEPT}, "required": ["concept"]},
-    ),
-    ToolSpec(
-        "get_codeforces_profile",
-        "The learner's linked Codeforces profile, if any: rating, rank, solved count and the "
-        "tags where they most often fail.",
-        {"type": "object", "properties": {}, "required": []},
     ),
     ToolSpec(
         "get_weekly_report",
@@ -140,22 +89,6 @@ TOOLS: list[ToolSpec] = [
         "to focus on, and whether this week's assessment is available. Use when they ask how "
         "their week went or what to focus on next.",
         {"type": "object", "properties": {}, "required": []},
-    ),
-    ToolSpec(
-        "save_problems",
-        "Add library problems to the learner's practice list (bookmarked to-dos). Only call "
-        "when the learner asks you to save or plan problems.",
-        {
-            "type": "object",
-            "properties": {
-                "problem_ids": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Ids from recommend_problems or search_library, at most 8.",
-                }
-            },
-            "required": ["problem_ids"],
-        },
     ),
 ]
 PROPOSAL_KINDS = [
@@ -259,12 +192,7 @@ LABELS = {
     "get_progress": "Checking your progress",
     "get_plan": "Looking at your plan",
     "get_recent_work": "Reviewing your recent work",
-    "recommend_problems": "Picking problems for you",
-    "search_library": "Searching the library",
-    "next_topics": "Working out what's next",
     "get_concept_guide": "Opening the lesson notes",
-    "get_codeforces_profile": "Checking your Codeforces profile",
-    "save_problems": "Saving to your list",
     "get_weekly_report": "Reading your weekly assessment",
     "get_learner_profile": "Looking at how you're progressing",
     "propose_plan_change": "Suggesting a change to your plan",
@@ -276,10 +204,6 @@ LABELS = {
 
 def _clamp(value, low: int, high: int, default: int) -> int:
     return max(low, min(high, int(value))) if isinstance(value, int) else default
-
-
-def link(problem: dict) -> str:
-    return f"[{problem['title']}]({problem['url']})"
 
 
 def lesson_link(catalog: Catalog, concept: str) -> str:
@@ -302,26 +226,6 @@ def resolve_concept(catalog: Catalog, value: str) -> str | None:
     return best
 
 
-# Tools that only make sense for some courses, and the course feature each needs.
-COURSE_TOOLS = {
-    "recommend_problems": "library",
-    "search_library": "library",
-    "save_problems": "library",
-    "get_codeforces_profile": "codeforces",
-}
-
-
-def course_features(bind: Engine | None, catalog: Catalog, user_id: str) -> dict[str, bool]:
-    if bind is None:  # no database (tool listings in tests): nothing to look up
-        return dict(code=True, library=True, companies=True, codeforces=True, drills=False)
-    with Session(bind) as db:
-        enrollment = learn.active_enrollment(db, user_id)
-        course_id = enrollment.course_id if enrollment else None
-    if course_id is None:  # not enrolled yet: nothing is hidden, the tools report it
-        return dict(code=True, library=True, companies=True, codeforces=True, drills=False)
-    return shape.features_of(catalog, course_id)
-
-
 class Toolbox:
     def __init__(self, bind: Engine, catalog: Catalog, user_id: str, engine_tools: bool = False):
         self.bind = bind
@@ -333,12 +237,7 @@ class Toolbox:
             if engine_tools
             else {}
         )
-        # Only the tools for the learner's own course: a math course has no problem library
-        # and no Codeforces, so Soc cannot pitch LeetCode problems to it.
-        offered = course_features(bind, catalog, user_id)
-        hidden = {name for name, needs in COURSE_TOOLS.items() if not offered[needs]}
-        self.hidden = hidden
-        self.specs = [t for t in TOOLS if t.name not in hidden] + [
+        self.specs = [*TOOLS] + [
             ToolSpec(c.tool_name, c.summary, c.parameters) for c in self.verified.values()
         ]
 
@@ -351,7 +250,7 @@ class Toolbox:
         return await asyncio.to_thread(self._run, name, arguments)
 
     def _run(self, name: str, arguments: dict) -> tuple[str, bool]:
-        handler = None if name in self.hidden else getattr(self, f"_{name}", None)
+        handler = getattr(self, f"_{name}", None)
         if handler is None:
             return f"Unknown tool {name!r}.", True
         with Session(self.bind) as db, db.begin():
@@ -366,34 +265,12 @@ class Toolbox:
 
     # ------------------------------------------------------------ helpers
 
-    def _learner(self, db, user, enrollment, now) -> recommend.Learner:
-        return library.learner_for(db, self.catalog, user, enrollment, now)
-
-    def _problem_row(self, learner: recommend.Learner, problem: dict, **extra) -> dict:
-        primary = problem["concepts"][0] if problem["concepts"] else None
-        solved = problem["id"] in learner.solved or (
-            problem["id"].removeprefix("socrat:") in learner.native_solved
-        )
-        row = dict(
-            id=problem["id"],
-            link=link(problem),
-            platform=problem["platform"],
-            difficulty=problem["difficulty"],
-            rating=problem.get("rating"),
-            concept=self.catalog.concept(primary).title
-            if primary in self.catalog.concepts
-            else None,
-            solved=solved,
-        )
-        return {k: v for k, v in {**row, **extra}.items() if v not in (None, "")}
-
     # ------------------------------------------------------------ tools
 
     def _get_progress(self, db, user, enrollment, now, concept: str = "", only_weak: bool = False):
         if enrollment is None:
             return "Error: the learner has not chosen a course yet."
-        learner = self._learner(db, user, enrollment, now)
-        states = learner.states
+        states = learn.states_for(db, enrollment)
         if concept:
             resolved = resolve_concept(self.catalog, concept)
             if resolved is None:
@@ -423,11 +300,8 @@ class Toolbox:
                     ),
                 }
             )
-        level = recommend.level_view(learner.rating)
         return {
             "course": self.catalog.course(enrollment.course_id).title,
-            "practice_level": f"{level['name']} (~{level['rating']})",
-            "solved_elsewhere": len(learner.solved),
             "concepts": rows,
         }
 
@@ -493,122 +367,7 @@ class Toolbox:
             }
             for s in submissions
         ]
-        index = practice.default_index()
-        marks = db.scalars(
-            select(PracticeMark)
-            .where(PracticeMark.user_id == user.id, PracticeMark.updated_at >= since)
-            .order_by(PracticeMark.updated_at.desc())
-            .limit(15)
-        )
-        out["external"] = [
-            {"problem": index.problems[m.problem_id]["title"], "status": m.status}
-            for m in marks
-            if m.problem_id in index.problems
-        ]
         return out
-
-    def _recommend_problems(
-        self,
-        db,
-        user,
-        enrollment,
-        now,
-        concept: str = "",
-        count: int = 4,
-        platform: str = "",
-        harder: bool = False,
-    ):
-        index = practice.default_index()
-        learner = self._learner(db, user, enrollment, now)
-        count = _clamp(count, 1, 8, 4)
-        if concept:
-            resolved = resolve_concept(self.catalog, concept)
-            if resolved is None:
-                return f"Error: no concept matches {concept!r}."
-            native = [] if harder else recommend.native_for(self.catalog, learner, resolved)[:2]
-            external = recommend.best_for(index, learner, resolved, count * 4, stretch=harder)
-            picks = native + external
-            if platform:
-                picks = [p for p in picks if p["platform"] == platform]
-            reason = (
-                "a step above your level"
-                if harder
-                else f"fits where you are ({BAND_WORDS[learner.band(resolved)]})"
-            )
-            rows = [self._problem_row(learner, p, why=reason) for p in picks[:count]]
-        else:
-            plan = (
-                learn.plan_for(db, self.catalog, user, enrollment, now, record=False)
-                if enrollment
-                else None
-            )
-            picks = recommend.next_problems(index, self.catalog, learner, plan, limit=count * 3)
-            if platform:
-                picks = [p for p in picks if p["platform"] == platform]
-            if harder:
-                picks = [p for p in picks if p["kind"] == "stretch"] or picks
-            rows = [self._problem_row(learner, p, why=p["reason"]) for p in picks[:count]]
-        if not rows:
-            return "No unsolved matches; try another concept or platform."
-        return {"practice_level": learner.rating, "problems": rows}
-
-    def _search_library(
-        self,
-        db,
-        user,
-        enrollment,
-        now,
-        query: str = "",
-        concept: str = "",
-        platform: str = "",
-        difficulty: str = "",
-        rating_min: int = 0,
-        rating_max: int = 0,
-        unsolved_only: bool = False,
-        limit: int = 6,
-    ):
-        index = practice.default_index()
-        learner = self._learner(db, user, enrollment, now)
-        resolved = resolve_concept(self.catalog, concept) if concept else ""
-        if concept and resolved is None:
-            return f"Error: no concept matches {concept!r}."
-        items = index.search(
-            query[:80],
-            (platform,) if platform else (),
-            resolved or "",
-            difficulty,
-            rating_min,
-            rating_max,
-        )
-        items = [p for p in items if learner.can_practice(p)]
-        if unsolved_only:
-            items = [p for p in items if p["id"] not in learner.solved]
-        items.sort(key=lambda p: (-p.get("companies", 0), -p.get("solvers", 0), p["id"]))
-        limit = _clamp(limit, 1, 10, 6)
-        return {
-            "total": len(items),
-            "problems": [self._problem_row(learner, p) for p in items[:limit]],
-        }
-
-    def _next_topics(self, db, user, enrollment, now):
-        learner = self._learner(db, user, enrollment, now)
-        plan = (
-            learn.plan_for(db, self.catalog, user, enrollment, now, record=False)
-            if enrollment
-            else None
-        )
-        topics = recommend.next_topics(self.catalog, learner, plan, limit=4)
-        return {
-            "topics": [
-                {
-                    "lesson": lesson_link(self.catalog, t["id"]),
-                    "why": t["reason"],
-                    "band": BAND_WORDS[t["band"]],
-                    "minutes": t["minutes"],
-                }
-                for t in topics
-            ]
-        }
 
     def _get_concept_guide(self, db, user, enrollment, now, concept: str):
         resolved = resolve_concept(self.catalog, concept)
@@ -618,7 +377,6 @@ class Toolbox:
             return "Error: that topic is outside your current course."
         learn.require_unlocked(db, self.catalog, enrollment, resolved, now)
         c = self.catalog.concept(resolved)
-        index = practice.default_index()
         states = learn.states_for(db, enrollment) if enrollment else {}
         language = enrollment.language if enrollment else "python"
         return {
@@ -636,24 +394,11 @@ class Toolbox:
                 for r in c.resources
                 if not r.languages or language in r.languages
             ][:5],
-            "handbook": [
-                f"[§{h['chapter']} {h['title']}]({h['url']})" for h in index.book_for(resolved)
-            ],
             "socrat_problems": [
                 f"[{self.catalog.problem(p).title}](/problems/{p}) ({self.catalog.problem(p).difficulty})"
                 for p in c.problems
             ],
         }
-
-    def _get_codeforces_profile(self, db, user, enrollment, now):
-        view = library.account_view(library.account_for(db, user.id))
-        if view is None:
-            return "The learner has not linked a Codeforces handle (they can in Settings)."
-        view.pop("sync_error", None)
-        synced = view.pop("synced_at", None)
-        if synced:
-            view["synced_days_ago"] = round((now - synced) / DAY, 1)
-        return view
 
     def _get_weekly_report(self, db, user, enrollment, now):
         if enrollment is None:
@@ -682,17 +427,6 @@ class Toolbox:
             "latest_report": report or "No finished assessments yet.",
         }
 
-    def _save_problems(self, db, user, enrollment, now, problem_ids: list):
-        index = practice.default_index()
-        saved = []
-        for problem_id in [str(p) for p in problem_ids][:8]:
-            if problem_id in index.problems:
-                library.mark(db, self.catalog, user, problem_id, now, bookmarked=True)
-                saved.append(index.problems[problem_id]["title"])
-        if not saved:
-            return "Error: none of those ids are in the library."
-        return {"saved": saved, "where": "[your practice list](/library?status=bookmarked)"}
-
     # ------------------------------------------------------------ adaptive
 
     def _get_learner_profile(self, db, user, enrollment, now):
@@ -702,10 +436,9 @@ class Toolbox:
         skill = adaptive.build_profiles(db, self.catalog, enrollment, states, now)
         stuck = adaptive.stuck_map(skill, now)
         plan = learn.plan_for(db, self.catalog, user, enrollment, now, record=False)
-        learner = self._learner(db, user, enrollment, now)
         active = sorted((p for p in skill.values() if p.attempts), key=lambda p: -p.last_seen_at)
         return {
-            "level": adaptive.level_for(db, user.id, learner.rating, enrollment),
+            "level": adaptive.level_for(db, enrollment),
             "stuck": [
                 {
                     "concept": lesson_link(self.catalog, c),

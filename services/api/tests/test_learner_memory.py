@@ -33,7 +33,7 @@ def test_signals_are_off_by_default_and_refuse_what_is_not_this_learners(client,
     assert client.get("/api/v1/memory", headers=headers).status_code == 404
     client.app.state.settings.lesson_signals = True
     assert send(client, headers, concept, kind="simpler").status_code == 204
-    assert send(client, headers, "dsa:complexity", kind="simpler").status_code == 404
+    assert send(client, headers, "algo:arrays", kind="simpler").status_code == 404
     assert send(client, headers, concept, kind="cheer").status_code == 422
     assert send(client, headers, concept, kind="page", page=900).status_code == 422
 

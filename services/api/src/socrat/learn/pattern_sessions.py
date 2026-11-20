@@ -6,7 +6,6 @@ session. Returns None whenever no valid plan exists, so the caller keeps the exi
 composer: the flag can only add pattern sessions, never take a session away.
 """
 
-import math
 from collections import Counter
 from dataclasses import dataclass
 from functools import lru_cache
@@ -16,7 +15,6 @@ import yaml
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from socrat.catalog import practice
 from socrat.catalog.registry import Catalog
 from socrat.mastery.model import DAY, ConceptState
 from socrat.models import (
@@ -27,7 +25,6 @@ from socrat.models import (
     QuizResponse,
 )
 from socrat.planner import patterns as planner
-from socrat.quiz.config import COURSE_TRACK
 from socrat.quiz.config import DEFAULT as QUIZ
 from socrat.quiz.rating import p_correct
 
@@ -53,22 +50,9 @@ def contrasts(path: str) -> dict[str, dict]:
 def relevance(catalog: Catalog, track: str) -> dict[str, float]:
     """Track relevance per pattern, scaled to 0..1 across the pilot patterns."""
     raw: dict[str, float] = {}
-    if track == "foundations":
-        order = {concept: i for i, concept in enumerate(catalog.order)}
-        for pid, pattern in catalog.patterns.items():
-            raw[pid] = len(order) - order.get(pattern.concept, len(order))
-    else:
-        index = practice.default_index().problems
-        for pid, pattern in catalog.patterns.items():
-            linked = [index[p] for p in pattern.problems.external if p in index]
-            if track == "interview":
-                raw[pid] = sum(math.log1p(p.get("companies", 0)) for p in linked)
-            else:  # competitive: contest problems, weighted by how many people solve them
-                raw[pid] = sum(
-                    math.log1p(p.get("solvers", 0))
-                    for p in linked
-                    if p["id"].startswith(("cf:", "cses:"))
-                ) + len(pattern.problems.native)
+    order = {concept: i for i, concept in enumerate(catalog.order)}
+    for pid, pattern in catalog.patterns.items():
+        raw[pid] = len(order) - order.get(pattern.concept, len(order))
     top = max(raw.values(), default=0) or 1
     return {pid: value / top for pid, value in raw.items()}
 
@@ -84,9 +68,7 @@ def views(
     now: int,
     w: planner.Weights = planner.DEFAULT,
 ) -> list[planner.PatternView]:
-    track = (enrollment.goal or {}).get("track") or COURSE_TRACK.get(
-        enrollment.course_id, "interview"
-    )
+    track = (enrollment.goal or {}).get("track") or "foundations"
     scale = relevance(catalog, track)
     mine = [p for p in catalog.patterns.values() if p.concept in curriculum]
     abilities = {

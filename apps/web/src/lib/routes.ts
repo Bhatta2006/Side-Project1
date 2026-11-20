@@ -39,9 +39,6 @@ export const NAME = {
   settings: 'Settings',
   problems: 'Problems',
   practiceSets: 'Practice sets',
-  companies: 'Company questions',
-  sprint: 'Focus sprint',
-  companySprint: 'Company sprint',
   passport: 'Skill Passport',
   assessment: 'Weekly assessment',
 } as const;
@@ -52,7 +49,7 @@ export type NavKey = 'today' | 'skills' | 'practice' | 'playground' | 'evidence'
 export const NAV: { key: NavKey; href: string; label: string; owns: string[] }[] = [
   { key: 'today', href: '/today', label: NAME.today, owns: ['/today'] },
   { key: 'skills', href: '/plan', label: NAME.skills, owns: ['/plan', '/graph', '/learn', '/quiz', '/transfer', '/notes'] },
-  { key: 'practice', href: '/library', label: NAME.practice, owns: ['/library', '/companies', '/company-sprint', '/sprint', '/problems', '/studio'] },
+  { key: 'practice', href: '/studio', label: NAME.practice, owns: ['/problems', '/studio'] },
   { key: 'playground', href: '/playground', label: NAME.playground, owns: ['/playground'] },
   { key: 'evidence', href: '/progress', label: NAME.evidence, owns: ['/progress', '/assessments'] },
   { key: 'settings', href: '/settings', label: NAME.settings, owns: ['/settings'] },
@@ -68,25 +65,8 @@ export function navItems(shape?: { studio: string; name: string } | null, _featu
   return NAV.map(item => (item.key === 'practice' ? { ...item, href: '/studio', label } : item));
 }
 
-/**
- * Practice is the same page for every course. Practice sets (questions written for the course)
- * come first everywhere; a programming course adds its problem library and sprints, and DSA
- * its company questions. Each segment is a real route.
- */
-export const PRACTICE_SEGMENTS: { href: string; label: string; needs: keyof CourseFeatures }[] = [
-  { href: '/studio', label: NAME.practiceSets, needs: 'drills' },
-  { href: '/library', label: NAME.problems, needs: 'library' },
-  { href: '/companies', label: NAME.companies, needs: 'companies' },
-  { href: '/company-sprint', label: NAME.companySprint, needs: 'companies' },
-  { href: '/sprint', label: NAME.sprint, needs: 'library' },
-];
-
 /** Routes that belong to one kind of course; another course is sent to its own Practice. */
 export const COURSE_ROUTES: { root: string; needs: keyof CourseFeatures }[] = [
-  { root: '/library', needs: 'library' },
-  { root: '/sprint', needs: 'library' },
-  { root: '/companies', needs: 'companies' },
-  { root: '/company-sprint', needs: 'companies' },
   { root: '/problems', needs: 'code' },
 ];
 

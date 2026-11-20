@@ -32,8 +32,6 @@ from socrat.catalog.schema import Problem
 from socrat.config import Settings
 from socrat.coursegen import audience
 from socrat.learn import service as learn
-from socrat.library import recommend
-from socrat.library import service as library
 from socrat.mastery.model import band
 from socrat.mentor import service as mentor
 from socrat.models import (
@@ -189,9 +187,6 @@ def learner_sections(
     upcoming = [f"{a.kind}: [{a.title}]({activity_path(a.id)})" for a in plan.queue[:5]]
     recent = learn.history_for(db, enrollment, limit=6)
     streak = learn.streak(db, user, enrollment, now)
-    learner_state = library.learner_for(db, catalog, user, enrollment, now)
-    practice_level = recommend.level_view(learner_state.rating)
-    account = library.account_for(db, user.id)
     level = next(
         (x.label for x in course.levels if x.id == enrollment.level_id), enrollment.level_id
     )
@@ -199,8 +194,8 @@ def learner_sections(
     kind = (
         "programming"
         if offered["code"]
-        else f"not programming ({shape.effective(course).studio} studio): no code, no problem "
-        "library, no Codeforces; practice is Socrat's own practice sets at /studio"
+        else f"not programming ({shape.effective(course).studio} studio): no code, "
+        "practice is Socrat's own practice sets at /studio"
     )
     learner = (
         f"Name: {user.display_name or 'learner'}\n"
@@ -216,17 +211,6 @@ def learner_sections(
         f"Current pace: {plan.pace} ({plan.pace_reason})\n"
         f"Streak: {streak['current']} study days; projected finish {plan.projected_finish}\n"
         f"Today: {learn.local_day(user, now).isoformat()}"
-        + (
-            f"\nPractice level: {practice_level['name']} (~{practice_level['rating']}); "
-            f"{len(learner_state.solved)} library problems solved"
-            if offered["library"]
-            else ""
-        )
-        + (
-            f"\nCodeforces: {account.handle}, rating {account.rating or 'unrated'}"
-            if account and offered["codeforces"]
-            else ""
-        )
     )
     mastery = "\n".join(
         f"{name}: {', '.join(values[:12])}" for name, values in groups.items() if values

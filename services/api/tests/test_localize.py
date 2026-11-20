@@ -35,7 +35,7 @@ Calling `pop()` on an empty stack raises an error.
 
 
 def fixture_concept():
-    base = default_catalog().concept("cp:bitmasks")
+    base = default_catalog().concept("algo:graphs")
     quiz = QuizItem(
         id="lifo",
         prompt="Which item does pop remove from a stack?",
@@ -184,7 +184,7 @@ def test_english_is_not_a_target(client):
 # ------------------------------------------------------------ storing and overlays
 
 
-def store(client, qualified="cp:bitmasks", units=None):
+def store(client, qualified="algo:graphs", units=None):
     concept = default_catalog().concept(qualified)
     result = translate.Result(units or {"title": "बिट मास्क"}, "test-model", 0.0, 1)
     with Session(client.app.state.engine) as db, db.begin():
@@ -195,7 +195,7 @@ def store(client, qualified="cp:bitmasks", units=None):
 def test_saving_twice_replaces_and_resets_review(client):
     store(client)
     with Session(client.app.state.engine) as db, db.begin():
-        db.get(ContentTranslation, ("cp:bitmasks", "hi")).status = "reviewed"
+        db.get(ContentTranslation, ("algo:graphs", "hi")).status = "reviewed"
     row = store(client, units={"title": "बिट मास्क v2"})
     assert row["status"] == "machine" and row["reviewer"] is None
     assert row["units"]["title"].endswith("v2")
@@ -204,7 +204,7 @@ def test_saving_twice_replaces_and_resets_review(client):
 
 
 def test_overlay_swaps_text_only_and_goes_stale_with_the_english(client):
-    qualified = "cp:bitmasks"
+    qualified = "algo:graphs"
     concept = default_catalog().concept(qualified)
     store(client, units={"title": "बिट मास्क", "key_points.0": "पहला बिंदु"})
     view = dict(
@@ -246,24 +246,22 @@ def test_the_script_check_and_glossary_cover_the_launch_locales():
 def test_the_learner_picks_a_language_and_the_lesson_follows(client):
     headers = login(client)
     onboard(client, headers)
-    english = client.get("/api/v1/concepts/zero:programs-and-output").json()
+    english = client.get("/api/v1/concepts/basics:values").json()
     assert english["translation"] is None
-    store(client, "zero:programs-and-output", {"title": "प्रोग्राम और आउटपुट"})
+    store(client, "basics:values", {"title": "प्रोग्राम और आउटपुट"})
 
     assert client.patch("/api/v1/me", json={"locale": "xx"}, headers=headers).status_code == 422
     me = client.patch("/api/v1/me", json={"locale": "hi"}, headers=headers).json()
     assert me["locale"] == "hi"
-    got = client.get("/api/v1/concepts/zero:programs-and-output").json()
+    got = client.get("/api/v1/concepts/basics:values").json()
     assert got["title"] == "प्रोग्राम और आउटपुट" and got["translation"]["status"] == "machine"
     assert got["lesson"] == english["lesson"]  # that unit was not translated: English stays
     # ?locale=en shows the original for one view without changing the account.
-    original = client.get("/api/v1/concepts/zero:programs-and-output?locale=en").json()
+    original = client.get("/api/v1/concepts/basics:values?locale=en").json()
     assert original["title"] == english["title"] and original["translation"] is None
     assert client.get("/api/v1/me").json()["locale"] == "hi"
     client.patch("/api/v1/me", json={"locale": "en"}, headers=headers)
-    assert (
-        client.get("/api/v1/concepts/zero:programs-and-output").json()["title"] == english["title"]
-    )
+    assert client.get("/api/v1/concepts/basics:values").json()["title"] == english["title"]
 
 
 def test_locales_are_listed_for_anyone_with_a_suggestion(client):
@@ -283,14 +281,14 @@ def test_admin_translates_and_one_named_person_reviews(client, boss, monkeypatch
         return translate.Result({"title": "बिट मास्क"}, "test-model", 0.0, 1)
 
     monkeypatch.setattr(locale_routes.translate, "translate", fake)
-    body = {"concept": "cp:bitmasks", "locale": "hi"}
+    body = {"concept": "algo:graphs", "locale": "hi"}
     url = "/api/v1/admin/translations"
     assert client.post(url, json=body, headers=boss).json()["status"] == "machine"
     queue = client.get(url, headers=boss).json()["items"]
     assert [(i["concept"], i["status"], i["stale"]) for i in queue] == [
-        ("cp:bitmasks", "machine", False)
+        ("algo:graphs", "machine", False)
     ]
-    review = f"{url}/cp:bitmasks/hi/review"
+    review = f"{url}/algo:graphs/hi/review"
     assert client.post(review, json={"reviewer": "A"}, headers=boss).status_code == 422
     done = client.post(review, json={"reviewer": "Asha Verma"}, headers=boss).json()
     assert done["status"] == "reviewed" and done["reviewer"] == "Asha Verma"
@@ -300,7 +298,7 @@ def test_admin_translates_and_one_named_person_reviews(client, boss, monkeypatch
 
 def test_translation_failures_are_reported_plainly(client, boss, monkeypatch):
     url = "/api/v1/admin/translations"
-    body = {"concept": "cp:bitmasks", "locale": "hi"}
+    body = {"concept": "algo:graphs", "locale": "hi"}
     # No model configured in tests: honest 503, nothing stored.
     assert client.post(url, json=body, headers=boss).status_code == 503
 
@@ -318,11 +316,11 @@ def test_translation_management_is_admin_only(client):
     headers = login(client)
     url = "/api/v1/admin/translations"
     assert client.get(url, headers=headers).status_code == 403
-    body = {"concept": "cp:bitmasks", "locale": "hi"}
+    body = {"concept": "algo:graphs", "locale": "hi"}
     assert client.post(url, json=body, headers=headers).status_code == 403
     assert (
         client.post(
-            f"{url}/cp:bitmasks/hi/review", json={"reviewer": "Asha Verma"}, headers=headers
+            f"{url}/algo:graphs/hi/review", json={"reviewer": "Asha Verma"}, headers=headers
         )
     ).status_code == 403
 
@@ -343,7 +341,7 @@ def test_the_tutor_is_told_the_language_without_loosening_the_rules():
 def test_quiz_text_is_translated_but_grading_and_shuffling_are_not(client):
     headers = login(client)
     onboard(client, headers)
-    qualified = "zero:programs-and-output"
+    qualified = "basics:values"
     concept = default_catalog().concept(qualified)
     first = concept.quiz[0]
     # What a translator would return, in a form that shows which authored option each is.

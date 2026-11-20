@@ -132,11 +132,11 @@ def test_tidy_drops_bad_related_links_and_keeps_good_ones():
         "loss",
         "what-is-ml",
         "no-such-thing",
-        "zero:programs-and-output",
-        "zero:programs-and-output",
+        "basics:values",
+        "basics:values",
     ]
     tidy(outline, default_catalog())
-    assert loss["related"] == ["zero:programs-and-output"]
+    assert loss["related"] == ["basics:values"]
 
 
 def test_tidy_repairs_values_code_can_fix_instead_of_a_new_round():
@@ -185,7 +185,7 @@ def test_a_large_module_is_detailed_in_small_parallel_chunks(client, admin):  # 
 
     full = copy.deepcopy(OUTLINE)
     first = full["modules"][0]
-    first["concepts"] = [concept("what-is-ml", ["zero:programs-and-output"])] + [
+    first["concepts"] = [concept("what-is-ml", ["basics:values"])] + [
         concept(f"step-{i}", ["what-is-ml"]) for i in range(9)
     ]
     full["levels"][1]["start_concept"] = "step-0"

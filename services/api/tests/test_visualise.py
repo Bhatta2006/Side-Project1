@@ -54,8 +54,8 @@ def test_a_parts_request_is_built_from_the_lesson_and_keyed_apart_from_the_lesso
     prompt = shared.prompt_for_part(concept, title, text)
     assert "Changing it" in prompt and "Assign again." in prompt and "Variables" in prompt
     assert len(shared.prompt_for_part(concept, title, "x" * 9000)) <= 4000
-    assert shared.key_for("zero:variables", None) == "zero:variables"
-    assert shared.key_for("zero:variables", 3) == "zero:variables#3"
+    assert shared.key_for("basics:values", None) == "basics:values"
+    assert shared.key_for("basics:values", 3) == "basics:values#3"
     one = shared.fingerprint_part(concept, title, text)
     assert one != shared.fingerprint_part(concept, title, text + " Edited.")
     assert one == shared.fingerprint_part(concept, title, text)

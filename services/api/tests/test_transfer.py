@@ -17,8 +17,8 @@ from socrat.models import ActivityRecord, AssistantThread, Enrollment, Evidence,
 from socrat.planner import gates
 
 CAT = default_catalog()
-FIRST = CAT.course("zero").modules[0]
-CONCEPT = f"zero:{FIRST.concepts[0]}"  # programs-and-output: two problems, no prerequisites
+FIRST = CAT.course("basics").modules[0]
+CONCEPT = f"basics:{FIRST.concepts[0]}"  # programs-and-output: two problems, no prerequisites
 STRONG = dict(alpha=20.0, beta=1.0, evidence_count=8, review_step=3)
 
 
@@ -104,19 +104,17 @@ def wrong_choice(view):
 
 
 def test_choices_are_four_unique_stable_and_never_a_neighbour():
-    scope = set(CAT.closure(CAT.course_concepts("zero")))
+    scope = set(CAT.closure(CAT.course_concepts("basics")))
     first = transfer.choices(CAT, CONCEPT, "seed", scope, set())
     assert first == transfer.choices(CAT, CONCEPT, "seed", scope, set())
     assert len(first) == transfer.CHOICES == len(set(first)) and CONCEPT in first
     follow_on = {c for c in scope if CONCEPT in CAT.prerequisites[c]}
     assert follow_on and not follow_on & set(first)
-    assert (
-        transfer.choices(CAT, CONCEPT, "seed", {CONCEPT, "zero:variables-and-types"}, set()) is None
-    )
+    assert transfer.choices(CAT, CONCEPT, "seed", {CONCEPT, "basics:text"}, set()) is None
 
 
 def test_distractors_come_from_what_the_learner_has_met():
-    scope = set(CAT.closure(CAT.course_concepts("zero")))
+    scope = set(CAT.closure(CAT.course_concepts("basics")))
     near = {CONCEPT, *CAT.prerequisites[CONCEPT]} | {
         c for c in scope if CONCEPT in CAT.prerequisites[c]
     }
@@ -139,18 +137,19 @@ def test_status_follows_the_attempt():
 
 def test_a_module_is_held_only_by_an_offered_check_nobody_has_moved_past():
     states = {CONCEPT: mastered(now())}
-    done = {gates.gate_id(f"zero:{FIRST.id}")}
-    args = (CAT, "zero", states, done, now())
-    held = transfer.blocking_modules(CAT, "zero", {CONCEPT: "due"}, states, done, now())
-    assert held == {f"zero:{FIRST.id}"}
-    assert not gates.cleared(CAT, f"zero:{FIRST.id}", *args[2:], held=held)
+    done = {gates.gate_id(f"basics:{FIRST.id}")}
+    args = (CAT, "basics", states, done, now())
+    held = transfer.blocking_modules(CAT, "basics", {CONCEPT: "due"}, states, done, now())
+    assert held == {f"basics:{FIRST.id}"}
+    assert not gates.cleared(CAT, f"basics:{FIRST.id}", *args[2:], held=held)
     assert (
-        transfer.blocking_modules(CAT, "zero", {CONCEPT: "verified"}, states, done, now()) == set()
+        transfer.blocking_modules(CAT, "basics", {CONCEPT: "verified"}, states, done, now())
+        == set()
     )
-    assert transfer.blocking_modules(CAT, "zero", {}, states, done, now()) == set()
-    nxt = f"zero:{CAT.course('zero').modules[1].concepts[0]}"
+    assert transfer.blocking_modules(CAT, "basics", {}, states, done, now()) == set()
+    nxt = f"basics:{CAT.course('basics').modules[1].concepts[0]}"
     moved = {**states, nxt: mastered(now())}
-    assert transfer.blocking_modules(CAT, "zero", {CONCEPT: "due"}, moved, done, now()) == set()
+    assert transfer.blocking_modules(CAT, "basics", {CONCEPT: "due"}, moved, done, now()) == set()
 
 
 # ---------------------------------------------------------------- the check, end to end
@@ -262,7 +261,7 @@ def test_a_problem_the_learner_has_met_is_never_offered(client):
     with Session(client.app.state.engine) as db, db.begin():
         enrollment = db.scalar(select(Enrollment).where(Enrollment.active.is_(True)))
         for pid, (owner, problem) in CAT.problems.items():
-            if owner == "zero" and f"zero:{problem.concepts[0]}" == CONCEPT:
+            if owner == "basics" and f"basics:{problem.concepts[0]}" == CONCEPT:
                 db.add(ActivityRecord(enrollment_id=enrollment.id, activity_id=f"problem:{pid}"))
     assert check(client)["state"] == "unavailable"
     assert classify(client, headers, view, CONCEPT).status_code == 409
@@ -282,7 +281,7 @@ def test_an_unmastered_concept_has_no_check_and_a_stale_problem_is_refused(clien
     assert stale.status_code == 409 and view["state"] == "classify"
     elsewhere = client.post(
         f"/api/v1/transfer/{CONCEPT}/classify",
-        json={"problem": view["problem"]["id"], "choice": "zero:not-offered"},
+        json={"problem": view["problem"]["id"], "choice": "basics:not-offered"},
         headers=headers,
     )
     assert elsewhere.status_code == 422
@@ -290,7 +289,7 @@ def test_an_unmastered_concept_has_no_check_and_a_stale_problem_is_refused(clien
 
 def test_a_passed_checkpoint_holds_the_next_module_until_the_check_is_passed(client):
     headers = learner(client)
-    module = f"zero:{FIRST.id}"
+    module = f"basics:{FIRST.id}"
     with Session(client.app.state.engine) as db, db.begin():
         enrollment = db.scalar(select(Enrollment).where(Enrollment.active.is_(True)))
         db.add(
@@ -319,7 +318,7 @@ def test_transfer_cannot_be_completed_directly(client):
     assert check(client)["state"] == "classify"
 
 
-@pytest.mark.parametrize("path", ["/transfer/dsa:arrays-hashing", "/transfer/zero:nope"])
+@pytest.mark.parametrize("path", ["/transfer/algo:arrays", "/transfer/basics:nope"])
 def test_concepts_outside_the_course_are_not_found(client, path):
     headers = login(client)
     onboard(client, headers)

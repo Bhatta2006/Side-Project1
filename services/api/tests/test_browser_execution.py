@@ -55,13 +55,13 @@ def test_browser_submit_gets_inputs_only_and_is_judged_by_digest(client):
     headers = login(client)
     onboard(client, headers)
     job = client.post(
-        "/api/v1/problems/greeting/submit", json={"source": "print(1)"}, headers=headers
+        "/api/v1/problems/double-it/submit", json={"source": "print(1)"}, headers=headers
     ).json()
     assert job["status"] == "running"
     task = job["browser"]
     assert task["language"] == "python" and task["time_limit_ms"] >= 1500
     assert all(set(t) == {"index", "input"} for t in task["tests"])
-    expected = expected_outputs("greeting")
+    expected = expected_outputs("double-it")
     assert len(task["tests"]) == len(expected)
     assert "expected" not in str(job) and "Welcome to Socrat" not in str(job)
 
@@ -72,7 +72,7 @@ def test_browser_submit_gets_inputs_only_and_is_judged_by_digest(client):
     assert again.json()["verdict"] == "wrong_answer"
 
     job = client.post(
-        "/api/v1/problems/greeting/submit", json={"source": "print(2)"}, headers=headers
+        "/api/v1/problems/double-it/submit", json={"source": "print(2)"}, headers=headers
     ).json()
     # Trailing spaces and CRLF do not matter, as with the worker judge.
     accepted = report(client, headers, job, [o.replace("\n", "  \r\n") for o in expected])
@@ -80,7 +80,7 @@ def test_browser_submit_gets_inputs_only_and_is_judged_by_digest(client):
     assert accepted.json()["browser"] is None
     hidden = [c for c in accepted.json()["cases"] if not c["public"]]
     assert hidden and all(c["expected"] is None and c["stdout"] is None for c in hidden)
-    assert client.get("/api/v1/problems/greeting").json()["solved"]
+    assert client.get("/api/v1/problems/double-it").json()["solved"]
     assert client.get("/api/v1/progress").json()["solves"]["independent_solves"] == 1
 
 
@@ -88,7 +88,7 @@ def test_browser_reports_need_the_token_owner_and_a_known_status(client):
     headers = login(client)
     onboard(client, headers)
     job = client.post(
-        "/api/v1/problems/greeting/run", json={"source": "print(1)"}, headers=headers
+        "/api/v1/problems/double-it/run", json={"source": "print(1)"}, headers=headers
     ).json()
     n = len(job["browser"]["tests"])
     body = dict(
@@ -111,7 +111,7 @@ def test_custom_input_runs_report_their_output(client):
     headers = login(client)
     onboard(client, headers)
     job = client.post(
-        "/api/v1/problems/greeting/run",
+        "/api/v1/problems/double-it/run",
         json={"source": "print(input())", "custom_input": "Ada"},
         headers=headers,
     ).json()

@@ -49,7 +49,7 @@ def test_exercises_are_accepted_only_when_the_checker_accepts_their_own_answers(
 def _catalog_with_exercises():
     cat = copy.deepcopy(default_catalog())
     first = next(
-        q for q, c in cat.concepts.items() if q.startswith("zero:") and not cat.prerequisites[q]
+        q for q, c in cat.concepts.items() if q.startswith("basics:") and not cat.prerequisites[q]
     )
     exercises = [
         Exercise.model_validate(exercise()),

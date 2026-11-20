@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from socrat.catalog.registry import Catalog
 from socrat.catalog.schema import QuizItem
 from socrat.learn import service as learn
-from socrat.library import service as library
+from socrat.learn.views import solved_problems
 from socrat.mastery.model import DAY, ConceptState, band
 from socrat.models import (
     ActivityRecord,
@@ -350,7 +350,7 @@ def plan(
         learn.states_for(db, enrollment),
         exposure,
         set(learn.locked_concepts(db, catalog, enrollment, now)),
-        library.native_solved(db, user.id),
+        solved_problems(db, user.id),
         seen_keys(db, enrollment),
         now,
         f"{enrollment.id}:{week}",

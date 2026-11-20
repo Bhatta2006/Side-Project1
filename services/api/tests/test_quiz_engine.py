@@ -77,25 +77,11 @@ def test_band_for_theta():
 
 
 def test_pool_partition_is_stable_and_near_seventy_percent():
-    keys = [f"dsa:x:item-{n}" for n in range(4000)]
+    keys = [f"algo:x:item-{n}" for n in range(4000)]
     first = [pools.pool_for_key(k) for k in keys]
     assert first == [pools.pool_for_key(k) for k in keys]
     share = first.count("practice") / len(first)
     assert 0.67 < share < 0.73
-
-
-def test_legacy_bank_wraps_every_item_with_bands_and_pools():
-    catalog = default_catalog()
-    items = pools.keep_practice(pools.legacy_bank(catalog))
-    total = sum(len(c.quiz) for c in catalog.concepts.values())
-    assert len(items) == total >= 284
-    assert len({i.key for i in items}) == total
-    assert {i.band for i in items} <= {1, 2, 3, 4, 5}  # difficulty n is band n, so no band is empty
-    assert all(i.d_prior == DEFAULT.prior(i.band) for i in items)
-    assert all(i.status == "provisional" and i.reviewed for i in items)
-    counts = pools.summary(items)
-    assert all(c["practice"] >= 1 for c in counts.values())
-    assert sum(c["assessment"] for c in counts.values()) > 30
 
 
 def test_code_items_start_at_band_two():
@@ -218,7 +204,7 @@ def test_prerequisite_cap_limits_bands():
 
 def test_assessment_modes_fail_closed_without_calibrated_items():
     items = pools.bank(default_catalog())
-    concepts = ["dsa:sliding-window"]
+    concepts = ["algo:arrays"]
     for mode in ("placement", "checkpoint", "weekly"):
         assert not modes.available(DEFAULT.modes[mode], concepts, items)
     assert modes.available(CHECK, concepts, items)
@@ -282,9 +268,9 @@ def test_family_items_render_with_hints_and_count_only_after_review():
 
     family = QuizFamily.model_validate(
         dict(
-            id="quiz:dsa:sliding-window:fixed-sum",
+            id="quiz:algo:arrays:fixed-sum",
             family="fixed-sum",
-            concept="dsa:sliding-window",
+            concept="algo:arrays",
             format="mcq",
             tracks=["interview"],
             languages=["python"],
@@ -305,8 +291,8 @@ def test_family_items_render_with_hints_and_count_only_after_review():
         )
     )
     (item,) = pools.family_bank({family.id: family})
-    assert item.key == "quiz:dsa:sliding-window:fixed-sum:one"
-    assert item.pattern == "dsa:sliding-window" and item.pool == "practice"
+    assert item.key == "quiz:algo:arrays:fixed-sum:one"
+    assert item.pattern == "algo:arrays" and item.pool == "practice"
     assert not item.reviewed and item.misconceptions[1] == "syntax-delimiters"
     shown = service.render(SimpleNamespace(quiz_families={family.id: family}), item, "s", "python")
     assert shown["options"][shown["answer"]] == "5"

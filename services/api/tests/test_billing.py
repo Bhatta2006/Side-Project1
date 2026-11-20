@@ -57,7 +57,7 @@ def test_free_plan_limits_then_paid_unlocks(paid):
     api, headers, _ = paid
     uid = user_id(api)
     catalog = default_catalog()
-    locked = next(f"dsa:{c}" for m in catalog.course("dsa").modules[2:] for c in m.concepts)
+    locked = next(f"algo:{c}" for m in catalog.course("algo").modules[2:] for c in m.concepts)
     with Session(api.app.state.engine) as db, db.begin():
         with pytest.raises(HTTPException) as err:
             entitlements.require_concept(db, catalog, uid, locked, 0)
@@ -199,13 +199,13 @@ def test_plus_upgrades_to_pro_without_losing_access_and_cancels_the_old_plan(pai
 def test_free_learners_cannot_reach_paid_content_by_any_route(paid):
     api, headers, _ = paid
     catalog = default_catalog()
-    locked = next(f"zero:{c}" for m in catalog.course("zero").modules[2:] for c in m.concepts)
-    module = catalog.course("zero").modules[2].id
+    locked = next(f"basics:{c}" for m in catalog.course("basics").modules[2:] for c in m.concepts)
+    module = catalog.course("basics").modules[2].id
     for method, path in [
         ("get", f"/api/v1/concepts/{locked}"),
         ("get", f"/api/v1/quiz/quiz:{locked}"),
         ("get", f"/api/v1/quiz/review:{locked}"),
-        ("get", f"/api/v1/quiz/checkpoint:zero:{module}"),
+        ("get", f"/api/v1/quiz/checkpoint:basics:{module}"),
         ("post", f"/api/v1/activities/lesson:{locked}/start"),
         ("post", "/api/v1/assessments/start"),
     ]:
@@ -221,29 +221,3 @@ def test_free_learners_cannot_reach_paid_content_by_any_route(paid):
         assert not set(
             learn.practice_topics(db, catalog, enrollment, 0)
         ) - entitlements.free_concepts(catalog)
-
-
-def test_company_questions_are_pro_only(paid):
-    api, headers, _ = paid
-    assert api.get("/api/v1/companies", headers=headers).json()["locked"] is True
-    slug = next(
-        iter(__import__("socrat.catalog.practice", fromlist=["x"]).default_index().companies)
-    )
-    reply = api.get(f"/api/v1/companies/{slug}", headers=headers)
-    assert reply.status_code == 402 and reply.json()["error"]["code"] == "pro_required"
-    with Session(api.app.state.engine) as db, db.begin():
-        from socrat.models import Subscription
-
-        db.add(
-            Subscription(
-                user_id=user_id(api),
-                plan="plus",
-                interval="month",
-                currency="INR",
-                status="active",
-                razorpay_subscription_id="sub_x",
-                current_end=2**31 - 1,
-            )
-        )
-    assert api.get(f"/api/v1/companies/{slug}", headers=headers).status_code == 402
-    assert api.post("/api/v1/assessments/start", headers=headers, json={}).status_code != 402

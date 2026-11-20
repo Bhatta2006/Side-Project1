@@ -3,8 +3,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 /** WCAG 2.1 A/AA checks on every main page, light and dark. Serious or critical issues fail. */
 const PAGES = [
-  '/today', '/plan', '/library', '/assessments', '/sprint', '/progress', '/settings', '/companies',
-  '/learn/zero/programs-and-output', '/problems/greeting', '/quiz/zero/programs-and-output',
+  '/today', '/plan', '/assessments', '/progress', '/settings',
+  '/learn/zero/programs-and-output', '/problems/double-it', '/quiz/zero/programs-and-output',
   '/quiz/checkpoint/zero/first-steps',
 ];
 

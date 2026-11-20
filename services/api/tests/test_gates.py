@@ -53,9 +53,9 @@ def test_checkpoint_pool_only_asks_about_the_learners_language():
     from socrat.learn.quizzes import gate_pool
 
     cat = default_catalog()
-    everything = gate_pool(cat, "zero:first-steps", "python")
+    everything = gate_pool(cat, "basics:start", "python")
     assert any(not q.fits("cpp") for _, q in everything)  # the module does have Python-only items
-    cpp = gate_pool(cat, "zero:first-steps", "cpp")
+    cpp = gate_pool(cat, "basics:start", "cpp")
     assert cpp and all(q.fits("cpp") for _, q in cpp)
 
 
@@ -92,16 +92,16 @@ def test_renamed_items_still_resolve_from_stored_sessions():
 
 def test_modules_unlock_in_order_and_known_modules_are_cleared():
     catalog = default_catalog()
-    keys = gates.module_keys(catalog, "zero")
-    locked = gates.locked_modules(catalog, "zero", {}, set(), NOW)
+    keys = gates.module_keys(catalog, "basics")
+    locked = gates.locked_modules(catalog, "basics", {}, set(), NOW)
     assert keys[0] not in locked and set(locked) == set(keys[1:])
     assert all(gate == gates.gate_id(keys[0]) for gate in locked.values())
 
-    passed_first = gates.locked_modules(catalog, "zero", {}, {gates.gate_id(keys[0])}, NOW)
+    passed_first = gates.locked_modules(catalog, "basics", {}, {gates.gate_id(keys[0])}, NOW)
     assert keys[1] not in passed_first and passed_first[keys[2]] == gates.gate_id(keys[1])
 
     known = {c: ConceptState(assumed=True) for c in gates.module_concepts(catalog, keys[0])}
-    assert keys[1] not in gates.locked_modules(catalog, "zero", known, set(), NOW)
+    assert keys[1] not in gates.locked_modules(catalog, "basics", known, set(), NOW)
 
 
 def answer_gate(client, headers, gate: str, right: bool) -> dict:  # noqa: F811
@@ -124,9 +124,12 @@ def test_gate_locks_the_next_module_until_passed(client, monkeypatch):  # noqa: 
     headers = login(client)
     onboard(client, headers)  # Programming from Zero, brand new: active immediately
     # The day-long wait after a miss is the strict mode's rule (socrat.learning_mode).
-    assert client.patch("/api/v1/me", json={"learning_mode": "strict"}, headers=headers).status_code == 200
+    assert (
+        client.patch("/api/v1/me", json={"learning_mode": "strict"}, headers=headers).status_code
+        == 200
+    )
     catalog = default_catalog()
-    first, second = gates.module_keys(catalog, "zero")[:2]
+    first, second = gates.module_keys(catalog, "basics")[:2]
     locked_concept = gates.module_concepts(catalog, second)[0]
     gate = gates.gate_id(first)
 

@@ -220,8 +220,6 @@ class Settings(DatabaseSettings):
     # them into the course folder for a commit. Empty means the repository defaults.
     content_drafts_dir: str = ""
     content_courses_dir: str = ""
-    # Re-sync linked Codeforces profiles in the background (off in tests: no network).
-    codeforces_autosync: bool = True
     # Course generation (docs/architecture/course-generation.md). Each agent role may use its
     # own provider, model, effort and prices, e.g. SOCRAT_GEN_ROLES='{"critic": {"provider":
     # "openai", "model": "...", "base_url": "..."}}'; unset keys fall back to SOCRAT_AI_*.
@@ -389,9 +387,6 @@ class Settings(DatabaseSettings):
 
     # The signed-out "try a problem" tutor on the landing page. It shares the global AI
     # budgets and has its own daily cap and per-visitor limits.
-    try_tutor_enabled: bool = True
-    try_daily_budget_usd: float = Field(default=3.0, ge=0, le=10_000)
-    try_messages_per_hour: int = Field(default=20, ge=1, le=500)
 
     # Email-and-password accounts. One-time codes are sent through Resend (resend.com) from a
     # verified domain; email_from looks like "Socrat <no-reply@example.com>".
@@ -476,7 +471,6 @@ class Settings(DatabaseSettings):
         if self.gen_relaxed_gates and self.environment in {"staging", "production"}:
             raise ValueError("SOCRAT_GEN_RELAXED_GATES is for local testing only")
         if self.environment == "test":
-            self.codeforces_autosync = False
             self.gen_runner = False
         from socrat.coursegen.roles import check_roles, check_tiers
 

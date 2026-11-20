@@ -29,7 +29,7 @@ FREE_MODULES = 2  # per course
 PLAN_GATE = "plan"  # the gate `learn.locked_concepts` reports for content outside the plan
 RANK = {"free": 0, "plus": 1, "pro": 2}
 # Features beyond lessons and chat: feature -> the lowest plan that includes it.
-TIER = {"assessment": "plus", "companies": "pro"}
+TIER = {"assessment": "plus"}
 
 # feature -> (messages, window). 0 messages = locked.
 PLANS = {

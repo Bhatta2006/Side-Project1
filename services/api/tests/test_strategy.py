@@ -6,7 +6,7 @@ from test_learner_api import client, login, onboard  # noqa: F401
 from socrat.catalog.registry import default_catalog
 from socrat.engine import domains, evidence_library, strategy
 
-CONCEPT = "zero:programs-and-output"
+CONCEPT = "basics:values"
 
 
 def test_every_technique_in_the_prompt_is_in_the_library_with_its_evidence():

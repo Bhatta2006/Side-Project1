@@ -1,8 +1,13 @@
 """Keep synthetic API tests independent of private developer deployment settings."""
 
-import pytest
+import content_fixture
 
-from socrat.config import DatabaseSettings, Settings
+# Before anything imports socrat.catalog: it reads these paths once, at import.
+content_fixture.install()
+
+import pytest  # noqa: E402
+
+from socrat.config import DatabaseSettings, Settings  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

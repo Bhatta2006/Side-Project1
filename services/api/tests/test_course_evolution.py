@@ -76,7 +76,7 @@ def test_generated_concepts_get_a_bridge_option_in_the_same_group():
     from socrat.coursegen.package import AI_AUTHOR
 
     cat = default_catalog()
-    hand = next(k for k, p in cat.prerequisites.items() if p and k.startswith("zero:"))
+    hand = next(k for k, p in cat.prerequisites.items() if p and k.startswith("basics:"))
     weak = cat.prerequisites[hand][0]
     assert [d.kind for d in suggest._gap(cat, hand, weak, "Stuck.")] == ["repair"]
     made = copy.copy(cat)
@@ -124,7 +124,7 @@ def test_a_bridge_is_never_offered_on_someone_elses_course(client):
         "bridge:x",
         "Bridge",
         "Why.",
-        {"concept": "zero:programs-and-output", "for": "zero:loops"},
+        {"concept": "basics:values", "for": "basics:loops"},
     )
     with Session(client.app.state.engine) as db, db.begin():
         enrollment = db.scalars(select(Enrollment)).one()

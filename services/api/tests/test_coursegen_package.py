@@ -328,8 +328,8 @@ def test_links_must_be_public_https():
 
 
 def test_lesson_gates_and_verdict_rules():
-    course = default_catalog().course("zero")
-    concept = default_catalog().concept("zero:programs-and-output")
+    course = default_catalog().course("basics")
+    concept = default_catalog().concept("basics:values")
     short = pkg.check_lesson(concept, course, {"lesson": "## a\n```rust\nx\n```"})
     assert any("characters" in p for p in short) and any("rust" in p for p in short)
     assert not any("<details>" in p for p in short)  # missing self-checks do not block

@@ -6,7 +6,7 @@ from test_learner_api import client, login, onboard  # noqa: F401  (client is a 
 def test_resources_are_ranked_and_feedback_reorders_them(client):  # noqa: F811
     headers = login(client)
     onboard(client, headers)
-    concept = "zero:programs-and-output"
+    concept = "basics:values"
     view = client.get(f"/api/v1/concepts/{concept}").json()
     resources = view["resources"]
     assert resources and sum(r["picked"] for r in resources) == min(3, len(resources))

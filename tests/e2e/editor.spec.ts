@@ -15,7 +15,7 @@ test('editor settings, reset and the resizable split', async ({ page }, info) =>
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Create my plan' }).click();
   await expect(page).toHaveURL(/\/today$/);
-  await page.goto('/problems/greeting');
+  await page.goto('/problems/double-it');
   const content = page.locator('.cm-content');
   await expect(content).toBeVisible();
   const starter = await content.innerText();

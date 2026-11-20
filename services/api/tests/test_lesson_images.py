@@ -166,7 +166,7 @@ def test_the_subject_of_a_lesson_title():
 
 def test_pictures_are_off_until_turned_on(client):  # noqa: F811
     onboard(client, login(client))
-    response = client.get("/api/v1/concepts/zero:programs-and-output/images")
+    response = client.get("/api/v1/concepts/basics:values/images")
     assert response.status_code == 404
 
 

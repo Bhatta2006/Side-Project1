@@ -7,7 +7,7 @@ import { Search } from '@/components/icons';
 const load = () => import('@/components/command-palette');
 const CommandPalette = dynamic(load, { ssr: false });
 
-/** Ctrl K or ⌘K: jump to any page, lesson or library problem. The dialog loads on first use. */
+/** Ctrl K or ⌘K: jump to any page or lesson. The dialog loads on first use. */
 export function CommandMenu() {
   const [open, setOpen] = useState(false);
   const [used, setUsed] = useState(false);

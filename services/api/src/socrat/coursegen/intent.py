@@ -453,7 +453,6 @@ SUBJECT_SUGGESTIONS = [
     ("chemistry", "Chemistry", "Maths and science"),
     ("biology", "Biology", "Maths and science"),
     ("programming", "Programming", "Computing"),
-    ("dsa", "Data structures and algorithms", "Computing"),
     ("ml", "Machine learning and AI", "Computing"),
     ("electronics", "Electronics", "Engineering"),
     ("music", "Music and instruments", "Creative"),

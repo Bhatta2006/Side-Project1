@@ -17,9 +17,6 @@ Mode = Literal["placement", "concept_check", "review", "checkpoint", "weekly", "
 Pool = Literal["practice", "assessment"]
 
 TRACKS: tuple[Track, ...] = ("foundations", "interview", "competitive")
-COURSE_TRACK: Mapping[str, Track] = MappingProxyType(
-    {"zero": "foundations", "dsa": "interview", "cp": "competitive"}
-)
 
 
 @dataclass(frozen=True)

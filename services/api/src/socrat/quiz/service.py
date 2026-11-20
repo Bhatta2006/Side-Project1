@@ -28,7 +28,7 @@ from socrat.models import (
     QuizResponse,
 )
 from socrat.quiz import engine, modes, pools
-from socrat.quiz.config import COURSE_TRACK, DEFAULT, TRACKS, EngineConfig, Mode, ModeSpec, Track
+from socrat.quiz.config import DEFAULT, TRACKS, EngineConfig, Mode, ModeSpec, Track
 from socrat.quiz.pools import Item
 from socrat.quiz.selection import Context, Outcome, Step
 
@@ -76,7 +76,7 @@ def track_for(enrollment: Enrollment) -> Track:
     chosen = (enrollment.goal or {}).get("track")
     if chosen in TRACKS:
         return chosen
-    return COURSE_TRACK.get(enrollment.course_id, "interview")
+    return "foundations"  # a generated course sets its own bar; the learner may choose a track
 
 
 # ---------------------------------------------------------------- item content

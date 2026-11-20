@@ -14,8 +14,8 @@ from socrat.learn import recall
 from socrat.models import ConceptState as ConceptRow
 from socrat.models import Enrollment, User, now
 
-OLD = "zero:programs-and-output"
-FRESH = "zero:variables-and-types"
+OLD = "basics:values"
+FRESH = "basics:conditions"
 DAY = recall.DAY
 
 
@@ -98,14 +98,14 @@ def test_lists_what_has_faded_most_first_and_skips_what_is_fresh(enabled):
     onboard(client, headers)
     stamp = now()
     add(client, OLD, 1.0, stamp - 6 * DAY)
-    add(client, "zero:input-and-arithmetic", 1.0, stamp - 3 * DAY)
-    add(client, "zero:input-and-arithmetic", 1.0, stamp - 3 * DAY + 60)
+    add(client, "basics:text", 1.0, stamp - 3 * DAY)
+    add(client, "basics:text", 1.0, stamp - 3 * DAY + 60)
     add(client, FRESH, 1.0, stamp - 60)
 
     body = review(client, headers)
     concepts = [i["concept"] for i in body["items"]]
     assert body["model"] == recall.MODEL
-    assert concepts == [OLD, "zero:input-and-arithmetic"]  # least likely recalled first
+    assert concepts == [OLD, "basics:text"]  # least likely recalled first
     first = body["items"][0]
     assert first["activity"] == f"review:{OLD}"
     assert 0 < first["recall"] < body["items"][1]["recall"] < recall.SUCCESS + 0.2

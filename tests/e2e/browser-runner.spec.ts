@@ -35,10 +35,10 @@ async function signUp(page: Page) {
 }
 
 async function runWith(page: Page, headers: Record<string, string>, language: 'python' | 'cpp', source: string, button: 'Run tests' | 'Submit solution') {
-  const saved = await page.request.put('/api/v1/problems/greeting/draft', { data: { source, language }, headers });
+  const saved = await page.request.put('/api/v1/problems/double-it/draft', { data: { source, language }, headers });
   expect(saved.ok()).toBeTruthy();
   await page.evaluate(() => localStorage.clear());
-  await page.goto('/problems/greeting');
+  await page.goto('/problems/double-it');
   const select = page.getByRole('combobox').filter({ hasText: /Python|C\+\+/ }).first();
   await select.selectOption(language);
   await expect(page.locator('.cm-content')).toContainText(source.split('\n')[0].slice(0, 20));
@@ -93,17 +93,17 @@ test('C++: compiles in the browser, with bits/stdc++.h, errors and time limits',
 test('drafts typed in the editor survive a reload before they reach the server', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'storage behaviour is the same on phones');
   await signUp(page);
-  await page.goto('/problems/greeting');
+  await page.goto('/problems/double-it');
   const content = page.locator('.cm-content');
   await expect(content).toBeVisible();
   // Block the autosave, type, and reload: the local copy comes back and is saved.
-  await page.route('**/api/v1/problems/greeting/draft', route => route.abort());
+  await page.route('**/api/v1/problems/double-it/draft', route => route.abort());
   await content.click();
   await page.keyboard.press('Control+End');
   await page.keyboard.type('\n# kept offline');
   await page.waitForTimeout(2000);
-  await page.unroute('**/api/v1/problems/greeting/draft');
+  await page.unroute('**/api/v1/problems/double-it/draft');
   await page.reload();
   await expect(content).toContainText('# kept offline');
-  await expect.poll(async () => (await (await page.request.get('/api/v1/problems/greeting')).json()).draft ?? '').toContain('# kept offline');
+  await expect.poll(async () => (await (await page.request.get('/api/v1/problems/double-it')).json()).draft ?? '').toContain('# kept offline');
 });

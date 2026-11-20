@@ -36,7 +36,6 @@ from socrat.judge.service import normalized
 from socrat.style import spec as styles
 
 AI_AUTHOR = "Socrat AI course team"
-GOLD = "dsa:sliding-window"  # a hand-authored lesson of typical depth, shown to authors
 ATOM_KINDS = {"hook", "concept", "worked", "explanation", "reflection", "predict", "trace"}
 CODE_ATOMS = {"worked", "predict", "trace"}
 MIN_LESSON = {"overview": 2000, "practitioner": 3000, "mastery": 4000}
@@ -146,15 +145,6 @@ def practice_line(course: Course) -> str:
     )
 
 
-def gold(catalog: Catalog, course: Course | None = None) -> Concept | None:
-    """The reference lesson, for programming courses only. It is a DSA lesson: shown to the
-    author of a physics, language or children's course it pulled every lesson towards code,
-    edge cases and invariants, and added thousands of tokens to every call."""
-    if course is not None and shape.effective(course).studio != "code":
-        return None
-    return catalog.concepts.get(GOLD)
-
-
 LESSON = """You are the Lesson Author for Socrat. Socrat lessons are deep enough to master a
 skill, not summaries. Write one concept's lesson in Markdown, original prose only.
 
@@ -167,7 +157,7 @@ The lesson must:
 - teach every objective; finish with 3-5 self-check questions (answers in a <details> block);
 - use "## " section headings; code only in a course that has code languages, as fenced
   blocks, one per course language, equivalent across languages; no other languages.
-If a reference lesson is shown, match its depth, never its subject. Write for the learner
+Write for the learner
 described: their age, level and the way they asked to be taught decide the words, the
 examples and the length. Never invent citations.
 
@@ -231,7 +221,7 @@ Reply with one JSON object only:
 List every imprecise or incorrect claim, and at most 10 correct ones."""
 
 REVIEW = """You are the Reviewer for Socrat. Judge a generated concept package against the
-concept's contract and against the reference lesson's depth. Be demanding: learners rely on
+concept's contract and against the depth the learner's brief asks for. Be demanding: learners rely on
 this to master the skill.
 
 Score 1-5 each: correctness, depth (worked example traced, why it works, edge cases,
@@ -259,13 +249,13 @@ STYLE_NOTE = """
 
 A LEARNING STYLE block is part of the context. Follow it: the lesson's length, register,
 examples, tone and structure come from the style, not from the default rules above (the
-"## " heading count, section list and reference lesson depth are defaults the style may
+"## " heading count, section list and lesson depth are defaults the style may
 override). Quiz and atoms use the style's register too; item counts stay within 4-8."""
 
 STYLE_REVIEW = """
 
 A LEARNING STYLE block is part of the context. Judge depth and clarity against that style,
-not against the reference lesson. Also score "style_fit" 1-5: would the learner described
+not against a default lesson length. Also score "style_fit" 1-5: would the learner described
 find the length, register, tone, examples and rigor right for them? Add "style_fit" to scores,
 on the same 1-5 meaning, with the fix named when it is below 5."""
 
@@ -405,12 +395,8 @@ REVISE = (
 )
 
 
-def lesson_prompt(ctx: str, reference: Concept | None, draft: dict | None, notes: list[str]) -> str:
+def lesson_prompt(ctx: str, draft: dict | None, notes: list[str]) -> str:
     parts = [ctx]
-    if reference is not None:
-        parts.append(
-            f"Reference lesson ({reference.title}) for depth and style:\n{reference.lesson}"
-        )
     if draft is not None:
         parts.append("Your previous draft:\n" + json.dumps(draft, indent=1))
     if notes:
@@ -436,15 +422,6 @@ def part_prompt(ctx: str, lesson: dict, draft: dict | None, notes: list[str], ex
         intro = REVISE if draft is not None else "Fix all of these in a complete reply:\n- "
         parts.append(intro + "\n- ".join(notes))
     return "\n\n".join(parts)
-
-
-def quiz_example(reference: Concept | None, marked: bool = False) -> str:
-    if reference is None or not reference.quiz:
-        return ""
-    items = [q.model_dump(mode="json", exclude_none=True) for q in reference.quiz[:2]]
-    if marked:  # the example must show the form the writer is asked for
-        items = [keyed.marked(i) for i in items]
-    return "Reference items for quality:\n" + json.dumps(items, indent=1)
 
 
 SHELL_FENCES = {"bash", "sh", "shell", "console", "zsh", "powershell", "ps", "cmd", "terminal"}

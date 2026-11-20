@@ -93,7 +93,7 @@ test('learner pages', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await shoot(page, 'lesson', chrome);
 
-  await page.goto('/problems/greeting');
+  await page.goto('/problems/double-it');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.locator('.cm-editor')).toBeVisible();
   await shoot(page, 'problem', chrome);

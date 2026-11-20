@@ -5,7 +5,6 @@ pattern references existing concepts, problems, atoms and misconception IDs by I
 never creates or edits problem content. Mastery stays at concept level (PRD §11).
 """
 
-import json
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -93,14 +92,6 @@ class Pattern(Model):
         if self.status == "calibrated" and self.provenance.review is None:
             raise ValueError("a calibrated pattern needs a human review record")
         return self
-
-
-def external_problem_ids(path: Path) -> set[str]:
-    """IDs in the imported practice index (metadata only; never modified here)."""
-    if not path.exists():
-        return set()
-    with path.open(encoding="utf-8") as handle:
-        return {json.loads(line)["id"] for line in handle if line.strip()}
 
 
 def load(

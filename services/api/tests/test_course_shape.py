@@ -78,7 +78,8 @@ def test_the_architect_is_told_to_choose_a_shape_and_it_is_stored_and_served(cli
     cards = {c["id"]: c for c in client.get("/api/v1/courses").json()["items"]}
     assert cards["ai-basics"]["shape"]["name"] == "Physics lab"
     assert (
-        cards["zero"]["shape"]["studio"] == "code" and cards["zero"]["shape"]["name"] == "Practice"
+        cards["basics"]["shape"]["studio"] == "code"
+        and cards["basics"]["shape"]["name"] == "Practice"
     )
 
 
@@ -114,34 +115,14 @@ def test_every_learner_gets_the_course_shape_and_its_practice_features(client): 
     onboard(client, learner, course="ai-basics")
     theirs = client.get("/api/v1/auth/status").json()["profile"]["enrollment"]
     assert theirs["course"] == "ai-basics" and theirs["shape"]["studio"] == "lab"
-    assert theirs["features"] == dict(
-        code=False, library=False, companies=False, codeforces=False, drills=True
-    )
+    assert theirs["features"] == dict(code=False, drills=True)
     # The lab opens for the learner whose course is a lab course.
     assert client.get("/api/v1/lab", headers=learner).status_code == 200
-    # Another course's practice does not leak in: no library, no company questions.
-    for path in ("/api/v1/library/meta", "/api/v1/companies", "/api/v1/library/company-sprints"):
-        response = client.get(path, headers=learner)
-        assert (
-            response.status_code == 404 and response.json()["error"]["code"] == "not_in_course"
-        ), path
 
 
-def test_only_dsa_offers_company_questions_and_only_code_courses_the_library(client):  # noqa: F811
-    for course, companies, codeforces in (
-        ("zero", False, False),
-        ("dsa", True, True),
-        ("cp", False, True),
-    ):
+def test_a_code_course_gets_the_editor_from_its_shape_not_its_name(client):  # noqa: F811
+    for course in ("basics", "algo"):
         headers = login(client, subject=f"learner-{course}", name="Learner")
-        onboard(
-            client,
-            headers,
-            course=course,
-            level="brand-new" if course == "zero" else "new-to-programming",
-        )
+        onboard(client, headers, course=course, level="brand-new")
         features = client.get("/api/v1/auth/status").json()["profile"]["enrollment"]["features"]
-        assert features == dict(
-            code=True, library=True, companies=companies, codeforces=codeforces, drills=True
-        ), course
-        assert client.get("/api/v1/library/meta", headers=headers).status_code == 200
+        assert features == dict(code=True, drills=True), course

@@ -164,7 +164,7 @@ def test_day_one_offers_a_goal_at_the_end_of_the_session(enabled):
     try:
         headers = login(client)
         onboard(client, headers)
-        lesson = "lesson:zero:programs-and-output"
+        lesson = "lesson:basics:values"
         assert client.post(f"/api/v1/activities/{lesson}/complete", headers=headers).json()[
             "completed"
         ]

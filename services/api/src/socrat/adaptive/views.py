@@ -66,14 +66,11 @@ def profile_view(
     db: Session, catalog: Catalog, user: User, enrollment: Enrollment, now: int
 ) -> dict:
     """A1: the full learner model the planner and tutor see."""
-    from socrat.library import service as library
-
     states = learn.states_for(db, enrollment)
     skill = adaptive.build_profiles(db, catalog, enrollment, states, now)
     stuck = adaptive.stuck_map(skill, now)
-    learner = library.learner_for(db, catalog, user, enrollment, now)
     return dict(
-        level=adaptive.level_for(db, user.id, learner.rating, enrollment),
+        level=adaptive.level_for(db, enrollment),
         review_scale=adaptive.review_scale_for(db, enrollment),
         adherence=adaptive.adherence_for(db, enrollment, learn.local_day(user, now)),
         concepts=[

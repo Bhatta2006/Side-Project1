@@ -113,36 +113,6 @@ test('placement adapts, then practice and the Socratic tutor work', async ({ pag
   await expect(page.getByText(/You updated your plan: 20 min per study day/).first()).toBeVisible();
 });
 
-test('the practice library filters, saves and never shows raw links', async ({ page }, info) => {
-  await signIn(page, `library-${info.project.name}-${Date.now()}`);
-  await onboard(page, /Competitive Programming/, /never written code|new to programming/);
-  await expect(page).toHaveURL(/\/(today|placement)$/);
-
-  await page.goto('/today#practice');
-  await expect(page.getByRole('heading', { name: 'Practice picked for you' })).toBeVisible();
-  expect((await (await page.request.get('/api/v1/library?sort=easiest')).json()).total).toBe(0);
-  await page.goto('/learn/zero/input-and-arithmetic');
-  await page.getByRole('button', { name: 'Mark lesson as read' }).click();
-  await expect(page.getByRole('heading', { name: 'Lesson read' })).toBeVisible();
-  await page.goto('/library?platform=Codeforces&rating_min=800&rating_max=900&sort=easiest');
-  await expect(page.getByRole('heading', { level: 1, name: 'Problems' })).toBeVisible();
-  // Desktop shows a table, phones show card rows; both carry data-problem-row.
-  const rows = page.locator('[data-problem-row]:visible');
-  await expect(rows.first()).toContainText('Codeforces');
-  await expect(rows.first()).toContainText('800');
-  // Names link out to the official site; addresses are never printed.
-  expect(await page.locator('main').innerText()).not.toMatch(/https?:\/\//);
-  const title = (await rows.first().getByRole('link').first().innerText()).replace(/\s*(,\s*opens on|↗).*$/s, '');
-
-  await rows.first().getByRole('button', { name: 'Save to my list' }).click();
-  await expect(rows.first().getByRole('button', { name: 'Remove from my list' })).toBeVisible();
-  await rows.first().getByRole('button', { name: /Mark as solved|✓/ }).first().click();
-  await page.getByRole('tab', { name: 'My list' }).click();
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText(title);
-  await expect(rows.first().getByRole('button', { name: /Solved/ })).toBeVisible();
-});
-
 test('later modules are locked behind a checkpoint that gets harder', async ({ page }, info) => {
   await signIn(page, `gate-${info.project.name}-${Date.now()}`);
   await onboard(page, /Programming from Zero/, /never written code/);
@@ -193,14 +163,4 @@ test('a weekly assessment is built from what the learner studied', async ({ page
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'By topic' })).toBeVisible();
   await expect(page.getByText('Programs and output').first()).toBeVisible();
-});
-
-test('a focus sprint explains what it needs before it starts', async ({ page }, info) => {
-  await signIn(page, `sprint-${info.project.name}-${Date.now()}`);
-  await onboard(page, /Programming from Zero/, /never written code/);
-  await expect(page).toHaveURL(/\/today$/);
-  await page.goto('/sprint');
-  await expect(page.getByRole('heading', { level: 1, name: 'Focus sprint' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start sprint' }).click();
-  await expect(page.getByText(/sprints use topics you have studied/)).toBeVisible();
 });

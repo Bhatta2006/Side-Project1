@@ -29,12 +29,6 @@ export interface Enrollment {
 export interface CourseFeatures {
   /** A code editor and a programming-language choice. */
   code: boolean;
-  /** External problems (LeetCode, CSES, Codeforces), recommendations and focus sprints. */
-  library: boolean;
-  /** Company questions and company sprints (DSA only). */
-  companies: boolean;
-  /** The Codeforces handle link. */
-  codeforces: boolean;
   /** Practice sets written for this course by Socrat. */
   drills: boolean;
 }
@@ -127,7 +121,6 @@ export interface Features {
   demo_mode: boolean;
   /** WhatsApp community invite for beta learners; null hides it. */
   community_url?: string | null;
-  try_tutor?: boolean;
   adaptive_quiz?: boolean;
   /** Learners may build their own course at /new. */
   learning_requests?: boolean;
@@ -287,7 +280,7 @@ export interface Proposal {
   reason: string;
   payload: Record<string, unknown>;
   group: string;
-  source: 'planner' | 'tutor' | 'review' | 'company_sprint';
+  source: 'planner' | 'tutor' | 'review';
   status: 'pending' | 'accepted' | 'declined' | 'expired' | 'superseded';
   created_at: number;
   decided_at: number | null;
@@ -449,7 +442,6 @@ export interface RoadmapItem {
   requires: string[];
   /** Transfer check: verified, due (take it), pending (solve the problem), wait (cooling down). */
   transfer?: 'verified' | 'due' | 'pending' | 'wait' | null;
-  roadmap_resources: { title: string; url: string; source: string; language: string | null }[];
   concept: string;
   title: string;
   module: string;
@@ -568,71 +560,6 @@ export interface Resource {
   helpful?: boolean | null;
 }
 
-export type Platform = 'Socrat' | 'LeetCode' | 'CSES' | 'Codeforces';
-export type PracticeStatus = 'todo' | 'attempted' | 'solved';
-
-export interface ExternalProblem {
-  id: string;
-  title: string;
-  /** Opened on click only; never rendered as text. Socrat problems use an in-app path. */
-  url: string;
-  platform: Platform | string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  rating?: number | null;
-  concepts: string[];
-  companies: number;
-  striver: boolean;
-}
-
-export interface LibraryProblem extends ExternalProblem {
-  /** A deliberately harder pick above the learner's level. */
-  stretch?: boolean;
-  status: PracticeStatus | null;
-  bookmarked: boolean;
-  concept: { id: string; title: string; band: Band } | null;
-}
-
-export interface Level {
-  rating: number;
-  name: string;
-  next_name: string | null;
-  next_rating: number | null;
-  progress: number;
-}
-
-export interface RecommendedProblem extends ExternalProblem {
-  kind: 'review' | 'practice' | 'current' | 'stretch' | 'start' | 'upsolve';
-  reason: string;
-  concept: { id: string; title: string; band: Band };
-  status: PracticeStatus | null;
-}
-
-export interface CodeforcesAccount {
-  handle: string;
-  rating: number | null;
-  max_rating: number | null;
-  rank: string;
-  solved: number;
-  attempted: number;
-  weak_tags: string[];
-  synced_at: number | null;
-  sync_error: string;
-}
-
-export interface Recommendations {
-  level: Level;
-  problems: RecommendedProblem[];
-  topics: { id: string; title: string; summary: string; reason: string; kind: string; band: Band; minutes: number }[];
-  solved_external: number;
-  codeforces: CodeforcesAccount | null;
-}
-
-export interface CompanyProblem extends ExternalProblem {
-  frequency: number;
-  window: 'thirty-days' | 'three-months' | 'six-months' | 'more-than-six-months' | 'all';
-  concept: { id: string; title: string; band: Band } | null;
-}
-
 /** A rubric grade from the AI grader: points per criterion, logged with the evidence. */
 export interface Grade {
   score: number;
@@ -678,7 +605,6 @@ export interface ConceptView {
   /** Each page of the lesson offers "show me this part" (a shared visual of that page). */
   section_visuals?: boolean;
   prompts?: WrittenPrompt[];
-  exercises: { number: number; title: string; url: string; language: string; guidance: string }[];
   id: string;
   course: string;
   title: string;
@@ -707,10 +633,6 @@ export interface ConceptView {
   visuals?: { renderer: string; version: string; params: Record<string, unknown>; purpose: string; fallback_text: string; alt_text: string }[];
   pitfalls: string[];
   resources: Resource[];
-  practice_links: { title: string; url: string; platform: string; difficulty: 'easy' | 'medium' | 'hard' }[];
-  more_practice: LibraryProblem[];
-  implementations: { title: string; url: string }[];
-  handbook: { chapter: string; title: string; page: number; url: string; source: string }[];
   problems: { id: string; title: string; difficulty: string; solved: boolean }[];
   prerequisites: { id: string; title: string; band: Band }[];
   band: Band;
@@ -909,16 +831,6 @@ export interface AssessmentView {
   report: AssessmentReport | null;
 }
 
-export interface SprintView {
-  id: string;
-  started_at: number;
-  deadline: number;
-  seconds_left: number | null;
-  finished: boolean;
-  solved: number;
-  problems: { id: string; title: string; difficulty: string; concept: string; solved_after: number | null }[];
-}
-
 export interface Contest {
   id: number;
   name: string;
@@ -929,7 +841,7 @@ export interface Contest {
 
 /** How Socrat models the learner: one profile per concept plus a single practice level. */
 export interface LearnerProfile {
-  level: { rating: number; library: number; quiz: number | null; codeforces: number | null };
+  level: { rating: number | null; quiz: number | null };
   review_scale: number;
   adherence: number;
   concepts: {
@@ -974,57 +886,6 @@ export interface PassportSettings {
   path: string | null;
   updated_at: number | null;
   preview: PassportView;
-}
-
-export interface CompanySprintWeek {
-  number: number;
-  starts: string;
-  ends: string;
-  review: boolean;
-  concepts: { id: string; title: string; band: Band; done: boolean }[];
-  questions: (ExternalProblem & { solved: boolean })[];
-  locked_questions: number;
-}
-
-export interface CompanySprintView {
-  id: string;
-  company: { slug: string; name: string };
-  role: string;
-  role_label: string;
-  title: string;
-  weeks_total: number;
-  started_on: string;
-  ends_on: string;
-  current_week: number;
-  finished: boolean;
-  progress: number;
-  on_track: boolean;
-  counts: { concepts: number; concepts_done: number; questions: number; questions_solved: number; already_known: number };
-  weeks: CompanySprintWeek[];
-  proposal: Proposal | null;
-}
-
-export interface CompanySprintOverview {
-  current: CompanySprintView | null;
-  companies: { slug: string; name: string; questions: number }[];
-  roles: { id: string; label: string }[];
-  weeks: number[];
-  /** Company sprints need Pro. */
-  locked?: boolean;
-}
-
-export interface TryProblem {
-  id: string;
-  title: string;
-  statement: string;
-  input_format: string;
-  output_format: string;
-  constraints: string[];
-  examples: { input: string; output: string; explanation: string }[];
-  starter: string;
-  time_limit_ms: number;
-  tests: { index: number; input: string; expected: string; public: boolean }[];
-  max_turns: number;
 }
 
 /** GET /daily-review (item 4): practised concepts most likely forgotten, by a recall model. */

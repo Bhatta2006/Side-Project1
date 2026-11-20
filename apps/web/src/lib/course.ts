@@ -5,7 +5,7 @@ import { featuresFor } from '@/lib/course-features';
 export { featuresFor, practiceHref } from '@/lib/course-features';
 
 /** No course yet (onboarding): nothing course-specific is offered. */
-const NONE: CourseFeatures = { code: false, library: false, companies: false, codeforces: false, drills: false };
+const NONE: CourseFeatures = { code: false, drills: false };
 
 export function useCourse(): { course: string | null; shape: CourseShape | null; features: CourseFeatures; ready: boolean } {
   const { profile, loading } = useSession();

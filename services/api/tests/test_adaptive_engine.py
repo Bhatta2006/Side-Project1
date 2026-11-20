@@ -11,7 +11,6 @@ from catalog_support import catalog
 from socrat.adaptive import profile, stuck, suggest
 from socrat.adaptive.profile import EvidenceRow
 from socrat.mastery.model import DAY, MAX_STEP, ConceptState, apply
-from socrat.planner import goals
 from socrat.planner.engine import Adaptive, build_plan, ordered, set_aside
 
 NOW = 1_800_000_000
@@ -92,8 +91,8 @@ def test_forgetting_rate_adherence_and_unified_level():
     assert profile.review_scale([0.0, 0.3, 1.0, 0.2]) == 0.6
     assert profile.adherence(100, 400, 30) == 0.25
     assert profile.adherence(100, 400, 3) == 1.0  # too early to judge
-    level = profile.level(1200, [1400.0], 1500)
-    assert level["rating"] == 1360 and level["codeforces"] == 1500
+    assert profile.level([1400.0, 1200.0]) == dict(rating=1300, quiz=1300)
+    assert profile.level([]) == dict(rating=None, quiz=None)
 
 
 # ---------------------------------------------------------------- stuck
@@ -217,16 +216,6 @@ def test_forecast_uses_real_adherence_and_milestones_cover_the_path():
     assert weeks == sorted(weeks) and planned.milestones[0]["outcome"].startswith("You'll")
     covered = {c["concept"] for m in planned.milestones for c in m["concepts"]}
     assert "algo:bfs" in covered
-
-
-def test_goal_relevance_for_interviews_and_contests():
-    assert goals.focus_of("dsa", {}) == "interview"
-    assert goals.focus_of("zero", {"target_rating": 1400}) == "contest"
-    assert goals.relevance("dsa:arrays-hashing", "dsa", {}) == 1.0
-    junior = goals.relevance("dsa:union-find", "dsa", {"target_role": "internship"})
-    assert junior < goals.relevance("dsa:union-find", "dsa", {"target_role": "senior"})
-    assert goals.relevance("cp:segment-tree", "cp", {"target_rating": 1200}) < 0.35
-    assert goals.relevance("zero:loops", "dsa", {}) == goals.DEFAULT_RELEVANCE  # bridge
 
 
 # ---------------------------------------------------------------- suggestions

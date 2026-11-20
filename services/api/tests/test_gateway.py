@@ -4,7 +4,6 @@ import asyncio
 import json
 from types import SimpleNamespace as NS
 
-import httpx
 import pytest
 
 from socrat.assistant import gateway
@@ -21,7 +20,6 @@ from socrat.assistant.gateway import (
     make_provider,
 )
 from socrat.config import Settings
-from socrat.library import codeforces
 
 TOOL = ToolSpec(
     "lookup",
@@ -297,99 +295,3 @@ def test_offline_and_factory():
     )
     with pytest.raises(ProviderError):
         collect(OfflineProvider().converse("s", [], 10))
-
-
-# ------------------------------------------------------------------ Codeforces API client
-
-
-def mock_client(handler) -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
-
-
-@pytest.mark.parametrize(
-    "body, code",
-    [
-        (
-            {"status": "FAILED", "comment": "handles: User with handle x not found"},
-            "handle_not_found",
-        ),
-        ({"status": "FAILED", "comment": "Call limit exceeded"}, "rate_limited"),
-        ({"status": "FAILED", "comment": "Internal error"}, "unavailable"),
-    ],
-)
-def test_codeforces_errors_map_to_safe_codes(monkeypatch, body, code):
-    monkeypatch.setattr(codeforces, "MIN_GAP_SECONDS", 0)
-
-    async def run():
-        async with mock_client(lambda r: httpx.Response(200, json=body)) as client:
-            await codeforces._call(client, "user.info", {"handles": "x"})
-
-    with pytest.raises(codeforces.CodeforcesError, match=code):
-        asyncio.run(run())
-
-
-def test_codeforces_fetch_profile_reads_user_and_submissions(monkeypatch):
-    monkeypatch.setattr(codeforces, "MIN_GAP_SECONDS", 0)
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path.endswith("user.info"):
-            user = {"handle": "Ada", "rating": 1500, "maxRating": 1600, "rank": "specialist"}
-            return httpx.Response(200, json={"status": "OK", "result": [user]})
-        sub = {"verdict": "OK", "problem": {"contestId": 1, "index": "A", "tags": ["math"]}}
-        return httpx.Response(200, json={"status": "OK", "result": [sub]})
-
-    real = httpx.AsyncClient
-    monkeypatch.setattr(
-        codeforces.httpx,
-        "AsyncClient",
-        lambda **kw: real(transport=httpx.MockTransport(handler), **kw),
-    )
-    profile = asyncio.run(codeforces.fetch_profile("ada"))
-    assert profile["handle"] == "Ada" and profile["solved"] == ["cf:1A"]
-    with pytest.raises(codeforces.CodeforcesError, match="invalid_handle"):
-        asyncio.run(codeforces.fetch_profile("x y"))
-
-    def broken(request):
-        return httpx.Response(200, text="<html>")
-
-    monkeypatch.setattr(
-        codeforces.httpx,
-        "AsyncClient",
-        lambda **kw: real(transport=httpx.MockTransport(broken), **kw),
-    )
-    with pytest.raises(codeforces.CodeforcesError, match="unavailable"):
-        asyncio.run(codeforces.fetch_profile("ada"))
-
-
-def test_providers_report_token_usage_per_round():
-    provider, fake = openai_provider(
-        [
-            [
-                chunk("Hi", finish="stop"),
-                NS(choices=[], usage=NS(prompt_tokens=120, completion_tokens=7)),
-            ]
-        ]
-    )
-    events = collect(provider.converse("sys", [Turn("user", "hi")], 100), usage=True)
-    assert events[-1].kind == "usage"
-    assert events[-1].arguments == {"input_tokens": 120, "output_tokens": 7}
-    assert fake.requests[0]["stream_options"] == {"include_usage": True}
-
-    # Endpoints that report nothing are estimated, so budgets still apply.
-    provider, _ = openai_provider([[chunk("Hello there", finish="stop")]])
-    usage = collect(provider.converse("s" * 400, [Turn("user", "hi")], 100), usage=True)[-1]
-    assert usage.kind == "usage" and usage.arguments["input_tokens"] > 100
-
-    final = NS(
-        stop_reason="end_turn",
-        content=[],
-        usage=NS(
-            input_tokens=100,
-            output_tokens=20,
-            cache_creation_input_tokens=0,
-            cache_read_input_tokens=1000,
-        ),
-    )
-    provider, _ = anthropic_provider([(["Hi"], final)])
-    usage = collect(provider.converse("s", [Turn("user", "x")], 100), usage=True)[-1]
-    assert usage.arguments == {"input_tokens": 200, "output_tokens": 20}

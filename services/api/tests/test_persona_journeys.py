@@ -162,62 +162,10 @@ def place(client, headers, enrollment, right):  # noqa: F811
     raise AssertionError("placement never finished")
 
 
-@pytest.mark.parametrize("course", ["zero", "dsa", "cp"])
-def test_a_strong_learner_finishes_every_course_with_every_skill_proven(client, clock, course):  # noqa: F811
-    headers = login(client, subject=f"strong-{course}")
-    level = {"zero": "brand-new", "dsa": "new-to-programming", "cp": "knows-dsa-basics"}[course]
-    enrollment = onboard(client, headers, course=course, level=level)
-    if enrollment["status"] == "placement":
-        place(client, headers, enrollment, lambda _: True)
-    log, today = walk(client, headers, clock, always_right)
-    progress = today["progress"]
-    assert progress["complete"] and progress["percent"] == 100 and not progress["assumed"]
-    # Search lists only this course; switching courses is off.
-    concepts = client.get("/api/v1/library/meta").json()["concepts"]
-    assert concepts and all(c["id"].startswith(f"{course}:") for c in concepts)
-    again = client.post(
-        "/api/v1/enrollments",
-        json=dict(
-            course="zero",
-            language="python",
-            level="brand-new",
-            minutes_per_day=30,
-            weekdays=[0, 1, 2, 3, 4],
-        ),
-        headers=headers,
-    )
-    assert again.status_code == 409 and again.json()["error"]["code"] == "already_enrolled"
-    assert {s["code"] for s in log} >= {"path", "checkpoint"}
-    # The finished course points onward: the next course, and hard problems still open.
-    following = {"zero": "dsa", "dsa": "cp", "cp": None}[course]
-    finale = today["finale"]
-    assert finale and len(finale["challenges"]) <= 3
-    assert (finale["next_course"] or {}).get("id") == following
-    # Every course ends in a graded capstone that ties its skills together.
-    capstone = finale["capstone"]
-    assert capstone["id"].startswith(f"{course}:capstone-")
-    assert capstone["done"] == 0 and capstone["total"] >= 3
-    listed = client.get("/api/v1/projects").json()["projects"]
-    assert capstone["id"] in {p["id"] for p in listed}
-    if following:
-        onward = client.post(
-            "/api/v1/enrollments",
-            json=dict(
-                course=following,
-                language="python",
-                level={"dsa": "new-to-programming", "cp": "knows-dsa-basics"}[following],
-                minutes_per_day=30,
-                weekdays=[0, 1, 2, 3, 4],
-            ),
-            headers=headers,
-        )
-        assert onward.status_code == 200, onward.text
-
-
 def test_placement_knowledge_counts_only_after_its_confirmation_check(client, clock):  # noqa: F811
     headers = login(client, subject="placed")
-    enrollment = onboard(client, headers, course="dsa", level="knows-basics")
-    zero = set(default_catalog().course_concepts("zero"))
+    enrollment = onboard(client, headers, course="algo", level="ok")
+    zero = set(default_catalog().course_concepts("basics"))
     summary = place(client, headers, enrollment, lambda item: True)
     assert summary["known_concepts"], "a strong placement skips lessons"
     today = client.get("/api/v1/today").json()
@@ -251,7 +199,7 @@ def test_a_missed_check_is_not_done_and_socrat_reteaches_before_a_fresh_check(cl
     headers = login(client, subject="misses")
     onboard(client, headers)
     cat = default_catalog()
-    concept = "zero:programs-and-output"
+    concept = "basics:values"
     client.post(f"/api/v1/activities/lesson:{concept}/complete", headers=headers)
     first = take(client, headers, cat, f"quiz:{concept}", lambda q: False)
     assert first["completed"] and first["score"] == 0
@@ -301,7 +249,7 @@ def test_adaptive_concept_check_closes_the_same_plan_step(client, clock):  # noq
     headers = login(client, subject="adaptive")
     onboard(client, headers)
     cat = default_catalog()
-    concept = "zero:programs-and-output"
+    concept = "basics:values"
     started = client.post(
         "/api/v1/adaptive-quiz/sessions",
         json={"mode": "concept_check", "concepts": [concept]},
@@ -326,7 +274,7 @@ def test_adaptive_concept_check_closes_the_same_plan_step(client, clock):  # noq
     # Another course's skill is out of scope for the engine too.
     outside = client.post(
         "/api/v1/adaptive-quiz/sessions",
-        json={"mode": "concept_check", "concepts": ["dsa:complexity"]},
+        json={"mode": "concept_check", "concepts": ["algo:arrays"]},
         headers=headers,
     )
     assert outside.status_code == 404

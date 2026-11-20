@@ -81,7 +81,7 @@ def test_learner_rows_are_erased_with_the_account(tmp_path):
         db.flush()
         enrollment = Enrollment(
             user_id=user.id,
-            course_id="dsa",
+            course_id="algo",
             language="python",
             level_id="new",
             minutes_per_day=30,
@@ -92,8 +92,8 @@ def test_learner_rows_are_erased_with_the_account(tmp_path):
         db.add(
             QuizResponse(
                 enrollment_id=enrollment.id,
-                item_id="dsa:sliding-window:fixed-update",
-                concept="dsa:sliding-window",
+                item_id="algo:arrays:fixed-update",
+                concept="algo:arrays",
                 mode="concept_check",
                 pool="practice",
                 correct=True,
@@ -103,12 +103,12 @@ def test_learner_rows_are_erased_with_the_account(tmp_path):
         db.add(
             LearnerAbility(
                 enrollment_id=enrollment.id,
-                pattern="dsa:sliding-window/variable-size",
+                pattern="algo:arrays/variable-size",
                 theta=1000.0,
             )
         )
-        db.add(ItemRating(item_id="dsa:sliding-window:fixed-update", d_current=950.0))
-        db.add(ItemCalibration(item_id="dsa:sliding-window:fixed-update", status="provisional"))
+        db.add(ItemRating(item_id="algo:arrays:fixed-update", d_current=950.0))
+        db.add(ItemCalibration(item_id="algo:arrays:fixed-update", status="provisional"))
         db.commit()
         db.delete(db.get(User, user.id))
         db.commit()
@@ -116,6 +116,6 @@ def test_learner_rows_are_erased_with_the_account(tmp_path):
         assert db.scalar(sa.select(sa.func.count()).select_from(LearnerAbility)) == 0
         # Item-level rows hold no learner data and stay.
         assert db.scalar(sa.select(sa.func.count()).select_from(ItemRating)) == 1
-        calibration = db.get(ItemCalibration, "dsa:sliding-window:fixed-update")
+        calibration = db.get(ItemCalibration, "algo:arrays:fixed-update")
         assert calibration is not None and calibration.approved_by is None
     engine.dispose()

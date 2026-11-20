@@ -73,11 +73,6 @@ export function SupportStep({
       {content ? <div className="mt-4"><Markdown source={content} language={language} /></div> : null}
       <div className="mt-4 flex flex-wrap gap-2">
         {step === 'checkin' ? <Button variant="outline" onClick={onAsk}>Talk to Soc</Button> : null}
-        {step === 'stretch' ? (
-          <Button asChild variant="outline">
-            <Link href={`/library?concept=${encodeURIComponent(concept)}`}>Find a harder problem</Link>
-          </Button>
-        ) : null}
         {done ? (
           <p className="flex items-center text-[15px] font-semibold" role="status">
             Done. <Link href="/today" className="ml-2 underline underline-offset-4">Back to Today</Link>

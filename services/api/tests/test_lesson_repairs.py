@@ -88,7 +88,7 @@ def test_an_almost_right_atom_is_repaired_without_inventing_checks():
 def test_sequence_entries_for_missing_activities_are_left_out():
     from socrat.catalog.registry import default_catalog
 
-    concept = default_catalog().concept("zero:programs-and-output")
+    concept = default_catalog().concept("basics:values")
     lesson = {
         "lesson": concept.lesson,
         "key_points": concept.key_points,

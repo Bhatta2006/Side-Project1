@@ -706,7 +706,6 @@ async def run_package(
 
         paging = pages.profile(brief.learner or pages.learner_of(None, style), style)
         ctx = f"{ctx}\n\n{pages.block(paging)}"
-    reference = pkg.gold(base, course) if style is None or style.shows_reference() else None
     note = pkg.STYLE_NOTE if style else ""
     cited: list[dict] = []
     version = concept.provenance.version + 1 if concept.provenance else 1
@@ -832,7 +831,7 @@ async def run_package(
             break
         last = attempt == rounds and rounds > 1
         if "lesson" in redo:
-            prompt = pkg.lesson_prompt(ctx, reference, lesson, notes["lesson"])
+            prompt = pkg.lesson_prompt(ctx, lesson, notes["lesson"])
             # The first draft is the cheap model's; a lesson sent back is rewritten by the
             # reviser (a stronger model when one is set), so only failing lessons cost more.
             writer = "author" if lesson is None else "reviser"
@@ -887,7 +886,7 @@ async def run_package(
         pending = {}
         asked: dict[str, tuple[str, str, int]] = {}  # part -> (system, prompt, tokens)
         if "quiz" in redo or quiz is None:
-            example = pkg.quiz_example(reference, settings.gen_marked_answers)
+            example = ""
             if code:
                 example += "\n\n" + pkg.QUIZ_CODE.format(languages=", ".join(code))
             if concept.outline and "explain" in concept.outline.assessment:
@@ -1016,7 +1015,7 @@ async def run_package(
             },
             indent=1,
         )
-        review_prompt = pkg.lesson_prompt(ctx, reference, None, [])
+        review_prompt = pkg.lesson_prompt(ctx, None, [])
         facts, review = await asyncio.gather(
             ask("facts", pkg.FACTS, f"{ctx}\n\nPackage:\n{bundle}", 8000),
             ask(

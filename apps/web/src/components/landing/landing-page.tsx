@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,34 +23,21 @@ import { SocraticDemo } from '@/components/landing/socratic-demo';
 import { FollowSoc } from '@/components/landing/follow-soc';
 import { cn } from '@/lib/utils';
 
-// The demo pulls in the editor and runner; load it after the page is interactive.
-const TryTutor = dynamic(() => import('@/components/landing/try-tutor').then(m => m.TryTutor), {
-  ssr: false,
-  loading: () => <div id="try" className="mx-auto min-h-[720px] max-w-[1320px] scroll-mt-20" aria-hidden="true" />,
-});
-
 /** The hero's opening question. Each answer changes how Soc reacts and where the button goes. */
 const GOALS: { id: string; label: string; mood: SocMood; say: string; cta: string; href: string }[] = [
-  { id: 'zero', label: 'Learn to code from zero', mood: 'happy', say: 'Lovely. So what is a variable, really?', cta: 'Start from zero', href: '/start?course=zero' },
-  { id: 'interview', label: 'Crack DSA interviews', mood: 'curious', say: 'Why does a hash map make it fast?', cta: 'Prep for interviews', href: '/start?course=dsa' },
-  { id: 'competitive', label: 'Win coding contests', mood: 'proud', say: 'Can you prove it runs in time?', cta: 'Train for contests', href: '/start?course=cp' },
-  { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then try one problem below. No sign-up.', cta: 'Try a problem', href: '#try' },
-];
-
-const PATHS = [
-  { id: 'zero', name: 'Programming from Zero', title: 'Start from the very first line', description: 'Write your first programs in Python, C++ or Java and understand what each line does.', color: 'bg-[var(--book-blue)] text-white [--illo-line:#fff]', doodle: 'bulb' as IllustrationName },
-  { id: 'interview', name: 'DSA for Interviews', title: 'The patterns behind interview questions', description: 'Learn why each technique works, then explain your choices and trade-offs out loud.', color: 'bg-[var(--book-red)] text-white [--illo-line:#fff]', doodle: 'plane' as IllustrationName },
-  { id: 'competitive', name: 'Competitive Programming', title: 'Contest speed, on real understanding', description: 'Contest techniques, timed practice and upsolving, built on the foundations.', color: 'bg-[var(--book-yellow)] text-[#15161E]', doodle: 'ladder' as IllustrationName },
+  { id: 'learn', label: 'Learn something new', mood: 'happy', say: 'Lovely. Tell me what, and how you like to learn.', cta: 'Build my course', href: '/start' },
+  { id: 'code', label: 'Learn to code', mood: 'curious', say: 'Then we will write real code, one small step at a time.', cta: 'Build my course', href: '/start' },
+  { id: 'explore', label: 'Just looking around', mood: 'wink', say: 'Then see how the tutor teaches, just below.', cta: 'See the tutor', href: '#tutor' },
 ];
 
 const FAQ = [
   ['Why not just use ChatGPT?', 'A chatbot will write the solution for you, and you learn little from pasting it. Socrat asks what you tried, raises help one step at a time after real attempts, blocks solution code until you have earned it, and checks what you can do on your own.'],
   ['Can I use it on my phone?', 'Yes. Lessons, concept checks, reviews and the tutor work on a phone, and you can install Socrat to your home screen. Writing code is best on a laptop or desktop.'],
-  ['Can I start without knowing how to code?', 'Yes. Programming from Zero starts with your first program. You choose Python, C++ or Java, and a short placement check finds the right starting point.'],
+  ['Do I need to know the subject already?', 'No. You tell Socrat what you want to learn and what you already know, and the course is written to start where you are.'],
   ['How is this different from a problem list?', 'A problem list gives you options. Socrat connects lessons, checks and practice into a plan built from your goal, your time and what you have shown you can do.'],
   ['Will the tutor give me the answer?', 'The tutor starts with a question or a small hint. Help gets more specific as you make real attempts. A full walkthrough is available after you have worked through the problem.'],
   ['What counts as proof?', 'Reading a lesson does not. Concept checks, judged code and reviews do, and help you received lowers how much a success counts.'],
-  ['Where do the practice problems come from?', 'Socrat has its own judged problems and a curated index of LeetCode, CSES and Codeforces problems. External statements and submissions stay on those platforms.'],
+  ['Where do the practice questions come from?', 'They are written for your course as you learn it: questions on every topic, and judged coding problems in programming courses.'],
 ];
 
 const STEPS: { title: string; status: 'read' | 'practised' | 'mastered'; label: string; text: string; doodle: IllustrationName; note: string }[] = [
@@ -159,10 +145,8 @@ export function LandingPage() {
     return () => { active = false; };
   }, []);
 
-  const links = [['#how', 'How it works'], ['#tutor', 'The tutor'], ['#try', 'Try it'], ['#paths', 'Paths'], ['/pricing', 'Pricing'], ['#faq', 'FAQ']] as const;
+  const links = [['#how', 'How it works'], ['#tutor', 'The tutor'], ['/pricing', 'Pricing'], ['#faq', 'FAQ']] as const;
   const chosen = GOALS.find(g => g.id === goal) ?? null;
-  const skills = courses.reduce((sum, c) => sum + c.concept_count, 0);
-  const problems = courses.reduce((sum, c) => sum + c.problem_count, 0);
 
   return (
     <div className="landing ll-desk min-h-dvh text-foreground">
@@ -282,12 +266,7 @@ export function LandingPage() {
 
         {/* The main question learners ask: why not a chatbot. */}
         <div data-soc="worried|A chatbot would just give you the answer…">
-          <WhySocrat skills={skills} problems={problems} />
-        </div>
-
-        {/* First "aha" before sign-up. */}
-        <div data-soc="curious|Go on. Write some code. I will only ask questions.">
-          <TryTutor />
+          <WhySocrat />
         </div>
 
         {/* Product proof: real components with sample data. */}
@@ -305,35 +284,6 @@ export function LandingPage() {
                 </figure>
               </InView>
             ))}
-          </div>
-        </section>
-
-        {/* Learning paths: three books from Soc's stack. */}
-        <section id="paths" data-soc="happy|Pick a book. Any book." aria-labelledby="paths-title" className="below-fold mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
-          <SectionHead id="paths-title" title="Three ways in" note="each one is a book from Soc's stack ↓" />
-          <div className="mt-12 grid gap-6 md:grid-cols-3 lg:gap-8">
-            {PATHS.map((path, i) => {
-              const course = courses.find(c => c.id === path.id || c.title === path.name);
-              return (
-                <InView key={path.id} index={i} className="doodle-host group">
-                  <Link
-                    href={`/start?course=${path.id}`}
-                    aria-label={`Get started with ${path.name}`}
-                    className={cn('relative flex min-h-[22rem] flex-col gap-3 overflow-hidden rounded-[4px] border-2 border-[var(--soc-outline)] p-6 shadow-[6px_6px_0_var(--soc-outline)] transition-[transform,box-shadow] duration-300 ease-[var(--ease-soft)] group-hover:-translate-x-0.5 group-hover:-translate-y-1 group-hover:shadow-[9px_10px_0_var(--soc-outline)] lg:p-8', path.color)}
-                  >
-                    <span aria-hidden="true" className="absolute inset-y-0 left-5 w-px bg-current opacity-25" />
-                    <p className="type-label pl-4 opacity-85">{course?.title ?? path.name}</p>
-                    <h3 className="pl-4 font-display text-[30px] leading-[1.04] font-semibold tracking-[-0.045em]">{path.title}</h3>
-                    <p className="pl-4 text-[16px] opacity-90">{path.description}</p>
-                    {course ? <p className="path-count pl-4 text-[14px] font-medium">{course.concept_count} skills · {course.problem_count} judged problems</p> : null}
-                    <div className="mt-auto flex items-end justify-between pl-4">
-                      <span className="inline-flex h-11 items-center gap-2 rounded-full bg-card px-5 text-[15px] font-medium text-foreground">Get started<ArrowCircle /></span>
-                      <Illustration name={path.doodle} className="-mr-3 -mb-3 size-28" />
-                    </div>
-                  </Link>
-                </InView>
-              );
-            })}
           </div>
         </section>
 

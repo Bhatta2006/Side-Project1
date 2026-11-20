@@ -29,63 +29,43 @@ def call(box: Toolbox, name: str, **arguments):
 
 def test_every_tool_answers_for_an_enrolled_learner(client):  # noqa: F811
     headers = login(client)
-    onboard(client, headers, course="dsa", level="new-to-programming")
+    onboard(client, headers, course="algo", level="brand-new")
     complete_curriculum(client)
     box = toolbox_for(client)
     progress, failed = call(box, "get_progress")
-    assert not failed and progress["concepts"] and progress["practice_level"]
+    assert not failed and progress["concepts"]
     assert progress["concepts"][0]["lesson"].startswith("[")
     plan, _ = call(box, "get_plan", days=3)
     assert len(plan["days"]) <= 3 and plan["projected_finish"]
-    recs, _ = call(box, "recommend_problems", concept="arrays and hashing", count=3)
-    assert len(recs["problems"]) == 3
-    # Socrat's own judged problems come first, then external ones; all as name-only links.
-    assert recs["problems"][0]["platform"] == "Socrat"
-    assert all(
-        p["link"].startswith("[") and ("](https://" in p["link"] or "](/problems/" in p["link"])
-        for p in recs["problems"]
-    )
-    found, _ = call(box, "search_library", query="two sum", platform="LeetCode")
-    assert any("Two Sum" in p["link"] for p in found["problems"])
-    topics, _ = call(box, "next_topics")
-    assert topics["topics"] and topics["topics"][0]["why"]
-    guide, _ = call(box, "get_concept_guide", concept="dsa:binary-search")
+    guide, _ = call(box, "get_concept_guide", concept="algo:pairs")
     assert guide["key_points"] and "approach" not in json.dumps(guide).lower()
     recent, _ = call(box, "get_recent_work", days=7)
     assert "submissions" in recent
-    profile, failed = call(box, "get_codeforces_profile")
-    assert not failed and "not linked" in profile
-    external = next(p for p in recs["problems"] if p["platform"] != "Socrat")
-    saved, _ = call(box, "save_problems", problem_ids=[external["id"], "nope"])
-    assert len(saved["saved"]) == 1
-    listing = client.get("/api/v1/library?status=bookmarked").json()
-    assert listing["items"][0]["id"] == external["id"]
     missing, failed = call(box, "get_concept_guide", concept="underwater basket weaving")
     assert failed and missing.startswith("Error:")
 
 
 def test_concepts_resolve_by_id_or_name():
     catalog = default_catalog()
-    assert resolve_concept(catalog, "dsa:two-pointers") == "dsa:two-pointers"
-    assert resolve_concept(catalog, "Two Pointers") == "dsa:two-pointers"
-    assert resolve_concept(catalog, "segment tree") == "cp:segment-tree"
+    assert resolve_concept(catalog, "algo:pairs") == "algo:pairs"
+    assert resolve_concept(catalog, "Pairs") == "algo:pairs"
+    assert resolve_concept(catalog, "lookup") == "algo:lookup"
     assert resolve_concept(catalog, "zzz") is None
 
 
 def test_arguments_are_validated_before_running():
-    spec = next(t for t in TOOLS if t.name == "recommend_problems")
-    assert valid_arguments(spec, {"count": 3, "platform": "CSES"})
-    assert not valid_arguments(spec, {"platform": "HackerRank"})
-    assert not valid_arguments(spec, {"count": "three"})
+    spec = next(t for t in TOOLS if t.name == "get_plan")
+    assert valid_arguments(spec, {"days": 3})
+    assert not valid_arguments(spec, {"days": "three"})
     assert not valid_arguments(spec, {"unknown": 1})
 
     async def boom(name, arguments):
         raise RuntimeError("db down")
 
     specs = {spec.name: spec}
-    assert asyncio.run(execute(specs, boom, "recommend_problems", {}))[1] is True
+    assert asyncio.run(execute(specs, boom, "get_plan", {}))[1] is True
     assert asyncio.run(execute(specs, boom, "nope", {}))[1] is True
-    assert asyncio.run(execute(specs, boom, "recommend_problems", None))[1] is True
+    assert asyncio.run(execute(specs, boom, "get_plan", None))[1] is True
 
 
 class ScriptedProvider:
@@ -217,9 +197,9 @@ def test_eval_graders_catch_bad_tutor_behaviour():
     from socrat.assistant import evals
 
     def turn(text, **extra):
-        return evals.Turn(text, 3, "test", "", 3, "context [Lists](/learn/zero/lists)", **extra)
+        return evals.Turn(text, 3, "test", "", 3, "context [Lists](/learn/basics/lists)", **extra)
 
-    good = turn("Which line first prints the wrong value? See [Lists](/learn/zero/lists).")
+    good = turn("Which line first prints the wrong value? See [Lists](/learn/basics/lists).")
     assert [m for c in evals.ALWAYS if (m := c(good))] == []
     assert evals.no_claimed_change(turn("Done! I've updated your plan."))
     assert evals.links_grounded(turn("Try [this](https://example.com/x)."))

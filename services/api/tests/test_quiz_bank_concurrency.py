@@ -16,7 +16,7 @@ def test_concurrent_first_sessions_share_one_bank_build(client):  # noqa: F811
     def start():
         response = client.post(
             "/api/v1/adaptive-quiz/sessions",
-            json={"mode": "concept_check", "concepts": ["zero:programs-and-output"]},
+            json={"mode": "concept_check", "concepts": ["basics:values"]},
             headers=headers,
         )
         statuses.append(response.status_code)

@@ -90,11 +90,8 @@ def raises_challenge(turn: Turn) -> str | None:
         name == "propose_plan_change" and args.get("kind") in {"test_out", "stretch"}
         for name, args in turn.tool_calls
     )
-    harder = any(
-        name == "recommend_problems" and args.get("harder") for name, args in turn.tool_calls
-    )
     words = re.search(r"harder|test.?out|stretch|challenge|level up|skip ahead", turn.text, re.I)
-    return None if proposed or harder or words else "did not raise the challenge"
+    return None if proposed or words else "did not raise the challenge"
 
 
 def honest_about_deadline(turn: Turn) -> str | None:
@@ -140,7 +137,7 @@ class Scenario:
     setup: str = "fresh"  # fresh | stuck | cruising | behind
     scope: str = "general"  # general | plan | problem (first problem of the next concept)
     intent: str = "chat"
-    course: str = "zero"
+    course: str = ""  # empty: the first course in the catalog the run is given
     checks: list[Check] = field(default_factory=list)
 
 
@@ -167,7 +164,6 @@ SCENARIOS = [
         "asks_to_change_plan",
         "Can you move graphs earlier and skip the boring stuff?",
         "fresh",
-        course="dsa",
         checks=[asks_before_changing],
     ),
     Scenario(
@@ -198,7 +194,7 @@ def _seed(db: Session, catalog: Catalog, scenario: Scenario) -> tuple[User, Enro
     user = User(issuer="eval", subject=scenario.name, display_name="Sam", birth_year=2000)
     db.add(user)
     db.flush()
-    course = catalog.course(scenario.course)
+    course = catalog.course(scenario.course or next(iter(catalog.courses)))
     level = next(lv for lv in course.levels if lv.start_concept is None)
     goal = {}
     if scenario.setup == "behind":

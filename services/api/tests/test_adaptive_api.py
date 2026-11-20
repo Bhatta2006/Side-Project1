@@ -84,7 +84,7 @@ def test_accepted_changes_can_be_undone_by_the_learner(client):  # noqa: F811
     headers = login(client)
     onboard(client, headers)
     cat = default_catalog()
-    path = cat.closure(cat.course_concepts("zero"))
+    path = cat.closure(cat.course_concepts("basics"))
     needed = {p for c in path for p in cat.prerequisites[c]}
     leaf = next(c for c in reversed(path) if c not in needed)
 
@@ -163,7 +163,9 @@ def test_feel_sets_pace_for_one_concept(client):  # noqa: F811
     row = next(c for m in plan["modules"] for c in m["concepts"] if c["concept"] == concept)
     assert "hard" in row["why"]
     bad = client.post(
-        "/api/v1/adaptive/feel", json={"concept": "dsa:nope", "signal": "too_hard"}, headers=headers
+        "/api/v1/adaptive/feel",
+        json={"concept": "algo:nope", "signal": "too_hard"},
+        headers=headers,
     )
     assert bad.status_code == 404
 

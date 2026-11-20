@@ -10,20 +10,15 @@ from dataclasses import dataclass, field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from socrat.catalog import practice
 from socrat.catalog.registry import Catalog
 from socrat.models import (
     ActivityRecord,
     Enrollment,
-    FocusSprint,
-    PracticeMark,
     Submission,
     User,
     WeeklyAssessment,
 )
 from socrat.planner import gates
-
-HARD_RATING = 1600  # library problems at or above this count as hard
 
 
 @dataclass(frozen=True)
@@ -48,9 +43,6 @@ BADGES = [
         "course-cleared", "Course cleared", "Passed every checkpoint in your course.", 0, "gates"
     ),
     Badge("weekly-check", "Weekly check", "Finished a weekly assessment.", 1, "weekly"),
-    Badge(
-        "clean-sprint", "Clean sprint", "Solved all three problems in a focus sprint.", 1, "sprint"
-    ),
     Badge("streak-7", "Week in a row", "Studied 7 scheduled days in a row.", 7, "streak"),
     Badge("streak-30", "Month in a row", "Studied 30 scheduled days in a row.", 30, "streak"),
 ]
@@ -131,21 +123,7 @@ def facts_for(
         if pid in catalog.problems and catalog.problem(pid).difficulty == "hard"
     ]
 
-    index = practice.default_index()
-    library = db.execute(
-        select(PracticeMark.problem_id, PracticeMark.solved_at, PracticeMark.updated_at).where(
-            PracticeMark.user_id == user.id, PracticeMark.status == "solved"
-        )
-    )
     solves = list(first.values())
-    for problem_id, solved_at, updated_at in library:
-        at = solved_at or updated_at
-        solves.append(at)
-        problem = index.problems.get(problem_id)
-        if problem and (
-            problem["difficulty"] == "hard" or practice.rating_of(problem) >= HARD_RATING
-        ):
-            hard.append(at)
 
     weekly = db.scalars(
         select(WeeklyAssessment.finished_at).where(
@@ -153,18 +131,6 @@ def facts_for(
             WeeklyAssessment.finished_at.is_not(None),
         )
     )
-    sprints = db.scalars(
-        select(FocusSprint).where(
-            FocusSprint.enrollment_id.in_(enrollment_ids), FocusSprint.finished_at.is_not(None)
-        )
-    )
-    clean = [
-        sprint.finished_at
-        for sprint in sprints
-        if sprint.finished_at is not None
-        and sprint.problems
-        and len(sprint.results) >= len(sprint.problems)
-    ]
     return Facts(
         events=dict(
             lessons=lessons,
@@ -173,7 +139,6 @@ def facts_for(
             hard=hard,
             gates=list(passed.values()),
             weekly=[at for at in weekly if at is not None],
-            sprint=clean,
         ),
         longest_streak=longest_streak,
         gate_count=len(course_gates),

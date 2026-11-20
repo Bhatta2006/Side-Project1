@@ -105,15 +105,6 @@ class StyleSpec(BaseModel):
     def min_headings(self) -> int:
         return 1 if self.format == "bite" else 3
 
-    def shows_reference(self) -> bool:
-        """The hand-authored reference lesson is a model for long, plain lessons only."""
-        return (
-            self.format != "bite"
-            and not self.gamified
-            and self.tone != "playful"
-            and self.frame is None  # a plain lesson is no model for a story or a case
-        )
-
 
 PRESETS: dict[str, StyleSpec] = {
     "standard": StyleSpec(name="Standard"),

@@ -81,7 +81,7 @@ def test_learner_reports_and_the_admin_queue(client):
     headers = login(http)
     sent = http.post(
         "/api/v1/problem-reports",
-        json={"message": "The run button spins forever", "route": "/problems/greeting"},
+        json={"message": "The run button spins forever", "route": "/problems/double-it"},
         headers=headers,
     )
     assert sent.status_code == 200

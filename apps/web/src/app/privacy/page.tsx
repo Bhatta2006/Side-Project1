@@ -66,10 +66,6 @@ export default function PrivacyPage() {
             the replies, and your ratings of them.
           </li>
           <li>
-            <strong>Optional links.</strong> A public Codeforces handle if you add one; we then read your public
-            Codeforces results.
-          </li>
-          <li>
             <strong>Reports you send.</strong> What you write in "Report a problem", with the page you were on.
           </li>
           <li>

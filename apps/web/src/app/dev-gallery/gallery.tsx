@@ -107,7 +107,7 @@ export default function Gallery() {
         <div className="grid max-w-md gap-2"><label htmlFor="g-input" className="font-semibold">Label</label><Input id="g-input" aria-describedby="g-help" /><p id="g-help" className="text-sm text-muted-foreground">Helper text below.</p></div>
         <div className="flex flex-wrap gap-2"><Pill pressed={pressed} onClick={() => setPressed(p => !p)}>45 min</Pill><Pill pressed={!pressed} onClick={() => setPressed(p => !p)}>Mon</Pill></div>
         <label className="flex items-center gap-3"><Switch /> Reduce motion</label>
-        <Tabs defaultValue="a"><TabsList><TabsTrigger value="a">Problems</TabsTrigger><TabsTrigger value="b">Company questions</TabsTrigger><TabsTrigger value="c">Focus sprint</TabsTrigger></TabsList></Tabs>
+        <Tabs defaultValue="a"><TabsList><TabsTrigger value="a">Practice sets</TabsTrigger><TabsTrigger value="b">Problems</TabsTrigger></TabsList></Tabs>
         <div className="grid max-w-xl gap-3" role="radiogroup" aria-label="Sample answers">
           {['Unanswered', 'Selected'].map((label, i) => <Choice key={label} role="radio" aria-checked={choice === i} selected={choice === i} note={choice === i ? 'Selected' : undefined} marker={String.fromCharCode(65 + i)} onClick={() => setChoice(i)}>{label}</Choice>)}
           <Choice role="radio" aria-checked tone="correct" note="Correct" marker="C" disabled>Checked correct</Choice>

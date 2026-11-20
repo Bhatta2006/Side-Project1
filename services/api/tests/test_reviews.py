@@ -11,7 +11,7 @@ from socrat.learn import service as learn
 from socrat.mastery.model import DAY
 from socrat.models import Enrollment, Evidence
 
-CONCEPT = "zero:programs-and-output"
+CONCEPT = "basics:values"
 
 
 def _take_quiz(client, headers):
@@ -83,7 +83,7 @@ def test_planner_keeps_a_snoozed_review_off_until_the_snooze_ends():
     from socrat.planner.engine import Adaptive, build_plan
 
     cat = default_catalog()
-    path = cat.course_concepts("zero")
+    path = cat.course_concepts("basics")
     now, today = 1_000 * DAY, date(2026, 11, 2)  # a Monday
     done = ConceptState(alpha=20, beta=1, evidence_count=5, review_step=2, next_review_at=now)
     states = {q: done for q in path[:6]}
@@ -101,8 +101,8 @@ def test_planner_keeps_a_snoozed_review_off_until_the_snooze_ends():
             now,
             set(range(7)),
             60,
-            course_id="zero",
-            adaptive=Adaptive(course_id="zero", overrides=overrides),
+            course_id="basics",
+            adaptive=Adaptive(course_id="basics", overrides=overrides),
         )
         return [
             n for n, d in enumerate(plan.days) for i in d["items"] if i["id"] == f"review:{target}"
@@ -134,7 +134,7 @@ def _two_courses(client):
         db.query(Row).delete()  # only the schedule this test sets
         cp = Enrollment(
             user_id=zero.user_id,
-            course_id="cp",
+            course_id="algo",
             language="python",
             level_id=zero.level_id,
             minutes_per_day=30,
@@ -156,41 +156,39 @@ def _two_courses(client):
             last_evidence_at=stamp - DAY,
             next_review_at=stamp + 3 * DAY,
         )
-        db.add(Row(enrollment_id=zero.id, concept="zero:input-and-arithmetic", state=due.to_dict()))
+        db.add(Row(enrollment_id=zero.id, concept="basics:functions", state=due.to_dict()))
         db.add(Row(enrollment_id=zero.id, concept=CONCEPT, state=later.to_dict()))
         db.add(Row(enrollment_id=cp.id, concept=CONCEPT, state=due.to_dict()))
-        db.add(Row(enrollment_id=cp.id, concept="cp:fast-io", state=later.to_dict()))
+        db.add(Row(enrollment_id=cp.id, concept="algo:arrays", state=later.to_dict()))
     return headers
 
 
 def test_reviews_from_every_course_with_overlap_and_what_the_current_course_needs(client):
     headers = _two_courses(client)
     own = client.get("/api/v1/reviews").json()
-    assert {i["concept"] for i in own["items"]} == {CONCEPT, "cp:fast-io"}  # active course only
+    assert {i["concept"] for i in own["items"]} == {CONCEPT, "algo:arrays"}  # active course only
 
     everywhere = client.get("/api/v1/reviews?scope=all").json()
     assert everywhere["scope"] == "all" and everywhere["daily_limit"] >= 1
     by = {i["concept"]: i for i in everywhere["items"]}
-    assert set(by) == {CONCEPT, "cp:fast-io", "zero:input-and-arithmetic"}
+    assert set(by) == {CONCEPT, "algo:arrays", "basics:functions"}
     # Scheduled in both enrolments: listed once, at the earlier date, naming both courses.
-    assert by[CONCEPT]["courses"] == ["cp", "zero"] and by[CONCEPT]["due"] is True
-    needed = by["zero:input-and-arithmetic"]
+    assert by[CONCEPT]["courses"] == ["algo", "basics"] and by[CONCEPT]["due"] is True
+    needed = by["basics:functions"]
     assert needed["builds_on"] is True and needed["current_course"] is False
-    assert "builds on this" in needed["reason"] and needed["course"] == "zero"
+    assert "builds on this" in needed["reason"] and needed["course"] == "basics"
     assert everywhere["due_now"] == 2
     # Due at the same time, the prerequisite the current course needs comes first.
-    assert everywhere["items"][0]["concept"] == "zero:input-and-arithmetic"
+    assert everywhere["items"][0]["concept"] == "basics:functions"
 
     # Snoozing a review held by the paused course works, and bringing it back too.
-    held = client.post(
-        "/api/v1/reviews/zero:input-and-arithmetic/snooze", json={"days": 3}, headers=headers
-    )
+    held = client.post("/api/v1/reviews/basics:functions/snooze", json={"days": 3}, headers=headers)
     assert held.status_code == 200
     listed = {i["concept"]: i for i in client.get("/api/v1/reviews?scope=all").json()["items"]}
-    assert listed["zero:input-and-arithmetic"]["snoozed_until"] == held.json()["snoozed_until"]
-    client.delete("/api/v1/reviews/zero:input-and-arithmetic/snooze", headers=headers)
+    assert listed["basics:functions"]["snoozed_until"] == held.json()["snoozed_until"]
+    client.delete("/api/v1/reviews/basics:functions/snooze", headers=headers)
     listed = {i["concept"]: i for i in client.get("/api/v1/reviews?scope=all").json()["items"]}
-    assert listed["zero:input-and-arithmetic"]["snoozed_until"] is None
+    assert listed["basics:functions"]["snoozed_until"] is None
 
 
 def test_concepts_placement_only_assumed_known_are_not_listed_as_reviews(client):
@@ -220,9 +218,9 @@ def test_concepts_placement_only_assumed_known_are_not_listed_as_reviews(client)
         db.add(
             Row(
                 enrollment_id=enrollment.id,
-                concept="zero:input-and-arithmetic",
+                concept="basics:functions",
                 state=real.to_dict(),
             )
         )
     shown = [i["concept"] for i in client.get("/api/v1/reviews").json()["items"]]
-    assert shown == ["zero:input-and-arithmetic"]
+    assert shown == ["basics:functions"]

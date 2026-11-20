@@ -58,7 +58,7 @@ const STARTERS: Record<string, string[]> = {
   plan: ['Help me build my plan', 'I have interviews coming up', "I'm stuck. What should change?"],
   concept: ['Explain this with a real example', 'When would I use this?', 'Give me a problem to practise this'],
 };
-// Courses without code (a language, drawing, finance): no problem library to pick from.
+// Courses without code (a language, drawing, finance): no code problems to suggest.
 const STARTERS_NO_CODE: Record<string, string[]> = {
   general: ['What should I focus on this week?', 'Quiz me on what I learned', 'Where am I weakest right now?'],
   plan: ['Help me build my plan', 'I have a deadline coming up', "I'm stuck. What should change?"],
@@ -67,8 +67,8 @@ const STARTERS_NO_CODE: Record<string, string[]> = {
 
 export default function Assistant({ scope, title, language, context, onSent, openSignal = 0, launcher: showLauncher = true }: Props) {
   const problem = scope.startsWith('problem:');
-  // Problem picks and the practice library exist only in the programming courses.
-  const coding = useCourse().features.library;
+  // Code questions and code starters exist only in the programming courses.
+  const coding = useCourse().features.code;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [ladder, setLadder] = useState<Ladder>({});
@@ -380,7 +380,7 @@ export default function Assistant({ scope, title, language, context, onSent, ope
               ? 'Tell me what you tried and where it breaks. Hints get more specific as you keep working. Run your code or explain your thinking to unlock the next level.'
               : scope === 'general'
                 ? coding
-                  ? 'I know your plan, your progress and the whole practice library. Ask what to study, which problems to do next, or anything you are stuck on.'
+                  ? 'I know your plan and your progress. Ask what to study, which problems to do next, or anything you are stuck on.'
                   : 'I know your plan and your progress. Ask what to study next, to quiz you, or about anything you are stuck on.'
                 : scope === 'plan'
                   ? "Let's shape your roadmap together. I'll ask a few questions, then suggest changes you can accept or skip. Nothing changes without your yes."

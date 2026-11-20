@@ -22,7 +22,7 @@ def _switch_to(db: Session, user_id: str, course: str) -> None:
                 user_id=user_id,
                 course_id=course,
                 language="python",
-                level_id="new-to-programming",
+                level_id="brand-new",
                 minutes_per_day=30,
                 weekdays=[0, 1, 2],
                 status="active",
@@ -49,7 +49,7 @@ def test_general_and_plan_chats_stay_with_their_course(client):
         zero_general = _say(db, user.id, "general", "zero: how do loops work")
         _say(db, user.id, "plan", "zero: plan for loops")
 
-        _switch_to(db, user.id, "dsa")
+        _switch_to(db, user.id, "algo")
         # The other course's chats are not this course's history or context.
         assert assistant.thread_view(db, user.id, "general")["messages"] == []
         assert assistant.thread_view(db, user.id, "plan")["messages"] == []
@@ -65,7 +65,7 @@ def test_general_and_plan_chats_stay_with_their_course(client):
             m["content"] for m in assistant.thread_view(db, user.id, "general")["messages"]
         ] == ["dsa: two pointers"]
 
-        _switch_to(db, user.id, "zero")
+        _switch_to(db, user.id, "basics")
         # Back in the first course, its own conversation is still there, and only it.
         view = assistant.thread_view(db, user.id, "general")
         assert view["scope"] == "general"
@@ -83,13 +83,12 @@ def test_problem_and_concept_chats_keep_their_scope_names(client):
     onboard(client, headers)
     with Session(client.app.state.engine) as db, db.begin():
         user = db.scalar(select(User).where(User.subject == "omar"))
-        assert assistant.stored_scope(db, user.id, "problem:greeting") == "problem:greeting"
+        assert assistant.stored_scope(db, user.id, "problem:double-it") == "problem:double-it"
         assert (
-            assistant.stored_scope(db, user.id, "concept:zero:programs-and-output")
-            == "concept:zero:programs-and-output"
+            assistant.stored_scope(db, user.id, "concept:basics:values") == "concept:basics:values"
         )
-        assert assistant.stored_scope(db, user.id, "general") == "general@zero"
-        assert assistant.public_scope("general@zero#abc") == "general"
+        assert assistant.stored_scope(db, user.id, "general") == "general@basics"
+        assert assistant.public_scope("general@basics#abc") == "general"
 
 
 def test_non_tutor_scopes_pass_through_unchanged(client):

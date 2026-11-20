@@ -22,7 +22,6 @@ from socrat.models import (
     Enrollment,
     Evidence,
     LearnerAbility,
-    LinkedAccount,
     PlanProposal,
     Submission,
 )
@@ -271,12 +270,10 @@ def sync_suggestions(
     return proposals.sync(db, enrollment, suggest.drafts(catalog, plan, signals), now)
 
 
-def level_for(db: Session, user_id: str, library_rating: int, enrollment: Enrollment) -> dict:
+def level_for(db: Session, enrollment: Enrollment) -> dict:
     thetas = list(
         db.scalars(
             select(LearnerAbility.theta).where(LearnerAbility.enrollment_id == enrollment.id)
         )
     )
-    account = db.scalar(select(LinkedAccount).where(LinkedAccount.user_id == user_id))
-    rating = getattr(account, "rating", None) if account else None
-    return profiles.level(library_rating, thetas, rating)
+    return profiles.level(thetas)

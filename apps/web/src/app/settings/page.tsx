@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { Choice, Pill } from '@/components/choice';
 import { TOUR_EVENT } from '@/components/tour-event';
-import CodeforcesLink from '@/components/codeforces-link';
 import { SuccessLine } from '@/components/socrat/states';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -364,7 +363,6 @@ export default function Settings() {
 
         <div id="connections" className="scroll-mt-32 grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
           <PlanSection />
-          {features.codeforces ? <CodeforcesLink /> : null}
           <AppSection />
         </div>
 

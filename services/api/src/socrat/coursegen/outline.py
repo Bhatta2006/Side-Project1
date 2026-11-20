@@ -23,7 +23,9 @@ class Brief(BaseModel):
     outcome: str = Field(min_length=10, max_length=600)  # what learners can do at the end
     background: str = Field(default="", max_length=600)  # what learners already know
     languages: list[Language] = Field(default=["python"], min_length=1)
-    reuse: list[Ref] = Field(default_factory=list, max_length=40)  # e.g. zero:loops
+    reuse: list[Ref] = Field(
+        default_factory=list, max_length=40
+    )  # concept ids from other courses, normally empty
     references: list[str] = Field(default_factory=list, max_length=10)
     notes: str = Field(default="", max_length=2000)
     # How learners want to learn (admin testing): a ready style, or a free-text wish the
@@ -141,41 +143,12 @@ def from_course(course: Course) -> dict:
     }
 
 
-def known_concepts(catalog: Catalog) -> str:
-    """Existing concepts a new course may list as prerequisites, one per line."""
-    return "\n".join(
-        f"{key} — {catalog.concepts[key].title}"
-        for course_id in catalog.courses
-        for key in catalog.course_concepts(course_id)
-    )
-
-
-# Adapters whose courses are programming courses ("" is a course made before adapters existed).
-SOFTWARE_ADAPTERS = {"", "software"}
-# What the DSA example teaches the architect, said without the DSA: for every other subject.
+# The granularity and ordering every outline is asked to follow, for any subject.
 GRANULARITY = """Granularity and ordering: this course stands alone, so every prerequisite is a
 concept of this course. One concept is one idea a learner can study in a single sitting of the
 length they asked for; split anything bigger. Order concepts so each uses only what came before,
 group them into modules of 3 to 7 that each end in something the learner can do, and let the
-subject decide the shape: do not borrow the structure of a programming course."""
-
-
-def gold_example(catalog: Catalog) -> str:
-    """The hand-authored DSA course's shape: the granularity and ordering to match."""
-    if "dsa" not in catalog.courses:
-        return ""
-    course = catalog.course("dsa")
-    lines = []
-    for m in course.modules:
-        lines.append(f"Module {m.id}: {m.title} — {m.summary}")
-        for cid in m.concepts:
-            c = catalog.concept(f"dsa:{cid}")
-            prereqs = ", ".join(c.prerequisites) or "none"
-            lines.append(
-                f"  - {cid} ({c.estimated_minutes} min, difficulty {c.difficulty}; "
-                f"needs {prereqs}): {c.summary}"
-            )
-    return "\n".join(lines)
+subject and the learner decide the shape, not any other course."""
 
 
 SHAPE = """{
@@ -203,7 +176,7 @@ SHAPE = """{
       {"id": "kebab-case, unique in the course",
        "title": "2-100 chars",
        "summary": "10-300 chars",
-       "prerequisites": ["earlier-concept-id", "zero:existing-id"],
+       "prerequisites": ["earlier-concept-id"],
        "difficulty": 1-5,
        "estimated_minutes": 10-600 (3-600 when the learning style asks for short sessions),
        "depth": "overview | practitioner | mastery"}
@@ -251,9 +224,8 @@ Rules:
   as many concepts as that takes (a full skill course is usually 25-80 concepts in 4-12
   modules). Tag each concept's depth: "overview" if every learner needs it, "practitioner"
   for working competence, "mastery" for deep or advanced material.
-- Prerequisites form a DAG. List only concepts that come earlier in this course, or
-  existing Socrat concepts by their full id from the list given. Reuse an existing concept
-  instead of re-teaching it. Modules are in learning order.
+- Prerequisites form a DAG. List only concepts that come earlier in this course; the course
+  stands alone. Modules are in learning order.
 - List your assumptions about the learner and any prerequisite questions you could not settle,
   so the learner and the critic can see them. Do not hide uncertainty.
 - Levels: 2-4 self-reported starting points. The first has start_concept null.
@@ -311,8 +283,7 @@ Check:
   concepts alone? Name missing concepts.
 - Granularity: concepts that bundle separable skills (split them), or trivial slivers
   (merge them).
-- Order and prerequisites: missing or wrong edges, concepts used before they are taught,
-  existing Socrat concepts that should be reused instead of re-taught.
+- Order and prerequisites: missing or wrong edges, concepts used before they are taught.
 - Depth tags fit the audience. When concepts carry objectives and misconceptions, objectives
   are observable and misconceptions concrete; an outline without them is a plan whose details
   are written separately, so their absence is not an issue.
@@ -354,17 +325,7 @@ def architect_prompt(
     issues: list[str] | None = None,
 ) -> str:
     parts = [brief_text(brief), *([styles.block(brief.style)] if brief.style else [])]
-    if brief.adapter in SOFTWARE_ADAPTERS:
-        # Only a programming course can build on the hand-authored programming courses, and only
-        # it is helped by their shape. Every other subject used to get both (hundreds of lines of
-        # DSA in a children's physics prompt): slower, dearer and pulling the plan towards code.
-        parts += [
-            "Existing Socrat concepts you may use as prerequisites:\n" + known_concepts(catalog),
-            "For quality, granularity and ordering, match the hand-authored DSA course:\n"
-            + gold_example(catalog),
-        ]
-    else:
-        parts.append(GRANULARITY)
+    parts.append(GRANULARITY)
     if previous is not None:
         parts.append("Your previous outline:\n" + json.dumps(previous, indent=1))
     if issues:

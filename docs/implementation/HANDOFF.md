@@ -22,6 +22,36 @@ Commits on the branch, oldest first: `17b3c06` slice 1, `1481a78` 2, `afd1559` 3
 `git log --oneline origin/main..HEAD` to confirm the state above, run the related test subset for
 the area you will touch, then pick work from section 6.
 
+**Update 2026-11-20 (separation of the hand-authored courses from the engine, branch `gbuild/main`).**
+The owner decided Socrat ships **no built-in courses**: `zero`, `dsa` and `cp`, their atoms, patterns,
+quiz families and generators, placement banks, projects and the external practice layer (the
+LeetCode/CSES/Codeforces index, company bank, focus and company sprints, the Codeforces link) are
+removed, and every course, question and practice item is generated from the learner's onboarding
+details. This reverses the earlier line "DSA, CP, Zero stay hand-authored" below and in
+`docs/architecture/course-generation.md`. What changed in the engine: the outline and lesson authors
+no longer receive a reference course or lesson (`coursegen/outline.py`, `package.py`); the tutor lost
+its library tools and the contest/interview steer; goal relevance, quiz tracks, the fixed course
+sequence and the `shape.features` library/companies/codeforces flags are gone (a code editor now
+follows the course's own shape only); `content/courses` may be empty. API tests that went through
+the real catalog now use the synthetic packs in `services/api/tests/content_fixture.py`. DB tables for
+the removed features (`practice_marks`, `linked_accounts`, `focus_sprints`, `company_sprints`) were
+left in place on purpose: dropping them needs an owner-approved migration. Not verified: the web
+build and Playwright suites (typecheck and unit tests only), any live model run, onboarding (the
+cofounder is reshaping it; its course-picker step lists catalog courses and is empty until generated
+courses exist).
+
+Also removed in that change: the signed-out "Try it" tutor on the landing page (`/api/v1/try`,
+`try-tutor.tsx`, the `try_*` settings and the `try_tutor` feature flag) because it ran on a fixed DSA
+problem; `socrat/trial.py` keeps only the per-visitor rate limiter that email sign-in uses. A demo built
+from a generated course can replace it. API tests that depended on hand-authored content (quiz
+families and generators, patterns, projects, placement banks, atom sessions, the course-completion
+journey, calibration of real items) were deleted with that content, not rewritten. The Playwright
+e2e and visual specs still onboard into `zero`/`dsa` and fetch `/problems/double-it`-style ids that need
+a seeded generated course: only the removed routes were dropped from them, so treat them as stale.
+Known red tests not caused by this change: `test_lifecycle.py` (untracked, three tests),
+`test_explainer.py::test_artifact_validation_and_compiler_boundaries` (theme token), and
+`test_sourced_content.py` (reads the wrong job from the course detail).
+
 **Update 2026-11-03 (gap closure against the master prompt).** The master prompt was found at
 `D:\Downloads\SOCRAT_Universal_Learning_Engine_Master_Prompt.txt` on this machine. A depth audit
 (`docs/implementation/ule-gap-audit.md`, section 0 has the current status of all 20 acceptance
@@ -624,7 +654,7 @@ per batch when the first learner approaches, cached for all; auto-release after 
 plus a separate reviewer agent, labelled AI-generated, learner reports, batch quarantine; assessment
 via code exercises (existing judge), auto-graded quizzes, AI-rubric free text and projects; in-product
 background worker, one agent per role, output in the database (versioned, status, provenance); repo
-YAML stays as gold packs and the reviewer's quality bar (DSA, CP, Zero stay hand-authored); depth from
+YAML held gold packs and the reviewer's quality bar (removed 2026-11-20: no course is hand-authored); depth from
 the enrolment goal (overview, practitioner, mastery); researcher agent with sources cited, never copied;
 provider-agnostic, model per role; prefetch about 2 concepts ahead; configurable per-course and
 per-batch budget caps that pause and alert; outline up front, lesson content lazy; languages declared

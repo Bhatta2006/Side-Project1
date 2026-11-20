@@ -20,7 +20,7 @@ def test_a_claimed_attempt_does_not_advance_the_ladder_and_a_real_run_counts_onc
     def ask():
         response = client.post(
             "/api/v1/assistant/messages",
-            json={"scope": "problem:time-convert", "new_attempt": True},
+            json={"scope": "problem:sum-loop", "new_attempt": True},
             headers=headers,
         )
         response.raise_for_status()
@@ -35,7 +35,7 @@ def test_a_claimed_attempt_does_not_advance_the_ladder_and_a_real_run_counts_onc
         db.add(
             Submission(
                 user_id=user,
-                problem_id="time-convert",
+                problem_id="sum-loop",
                 language="python",
                 mode="run",
                 source="print(1)",
@@ -51,7 +51,7 @@ def test_a_claimed_attempt_does_not_advance_the_ladder_and_a_real_run_counts_onc
 
 
 def test_protected_approach_never_appears_in_a_stream_delta():
-    problem = default_catalog().problem("time-convert")
+    problem = default_catalog().problem("sum-loop")
     secret = problem.approach.split(". ")[0]
 
     class Provider:
@@ -62,7 +62,7 @@ def test_protected_approach_never_appears_in_a_stream_delta():
             yield Event("text", ". Try implementing that.")
 
     async def run():
-        plan = TurnPlan("thread", "problem:time-convert", 1, problem, [], "Safe hint")
+        plan = TurnPlan("thread", "problem:sum-loop", 1, problem, [], "Safe hint")
         return [item async for item in stream_reply(Provider(), plan, Settings(environment="test"))]
 
     events = asyncio.run(run())

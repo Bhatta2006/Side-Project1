@@ -53,8 +53,6 @@ from socrat.learn.session_routes import router as session_router
 from socrat.learn.streak_routes import router as streak_router
 from socrat.learn.tasks import admin as tasks_admin
 from socrat.learn.tasks import router as tasks_router
-from socrat.library import autosync
-from socrat.library.routes import router as library_router
 from socrat.localize.routes import admin as locale_admin
 from socrat.localize.routes import public as locale_public
 from socrat.mentor.routes import router as mentor_router
@@ -64,7 +62,6 @@ from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
 from socrat.schema_revision import SCHEMA_REVISION
 from socrat.style.routes import router as style_router
-from socrat.trial import router as trial_router
 from socrat.vitals import router as vitals_router
 from socrat.workbench.routes import router as workbench_router
 
@@ -97,9 +94,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app):
-        background = None
-        if settings.codeforces_autosync:
-            background = asyncio.create_task(autosync.run_forever(engine))
         # Several loops write several lessons at once; jobs.claim gives each job to one loop.
         generation = [
             asyncio.create_task(coursegen_jobs.run_forever(engine, settings, default_catalog))
@@ -117,8 +111,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # Building the item bank runs every generator (~20 s); do it before the first check.
             threading.Thread(target=warm_quiz_bank, daemon=True).start()
         yield
-        if background is not None:
-            background.cancel()
         for task in generation:
             task.cancel()
         engine.dispose()
@@ -139,7 +131,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(explainer_router)
     app.include_router(adaptive_quiz_router)
     app.include_router(session_router)
-    app.include_router(library_router)
     app.include_router(assessments_router)
     app.include_router(admin_router)
     app.include_router(coursegen_router)
@@ -314,7 +305,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "adaptive_quiz": settings.adaptive_quiz_enabled,
             "pattern_planner": settings.pattern_planner_enabled,
             "community_url": settings.community_whatsapp_url or None,
-            "try_tutor": settings.try_tutor_enabled,
             "learning_requests": settings.learning_requests_enabled,
             "lite_mode": settings.lite_mode_enabled,
             "lesson_feel": settings.lesson_feel_enabled,
