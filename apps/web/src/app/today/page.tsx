@@ -567,7 +567,7 @@ export default function TodayPage() {
       </div>
       {features?.learning_requests ? (
         <Link
-          href="/new"
+          href="/start"
           className="mt-6 flex min-h-14 items-center justify-between gap-4 rounded-[4px] border bg-card px-5 py-4 transition-colors hover:bg-raised"
         >
           <span>

@@ -352,7 +352,7 @@ def confirm(request_id: str, body: Confirm, request: Request):
     """Start the course from the (optionally edited) intent. Idempotent: a confirmed request
     returns as it is."""
     _enabled(request)
-    settings, cat = request.app.state.settings, catalog()
+    settings = request.app.state.settings
     with Session(engine(request)) as db, db.begin():
         user = user_of(request, db, write=True)
         row = db.get(LearningRequest, request_id)
@@ -366,26 +366,32 @@ def confirm(request_id: str, body: Confirm, request: Request):
             parsed = intents.Intent.model_validate(body.intent or row.intent)
         except ValidationError as exc:
             raise HTTPException(422, "invalid_intent") from exc
-        if parsed.blocked:
-            raise HTTPException(422, "request_blocked")
-        course_id = intents.slug(parsed.subject, user.id, row.key)
-        if course_id in cat.courses or jobs.active(db, course_id) is not None:
-            raise HTTPException(409, "generation_in_progress")
-        brief = intents.to_brief(
-            parsed, course_id, settings.learning_request_budget_usd, row.material or ""
-        )
-        jobs.enqueue(
-            db,
-            "outline",
-            course_id,
-            {"brief": brief.model_dump(mode="json"), "learning_request": row.id},
-            user.id,
-        )
-        row.intent = parsed.model_dump(mode="json")
-        row.course_id, row.status, row.updated_at = course_id, "confirmed", now()
-        record_event(db, user.id, "learning_request.confirmed", row.id)
-        db.flush()
+        begin(db, settings, user.id, row, parsed)
         return view(db, row)
+
+
+def begin(db: Session, settings, user_id: str, row: LearningRequest, parsed) -> None:
+    """Queue the outline for a request: the course starts being planned. Shared by confirm
+    and Lesson 0 onboarding (``socrat.onboarding``)."""
+    if parsed.blocked:
+        raise HTTPException(422, "request_blocked")
+    course_id = intents.slug(parsed.subject, user_id, row.key)
+    if course_id in catalog().courses or jobs.active(db, course_id) is not None:
+        raise HTTPException(409, "generation_in_progress")
+    brief = intents.to_brief(
+        parsed, course_id, settings.learning_request_budget_usd, row.material or ""
+    )
+    jobs.enqueue(
+        db,
+        "outline",
+        course_id,
+        {"brief": brief.model_dump(mode="json"), "learning_request": row.id},
+        user_id,
+    )
+    row.intent = parsed.model_dump(mode="json")
+    row.course_id, row.status, row.updated_at = course_id, "confirmed", now()
+    record_event(db, user_id, "learning_request.confirmed", row.id)
+    db.flush()
 
 
 def _matching(request: Request) -> None:

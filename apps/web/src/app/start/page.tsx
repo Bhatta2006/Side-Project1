@@ -1,466 +1,433 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * Lesson 0: the only way into Socrat. A goal in the learner's words, a mode, a door (an everyday
+ * scenario for this goal), an honest daily time budget, then a quick win, a snag and a reveal,
+ * all before any account. Sign-in comes last and turns the draft into a course plan.
+ * The server keeps the answer keys and grades every tap (`socrat/onboarding.py`).
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Code2, Target, Trophy } from '@/components/icons';
-import { ApiError, api, explain } from '@/lib/api';
+import { ArrowLeft } from '@/components/icons';
+import { api, explain } from '@/lib/api';
 import { useSession } from '@/lib/session';
-import { LANGUAGE_LABEL, hours } from '@/lib/routes';
-import type { Course, Language } from '@/lib/types';
 import { ErrorNote, Loading } from '@/components/common';
-import { Choice, Pill } from '@/components/choice';
+import { Choice } from '@/components/choice';
 import { ArrowCircle, Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import { Soc } from '@/components/socrat/illustration';
 
-const MINUTES = [15, 20, 30, 45, 60, 90, 120] as const;
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const ROLES = [
-  ['internship', 'Internship'],
-  ['new-grad', 'New grad'],
-  ['mid-level', 'Mid-level'],
-  ['senior', 'Senior'],
-] as const;
-type Step = 'about' | 'course' | 'level' | 'language' | 'schedule' | 'review';
-const ORDER: Step[] = ['about', 'course', 'level', 'language', 'schedule', 'review'];
-// Only a programming course asks which language; others (Kannada, drawing, finance) skip it.
-const codes = (c: Course | null) => !c || !c.shape || c.shape.studio === 'code';
-const COURSE_ICON: Record<string, typeof BookOpen> = { zero: BookOpen, dsa: Target, cp: Trophy };
-const DRAFT_KEY = 'socrat:onboarding';
-const MIN_AGE = 13;
+type Mode = 'sprint' | 'builder' | 'explorer';
+type Task = { prompt: string; scene: string; options: string[] };
+type Draft = {
+  id: string;
+  subject: string;
+  goal: string;
+  doors: string[];
+  mode: Mode | null;
+  door: string | null;
+  safety_notes: string[];
+  calibration: 'pending' | 'ready' | 'none';
+  win: Task | null;
+  snag: Task | null;
+  hint: string | null;
+  reveal: { explain: string; concept: string; real_world: string } | null;
+  progress: Record<string, { done: boolean; tries: number }>;
+  request_id: string | null;
+};
+type Result = { correct: boolean; nudge: string; done: boolean; answer: number | null };
+type Plan = {
+  id: string;
+  status: string;
+  published: boolean;
+  enroll: Record<string, unknown> | null;
+  job: { state: string } | null;
+  skeleton: { title: string; modules: { title: string; lessons: string[] }[] } | null;
+  blueprint: { title: string; tagline: string; modules: { id: string; title: string; concepts: { id: string; title: string }[] }[] } | null;
+};
+type Step = 'goal' | 'mode' | 'door' | 'time' | 'win' | 'snag' | 'reveal' | 'save' | 'plan';
 
-function GoogleMark() {
+const STEPS: Step[] = ['goal', 'mode', 'door', 'time', 'win', 'snag', 'reveal', 'save'];
+const KEY = 'socrat:lesson0';
+const MODES: { id: Mode; title: string; body: string }[] = [
+  { id: 'sprint', title: 'Sprint', body: 'An exam or a deadline. Fast, high-yield, no detours.' },
+  { id: 'builder', title: 'Builder', body: 'Make something real. Theory only when the project needs it.' },
+  { id: 'explorer', title: 'Deep explorer', body: 'Understand the why. Slower, and it sticks.' },
+];
+const MINUTES = [
+  { m: 10, label: '10 min', body: 'Tiny steps that still add up' },
+  { m: 25, label: '25 min', body: 'One solid lesson a day' },
+  { m: 60, label: '60 min', body: 'Room to go deep' },
+];
+const EXAMPLES = ['Build a REST API', 'Pass my DBMS exam', 'Understand stock investing', 'Play my first song on guitar'];
+
+function Ask({ eyebrow, title, body }: { eyebrow?: string; title: string; body?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
-      <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z" />
-      <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z" />
-      <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z" />
-      <path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z" />
-    </svg>
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        {eyebrow ? <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">{eyebrow}</p> : null}
+        <h1 className="type-display-l mt-1 text-balance">{title}</h1>
+        {body ? <p className="mt-3 text-base text-muted-foreground">{body}</p> : null}
+      </div>
+      <Soc size={88} mood="curious" className="mt-2 hidden sm:block" />
+    </div>
   );
 }
 
 function detectTimezone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch {
-    return 'UTC';
-  }
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
 }
-
-/** Each onboarding step is one of Soc's questions: he asks it from the margin. */
-function Heading({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">quick question</p>
-        <h1 className="type-display-l mt-1">{title}</h1>
-        <p className="mt-3 text-base text-muted-foreground">{body}</p>
-      </div>
-      <Soc size={96} mood="curious" className="mt-2 hidden sm:block" />
-    </div>
-  );
-}
-
-/** One row on the review step, with an Edit link back to its step. */
-function Summary({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
-  return (
-    <div className="flex min-h-14 items-center justify-between gap-4 border-b py-3 last:border-0">
-      <div className="min-w-0">
-        <dt className="text-[13px] text-muted-foreground">{label}</dt>
-        <dd className="font-semibold">{value}</dd>
-      </div>
-      <Button type="button" variant="link" size="sm" onClick={onEdit}>Edit<span className="sr-only"> {label.toLowerCase()}</span></Button>
-    </div>
-  );
-}
-
-/** Validation answers (age, missing details) are fixed in the form, not by retrying. */
-const retryable = (message: string) => !/age|valid|details|already/i.test(message);
 
 export default function Start() {
-  const { profile, features, loading, refresh } = useSession();
-  const allowed = !loading; // the questions come first; signing in happens at the end
   const router = useRouter();
-  const [courses, setCourses] = useState<Course[] | null>(null);
-  const [step, setStep] = useState<Step>('about');
-  // Each step starts at the top, so the progress bar and Back are always in view.
-  useEffect(() => { window.scrollTo({ top: 0 }); }, [step]);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [restored, setRestored] = useState(false);
-  // Set once a signed-out learner heads to sign in: on return the plan is created from the saved answers.
-  const [pending, setPending] = useState(false);
-  const finishing = useRef(false);
-
-  const [name, setName] = useState('');
+  const { profile, features, loading, refresh } = useSession();
+  const [step, setStep] = useState<Step>('goal');
+  const [text, setText] = useState('');
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [mode, setMode] = useState<Mode | null>(null);
+  const [minutes, setMinutes] = useState<number | null>(null);
+  const [ownDoor, setOwnDoor] = useState('');
+  const [picked, setPicked] = useState<number | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const [note, setNote] = useState('');
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [birthYear, setBirthYear] = useState('');
-  const [birthdayPassed, setBirthdayPassed] = useState(true);
-  const [course, setCourse] = useState<Course | null>(null);
-  const [level, setLevel] = useState('');
-  const [language, setLanguage] = useState<Language | ''>('');
-  const [minutes, setMinutes] = useState<number>(30);
-  const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4]);
-  const [targetDate, setTargetDate] = useState('');
-  const [targetRole, setTargetRole] = useState('');
-  const [targetRating, setTargetRating] = useState('');
-  const [motivation, setMotivation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [restored, setRestored] = useState(false);
+  const pending = useRef<Promise<Draft> | null>(null);
+  const shownAt = useRef(0);
+  const claiming = useRef(false);
 
-  const [runtimes, setRuntimes] = useState<Record<string, boolean>>({});
-  // Any subject goes to the generation engine; the ready-made courses below stay as defaults.
-  const [subject, setSubject] = useState('');
-  const [suggestions, setSuggestions] = useState<{ id: string; label: string }[]>([]);
-  useEffect(() => {
-    if (!features?.learning_requests) return;
-    api.get<{ subjects: { id: string; label: string }[] }>('/learning-requests/options').then(r => setSuggestions(r.subjects)).catch(() => undefined);
-  }, [features?.learning_requests]);
+  useEffect(() => { window.scrollTo({ top: 0 }); shownAt.current = performance.now(); }, [step]);
 
+  // A reload, or the return from Google sign-in, picks up where the learner was.
   useEffect(() => {
-    api.get<{ items: Course[] }>('/courses').then(r => setCourses(r.items)).catch(e => setError(explain(e)));
-    api.get<{ languages: Record<string, boolean> }>('/runtimes').then(r => setRuntimes(r.languages)).catch(() => undefined);
+    let saved: { id?: string; step?: Step; mode?: Mode; minutes?: number; text?: string } = {};
+    try { saved = JSON.parse(sessionStorage.getItem(KEY) ?? '{}'); } catch { /* start fresh */ }
+    if (!saved.id) { setRestored(true); return; }
+    setText(saved.text ?? '');
+    setMode(saved.mode ?? null);
+    setMinutes(saved.minutes ?? null);
+    api.get<Draft>(`/onboarding/${saved.id}`)
+      .then(d => { setDraft(d); setStep(d.request_id ? 'plan' : saved.step ?? 'door'); })
+      .catch(() => { try { sessionStorage.removeItem(KEY); } catch { /* ignore */ } })
+      .finally(() => setRestored(true));
   }, []);
-  // A restored draft may stand on the language step of a course that has none.
-  useEffect(() => { if (step === 'language' && !codes(course)) setStep('schedule'); }, [step, course]);
-  useEffect(() => {
-    if (!profile) return;
-    // A finished course may start the next one (the API refuses unless the course is done).
-    const moving = new URLSearchParams(window.location.search).get('next') === '1';
-    if (profile.enrollment && !moving) { router.replace(profile.enrollment.status === 'placement' ? '/placement' : '/today'); return; }
-    setName(n => n || profile.display_name || '');
-    if (profile.birth_year) setStep(s => (s === 'about' ? 'course' : s));
-  }, [profile, router]);
-
-  // Choices survive moving between steps and a reload within this browser session.
-  useEffect(() => {
-    if (!courses || restored) return;
-    setRestored(true);
-    try {
-      const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null') as Record<string, unknown> | null;
-      if (!saved) {
-        const wanted = courses.find(c => c.id === new URLSearchParams(window.location.search).get('course'));
-        if (wanted) { setCourse(wanted); if (wanted.languages.length === 1) setLanguage(wanted.languages[0]); }
-        return;
-      }
-      const savedCourse = courses.find(c => c.id === saved.course) ?? null;
-      if (typeof saved.name === 'string' && saved.name) setName(saved.name);
-      if (typeof saved.birthYear === 'string') setBirthYear(saved.birthYear);
-      setCourse(savedCourse);
-      if (savedCourse && typeof saved.level === 'string') setLevel(saved.level);
-      if (savedCourse && typeof saved.language === 'string') setLanguage(saved.language as Language);
-      if (typeof saved.minutes === 'number') setMinutes(saved.minutes);
-      if (Array.isArray(saved.weekdays) && saved.weekdays.length) setWeekdays(saved.weekdays as number[]);
-      if (typeof saved.targetDate === 'string') setTargetDate(saved.targetDate);
-      if (typeof saved.targetRole === 'string') setTargetRole(saved.targetRole);
-      if (typeof saved.targetRating === 'string') setTargetRating(saved.targetRating);
-      if (typeof saved.motivation === 'string') setMotivation(saved.motivation);
-      if (saved.pending === true) setPending(true);
-      const savedStep = saved.step as Step;
-      // Never skip the profile step for an incomplete profile.
-      if ((profile?.birth_year || (saved.name && saved.birthYear)) && ORDER.includes(savedStep) && savedStep !== 'about' && (savedCourse || savedStep === 'course')) setStep(savedStep);
-    } catch { /* start fresh */ }
-  }, [courses, restored, profile?.birth_year]);
   useEffect(() => {
     if (!restored) return;
-    try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, name, birthYear, course: course?.id, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation, pending }));
-    } catch { /* per-viewer nicety only */ }
-  }, [restored, step, name, birthYear, course, level, language, minutes, weekdays, targetDate, targetRole, targetRating, motivation, pending]);
+    try { sessionStorage.setItem(KEY, JSON.stringify({ id: draft?.id, step, mode, minutes, text })); } catch { /* per-viewer nicety */ }
+  }, [restored, draft?.id, step, mode, minutes, text]);
 
-  const thisYear = new Date().getFullYear();
-  const years = useMemo(() => Array.from({ length: 90 }, (_, i) => thisYear - 13 - i), [thisYear]);
-  const borderline = Number(birthYear) === thisYear - 13;
-
-  async function saveAbout(event: React.FormEvent) {
-    event.preventDefault();
-    setError('');
-    if (thisYear - Number(birthYear) < MIN_AGE || (borderline && !birthdayPassed)) {
-      setError(explain(new ApiError(422, 'minimum_age')));
-      return;
-    }
-    if (!profile) { // saved with the plan once they sign in
-      setStep(course ? 'level' : 'course');
-      return;
-    }
+  async function act<T>(work: () => Promise<T>): Promise<T | undefined> {
     setBusy(true);
+    setError('');
+    try { return await work(); } catch (e) { setError(explain(e)); return undefined; } finally { setBusy(false); }
+  }
+
+  // Stage 1: reading the goal and writing the doors runs while the learner picks a mode.
+  function submitGoal(event: React.FormEvent) {
+    event.preventDefault();
+    if (text.trim().length < 3) return;
+    setError('');
+    const call = api.post<Draft>('/onboarding', { text: text.trim() });
+    pending.current = call;
+    call.then(setDraft).catch(e => { setError(explain(e)); setStep('goal'); });
+    setStep('mode');
+  }
+
+  async function chooseMode(m: Mode) {
+    setMode(m);
+    setStep('door');
+    if (!draft && pending.current) await act(() => pending.current as Promise<Draft>);
+  }
+
+  // The calibration is written for the chosen door while the learner picks a time budget.
+  function chooseDoor(door: string) {
+    if (!draft || !mode || !door.trim()) return;
+    setStep('time');
+    pending.current = api.post<Draft>(`/onboarding/${draft.id}/choose`, { mode, door: door.trim() });
+    pending.current.then(setDraft).catch(e => setError(explain(e)));
+  }
+
+  async function chooseTime(m: number) {
+    setMinutes(m);
+    const ready = draft?.calibration === 'pending' && pending.current ? await act(() => pending.current as Promise<Draft>) : draft;
+    if (!ready) return;
+    setStep(ready.calibration === 'ready' ? 'win' : 'save');
+  }
+
+  async function answer(stepName: 'win' | 'snag', choice: number | null) {
+    if (!draft) return;
+    const ms = Math.round(performance.now() - shownAt.current);
+    const out = await act(() => api.post<Draft & { result: Result }>(`/onboarding/${draft.id}/answer`, { step: stepName, choice, ms, note: note.trim() }));
+    shownAt.current = performance.now();
+    if (!out) return;
+    setDraft(out);
+    setResult(out.result);
+  }
+
+  function next() {
+    setResult(null);
+    setPicked(null);
+    setNote('');
+    setStep(step === 'win' ? 'snag' : step === 'snag' ? 'reveal' : 'save');
+  }
+
+  async function hint() {
+    if (!draft) return;
+    const out = await act(() => api.post<Draft>(`/onboarding/${draft.id}/hint`, {}));
+    if (out) setDraft(out);
+  }
+
+  const claim = useCallback(async () => {
+    if (!draft || !minutes || claiming.current) return;
+    claiming.current = true;
+    setBusy(true);
+    setError('');
     try {
-      await api.patch('/me', {
-        display_name: name.trim() || undefined,
-        birth_year: Number(birthYear),
-        birthday_passed: borderline ? birthdayPassed : true,
-        timezone: detectTimezone(),
-      });
-      await refresh();
-      setStep('course');
+      if (profile && !profile.birth_year) {
+        await api.patch('/me', { birth_year: Number(birthYear), birthday_passed: true, timezone: detectTimezone() });
+        await refresh();
+      }
+      const out = await api.post<{ draft: Draft; request: Plan }>(`/onboarding/${draft.id}/claim`, { minutes });
+      setDraft(out.draft);
+      setPlan(out.request);
+      setStep('plan');
     } catch (e) {
       setError(explain(e));
     } finally {
+      claiming.current = false;
       setBusy(false);
     }
-  }
+  }, [draft, minutes, profile, birthYear, refresh]);
 
-  async function enroll(event: React.FormEvent) {
-    event.preventDefault();
-    if (!profile) { setPending(true); return; } // show the sign-in options
-    await submitPlan();
+  // Back from sign-in with an age already on the account: save the course without asking again.
+  useEffect(() => {
+    if (step === 'save' && profile?.birth_year && draft && minutes && !error) void claim();
+  }, [step, profile?.birth_year, draft, minutes, error, claim]);
+
+  // The plan is written in the background; ask again until it can be started.
+  useEffect(() => {
+    if (step !== 'plan' || !draft?.request_id) return;
+    let alive = true;
+    const look = () => api.get<Plan>(`/learning-requests/${draft.request_id}`).then(p => { if (alive) setPlan(p); }).catch(() => undefined);
+    void look();
+    const timer = setInterval(() => { if (!plan?.blueprint) void look(); }, 2500);
+    return () => { alive = false; clearInterval(timer); };
+  }, [step, draft?.request_id, plan?.blueprint]);
+
+  async function begin() {
+    if (!plan) return;
+    await act(async () => {
+      const published = await api.post<Plan>(`/learning-requests/${plan.id}/publish`, {});
+      await api.post('/enrollments', published.enroll);
+      try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
+      await refresh();
+      router.push('/today');
+    });
   }
 
   async function devSignIn() {
-    setError('');
-    try {
-      const subject = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 64) || 'learner';
-      await api.post('/auth/dev-login', { subject, display_name: name.trim() });
+    await act(async () => {
+      await api.post('/auth/dev-login', { subject: `learner-${Math.random().toString(36).slice(2, 8)}`, display_name: 'Learner' });
       await refresh();
-    } catch (e) {
-      setError(explain(e));
-    }
+    });
   }
 
-  async function submitPlan() {
-    if (!course || !language || !level) return;
-    setBusy(true);
-    setError('');
-    try {
-      if (!profile?.birth_year) {
-        await api.patch('/me', { display_name: name.trim() || undefined, birth_year: Number(birthYear), birthday_passed: borderline ? birthdayPassed : true, timezone: detectTimezone() });
-      }
-      const body: Record<string, unknown> = { course: course.id, language, level, minutes_per_day: minutes, weekdays };
-      if (targetDate) body.target_date = targetDate;
-      if (targetRole) body.target_role = targetRole;
-      if (targetRating) body.target_rating = Number(targetRating);
-      if (motivation.trim()) body.motivation = motivation.trim();
-      const result = await api.post<{ status: string }>('/enrollments', body);
-      try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-      await refresh();
-      router.replace(result.status === 'placement' ? '/placement' : '/today');
-    } catch (e) {
-      setError(explain(e));
-      setPending(false);
-      setBusy(false);
-    }
-  }
+  const thisYear = new Date().getFullYear();
+  const years = useMemo(() => Array.from({ length: 90 }, (_, i) => thisYear - 13 - i), [thisYear]);
 
-  // Back from signing in with a finished set of answers: create the plan without asking again.
-  useEffect(() => {
-    if (!restored || !pending || !profile || finishing.current || !course || !language || !level) return;
-    if (!profile.birth_year && !birthYear) return;
-    finishing.current = true;
-    void submitPlan();
-  });
+  if (loading || !restored) return <Loading variant="form" label="Loading" />;
 
-  if (!allowed || !courses) return error ? <div className="mx-auto max-w-2xl p-6"><ErrorNote message={error} /></div> : <Loading variant="form" label="Loading setup" />;
-
-  const steps = codes(course) ? ORDER : ORDER.filter(s => s !== 'language');
-  const position = Math.max(0, steps.indexOf(step));
-  const back = position > (profile?.birth_year ? 1 : 0) ? () => setStep(steps[position - 1]) : undefined;
-  const toggleDay = (i: number) => setWeekdays(w => (w.includes(i) ? (w.length > 1 ? w.filter(x => x !== i) : w) : [...w, i].sort()));
-  const weekly = minutes * weekdays.length;
+  const position = Math.max(0, STEPS.indexOf(step === 'plan' ? 'save' : step));
+  const back = { mode: 'goal', door: 'mode', time: 'door' }[step as string] as Step | undefined;
+  const task = step === 'win' ? draft?.win : step === 'snag' ? draft?.snag : null;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-32 sm:px-6 md:pt-10">
       <div className="mb-10 grid gap-3">
         <div className="flex min-h-11 items-center justify-between gap-4">
-          {back ? <Button type="button" variant="ghost" size="sm" className="-ml-3" onClick={back}><ArrowLeft data-icon="inline-start" /> Back</Button> : <span />}
-          <p className="text-sm font-semibold text-muted-foreground tabular-nums">Step {position + 1} of {steps.length}</p>
+          {back ? <Button type="button" variant="ghost" size="sm" className="-ml-3" onClick={() => setStep(back)}><ArrowLeft data-icon="inline-start" /> Back</Button> : <span />}
+          <p className="text-sm font-semibold text-muted-foreground">Lesson 0</p>
         </div>
-        <Progress value={(100 * (position + 1)) / steps.length} aria-label={`Step ${position + 1} of ${steps.length}`} />
+        <Progress value={(100 * (position + 1)) / STEPS.length} aria-label={`Step ${position + 1} of ${STEPS.length}`} />
       </div>
 
       <div key={step} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-        {step === 'about' ? (
-          <form onSubmit={saveAbout} className="grid gap-6">
-            <Heading title="Let us set you up" body="Two quick details, then you choose what to learn." />
-            <Field>
-              <FieldLabel htmlFor="about-name">What should we call you?</FieldLabel>
-              <Input id="about-name" className="max-w-md" value={name} onChange={e => setName(e.target.value)} maxLength={80} required />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="about-year">Year you were born</FieldLabel>
-              <NativeSelect id="about-year" className="w-full max-w-xs [&_select]:h-13" value={birthYear} onChange={e => setBirthYear(e.target.value)} required>
-                <NativeSelectOption value="" disabled>Choose a year</NativeSelectOption>
-                {years.map(y => <NativeSelectOption key={y} value={y}>{y}</NativeSelectOption>)}
-              </NativeSelect>
-              <FieldDescription>Socrat is for learners aged 13 and over. Only the year is stored.</FieldDescription>
-            </Field>
-            {borderline ? (
-              <label className="flex min-h-11 items-center gap-3 text-[15px]">
-                <Checkbox checked={birthdayPassed} onCheckedChange={v => setBirthdayPassed(v === true)} />
-                I have already had my birthday this year
-              </label>
-            ) : null}
-            <Button size="lg" className="justify-self-start" disabled={busy || !birthYear || !name.trim()} aria-busy={busy}>Continue<ArrowCircle loading={busy} /></Button>
+        {step === 'goal' ? (
+          <form onSubmit={submitGoal} className="grid gap-6">
+            <Ask eyebrow="first question" title="What do you want to be able to actually do?" body="Any skill, in your own words. Messy is fine." />
+            <Textarea autoFocus className="min-h-24 text-lg" maxLength={500} value={text} onChange={e => setText(e.target.value)} aria-label="What you want to be able to do" placeholder="For example: automate my boring Excel work" />
+            <ul className="flex flex-wrap gap-2" aria-label="Examples">
+              {EXAMPLES.map(x => <li key={x}><Button type="button" variant="outline" size="sm" onClick={() => setText(x)}>{x}</Button></li>)}
+            </ul>
+            <Button size="lg" className="justify-self-start" disabled={text.trim().length < 3}>Continue<ArrowCircle /></Button>
           </form>
         ) : null}
 
-        {step === 'course' ? (
+        {step === 'mode' ? (
           <div className="grid gap-6">
-            <Heading title="What do you want to learn?" body="Type anything, or start from a suggestion or a ready-made course. You can switch later." />
-            {features?.learning_requests ? (
-              <form
-                className="grid gap-3"
-                onSubmit={e => { e.preventDefault(); if (subject.trim().length >= 3) router.push(`/new?subject=${encodeURIComponent(subject.trim())}`); }}
-              >
-                <FieldLabel htmlFor="subject">Your subject</FieldLabel>
-                <Input id="subject" value={subject} maxLength={500} onChange={e => setSubject(e.target.value)} placeholder="For example: how black holes work, Carnatic music, circuits" />
-                <ul className="flex flex-wrap gap-2" aria-label="Suggested subjects">
-                  {suggestions.map(s => (
-                    <li key={s.id}><Pill pressed={subject === s.label} onClick={() => setSubject(s.label)}>{s.label}</Pill></li>
-                  ))}
-                </ul>
-                {subject.trim().length >= 3 ? <Button type="submit">Build my course</Button> : null}
-                <p className="mt-2 text-sm font-semibold text-muted-foreground">Or start a ready-made course</p>
-              </form>
-            ) : null}
+            <Ask title="What's your vibe right now?" body="This shapes the whole course. You can change it later." />
             <div className="grid gap-3">
-              {courses.map(c => {
-                const Icon = COURSE_ICON[c.id] ?? Code2;
-                return (
-                  <Choice
-                    key={c.id}
-                    icon={<Icon />}
-                    className="min-h-[72px]"
-                    selected={course?.id === c.id}
-                    aria-pressed={course?.id === c.id}
-                    onClick={() => { setCourse(c); if (course?.id !== c.id) { setLevel(''); setLanguage(c.languages.length === 1 || !codes(c) ? c.languages[0] : ''); } setStep('level'); }}
-                  >
-                    <span className="choice-title block text-[17px] font-semibold">{c.title}</span>
-                    <span className="block text-[15px] text-muted-foreground">{c.tagline}</span>
-                    <span className="mt-1 block text-[13px] text-muted-foreground">{c.concept_count} skills{c.problem_count ? `, ${c.problem_count} judged problems` : ''}</span>
-                  </Choice>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-
-        {step === 'level' && course ? (
-          <div className="grid gap-6">
-            <Heading title="How much do you already know?" body="If you pick a higher level, a short adaptive check confirms it, so nothing important gets skipped." />
-            <div className="grid gap-3">
-              {course.levels.map((l, i) => (
-                <Choice key={l.id} marker={i + 1} className="min-h-[72px]" selected={level === l.id} aria-pressed={level === l.id} onClick={() => { setLevel(l.id); setStep(codes(course) ? 'language' : 'schedule'); }}>
-                  <span className="choice-title block text-[17px] font-semibold">{l.label}</span>
-                  <span className="block text-[15px] text-muted-foreground">{l.description}</span>
+              {MODES.map(m => (
+                <Choice key={m.id} className="min-h-[72px]" selected={mode === m.id} aria-pressed={mode === m.id} onClick={() => void chooseMode(m.id)}>
+                  <span className="choice-title block text-[17px] font-semibold">{m.title}</span>
+                  <span className="block text-[15px] text-muted-foreground">{m.body}</span>
                 </Choice>
               ))}
             </div>
           </div>
         ) : null}
 
-        {step === 'language' && course && codes(course) ? (
+        {step === 'door' ? (
+          !draft ? <Loading variant="inline" label="Reading your goal" /> : (
+            <div className="grid gap-6">
+              <Ask title="Pick your door" body="We'll start from one of these everyday scenes. Pick the one that feels most like you." />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {draft.doors.map(d => (
+                  <Choice key={d} className="min-h-[72px]" selected={draft.door === d} aria-pressed={draft.door === d} onClick={() => chooseDoor(d)}>
+                    <span className="choice-title block text-[17px] font-semibold">{d}</span>
+                  </Choice>
+                ))}
+              </div>
+              <form className="grid gap-2" onSubmit={e => { e.preventDefault(); chooseDoor(ownDoor); }}>
+                <FieldLabel htmlFor="own-door">Or your own</FieldLabel>
+                <div className="flex gap-2">
+                  <Input id="own-door" maxLength={80} value={ownDoor} onChange={e => setOwnDoor(e.target.value)} placeholder="For example: my football team" />
+                  <Button type="submit" variant="outline" disabled={ownDoor.trim().length < 2}>Use this</Button>
+                </div>
+              </form>
+            </div>
+          )
+        ) : null}
+
+        {step === 'time' ? (
           <div className="grid gap-6">
-            <Heading title="Which language?" body="Lessons, examples, checks and your code editor all follow this choice. Not sure? Python reads closest to plain English." />
+            <Ask title="On a tired, messy weekday, how many minutes can you really give this?" body="Be honest: lessons are cut to fit, so day two never feels like a wall." />
             <div className="grid gap-3 sm:grid-cols-3">
-              {course.languages.map(l => {
-                // Don't sell a language whose code can't run yet (D-7).
-                const offline = Object.keys(runtimes).length > 0 && !runtimes[l];
+              {MINUTES.map(o => (
+                <Choice key={o.m} className="min-h-[88px]" selected={minutes === o.m} aria-pressed={minutes === o.m} disabled={busy} onClick={() => void chooseTime(o.m)}>
+                  <span className="choice-title block text-lg font-semibold">{o.label}</span>
+                  <span className="block text-[14px] text-muted-foreground">{o.body}</span>
+                </Choice>
+              ))}
+            </div>
+            {busy ? <Loading variant="inline" label="Setting up your first puzzle" /> : null}
+          </div>
+        ) : null}
+
+        {(step === 'win' || step === 'snag') && task ? (
+          <div className="grid gap-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">{step === 'win' ? 'warm up' : 'one step further'}</p>
+                {/* A question, not a headline: up to three sentences must read at a glance. */}
+                <h1 className="mt-2 text-xl leading-snug font-semibold text-balance">{task.prompt}</h1>
+                {step === 'win' ? <p className="mt-2 text-sm text-muted-foreground">This helps Socrat pick where you start. Nothing here is graded.</p> : null}
+              </div>
+              <Soc size={72} mood="curious" className="mt-2 hidden sm:block" />
+            </div>
+            {task.scene ? <pre className="code-block whitespace-pre-wrap">{task.scene}</pre> : null}
+            <div className="grid gap-3" role="radiogroup" aria-label="Your answer">
+              {task.options.map((o, i) => {
+                const settled = result?.done && result.answer !== null;
+                const tone = settled && i === result.answer ? 'correct' : 'idle';
                 return (
-                  <Choice key={l} disabled={offline} selected={language === l} aria-pressed={language === l} className="min-h-[72px] items-center justify-center disabled:opacity-60" onClick={() => { setLanguage(l); setStep('schedule'); }}>
-                    <span className="block">
-                      <span className="choice-title block text-center text-lg font-semibold">{LANGUAGE_LABEL[l]}</span>
-                      {offline ? (
-                        <span className="block text-center text-sm text-muted-foreground">Coming soon: code can't run yet</span>
-                      ) : l === 'python' ? (
-                        <span aria-hidden="true" className="mt-0.5 block text-center text-[13px] text-muted-foreground">Easiest to start with</span>
-                      ) : null}
-                    </span>
+                  <Choice key={o} role="radio" aria-checked={picked === i} marker={String.fromCharCode(65 + i)} selected={picked === i} tone={tone} disabled={busy || !!result?.done} onClick={() => { setPicked(i); setResult(null); void answer(step, i); }}>
+                    <span className="choice-title whitespace-pre-wrap">{o}</span>
                   </Choice>
                 );
               })}
             </div>
+            {result && !result.correct && result.nudge ? <p className="font-hand text-[22px] text-pen" role="status">{result.nudge}</p> : null}
+            {result?.correct ? <p className="font-hand text-[22px] text-pen" role="status">{step === 'win' ? 'Exactly. Now a little further.' : 'You got it.'}</p> : null}
+            {step === 'snag' && !result?.done ? (
+              <div className="grid gap-3">
+                {draft?.hint ? <p className="paper rounded-card p-4 text-[15px]">{draft.hint}</p> : null}
+                <label className="grid gap-2 text-sm">
+                  <span className="font-semibold">Explain your thinking <span className="font-normal text-muted-foreground">(optional, never graded)</span></span>
+                  <Textarea className="min-h-16" maxLength={500} value={note} onChange={e => setNote(e.target.value)} />
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {!draft?.hint ? <Button type="button" variant="outline" disabled={busy} onClick={() => void hint()}>Give me a hint</Button> : null}
+                  <Button type="button" variant="ghost" disabled={busy} onClick={() => void answer('snag', null)}>I&apos;m stuck, show me</Button>
+                </div>
+              </div>
+            ) : null}
+            {result?.done || (step === 'snag' && draft?.reveal) ? <Button size="lg" className="justify-self-start" onClick={next}>Continue<ArrowCircle /></Button> : null}
           </div>
         ) : null}
 
-        {step === 'schedule' && course ? (
-          <form onSubmit={e => { e.preventDefault(); setStep('review'); }} className="grid gap-8">
-            <Heading title="When can you study?" body="Your plan fits into this time. Missed days never pile up; the plan moves forward instead." />
-            <fieldset>
-              <legend className="mb-3 text-[15px] font-semibold">Time per study day</legend>
-              <div className="flex flex-wrap gap-2">
-                {MINUTES.map(m => <Pill key={m} pressed={minutes === m} onClick={() => setMinutes(m)}>{hours(m)}</Pill>)}
-              </div>
-            </fieldset>
-            <fieldset>
-              <legend className="mb-3 text-[15px] font-semibold">Study days</legend>
-              <div className="flex flex-wrap gap-2">
-                {DAYS.map((d, i) => <Pill key={d} pressed={weekdays.includes(i)} onClick={() => toggleDay(i)}>{d}</Pill>)}
-              </div>
-            </fieldset>
-            <div className="rounded-card bg-raised p-5" role="status">
-              <p className="type-display-m tabular-nums">{hours(weekly)} a week</p>
-              <p className="mt-1 text-[15px] text-muted-foreground">{hours(minutes)} on {weekdays.length} day{weekdays.length === 1 ? '' : 's'} is {hours(weekly)} a week.</p>
-            </div>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="target-date">Target date <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
-                <Input id="target-date" type="date" value={targetDate} min={new Date().toISOString().slice(0, 10)} onChange={e => setTargetDate(e.target.value)} />
-              </Field>
-              {course.id === 'dsa' ? (
-                <Field>
-                  <FieldLabel htmlFor="target-role">Interviewing for <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
-                  <NativeSelect id="target-role" className="w-full [&_select]:h-13" value={targetRole} onChange={e => setTargetRole(e.target.value)}>
-                    <NativeSelectOption value="">No specific role</NativeSelectOption>
-                    {ROLES.map(([id, label]) => <NativeSelectOption key={id} value={id}>{label}</NativeSelectOption>)}
-                  </NativeSelect>
-                </Field>
-              ) : null}
-              {course.id === 'cp' ? (
-                <Field>
-                  <FieldLabel htmlFor="target-rating">Target rating <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
-                  <Input id="target-rating" type="number" min={0} max={4000} step={50} value={targetRating} onChange={e => setTargetRating(e.target.value)} />
-                </Field>
-              ) : null}
-            </div>
-            <Field>
-              <FieldLabel htmlFor="motivation">Why are you learning this? <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
-              <Input id="motivation" value={motivation} onChange={e => setMotivation(e.target.value)} maxLength={280} aria-describedby="motivation-help" />
-              <FieldDescription id="motivation-help">Your tutor keeps this in mind.</FieldDescription>
-            </Field>
-            <Button size="lg" className="justify-self-start">Continue<ArrowCircle /></Button>
-          </form>
+        {step === 'reveal' && draft?.reveal ? (
+          <div className="grid gap-6">
+            <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">here&apos;s the trick</p>
+            <p className="text-lg">{draft.reveal.explain}</p>
+            <h1 className="type-display-l">You just used <span className="hl hl-draw">{draft.reveal.concept}</span></h1>
+            <p className="text-base text-muted-foreground">{draft.reveal.real_world}</p>
+            <Button size="lg" className="justify-self-start" onClick={() => setStep('save')}>Build my course from here<ArrowCircle /></Button>
+          </div>
         ) : null}
 
-        {step === 'review' && course ? (
-          <form onSubmit={enroll} className="grid gap-8">
-            <Heading title="Check your choices" body="Your plan is built from these. You can change study time later in Settings." />
-            <dl className="paper rounded-card px-5">
-              <Summary label="Course" value={course.title} onEdit={() => setStep('course')} />
-              <Summary label="Starting level" value={course.levels.find(l => l.id === level)?.label ?? 'Not chosen'} onEdit={() => setStep('level')} />
-              {codes(course) ? <Summary label="Language" value={language ? LANGUAGE_LABEL[language] : 'Not chosen'} onEdit={() => setStep('language')} /> : null}
-              <Summary label="Study time" value={`${hours(minutes)} on ${weekdays.map(i => DAYS[i]).join(', ')}`} onEdit={() => setStep('schedule')} />
-              {targetDate ? <Summary label="Target date" value={new Date(`${targetDate}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })} onEdit={() => setStep('schedule')} /> : null}
-            </dl>
-            {!profile && pending ? (
-              <div className="paper grid gap-4 rounded-card p-5" role="region" aria-label="Sign in to save your plan">
-                <div>
-                  <h2 className="font-display text-xl font-bold tracking-[-0.02em]">Save your plan</h2>
-                  <p className="mt-1 text-[15px] text-muted-foreground">Sign in so your plan and progress are kept. Your answers are already filled in.</p>
-                </div>
-                {features?.oidc_login ? (
-                  <Button asChild variant="outline" size="lg" className="w-full"><a href="/api/v1/auth/login"><GoogleMark /> Continue with Google</a></Button>
-                ) : null}
-                {features?.dev_login ? (
-                  <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => void devSignIn()}>Continue as {name.trim() || 'a simulated learner'} (development)</Button>
-                ) : null}
+        {step === 'save' ? (
+          <div className="grid gap-6">
+            <Ask
+              title={draft?.calibration === 'none' ? 'Your course starts here' : 'Save your course'}
+              body={draft?.calibration === 'none' ? 'The first puzzle could not be set up right now, so your first lesson will find where you start instead.' : 'Sign in so your plan and progress are kept. Your answers are already in.'}
+            />
+            {/* Shown here, not earlier: by now the draft holds the model's reading of the goal. */}
+            {draft?.safety_notes.map(n => <p key={n} className="text-sm">{n}</p>)}
+            {!profile ? (
+              <div className="grid gap-3">
+                {features?.oidc_login ? <Button asChild variant="outline" size="lg" className="w-full"><a href="/api/v1/auth/login">Continue with Google</a></Button> : null}
+                {features?.dev_login ? <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => void devSignIn()}>Continue as a test learner (development)</Button> : null}
                 {features && !features.oidc_login && !features.dev_login ? <p className="text-[15px] text-muted-foreground">Sign-in is not configured on this server.</p> : null}
                 <p className="text-[13px] text-muted-foreground">
-                  By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms of service</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
+                  By continuing you agree to the <a href="/terms" className="underline underline-offset-4">terms</a> and the <a href="/privacy" className="underline underline-offset-4">privacy policy</a>. You must be 13 or older.
                 </p>
               </div>
+            ) : !profile.birth_year ? (
+              <form className="grid gap-4" onSubmit={e => { e.preventDefault(); void claim(); }}>
+                <div className="grid gap-2">
+                  <FieldLabel htmlFor="birth-year">Year you were born</FieldLabel>
+                  <NativeSelect id="birth-year" className="w-full max-w-xs [&_select]:h-13" value={birthYear} onChange={e => setBirthYear(e.target.value)} required>
+                    <NativeSelectOption value="" disabled>Choose a year</NativeSelectOption>
+                    {years.map(y => <NativeSelectOption key={y} value={y}>{y}</NativeSelectOption>)}
+                  </NativeSelect>
+                  <p className="text-[13px] text-muted-foreground">Socrat is for learners aged 13 and over. Only the year is stored.</p>
+                </div>
+                <Button size="lg" className="justify-self-start" disabled={busy || !birthYear} aria-busy={busy}>Save my course<ArrowCircle loading={busy} /></Button>
+              </form>
             ) : (
-              <Button size="lg" className="justify-self-start" disabled={busy || !level || !language} aria-busy={busy}>
-                {busy ? 'Creating your plan' : profile ? 'Create my plan' : 'Save my plan'}<ArrowCircle loading={busy} />
-              </Button>
+              <Loading variant="inline" label="Saving your course" />
             )}
-            {!level || !language ? <p className="text-sm text-muted-foreground">Choose a level and a language first.</p> : null}
-          </form>
+          </div>
+        ) : null}
+
+        {step === 'plan' ? (
+          <div className="grid gap-6">
+            <Ask title={plan?.blueprint?.title || plan?.skeleton?.title || 'Writing your course plan'} body={plan?.blueprint ? plan.blueprint.tagline : 'Module 1 first, the rest just before you reach it. This takes a minute.'} />
+            {!plan?.blueprint ? <Loading variant="inline" label="Planning your course" /> : null}
+            <ol className="grid gap-2">
+              {(plan?.blueprint?.modules.map(m => ({ title: m.title, n: m.concepts.length })) ?? plan?.skeleton?.modules.map(m => ({ title: m.title, n: m.lessons.length })) ?? []).map((m, i) => (
+                <li key={`${i}-${m.title}`} className="flex min-h-12 items-center justify-between gap-3 rounded-[4px] border bg-card px-4 py-3">
+                  <span className="font-semibold">{m.title}</span>
+                  <span className="text-[13px] text-muted-foreground">{m.n} lesson{m.n === 1 ? '' : 's'}</span>
+                </li>
+              ))}
+            </ol>
+            {plan?.job?.state === 'failed' ? <ErrorNote message="The plan could not be written. Try again in a moment." /> : null}
+            {plan?.blueprint ? <Button size="lg" className="justify-self-start" disabled={busy} aria-busy={busy} onClick={() => void begin()}>Start learning<ArrowCircle loading={busy} /></Button> : null}
+          </div>
         ) : null}
       </div>
 
-      {error ? <ErrorNote message={error} title={retryable(error) ? undefined : 'Check this'} /> : null}
+      {error ? <ErrorNote message={error} title={error && /age|valid/i.test(error) ? 'Check this' : undefined} /> : null}
+      {error && step === 'save' ? <Button className="mt-3" variant="outline" onClick={() => { setError(''); void claim(); }}>Try again</Button> : null}
     </div>
   );
 }

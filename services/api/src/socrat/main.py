@@ -59,6 +59,7 @@ from socrat.localize.routes import admin as locale_admin
 from socrat.localize.routes import public as locale_public
 from socrat.mentor.routes import router as mentor_router
 from socrat.models import User
+from socrat.onboarding import router as onboarding_router
 from socrat.passport import router as passport_router
 from socrat.quiz.routes import router as adaptive_quiz_router
 from socrat.schema_revision import SCHEMA_REVISION
@@ -168,6 +169,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(vitals_router)
     app.include_router(passport_router)
     app.include_router(trial_router)
+    app.include_router(onboarding_router)
     app.include_router(billing_router)
     app.include_router(email_auth_router)
     entitlements.ENABLED = settings.billing_enabled

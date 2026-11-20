@@ -253,7 +253,9 @@ class Settings(DatabaseSettings):
     gen_relaxed_gates: bool = False
     style_engine_enabled: bool = True  # learning styles; admin accounts only while testing
     # Learner-typed courses ("teach me X"): off until the owner turns it on.
-    learning_requests_enabled: bool = False
+    learning_requests_enabled: bool = True  # the only way in since Lesson 0 onboarding
+    # Lesson 0 (socrat/onboarding.py): model calls a visitor may cause per hour, before sign-in.
+    onboarding_per_hour: int = Field(default=12, ge=0, le=1000)
     learning_requests_max_open: int = Field(default=3, ge=1, le=50)
     # Match before build: a request is compared with the courses this learner may already
     # take (their own, and ones other learners chose to share); a fit is offered to start at

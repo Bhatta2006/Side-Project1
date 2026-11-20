@@ -103,7 +103,7 @@ export default function Courses() {
       <PageHeader
         title="Courses"
         description="The courses you started or made, and a library of courses from Socrat and other learners."
-        actions={<Button asChild><Link href="/new">Make a new course</Link></Button>}
+        actions={<Button asChild><Link href="/start">Make a new course</Link></Button>}
       />
       {error ? <ErrorNote message={error} /> : null}
 
@@ -112,7 +112,7 @@ export default function Courses() {
         {mine.length ? (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{mine.map(card)}</ul>
         ) : (
-          <p className="text-muted-foreground">Nothing yet. Start one from the library below, or <Link href="/new" className="underline underline-offset-4">make your own</Link>.</p>
+          <p className="text-muted-foreground">Nothing yet. Start one from the library below, or <Link href="/start" className="underline underline-offset-4">make your own</Link>.</p>
         )}
       </section>
 

@@ -10,7 +10,7 @@ cannot verify for the subject (physical practice, outside evaluator, safety).
 
 import hashlib
 import re
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -333,6 +333,12 @@ def _soften(data: dict) -> dict:
     long) keeps everything else it understood, instead of the whole reply being thrown away
     for the rules fallback."""
     out = dict(data)
+    # A choice the schema does not know (e.g. "sql" as a code language) is dropped, not
+    # allowed to throw away the whole reading (found in a live Gemini run).
+    for name, kind in (("code_languages", Language), ("approach", Approach)):
+        allowed = set(get_args(kind))
+        if isinstance(out.get(name), list):
+            out[name] = [v for v in out[name] if v in allowed]
     age = out.get("age")
     try:
         age = int(age) if age is not None and not isinstance(age, bool) else None

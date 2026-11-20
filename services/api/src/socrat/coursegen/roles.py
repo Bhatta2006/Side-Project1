@@ -39,6 +39,7 @@ ROLES = {
     "diagnostic",  # a short placement quiz for a learner's own course
     "experience",  # picks registered visuals/labs for a lesson (never writes code)
     "intent",  # a learner's free-text request -> a structured intent
+    "onboarding",  # Lesson 0: starter scenarios and a two-step calibration
     "translator",  # lesson text -> another language, under placeholder and glossary checks
     "weekly",  # hard, execution-verified weekly exam questions
 }
@@ -61,9 +62,15 @@ ROLE_EFFORT = {
     "researcher": "low",
     "stylist": "low",
     "intent": "low",
+    "onboarding": "low",
     "diagnostic": "low",
     "experience": "low",
 }
+
+# A person is waiting on these: a stalled call falls back (generic doors, no calibration, the
+# rules reading) instead of holding a visitor for the generation timeout. A live Vertex run
+# saw one doors call take 62 s.
+ROLE_TIMEOUT = {"onboarding": 25.0, "intent": 30.0}
 
 
 # Model tiers: a strong model where judgement decides the result, a fast cheap one where
@@ -83,6 +90,7 @@ ROLE_TIER = {
     "researcher": "fast",
     "stylist": "fast",
     "intent": "fast",
+    "onboarding": "fast",  # a visitor is waiting on it
     "experience": "fast",
 }
 
@@ -116,7 +124,7 @@ def role_settings(settings: Settings, role: str, escalate: bool = False) -> Sett
     moves this call to the strong tier: a second try at something the usual model got wrong."""
     update: dict = {
         "ai_effort": ROLE_EFFORT.get(role, DEFAULT_EFFORT),
-        "ai_timeout_seconds": settings.gen_timeout_seconds,
+        "ai_timeout_seconds": ROLE_TIMEOUT.get(role, settings.gen_timeout_seconds),
     }
     tier = tier_of(role, escalate)
     strong = "strong" in settings.gen_tiers

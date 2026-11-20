@@ -85,6 +85,14 @@ class VertexProvider:
         self.settings = settings
         self.client = client or make_client(settings)
 
+    def _thinking(self) -> str:
+        """The configured thinking level; otherwise a role that asked for low effort (intent,
+        onboarding, research: ``coursegen.roles.ROLE_EFFORT``) thinks little, so a learner is
+        not kept waiting on a short reply. Every other call keeps the model's default."""
+        if self.settings.vertex_thinking_level:
+            return self.settings.vertex_thinking_level
+        return "low" if self.settings.ai_effort == "low" else ""
+
     async def converse(
         self,
         system: str,
@@ -139,11 +147,9 @@ class VertexProvider:
                     if declared and rounds >= max_rounds
                     else None,
                     thinking_config=types.ThinkingConfig(
-                        thinking_level=types.ThinkingLevel(
-                            self.settings.vertex_thinking_level.upper()
-                        )
+                        thinking_level=types.ThinkingLevel(thinking.upper())
                     )
-                    if self.settings.vertex_thinking_level
+                    if (thinking := self._thinking())
                     else None,
                     response_mime_type="application/json" if response_format else None,
                 )
