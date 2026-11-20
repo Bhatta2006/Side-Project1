@@ -44,6 +44,10 @@ def of_job(job: GenerationJob | None, rounds: int, now: int) -> dict:
                 at=job.not_before,
             )
         return dict(state="queued", progress=0.02, label=f"{again}waiting its turn".capitalize())
+    from socrat.coursegen.prefetch import replanned
+
+    if replanned(job):  # stopped because the plan changed: it is written again, not stuck
+        return dict(state="queued", progress=0.0, label="Waiting its turn")
     if job.state in ("failed", "dead", "cancelled"):
         return dict(
             state="stuck",

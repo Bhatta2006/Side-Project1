@@ -43,6 +43,7 @@ from socrat.coursegen import (
     execute,
     fetch,
     learner_plan,
+    prefetch,
     research,
     roles,
     search,
@@ -591,6 +592,7 @@ async def run_outline(
             ):
                 if (open_job.input or {}).get("trigger") == "first":
                     open_job.state, open_job.updated_at = "cancelled", now()
+                    open_job.error = prefetch.PLAN_CHANGED  # written again from the new plan
         _note(engine, job_id, {"role": "system", "event": "first_lesson_requeued"})
     await _save_outline(engine, settings, base, job_id, kept, best, owner, keep_written=same)
 
@@ -1070,7 +1072,13 @@ async def run_package(
     if concept is None or concept.status != "planned":
         if data.get("trigger") == "first":
             # Queued before the learner had approved the plan; they changed it meanwhile.
-            _note(engine, job_id, {"role": "system", "event": "plan_changed"}, state="cancelled")
+            _note(
+                engine,
+                job_id,
+                {"role": "system", "event": "plan_changed"},
+                state="cancelled",
+                error=prefetch.PLAN_CHANGED,
+            )
             return
         raise ValueError(f"{course_id}:{concept_id} is not planned")
     from socrat.engine import design

@@ -466,3 +466,24 @@ def test_success_criteria_may_name_the_subjects_own_terms():
     plan = planned_brief().plan
     terms = outcome(plan, success=["Compose queries using Common Table Expressions (CTEs)"])
     assert lp.from_architect(plan, {"outcome_spec": terms}, {"loss"})[1] == []
+
+
+def test_a_lesson_cancelled_because_the_plan_changed_is_written_again(client, monkeypatch):  # noqa: F811
+    # Live journey 2026-11-20: the cancelled first lesson stayed "cancelled", Today called it
+    # failed, and prefetch never wrote it again.
+    from socrat.coursegen import prefetch, progress
+    from socrat.models import GenerationJob
+
+    learner_request(client, monkeypatch, profile())
+    state = client.app.state
+    state.settings.gen_waiting_learner = True
+    first = ROADMAP["modules"][0]
+    changed = dict(first, concepts=[dict(first["concepts"][0], summary="Rewritten by the repair.")])
+    changed["concepts"].append(first["concepts"][1])
+    repaired = ROADMAP | {"modules": [changed, *ROADMAP["modules"][1:]]}
+    script = SlowCritic(state.engine, [ROADMAP, repaired], critic=[revise("what-is-ml")])
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    with Session(state.engine) as db:
+        stopped = db.query(GenerationJob).filter_by(kind="package", state="cancelled").one()
+        assert prefetch.replanned(stopped) and stopped.error == prefetch.PLAN_CHANGED
+        assert progress.of_job(stopped, 3, 0)["state"] == "queued"  # not "stuck"

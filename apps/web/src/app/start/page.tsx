@@ -443,7 +443,11 @@ export default function Start() {
             </ol>
             {plan?.job?.state === 'failed' ? <ErrorNote message="The plan could not be written. Try again in a moment." /> : null}
             {plan?.blueprint && plan.start?.state === 'roadmap_ready' ? (
-              <Loading variant="inline" label="Your first lesson is being written" />
+              // Visible words, not placeholder bars: a live run waited 2-5 minutes here.
+              <p role="status" className="flex items-center gap-3 rounded-[4px] border bg-card px-4 py-3 text-[15px]">
+                <span aria-hidden className="size-2.5 shrink-0 animate-pulse rounded-full bg-primary" />
+                Your first lesson is being written for you. It is usually ready in a few minutes; you can stay on this page.
+              </p>
             ) : null}
             {plan?.start?.state === 'first_lesson_failed' ? (
               <div className="grid gap-3">

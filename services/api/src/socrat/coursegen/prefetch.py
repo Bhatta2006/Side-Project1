@@ -24,6 +24,14 @@ INITIAL_CONCEPTS = 6
 # their settings): lessons written for one course in any 24 hours. 0: no quota.
 LESSONS_PER_DAY = 0
 SETTLED = {"queued", "running", "failed", "dead", "cancelled"}
+# Set as ``GenerationJob.error`` when the system (not the owner) stopped a lesson because the
+# course plan changed under it: that concept is written again, never left as cancelled.
+PLAN_CHANGED = "plan_changed"
+
+
+def replanned(job) -> bool:
+    """A lesson job the system cancelled because its plan changed (write it again)."""
+    return job is not None and job.state == "cancelled" and job.error == PLAN_CHANGED
 
 
 def upcoming(catalog, course_id: str, done: set[str], ahead: int) -> list[str]:
@@ -66,7 +74,7 @@ def request(db: Session, enrollment: Enrollment, now: int, catalog=None) -> list
         ).first()
         # Running or queued: already on its way. Failed: the owner retries it from /admin,
         # so a concept that cannot pass its gates does not burn budget on every visit.
-        if latest is not None and latest.state in SETTLED:
+        if latest is not None and latest.state in SETTLED and not replanned(latest):
             continue
         # The very next lesson is the one the learner is waiting for: it jumps the queue.
         data = {"trigger": "prefetch", "urgent": True} if n == 0 else {"trigger": "prefetch"}
@@ -119,7 +127,7 @@ def initial(db: Session, course_id: str, start: str | None = None) -> list:
         )
     ):
         if (early.input or {}).get("trigger") == "first":
-            early.state = "cancelled"
+            early.state, early.error = "cancelled", PLAN_CHANGED
     for n, local in enumerate(wanted):
         latest = db.scalars(
             select(GenerationJob)
@@ -132,7 +140,7 @@ def initial(db: Session, course_id: str, start: str | None = None) -> list:
         ).first()
         # A finished job for a concept that is planned again means the plan was revised after
         # the lesson was written (the first lesson starts before publish): write it again.
-        if latest is None or latest.state == "done":
+        if latest is None or latest.state == "done" or replanned(latest):
             trigger = "first" if n == 0 else "initial"
             job = jobs.enqueue_once(db, "package", course_id, {"trigger": trigger}, None, local)
             if job is not None:
