@@ -10,10 +10,9 @@ import { StreakExtras } from '@/components/socrat/streak-extras';
 import { useCourse } from '@/lib/course';
 import { useI18n } from '@/lib/i18n';
 import { KIND_LABEL, NAME, PACE_LABEL, activityHref, conceptHref, formatDate } from '@/lib/routes';
-import type { Activity, AssessmentStatus, PlanView, Recommendations, Today } from '@/lib/types';
+import type { Activity, AssessmentStatus, PlanView, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal, Ring } from '@/components/common';
-import { Level, PlatformTag, ProblemName } from '@/components/practice';
 import { ReasonChip } from '@/components/socrat/reason-chip';
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { SocFigure } from '@/components/socrat/soc';
@@ -135,14 +134,12 @@ export default function TodayPage() {
   const allowed = useGuard('active');
   const course = useCourse();
   const courseReady = course.ready;
-  const library = course.features.library;
   useEffect(() => { void loadAdapting(); }, []);
   const planLocked = usePlanLocks();
   const { profile, features } = useSession();
   const { t } = useI18n();
   const [today, setToday] = useState<Today | null>(null);
   const [error, setError] = useState('');
-  const [recs, setRecs] = useState<Recommendations | null>(null);
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [assessment, setAssessment] = useState<AssessmentStatus | null>(null);
   const [askSoc, setAskSoc] = useState(0);
@@ -151,11 +148,9 @@ export default function TodayPage() {
   const load = useCallback(() => {
     setError('');
     api.get<Today>('/today').then(setToday).catch(e => setError(explain(e)));
-    // Problem picks come from the library, which only the programming courses have.
-    if (library) api.get<Recommendations>('/library/recommendations?limit=4').then(setRecs).catch(() => undefined);
     api.get<PlanView>('/plan').then(setPlan).catch(() => undefined);
     api.get<{ current: AssessmentStatus }>('/assessments').then(r => setAssessment(r.current)).catch(() => undefined);
-  }, [library]);
+  }, []);
   useEffect(() => { if (allowed && courseReady) load(); }, [allowed, courseReady, load]);
   // Lessons still being written: a bar each, and Today reloads when one goes live.
   const preparing = usePreparing(Boolean(allowed && courseReady), load);
@@ -176,7 +171,6 @@ export default function TodayPage() {
   const minutePercent = today.minutes.goal ? Math.min(100, (100 * today.minutes.done) / today.minutes.goal) : 0;
   const next = today.next;
   const review = today.queue.find(a => a.kind === 'review');
-  const weak = recs?.topics.find(t => t.band === 'needs_practice');
   const goal = milestone(plan, today.current_module);
   const goalPercent = goal && goal.total ? (100 * goal.finished) / goal.total : 0;
   const learned = today.progress.finished;
@@ -188,13 +182,12 @@ export default function TodayPage() {
   // A learner who has not started sees a plan, not a column of zeros.
   const fresh = today.streak.current === 0 && today.done.length === 0 && today.progress.finished === 0 && today.streak.week_minutes === 0;
   const active: TabId = tab === 'map' && !goal ? 'session' : tab;
-  const practiceCount = (recs?.problems.length ?? 0) + (recs?.topics.length ?? 0);
 
   // Each tab names what is inside it, so nothing is a mystery click.
   const tabs: { id: TabId; label: string; hint: string }[] = [
     { id: 'session', label: 'Session', hint: session.length ? (today.done.length ? `${today.done.length}/${session.length}` : `${session.length}`) : '' },
     ...(goal ? [{ id: 'map' as const, label: 'Skill map', hint: `${goal.finished}/${goal.total}` }] : []),
-    { id: 'practice', label: 'Practice', hint: practiceCount ? String(practiceCount) : '' },
+    { id: 'practice', label: 'Practice', hint: '' },
     { id: 'progress', label: 'Progress', hint: `${today.progress.percent}%` },
   ];
 
@@ -456,7 +449,7 @@ export default function TodayPage() {
               </TabsContent>
             ) : null}
 
-            {/* Practice: problems picked for you, skills worth learning, and the Playground. */}
+            {/* Practice: sets written for the course, and the Playground. */}
             <TabsContent value="practice" className="grid gap-3 sm:gap-4 lg:grid-cols-12 lg:gap-6">
               <div className="grid min-w-0 content-start gap-4 lg:col-span-8">
                 <Link href="/studio" className="paper group flex flex-col gap-2 rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
@@ -469,53 +462,13 @@ export default function TodayPage() {
                     <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </span>
                 </Link>
-                {recs?.problems.length ? (
-                  <section aria-labelledby="practice-heading" className="min-w-0">
-                    <div className="mb-3 flex items-baseline justify-between gap-3">
-                      <h2 id="practice-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">Practice picked for you</h2>
-                      <Link href="/library" className="text-[15px] font-semibold underline underline-offset-4">See all problems</Link>
-                    </div>
-                    <ul className="grid gap-3 sm:grid-cols-2">
-                      {recs.problems.map(p => (
-                        <li key={p.id} className="flex flex-col gap-3 paper rounded-card p-5">
-                          <div className="flex items-start justify-between gap-3">
-                            <ProblemName problem={p} className="text-base" />
-                            <StatusIcon status={p.status === 'solved' ? 'practised' : 'not_seen'} size={22} title={p.status === 'solved' ? 'Solved' : 'Not solved yet'} />
-                          </div>
-                          <p className="text-sm text-muted-foreground">{p.reason}</p>
-                          <div className="mt-auto flex flex-wrap items-center gap-2"><PlatformTag platform={p.platform} /><Level problem={p} /></div>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-                {recs?.topics.length ? (
-                  <Card aria-labelledby="learn-next-heading">
-                    <div className="px-(--card-spacing)">
-                      <h2 id="learn-next-heading" className="mb-3 font-display text-lg font-semibold tracking-[-0.02em]">Skills to learn next</h2>
-                      <ul className="grid gap-1 sm:grid-cols-2">
-                        {recs.topics.map(t => (
-                          <li key={t.id}>
-                            <Link href={conceptHref(t.id)} className="-mx-2 flex min-h-12 items-start gap-3 rounded-[4px] px-2 py-2 transition-colors hover:bg-raised">
-                              <StatusIcon status={statusFromBand(t.band)} size={22} className="mt-0.5" />
-                              <span className="min-w-0">
-                                <span className="block font-semibold">{t.title}</span>
-                                <span className="block text-[13px] text-muted-foreground">{t.reason}</span>
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </Card>
-                ) : null}
               </div>
               <div className="lg:col-span-4">
                 <Link href="/playground" className="paper doodle-host group relative flex min-h-40 flex-col justify-between gap-3 overflow-hidden rounded-card p-5 transition-transform duration-200 hover:-translate-y-0.5 lg:p-6">
                   <span className="type-label text-brand">{NAME.playground}</span>
                   <Illustration name="orbit" className="pointer-events-none absolute -top-3 -right-3 size-24 opacity-90" />
                   <span className="flex items-end justify-between gap-3">
-                    <span className="font-display text-lg leading-tight font-semibold tracking-[-0.02em]">{weak ? `Explore ${weak.title} visually` : 'Ask about any concept'}</span>
+                    <span className="font-display text-lg leading-tight font-semibold tracking-[-0.02em]">Ask about any concept</span>
                     <ArrowRight className="size-5 flex-none transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </span>
                 </Link>

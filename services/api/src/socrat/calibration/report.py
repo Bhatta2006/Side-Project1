@@ -13,7 +13,6 @@ from socrat.calibration import stats
 from socrat.catalog.registry import Catalog
 from socrat.models import ItemCalibration, QuizResponse
 from socrat.quiz import service as quiz
-from socrat.quiz.config import COURSE_TRACK
 
 # §9.6 success zones (share correct) per track.
 ZONES = {"foundations": (0.75, 0.85), "interview": (0.65, 0.80), "competitive": (0.50, 0.70)}
@@ -126,11 +125,7 @@ def build(
     ]
     rows = []
     for track, (low, high) in ZONES.items():
-        measured = [
-            records[i.key]
-            for i in ready
-            if COURSE_TRACK.get(i.concept.split(":")[0]) == track and i.key in records
-        ]
+        measured = [records[i.key] for i in ready if track == "foundations" and i.key in records]
         inside = sum(
             1 for r in measured if r.pct_correct is not None and low <= r.pct_correct <= high
         )

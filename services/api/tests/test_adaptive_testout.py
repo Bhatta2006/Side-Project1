@@ -4,10 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from test_adaptive_quiz_api import correct_choice, learner, make_client
 
-from socrat.models import ActivityRecord, Evidence, QuizEngineSession
-from socrat.quiz.config import DEFAULT
+from socrat.models import Evidence, QuizEngineSession
 
-RICH = "zero:operators-and-expressions"  # ~90 Python items, bands 1-6, first module
+RICH = "basics:conditions"  # ~90 Python items, bands 1-6, first module
 
 
 def start(client, headers, concept=RICH):
@@ -31,29 +30,6 @@ def run(client, headers, view, pick, seconds=8):
         assert result["explanation"] is None and result["answer"] is None  # nothing leaks
         view = result["session"]
     return view, trail
-
-
-def test_fast_right_answers_climb_quickly_and_pass_only_after_min_items(tmp_path):
-    app, client = make_client(tmp_path, True)
-    with client:
-        headers = learner(client)
-        view = start(client, headers)
-        assert view["mode"] == "testout" and view["current"]["band"] >= 3
-        view, trail = run(client, headers, view, correct_choice, seconds=3)
-        assert view["passed"] is True and view["stop_reason"] == "ceiling"
-        assert len(trail) >= DEFAULT.modes["testout"].min_items
-        assert max(trail) == view["hard_band"] and view["hard_correct"] >= 2
-        assert trail[1] - trail[0] == 2  # a fast right answer jumps two bands
-        assert [r["correct"] for r in view["results"]] == [True] * len(trail)
-        with Session(app.state.engine) as db:
-            kinds = set(db.scalars(select(Evidence.kind).where(Evidence.concept == RICH)))
-            record = db.scalar(
-                select(ActivityRecord).where(ActivityRecord.activity_id == f"testout:{RICH}")
-            )
-        assert kinds == {"testout"} and record.completed_at is not None
-        # One attempt: starting again shows the finished result.
-        assert start(client, headers)["id"] == view["id"]
-    app.state.engine.dispose()
 
 
 def test_three_misses_end_it_and_write_only_quiz_evidence(tmp_path):

@@ -160,23 +160,8 @@ def adherence(minutes_done: int, minutes_planned: int, days_enrolled: int) -> fl
     return round(min(1.2, max(0.25, minutes_done / minutes_planned)), 2)
 
 
-def level(
-    library_rating: int, thetas: list[float], codeforces_rating: int | None
-) -> dict[str, float | int | None]:
-    """A single practice level from the three rating systems (A1, A5).
-
-    The library rating already folds in solved problems; quiz Elo and a verified
-    Codeforces rating pull it toward independent evidence when they exist.
-    """
-    parts: list[tuple[float, float]] = [(float(library_rating), 1.0)]
-    if thetas:
-        parts.append((statistics.mean(thetas), 0.5))
-    if codeforces_rating:
-        parts.append((float(codeforces_rating), 1.0))
-    total = sum(w for _, w in parts)
-    return dict(
-        rating=round(sum(v * w for v, w in parts) / total),
-        library=library_rating,
-        quiz=round(statistics.mean(thetas)) if thetas else None,
-        codeforces=codeforces_rating,
-    )
+def level(thetas: list[float]) -> dict[str, int | None]:
+    """The learner's practice level in this course: the mean quiz ability (Elo-style) over the
+    concepts they have answered questions on, or None before any evidence."""
+    rating = round(statistics.mean(thetas)) if thetas else None
+    return dict(rating=rating, quiz=rating)

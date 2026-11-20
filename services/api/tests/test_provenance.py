@@ -5,7 +5,6 @@ from catalog_support import concept, quiz
 from pydantic import ValidationError
 
 from socrat.catalog.atoms import Atom
-from socrat.catalog.registry import load
 from socrat.catalog.schema import Concept, Provenance, QuizItem
 
 ADAPTED_FROM = dict(
@@ -19,20 +18,6 @@ ADAPTED_FROM = dict(
     content_sha256="0" * 64,
     changes="Reworded and reordered; examples replaced.",
 )
-
-
-def test_every_existing_content_file_still_loads_without_provenance():
-    catalog = load()
-    # The 61 concepts that predate provenance still load without it; newer ones record it.
-    assert sum(c.provenance is None for c in catalog.concepts.values()) == 61
-    assert all(c.provenance.origin == "original" for c in catalog.concepts.values() if c.provenance)
-    assert all(q.provenance is None for c in catalog.concepts.values() for q in c.quiz)
-    # Older problems load without provenance; newer ones record an original origin.
-    assert sum(p.provenance is not None for _, p in catalog.problems.values()) >= 10
-    assert all(
-        p.provenance.origin == "original" for _, p in catalog.problems.values() if p.provenance
-    )
-    assert all(pack.provenance is None for pack in catalog.atom_packs.values())
 
 
 def test_provenance_defaults_describe_unreviewed_socrat_original():

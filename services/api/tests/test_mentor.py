@@ -116,15 +116,15 @@ def test_refresh_applies_a_move_revises_the_plan_and_undo_restores_it(client, mo
     admin = admin_headers(client)
     onboard(client, admin)
     move = policy.Move(
-        "pace_down", "zero:loops", "Smaller steps on Loops", "Misses lately.", "hard"
+        "pace_down", "basics:loops", "Smaller steps on Loops", "Misses lately.", "hard"
     )
     monkeypatch.setattr(policy, "decide", lambda *a, **k: [move])
     shown = client.post("/api/v1/mentor/refresh", headers=admin).json()
     assert shown["log"][0]["title"] == "Smaller steps on Loops" and not shown["log"][0]["undone"]
     with Session(client.app.state.engine) as db:
         enrollment = db.query(Enrollment).join(User).filter(User.subject == "boss").one()
-        assert enrollment.adaptive["mentor"]["feel"] == {"zero:loops": "hard"}
-        note = service.tutor_note(enrollment, default_catalog(), "concept:zero:loops")
+        assert enrollment.adaptive["mentor"]["feel"] == {"basics:loops": "hard"}
+        note = service.tutor_note(enrollment, default_catalog(), "concept:basics:loops")
         assert "smaller steps" in note
     monkeypatch.undo()
     back = client.post("/api/v1/mentor/undo", json={"id": shown["log"][0]["id"]}, headers=admin)

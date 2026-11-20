@@ -111,9 +111,7 @@ def learner(client, published, web, monkeypatch):  # noqa: F811
         enrollment = db.scalar(select(Enrollment))
         stamp = enrollment.created_at
         # The prerequisite from another course is known, so this concept is open.
-        learn.set_state(
-            db, enrollment, "zero:programs-and-output", mastery.placed(True, stamp), stamp
-        )
+        learn.set_state(db, enrollment, "basics:values", mastery.placed(True, stamp), stamp)
     return headers
 
 

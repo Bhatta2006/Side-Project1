@@ -117,7 +117,7 @@ function BriefForm({ onCreated }: { onCreated: () => void }) {
           <Field label="Notes for the architect"><Textarea maxLength={2000} rows={2} value={form.notes} onChange={set('notes')} /></Field>
           <Field label="How should it be taught? (optional)" hint="Any style in your own words: 'quantum mechanics for kids under 10', 'a gamified 5-minute daily', 'Harvard-level and rigorous'"><Textarea maxLength={600} rows={2} value={form.style} onChange={set('style')} /></Field>
           <Field label="Code languages" hint="Comma separated: python, cpp, java"><Input value={form.languages} onChange={set('languages')} /></Field>
-          <Field label="Existing concepts to build on" hint="Comma separated, e.g. zero:loops, dsa:complexity"><Input value={form.reuse} onChange={set('reuse')} /></Field>
+          <Field label="Existing concepts to build on" hint="Comma separated concept ids of existing courses (normally empty)"><Input value={form.reuse} onChange={set('reuse')} /></Field>
           <Field label="References to align with" hint="One per line: docs, books, syllabi"><Textarea rows={2} value={form.references} onChange={set('references')} /></Field>
           <Field label="Budget (USD)" hint="Generation stops when this course has spent it"><Input type="number" min="0.5" max="1000" step="0.5" required value={form.budget} onChange={set('budget')} /></Field>
           <div className="sm:col-span-2">

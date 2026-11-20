@@ -25,22 +25,15 @@ SOCRAT_OPENAI_BASE_URL=https://api.tokenfactory.us-central1.nebius.com/v1/
 SOCRAT_OPENAI_MODEL=nvidia/nemotron-3-super-120b-a12b
 ```
 
-For Claude, set `SOCRAT_AI_PROVIDER=anthropic` and `SOCRAT_ANTHROPIC_API_KEY` (model `SOCRAT_AI_MODEL`, default `claude-opus-5-5`). The tutor can call learner-scoped tools (progress, plan, recent work, next topics, concept guides, Codeforces profile, problem recommendations, library search, saving to the practice list); `SOCRAT_AI_TOOLS=false` turns them off. The server still enforces the Socratic help ladder and leak guard on every reply. Restart the demo after changing `.env`.
+For Claude, set `SOCRAT_AI_PROVIDER=anthropic` and `SOCRAT_ANTHROPIC_API_KEY` (model `SOCRAT_AI_MODEL`, default `claude-opus-5-5`). The tutor can call learner-scoped tools (progress, plan, recent work, the weekly report, concept guides and the adaptive profile); `SOCRAT_AI_TOOLS=false` turns them off. The server still enforces the Socratic help ladder and leak guard on every reply. Restart the demo after changing `.env`.
 
-### Practice library
+### Courses and practice
 
-`content/practice/` holds a metadata-and-links index of LeetCode, CSES and Codeforces problems mapped to Socrat concepts (no statements or solutions). Rebuild it with `python scripts/content/import_practice.py --fetch`. Learners browse it at `/library`, mark problems solved or save them, and can link a public Codeforces handle in Settings; recommendations combine mastery, a linked rating and Socrat's own judged problems.
-
-The external library and company bank show only questions whose mapped topics are all
-completed or demonstrated as known in the active course and its prerequisite bridges.
-Sorting, searching, bookmarks, recommendations and tutor tools use the same rule; unmapped
-questions stay hidden. Ctrl+K and direct lesson/quiz access respect the active curriculum.
-
-Lessons include worked traces, correctness reasoning, edge cases and self-checks. The plan
-roadmap distinguishes lesson/check completion from mastery and links to selected programming
-and DSA guides from `nilbuild/developer-roadmap`. `content/learning-resources.json` records the
-explicit source selection, including 28 topic-mapped Python exercise links; source statements
-and solutions are not copied.
+Socrat ships no built-in courses. Every course is generated for one learner from their goal and
+onboarding answers (see `docs/architecture/course-generation.md` and `docs/engine/README.md`), and
+every lesson, quiz and practice question is written for that course. Practice sets (`/studio`)
+exist for every course; a code editor and judged problems (`/problems`) appear only in programming
+courses. There is no external problem index, company bank or contest-rating link.
 
 ### Concept playground
 

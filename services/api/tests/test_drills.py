@@ -78,7 +78,7 @@ def _first_open_concept(client, headers):  # noqa: F811
     cat = catalog()
     overview = client.get("/api/v1/drills", headers=headers).json()
     open_ = [c["concept"] for c in overview["concepts"] if not c["locked"]]
-    assert open_ and all(c["concept"].startswith("zero:") for c in overview["concepts"])
+    assert open_ and all(c["concept"].startswith("basics:") for c in overview["concepts"])
     return cat, open_[0]
 
 
@@ -113,7 +113,7 @@ def test_a_set_is_made_for_the_learners_course_and_each_question_answered_once(c
     )
 
     # Another course's topic is refused, and the set never counts as a finished plan step.
-    other = next(q for q in cat.concepts if q.startswith("dsa:"))
+    other = next(q for q in cat.concepts if q.startswith("algo:"))
     assert (
         client.post("/api/v1/drills", json={"concept": other}, headers=headers).status_code == 404
     )
@@ -141,12 +141,12 @@ def test_without_a_model_the_topics_own_concept_checks_are_used(client, monkeypa
         )
 
 
-def test_programming_courses_get_practice_sets_too_but_only_dsa_company_questions(client):  # noqa: F811
+def test_programming_courses_get_practice_sets_too(client):  # noqa: F811
     headers = login(client, subject="ada", name="Ada")
     onboard(client, headers)
     overview = client.get("/api/v1/drills", headers=headers)
     assert overview.status_code == 200
-    assert all(c["concept"].startswith("zero:") for c in overview.json()["concepts"])
+    assert all(c["concept"].startswith("basics:") for c in overview.json()["concepts"])
 
 
 ARRANGED = {

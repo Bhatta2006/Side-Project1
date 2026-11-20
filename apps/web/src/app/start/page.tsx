@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Code2, Target, Trophy } from '@/components/icons';
+import { ArrowLeft, BookOpen, Code2 } from '@/components/icons';
 import { ApiError, api, explain } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { LANGUAGE_LABEL, hours } from '@/lib/routes';
@@ -19,17 +19,10 @@ import { Soc } from '@/components/socrat/illustration';
 
 const MINUTES = [15, 20, 30, 45, 60, 90, 120] as const;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const ROLES = [
-  ['internship', 'Internship'],
-  ['new-grad', 'New grad'],
-  ['mid-level', 'Mid-level'],
-  ['senior', 'Senior'],
-] as const;
 type Step = 'about' | 'course' | 'level' | 'language' | 'schedule' | 'review';
 const ORDER: Step[] = ['about', 'course', 'level', 'language', 'schedule', 'review'];
 // Only a programming course asks which language; others (Kannada, drawing, finance) skip it.
 const codes = (c: Course | null) => !c || !c.shape || c.shape.studio === 'code';
-const COURSE_ICON: Record<string, typeof BookOpen> = { zero: BookOpen, dsa: Target, cp: Trophy };
 const DRAFT_KEY = 'socrat:onboarding';
 const MIN_AGE = 13;
 
@@ -229,8 +222,6 @@ export default function Start() {
       }
       const body: Record<string, unknown> = { course: course.id, language, level, minutes_per_day: minutes, weekdays };
       if (targetDate) body.target_date = targetDate;
-      if (targetRole) body.target_role = targetRole;
-      if (targetRating) body.target_rating = Number(targetRating);
       if (motivation.trim()) body.motivation = motivation.trim();
       const result = await api.post<{ status: string }>('/enrollments', body);
       try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
@@ -316,7 +307,7 @@ export default function Start() {
             ) : null}
             <div className="grid gap-3">
               {courses.map(c => {
-                const Icon = COURSE_ICON[c.id] ?? Code2;
+                const Icon = codes(c) ? Code2 : BookOpen;
                 return (
                   <Choice
                     key={c.id}
@@ -398,21 +389,6 @@ export default function Start() {
                 <FieldLabel htmlFor="target-date">Target date <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
                 <Input id="target-date" type="date" value={targetDate} min={new Date().toISOString().slice(0, 10)} onChange={e => setTargetDate(e.target.value)} />
               </Field>
-              {course.id === 'dsa' ? (
-                <Field>
-                  <FieldLabel htmlFor="target-role">Interviewing for <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
-                  <NativeSelect id="target-role" className="w-full [&_select]:h-13" value={targetRole} onChange={e => setTargetRole(e.target.value)}>
-                    <NativeSelectOption value="">No specific role</NativeSelectOption>
-                    {ROLES.map(([id, label]) => <NativeSelectOption key={id} value={id}>{label}</NativeSelectOption>)}
-                  </NativeSelect>
-                </Field>
-              ) : null}
-              {course.id === 'cp' ? (
-                <Field>
-                  <FieldLabel htmlFor="target-rating">Target rating <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>
-                  <Input id="target-rating" type="number" min={0} max={4000} step={50} value={targetRating} onChange={e => setTargetRating(e.target.value)} />
-                </Field>
-              ) : null}
             </div>
             <Field>
               <FieldLabel htmlFor="motivation">Why are you learning this? <span className="font-normal text-muted-foreground">(optional)</span></FieldLabel>

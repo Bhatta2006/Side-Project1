@@ -1,6 +1,7 @@
 """The engine serves any course, not a programming course with other words in it.
 
-Pins the 2026-11-10 changes: nothing about DSA reaches a non-programming course's prompts, a
+Pins the 2026-11-10 changes (and the 2026-11-20 removal of the reference course): no prompt
+mentions a built-in course, a
 waiting learner is served before background work, a learner's first lesson starts when their
 plan exists, and one disputed quiz item is dropped instead of costing a round.
 """
@@ -24,25 +25,23 @@ def brief(adapter: str) -> Brief:
     return Brief.model_validate(BRIEF | {"adapter": adapter})
 
 
-def test_only_a_programming_course_is_shown_the_dsa_course():
+def test_no_course_is_offered_to_the_planner_as_a_model_to_copy():
     catalog = default_catalog()
-    software = architect_prompt(brief("software"), catalog)
-    assert "match the hand-authored DSA course" in software
-    for adapter in ("math-science", "music", "general"):
+    for adapter in ("software", "math-science", "music", "general"):
         prompt = architect_prompt(brief(adapter), catalog)
         assert "DSA" not in prompt and "dsa:" not in prompt
+        assert "hand-authored" not in prompt
         assert GRANULARITY in prompt
-        assert len(prompt) < len(software) / 4  # the plan is asked for with a short prompt
-
-
-def test_the_reference_lesson_is_for_code_courses_only():
-    catalog = default_catalog()
-    assert pkg.gold(catalog, catalog.course("dsa")) is not None
-    reading = catalog.course("dsa").model_copy(
-        update={"shape": {"studio": "reading", "loop": "read-reflect", "evidence": ["quiz"]}}
+    # The same plan is asked for whatever the subject: nothing about it depends on a course.
+    assert architect_prompt(brief("software"), catalog) == architect_prompt(
+        brief("software"), default_catalog()
     )
-    reading = type(reading).model_validate(reading.model_dump(mode="json"))
-    assert pkg.gold(catalog, reading) is None
+
+
+def test_the_lesson_author_is_never_handed_a_reference_lesson():
+    assert not hasattr(pkg, "gold") and not hasattr(pkg, "GOLD")
+    prompt = pkg.lesson_prompt("Concept: loops", None, [])
+    assert "hand-authored" not in prompt and "DSA" not in prompt
 
 
 def test_a_waiting_learner_is_served_before_background_lessons(client):

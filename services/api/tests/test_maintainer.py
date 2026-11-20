@@ -219,7 +219,7 @@ def test_old_and_unhelpful_content_is_listed_not_changed(client, released, site)
 
 
 def test_a_rewrite_that_orphans_ids_says_so():
-    base = default_catalog().concept("cp:bitmasks")
+    base = default_catalog().concept("algo:graphs")
     renamed = base.model_copy(
         update={"quiz": [base.quiz[0].model_copy(update={"id": "new-id"}), *base.quiz[1:]]}
     )

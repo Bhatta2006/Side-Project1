@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input';
 type Listed = Course & { community?: { by: string | null; mine: boolean; shared: boolean; ai_generated: boolean } };
 interface Started { id: string; course: string; title: string; active: boolean; status: string }
 
-const TEAM = new Set(['zero', 'dsa', 'cp']);
 const MINUTES = [15, 20, 30, 45, 60, 90, 120];
 
 /**
@@ -73,8 +72,6 @@ export default function Courses() {
     if (s?.active) return <Button asChild size="sm"><Link href="/today">Continue</Link></Button>;
     if (s) return <Button size="sm" variant="outline" disabled={!!busy} onClick={() => resume(s)}>{busy === c.id ? 'Opening…' : 'Switch to this course'}</Button>;
     if (c.community) return <Button size="sm" variant="outline" disabled={!!busy} onClick={() => begin(c)}>{busy === c.id ? 'Starting…' : 'Start this course'}</Button>;
-    // Socrat's own courses run in order: one opens when the one before it is finished.
-    if (TEAM.has(c.id) && profile?.enrollment) return <span className="text-[13px] text-muted-foreground">Opens after your current Socrat course</span>;
     return <Button asChild size="sm" variant="outline"><Link href={`/start?course=${c.id}`}>Start this course</Link></Button>;
   };
 

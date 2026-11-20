@@ -33,15 +33,10 @@ interface Step {
 
 /** The Practice step describes the learner's own course's Practice, nothing from another course. */
 function practiceStep(features: CourseFeatures, studio?: string): Step {
-  const extras = features.companies
-    ? ' The tabs above add problems from LeetCode, CSES and Codeforces, company questions and timed sprints.'
-    : features.library
-      ? ' The tabs above add problems from LeetCode, CSES and Codeforces and timed focus sprints.'
-      : '';
   return {
-    route: '/studio', nav: 'practice', target: features.library ? 'practice-nav' : undefined,
+    route: '/studio', nav: 'practice',
     title: studio ?? NAME.practice,
-    body: `Pick any topic you have opened and Socrat writes fresh practice questions for your course. Earn stars and keep your streak going.${extras}`,
+    body: `Pick any topic you have opened and Socrat writes fresh practice questions for your course. Earn stars and keep your streak going.`,
   };
 }
 

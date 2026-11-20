@@ -29,55 +29,24 @@ def bank():
 def test_composition_follows_study_and_fragility():
     catalog = default_catalog()
     states = {
-        "zero:conditionals": shaky(),
-        "zero:for-loops": strong(),
-        "zero:strings": ConceptState(alpha=4, beta=2, evidence_count=4, next_review_at=NOW - DAY),
+        "basics:conditions": shaky(),
+        "basics:loops": strong(),
+        "basics:text": ConceptState(alpha=4, beta=2, evidence_count=4, next_review_at=NOW - DAY),
     }
-    exposure = Counter({"zero:conditionals": 4, "zero:for-loops": 2})
+    exposure = Counter({"basics:conditions": 4, "basics:loops": 2})
     args = (catalog, bank(), "python", states, exposure)
     concepts, items, coding = assessments.compose(*args, set(), set(), set(), NOW, "seed")
     asked = Counter(c for c, _ in items)
     assert len(items) == assessments.QUESTIONS
-    assert asked["zero:conditionals"] > asked["zero:for-loops"] >= 1
-    assert ["zero:strings", "review"] in concepts and asked["zero:strings"] == 1
+    assert asked["basics:conditions"] > asked["basics:loops"] >= 1
+    assert ["basics:text", "review"] in concepts and asked["basics:text"] == 1
     assert coding and all(p in catalog.problems for p in coding)
     assert assessments.compose(*args, set(), set(), set(), NOW, "seed") == (concepts, items, coding)
     # Locked topics and solved problems never appear.
     _, locked_items, _ = assessments.compose(
-        *args, {"zero:for-loops"}, set(coding), set(), NOW, "seed"
+        *args, {"basics:loops"}, set(coding), set(), NOW, "seed"
     )
-    assert "zero:for-loops" not in {c for c, _ in locked_items}
-
-
-def test_only_unseen_questions_hardest_first_in_the_learners_language():
-    catalog = default_catalog()
-    items_by_key = {i.key: i for i in bank()}
-    concept = "zero:for-loops"
-    exposure = Counter({concept: 3, "zero:conditionals": 1})
-    _, first, _ = assessments.compose(
-        catalog, bank(), "cpp", {}, exposure, set(), set(), set(), NOW, "a"
-    )
-    keys = [k for c, k in first if c == concept]
-    picked = [items_by_key[k] for k in keys]
-    assert all(not i.languages or "cpp" in i.languages for i in picked)
-    offered = sorted(
-        (
-            i.band
-            for i in bank()
-            if i.concept == concept and (not i.languages or "cpp" in i.languages)
-        ),
-        reverse=True,
-    )
-    # Hardest first (with one question per trick before repeats): never below the band that
-    # sits twice as deep in the ranked bank.
-    assert max(i.band for i in picked) == offered[0]
-    assert min(i.band for i in picked) >= offered[min(len(offered) - 1, 2 * len(picked))]
-    # Everything already seen is skipped: a second exam shares no question with the first.
-    seen = {k for _, k in first}
-    _, second, _ = assessments.compose(
-        catalog, bank(), "cpp", {}, exposure, set(), set(), seen, NOW, "b"
-    )
-    assert second and not seen & {k for _, k in second}
+    assert "basics:loops" not in {c for c, _ in locked_items}
 
 
 def finish_lesson(client, headers, concept):  # noqa: F811
@@ -94,7 +63,7 @@ def test_weekly_assessment_journey(client, monkeypatch):  # noqa: F811
     assert overview["current"]["state"] == "locked" and overview["history"] == []
     assert client.post("/api/v1/assessments/start", json={}, headers=headers).status_code == 409
 
-    for concept in ("zero:programs-and-output", "zero:variables-and-types"):
+    for concept in ("basics:values", "basics:text"):
         finish_lesson(client, headers, concept)
     current = client.get("/api/v1/assessments").json()["current"]
     assert current["state"] == "upcoming" and current["ready"] and current["opens_on"]
@@ -107,7 +76,7 @@ def test_weekly_assessment_journey(client, monkeypatch):  # noqa: F811
     assert view["questions"] and not view["finished"]
     assert view["timed"] and 0 < view["seconds_left"] <= assessments.TIME_LIMIT_SECONDS
     assert all("answer" not in q for q in view["questions"])  # graded only at the end
-    assert {t["title"] for t in view["topics"]} >= {"Programs and output"}
+    assert {t["title"] for t in view["topics"]} >= {"Values"}
     again = client.post("/api/v1/assessments/start", json={}, headers=headers).json()
     assert again["id"] == view["id"]
 
@@ -145,7 +114,7 @@ def test_timed_assessment_closes_at_the_deadline(client, monkeypatch):  # noqa: 
     monkeypatch.setattr(assessments, "exam_day", lambda user, now: True)
     headers = login(client, subject="timed", name="Tim")
     onboard(client, headers)
-    for concept in ("zero:programs-and-output", "zero:variables-and-types"):
+    for concept in ("basics:values", "basics:text"):
         finish_lesson(client, headers, concept)
     view = client.post("/api/v1/assessments/start", json={"timed": True}, headers=headers).json()
     assert view["timed"] and 0 < view["seconds_left"] <= assessments.TIME_LIMIT_SECONDS

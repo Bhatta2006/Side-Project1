@@ -1,6 +1,5 @@
 'use client';
 
-import { useCourse } from '@/lib/course';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -15,8 +14,6 @@ function spacing(scale: number) {
 
 /** A1: what Socrat's learner model says, in words, so adaptation is never a black box. */
 export function LearnerProfileCard() {
-  // The practice level is a problem-library rating; other courses have no such scale.
-  const { features } = useCourse();
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
 
   useEffect(() => {
@@ -32,13 +29,10 @@ export function LearnerProfileCard() {
       <h2 id="model-heading" className="font-display text-xl font-semibold tracking-[-0.03em]">How Socrat sees you</h2>
       <p className="mt-1 text-sm text-muted-foreground">What your plan adapts to. Estimates from your evidence, not grades.</p>
       <dl className="mt-4 grid gap-3 text-[15px]">
-        {features.library ? (
+        {profile.level.rating != null ? (
           <div>
             <dt className="font-semibold">Practice level</dt>
-            <dd className="text-muted-foreground">
-              About {profile.level.rating}
-              {profile.level.codeforces && features.codeforces ? `, with your Codeforces rating of ${profile.level.codeforces}` : ''}
-            </dd>
+            <dd className="text-muted-foreground">About {profile.level.rating}</dd>
           </div>
         ) : null}
         <div>

@@ -83,7 +83,7 @@ def ai_basics(**overrides):
                 ),
             ],
             concepts=[
-                concept("what-is-ml", "ideas", "live", ["zero:programs-and-output"]),
+                concept("what-is-ml", "ideas", "live", ["basics:values"]),
                 concept("loss", "ideas", prerequisites=["what-is-ml"]),
             ],
         )
@@ -122,9 +122,9 @@ def test_save_validates_against_the_whole_catalog(client, stored):  # noqa: F811
     base = default_catalog()
     with Session(stored) as db:
         with pytest.raises(CatalogError, match="already exists"):
-            generated.save_course(db, base, ai_basics(id="dsa"))
+            generated.save_course(db, base, ai_basics(id="algo"))
         broken = ai_basics()
-        broken.concepts[1].prerequisites.append("zero:no-such-concept")
+        broken.concepts[1].prerequisites.append("basics:no-such-concept")
         with pytest.raises(CatalogError, match="unknown prerequisite"):
             generated.save_course(db, base, broken)
 
@@ -135,7 +135,7 @@ def test_an_invalid_stored_course_leaves_the_file_courses_serving(client, stored
         row.payload = {**row.payload, "modules": []}
         row.updated_at += 1
     courses = {c["id"] for c in client.get("/api/v1/courses").json()["items"]}
-    assert "ai-basics" not in courses and "dsa" in courses
+    assert "ai-basics" not in courses and "algo" in courses
 
 
 def test_placement_skips_planned_concepts(client, stored):  # noqa: F811

@@ -72,7 +72,7 @@ def test_only_entries_that_fit_a_section_are_kept():
 
 
 def test_the_writer_is_asked_for_entries_only_when_the_course_has_sections():
-    course = default_catalog().course("zero")
+    course = default_catalog().course("basics")
     assert pkg.entries_block(course) == ""
     with_words = type(course).model_validate(course.model_dump(mode="json") | {"sections": [WORDS]})
     block = pkg.entries_block(with_words)
@@ -123,8 +123,8 @@ def test_a_lesson_fills_the_section_and_the_learner_sees_it_after_finishing(clie
 
 def test_every_course_gets_the_built_in_sections_from_its_lessons():
     cat = default_catalog()
-    course = cat.course("zero")
-    concept = cat.concept("zero:programs-and-output")
+    course = cat.course("basics")
+    concept = cat.concept("basics:values")
     built = {s["id"]: s for s in sections.build(course, [concept])}
     assert built["key-ideas"]["count"] == len(concept.key_points)
     assert "formulas" not in built  # nothing to show, so it is not listed

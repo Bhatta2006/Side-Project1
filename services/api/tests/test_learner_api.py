@@ -51,7 +51,7 @@ def login(client, subject="ada", name="Ada"):
     return {"Origin": ORIGIN, "X-CSRF-Token": client.get("/api/v1/me").json()["csrf_token"]}
 
 
-def onboard(client, headers, course="zero", level="brand-new", **extra):
+def onboard(client, headers, course="basics", level="brand-new", **extra):
     assert (
         client.patch(
             "/api/v1/me", json={"birth_year": 2001, "timezone": "Asia/Kolkata"}, headers=headers
@@ -98,7 +98,7 @@ def test_age_gate_blocks_under_thirteen(client):
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "minimum_age"
     body = dict(
-        course="zero", language="python", level="brand-new", minutes_per_day=30, weekdays=[0]
+        course="basics", language="python", level="brand-new", minutes_per_day=30, weekdays=[0]
     )
     assert (
         client.post("/api/v1/enrollments", json=body, headers=headers).json()["error"]["code"]
@@ -110,14 +110,14 @@ def test_beginner_skips_placement_and_learns(client):
     headers = login(client)
     assert onboard(client, headers)["status"] == "active"
     courses = client.get("/api/v1/courses").json()["items"]
-    assert [c["id"] for c in courses[:3]] == ["zero", "dsa", "cp"]
+    assert sorted(c["id"] for c in courses) == ["algo", "basics"]
 
     today = client.get("/api/v1/today").json()
     assert today["greeting"].endswith("Ada")
     first = today["next"]
-    assert first["id"] == "lesson:zero:programs-and-output"
+    assert first["id"] == "lesson:basics:values"
 
-    concept = client.get("/api/v1/concepts/zero:programs-and-output").json()
+    concept = client.get("/api/v1/concepts/basics:values").json()
     assert concept["resources"] and all(
         not r["languages"] or "python" in r["languages"] for r in concept["resources"]
     )
@@ -125,16 +125,13 @@ def test_beginner_skips_placement_and_learns(client):
         "completed"
     ]
 
-    quiz = client.get("/api/v1/quiz/quiz:zero:programs-and-output").json()
+    quiz = client.get("/api/v1/quiz/quiz:basics:values").json()
     catalog = default_catalog()
     # Options are shuffled per session; the server maps display positions back.
-    answers = {
-        q.id: q.shown(quiz["id"])["answer"]
-        for q in catalog.concept("zero:programs-and-output").quiz
-    }
+    answers = {q.id: q.shown(quiz["id"])["answer"] for q in catalog.concept("basics:values").quiz}
     for question in quiz["questions"]:
         view = client.post(
-            "/api/v1/quiz/quiz:zero:programs-and-output/answer",
+            "/api/v1/quiz/quiz:basics:values/answer",
             json={"item": question["id"], "choice": answers[question["id"]]},
             headers=headers,
         ).json()
@@ -143,8 +140,8 @@ def test_beginner_skips_placement_and_learns(client):
 
     today = client.get("/api/v1/today").json()
     assert {d["id"] for d in today["done"]} >= {
-        "lesson:zero:programs-and-output",
-        "quiz:zero:programs-and-output",
+        "lesson:basics:values",
+        "quiz:basics:values",
     }
     assert today["streak"]["studied_today"]
     progress = client.get("/api/v1/progress").json()
@@ -185,9 +182,7 @@ def test_schedule_update_reflows_the_plan_and_explains_it(client):
 
 def test_placement_adapts_and_seeds_the_plan(client):
     headers = login(client)
-    enrollment = onboard(
-        client, headers, course="dsa", level="knows-basics", target_role="new-grad"
-    )
+    enrollment = onboard(client, headers, course="algo", level="ok", target_role="new-grad")
     assert enrollment["status"] == "placement"
     catalog = default_catalog()
     asked = 0
@@ -208,7 +203,7 @@ def test_placement_adapts_and_seeds_the_plan(client):
             "answer"
         ]
         # Knows the basics course, not yet DSA.
-        known = concept in [catalog.concept(k) for k in catalog.course_concepts("zero")]
+        known = concept in [catalog.concept(k) for k in catalog.course_concepts("basics")]
         choice = correct if known else None
         client.post(
             "/api/v1/placement/answer",
@@ -242,7 +237,7 @@ def test_submit_round_trip_records_evidence_and_isolation(client):
     )
     source = 'name = input().strip()\nprint(f"Hello, {name}! Welcome to Socrat.")\n'
     job = client.post(
-        "/api/v1/problems/greeting/submit", json={"source": source}, headers=headers
+        "/api/v1/problems/double-it/submit", json={"source": source}, headers=headers
     ).json()
     assert job["status"] == "queued"
 
@@ -283,9 +278,9 @@ def test_submit_round_trip_records_evidence_and_isolation(client):
     hidden = [c for c in response.json()["cases"] if not c["public"]]
     assert hidden and all(c["input"] is None and c["expected"] is None for c in hidden)
 
-    problem = client.get("/api/v1/problems/greeting").json()
+    problem = client.get("/api/v1/problems/double-it").json()
     assert problem["solved"] and problem["draft"] == source
-    assert "problem:greeting" in {d["id"] for d in client.get("/api/v1/today").json()["done"]}
+    assert "problem:double-it" in {d["id"] for d in client.get("/api/v1/today").json()["done"]}
     progress = client.get("/api/v1/progress").json()
     assert progress["solves"]["independent_solves"] == 1
 
@@ -302,7 +297,7 @@ def test_assistant_is_socratic_and_gates_the_answer(client):
         response = client.post(
             "/api/v1/assistant/messages",
             json={
-                "scope": "problem:time-convert",
+                "scope": "problem:sum-loop",
                 "message": message,
                 "intent": intent,
                 "new_attempt": new_attempt,
@@ -327,7 +322,7 @@ def test_assistant_is_socratic_and_gates_the_answer(client):
     blocked = ask("just give me the answer", intent="reveal")
     assert blocked["meta"]["reveal_blocked"]
     assert "```" not in blocked["done"]["text"]
-    thread = client.get("/api/v1/assistant/thread", params={"scope": "problem:time-convert"}).json()
+    thread = client.get("/api/v1/assistant/thread", params={"scope": "problem:sum-loop"}).json()
     assert [m["role"] for m in thread["messages"]][:2] == ["user", "assistant"]
     assert (
         client.post(
@@ -344,38 +339,3 @@ def test_export_and_delete_account(client):
     assert data["profile"]["display_name"] == "Ada" and data["enrollments"]
     assert client.delete("/api/v1/me", headers=headers).status_code == 204
     assert client.get("/api/v1/me").status_code == 401
-
-
-def test_concepts_link_curated_practice_and_company_lists(client):
-    headers = login(client)
-    onboard(client, headers, course="dsa", level="new-to-programming")
-    complete_curriculum(client)
-    concept = client.get("/api/v1/concepts/dsa:two-pointers").json()
-    practice = concept["more_practice"]
-    assert practice and all("dsa:two-pointers" in p["concepts"] for p in practice)
-    # A not-yet-started learner is offered easier problems first.
-    assert practice[0]["difficulty"] == "easy"
-    assert all(set(p) >= {"title", "url", "platform", "difficulty"} for p in practice)
-    # Two deliberately harder picks close the list, and it is not one site's problems only.
-    stretch = [p for p in practice if p.get("stretch")]
-    assert stretch and practice[-len(stretch) :] == stretch
-    assert len({p["platform"] for p in practice}) >= 2
-    assert concept["handbook"][0]["url"].startswith("https://cses.fi/book/book.pdf#page=")
-    assert all(
-        i["url"].startswith("https://github.com/TheAlgorithms/") for i in concept["implementations"]
-    )
-
-    listing = client.get("/api/v1/companies?q=goo").json()
-    assert any(c["slug"] == "google" for c in listing["items"])
-    google = client.get("/api/v1/companies/google?window=thirty-days&difficulty=easy").json()
-    assert google["total"] > 0
-    assert all(p["difficulty"] == "easy" and p["window"] == "thirty-days" for p in google["items"])
-    assert all(p["concept"] is None or p["concept"]["band"] for p in google["items"])
-    assert client.get("/api/v1/companies/not-a-company").status_code == 404
-
-
-def test_zero_problems_start_from_beginner_code(client):
-    headers = login(client)
-    onboard(client, headers)
-    starter = client.get("/api/v1/problems/ticket-stub").json()["starter"]
-    assert "input()" in starter and "sys" not in starter and "def main" not in starter

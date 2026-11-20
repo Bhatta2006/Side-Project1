@@ -12,6 +12,7 @@ at least 30 responses and no repair flags. The database comes from the usual SOC
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import UTC, datetime
@@ -43,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
 
     url = args.database_url or DatabaseSettings().database_url_value
     engine = make_engine(url)
-    catalog = load(CONTENT_ROOT, tests_root=None)
+    catalog = load(Path(os.environ.get("SOCRAT_CONTENT_ROOT", CONTENT_ROOT)), tests_root=None)
     try:
         with Session(engine) as db, db.begin():
             if args.command == "stats":

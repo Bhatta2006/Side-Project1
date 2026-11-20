@@ -66,7 +66,7 @@ def test_a_lesson_over_the_quota_is_scheduled_and_the_learner_is_told(
     now_one = client.get("/api/v1/concepts/ai-basics:what-is-ml/writing").json()
     assert now_one["at"] is None and now_one["seconds"] == 0  # this one is being written now
     assert client.get("/api/v1/concepts/ai-basics:nope/writing").status_code == 404
-    assert client.get("/api/v1/concepts/zero:programs-and-output/writing").status_code == 404
+    assert client.get("/api/v1/concepts/basics:values/writing").status_code == 404
 
     # The runner takes the lesson that is due and leaves the scheduled one for its day.
     engine = client.app.state.engine

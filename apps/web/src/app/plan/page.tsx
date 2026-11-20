@@ -120,7 +120,6 @@ export default function PlanPage() {
 
   const current = plan.modules.find(m => m.id === plan.current_module) ?? plan.modules.find(m => m.concepts.some(c => c.concept === plan.current_concept)) ?? plan.modules[0];
   const currentDone = current ? current.concepts.filter(c => FINISHED.includes(c.status)).length : 0;
-  const guides = plan.modules.flatMap(m => m.concepts).filter(c => c.status !== 'locked' && c.roadmap_resources?.length);
   // The next checkpoint stays in view: the first locked module starts open.
   const firstLocked = plan.modules.find(m => m.locked_by)?.id;
   const pending = plan.proposals.pending;
@@ -371,21 +370,6 @@ export default function PlanPage() {
                   </ol>
                 </>
               ) : null}
-            </Disclosure>
-          ) : null}
-          {guides.length ? (
-            <Disclosure id="guides-heading" title="Selected topic guides">
-              <p className="mb-3 text-sm text-muted-foreground">Chosen from <a className="underline underline-offset-4" href="https://github.com/nilbuild/developer-roadmap/tree/master/roadmaps" target="_blank" rel="noopener noreferrer">Developer Roadmap<span className="sr-only">, opens in a new tab</span></a>. Unrelated career paths are left out.</p>
-              <ul className="grid gap-3 text-[15px]">
-                {guides.map(c => (
-                  <li key={c.concept}>
-                    <p className="font-semibold">{c.title}</p>
-                    <ul className="mt-1 grid gap-1">
-                      {c.roadmap_resources.map(r => <li key={r.url}><a href={r.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{r.title}<span className="sr-only">, opens in a new tab</span></a> <span className="text-[13px] text-muted-foreground">{r.source}</span></li>)}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
             </Disclosure>
           ) : null}
         </aside>

@@ -197,7 +197,7 @@ def test_tutor_falls_back_to_curated_hints_when_ai_is_off(tmp_path):
         onboard(client, headers)
         reply = client.post(
             "/api/v1/assistant/messages",
-            json={"scope": "problem:greeting", "message": "How do I start?"},
+            json={"scope": "problem:double-it", "message": "How do I start?"},
             headers=headers,
         )
         assert reply.status_code == 200

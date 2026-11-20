@@ -5,14 +5,10 @@ how helpful other learners found them (Bayesian-smoothed so a single vote cannot
 it), and by this learner's own history (unhelpful ones sink, already-read ones step back).
 """
 
-import json
-from functools import cache
-
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from socrat.catalog.registry import REPO_ROOT
 from socrat.catalog.schema import Concept
 from socrat.models import ResourceEvent, ResourceHealth
 
@@ -25,21 +21,6 @@ TARGET_LEVEL = {
     "strong": "deep",
 }
 LEVEL_ORDER = ["intro", "core", "deep"]
-
-
-@cache
-def course_links() -> dict:
-    return json.loads(
-        (REPO_ROOT / "content" / "learning-resources.json").read_text(encoding="utf-8")
-    )["concepts"]
-
-
-def selected(concept: str, language: str, kind: str) -> list[dict]:
-    return [
-        item
-        for item in course_links().get(concept, {}).get(kind, [])
-        if item.get("language") in {None, language}
-    ]
 
 
 def community(db: Session, concept: str) -> dict[str, tuple[int, int]]:

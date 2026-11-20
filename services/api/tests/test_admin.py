@@ -8,15 +8,13 @@ from socrat.catalog.registry import default_catalog
 def test_admin_overview_is_private_and_counts_the_funnel(client):  # noqa: F811
     learner = login(client, subject="ada", name="Ada")
     onboard(client, learner)
-    client.post("/api/v1/activities/lesson:zero:programs-and-output/complete", headers=learner)
+    client.post("/api/v1/activities/lesson:basics:values/complete", headers=learner)
     catalog = default_catalog()
-    quiz = client.get("/api/v1/quiz/quiz:zero:programs-and-output").json()
+    quiz = client.get("/api/v1/quiz/quiz:basics:values").json()
     for question in quiz["questions"]:
-        item = next(
-            q for q in catalog.concept("zero:programs-and-output").quiz if q.id == question["id"]
-        )
+        item = next(q for q in catalog.concept("basics:values").quiz if q.id == question["id"])
         client.post(
-            "/api/v1/quiz/quiz:zero:programs-and-output/answer",
+            "/api/v1/quiz/quiz:basics:values/answer",
             json={"item": question["id"], "choice": item.shown(quiz["id"])["answer"]},
             headers=learner,
         )

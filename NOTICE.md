@@ -21,12 +21,3 @@ JavaScript dependencies in `package-lock.json`. Each package is distributed unde
 license, recorded in its package metadata. A complete dependency license report has not
 yet been produced; generating one (for example with `pip-licenses` and `license-checker`)
 is part of the legal review.
-
-## External problem and resource metadata
-
-`content/practice/` stores titles, links, tags and difficulty for problems on LeetCode,
-Codeforces and CSES, and links to TheAlgorithms implementations. Problem statements,
-editorials and solutions are not stored. Codeforces data comes from its public API.
-Socrat links to these sites; their content belongs to their owners.
-
-Learning resources linked from lessons are listed in [ATTRIBUTION.md](ATTRIBUTION.md).

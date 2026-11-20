@@ -83,14 +83,14 @@ def native_result(client, passes: bool):
 
 
 def solved(client):
-    return client.get("/api/v1/problems/greeting").json()["solved"]
+    return client.get("/api/v1/problems/double-it").json()["solved"]
 
 
 def accepted_in_browser(client, headers, source="print(1)"):
     job = client.post(
-        "/api/v1/problems/greeting/submit", json={"source": source}, headers=headers
+        "/api/v1/problems/double-it/submit", json={"source": source}, headers=headers
     ).json()
-    return job, report(client, headers, job, expected_outputs("greeting"))
+    return job, report(client, headers, job, expected_outputs("double-it"))
 
 
 def test_a_pass_the_server_can_reproduce_earns_credit_after_the_native_rerun(client):

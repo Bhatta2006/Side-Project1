@@ -52,8 +52,8 @@ def test_wishes_map_to_styles_and_bounds_follow_the_format():
 
 def test_lesson_gates_follow_the_style_and_default_behaviour_is_unchanged():
     base = default_catalog()
-    course = base.course("zero")
-    concept = base.concept("zero:programs-and-output")
+    course = base.course("basics")
+    concept = base.concept("basics:values")
     short = {"lesson": BITE}
     default = pkg.check_lesson(concept, course, short)
     assert any("at least 3000" in p for p in default) and any("heading" in p for p in default)

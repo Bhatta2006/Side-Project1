@@ -16,9 +16,9 @@ import { Button } from '@/components/ui/button';
 
 const RANK: Record<PlanId, number> = { free: 0, plus: 1, pro: 2 };
 const PLANS: { id: PlanId; features: string[]; missing?: string[] }[] = [
-  { id: 'free', features: ['First 2 modules of every course', '5 messages with Soc a week', 'A few starter practice problems'], missing: ['Weekly assessment', 'Visual playground', 'Company questions'] },
-  { id: 'plus', features: ['Every topic in every course', '10 messages with Soc a day', 'Full practice library and checkpoints', 'Weekly assessment', '3 playground visuals a day'], missing: ['Company questions'] },
-  { id: 'pro', features: ['Everything in Founding Member', 'Every company interview question', 'Company sprint plans', '50 messages with Soc a day', '15 playground visuals a day'] },
+  { id: 'free', features: ['First 2 modules of every course', '5 messages with Soc a week', 'A few starter practice questions'], missing: ['Weekly assessment', 'Visual playground'] },
+  { id: 'plus', features: ['Every topic in every course', '10 messages with Soc a day', 'Full practice and checkpoints', 'Weekly assessment', '3 playground visuals a day'] },
+  { id: 'pro', features: ['Everything in Founding Member', '50 messages with Soc a day', '15 playground visuals a day'] },
 ];
 
 export default function PricingPage() {

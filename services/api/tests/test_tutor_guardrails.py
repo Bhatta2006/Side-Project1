@@ -42,8 +42,8 @@ def test_hidden_approach_sentence_is_a_leak():
 
 
 def test_activity_paths_match_the_web_app():
-    assert activity_path("quiz:zero:x") == "/quiz/zero/x"
-    assert activity_path("review:zero:x") == "/quiz/review/zero/x"
-    assert activity_path("example:zero:x") == "/learn/zero/x?step=example"
-    assert activity_path("lesson:zero:x") == "/learn/zero/x"
-    assert activity_path("problem:zero:p") == "/problems/zero/p"
+    assert activity_path("quiz:basics:x") == "/quiz/basics/x"
+    assert activity_path("review:basics:x") == "/quiz/review/basics/x"
+    assert activity_path("example:basics:x") == "/learn/basics/x?step=example"
+    assert activity_path("lesson:basics:x") == "/learn/basics/x"
+    assert activity_path("problem:basics:p") == "/problems/basics/p"

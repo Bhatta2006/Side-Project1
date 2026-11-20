@@ -187,8 +187,8 @@ function Momentum() {
 }
 
 /**
- * A page that belongs to another kind of course (company questions in a children's math
- * course, the problem library in a Kannada course) sends the learner to their own Practice.
+ * A page that belongs to another kind of course (the code problems in a Kannada course)
+ * sends the learner to their own Practice.
  */
 function useCourseRoutes(learning: boolean) {
   const pathname = usePathname();

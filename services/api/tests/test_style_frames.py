@@ -54,7 +54,6 @@ def test_a_frame_reaches_the_writers_and_the_tutor_and_its_app_words_are_plain()
     told = styles.block(spec)
     assert "Teaching frame: Detective story" in told and "the clue" in told
     assert 'called a "case"' in told and "never what is true" in told
-    assert not spec.shows_reference()  # a plain model lesson would pull it out of the frame
     assert "Detective story" in styles.tutor_block(spec)
     assert "Teaching frame" not in styles.block(styles.StyleSpec())  # no frame: as before
     # The words the app shows and the tutor is told can carry no instruction.

@@ -111,7 +111,7 @@ def learners(db, n):
         db.flush()
         enrollment = Enrollment(
             user_id=user.id,
-            course_id="dsa",
+            course_id="algo",
             language="python",
             level_id="new",
             minutes_per_day=30,
@@ -196,7 +196,7 @@ def test_the_engine_honours_approved_statuses(db):
     assert next(i for i in service.items_for(db, CAT) if i.key == item.key).status == "retired"
 
     # Assessments open only when enough calibrated assessment items cover the concept (D3).
-    concept = "dsa:sliding-window"
+    concept = "algo:arrays"
     pool = [replace(i, pool="assessment") for i in service.bank(CAT) if i.concept == concept][:3]
     spec = QUIZ.modes["weekly"]
     assert not modes.available(spec, [concept], pool)
@@ -224,8 +224,7 @@ def test_report_has_every_section_and_no_learner_data(db):
     for enrollment in enrollments:
         assert enrollment.id not in text and enrollment.user_id not in text
     assert "learner-" not in text
-    assert "`dsa:heaps`" in text  # a concept without an atom pack (gap)
-    assert "`dsa:sliding-window/variable-size` | draft | none" in text
+    assert "`algo:trees`" in text  # a concept without an atom pack (gap)
 
 
 def test_cli_runs_stats_status_and_report(db, tmp_path, capsys):

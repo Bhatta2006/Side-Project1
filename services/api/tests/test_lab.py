@@ -101,7 +101,7 @@ def test_experiments_are_accepted_only_when_the_simulation_runs_them():
 def _catalog_with_experiments():
     cat = copy.deepcopy(default_catalog())
     first = next(
-        q for q, c in cat.concepts.items() if q.startswith("zero:") and not cat.prerequisites[q]
+        q for q, c in cat.concepts.items() if q.startswith("basics:") and not cat.prerequisites[q]
     )
     items = [Experiment.model_validate(experiment()), Experiment.model_validate(experiment(id="b"))]
     cat.concepts[first] = cat.concepts[first].model_copy(update={"experiments": items})

@@ -199,7 +199,11 @@ def build(courses: list[Course]) -> Catalog:
 
 def load(root: Path = CONTENT_ROOT, tests_root: Path | None = TESTS_ROOT) -> Catalog:
     """tests_root=None loads authoring data only (used while building tests)."""
-    folders = sorted(p for p in root.iterdir() if (p / "course.yaml").exists())
+    # No course is built in: every course is generated for a learner and lives in the database
+    # (socrat.catalog.generated). A folder here only holds course packs a test or an author adds.
+    folders = (
+        sorted(p for p in root.iterdir() if (p / "course.yaml").exists()) if root.exists() else []
+    )
     from socrat.catalog import atoms
 
     catalog = build([load_course(folder, tests_root) for folder in folders])
@@ -223,7 +227,7 @@ def load(root: Path = CONTENT_ROOT, tests_root: Path | None = TESTS_ROOT) -> Cat
         root.parent / "patterns",
         catalog,
         taxonomy,
-        lambda: patterns.external_problem_ids(root.parent / "practice" / "problems.jsonl"),
+        set,  # no outside problem index is kept: a pattern lists only Socrat problems
         catalog.quiz_families,
     )
     quizbank.check_patterns(catalog.quiz_families, catalog.patterns)

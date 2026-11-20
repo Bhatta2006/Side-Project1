@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { NAME, PACE_LABEL, conceptHref, formatDate, hours } from '@/lib/routes';
 import type { AssessmentStatus, ProgressView } from '@/lib/types';
 import { ErrorNote, Loading, Page, Ring, StatCard } from '@/components/common';
-import { SolvedBoard } from '@/components/socrat/solved-board';
 import { StreakCalendar } from '@/components/socrat/streak-calendar';
 import { EmptyState } from '@/components/socrat/states';
 import { LearnerProfileCard } from '@/components/socrat/learner-profile';
@@ -106,8 +105,6 @@ export default function ProgressPage() {
             <Stamp text="PROVEN" sub={`${mastered} mastered`} shape="round" ink="green" size={96} tilt={-8} seed="evidence-proven" className="absolute top-4 right-[200px] hidden xl:block" />
           ) : null}
         </Paper>
-
-        {features.library ? <SolvedBoard /> : null}
 
         <div className={cn('grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6', features.code ? 'lg:grid-cols-4' : 'max-sm:[&>:last-child]:col-span-2 sm:grid-cols-3')}>
           <StatCard value={mastered} icon={<StatusIcon status="mastered" size={28} />} label="Skills mastered" hint={features.code ? 'Evidence from checks, judged code and reviews passed the mastery threshold.' : 'Evidence from checks and reviews passed the mastery threshold.'} />

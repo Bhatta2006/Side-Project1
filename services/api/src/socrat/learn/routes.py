@@ -17,14 +17,13 @@ from socrat.assistant import service as assistant
 from socrat.assistant.gateway import make_provider
 from socrat.assistant.tools import Toolbox
 from socrat.auth import COOKIE, require_csrf, require_session
-from socrat.catalog import generated, practice, shape
+from socrat.catalog import generated, shape
 from socrat.catalog.registry import Catalog, CatalogError, default_catalog
 from socrat.database import record_event
 from socrat.execution.protocol import ResultEnvelope
 from socrat.judge import service as judge
 from socrat.learn import placement, playground, quizzes, resources, session_end, transfers, views
 from socrat.learn import service as learn
-from socrat.mastery.model import ConceptState, band
 from socrat.models import (
     AuditEvent,
     DailyActivity,
@@ -488,10 +487,7 @@ def courses(request: Request):
             )
         return item
 
-    return {
-        "items": [card(cid) for cid in ("zero", "dsa", "cp") if cid in shown]
-        + [card(cid) for cid in shown if cid not in {"zero", "dsa", "cp"}]
-    }
+    return {"items": [card(cid) for cid in shown]}
 
 
 @router.post("/enrollments")
@@ -524,9 +520,6 @@ def enroll(body: EnrollInput, request: Request):
         else:
             # One course at a time: a learner moves on once the current course is finished.
             if active is not None and not views.course_finished(db, cat, user, active):
-                raise HTTPException(409, "already_enrolled")
-            # Moving on means the next course in the sequence, never back or sideways.
-            if active is not None and views.NEXT_COURSE.get(active.course_id) != body.course:
                 raise HTTPException(409, "already_enrolled")
         goal = {
             k: v
@@ -995,107 +988,6 @@ def transfer_classify(qualified: str, body: TransferAnswer, request: Request):
             )
     except IntegrityError:
         raise HTTPException(409, "transfer_in_progress") from None
-
-
-# ---------------------------------------------------------------- company practice
-
-
-@router.get("/companies")
-def companies(request: Request, q: str = "", limit: int = 60):
-    from socrat.library import service as library
-
-    index = practice.default_index()
-    with Session(engine(request)) as db:
-        user = user_of(request, db)
-        require_feature(db, user, "library")
-        learner = library.learner_for(
-            db, catalog(), user, learn.active_enrollment(db, user.id), now()
-        )
-        unlocked = entitlements.has(db, user.id, "companies")
-    needle = q.strip().lower()
-    items = [
-        dict(
-            slug=slug,
-            name=c["name"],
-            # Locked: the full bank size, as a preview of what Pro opens.
-            problems=len(c["problems"])
-            if not unlocked
-            else sum(
-                library_problem in index.problems
-                and learner.can_practice(index.problems[library_problem])
-                for library_problem, _, _ in c["problems"]
-            ),
-        )
-        for slug, c in index.companies.items()
-        if not needle or needle in c["name"].lower()
-    ]
-    items = [c for c in items if c["problems"]]
-    items.sort(key=lambda c: (-c["problems"], c["name"]))
-    return {
-        "items": items[: max(1, min(limit, 700))],
-        "total": len(items),
-        "locked": not unlocked,  # names show as a preview; the questions need Pro
-    }
-
-
-@router.get("/companies/{slug}")
-def company(
-    slug: str,
-    request: Request,
-    window: Literal["thirty-days", "three-months", "six-months", "all"] = "all",
-    difficulty: Literal["easy", "medium", "hard", "all"] = "all",
-    offset: int = 0,
-    limit: int = 50,
-):
-    from socrat.library import service as library
-
-    index = practice.default_index()
-    entry = index.companies.get(slug)
-    if entry is None:
-        raise HTTPException(404, "not_found")
-    cat = catalog()
-    with Session(engine(request)) as db:
-        user = user_of(request, db)
-        require_feature(db, user, "library")
-        entitlements.require(db, user.id, "companies")
-        enrollment = learn.active_enrollment(db, user.id)
-        states = learn.states_for(db, enrollment) if enrollment else {}
-        stamp = now()
-        learner = library.learner_for(db, cat, user, enrollment, stamp)
-    cutoff = practice.WINDOW_RANK[window]
-    rows = []
-    for problem_id, frequency, seen in entry["problems"]:
-        problem = index.problems.get(problem_id)
-        if (
-            problem is None
-            or not learner.can_practice(problem)
-            or practice.WINDOW_RANK.get(seen, 4) > cutoff
-        ):
-            continue
-        if difficulty != "all" and problem["difficulty"] != difficulty:
-            continue
-        primary = problem["concepts"][0] if problem["concepts"] else None
-        rows.append(
-            dict(
-                practice.public(problem),
-                frequency=frequency,
-                window=seen,
-                concept=None
-                if primary is None or primary not in cat.concepts
-                else dict(
-                    id=primary,
-                    title=cat.concept(primary).title,
-                    band=band(states.get(primary, ConceptState()), stamp),
-                ),
-            )
-        )
-    offset = max(0, offset)
-    return {
-        "slug": slug,
-        "name": entry["name"],
-        "total": len(rows),
-        "items": rows[offset : offset + max(1, min(limit, 100))],
-    }
 
 
 # ---------------------------------------------------------------- practice

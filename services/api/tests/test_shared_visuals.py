@@ -19,7 +19,7 @@ from socrat.models import (
     SharedVisual,
 )
 
-CONCEPT = "zero:programs-and-output"
+CONCEPT = "basics:values"
 BODY = dict(concept=CONCEPT)
 
 
@@ -155,11 +155,11 @@ def test_no_visual_while_the_problem_is_a_pending_transfer_check(client, configu
             ActivityRecord(
                 enrollment_id=enrollment.id,
                 activity_id=f"transfer:{CONCEPT}",
-                outcome={"state": "pending", "problem": "ticket-stub", "at": 1},
+                outcome={"state": "pending", "problem": "double-twice", "at": 1},
             )
         )
-    assert state(client, problem="ticket-stub").status_code == 423
-    assert start(client, headers, problem="ticket-stub").status_code == 423
+    assert state(client, problem="double-twice").status_code == 423
+    assert start(client, headers, problem="double-twice").status_code == 423
     assert generations(client) == 0
     assert state(client, problem="another-problem").status_code == 200
 
@@ -167,7 +167,7 @@ def test_no_visual_while_the_problem_is_a_pending_transfer_check(client, configu
 def test_the_cache_needs_a_signed_in_learner_and_a_real_concept(client, configured):
     headers, _ = configured
     assert client.post("/api/v1/playground/shared", json=BODY).status_code == 403  # no CSRF token
-    assert start(client, headers, concept="zero:not-a-concept").status_code == 404
+    assert start(client, headers, concept="basics:not-a-concept").status_code == 404
     assert start(client, headers, level="extreme").status_code == 422
 
 
@@ -197,5 +197,5 @@ def test_one_learner_cannot_start_unlimited_fills(client, configured, monkeypatc
     client.app.state.settings.explainer_daily_messages = 1
     assert start(client, headers).json()["state"] == "generating"
     work(client)
-    other = start(client, headers, concept="zero:variables-and-types")
+    other = start(client, headers, concept="basics:text")
     assert other.status_code == 429 and other.json()["error"]["code"] == "playground_daily_limit"

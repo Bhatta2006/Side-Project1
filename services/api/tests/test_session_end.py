@@ -9,7 +9,7 @@ from test_learner_api import client, login, onboard  # noqa: F401
 from socrat.config import Settings
 from socrat.learn import achievements, session_end
 
-LESSON = "lesson:zero:programs-and-output"
+LESSON = "lesson:basics:values"
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def test_evidence_leads_streak_once_a_day_next_closes(enabled):
     assert first["arrangement"] == session_end.ARRANGEMENT
     assert kinds[0] == "evidence" and kinds[-1] == "next" and "streak" in kinds
     evidence = first["screens"][0]
-    assert evidence["concept"] == "zero:programs-and-output" and evidence["title"]
+    assert evidence["concept"] == "basics:values" and evidence["title"]
     assert evidence["status"] in {"mastered", "shown_alone", "building"}
     streak = next(s for s in first["screens"] if s["kind"] == "streak")
     assert streak["current"] == 1 and streak["first_day"] is True
@@ -71,7 +71,7 @@ def test_unknown_activity_still_ends_cleanly(enabled):
     client = enabled
     headers = login(client)
     onboard(client, headers)
-    screens = end(client, headers, "checkpoint:zero:first-steps").json()["screens"]
+    screens = end(client, headers, "checkpoint:basics:start").json()["screens"]
     assert screens[0] == {"kind": "evidence", "concept": None, "title": None, "status": None}
 
 

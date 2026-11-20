@@ -6,16 +6,14 @@ import { useGuard } from '@/lib/session';
 import { useCourse } from '@/lib/course';
 import { NAME } from '@/lib/routes';
 import { Loading, Page, PageHeader } from '@/components/common';
-import { PracticeNav } from '@/components/socrat/practice-nav';
 import { Badge } from '@/components/ui/badge';
 import { Drills } from '@/components/studio/drills';
 import { EVIDENCE_TEXT, LOOP_TEXT, STUDIOS } from '@/components/studio/registry';
 
 /**
  * Practice, the same page for every course: practice sets written for the learner's course,
- * then the course's own tools (math workbench, physics lab) if it has them. The tabs above add
- * only the extras the course has (the problem library in programming courses, company
- * questions in DSA); nothing from another course shows here.
+ * then the course's own tools (math workbench, physics lab) if it has them. Nothing from
+ * another course shows here.
  */
 function PracticePage() {
   const allowed = useGuard('active');
@@ -27,7 +25,6 @@ function PracticePage() {
   const Tools = studio && studio.studio !== 'reading' ? STUDIOS[studio.studio] : undefined;
   return (
     <Page>
-      <PracticeNav />
       <PageHeader
         eyebrow={NAME.practice}
         title={studio?.name ?? NAME.practiceSets}

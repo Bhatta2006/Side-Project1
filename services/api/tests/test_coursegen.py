@@ -19,7 +19,7 @@ BRIEF = dict(
     title="AI Basics",
     audience="Curious programmers who have never studied machine learning.",
     outcome="Explain how a model learns from data and train a tiny one in Python.",
-    reuse=["zero:programs-and-output"],
+    reuse=["basics:values"],
     budget_usd=5.0,
     research=False,
 )
@@ -56,7 +56,7 @@ OUTLINE = dict(
             title="Core ideas",
             summary="What learning from data means.",
             concepts=[
-                concept("what-is-ml", ["zero:programs-and-output"]),
+                concept("what-is-ml", ["basics:values"]),
                 concept("loss", ["what-is-ml"], "practitioner"),
             ],
         )
@@ -115,7 +115,8 @@ def test_brief_becomes_a_reviewed_outline_then_a_published_course(client, admin)
     # Bad JSON and a schema failure both came back to the architect as feedback.
     assert "not valid JSON" in script.prompts["architect"][1]
     assert "failed validation" in script.prompts["architect"][2]
-    assert "zero:programs-and-output — Programs and output" in script.prompts["architect"][0]
+    # The architect starts from the brief alone: no existing course is offered as a model.
+    assert "basics:values — Values" not in script.prompts["architect"][0]
 
     detail = client.get("/api/v1/admin/courses/ai-basics").json()
     assert detail["status"] == "review"
@@ -130,7 +131,7 @@ def test_brief_becomes_a_reviewed_outline_then_a_published_course(client, admin)
     assert "ai-basics" not in {c["id"] for c in client.get("/api/v1/courses").json()["items"]}
 
     edited = detail["course"] | {"title": "AI Basics, edited"}
-    edited["concepts"][0]["prerequisites"] = ["zero:nope"]
+    edited["concepts"][0]["prerequisites"] = ["basics:nope"]
     bad = client.put(
         "/api/v1/admin/courses/ai-basics/outline", json={"course": edited}, headers=admin
     )
@@ -204,13 +205,13 @@ def test_budget_and_provider_failures_end_the_job_without_a_course(client, admin
 def test_admin_only_and_brief_checks(client, admin):  # noqa: F811
     assert (
         client.post(
-            "/api/v1/admin/courses/briefs", json=BRIEF | {"id": "dsa"}, headers=admin
+            "/api/v1/admin/courses/briefs", json=BRIEF | {"id": "algo"}, headers=admin
         ).json()["error"]["code"]
         == "course_exists"
     )
     assert (
         client.post(
-            "/api/v1/admin/courses/briefs", json=BRIEF | {"reuse": ["zero:nope"]}, headers=admin
+            "/api/v1/admin/courses/briefs", json=BRIEF | {"reuse": ["basics:nope"]}, headers=admin
         ).json()["error"]["code"]
         == "unknown_reuse_concept"
     )
@@ -384,8 +385,8 @@ def test_a_written_start_lesson_is_not_locked_behind_unwritten_earlier_modules(c
     client.post("/api/v1/admin/courses/ai-basics/publish", headers=admin)
 
     base = default_catalog()
-    model = base.concept("zero:programs-and-output").model_dump(mode="json")
-    live = type(base.concept("zero:programs-and-output")).model_validate(
+    model = base.concept("basics:values").model_dump(mode="json")
+    live = type(base.concept("basics:values")).model_validate(
         model
         | dict(
             id="worth",

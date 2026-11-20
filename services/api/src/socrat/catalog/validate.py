@@ -405,9 +405,8 @@ def as_dicts(gates: list[Gate]) -> list[dict]:
 
 
 def library_titles() -> list[str]:
-    from socrat.catalog import practice
-
-    return [p["title"] for p in practice.default_index().problems.values()]
+    """Titles of known outside problems a new problem must not copy: none are kept in the app."""
+    return []
 
 
 def statements_of(catalog, extra: dict[str, str] | None = None) -> dict[str, str]:

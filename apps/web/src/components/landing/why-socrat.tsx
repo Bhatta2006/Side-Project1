@@ -34,11 +34,11 @@ const ROWS = [
   },
 ];
 
-export function WhySocrat({ skills, problems }: { skills: number; problems: number }) {
+export function WhySocrat() {
   const facts: [string, string][] = [
     ['6', 'levels of help, enforced on the server'],
-    [skills ? String(skills) : '100+', 'skills, each with its own checks'],
-    [problems ? String(problems) : '100+', 'judged problems with hidden tests'],
+    ['1', 'course written for you, from your goal and how you learn'],
+    ['0', 'fixed syllabus: nothing here is one-size-fits-all'],
   ];
   return (
     <section id="why" aria-labelledby="why-title" className="mx-auto max-w-[1500px] scroll-mt-20 px-5 py-20 sm:px-8 lg:py-28 lg:pr-10 lg:pl-[128px]">
@@ -82,7 +82,7 @@ export function WhySocrat({ skills, problems }: { skills: number; problems: numb
               </div>
             ))}
           </dl>
-          <Button asChild variant="ink" size="lg"><a href="#try">See it on a real problem<ArrowCircle /></a></Button>
+          <Button asChild variant="ink" size="lg"><a href="#tutor">See how the tutor teaches<ArrowCircle /></a></Button>
         </div>
       </div>
       <p className="mt-6 text-[13px] text-muted-foreground">

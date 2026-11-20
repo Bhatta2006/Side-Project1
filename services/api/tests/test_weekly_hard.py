@@ -11,7 +11,7 @@ from socrat.assessments import routes as assessment_routes
 from socrat.assessments import service as assessments
 from socrat.catalog.registry import default_catalog
 
-CONCEPT = "zero:variables-and-types"
+CONCEPT = "basics:text"
 
 
 def question(code, options, answer):
@@ -85,7 +85,7 @@ def test_generated_questions_replace_the_easiest_bank_ones(client, monkeypatch):
     monkeypatch.setattr(assessment_routes.hard, "generate", fake_generate)
     headers = login(client, subject="hard", name="Hana")
     onboard(client, headers)
-    for concept in ("zero:programs-and-output", CONCEPT):
+    for concept in ("basics:values", CONCEPT):
         finish_lesson(client, headers, concept)
     view = client.post("/api/v1/assessments/start", json={}, headers=headers).json()
     generated = [q for q in view["questions"] if q["id"].startswith("gen-")]

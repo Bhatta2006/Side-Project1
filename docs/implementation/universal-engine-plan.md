@@ -13,7 +13,7 @@
 | API | FastAPI modular monolith (`services/api/src/socrat`), 33 Alembic migrations, SQLite local / Postgres staging+prod, outbox worker (`worker.py`) |
 | Course generation | `coursegen/` (outline, research, package, exercise, project, quality, prefetch, jobs, roles): architect → critic → researcher → authors → fact check → reviewer, lazy per-batch, admin-triggered |
 | Engine | `harness/` (typed sandboxed capabilities: math, physics, library), `workbench/`, `mentor/` (teaching moves + "why" log), `adaptive/` (stuck ladder, proposals), `mastery/`, `diagnostics/`, `planner/`, `quiz/` (Elo adaptive quiz), `assessment/`, `reminders.py` |
-| Content | Hand-authored gold packs `content/courses/{zero,dsa,cp}`, patterns, quiz families verified by execution, 13.9k-problem library index |
+| Content | None built in (removed 2026-11-20): every course is generated per learner. Before, hand-authored packs `zero`, `dsa`, `cp` and a 13.9k-problem library index |
 | Money | Razorpay subscriptions, INR + USD price tables, entitlements |
 | Infra | OCI Hyderabad single-VM staging (A1.Flex), Postgres container, gVisor execution design, nightly CI (e2e, tutor eval, link check, lighthouse) |
 
@@ -178,3 +178,5 @@ Slice 8 limits: visuals do not yet write evidence (events like `predicted` and `
 Slice 6 limits, stated plainly: nothing is translated until an admin runs a translation with a key (the `translator` role uses the gateway; the Sarvam backend for Indian languages is not wired and needs a key from the owner); quiz text is stored in translations but not yet served translated; only the Today card, settings and lesson notice are in the UI catalogs; Geist has no Indic glyphs, so Indic text uses system fonts until Noto subsets are added; Latin-script targets (es, pt-BR, id) cannot be script-checked, so they stay "preview" until a native reviewer signs off.
 
 Open items: the diagnostic and outline agents have only been exercised with scripted models; a live-model run is the first thing to do once a key is supplied. `code.judge` is listed as a capability name for the software adapter but is not yet a harness capability (the harness note already records this).
+
+- **2026-11-20, DSA separation.** Removed the hand-authored `zero`/`dsa`/`cp` courses and the external practice layer; the engine no longer takes a reference course or lesson, nothing keys on a course id, and tests use synthetic fixture packs. See HANDOFF.md, update 2026-11-20. Next: upgrade the engine now that it stands alone.

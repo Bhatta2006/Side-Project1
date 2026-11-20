@@ -285,7 +285,7 @@ def release_first_lesson(on, course_id):
 
     with Session(on.app.state.engine) as db, db.begin():
         row = db.get(GeneratedConcept, (course_id, "what-is-ml"))
-        row.payload = live_concept("what-is-ml", "ideas", "live", ["zero:programs-and-output"])
+        row.payload = live_concept("what-is-ml", "ideas", "live", ["basics:values"])
         course = db.get(GeneratedCourse, course_id)
         course.updated_at += 1
 
@@ -390,7 +390,7 @@ def test_a_learner_can_pause_one_course_and_come_back_to_it(on):
         user.birth_year = 1990
         a = Enrollment(
             user_id=user.id,
-            course_id="zero",
+            course_id="basics",
             language="python",
             level_id="brand-new",
             minutes_per_day=30,
@@ -411,14 +411,14 @@ def test_a_learner_can_pause_one_course_and_come_back_to_it(on):
     first = on.post("/api/v1/enrollments", json=body, headers=ada)
     assert first.status_code == 200, first.text
     items = {i["course"]: i for i in on.get("/api/v1/enrollments").json()["items"]}
-    assert items[course_id]["active"] and not items["zero"]["active"]
+    assert items[course_id]["active"] and not items["basics"]["active"]
     # Same call again resumes, it does not create a second enrolment.
     again = on.post("/api/v1/enrollments", json=body, headers=ada).json()
     assert again["id"] == first.json()["id"]
     back = on.post("/api/v1/enrollments/switch", json={"enrollment": zero_id}, headers=ada)
     assert back.status_code == 200
     items = {i["course"]: i for i in on.get("/api/v1/enrollments").json()["items"]}
-    assert items["zero"]["active"] and not items[course_id]["active"]
+    assert items["basics"]["active"] and not items[course_id]["active"]
     assert (
         on.post("/api/v1/enrollments/switch", json={"enrollment": "nope"}, headers=ada).status_code
         == 404

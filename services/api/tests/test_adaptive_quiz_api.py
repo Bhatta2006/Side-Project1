@@ -1,7 +1,5 @@
 """Adaptive quiz API behind ``adaptive_quiz_enabled`` (M3 task 14)."""
 
-import re
-
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,7 +9,7 @@ from socrat.models import Evidence, ItemRating, LearnerAbility, QuizEngineSessio
 from socrat.quiz import service
 
 ORIGIN = "http://localhost:3000"
-CONCEPT = "zero:programs-and-output"
+CONCEPT = "basics:values"
 
 
 def make_client(tmp_path, enabled):
@@ -52,7 +50,7 @@ def off(tmp_path):
     app.state.engine.dispose()
 
 
-def learner(client, course="zero"):
+def learner(client, course="basics"):
     response = client.post(
         "/api/v1/auth/dev-login",
         json={"subject": "ada", "display_name": "Ada"},
@@ -230,7 +228,7 @@ def test_unknown_mode_concept_or_session(on):
     )
     assert (
         client.post(
-            sessions, json={"mode": "concept_check", "concepts": ["zero:nope"]}, headers=headers
+            sessions, json={"mode": "concept_check", "concepts": ["basics:nope"]}, headers=headers
         ).status_code
         == 404
     )
@@ -241,41 +239,3 @@ def test_unknown_mode_concept_or_session(on):
         == 422
     )
     assert client.get(f"{sessions}/missing/next").status_code == 404
-
-
-def test_generated_items_are_served_but_write_no_evidence_until_reviewed(on, monkeypatch):
-    app, client = on
-    headers = learner(client)
-    # for-loops sits behind earlier lessons; open it so the engine can be exercised.
-    monkeypatch.setattr(service.learn, "require_unlocked", lambda *args: None)
-    view = client.post(
-        "/api/v1/adaptive-quiz/sessions",
-        json={"mode": "concept_check", "concepts": ["zero:for-loops"]},
-        headers=headers,
-    ).json()
-    session_id, served = view["id"], []
-    while not view["finished"]:
-        key = view["current"]["item"]
-        served.append(key)
-        if key.startswith("quiz:"):  # a family item: generated (":s<seed>") or static
-            assert view["current"]["hints_available"] == 3
-        if re.fullmatch(r"quiz:zero:for-loops:accumulator:s\d+", key):
-            assert view["current"]["format"] == "fill_blank"
-            assert "___" in view["current"]["code"]
-            if len(served) == 1 or not any(k.startswith("quiz:") for k in served[:-1]):
-                hint = client.post(
-                    f"/api/v1/adaptive-quiz/sessions/{session_id}/hint", headers=headers
-                )
-                assert hint.json()["level"] == 1 and hint.json()["remaining"] == 2
-        view = client.post(
-            f"/api/v1/adaptive-quiz/sessions/{session_id}/answer",
-            json={"item": key, "choice": correct_choice(session_id, key)},
-            headers=headers,
-        ).json()["session"]
-    generated = [k for k in served if k.startswith("quiz:")]  # all from unreviewed families
-    assert generated, served
-    with Session(app.state.engine) as db:
-        responses = {r.item_id for r in db.scalars(select(QuizResponse))}
-        assert set(generated) <= responses
-        evidence = list(db.scalars(select(Evidence).where(Evidence.kind == "quiz")))
-        assert {e.details["item"] for e in evidence} == set(served) - set(generated)

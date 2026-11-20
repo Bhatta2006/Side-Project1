@@ -100,18 +100,16 @@ test('a learner can do a whole session with the keyboard alone', async ({ page }
   await page.keyboard.press('Enter');
   await expect(page.getByRole('status').filter({ hasText: /Correct|Incorrect/ })).toBeVisible();
 
-  await page.goto('/library');
-  await expect(page.getByRole('heading', { level: 1, name: 'Problems' })).toBeVisible();
-  await outline(page, '/library');
+  await page.goto('/today');
   await page.keyboard.press('Control+k');
-  const search = page.getByPlaceholder('Search lessons, problems, pages…');
+  const search = page.getByPlaceholder('Search lessons and pages…');
   await expect(search).toBeFocused();
   await page.keyboard.type('progress');
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/progress$/);
   await outline(page, '/progress');
 
-  for (const path of ['/plan', '/settings', '/assessments', '/sprint', '/companies', '/problems/greeting']) {
+  for (const path of ['/plan', '/settings', '/assessments']) {
     await page.goto(path);
     await outline(page, path);
   }

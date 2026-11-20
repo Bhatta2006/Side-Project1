@@ -16,7 +16,7 @@ from socrat.coursegen import maintain
 
 @pytest.fixture
 def base():
-    return default_catalog().concept("cp:bitmasks")
+    return default_catalog().concept("algo:graphs")
 
 
 def test_a_renamed_question_keeps_its_old_id(base):
@@ -114,7 +114,7 @@ def test_each_module_has_its_own_version_that_moves_only_with_it():
     from socrat.catalog.revisions import module_version
 
     cat = default_catalog()
-    full = cat.course("cp")
+    full = cat.course("algo")
     first, second = full.modules[0], full.modules[1]
     before = (module_version(full, first), module_version(full, second))
     assert before[0].startswith("m-") and before[0] != before[1]

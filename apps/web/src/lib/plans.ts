@@ -9,5 +9,5 @@ export const PLUS_WAS_INR = 49900;
 export const PLAN_BLURB: Record<PlanId, string> = {
   free: 'A taste of Socrat.',
   plus: 'Everything you need to actually finish a course.',
-  pro: 'For interview season: company questions and daily depth.',
+  pro: 'For daily depth: the most time with Soc and the playground.',
 };

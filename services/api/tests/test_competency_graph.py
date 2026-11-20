@@ -65,10 +65,10 @@ def test_code_flags_an_inconsistent_graph():
 
 def test_unknown_related_concept_is_refused_by_the_catalog():
     brief = Brief.model_validate(BRIEF)
-    course = to_course(brief, outline_with(related=["zero:no-such-concept"]))
+    course = to_course(brief, outline_with(related=["basics:no-such-concept"]))
     with pytest.raises(CatalogError, match="unknown related concept"):
         generated.extend(default_catalog(), [course])
-    fine = to_course(brief, outline_with(related=["zero:programs-and-output"]))
+    fine = to_course(brief, outline_with(related=["basics:values"]))
     generated.extend(default_catalog(), [fine])
 
 

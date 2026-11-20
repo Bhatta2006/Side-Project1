@@ -1,5 +1,7 @@
 # Course generation: any course, built in batches by agents
 
+> **Superseded in part, 2026-11-20.** No course is hand-authored any more: `zero`, `dsa` and `cp` were removed, so there are no few-shot gold lessons, no reference DSA course and no existing concepts to reuse as prerequisites. Every course is generated per learner. Read mentions of them below as history.
+
 - **Status:** Draft for owner review (2026-10-24)
 - **Supersedes in part:** ADR-0002 ("AI cannot freely generate a curriculum") — see §12
 - **Builds on:** ADR-0003 (skill-pack contract), ADR-0004 (append-only evidence), ADR-0005 (isolated execution)

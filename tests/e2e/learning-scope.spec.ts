@@ -138,10 +138,8 @@ test('course search stays scoped and generation sends the free request without p
   await page.keyboard.press('Control+k');
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('option', { name: /Programs and output/ })).toBeVisible();
-  await dialog.getByPlaceholder('Search lessons, problems, pages…').fill('Binary search');
+  await dialog.getByPlaceholder('Search lessons and pages…').fill('Binary search');
   await expect(dialog.getByText('No results. Try another word.')).toBeVisible(); await page.keyboard.press('Escape');
-  expect((await page.request.get('/api/v1/concepts/dsa:complexity')).status()).toBe(404);
-  expect((await (await page.request.get('/api/v1/library?sort=popular')).json()).total).toBe(0);
   await page.getByRole('link', { name: /Ask about any concept|visually$/ }).first().click();
   const request = 'Explain the phases of the Moon with an interactive orbit';
   await page.getByLabel('Your question', { exact: true }).fill(request);

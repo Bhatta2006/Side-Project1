@@ -20,7 +20,6 @@ import { strongSoFar } from '@/lib/strong-so-far';
 import Markdown from '@/components/markdown';
 import { LessonPages } from '@/components/lesson-pages';
 import { Difficulty, ErrorNote, Loading } from '@/components/common';
-import { Level, PlatformTag, ProblemName, StatusControl } from '@/components/practice';
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { ConceptVisual } from '@/components/socrat/concept-visual';
 import { StatusIcon, StatusLabel, statusFromBand, type Status } from '@/components/socrat/status';
@@ -347,15 +346,6 @@ export default function Lesson() {
   if (!concept) return <div className="mx-auto max-w-3xl p-6"><ErrorNote message={error} retry={load} /></div>;
 
   const weakPrereqs = concept.prerequisites.filter(p => p.band === 'needs_practice' || p.band === 'not_started');
-  const practice = [
-    ...concept.practice_links.map(p => ({
-      id: p.url, title: p.title, url: p.url, platform: p.platform, difficulty: p.difficulty, rating: null,
-      concepts: [] as string[], companies: 0, striver: false, status: null, bookmarked: false, concept: null,
-    })),
-    ...concept.more_practice,
-  ]
-    .filter((p, i, all) => all.findIndex(q => q.url.replace(/\/$/, '') === p.url.replace(/\/$/, '')) === i)
-    .slice(0, 10);
   const canCheck = active && !concept.locked;
 
   return (
@@ -499,10 +489,6 @@ export default function Lesson() {
                   ))}
                 </ul>
               </Section>
-            ) : features.library ? (
-              <Section id="judged-heading" title="Practice problems">
-                <p className="text-[15px] text-muted-foreground">No judged problems for this skill yet. The concept check shows what you know; for practice, try the <Link href={`/library?concept=${concept.id}`} className="font-semibold underline underline-offset-4">external problems</Link> or ask Soc.</p>
-              </Section>
             ) : null}
             {features.drills ? (
               <Section id="drills-heading" title="Practise this topic">
@@ -511,66 +497,10 @@ export default function Lesson() {
               </Section>
             ) : null}
 
-            {concept.exercises?.length && features.code ? (
-              <Section id="builders-heading" title="Python skill builders" collapsible>
-                <p className="mb-3 text-sm text-muted-foreground">Selected exercises for this skill. Practise the idea before opening the upstream solution; some examples there use older Python syntax.</p>
-                <ul className="grid divide-y">{concept.exercises.map(exercise => <li key={exercise.number} className="py-3"><a href={exercise.url} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">{exercise.title}, exercise {exercise.number}<span className="sr-only">, opens in a new tab</span></a><p className="mt-1 text-sm text-muted-foreground">{exercise.guidance}</p></li>)}</ul>
-                <p className="mt-3 text-[13px] text-muted-foreground">Source: zhiwehu/Python-programming-exercises. These optional exercises are ungraded.</p>
-              </Section>
-            ) : null}
-
-            {practice.length && features.library ? (
-              <Section id="more-practice-heading" title="External practice" collapsible>
-                <p className="mb-3 text-sm text-muted-foreground">Picked for your current level from LeetCode, Codeforces, CSES and more, plus two challenges above it. External problems open on the original site. <Link href={`/library?concept=${concept.id}`} className="font-semibold underline underline-offset-4">All problems</Link></p>
-                <ul className="grid divide-y">
-                  {practice.map(p => (
-                    <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-[15px]">
-                      <span className="flex min-w-0 flex-wrap items-center gap-2">
-                        <ProblemName problem={p} />
-                        <PlatformTag platform={p.platform} />
-                        {p.striver ? <Badge variant="secondary">A2Z sheet</Badge> : null}
-                        {'stretch' in p && p.stretch ? <Badge variant="outline">Challenge</Badge> : null}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <Level problem={p} />
-                        {p.id.includes(':') && !p.id.startsWith('http') ? (
-                          <StatusControl id={p.id} status={p.status} bookmarked={p.bookmarked} compact onChange={next => setConcept(c => (c ? { ...c, more_practice: c.more_practice.map(x => (x.id === p.id ? { ...x, ...next } : x)) } : c))} />
-                        ) : null}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            ) : null}
-
-            {concept.resources.length || concept.handbook.length || concept.implementations.length ? (
+            {concept.resources.length ? (
               <Section id="resources-heading" title="Resources" collapsible>
                 <div className="grid gap-5">
                   <ResourceList concept={concept.id} resources={concept.resources} onChange={updateResource} />
-                  {concept.handbook.length ? (
-                    <div className="border-t pt-4">
-                      <h3 className="type-label mb-2 text-muted-foreground">Competitive Programmer&apos;s Handbook</h3>
-                      <ul className="grid gap-2 text-[15px]">
-                        {concept.handbook.map(h => (
-                          <li key={h.url}>
-                            <a href={h.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Section {h.chapter}, {h.title}<span className="sr-only">, opens in a new tab</span></a>
-                            <span className="text-[13px] text-muted-foreground">, page {h.page}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                  {concept.implementations.length ? (
-                    <div className="border-t pt-4">
-                      <h3 className="type-label mb-2 text-muted-foreground">Reference implementations</h3>
-                      <ul className="grid gap-2 text-[15px]">
-                        {concept.implementations.map(i => (
-                          <li key={i.url}><a href={i.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{i.title}<span className="sr-only">, opens in a new tab</span></a> <span className="text-[13px] text-muted-foreground">TheAlgorithms</span></li>
-                        ))}
-                      </ul>
-                      <p className="mt-2 text-[13px] text-muted-foreground">Read these after you have solved a problem yourself.</p>
-                    </div>
-                  ) : null}
                 </div>
               </Section>
             ) : null}

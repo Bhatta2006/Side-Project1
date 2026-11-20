@@ -17,7 +17,7 @@ from socrat.engine import domains
 from socrat.learn import tasks
 from socrat.models import Evidence
 
-CONCEPT = "zero:programs-and-output"
+CONCEPT = "basics:values"
 RUBRIC = [
     {"criterion": "Clear steps", "points": 2, "look_for": "Each step in order"},
     {"criterion": "Correct output", "points": 2, "look_for": "Says what prints"},
@@ -141,6 +141,6 @@ def test_unknown_tasks_are_not_found(client, with_tasks):
         client.post(f"/api/v1/tasks/{CONCEPT}/nope", json=body, headers=headers).status_code == 404
     )
     assert (
-        client.post("/api/v1/tasks/zero:nope/think-back", json=body, headers=headers).status_code
+        client.post("/api/v1/tasks/basics:nope/think-back", json=body, headers=headers).status_code
         == 404
     )

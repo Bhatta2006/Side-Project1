@@ -69,7 +69,7 @@ def test_relaxed_keeps_every_module_open_but_still_plans_the_checkpoint(client):
     headers = login(client)
     onboard(client, headers)
     catalog = default_catalog()
-    first, second = gates.module_keys(catalog, "zero")[:2]
+    first, second = gates.module_keys(catalog, "basics")[:2]
     later = gates.module_concepts(catalog, second)[0]
     assert client.get(f"/api/v1/concepts/{later}").status_code == 423  # balanced: locked
 
@@ -89,7 +89,7 @@ def test_balanced_lets_a_missed_checkpoint_be_retried_straight_away(client):  # 
     headers = login(client)
     onboard(client, headers)
     catalog = default_catalog()
-    first, second = gates.module_keys(catalog, "zero")[:2]
+    first, second = gates.module_keys(catalog, "basics")[:2]
     gate = gates.gate_id(first)
     failed = answer_gate(client, headers, gate, right=False)
     assert failed["gate"]["passed"] is False and failed["gate"]["retry_at"] is None
@@ -103,7 +103,7 @@ def test_balanced_lets_a_missed_checkpoint_be_retried_straight_away(client):  # 
 def test_leaving_strict_ends_a_wait_already_running(client):  # noqa: F811
     headers = login(client)
     onboard(client, headers)
-    gate = gates.gate_id(gates.module_keys(default_catalog(), "zero")[0])
+    gate = gates.gate_id(gates.module_keys(default_catalog(), "basics")[0])
     client.patch("/api/v1/me", json={"learning_mode": "strict"}, headers=headers)
     failed = answer_gate(client, headers, gate, right=False)
     assert failed["gate"]["retry_at"]

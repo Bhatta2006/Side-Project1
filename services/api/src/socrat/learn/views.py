@@ -6,12 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from socrat import entitlements
-from socrat.catalog import practice, shape
+from socrat.catalog import shape
 from socrat.catalog.registry import Catalog
 from socrat.coursegen.package import AI_AUTHOR
 from socrat.learn import achievements, graded, resources
 from socrat.learn import service as learn
-from socrat.library import service as library
 from socrat.mastery.model import ConceptState, band
 from socrat.models import (
     ActivityRecord,
@@ -165,7 +164,6 @@ def today_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment
 
 
 OPEN = {"assumed", "upcoming", "in_progress", "locked"}
-NEXT_COURSE = {"zero": "dsa", "dsa": "cp"}
 FINALE_CHALLENGES = 3
 
 
@@ -192,7 +190,6 @@ def finale(
         (p for p in course.problems if p.id not in solved),
         key=lambda p: (rank.get(p.difficulty, 3), p.id),
     )
-    following = NEXT_COURSE.get(course.id)
     capstone = next((k for k in catalog.projects if k.startswith(f"{course.id}:capstone-")), None)
     project = graded.project_view(db, catalog, enrollment, capstone) if capstone else None
     return dict(
@@ -211,11 +208,7 @@ def finale(
             done=sum(m["done"] for m in project["milestones"]),
             total=len(project["milestones"]),
         ),
-        next_course=(
-            dict(id=following, title=catalog.course(following).title)
-            if following in catalog.courses
-            else None
-        ),
+        next_course=None,  # no fixed sequence of courses: the learner asks for what comes next
     )
 
 
@@ -312,9 +305,6 @@ def plan_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment,
                 review_due=states.get(item["concept"], ConceptState()).due(now),
                 reason_codes=reason_codes.get(item["concept"], []),
                 requires=catalog.prerequisites[item["concept"]],
-                roadmap_resources=resources.selected(
-                    item["concept"], enrollment.language, "roadmap"
-                ),
             )
         )
         if item.get("locked_by"):
@@ -439,7 +429,6 @@ def concept_view(
     state = states.get(qualified, ConceptState())
     completed = learn.completed_for(db, enrollment) if enrollment else set()
     solved = solved_problems(db, user.id)
-    index = practice.default_index()
     current_band = band(state, now)
     from socrat.mastery import evidence as kinds
 
@@ -486,7 +475,6 @@ def concept_view(
         validation=_validation(db, qualified, concept),
         safety=_safety(db, qualified, concept),
         attribution=concept.provenance.attribution_md if concept.provenance else "",
-        exercises=resources.selected(qualified, language, "exercises"),
         prompts=graded.prompt_views(db, enrollment, qualified, concept),
         workbench=len(concept.exercises),
         lab=len(concept.experiments),
@@ -494,25 +482,11 @@ def concept_view(
         visuals=[v.model_dump(mode="json") for v in concept.visuals],
         pitfalls=concept.pitfalls,
         resources=resources.personalised(db, user.id, qualified, concept, language, current_band),
-        # Authored links that are in the library become library rows (with status);
-        # the rest stay plain links.
         practice_links=[
             p.model_dump(mode="json")
             for p in concept.practice_links
-            if index.find_url(str(p.url)) is None
-            and qualified in learn.practice_topics(db, catalog, enrollment, now)
+            if qualified in learn.practice_topics(db, catalog, enrollment, now)
         ],
-        more_practice=library.concept_practice(
-            db,
-            catalog,
-            user,
-            enrollment,
-            qualified,
-            now,
-            [str(p.url) for p in concept.practice_links],
-        ),
-        implementations=index.implementations_for(qualified, language),
-        handbook=index.book_for(qualified),
         problems=[
             dict(
                 id=p,
@@ -537,19 +511,22 @@ def concept_view(
 
 
 def solved_problems(db: Session, user_id: str) -> set[str]:
-    return library.native_solved(db, user_id)
+    """Judged problems the learner has had accepted."""
+    return set(
+        db.scalars(
+            select(Submission.problem_id).where(
+                Submission.user_id == user_id,
+                Submission.mode == "submit",
+                Submission.verdict == "accepted",
+            )
+        )
+    )
 
 
 STARTERS = {
     "python": "import sys\n\n\ndef main():\n    data = sys.stdin.read().split()\n    # Your solution here\n\n\nmain()\n",
     "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    // Your solution here\n    return 0;\n}\n",
     "java": "import java.io.*;\nimport java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) throws IOException {\n        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));\n        // Your solution here\n    }\n}\n",
-}
-# Programming from Zero uses only what its first lessons teach: line-by-line input and print (Z-1).
-ZERO_STARTERS = {
-    "python": "# Read each input line with input().\n# Show your answer with print().\n",
-    "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Read input with cin >> (or getline(cin, line) for a whole line).\n    // Show your answer with cout.\n    return 0;\n}\n",
-    "java": "import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner in = new Scanner(System.in);\n        // Read input with in.nextLine() or in.nextInt().\n        // Show your answer with System.out.println.\n    }\n}\n",
 }
 
 
@@ -582,7 +559,7 @@ def problem_view(
         examples=[e.model_dump() for e in problem.examples],
         language=language,
         starter=problem.starter.get(language)  # type: ignore[call-overload]
-        or (ZERO_STARTERS if course_id == "zero" else STARTERS)[language],
+        or STARTERS[language],
         draft=draft.source if draft else None,
         solved=problem_id in solved_problems(db, user.id),
         locked=lock_info(db, catalog, enrollment, concept),

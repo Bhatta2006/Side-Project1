@@ -130,10 +130,6 @@ const MESSAGES: Record<string, string> = {
   email_code_invalid: 'That code is wrong or has expired. Check it, or send a new one.',
   too_many_attempts: 'Too many attempts. Wait a while, then try again.',
   email_unavailable: 'We could not send the email right now. Please try again in a few minutes.',
-  codeforces_handle_not_found: "Codeforces doesn't know that handle. Check the spelling.",
-  codeforces_invalid_handle: 'Handles are 3–24 letters, digits, dots, dashes or underscores.',
-  codeforces_unavailable: "Codeforces isn't answering right now. Try again in a minute.",
-  not_linked: 'Link a Codeforces handle first.',
   not_in_course: 'That part of Practice belongs to another course.',
   practice_unavailable: "Socrat couldn't write practice questions right now. Try again in a minute.",
   practice_sets_today: "You've made today's practice sets. Come back tomorrow for more.",
@@ -175,7 +171,6 @@ const MESSAGES: Record<string, string> = {
   playground_artifact_reported: 'This visual was reported and removed. Generate a new one.',
   playground_frame_expired: 'This preview link expired. Reopen the visual from your saved explorations.',
   upgrade_required: 'This is part of the Founding Member plan. See the plans to unlock it.',
-  pro_required: 'Company questions are part of the Pro plan. See the plans to unlock them.',
   chat_week_limit: "You've used this week's free messages with Soc. They reset on Monday, or upgrade for daily messages.",
   chat_day_limit: "You've used today's messages with Soc. They reset at midnight, or move up a plan for more.",
   playground_day_limit: "You've used today's visual generations. They reset at midnight, or move up a plan for more.",
@@ -189,7 +184,6 @@ const MESSAGES: Record<string, string> = {
   assessment_done: "You've already finished this week's assessment. A new one opens next week.",
   try_turns_used: "That's the end of the free preview. Create an account to keep going with Soc.",
   try_rate_limited: 'The preview is busy from your network. Try again in a little while, or sign up to keep going.',
-  company_not_covered: "That company's questions don't use skills in your course. Pick another company or course.",
   assessment_unavailable: 'Study at least two topics this week to unlock your weekly assessment.',
 };
 

@@ -39,7 +39,7 @@ def test_the_scorer_measures_what_code_can_check_and_names_what_it_cannot():
     from test_generated_courses import concept as live_concept
 
     course = to_course(Brief.model_validate(BRIEF), OUTLINE)
-    released = live_concept("what-is-ml", "ideas", "live", ["zero:programs-and-output"])
+    released = live_concept("what-is-ml", "ideas", "live", ["basics:values"])
     from socrat.catalog.schema import Concept
 
     course = course.model_copy(
@@ -90,7 +90,7 @@ def test_outcome_report_separates_independent_assisted_delayed_and_transfer(clie
             db.add(
                 Evidence(
                     enrollment_id=enrollment.id,
-                    concept="zero:programs-and-output",
+                    concept="basics:values",
                     kind=kind,
                     score=score,
                     assistance=help_,

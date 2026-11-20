@@ -449,7 +449,7 @@ def test_job_progress_quota_scope_and_csrf(client, configured):  # noqa: F811
         client.post(
             "/api/v1/playground/generate",
             headers=headers,
-            json={**payload, "concept": "dsa:complexity"},
+            json={**payload, "concept": "algo:arrays"},
         ).status_code
         == 404
     )

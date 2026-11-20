@@ -47,7 +47,7 @@ def test_learner_progress_queues_the_next_concepts_once(client, published):  # n
         ("what-is-ml", "prefetch"),
         ("loss", "prefetch"),
     }
-    client.post("/api/v1/activities/lesson:zero:programs-and-output/complete", headers=learner)
+    client.post("/api/v1/activities/lesson:basics:values/complete", headers=learner)
     assert len(package_jobs(client)) == 2  # already queued: nothing new
 
     with Session(client.app.state.engine) as db, db.begin():
@@ -65,7 +65,7 @@ def test_learner_progress_queues_the_next_concepts_once(client, published):  # n
 def test_hand_authored_courses_never_queue_generation(client):  # noqa: F811
     learner = login(client, subject="ada", name="Ada")
     onboard(client, learner)
-    client.post("/api/v1/activities/lesson:zero:programs-and-output/complete", headers=learner)
+    client.post("/api/v1/activities/lesson:basics:values/complete", headers=learner)
     assert package_jobs(client) == []
 
 

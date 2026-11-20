@@ -35,7 +35,7 @@ def test_dev_login_upgrade_preserves_enrollment_and_read_lesson(client):  # noqa
     name = "Jane.Doe"
     headers = login(client, subject="jane-doe", name=name)
     onboard(client, headers)
-    activity = "lesson:zero:programs-and-output"
+    activity = "lesson:basics:values"
     client.post(f"/api/v1/activities/{activity}/complete", headers=headers).raise_for_status()
     before = client.get("/api/v1/me").json()
     subject = "jane-doe-" + hashlib.sha256(name.encode()).hexdigest()[:10]

@@ -77,11 +77,10 @@ def test_rated_quiz_answers_feed_calibration_and_the_evidence_view(client):
     headers = login(client)
     onboard(client, headers)
     assert client.get("/api/v1/progress/calibration").json() == {"calibration": None}
-    url = "/api/v1/quiz/quiz:zero:programs-and-output"
+    url = "/api/v1/quiz/quiz:basics:values"
     quiz = client.get(url).json()
     answers = {
-        q.id: q.shown(quiz["id"])["answer"]
-        for q in default_catalog().concept("zero:programs-and-output").quiz
+        q.id: q.shown(quiz["id"])["answer"] for q in default_catalog().concept("basics:values").quiz
     }
     for n, question in enumerate(quiz["questions"]):
         body = {"item": question["id"], "choice": answers[question["id"]]}
@@ -94,5 +93,5 @@ def test_rated_quiz_answers_feed_calibration_and_the_evidence_view(client):
         f"{url}/answer", json={"item": "x", "choice": 0, "confidence": 9}, headers=headers
     )
     assert bad.status_code == 422
-    view = client.get("/api/v1/concepts/zero:programs-and-output").json()["evidence"]
+    view = client.get("/api/v1/concepts/basics:values").json()["evidence"]
     assert view["by_type"] == {"recognition": 1} and view["stage"] in {"emerging", "proficient"}
