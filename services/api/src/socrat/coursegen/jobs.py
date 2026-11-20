@@ -28,6 +28,7 @@ import json
 import logging
 import re
 from dataclasses import replace
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import CursorResult, Engine, func, or_, select, update
@@ -508,14 +509,14 @@ async def run_outline(
         if settings.gen_waiting_learner:
             # A crash or restart from here on resumes from this outline (no second architect
             # bill); the critic's verdicts so far are in the log.
-            prepared = brief.model_copy(update={"plan": plan}).model_dump(
+            stored_brief = brief.model_copy(update={"plan": plan}).model_dump(
                 mode="json", exclude={"learner_brief"}
             )
             _note(
                 engine,
                 job_id,
                 {"role": "system", "event": "outline_stored", "round": attempt},
-                output={"outline": outline, "notes": later_notes, "brief": prepared},
+                output={"outline": outline, "notes": later_notes, "brief": stored_brief},
             )
         _note(
             engine,
@@ -548,14 +549,14 @@ async def run_outline(
             review = await roles.ask(
                 engine, settings, "critic", CRITIC, critic_prompt(brief, outline), 8000, make
             )
-        verdict, found = _review(engine, job_id, attempt, review)
+        verdict, critique = _review(engine, job_id, attempt, review)
         if verdict == "pass":
             break
         if lazy:
             # A learner is waiting (lesson0-generation-plan.md 5.2): what concerns module 1 or the
             # whole course gets one repair round; what concerns later modules waits for them
             # and is handed to the detailer when that module is detailed.
-            fix_now, later_notes = split_review(outline, found)
+            fix_now, later_notes = split_review(outline, critique)
             if not fix_now or repaired:
                 entry = {"event": "kept_for_learner", "open": fix_now, "deferred": later_notes}
                 _note(engine, job_id, {"role": "system", **entry})
@@ -567,7 +568,9 @@ async def run_outline(
             # Advisory review: the findings are in the log, the outline stands.
             _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
             break
-        issues = found or ["The critic asked for a revision without details; tighten the outline."]
+        issues = critique or [
+            "The critic asked for a revision without details; tighten the outline."
+        ]
     if best is None:
         _note(
             engine,
@@ -743,7 +746,8 @@ def split_review(outline: dict, found: list[str]) -> tuple[list[str], list[str]]
         for x in [m.get("id"), *[c.get("id") for c in m.get("concepts", []) if isinstance(c, dict)]]
         if x
     }
-    now, later = [], []
+    now: list[str] = []
+    later: list[str] = []
     for issue in found:
         where = issue.split(":", 1)[0].strip()
         (later if where in later_ids else now).append(issue)
@@ -1232,8 +1236,8 @@ async def run_package(
             cited = await research.screen(research.best(hits), http, allowed)
         if not fast or not cited:
             fast = False
-            found = await ask("researcher", research.RESEARCHER, prompt, 2000)
-            cited = await research.screen(found.data, http, allowed)
+            researched = await ask("researcher", research.RESEARCHER, prompt, 2000)
+            cited = await research.screen(researched.data, http, allowed)
         if settings.youtube_transcripts:
             cited = research.add_videos(cited, list(allowed.values()) if allowed else [])
             cited = await youtube.with_transcripts(cited)
@@ -1253,7 +1257,7 @@ async def run_package(
                     for s in cited
                 ],
             },
-            0.0 if fast else found.cost_usd,
+            0.0 if fast else researched.cost_usd,
         )
         if cited:
             ctx = "\n\n".join([ctx, research.block(cited)])
@@ -1359,7 +1363,7 @@ async def run_package(
                 entry = {"role": "system", "round": attempt, "event": "preview_ready"}
                 _note(engine, job_id, entry, output={"lesson": lesson})
         assert lesson is not None  # written above, or kept from the previous round
-        pending = {}
+        parts: dict[str, Any] = {}  # part -> its model call, run together
         asked: dict[str, tuple[str, str, int]] = {}  # part -> (system, prompt, tokens)
         if "quiz" in redo or quiz is None:
             example = ""
@@ -1381,14 +1385,14 @@ async def run_package(
             quiz_rules = pkg.QUIZ_MARKED if settings.gen_marked_answers else pkg.QUIZ
             asked["quiz"] = (quiz_rules + note, prompt, 6000)
             # A part sent back twice goes to the strong model for its last try.
-            pending["quiz"] = ask("quiz", *asked["quiz"], escalate=last and quiz is not None)
+            parts["quiz"] = ask("quiz", *asked["quiz"], escalate=last and quiz is not None)
         if "atoms" in redo or atoms is None:
             extra = pkg.ATOMS_CODE.format(languages=", ".join(code)) if code else ""
             prompt = pkg.part_prompt(ctx, lesson, atoms, notes["atoms"], extra)
             atom_rules = pkg.ATOMS_MARKED if settings.gen_marked_answers else pkg.ATOMS
             asked["atoms"] = (atom_rules + note, prompt, 8000)
-            pending["atoms"] = ask("atoms", *asked["atoms"], escalate=last and atoms is not None)
-        replies = dict(zip(pending, await asyncio.gather(*pending.values()), strict=True))
+            parts["atoms"] = ask("atoms", *asked["atoms"], escalate=last and atoms is not None)
+        replies = dict(zip(parts, await asyncio.gather(*parts.values()), strict=True))
         # A quiz or atoms reply that is not readable JSON is re-asked once, at once and alone,
         # with the parse error. Before, it cost a whole round (3 by default), and the next round
         # could also rewrite the lesson; the first live run lost lessons this way.

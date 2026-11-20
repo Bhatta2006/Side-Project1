@@ -8,6 +8,7 @@ failing schedules a short cooldown with targeted reviews.
 
 import random
 from collections import Counter
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -463,7 +464,7 @@ def answer(
     if item_id in session.answers:
         raise HTTPException(409, "already_answered")
     correct = q.is_correct(session.id, choice)  # choice is a display position
-    entry = {"choice": choice, "correct": correct}
+    entry: dict[str, Any] = {"choice": choice, "correct": correct}
     trap = "" if correct else q.trap(session.id, choice)
     if trap:  # the wrong option this learner picked is a known misconception
         entry["misconception"] = trap
@@ -533,7 +534,7 @@ def finish(
             probed.add(concept)
     for concept, results in per_concept.items():
         sure = rated.get(concept, [])
-        details = (
+        details: dict[str, Any] = (
             {"confidence": round((sum(sure) / len(sure) - 1) / 3, 3), "rated": len(sure)}
             if sure
             else {}
