@@ -30,29 +30,14 @@ export function praise(run: number, seed: number): string {
   return run >= RUN_SHOWN ? `${run} in a row.` : PRAISE[Math.abs(seed) % PRAISE.length];
 }
 
-/** "n in a row" as pen tally marks: groups of four strokes crossed by a fifth. */
+/** "n in a row": an orange paper chip with Ember's flame that pops on every new answer in the run. */
 export function RunTally({ run, className }: { run: number; className?: string }) {
   if (run < RUN_SHOWN) return null;
-  const groups = Math.floor(run / 5);
-  const rest = run % 5;
-  const marks = [...Array.from({ length: Math.min(groups, 4) }, () => 5), ...(rest && groups < 4 ? [rest] : [])];
   return (
     <>
-    {/* Daybreak: a combo chip with Ember's flame that pops on every new answer in the run. */}
-    <p key={run} className={cn('db-only db-pop inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--db-streak-tint)] py-1 pr-3.5 pl-1.5 text-[15px] font-extrabold text-[var(--db-streak-ink)] shadow-[inset_0_0_0_2px_color-mix(in_srgb,var(--db-streak)_30%,transparent)]', className)} aria-live="polite">
+    <p key={run} className={cn('db-ribbon db-pop w-fit text-[15px]', className)} aria-live="polite">
       <GameEmoji name="flame" size={24} className={run >= RUN_GLOW ? 'db-flicker' : undefined} />
       {run} in a row{run >= RUN_GLOW ? '. On fire.' : ''}
-    </p>
-    <p className={cn('nb-only inline-flex items-center gap-2 text-[15px] font-semibold text-pen animate-pop', className)} aria-live="polite">
-      <span className="inline-flex gap-1.5" aria-hidden="true">
-        {marks.map((count, i) => (
-          <svg key={i} viewBox="0 0 26 18" className="h-[18px] w-[26px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            {Array.from({ length: Math.min(count, 4) }, (_, j) => <path key={j} d={`M${4 + j * 5} 3.5l-.6 11`} />)}
-            {count === 5 ? <path d="M1.5 13.5L23.5 4" /> : null}
-          </svg>
-        ))}
-      </span>
-      {run} in a row
     </p>
     </>
   );
@@ -152,19 +137,10 @@ export function FeedbackSheet({ tone, title, children, action, onContinue, run =
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-display text-xl font-semibold tracking-[-0.02em]">
-            {/* Daybreak: the game emoji, with Jade cheering a right answer and Soc for a wrong one. */}
-            <span aria-hidden="true" className="db-only relative flex-none">
+            {/* Jade cheers a right answer; Soc sits with a wrong one. */}
+            <span aria-hidden="true" className="relative flex-none">
               {tone === 'correct' ? <PebbleFriend kind="jade" mood="happy" size={46} className="db-pop" /> : tone === 'wrong' ? <PebbleFriend kind="soc" size={46} className="db-pop" /> : null}
               {tone !== 'neutral' ? <GameEmoji name={tone === 'correct' ? 'check' : 'cross'} size={22} className="absolute -right-1.5 -bottom-1 db-pop [animation-delay:120ms]" /> : null}
-            </span>
-            <span aria-hidden="true" className="nb-only feedback-mark grid size-8 flex-none place-items-center rounded-full">
-              {tone === 'correct' ? (
-                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-              ) : tone === 'wrong' ? (
-                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M7 7l10 10M17 7L7 17" /></svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 12h12" /></svg>
-              )}
             </span>
             {title}
           </p>

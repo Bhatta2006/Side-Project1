@@ -1,12 +1,12 @@
 'use client';
-// Daybreak game moments, behind features.game_moments (docs/implementation/gamified-ui-backlog.md,
+// Game moments, behind features.game_moments (docs/implementation/gamified-ui-backlog.md,
 // item 4). Each one dresses evidence the server already holds: today's minutes, skills proven, the
 // streak, badges earned. Nothing here records, counts or awards anything new. Every moment is
-// Daybreak only (.db-only) and shown once, remembered in this browser.
+// Shown once, remembered in this browser.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { levelFor, levelUpDue, nextStreakMilestone, streakMilestone } from '@/lib/game';
-import { playInDaybreak } from '@/lib/game-sound';
+import { playInGame } from '@/lib/game-sound';
 import { Button } from '@/components/ui/button';
 import { Celebrate } from './celebrate';
 import { GameEmoji, type GameEmojiName } from './game-emoji';
@@ -52,12 +52,12 @@ function Moment({ kind, emoji, label, title, children, onClose, className }: { k
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => { button.current?.focus({ preventScroll: true }); }, []);
   return (
-    <section role="status" aria-label={label} className={cn('db-only db-moment db-rise mb-6 grid items-center gap-4 p-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-6', className)}>
+    <section role="status" aria-label={label} className={cn('pp-card pp-tape db-rise mt-3 mb-6 grid items-center gap-4 p-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-6', className)}>
       <Celebrate kind={kind} emoji={emoji} className="size-32 [&>[data-slot=pebble-friend]]:size-20" />
       <div className="min-w-0">
-        <p className="text-[13px] font-extrabold tracking-wide text-[var(--db-muted)]">{label}</p>
-        <h2 className="mt-1 text-2xl text-balance">{title}</h2>
-        {children ? <div className="mt-1.5 text-[15px] text-[var(--db-ink-soft)]">{children}</div> : null}
+        <p className="font-hand text-[19px] text-pen">{label}</p>
+        <h2 className="type-title mt-1 text-balance">{title}</h2>
+        {children ? <div className="mt-1.5 text-[15px] text-muted-foreground">{children}</div> : null}
       </div>
       <Button ref={button} size="lg" onClick={onClose}>Nice</Button>
     </section>
@@ -72,7 +72,7 @@ export function GoalReachedMoment({ on, reached, day, minutes }: { on: boolean; 
     if (!on || !reached || read(key) === day) return;
     write(key, day);
     setOpen(true);
-    playInDaybreak('streak');
+    playInGame('streak');
   }, [on, reached, day]);
   if (!open) return null;
   return (
@@ -95,7 +95,7 @@ export function LevelUpMoment({ on, proven }: { on: boolean; proven: number }) {
     if (!levelUpDue(proven, seenIndex)) return;
     write(key, String(level.index));
     setOpen(true);
-    playInDaybreak('finish');
+    playInGame('finish');
   }, [on, proven, level.index]);
   if (!open) return null;
   return (
@@ -110,11 +110,11 @@ export function StreakMilestone({ current, freezes }: { current: number; freezes
   const hit = streakMilestone(current);
   const next = nextStreakMilestone(current);
   return (
-    <div className="db-only grid gap-3">
+    <div className="grid gap-3">
       {hit ? (
         <p className="db-ribbon db-pop w-fit"><GameEmoji name="flame" size={22} />{hit}-day milestone</p>
       ) : next ? (
-        <p className="text-[14px] font-bold text-[var(--db-muted)]">{next - current} more {next - current === 1 ? 'day' : 'days'} to the {next}-day milestone</p>
+        <p className="text-[14px] text-muted-foreground">{next - current} more {next - current === 1 ? 'day' : 'days'} to the {next}-day milestone</p>
       ) : null}
       {freezes > 0 ? <FrozenPebbles count={freezes} /> : null}
     </div>
@@ -125,7 +125,7 @@ export function StreakMilestone({ current, freezes }: { current: number; freezes
 export function FrozenPebbles({ count, className }: { count: number; className?: string }) {
   const shown = Math.min(count, 5);
   return (
-    <p className={cn('flex flex-wrap items-center gap-2 text-[14px] font-bold text-[var(--db-info-ink)]', className)} aria-label={`${count} streak ${count === 1 ? 'freeze' : 'freezes'} saved`}>
+    <p className={cn('flex flex-wrap items-center gap-2 text-[14px] font-semibold', className)} aria-label={`${count} streak ${count === 1 ? 'freeze' : 'freezes'} saved`}>
       <span className="flex -space-x-2" aria-hidden="true">
         {Array.from({ length: shown }, (_, i) => (
           <span key={i} className="db-frozen relative"><PebbleFriend kind="sky" size={34} shadow={false} /><GameEmoji name="snow" size={16} className="absolute -right-1 -bottom-1" /></span>
@@ -137,23 +137,24 @@ export function FrozenPebbles({ count, className }: { count: number; className?:
 }
 
 const STICKER: PebbleKind[] = ['amber', 'jade', 'amethyst', 'ember', 'sky'];
+const STICKER_TONE = ['xp', 'correct', 'info', 'streak', 'wrong'] as const;
 
 /** Badges as pebble stickers: earned ones in colour, the rest grey with how close they are. */
 export function BadgeStickers({ badges }: { badges: { id: string; title: string; description: string; earned: boolean; value?: number; goal?: number }[] }) {
   if (!badges.length) return null;
   const earned = badges.filter(b => b.earned).length;
   return (
-    <section aria-labelledby="badges-heading" className="db-only grid gap-3">
-      <h2 id="badges-heading" className="text-2xl">Badges <span className="text-base font-bold text-[var(--db-muted)] tabular-nums">{earned} of {badges.length}</span></h2>
+    <section aria-labelledby="badges-heading" className="grid gap-3">
+      <h2 id="badges-heading" className="font-display text-2xl font-semibold tracking-[-0.03em]">Badges <span className="text-base font-semibold text-muted-foreground tabular-nums">{earned} of {badges.length}</span></h2>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {badges.map((b, i) => (
-          <li key={b.id} className={cn('db-sticker grid justify-items-center gap-2 p-4 text-center', !b.earned && 'db-sticker-locked')}>
+          <li key={b.id} className={cn('pp-note grid justify-items-center gap-2 p-4 text-center', !b.earned && 'db-sticker-locked')} data-tone={b.earned ? STICKER_TONE[i % STICKER_TONE.length] : 'paper'} style={{ rotate: `${((i * 37) % 5) - 2}deg` }}>
             <span className="relative">
               <PebbleFriend kind={STICKER[i % STICKER.length]} mood={b.earned ? 'happy' : 'idle'} size={60} shadow={b.earned} />
               {b.earned ? <GameEmoji name="star" size={22} className="absolute -right-1 -bottom-1" /> : <GameEmoji name="lock" size={20} className="absolute -right-1 -bottom-1" />}
             </span>
-            <span className="text-[14.5px] leading-tight font-extrabold">{b.title}</span>
-            <span className="text-[12.5px] leading-snug text-[var(--db-muted)]">
+            <span className="text-[15px] leading-tight font-bold">{b.title}</span>
+            <span className="text-[13px] leading-snug text-muted-foreground">
               {b.earned ? b.description : b.goal ? `${Math.min(b.value ?? 0, b.goal)} of ${b.goal}` : b.description}
             </span>
           </li>

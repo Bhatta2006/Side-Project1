@@ -92,18 +92,12 @@ function iconFor(item: { key: NavKey }, studio?: string): LucideIcon {
   return (item.key === 'practice' && studio && STUDIO_ICON[studio]) || ICON[item.key];
 }
 
-/** Daybreak draws the same places as game emoji (components/socrat/game-emoji.tsx). */
+/** Each place in the nav is a game emoji sticker (components/socrat/game-emoji.tsx). */
 const EMOJI: Record<NavKey, GameEmojiName> = { today: 'home', skills: 'map', practice: 'code', playground: 'blocks', evidence: 'chart', settings: 'gear' };
 const STUDIO_EMOJI: Record<string, GameEmojiName> = { workbench: 'bulb', lab: 'blocks', reading: 'book' };
 function NavIcon({ item, studio, className }: { item: { key: NavKey }; studio?: string; className?: string }) {
-  const Icon = iconFor(item, studio);
   const emoji = (item.key === 'practice' && studio && STUDIO_EMOJI[studio]) || EMOJI[item.key];
-  return (
-    <>
-      <Icon className={cn('nb-only', className)} strokeWidth={1.75} aria-hidden="true" />
-      <GameEmoji name={emoji} size={24} className="db-only" />
-    </>
-  );
+  return <GameEmoji name={emoji} size={24} className={className} />;
 }
 
 function DevBanner() {

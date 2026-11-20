@@ -80,7 +80,7 @@ export default function ProgressPage() {
   return (
     <Page wide>
       <ProfileHeader name={profile?.display_name ?? ''} streak={data.streak.current} freezes={data.streak.freezes} proven={data.progress.finished} mastered={data.progress.mastered ?? mastered} />
-      <header className="nb-only mb-8">
+      <header className="mb-8">
         <p className="font-hand mb-2 origin-left -rotate-2 text-[22px] text-pen">{NAME.evidence}</p>
         <h1 className="type-display-l">What you have <span className="hl hl-draw">shown</span></h1>
       </header>

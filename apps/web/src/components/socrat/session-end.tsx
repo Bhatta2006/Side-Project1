@@ -72,14 +72,14 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
         <div className="grid gap-3">
           <Celebrate kind={screen.status === 'mastered' ? 'amethyst' : 'jade'} emoji={screen.status === 'mastered' ? 'gem' : 'star'} sound="finish" />
           {total ? (
-            <ul className="db-only grid grid-cols-2 gap-3" aria-hidden="true">
-              <li className="grid gap-1 rounded-2xl bg-[var(--db-correct-tint)] p-3 text-[var(--db-correct-ink)] shadow-[inset_0_0_0_2px_color-mix(in_srgb,var(--db-correct)_30%,transparent),0_3px_0_color-mix(in_srgb,var(--db-correct)_30%,transparent)]">
-                <span className="flex items-center gap-1.5 text-xs font-extrabold"><GameEmoji name="check" size={18} />Right</span>
-                <span className="font-display text-2xl font-bold tabular-nums">{right ?? 0}/{total}</span>
+            <ul className="grid grid-cols-2 gap-3" aria-hidden="true">
+              <li className="pp-note grid gap-1 p-3" data-tone="correct" style={{ rotate: '-1deg' }}>
+                <span className="flex items-center gap-1.5 text-[13px] font-semibold"><GameEmoji name="check" size={18} />Right</span>
+                <span className="font-display text-2xl tabular-nums">{right ?? 0}/{total}</span>
               </li>
-              <li className="grid gap-1 rounded-2xl bg-[var(--db-xp-tint)] p-3 text-[var(--db-xp-ink)] shadow-[inset_0_0_0_2px_color-mix(in_srgb,var(--db-xp)_35%,transparent),0_3px_0_color-mix(in_srgb,var(--db-xp)_35%,transparent)]">
-                <span className="flex items-center gap-1.5 text-xs font-extrabold"><GameEmoji name="target" size={18} />Accuracy</span>
-                <span className="font-display text-2xl font-bold tabular-nums">{Math.round((100 * (right ?? 0)) / total)}%</span>
+              <li className="pp-note grid gap-1 p-3" data-tone="xp" style={{ rotate: '1deg' }}>
+                <span className="flex items-center gap-1.5 text-[13px] font-semibold"><GameEmoji name="target" size={18} />Accuracy</span>
+                <span className="font-display text-2xl tabular-nums">{Math.round((100 * (right ?? 0)) / total)}%</span>
               </li>
             </ul>
           ) : null}

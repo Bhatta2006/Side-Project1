@@ -326,7 +326,7 @@ class Settings(DatabaseSettings):
     # Streak upgrade (item 5): a streak goal, earn-back, an automatic save for a streak about
     # to break, and a calendar (learn/streaks.py, learn/streak_routes.py).
     streak_plus_enabled: bool = False
-    # Daybreak game moments (docs/implementation/gamified-ui-backlog.md, item 4): daily goal
+    # Game moments (docs/implementation/gamified-ui-backlog.md, item 4): daily goal
     # reached, level-up, streak milestones, frozen pebbles and badge stickers. Web only, all
     # computed from evidence the server already holds; nothing new is recorded.
     game_moments_enabled: bool = False

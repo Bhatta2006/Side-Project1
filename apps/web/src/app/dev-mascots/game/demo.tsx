@@ -61,7 +61,7 @@ export function ChoiceDemo() {
   const options = ['200 OK', '201 Created', '404 Not Found'];
   return (
     <div className="grid gap-4" data-slot="quiz-head">
-      <div className="db-only db-lesson-bar" style={{ '--db-lesson-done': '60%' } as React.CSSProperties}><span /></div>
+      <div className="db-lesson-bar" style={{ '--db-lesson-done': '60%' } as React.CSSProperties}><span /></div>
       <Progress value={70} tone="hi" aria-label="Progress on a run" />
       <div className="grid gap-3" role="radiogroup" aria-label="Answer choices">
         {options.map((o, i) => (

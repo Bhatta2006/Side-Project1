@@ -48,7 +48,7 @@ export function InkProvider({ tier = "lo", density: densityProp, motion = "syste
   const [css, setCss] = React.useState<Knobs>(DEFAULT_KNOBS)
   const [inheritedDensity, setInheritedDensity] = React.useState<Density>("comfortable")
   const [inheritedDir, setInheritedDir] = React.useState<Dir>("ltr")
-  const [look, setLook] = React.useState<"daybreak" | "notebook" | undefined>(undefined)
+  const [look, setLook] = React.useState<"paper" | "notebook" | undefined>(undefined)
 
   React.useLayoutEffect(() => {
     const el = ref.current
@@ -61,7 +61,7 @@ export function InkProvider({ tier = "lo", density: densityProp, motion = "syste
       const r = el.parentElement?.closest("[dir]")?.getAttribute("dir") ?? el.ownerDocument.documentElement.getAttribute("dir")
       setInheritedDir(r === "rtl" ? "rtl" : "ltr")
       const l = el.ownerDocument.documentElement.getAttribute("data-look")
-      setLook(l === "daybreak" || l === "notebook" ? l : undefined)
+      setLook(l === "paper" || l === "notebook" ? l : undefined)
     }
     read()
     if (typeof MutationObserver === "undefined") return

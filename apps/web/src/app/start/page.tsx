@@ -82,15 +82,14 @@ function Ask({ eyebrow, title, body, trio }: { eyebrow?: string; title: string; 
         <h1 className="type-display-l mt-1 text-balance">{title}</h1>
         {body ? <p className="mt-3 text-base text-muted-foreground">{body}</p> : null}
       </div>
-      <Soc size={88} mood="curious" className="nb-only mt-2 hidden sm:block" />
       {trio ? (
-        <span aria-hidden="true" className="db-only relative mt-1 h-[92px] w-[132px] flex-none">
+        <span aria-hidden="true" className="relative mt-1 h-[92px] w-[132px] flex-none">
           <PebbleFriend kind="jade" size={52} className="db-bob absolute bottom-0 left-0 -rotate-6 [animation-delay:400ms]" />
           <PebbleFriend kind="ember" size={48} className="db-bob absolute right-0 bottom-1 rotate-6 [animation-delay:800ms]" />
           <PebbleFriend kind="soc" mood="happy" size={72} className="db-bob absolute top-0 left-[30px]" />
         </span>
       ) : (
-        <PebbleFriend kind="soc" size={72} className="db-only db-bob mt-2 hidden sm:block" />
+        <Soc size={88} mood="curious" className="mt-2 hidden sm:block" />
       )}
     </div>
   );
@@ -346,7 +345,7 @@ export default function Start() {
             <div className="grid gap-3 sm:grid-cols-3">
               {MINUTES.map(o => (
                 <Choice key={o.m} className="min-h-[88px]" selected={minutes === o.m} aria-pressed={minutes === o.m} disabled={busy} onClick={() => void chooseTime(o.m)}>
-                  <span className="db-only mb-0.5 block text-[12.5px] font-extrabold text-[var(--db-primary-lo)]">{dailyGoalName(o.m)}</span>
+                  <span className="mb-0.5 block text-[13px] font-bold text-pen">{dailyGoalName(o.m)}</span>
                   <span className="choice-title block text-lg font-semibold">{o.label}</span>
                   <span className="block text-[14px] text-muted-foreground">{o.body}</span>
                 </Choice>

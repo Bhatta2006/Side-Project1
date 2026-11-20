@@ -1,13 +1,13 @@
-// Socrat's own emoji for the game layer: flat, chunky stickers with a cream rim, drawn to sit
-// beside the pebble family. Use these instead of system emoji or stock icons for game moments
-// (streak, XP, goals, levels, results). Flat colour only: no gradients, no glow.
+// Socrat's own emoji for the game layer, cut like the notebook's stickers: flat colour, a paper
+// rim and an ink edge (the .ge-edge layer, inked by app/paper.css), with a short drop. Use these
+// instead of system emoji or stock icons for game moments and the nav. Flat colour only.
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export type GameEmojiName = 'flame' | 'bolt' | 'target' | 'gem' | 'check' | 'cross' | 'star' | 'lock' | 'review' | 'trophy' | 'clock' | 'book'
   | 'home' | 'map' | 'bulb' | 'flag' | 'chart' | 'gear' | 'blocks' | 'code' | 'snow';
 
-const RIM = { stroke: '#FFFBF2', strokeWidth: 2.6, strokeLinejoin: 'round' as const, paintOrder: 'stroke' as const };
+const RIM = { stroke: '#FBF8F1', strokeWidth: 2.6, strokeLinejoin: 'round' as const, paintOrder: 'stroke' as const };
 
 const ART: Record<GameEmojiName, ReactNode> = {
   flame: (
@@ -187,8 +187,10 @@ export function GameEmoji({ name, size = 24, className, label }: { name: GameEmo
       role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      className={cn('inline-block shrink-0 overflow-visible align-[-0.2em] [filter:drop-shadow(0_1.5px_0_rgb(34_26_58/0.14))]', className)}
+      className={cn('inline-block shrink-0 overflow-visible align-[-0.2em] [filter:drop-shadow(1px_1.5px_0_rgb(42_36_32/0.22))]', className)}
     >
+      {/* The ink edge: the same art, inked solid and stroked wide, under the paper rim. */}
+      <g className="ge-edge" aria-hidden="true">{ART[name]}</g>
       {ART[name]}
     </svg>
   );

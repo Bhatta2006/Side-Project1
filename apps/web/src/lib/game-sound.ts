@@ -125,7 +125,7 @@ export function play(sound: GameSound, run = 0) {
   }
 }
 
-/** Plays a sound only under the Daybreak look: the notebook look stays silent. */
-export function playInDaybreak(sound: GameSound, run = 0) {
-  if (typeof document !== 'undefined' && document.documentElement.dataset.look === 'daybreak') play(sound, run);
+/** Plays a game sound under the paper look (the app's look); a page without it, such as a print view, stays silent. */
+export function playInGame(sound: GameSound, run = 0) {
+  if (typeof document !== 'undefined' && document.documentElement.dataset.look === 'paper') play(sound, run);
 }

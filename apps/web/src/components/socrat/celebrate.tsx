@@ -1,14 +1,13 @@
 'use client';
-// The Daybreak celebration at the end of a session: a pebble on flat sun rays, a burst of
-// paper confetti, and one of Socrat's sounds. Shown only under the Daybreak look (.db-only);
-// still under reduced motion. Nothing here counts anything: it dresses what the server proved.
+// The celebration at the end of a session: a pebble on a paper disc with highlighter rays, a
+// burst of paper confetti, and one of Socrat's sounds. Still under reduced motion. Nothing here counts anything: it dresses what the server proved.
 import { useEffect } from 'react';
 import { play, type GameSound } from '@/lib/game-sound';
 import { cn } from '@/lib/utils';
 import { GameEmoji, type GameEmojiName } from './game-emoji';
 import { PebbleFriend, type PebbleKind } from './pebble-friend';
 
-const CONFETTI = ['#FFB224', '#1FAF5F', '#F0484F', '#2E8BF0', 'var(--db-primary)', '#FF6B35'];
+const CONFETTI = ['var(--ll-hi)', 'var(--ll-marker)', 'var(--ll-sticky-green)', 'var(--ll-sticky-blue)', 'var(--ll-sticky-pink)', 'var(--ll-ink)'];
 // Deterministic pieces, so the burst is the same on every render (no layout shift on re-render).
 const PIECES = Array.from({ length: 22 }, (_, i) => ({
   x: ((i * 47) % 100) - 50,
@@ -21,12 +20,12 @@ const PIECES = Array.from({ length: 22 }, (_, i) => ({
 }));
 
 export function Celebrate({ kind, emoji, sound, className }: { kind: PebbleKind; emoji?: GameEmojiName; sound?: GameSound; className?: string }) {
-  useEffect(() => { if (sound && document.documentElement.dataset.look === 'daybreak') play(sound); }, [sound]);
+  useEffect(() => { if (sound && document.documentElement.dataset.look === 'paper') play(sound); }, [sound]);
   return (
-    <div aria-hidden="true" className={cn('db-only relative mx-auto grid size-44 place-items-center', className)}>
+    <div aria-hidden="true" className={cn('relative mx-auto grid size-44 place-items-center', className)}>
       {/* Sun rays: alternating flat wedges, turning slowly. */}
-      <span className="absolute inset-0 rounded-full [animation:db-spin_24s_linear_infinite] motion-reduce:animate-none" style={{ background: 'repeating-conic-gradient(color-mix(in srgb, var(--db-xp) 26%, transparent) 0 12deg, transparent 12deg 30deg)', maskImage: 'radial-gradient(circle, #000 52%, transparent 70%)', WebkitMaskImage: 'radial-gradient(circle, #000 52%, transparent 70%)' }} />
-      <span className="absolute size-28 rounded-full bg-[var(--db-tint)] shadow-[inset_0_0_0_3px_var(--db-surface)]" />
+      <span className="absolute inset-0 rounded-full [animation:db-spin_24s_linear_infinite] motion-reduce:animate-none" style={{ background: 'repeating-conic-gradient(color-mix(in srgb, var(--ll-hi) 55%, transparent) 0 10deg, transparent 10deg 30deg)', maskImage: 'radial-gradient(circle, #000 52%, transparent 70%)', WebkitMaskImage: 'radial-gradient(circle, #000 52%, transparent 70%)' }} />
+      <span className="absolute size-28 rounded-full bg-[var(--ll-slip)] shadow-[inset_0_0_0_1.5px_var(--ll-ink),3px_3px_0_var(--ll-ink)]" />
       <PebbleFriend kind={kind} mood="happy" size={104} className="db-pop relative" />
       {emoji ? <GameEmoji name={emoji} size={40} className="db-pop absolute right-6 bottom-6 [animation-delay:180ms]" /> : null}
       {PIECES.map((p, i) => (

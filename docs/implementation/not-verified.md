@@ -53,22 +53,22 @@ Remove a line only when the check it names has run.
 - "Ladder ceiling lowered one level" was read as "starts one rung along" (2.4); the owner may have meant the opposite.
 - The door does not appear in a shared course's lessons (3.3): a shared lesson is written once for everyone.
 
-## Playful look: Daybreak (branch gbuild/feat/gamified-ui, 2026-11-21)
+## Gamified layer in the paper look (branch gbuild/feat/gamified-ui, 2026-11-21)
+
+The Daybreak look of slices 1 and 2 was replaced the same day by the notebook paper look with CSS frames.
 
 | Area | Not verified | To close it |
 |---|---|---|
-| Today (game strip, Path tab) | Never seen with a real course: offline onboarding never finishes a course locally; checked on `/dev-mascots/daybreak` with sample data and by typecheck only | open Today for a learner with a generated course |
-| Quiz and adaptive check | Feedback sheet, flame combo and sounds checked on the dev page only, not inside a real quiz | answer a real quiz with `lesson_feel` on |
-| Session end | Celebration, stat tiles and streak week never rendered from a real `/session-end` reply | finish a session with `session_end` on |
-| Sounds and vibration | Played without errors; never listened to on a phone or checked against the device's silent switch | try on an Android and an iPhone home-screen app |
-| Notebook look | The six notebook palettes were not re-checked after the ink change (frames skip only under Daybreak). Slice 2: on the dev board under Classic every `.db-only` part is hidden and choice tiles keep their notebook corners; real pages not walked | switch to Classic in Settings and walk Today, a lesson, Settings |
-| Dark mode, Daybreak | Slice 2 looked at the dev board in dark (profile header, tiles, badges): fine. Real pages not walked. The filled primary now keeps its light value in dark mode (white on the brighter `-hi` failed AA) | Settings, Dark, walk the main pages |
-| Lesson page (slice 2) | Page cards, the green lesson bar, Soc's bubble on Check pages, the sticky bottom Next bar on phones and the dark code blocks are typechecked only; never seen on a real lesson (needs a generated course) | open a lesson at 360px in Daybreak light, dark and Classic |
-| Quiz page (slice 2) | Choice tiles, tap clack, marigold run bar and the sticky Check bar checked on the dev board at 375px only | answer a real quiz with `lesson_feel` on, on a phone |
-| Shell (slice 2) | Game-emoji nav icons and the tinted active pill: typechecked only, the app shell needs an enrolled learner | open Today on a phone and on desktop (sidebar open and as an icon rail) |
-| Progress header and badge stickers (slice 2) | Seen on the dev board with sample data; never on `/progress` with a real `ProgressView`. Passport is untouched | open Progress for a learner with evidence, with `game_moments` on for the stickers |
-| Game moments (`game_moments`, slice 2) | Daily goal reached, level-up, streak milestone ribbon and frozen pebbles seen on the dev board only; once-only memory is in localStorage, per browser | turn the flag on, reach the daily goal and cross a level with a real course |
-| Onboarding and login visuals (slice 2) | Pebble trio, goal names on the time choices and login headline seen at 375px; the plan-ready celebration needs a real generated plan | run `/start` to the plan with a live provider |
-| Contrast (slice 2) | Computed, not measured in a browser tool: white on every palette primary now ≥ 4.6:1 (Ruby, Lagoon, Sunset darkened), correct and wrong Check buttons deepened to ≥ 4.5:1, ribbon text 5.1:1. Text on the game colours themselves (white on `--db-correct`) is still 2.9:1 wherever slice 1 used it | run an axe pass on Today, a quiz and Progress |
-| JS budget (slice 2) | New components (game moments, profile header, nine emoji) not measured against the 410 KB budget | `npm run build` and the CI budget check |
-| Playwright visual specs | Will differ: the default look changed | re-baseline with the e2e re-seed |
+| Today (game strip, Path tab) | Never seen with a real course: offline onboarding never finishes a course locally; checked on `/dev-mascots/game` with sample data and by typecheck only | open Today for a learner with a generated course |
+| Lesson page | Page cards, the ink lesson tube, Soc's bubble on Check pages and the sticky Next bar on phones are typechecked only; never seen on a real lesson | open a lesson at 360px in Classic light, dark and one more palette |
+| Quiz and adaptive check | Paper choice tiles, Check stamp, answer sheet, run ribbon and sounds checked on the dev board only (desktop, Classic light and Riso dark), not inside a real quiz | answer a real quiz with `lesson_feel` on, on a phone |
+| Session end | Celebration, sticky-note tiles and streak week never rendered from a real `/session-end` reply | finish a session with `session_end` on |
+| Sounds and vibration | `playInGame` now plays under the paper look; never listened to on a phone or checked against the silent switch | try on an Android and an iPhone home-screen app |
+| Shell | Game-emoji sticker nav icons and the highlighter pill: typechecked only, the app shell needs an enrolled learner | open Today on a phone and on desktop (sidebar open and as an icon rail) |
+| Progress header and badges | Seen on the dev board with sample data; never on `/progress` with a real `ProgressView`. Passport is untouched | open Progress for a learner with evidence, with `game_moments` on |
+| Game moments (`game_moments`) | Daily goal, level-up, streak ribbon and frozen pebbles seen on the dev board only; once-only memory is per browser | turn the flag on, reach the daily goal and cross a level with a real course |
+| Onboarding and landing | `/start` first question and the landing page seen at desktop width in Classic light; the plan-ready celebration needs a real plan | run `/start` to the plan with a live provider |
+| Palettes and dark mode | Classic light and Riso dark seen on the dev board; Tide, Lilac, Meadow, Dusk not looked at after the paper change. Dark mode prints filled buttons in dark ink (the light ink failed on the pink marker) | Settings, walk the main pages in each palette, light and dark |
+| Contrast | Not measured with a tool: sticky-note tones, the dark-mode stones and the pencil trail | run an axe pass on Today, a quiz and Progress |
+| JS budget | Not measured against the 410 KB budget | `npm run build` and the CI budget check |
+| Playwright visual specs | Will differ from `gbuild/main` | re-baseline with the e2e re-seed |

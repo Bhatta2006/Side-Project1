@@ -8,7 +8,7 @@ import { ProfileHeader } from '@/components/socrat/profile-header';
 import { BadgeStickers, StreakMilestone } from '@/components/socrat/game-moments';
 import { AnswerDemo, ChoiceDemo, MomentDemo } from './demo';
 
-export const metadata = { title: 'Daybreak parts' };
+export const metadata = { title: 'Game parts' };
 
 const EMOJI: GameEmojiName[] = ['flame', 'bolt', 'target', 'gem', 'star', 'check', 'cross', 'review', 'lock', 'trophy', 'clock', 'book', 'home', 'map', 'bulb', 'flag', 'chart', 'gear', 'blocks', 'code', 'snow'];
 
@@ -19,8 +19,8 @@ const BADGES = [
   { id: 'review', title: 'It stuck', description: 'Re-proved a skill after a week.', earned: false, value: 0, goal: 1 },
 ];
 
-/** Development-only board of the Daybreak pebble family, game emoji and buttons; 404 in production. */
-export default function DaybreakParts() {
+/** Development-only board of the game layer in the paper look: pebble family, game emoji, path, moments and quiz pieces; 404 in production. */
+export default function GameParts() {
   if (process.env.NODE_ENV === 'production') notFound();
   return (
     <main className="mx-auto grid max-w-3xl gap-10 px-5 py-10">

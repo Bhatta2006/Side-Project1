@@ -1,4 +1,4 @@
-// The pebble family of the Daybreak look: Soc's friends, each a polished stone with its own shape
+// The pebble family of the game layer: Soc's friends, each a polished stone with its own shape
 // and job, so a colour on screen always means the same thing.
 //   soc: the tutor (the dark speckled pebble)    ember: streaks    jade: review and correct answers
 //   amethyst: levels    amber: quests and XP    sky: checkpoints

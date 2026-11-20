@@ -28,12 +28,15 @@ export interface InkContextValue {
   knobs: Knobs
   hasProvider: boolean
   scope?: InkScopeProps
-  /** html[data-look]: under "daybreak" only decorative marks are drawn; frames come from CSS. */
-  look?: "daybreak" | "notebook"
+  /**
+   * html[data-look]: under "paper" (the default) only decorative marks are drawn; frames
+   * (buttons, cards, fields, sheets) come from CSS, so a page does not compute an ink frame per element.
+   */
+  look?: "paper" | "notebook"
 }
 
-/** Marks that still draw under the Daybreak look: the rest (frames, fields, cards) are plain CSS there. */
-export const DAYBREAK_INK_KINDS: ReadonlySet<string> = new Set([
+/** Marks that still draw under the light looks: the rest (frames, fields, cards) are plain CSS there. */
+export const LIGHT_INK_KINDS: ReadonlySet<string> = new Set([
   "arrow", "circled", "highlight", "scribble", "squiggle", "strike", "tally", "stepper-tally", "underline", "ribbon", "bookmark-ribbon", "reveal-nib",
 ])
 
@@ -225,7 +228,7 @@ export function useInkCore<P>(o: UseInkOptions<P>): UseInkCore {
     o.layers === "all" || (o.layers === undefined && tier === "hi") ? lazyDecl : Array.isArray(o.layers) ? (o.layers as readonly InkLayerName[]) : EMPTY
   const lazyKey = [...new Set([...eager, ...lazyOn])].sort().join(",")
   const paramsKey = stableStringify(o.params)
-  const skip = ctx.look === "daybreak" && !DAYBREAK_INK_KINDS.has(o.kind ?? recipe.kind)
+  const skip = ctx.look === "paper" && !LIGHT_INK_KINDS.has(o.kind ?? recipe.kind)
   const frame = React.useMemo(
     () =>
       box && !skip

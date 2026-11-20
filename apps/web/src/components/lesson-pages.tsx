@@ -6,7 +6,7 @@ import Markdown from '@/components/markdown';
 import { afterFirstParagraph } from '@/components/socrat/lesson-pictures';
 import { Button } from '@/components/ui/button';
 import { PebbleFriend } from '@/components/socrat/pebble-friend';
-import { playInDaybreak } from '@/lib/game-sound';
+import { playInGame } from '@/lib/game-sound';
 import { isCheckPage, minutes, splitPages } from '@/lib/pages';
 import { cn } from '@/lib/utils';
 
@@ -87,7 +87,7 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
 
   function go(step: number) {
     moved.current = true;
-    playInDaybreak('tap');
+    playInGame('tap');
     setIndex(i => Math.max(0, Math.min(total - 1, i + step)));
   }
 
@@ -130,8 +130,8 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
   return (
     <div ref={top} className="max-w-[68ch] scroll-mt-24">
       <div data-slot="lesson-dots" className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div aria-hidden="true" className="db-only db-lesson-bar" style={{ '--db-lesson-done': `${(100 * (index + 1)) / total}%` } as CSSProperties}><span /></div>
-        <ol className="nb-only flex items-center gap-1.5" aria-label="Lesson pages">
+        <div aria-hidden="true" className="db-lesson-bar" style={{ '--db-lesson-done': `${(100 * (index + 1)) / total}%` } as CSSProperties}><span /></div>
+        <ol className="flex items-center gap-1.5" aria-label="Lesson pages">
           {Array.from({ length: total }, (_, i) => (
             <li key={i}>
               <button
@@ -157,7 +157,7 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
 
       <section aria-labelledby="lesson-page-title" id="step-lesson" data-slot="lesson-page" data-check={page && isCheckPage(page) ? '' : undefined}>
         {page && isCheckPage(page) ? (
-          <div aria-hidden="true" className="db-only mb-4 flex items-end gap-3">
+          <div aria-hidden="true" className="mb-4 flex items-end gap-3">
             <PebbleFriend kind="soc" size={56} className="db-bob" />
             <span className="db-bubble">Your turn. Think it through before you look.</span>
           </div>
