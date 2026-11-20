@@ -79,6 +79,44 @@ def _enabled(request: Request) -> None:
         raise HTTPException(404, "not_found")
 
 
+FAILED_STATES = ("failed", "dead", "cancelled")
+
+
+def _true_minutes(meta: GeneratedCourse | None) -> int | None:
+    """The learner's true session length, for a course generated from a Lesson 0 plan."""
+    plan = ((meta.brief or {}) if meta is not None else {}).get("plan") or {}
+    minutes = plan.get("session_minutes")
+    return minutes if isinstance(minutes, int) and 5 <= minutes <= 120 else None
+
+
+def first_concept(stored, level_id: str | None) -> str | None:
+    """The concept the learner's first activity is on: the chosen level's start concept, else
+    the first concept in course order (as the planner opens a new enrollment)."""
+    level = next((lv for lv in stored.levels if lv.id == level_id), None) or (
+        stored.levels[0] if stored.levels else None
+    )
+    if level is not None and level.start_concept:
+        return level.start_concept.split(":")[-1]
+    return next((cid for m in stored.modules for cid in m.concepts), None)
+
+
+def start_state(stored, latest: dict, level_id: str | None, base: dict) -> dict:
+    """``view.start`` from data ``view`` already loaded: waiting (no plan yet), roadmap_ready
+    (plan saved, first lesson being written), first_lesson_ready, first_lesson_failed (its
+    latest job failed, died or was cancelled; ``retry``: the regenerate endpoint applies)."""
+    cid = first_concept(stored, level_id)
+    concept = next((c for c in stored.concepts if c.id == cid), None)
+    out = dict(base, concept=cid)
+    if concept is None:
+        return out
+    if concept.status != "planned":
+        return dict(out, state="first_lesson_ready", retry=False)
+    job = latest.get(cid)
+    if job is not None and job.state in FAILED_STATES:
+        return dict(out, state="first_lesson_failed", retry=True)
+    return dict(out, state="roadmap_ready", retry=False)
+
+
 def view(db: Session, row: LearningRequest) -> dict:
     out = dict(
         id=row.id,
@@ -98,6 +136,14 @@ def view(db: Session, row: LearningRequest) -> dict:
         ready=0,
         total=0,
         community=None,
+        # When the learner can safely start (lesson0-generation-plan.md 5.3): their first
+        # activity is a written lesson. Additive; clients that ignore it use ``published``.
+        start=dict(
+            state="waiting",
+            concept=None,
+            minutes=(row.intent or {}).get("minutes_per_day"),
+            retry=False,
+        ),
     )
     if row.course_id:
         stored = generated.course(db, row.course_id)
@@ -130,6 +176,9 @@ def view(db: Session, row: LearningRequest) -> dict:
                 weekdays=list(range(7)),
                 # The date they asked to be ready by, so the plan is paced against it.
                 **({"target_date": due} if (due := _deadline(row.intent)) else {}),
+                # A Lesson 0 course (Brief.plan): days are packed to the true session length
+                # instead of the rounded-up budget above.
+                **({"session_minutes": true} if (true := _true_minutes(meta)) else {}),
             )
         if stored is not None:
             by_id = {c.id: c for c in stored.concepts}
@@ -174,6 +223,7 @@ def view(db: Session, row: LearningRequest) -> dict:
                     for m in stored.modules
                 ],
             )
+            out["start"] = start_state(stored, latest, diagnosed, out["start"])
         job = db.scalars(
             select(GenerationJob)
             .where(GenerationJob.course_id == row.course_id, GenerationJob.kind == "outline")

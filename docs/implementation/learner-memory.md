@@ -124,7 +124,7 @@ Three kinds of input feed the same resolution:
 | `strictness` | learner (`users.learning_mode`), default `balanced` | quiz/tutor strictness |
 | `path_style` | learner (`enrollments.adaptive["style"]`), default `balanced` | planner |
 | `learning_style` | learner (`enrollments.adaptive["learning_style"]`, a StyleSpec dict) | |
-| `daily_minutes` | learner (`enrollments.minutes_per_day`) | what they planned |
+| `daily_minutes` | learner (`enrollments.minutes_per_day`) | what they planned (rounded up to 15/20/30/...); a Lesson 0 course also has the true session length in `enrollments.goal.session_minutes` (generation, 2026-11-20), which the planner packs to |
 | `actual_daily_minutes` | observed (planned x adherence over 28 days) | what they really do |
 | `review_spacing` | observed (`adaptive.profile.review_scale`) | personal forgetting rate |
 | `age`, `register`, `approach`, `balance` | learner (validated `Intent` of a course they made) | never another learner's picks |

@@ -61,10 +61,12 @@ def details_for(prompt: str) -> dict:
 class Planner:
     """architect -> ROADMAP, detailer -> details for what it is asked, critic -> pass."""
 
-    def __init__(self, outline=ROADMAP):
+    def __init__(self, outline=ROADMAP, critic=None):
         self.outline = outline
         self.detailed: list[str] = []
         self.architect: list[str] = []
+        self.detail_prompts: list[str] = []
+        self.critic = list(critic or [])
 
     def make(self, settings):
         script = self
@@ -78,16 +80,29 @@ class Planner:
                     script.architect.append(prompt)
                     text = json.dumps(script.outline)
                 elif system == DETAILER:
+                    script.detail_prompts.append(prompt)
                     reply = details_for(prompt)
                     script.detailed += [c["id"] for c in reply["concepts"]]
                     text = json.dumps(reply)
                 else:
                     assert system == CRITIC
-                    text = json.dumps({"verdict": "pass", "summary": "ok", "issues": []})
+                    verdict = script.critic.pop(0) if script.critic else PASSED
+                    text = json.dumps(verdict)
                 yield Event("text", text=text)
                 yield usage_event(100, 200)
 
         return Provider()
+
+
+PASSED = {"verdict": "pass", "summary": "ok", "issues": []}
+
+
+def revise(*where):
+    return {
+        "verdict": "revise",
+        "summary": "Needs work.",
+        "issues": [{"where": w, "problem": f"{w} is thin.", "fix": f"Deepen {w}."} for w in where],
+    }
 
 
 def planned_brief(mode="builder"):
@@ -235,3 +250,39 @@ def test_a_published_roadmap_serves_learners_before_later_modules_are_detailed(
         assert client.get(path).status_code == 200, path
     # A concept with no details yet is simply not reached: locked, never an error.
     assert client.get("/api/v1/concepts/ai-basics:gradient").status_code == 423
+
+
+def test_critic_notes_on_later_modules_wait_for_their_details(client, monkeypatch):  # noqa: F811
+    learner_request(client, monkeypatch, profile())
+    state = client.app.state
+    script = Planner(critic=[revise("training", "gradient")])
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    assert len(script.architect) == 1  # the learner was not held up by a rewrite
+    with Session(state.engine) as db:
+        course = generated.course(db, "ai-basics")
+        brief = Brief.model_validate(db.get(GeneratedCourse, "ai-basics").brief)
+    assert [n.split(":")[0] for n in brief.review_notes] == ["training", "gradient"]
+    asyncio.run(
+        jobs.detail_if_missing(
+            state.engine,
+            state.settings,
+            default_catalog(),
+            _job(state),
+            brief,
+            course,
+            "gradient",
+            script.make,
+        )
+    )
+    assert "Deepen gradient." in script.detail_prompts[-1]
+
+
+def test_a_module_one_issue_gets_one_repair_round_only(client, monkeypatch):  # noqa: F811
+    learner_request(client, monkeypatch, profile())
+    state = client.app.state
+    script = Planner(critic=[revise("what-is-ml"), revise("what-is-ml"), revise("what-is-ml")])
+    asyncio.run(jobs.run_once(state.engine, state.settings, default_catalog(), script.make))
+    assert len(script.architect) == 2
+    assert "what-is-ml is thin." in script.architect[1]
+    with Session(state.engine) as db:
+        assert db.get(GeneratedCourse, "ai-basics") is not None  # kept after the one repair

@@ -107,6 +107,10 @@ class EnrollInput(Strict):
     target_role: Literal["internship", "new-grad", "mid-level", "senior"] | None = None
     target_rating: int | None = Field(default=None, ge=0, le=4000)
     motivation: str | None = Field(default=None, max_length=280)
+    # The learner's true session length from Lesson 0 (10/25/60), when it differs from the
+    # rounded-up ``minutes_per_day`` budget: days are packed to it (lesson0-generation-plan.md
+    # 3.4). Kept on ``Enrollment.goal``.
+    session_minutes: int | None = Field(default=None, ge=5, le=120)
 
     @field_validator("weekdays")
     @classmethod
@@ -532,6 +536,7 @@ def enroll(body: EnrollInput, request: Request):
                 target_role=body.target_role,
                 target_rating=body.target_rating,
                 motivation=body.motivation,
+                session_minutes=body.session_minutes,
             ).items()
             if v is not None
         }

@@ -50,6 +50,9 @@ class Brief(BaseModel):
     # Lesson 0 for a course its learner alone reads (coursegen/learner_plan.py). Persisted with
     # the course; prompts receive it only as a marked data block.
     plan: LearnerPlan | None = None
+    # A learner's roadmap: the critic's notes on modules not detailed yet, handed to the
+    # detailer when each is (jobs.detail_if_missing). Empty otherwise.
+    review_notes: list[str] = Field(default_factory=list, max_length=30)
     budget_usd: float = Field(default=5.0, gt=0, le=1000)
     # One concept package (all its rounds) may not cost more than this.
     concept_budget_usd: float = Field(default=2.0, gt=0, le=100)
@@ -334,7 +337,15 @@ def brief_text(brief: Brief) -> str:
     # the audience and notes, so it is left out rather than said twice.
     head = "Brief:\n" + brief.model_dump_json(
         indent=2,
-        exclude={"budget_usd", "material", "learner", "subject_material", "learner_brief", "plan"},
+        exclude={
+            "budget_usd",
+            "material",
+            "learner",
+            "subject_material",
+            "learner_brief",
+            "plan",
+            "review_notes",
+        },
     )
     if brief.plan is not None:
         head += f"\n\n{data_block(brief.plan)}\n{OUTLINE_RULES}"

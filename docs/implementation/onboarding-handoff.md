@@ -149,6 +149,26 @@ If generation changes when a learner can start (for example Module 1 ready befor
 outline), extend `view` with a new field and tell onboarding; do not change the meaning of the
 existing ones.
 
+**New field for onboarding (generation, 2026-11-20; nothing above changed).** `view.start` =
+`{state, concept, minutes, retry}`:
+
+| `state` | Meaning | Suggested `/start` behaviour |
+|---|---|---|
+| `waiting` | no saved plan yet | keep the skeleton / loading |
+| `roadmap_ready` | plan saved; the first lesson is being written | show the plan; Start can wait or show "your first lesson is being written" |
+| `first_lesson_ready` | the learner's first lesson is written | enable "Start learning" |
+| `first_lesson_failed` | its last job failed, died or was cancelled; `retry: true` | offer a retry (`POST /learning-requests/{id}/regenerate`) |
+
+`concept` is the first activity's concept id (the start level's start concept, else the first in
+course order); `minutes` is the request's minutes per day. A course the brain served is
+`first_lesson_ready` at once. The web page is not changed yet: that is onboarding's call. Tests:
+`services/api/tests/test_start_state.py`.
+
+**`enroll.session_minutes` (generation, 2026-11-20).** For a course generated from a Lesson 0 plan,
+the view's `enroll` object also carries `session_minutes` (the learner's true 10/25/60).
+`POST /api/v1/enrollments` accepts it, so `/start` posting `published.enroll` unchanged keeps working and
+now gets ten-minute days for a ten-minute learner. No web change is needed.
+
 ## 4. Live-run findings that belong to generation
 
 From a real Vertex run (Gemini 3.8 Flash) on 2026-11-20, goal "I want to learn SQL for my college

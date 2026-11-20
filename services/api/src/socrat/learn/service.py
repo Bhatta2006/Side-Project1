@@ -494,14 +494,25 @@ def build_for(
         today,
         now,
         set(enrollment.weekdays),
-        enrollment.minutes_per_day,
+        session_budget(enrollment),
         course_id=enrollment.course_id,
         cooldowns=gate_cooldowns(db, enrollment),
         adaptive=adaptive,
         transfer=transfers.current(db, catalog, enrollment, states, completed, now),
         locks=mode_policy(db, enrollment).locks_modules,
+        strict=session_budget(enrollment) <= STRICT_MINUTES,
     )
     return plan, adaptive
+
+
+STRICT_MINUTES = 10  # at or under this, a day holds only what fits (plus its first item)
+
+
+def session_budget(enrollment: Enrollment) -> int:
+    """Minutes a study day is packed to: the learner's true session length when Lesson 0
+    gave one (``goal.session_minutes``), else the scheduled minutes per day."""
+    true = (enrollment.goal or {}).get("session_minutes")
+    return int(true) if isinstance(true, int) and true > 0 else enrollment.minutes_per_day
 
 
 def plan_changes(before: list | None, after: list, completed: set[str]) -> dict:

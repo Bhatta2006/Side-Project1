@@ -365,6 +365,9 @@ async def run_outline(
     issues = [job.input["notes"]] if job.input.get("notes") else []
     best = None
     reviews = 0
+    lazy = brief.plan is not None  # a learner's roadmap: module 1 now, the rest later
+    repaired = False  # a learner's roadmap gets one repair round, no more
+    later_notes: list[str] = []  # critic notes on later modules, for their detailer
     for attempt in range(1, ROUNDS + 1):
         with Session(engine) as db:
             if spent(db, brief.id) >= brief.budget_usd:
@@ -399,7 +402,6 @@ async def run_outline(
         early: roles.Reply | None = (
             None  # the critic's review of the skeleton, run while the details are written
         )
-        lazy = brief.plan is not None  # a learner's roadmap: module 1 now, the rest later
         if needs_detail(outline, first_only=lazy):
             work: list[Any] = [
                 _detail(engine, settings, brief, outline, issues, make, first_only=lazy)
@@ -480,6 +482,18 @@ async def run_outline(
         verdict, found = _review(engine, job_id, attempt, review)
         if verdict == "pass":
             break
+        if lazy:
+            # A learner is waiting (lesson0-generation-plan.md 5.2): what concerns module 1 or the
+            # whole course gets one repair round; what concerns later modules waits for them
+            # and is handed to the detailer when that module is detailed.
+            fix_now, later_notes = split_review(outline, found)
+            if not fix_now or repaired:
+                entry = {"event": "kept_for_learner", "open": fix_now, "deferred": later_notes}
+                _note(engine, job_id, {"role": "system", **entry})
+                break
+            repaired = True
+            issues = fix_now
+            continue
         if settings.gen_outline_reviews == 0:
             # Advisory review: the findings are in the log, the outline stands.
             _note(engine, job_id, {"role": "system", "event": "kept_after_review"})
@@ -496,7 +510,8 @@ async def run_outline(
         return
     best = _with_applied(engine, settings, job_id, best, owner)
     with Session(engine) as db, db.begin():
-        stored_brief = brief.model_dump(mode="json", exclude={"learner_brief"})
+        kept = brief.model_copy(update={"review_notes": later_notes[:30]})
+        stored_brief = kept.model_dump(mode="json", exclude={"learner_brief"})
         generated.save_course(db, base, best, status="review", brief=stored_brief)
         if owner is not None:
             need(db.get(GeneratedCourse, brief.id)).owner_id = owner
@@ -536,6 +551,24 @@ def _with_applied(engine: Engine, settings: Settings, job_id: str, course, owner
     if added:
         _note(engine, job_id, {"role": "system", "event": "applied_lessons", "concepts": added})
     return widened
+
+
+def split_review(outline: dict, found: list[str]) -> tuple[list[str], list[str]]:
+    """(fix now, later) for a learner's roadmap. An issue whose "where" names a module after
+    the first, or a concept in one, can wait for that module's details; anything else (module
+    1, the course as a whole, or no clear place) is fixed before the learner starts."""
+    modules = [m for m in outline.get("modules", []) if isinstance(m, dict)]
+    later_ids = {
+        str(x)
+        for m in modules[1:]
+        for x in [m.get("id"), *[c.get("id") for c in m.get("concepts", []) if isinstance(c, dict)]]
+        if x
+    }
+    now, later = [], []
+    for issue in found:
+        where = issue.split(":", 1)[0].strip()
+        (later if where in later_ids else now).append(issue)
+    return now, later
 
 
 def _review(engine: Engine, job_id: str, attempt: int, review) -> tuple[str, list[str]]:
@@ -779,7 +812,7 @@ async def detail_if_missing(
             settings,
             "architect",
             DETAILER,
-            detail_prompt(brief, skeleton, module.id, missing),
+            detail_prompt(brief, skeleton, module.id, missing, brief.review_notes or None),
             8000,
             make,
         )

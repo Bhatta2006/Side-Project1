@@ -50,11 +50,26 @@ module 1 is detailed in the outline job; `to_course` keeps an undetailed concept
 `outline=None`; `jobs.detail_if_missing` details the concept (and up to three more undetailed concepts of its
 module, one DETAILER call, one retry) at the start of its package job and stores them; a concept that cannot be
 detailed fails the package job (normal retry). A published roadmap enrols and serves Today, progress and the
-course list; an undetailed concept is locked, never an error. Not built from PR 2: `outcome_spec` and
-`gap_map` in the architect reply, the critic running without blocking the learner (a `revise` still redoes the
-outline as for admin briefs), and starting the first lesson in parallel with the critic.
+course list; an undetailed concept is locked, never an error. The critic no longer holds the learner up:
+issues whose "where" is a later module (or a concept in one) are stored as `Brief.review_notes` and handed to
+that module's detailer; anything about module 1 or the course as a whole gets **one** repair round, then the
+roadmap is kept (`kept_for_learner` in the job log, with what stayed open). Not built from PR 2:
+`outcome_spec` and `gap_map` in the architect reply, and starting the first lesson in parallel with the
+critic (it still starts at save, as `early_first_lesson` did before).
 
-Still to build, in order: the rest of PR 2 (above), PR 3 (readiness field), PR 4 (true time budget),
+**PR 3 (readiness field), API side built:** `view.start = {state, concept, minutes, retry}` with the four states
+of 5.3 (`coursegen/requests.start_state`), documented for onboarding in `onboarding-handoff.md` 3.3; tests
+`services/api/tests/test_start_state.py`. The `/start` page is not changed (onboarding's page; their call).
+
+**PR 4 (true time budget), packing built:** for a course with a Lesson 0 plan, `view.enroll` carries
+`session_minutes` (the true 10/25/60); `EnrollInput.session_minutes` (optional) stores it in
+`Enrollment.goal`; `learn.service.session_budget` packs days to it instead of the rounded-up `minutes_per_day`,
+and at 10 minutes or less a day holds only what fits (the first item always). Tests
+`services/api/tests/test_true_session_budget.py`. Not built from PR 4: computed activity minutes from written
+lessons (words/180, quiz items, attempts) and the `check_lesson` session-total gate; schedule changes
+(`ScheduleUpdate`) do not touch `session_minutes`.
+
+Still to build, in order: the rest of PR 2 (above), the rest of PR 4 (above),
 PR 5 (retry safety), PR 6 (session-one adaptation, including the probe miss), PR 7 (benchmark and gate),
 PR 8 (optional SQL checker).
 

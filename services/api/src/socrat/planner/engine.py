@@ -319,9 +319,11 @@ def build_plan(
     adaptive: Adaptive | None = None,
     transfer: transfers.Transfer | None = None,
     locks: bool = True,
+    strict: bool = False,
 ) -> Plan:
     """``locks`` is False when the learner chose a mode that keeps every module open;
-    checkpoints are still planned, they just stop holding later modules shut."""
+    checkpoints are still planned, they just stop holding later modules shut. ``strict``: a
+    short session (10 minutes) holds only what fits, never an item 40% over the rest."""
     if not weekdays:
         raise ValueError("at least one study weekday is required")
     adaptive = adaptive or Adaptive(course_id=course_id or "")
@@ -704,7 +706,8 @@ def build_plan(
                 ).to_dict()
             )
             budget -= REVIEW_MINUTES
-        while pending_queue and (budget >= pending_queue[0].minutes * 0.6 or not items):
+        fit = 1.0 if strict else 0.6
+        while pending_queue and (budget >= pending_queue[0].minutes * fit or not items):
             activity = pending_queue.pop(0)
             items.append(activity.to_dict())
             budget -= activity.minutes
