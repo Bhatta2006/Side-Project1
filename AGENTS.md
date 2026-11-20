@@ -12,6 +12,9 @@ Continuing the course generator? Its remaining work, in order, is in
 Working on onboarding (`/start`, Lesson 0) or on course generation after it? Read
 `docs/implementation/onboarding-handoff.md`: the contract between the two modules.
 
+Working on the look or the game layer (Daybreak palettes, path, sounds, celebrations)? Read
+`docs/implementation/gamified-ui-backlog.md`: the owner's design rules, how it works, and the remaining work in order.
+
 Anything that reads or adapts to the learner (generation, quizzes, tutor, new features)? Read
 `docs/implementation/learner-memory.md` and go through `socrat.learner`, never the stores directly.
 Update that file in the same change.
