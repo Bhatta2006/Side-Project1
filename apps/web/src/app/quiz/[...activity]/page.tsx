@@ -377,6 +377,7 @@ export default function Quiz() {
 
         {feel && graded && q.answered ? (
           <FeedbackSheet
+            run={run}
             key={q.id}
             tone={q.correct ? 'correct' : 'wrong'}
             title={q.correct ? praise(run, index) : 'Not quite'}

@@ -294,6 +294,7 @@ export function AdaptiveCheck({ activityId, mode, concept, title, onFallback, on
               </>
             ) : (
               <FeedbackSheet
+                run={run}
                 key={`${question.item}:sheet`}
                 tone={feedback.outcome === 'correct' ? 'correct' : feedback.outcome === 'wrong' ? 'wrong' : 'neutral'}
                 title={feedback.outcome === 'correct' ? praise(run, history.length) : feedback.outcome === 'skipped' ? 'Noted: not learned yet' : 'Not quite'}

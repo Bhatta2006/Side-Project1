@@ -28,7 +28,14 @@ export interface InkContextValue {
   knobs: Knobs
   hasProvider: boolean
   scope?: InkScopeProps
+  /** html[data-look]: under "daybreak" only decorative marks are drawn; frames come from CSS. */
+  look?: "daybreak" | "notebook"
 }
+
+/** Marks that still draw under the Daybreak look: the rest (frames, fields, cards) are plain CSS there. */
+export const DAYBREAK_INK_KINDS: ReadonlySet<string> = new Set([
+  "arrow", "circled", "highlight", "scribble", "squiggle", "strike", "tally", "stepper-tally", "underline", "ribbon", "bookmark-ribbon", "reveal-nib",
+])
 
 export const DEFAULT_INK_CONTEXT: InkContextValue = {
   tier: "lo",
@@ -218,15 +225,16 @@ export function useInkCore<P>(o: UseInkOptions<P>): UseInkCore {
     o.layers === "all" || (o.layers === undefined && tier === "hi") ? lazyDecl : Array.isArray(o.layers) ? (o.layers as readonly InkLayerName[]) : EMPTY
   const lazyKey = [...new Set([...eager, ...lazyOn])].sort().join(",")
   const paramsKey = stableStringify(o.params)
+  const skip = ctx.look === "daybreak" && !DAYBREAK_INK_KINDS.has(o.kind ?? recipe.kind)
   const frame = React.useMemo(
     () =>
-      box
+      box && !skip
         ? inkFrame(recipe, {
             box, params: o.params, seed, tier, density: ctx.density, dir, knobs: ctx.knobs, pad: o.pad, paramsKey,
             lazy: lazyKey ? (lazyKey.split(",") as InkLayerName[]) : undefined,
           })
         : null,
-    [recipe, box, seed, tier, ctx.density, dir, ctx.knobs, o.pad, paramsKey, lazyKey],
+    [recipe, box, skip, seed, tier, ctx.density, dir, ctx.knobs, o.pad, paramsKey, lazyKey],
   )
   const still = o.still ?? (ctx.density === "calm" || ctx.motion === "reduced")
   const hostProps: InkHostProps = frame ? { "data-ink-host": "", "data-ink-ready": "" } : { "data-ink-host": "" }

@@ -43,8 +43,12 @@ router = APIRouter(prefix="/api/v1")
 MIN_AGE = 13
 
 
-# The colour palettes the web app offers (apps/web/src/app/palettes.css).
-APPEARANCE_PALETTES = {"classic", "tide", "lilac", "meadow", "riso", "dusk"}
+# The colour palettes the web app offers (apps/web/src/app/palettes.css and daybreak.css):
+# the six Daybreak palettes, then the six notebook palettes of the earlier look.
+APPEARANCE_PALETTES = {
+    "daybreak", "ruby", "ocean", "lagoon", "sunset", "berry",
+    "classic", "tide", "lilac", "meadow", "riso", "dusk",
+}
 APPEARANCE_MODES = {"light", "dark", "system"}
 
 

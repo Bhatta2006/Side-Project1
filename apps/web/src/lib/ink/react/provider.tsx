@@ -41,13 +41,14 @@ function readKnobs(el: Element): Knobs {
 
 const sameKnobs = (a: Knobs, b: Knobs) => a.wobble === b.wobble && a.misreg === b.misreg && a.bleed === b.bleed && a.width === b.width
 
-const ATTRS = ["data-theme", "data-density", "data-motion", "dir"]
+const ATTRS = ["data-theme", "data-density", "data-motion", "dir", "data-look"]
 
 export function InkProvider({ tier = "lo", density: densityProp, motion = "system", theme, dir: dirProp, knobs: knobsProp, textures = false, defs = true, patterns, children }: InkProviderProps) {
   const ref = React.useRef<HTMLDivElement>(null)
   const [css, setCss] = React.useState<Knobs>(DEFAULT_KNOBS)
   const [inheritedDensity, setInheritedDensity] = React.useState<Density>("comfortable")
   const [inheritedDir, setInheritedDir] = React.useState<Dir>("ltr")
+  const [look, setLook] = React.useState<"daybreak" | "notebook" | undefined>(undefined)
 
   React.useLayoutEffect(() => {
     const el = ref.current
@@ -59,6 +60,8 @@ export function InkProvider({ tier = "lo", density: densityProp, motion = "syste
       setInheritedDensity(d === "compact" || d === "calm" ? d : "comfortable")
       const r = el.parentElement?.closest("[dir]")?.getAttribute("dir") ?? el.ownerDocument.documentElement.getAttribute("dir")
       setInheritedDir(r === "rtl" ? "rtl" : "ltr")
+      const l = el.ownerDocument.documentElement.getAttribute("data-look")
+      setLook(l === "daybreak" || l === "notebook" ? l : undefined)
     }
     read()
     if (typeof MutationObserver === "undefined") return
@@ -83,7 +86,7 @@ export function InkProvider({ tier = "lo", density: densityProp, motion = "syste
     () => resolveKnobs(knobsProp ? { ...css, ...knobsProp } : css, density),
     [css, density, knobsPropKey],
   )
-  const value = React.useMemo<InkContextValue>(() => ({ tier, density, dir, motion, knobs, hasProvider: true, scope }), [tier, density, dir, motion, knobs, scope])
+  const value = React.useMemo<InkContextValue>(() => ({ tier, density, dir, motion, knobs, hasProvider: true, scope, look }), [tier, density, dir, motion, knobs, scope, look])
 
   return (
     <InkContext.Provider value={value}>

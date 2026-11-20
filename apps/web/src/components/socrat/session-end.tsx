@@ -8,6 +8,8 @@ import type { EndScreen, SessionEndView } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StampButton } from '@/components/socrat/answer-flow';
+import { Celebrate } from '@/components/socrat/celebrate';
+import { GameEmoji } from '@/components/socrat/game-emoji';
 
 /**
  * The end of a session (item 3 of docs/research/duolingo-teardown.md), behind
@@ -65,6 +67,19 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
     case 'evidence':
       return (
         <div className="grid gap-3">
+          <Celebrate kind={screen.status === 'mastered' ? 'amethyst' : 'jade'} emoji={screen.status === 'mastered' ? 'gem' : 'star'} sound="finish" />
+          {total ? (
+            <ul className="db-only grid grid-cols-2 gap-3" aria-hidden="true">
+              <li className="grid gap-1 rounded-2xl bg-[var(--db-correct-tint)] p-3 text-[var(--db-correct-ink)] shadow-[inset_0_0_0_2px_color-mix(in_srgb,var(--db-correct)_30%,transparent),0_3px_0_color-mix(in_srgb,var(--db-correct)_30%,transparent)]">
+                <span className="flex items-center gap-1.5 text-xs font-extrabold"><GameEmoji name="check" size={18} />Right</span>
+                <span className="font-display text-2xl font-bold tabular-nums">{right ?? 0}/{total}</span>
+              </li>
+              <li className="grid gap-1 rounded-2xl bg-[var(--db-xp-tint)] p-3 text-[var(--db-xp-ink)] shadow-[inset_0_0_0_2px_color-mix(in_srgb,var(--db-xp)_35%,transparent),0_3px_0_color-mix(in_srgb,var(--db-xp)_35%,transparent)]">
+                <span className="flex items-center gap-1.5 text-xs font-extrabold"><GameEmoji name="target" size={18} />Accuracy</span>
+                <span className="font-display text-2xl font-bold tabular-nums">{Math.round((100 * (right ?? 0)) / total)}%</span>
+              </li>
+            </ul>
+          ) : null}
           <p className="type-label text-muted-foreground">What you proved</p>
           <h1 className="type-display-l text-balance">
             {screen.title ? <>{screen.title}: <span className="hl">{STATUS[screen.status ?? 'building']}</span></> : 'Session complete'}
@@ -81,6 +96,7 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
     case 'streak':
       return (
         <div className="grid gap-4">
+          <Celebrate kind="ember" emoji="flame" sound="streak" />
           <p className="type-label text-muted-foreground">{screen.earned_back ? 'Streak earned back' : screen.first_day ? 'Day one' : 'Your streak'}</p>
           <h1 className="type-display-l">
             {screen.current} study {screen.current === 1 ? 'day' : 'days'} in a row
@@ -92,6 +108,7 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
               return (
                 <li key={d.day} className="grid justify-items-center gap-1.5">
                   <span className={cn('grid size-10 place-items-center rounded-full border-2 text-sm font-bold',
+                    d.studied && 'db-week-on',
                     d.studied ? 'border-foreground bg-[var(--highlight)] text-[#15161E]' : d.kept ? 'border-foreground border-double border-[3px]' : d.scheduled ? 'border-dashed border-border-strong' : 'border-transparent bg-raised/60',
                     d.today && 'ring-2 ring-foreground ring-offset-2 ring-offset-background')}
                   >
@@ -119,6 +136,7 @@ function Screen({ screen, right, total }: { screen: EndScreen; right?: number; t
     case 'badge':
       return (
         <div className="grid gap-3">
+          <Celebrate kind="amber" emoji="trophy" sound="finish" />
           <p className="type-label text-muted-foreground">Badge earned</p>
           <h1 className="type-display-l text-balance">{screen.title}</h1>
           <p className="text-lg">{screen.description}</p>

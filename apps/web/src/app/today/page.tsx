@@ -17,7 +17,8 @@ import { ReasonChip } from '@/components/socrat/reason-chip';
 import { Illustration, Soc } from '@/components/socrat/illustration';
 import { SocFigure } from '@/components/socrat/soc';
 import { StatusIcon, statusFromBand, statusFromRoadmap } from '@/components/socrat/status';
-import { SkillGrid } from '@/components/socrat/skill-grid';
+import { SkillPath } from '@/components/socrat/skill-path';
+import { GameBar } from '@/components/socrat/game-bar';
 import { usePlanLocks } from '@/lib/plan-locks';
 import { WeekStrip } from '@/components/socrat/week-strip';
 import { ArrowCircle, Button } from '@/components/ui/button';
@@ -122,13 +123,8 @@ function SessionRow({ activity, done, onLater }: { activity: Activity; done: boo
   );
 }
 
-const TABS = ['session', 'map', 'practice', 'progress'] as const;
+const TABS = ['map', 'session', 'practice', 'progress'] as const;
 type TabId = (typeof TABS)[number];
-
-/** A small headline number with a caption, for the compact status line. */
-function Pill({ children }: { children: React.ReactNode }) {
-  return <li className="inline-flex min-h-9 items-center gap-1.5 rounded-full border bg-card px-3.5 text-sm font-medium">{children}</li>;
-}
 
 export default function TodayPage() {
   const allowed = useGuard('active');
@@ -143,7 +139,7 @@ export default function TodayPage() {
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [assessment, setAssessment] = useState<AssessmentStatus | null>(null);
   const [askSoc, setAskSoc] = useState(0);
-  const [tab, setTab] = useState<TabId>('session');
+  const [tab, setTab] = useState<TabId>('map');
 
   const load = useCallback(() => {
     setError('');
@@ -185,8 +181,8 @@ export default function TodayPage() {
 
   // Each tab names what is inside it, so nothing is a mystery click.
   const tabs: { id: TabId; label: string; hint: string }[] = [
+    ...(goal ? [{ id: 'map' as const, label: 'Path', hint: `${goal.finished}/${goal.total}` }] : []),
     { id: 'session', label: 'Session', hint: session.length ? (today.done.length ? `${today.done.length}/${session.length}` : `${session.length}`) : '' },
-    ...(goal ? [{ id: 'map' as const, label: 'Skill map', hint: `${goal.finished}/${goal.total}` }] : []),
     { id: 'practice', label: 'Practice', hint: '' },
     { id: 'progress', label: 'Progress', hint: `${today.progress.percent}%` },
   ];
@@ -211,13 +207,14 @@ export default function TodayPage() {
             </div>
           </div>
         </header>
-        <ul className="-mt-2 mb-6 flex flex-wrap gap-2 lg:-mt-4 lg:mb-8" aria-label="Today at a glance">
-          <Pill><Flame className="size-4" strokeWidth={1.5} aria-hidden="true" />{fresh ? 'Start your streak today' : `${today.streak.current}-day streak`}</Pill>
-          <Pill><span className="tabular-nums">{today.minutes.done} of {today.minutes.goal} min today</span></Pill>
-          {today.reviews_due ? <Pill><StatusIcon status="review" size={16} /> <Link href="/reviews" className="underline-offset-4 hover:underline">{today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</Link></Pill> : <Pill><Link href="/reviews" className="underline-offset-4 hover:underline">Reviews</Link></Pill>}
-          <Pill><Link href="/notes" className="underline-offset-4 hover:underline">Notes</Link></Pill>
-          <Pill><Link href="/courses" className="underline-offset-4 hover:underline">Courses</Link></Pill>
-        </ul>
+        <GameBar streak={today.streak.current} fresh={fresh} studiedToday={today.streak.studied_today} minutesDone={today.minutes.done} minutesGoal={today.minutes.goal} learned={learned} mastered={mastered} />
+        <nav aria-label="Shortcuts" className="-mt-3 mb-6 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-muted-foreground lg:-mt-5 lg:mb-8">
+          <Link href="/reviews" className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline">
+            {today.reviews_due ? <><StatusIcon status="review" size={16} />{today.reviews_due} review{today.reviews_due === 1 ? '' : 's'} due</> : 'Reviews'}
+          </Link>
+          <Link href="/notes" className="underline-offset-4 hover:underline">Notes</Link>
+          <Link href="/courses" className="underline-offset-4 hover:underline">Courses</Link>
+        </nav>
       </Reveal>
 
       {/* 2. Return after absence. */}
@@ -440,7 +437,8 @@ export default function TodayPage() {
                       <GrowBar value={goalPercent} label={`${goal.title}: ${goal.finished} of ${goal.total} skills`} />
                       <span className="text-sm font-semibold text-muted-foreground tabular-nums">{Math.round(goalPercent)}%</span>
                     </div>
-                    <SkillGrid
+                    <SkillPath
+                      startLabel={next ? (VERB[next.kind] ?? 'Start') : 'Start'}
                       label={goal.title}
                       nodes={goal.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: planLocked(c.concept) ? 'locked' : statusFromRoadmap(c), current: c.concept === goal.current, reviewDue: c.review_due }))}
                     />

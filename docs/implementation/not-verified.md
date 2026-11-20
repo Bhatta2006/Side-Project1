@@ -52,3 +52,16 @@ Remove a line only when the check it names has run.
 - The first-lesson gate cannot check "one example outside the door" (2.5).
 - "Ladder ceiling lowered one level" was read as "starts one rung along" (2.4); the owner may have meant the opposite.
 - The door does not appear in a shared course's lessons (3.3): a shared lesson is written once for everyone.
+
+## Playful look: Daybreak (branch gbuild/feat/gamified-ui, 2026-11-21)
+
+| Area | Not verified | To close it |
+|---|---|---|
+| Today (game strip, Path tab) | Never seen with a real course: offline onboarding never finishes a course locally; checked on `/dev-mascots/daybreak` with sample data and by typecheck only | open Today for a learner with a generated course |
+| Quiz and adaptive check | Feedback sheet, flame combo and sounds checked on the dev page only, not inside a real quiz | answer a real quiz with `lesson_feel` on |
+| Session end | Celebration, stat tiles and streak week never rendered from a real `/session-end` reply | finish a session with `session_end` on |
+| Sounds and vibration | Played without errors; never listened to on a phone or checked against the device's silent switch | try on an Android and an iPhone home-screen app |
+| Notebook look | The six notebook palettes were not re-checked after the ink change (frames skip only under Daybreak) | switch to Classic in Settings and walk Today, a lesson, Settings |
+| Dark mode, Daybreak | Tokens written, never looked at | Settings, Dark, walk the main pages |
+| Lesson page, Profile, Progress, Passport | Restyled only through shared parts (buttons, cards, fields); no page-specific Daybreak work yet | the next slice of the rework |
+| Playwright visual specs | Will differ: the default look changed | re-baseline with the e2e re-seed |
