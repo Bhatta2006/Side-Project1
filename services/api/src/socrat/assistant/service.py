@@ -172,7 +172,7 @@ def learner_sections(
     course = catalog.course(enrollment.course_id)
     plan = learn.plan_for(db, catalog, user, enrollment, now, record=False)
     states = learn.states_for(db, enrollment)
-    snap = learner_memory.snapshot(db, catalog, user, enrollment, now, states)
+    snap = learner_memory.snapshot(db, enrollment, now, catalog=catalog, user=user, states=states)
     groups: dict[str, list[str]] = {
         "strong": [],
         "developing": [],

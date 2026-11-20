@@ -754,10 +754,13 @@ async def run_package(
     # Plug point for the learner layer (socrat/learner, docs/implementation/
     # generation-plug-points.md): a private course's lessons may be shaped by its one learner's
     # module brief. Shared courses never are: their lessons are read by everyone.
+    # Off until SOCRAT_GEN_LEARNER_BRIEF is set (learner-memory.md).
     from socrat.coursegen.brain import learner as learner_hook
 
-    with Session(engine) as db:
-        shaped = learner_hook.lesson_block(db, course_id, now())
+    shaped = ""
+    if settings.gen_learner_brief:
+        with Session(engine) as db:
+            shaped = learner_hook.lesson_block(db, course_id, now())
     if shaped:
         ctx = f"{ctx}\n\n{shaped}"
     # Lesson pages sized for this learner (style/pages.py), decided by code from the request.

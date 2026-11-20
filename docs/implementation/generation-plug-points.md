@@ -8,6 +8,10 @@ to generation), `onboarding-handoff.md` (the onboarding contract).
 
 ## 1. The learner layer (`socrat/learner/`, built in parallel)
 
+The layer has landed as `services/api/src/socrat/learner.py`; its side of the contract, the
+brief's keys and the preference sources are in `learner-memory.md`. The brief keeps itself under
+3,500 characters and holds no `<` or `>` in any value, so `lesson_block` never cuts it mid-JSON.
+
 Generation calls the learner layer **only** through `services/api/src/socrat/coursegen/brain/learner.py`.
 When `socrat.learner` is importable and exposes `snapshot` and `brief`, it is used; otherwise every
 hook returns nothing and generation runs exactly as before. Nothing else in `coursegen` imports it.
@@ -27,7 +31,7 @@ Suggested keys (generation passes them through unchanged, the lesson author read
 
 | Hook (in `brain/learner.py`) | Called from | When it applies | Status |
 |---|---|---|---|
-| `lesson_block(db, course_id, now)` | `jobs.run_package`, after the pedagogical-strategy block and root material | the course is **private** to one learner (owner set, `serve != "shared"`, not public) and that learner has an enrollment in it | built, tested with a fake layer (`tests/test_brain_units.py::test_learner_layer_shapes_private_lessons_only`) |
+| `lesson_block(db, course_id, now)` | `jobs.run_package`, after the pedagogical-strategy block and root material, only when `settings.gen_learner_brief` (off by default) | the course is **private** to one learner (owner set, `serve != "shared"`, not public) and that learner has an enrollment in it | built; tested with a fake layer (`tests/test_brain_units.py::test_learner_layer_shapes_private_lessons_only`) and with the real layer (`tests/test_learner_generation.py`) |
 | `brief_for(db, enrollment, now, purpose)` | any generation code that needs the raw dict | as above | built |
 | outline for a learner's new private course | `jobs.run_outline`, before the architect call | private course, learner already has other enrollments | **not built**: needs a user-level brief (`brief_for_user(db, user_id, now)`) because a new course has no enrollment yet. Add it to `brain/learner.py`, never call the layer from `run_outline` directly |
 | quiz generation (`quiz` role in `run_package`) | `run_package` | private course | **not built**: use `brief_for(..., "quiz")` in the same place as `lesson_block` |

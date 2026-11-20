@@ -308,6 +308,11 @@ def test_learner_layer_shapes_private_lessons_only(brain, monkeypatch):
     fake.snapshot = lambda db, enrollment, now: {"enrollment": enrollment.id}
     fake.brief = lambda snap, purpose, **_: calls.append(purpose) or {"patch_first": ["x"]}
     monkeypatch.setitem(sys.modules, "socrat.learner", fake)
+    # The real layer is installed now: ``from socrat import learner`` reads the package
+    # attribute before sys.modules, so replace that too.
+    import socrat
+
+    monkeypatch.setattr(socrat, "learner", fake, raising=False)
 
     ada = login(brain, "ada", "Ada")
     adult(brain, ada)
