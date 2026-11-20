@@ -6,6 +6,7 @@ unfinished content as ready. Off unless ``learning_requests_enabled``.
 """
 
 import hashlib
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -118,7 +119,7 @@ def start_state(stored, latest: dict, level_id: str | None, base: dict) -> dict:
 
 
 def view(db: Session, row: LearningRequest) -> dict:
-    out = dict(
+    out: dict[str, Any] = dict(
         id=row.id,
         text=row.text,
         status=row.status,
@@ -186,7 +187,7 @@ def view(db: Session, row: LearningRequest) -> dict:
                 from socrat.coursegen import learner_plan
 
                 try:
-                    plan = learner_plan.LearnerPlan.model_validate(meta.brief["plan"])
+                    plan = learner_plan.LearnerPlan.model_validate((meta.brief or {})["plan"])
                 except ValueError:
                     plan = None
                 out["level_suggestion"] = learner_plan.suggest_level(plan, stored)
@@ -453,10 +454,13 @@ def begin(db: Session, settings, user_id: str, row: LearningRequest, parsed) -> 
             record_event(db, user_id, "learning_request.matched", row.id)
             db.flush()
             return
-    shared = decision is not None and decision.family_id is not None
+    family = decision.family_id if decision is not None else None
+    shared = family is not None
     # A course the brain may share: one id per spec (so concurrent learners meet on it) and
     # generated without this learner's private parts (their door, gaps, age, deadline).
-    course_id = decision.family_id if shared else intents.slug(parsed.subject, user_id, row.key)
+    course_id: str = (
+        family if family is not None else intents.slug(parsed.subject, user_id, row.key)
+    )
 
     def join() -> None:
         from socrat.coursegen import brain
