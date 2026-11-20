@@ -27,7 +27,9 @@ export function PaywallHost() {
     if (!profile) return setStatus(null);
     api.get<BillingStatus>('/billing/status').then(s => {
       setStatus(s);
-      // Right after sign-in, once per account: the plans, before the learner settles into Free.
+      // Once per account, after the learner has a course: never on top of Lesson 0 (/start),
+      // where sign-in happens in the middle of the flow.
+      if (!profile.enrollment) return;
       let seen = true;
       try { seen = localStorage.getItem(WELCOME_KEY + profile.id) !== null; localStorage.setItem(WELCOME_KEY + profile.id, '1'); } catch { /* storage unavailable: skip the welcome */ }
       if (s.enabled && s.plan === 'free' && !seen) setReason(current => current ?? 'welcome');

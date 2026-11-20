@@ -933,6 +933,33 @@ class Diagnostic(Base):
     created_at: Mapped[int] = mapped_column(Integer, default=now)
 
 
+class OnboardingDraft(Base):
+    """Lesson 0 for a visitor who may not have an account yet: their goal, the choices they
+    tapped, a generated two-step calibration (answer keys stay here, never sent) and what was
+    observed while they answered. ``id`` is a random secret: holding it is the visitor's
+    access. Claimed by a learner at sign-in, when it becomes a learning request."""
+
+    __tablename__ = "onboarding_drafts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    text: Mapped[str] = mapped_column(Text)
+    intent: Mapped[dict] = mapped_column(JSON)
+    source: Mapped[str] = mapped_column(String(16), default="rules")
+    doors: Mapped[list] = mapped_column(JSON, default=list)
+    mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    door: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    calibration: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    signals: Mapped[dict] = mapped_column(JSON, default=dict)
+    profile: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    request_id: Mapped[str | None] = mapped_column(
+        ForeignKey("learning_requests.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+    updated_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
 class ContentTranslation(Base):
     """One concept translated into one locale. ``units`` are the translated text pieces (code,
     numbers and answer keys never pass through a model); ``source_hash`` ties it to the exact

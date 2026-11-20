@@ -6,6 +6,9 @@ what has not been verified, the remaining work in order, and how to commit and p
 
 Then read `docs/implementation/universal-engine-plan.md` (strategy, phase table, progress log).
 
+Working on onboarding (`/start`, Lesson 0) or on course generation after it? Read
+`docs/implementation/onboarding-handoff.md`: the contract between the two modules.
+
 Short version of the rules:
 - Work on branch `feat/universal-engine`. Push with `git push origin feat/universal-engine`.
   Never force-push, never push to `main`, never merge `main` into the branch.

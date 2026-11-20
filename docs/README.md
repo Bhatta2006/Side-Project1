@@ -1,141 +1,49 @@
 # Documentation index
 
+Socrat is a learn-anything engine: a learner types what they want to be able to do, plays
+Lesson 0, and the engine generates a course for them. Docs from the earlier fixed-course
+product (DSA, CP, Zero syllabi, v1 requirements, milestone reports, old audits and redesign
+screenshots) were removed on 2026-11-20; they remain in git history.
+
+## Start here
+
+- [Handoff](implementation/HANDOFF.md): owner's rules, environment quirks, what is built, how to commit
+- [Universal engine plan](implementation/universal-engine-plan.md): strategy, phases, progress log
+- [Engine README](engine/README.md): how a request becomes a course, how to extend it, flags
+- [Onboarding → course generation handoff](implementation/onboarding-handoff.md): Lesson 0 and the contract with generation
+
 ## Product
 
-- [V1 product requirements](product/v1-product-requirements.md) — complete product and delivery contract
-- [Domain glossary](product/domain-glossary.md) — normative vocabulary
-- [Goal templates](product/goal-templates.md) — Foundations, Interview, and Competitive goal contracts
-- [Deterministic policy matrices](product/deterministic-policy-matrices.md) — routing, selection, help, mastery, and fallback authority
-- [Metric contract](product/metric-contract.md) — outcome, funnel, quality, and guardrail definitions
-- [Content standard](product/content-standard.md) — concept/exercise/assessment authoring and release bar
-- [Launch backlog](product/launch-backlog.md) — remaining work before launch and how to build each item
-- [Content placement playbook](product/content-placement-playbook.md) — learning atoms, placement and ethical feedback
-- [Content implementation and UI handoff](product/content-placement-implementation.md) — authored packs, backend contracts and validation
+- [Universal engine spec](product/universal-engine-spec.md)
+- [Metric contract](product/metric-contract.md): outcome, funnel, quality and guardrail definitions
+
+## Engine work in progress
+
+- [Experience plan](implementation/experience-plan.md): calm lessons, page profiles, practice
+- [Gap audit](implementation/ule-gap-audit.md) and [audit 3](implementation/universal-engine-audit-3.md)
+- [Learning-style engine](implementation/learning-style-engine.md)
+- [Harness and workbench](implementation/harness-and-workbench.md): deterministic capabilities
+- [Visual playground](implementation/visual-playground.md)
+- [Vertex AI handoff](implementation/vertex-ai-handoff.md): the Gemini provider
+- [Live run log](implementation/live-run-log.md) and [load test results](implementation/load-test-results.md)
 
 ## Research
 
-- [M0 concierge pilot](research/concierge-pilot.md) — recruitment, protocol, observations, and pass criteria
-- [M0 pilot plan](research/m0-pilot-plan.md) — confirmed arrangements, recruitment targets, session checklist, and closeout
-- [Private review record](research/m0-private-review-record-template.md) — approval evidence with identities outside the repository
-- [Recruitment and consent template](research/pilot-recruitment-and-consent.md) — must be completed and privacy-approved before use
-- [Session record template](research/pilot-session-record-template.md) — copy outside the repository for each participant
-- [Pilot synthesis template](research/pilot-synthesis-template.md) — redacted aggregate evidence and decision
-- [`prototypes/concierge`](../prototypes/concierge/) — disposable interactive M0 prototype; not production architecture
-
-Pilot evidence containing personal data must not be committed here. Store only approved redacted synthesis and opaque participant IDs.
+- [Duolingo teardown](research/duolingo-teardown.md) and [its plan](research/duolingo-teardown-plan.md)
 
 ## Architecture
 
-- [Dependency assessment](architecture/dependency-assessment.md) — adopt/conditional/reject decisions for candidate repositories
-- [API conventions](architecture/api-conventions.md) — versioning, auth, errors, transactions, telemetry, and migrations
-- [OCI staging cost plan](architecture/oci-staging-cost-plan.md) — Hyderabad free-first topology, USD 55 ceiling, and production evolution
-- [M1 foundation research](research/m1-foundation-research.md) — primary-source research and unresolved vendor decisions
-- [Architecture decision records](architecture/adr/) — numbered, immutable decision history
+- [ADRs](architecture/adr/): modular monolith, bounded AI, evidence and replay, execution plane, data boundaries, code editor, generated course content
+- [Course generation](architecture/course-generation.md)
+- [API conventions](architecture/api-conventions.md)
+- [OCI staging cost plan](architecture/oci-staging-cost-plan.md)
 
-Current ADRs:
+## Design
 
-- [ADR-0001: Modular monolith](architecture/adr/0001-modular-monolith.md)
-- [ADR-0002: Deterministic authority with bounded AI](architecture/adr/0002-deterministic-authority-bounded-ai.md)
-- [ADR-0003: Versioned skill-pack contract](architecture/adr/0003-versioned-skill-pack-contract.md)
-- [ADR-0004: Append-only evidence and replay](architecture/adr/0004-append-only-evidence-and-replay.md)
-- [ADR-0005: Isolated code-execution plane](architecture/adr/0005-isolated-code-execution-plane.md)
-- [ADR-0006: Managed services and data boundaries](architecture/adr/0006-managed-services-and-data-boundaries.md)
+- [Design system](redesign/DESIGN-SYSTEM.md): the notebook brand
 
-## Security
+## Operations and security
 
-- [V1 threat model](security/threat-model.md) — assets, trust boundaries, risk register, and verification program
-
-## Operations
-
-- [M1 staging runbook](operations/m1-staging-runbook.md) — immutable deploy, backup/restore, rollback, telemetry access, and incident response
-- [M1 account setup](operations/m1-account-setup.md) — confirmed hostname/account inputs and pending identity, DNS, and access configuration
-- [M2 content authoring](operations/m2-content-authoring.md) — schema validation, editorial API, publication, quarantine, and rollback
-- [`infra/runtime/staging`](../infra/runtime/staging/) — executable private-staging runtime contract
-
-## Delivery
-
-- [M10 dashboard, accountability, and privacy](delivery/milestones/m10-index.md)
-- [M10 release gate](delivery/milestones/m10-gate.md)
-- [M10 validation](delivery/validation/m10-validation-report.md)
-- [M10 operations](operations/m10-accountability-privacy.md)
-- [M10 data map](security/m10-data-map.md)
-
-- [M9 assessment, mastery, and retention](delivery/milestones/m9-index.md)
-- [M9 gate](delivery/milestones/m9-gate.md)
-- [M9 validation](delivery/validation/m9-validation-report.md)
-- [M9 operations](operations/m9-assessments.md)
-
-- [M8 bounded assistance](delivery/milestones/m8-index.md)
-- [M8 gate](delivery/milestones/m8-gate.md)
-- [M8 validation record](delivery/validation/m8-validation-report.md)
-- [M8 assistance operations](operations/m8-assistance.md)
-- [M7/M8 owner decisions and reviewer handoff](operations/m7-m8-completion.md)
-
-- [M0 index](delivery/milestones/m0-index.md)
-- [M0 gate](delivery/milestones/m0-gate.md)
-- [M0 validation report](delivery/validation/m0-validation-report.md)
-- [M1 index](delivery/milestones/m1-index.md)
-- [M1 gate](delivery/milestones/m1-gate.md)
-- [M1 local validation report](delivery/validation/m1-validation-report.md)
-- [M1 staging evidence record](delivery/validation/m1-staging-evidence.md) — live drills and private sign-off references; not yet exercised
-- [M2 index](delivery/milestones/m2-index.md)
-- [M2 gate](delivery/milestones/m2-gate.md)
-- [M2 validation report](delivery/validation/m2-validation-report.md)
-- [M3 index](delivery/milestones/m3-index.md)
-- [M3 gate](delivery/milestones/m3-gate.md)
-- [M3 validation report](delivery/validation/m3-validation-report.md)
-- [M3 onboarding operations](operations/m3-onboarding.md)
-- [M4 diagnostic and evidence operations](operations/m4-diagnostics.md)
-- [M4 implementation plan](delivery/milestones/m4-index.md)
-- [M4 gate](delivery/milestones/m4-gate.md)
-- [M4 validation report](delivery/validation/m4-validation-report.md)
-
-- [M5 deterministic planner](delivery/milestones/m5-index.md)
-- [M5 gate](delivery/milestones/m5-gate.md)
-- [M5 validation](delivery/validation/m5-validation-report.md)
-- [M5 planning operations](operations/m5-planning.md)
-
-- [M6 execution platform](delivery/milestones/m6-index.md)
-- [M6 gate](delivery/milestones/m6-gate.md)
-- [M6 validation](delivery/validation/m6-validation-report.md)
-- [M6 execution operations](operations/m6-execution.md)
-- [Execution threat model](security/execution-threat-model.md)
-
-- [M7 learning-session implementation](delivery/milestones/m7-index.md)
-- [M7 gate](delivery/milestones/m7-gate.md)
-- [M7 initial validation](delivery/validation/m7-validation-report.md)
-- [M7 learning-session operations](operations/m7-learning-sessions.md)
-- [M7 session content authoring](operations/m7-content-authoring.md)
-- [M7 private acceptance records](operations/m7-acceptance.md)
-- [M7 limited pilot content and policy proposal](operations/m7-limited-pilot.md)
-- [M9 prerequisite review](delivery/milestones/m9-readiness.md)
-
-- [M11 automated testing scope](delivery/milestones/m11-index.md)
-- [M11 gate](delivery/milestones/m11-gate.md)
-- [M11 automated validation](delivery/validation/m11-validation-report.md)
-
-## Machine-readable contracts
-
-- [`contracts/product/m5-planning-policy.json`](../contracts/product/m5-planning-policy.json)
-- [`contracts/schemas/planning-command.schema.json`](../contracts/schemas/planning-command.schema.json)
-- [`contracts/schemas/learning-session-start.schema.json`](../contracts/schemas/learning-session-start.schema.json)
-- [`contracts/schemas/learning-session-command.schema.json`](../contracts/schemas/learning-session-command.schema.json)
-- [`contracts/schemas/m7-acceptance-evidence.schema.json`](../contracts/schemas/m7-acceptance-evidence.schema.json)
-- [`contracts/schemas/m7-pilot-draft.schema.json`](../contracts/schemas/m7-pilot-draft.schema.json)
-
-Machine contracts live outside `docs` so CI and application tooling can consume them directly:
-
-- [`contracts/product/m0-contracts.json`](../contracts/product/m0-contracts.json)
-- [`contracts/schemas/m0-contracts.schema.json`](../contracts/schemas/m0-contracts.schema.json)
-- [`contracts/schemas/skill-pack.schema.json`](../contracts/schemas/skill-pack.schema.json)
-- [`contracts/schemas/learning-evidence.schema.json`](../contracts/schemas/learning-evidence.schema.json)
-- [`contracts/product/m4-learning-policies.json`](../contracts/product/m4-learning-policies.json)
-
-## Documentation rules
-
-- Use lower-case kebab-case file names except conventional root files.
-- Put documents by durable ownership/domain, not by temporary sprint or milestone folder.
-- Milestone files belong under `delivery/milestones`; product/security/architecture artifacts remain in their domain folders.
-- ADRs are numbered. Accepted ADRs are not rewritten to hide history; supersede them with a new ADR.
-- Normative thresholds/enums also live in machine-readable contracts and are tested for drift.
-- Never commit secrets, direct participant identifiers, raw production exports, or unredacted provider payloads.
+- [Oracle deploy](operations/oracle-deploy.md), [API/worker split](operations/api-worker-split.md),
+  [staging runbook](operations/m1-staging-runbook.md), [account setup](operations/m1-account-setup.md)
+- [Threat model](security/threat-model.md), [execution threat model](security/execution-threat-model.md), [data map](security/m10-data-map.md)

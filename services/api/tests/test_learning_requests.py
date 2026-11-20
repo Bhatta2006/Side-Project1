@@ -48,7 +48,8 @@ MODEL_INTENT = dict(
 )
 
 
-def test_disabled_by_default(client):  # noqa: F811
+def test_can_be_switched_off(client):  # noqa: F811
+    client.app.state.settings.learning_requests_enabled = False
     headers = login(client)
     assert client.post(URL, json={"text": "teach me chess"}, headers=headers).status_code == 404
 

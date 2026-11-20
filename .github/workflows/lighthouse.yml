@@ -3,7 +3,7 @@ name: lighthouse
 # Lab performance on a mid-range phone profile (simulated 4G, 4x CPU slowdown) against the
 # production build: LCP ≤ 2.5 s, TBT ≤ 300 ms (the lab stand-in for INP), CLS ≤ 0.1.
 # Field numbers from real visits are in /admin → Page speed. Assertions warn (not fail)
-# until the LCP render delay noted in docs/product/launch-backlog.md (item 15) is fixed.
+# until the LCP render delay on the landing page is fixed.
 on:
   schedule:
     - cron: "31 3 * * *"  # daily 03:31 UTC; assertions only warn, so it does not gate PRs
