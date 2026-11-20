@@ -307,6 +307,15 @@ def test_appearance_is_saved_on_the_account(platform):
     assert response.status_code == 200
     assert response.json()["appearance"] == "tide:dark"
     assert client.get("/api/v1/me").json()["appearance"] == "tide:dark"
+    # The retired Daybreak palettes are still accepted, so an old saved choice loads.
+    assert (
+        client.patch("/api/v1/me", json={"appearance": "ruby:light"}, headers=headers).status_code
+        == 200
+    )
+    assert (
+        client.patch("/api/v1/me", json={"appearance": "tide:dark"}, headers=headers).status_code
+        == 200
+    )
     for bad in ("neon:dark", "tide:dim", "tide", "<script>:dark"):
         assert (
             client.patch("/api/v1/me", json={"appearance": bad}, headers=headers).status_code == 422

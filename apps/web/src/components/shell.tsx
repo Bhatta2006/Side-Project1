@@ -36,6 +36,7 @@ import { useInstall } from '@/lib/pwa';
 import { useCommunityUrl } from '@/components/community-link';
 import type { BillingStatus, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { GameEmoji, type GameEmojiName } from '@/components/socrat/game-emoji';
 import { CommandMenu } from '@/components/command-menu';
 import { FeedbackButton, ReportProblem, openReportProblem } from '@/components/report-problem';
 import { Wordmark } from '@/components/socrat/wordmark';
@@ -89,6 +90,14 @@ const MOBILE_KEYS = NAV.filter(item => item.key !== 'settings').map(item => item
 const STUDIO_ICON: Record<string, LucideIcon> = { workbench: Sigma, lab: FlaskConical, reading: NotebookPen };
 function iconFor(item: { key: NavKey }, studio?: string): LucideIcon {
   return (item.key === 'practice' && studio && STUDIO_ICON[studio]) || ICON[item.key];
+}
+
+/** Each place in the nav is a game emoji sticker (components/socrat/game-emoji.tsx). */
+const EMOJI: Record<NavKey, GameEmojiName> = { today: 'home', skills: 'map', practice: 'code', playground: 'blocks', evidence: 'chart', settings: 'gear' };
+const STUDIO_EMOJI: Record<string, GameEmojiName> = { workbench: 'bulb', lab: 'blocks', reading: 'book' };
+function NavIcon({ item, studio, className }: { item: { key: NavKey }; studio?: string; className?: string }) {
+  const emoji = (item.key === 'practice' && studio && STUDIO_EMOJI[studio]) || EMOJI[item.key];
+  return <GameEmoji name={emoji} size={24} className={className} />;
 }
 
 function DevBanner() {
@@ -275,13 +284,12 @@ function AppSidebar({ active, ready }: { active: NavKey | null; ready: boolean }
             <nav aria-label="Main">
               <SidebarMenu>
                 {navItems(profile?.enrollment?.shape, course.features).map(item => {
-                  const Icon = iconFor(item, profile?.enrollment?.shape?.studio);
                   const current = active === item.key;
                   return (
                     <SidebarMenuItem key={item.key}>
                       <SidebarMenuButton asChild isActive={current} tooltip={item.label} size="lg" className="text-[17px]">
                         <Link href={item.href} data-tour={item.key} aria-current={current ? 'page' : undefined}>
-                          <Icon strokeWidth={1.75} aria-hidden="true" />
+                          <NavIcon item={item} studio={profile?.enrollment?.shape?.studio} />
                           <span className="group-data-[collapsible=icon]:hidden"><NavLabel item={item} /></span>
                         </Link>
                       </SidebarMenuButton>
@@ -333,10 +341,9 @@ function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean })
   const course = useCourse();
   const mobile = navItems(profile?.enrollment?.shape, course.features).filter(item => MOBILE_KEYS.includes(item.key));
   return (
-    <nav aria-label="Main" className="ll-paper ll-stock-slip fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav aria-label="Main" data-slot="mobile-nav" className="ll-paper ll-stock-slip fixed inset-x-0 bottom-0 z-40 border-t border-line pb-[env(safe-area-inset-bottom)] md:hidden">
       <ul className="grid h-[68px] grid-cols-5">
         {mobile.map(item => {
-          const Icon = iconFor(item, profile?.enrollment?.shape?.studio);
           const current = active === item.key;
           return (
             <li key={item.key}>
@@ -346,8 +353,8 @@ function MobileNav({ active, ready }: { active: NavKey | null; ready: boolean })
                 aria-current={current ? 'page' : undefined}
                 className={cn('relative grid h-full min-w-0 content-center justify-items-center gap-0.5 px-0.5 text-[12px] leading-tight text-ink-muted', current && 'font-bold text-ink')}
               >
-                <span className={cn('grid h-7 w-12 place-items-center rounded-[3px] transition-colors', current && 'bg-hi-select')}>
-                  <Icon className="size-5" strokeWidth={1.75} aria-hidden="true" />
+                <span data-slot="mobile-nav-icon" className={cn('grid h-7 w-12 place-items-center rounded-[3px] transition-colors', current && 'bg-hi-select')}>
+                  <NavIcon item={item} studio={profile?.enrollment?.shape?.studio} className="size-5" />
                 </span>
                 <span className="max-w-full truncate"><NavLabel item={item} /></span>
                 {ready && item.key === 'evidence' ? <span className="absolute top-2 right-[calc(50%-22px)] size-2.5 rounded-full bg-hi ring-2 ring-ink"><span className="sr-only">: weekly assessment available</span></span> : null}

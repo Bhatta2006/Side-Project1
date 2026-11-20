@@ -132,6 +132,8 @@ export interface Features {
   session_end?: boolean;
   daily_review?: boolean;
   streak_plus?: boolean;
+  /** Game moments: goal reached, level-up, streak milestones, badge stickers. */
+  game_moments?: boolean;
 }
 
 export interface Course {

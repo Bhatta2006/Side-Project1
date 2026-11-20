@@ -1,0 +1,391 @@
+/*
+ * Paper: Socrat's look. The notebook's desk, paper stock, ink and highlighter (app/palettes.css,
+ * six palettes, light and dark), drawn light: <html data-look="paper"> tells the ink layer to skip
+ * frames (lib/ink/react/hooks.ts, LIGHT_INK_KINDS), so buttons, fields and controls are framed here
+ * in plain CSS. Only decorative marks (highlighter, underline, circled, tally) and stickers are
+ * still hand drawn. The game layer (path, chips, moments, stickers) is styled here in the same ink.
+ *
+ * Rules are unlayered on purpose, so they win over Tailwind's layered utilities without !important.
+ *
+ * The --db-* names are the game tokens. They come from the notebook palette, with fixed print colours
+ * for meaning: XP is highlighter yellow, streaks are marker orange, right is green, wrong is red.
+ */
+
+@theme inline {
+  --color-db-primary: var(--db-primary);
+  --color-db-tint: var(--db-tint);
+  --color-db-tint-ink: var(--db-tint-ink);
+  --color-db-surface: var(--db-surface);
+  --color-db-raised: var(--db-raised);
+  --color-db-line: var(--db-line);
+  --color-db-ink: var(--db-ink);
+  --color-db-muted: var(--db-muted);
+  --color-db-xp: var(--db-xp);
+  --color-db-xp-ink: var(--db-xp-ink);
+  --color-db-xp-tint: var(--db-xp-tint);
+  --color-db-streak: var(--db-streak);
+  --color-db-streak-ink: var(--db-streak-ink);
+  --color-db-streak-tint: var(--db-streak-tint);
+  --color-db-correct: var(--db-correct);
+  --color-db-correct-ink: var(--db-correct-ink);
+  --color-db-correct-tint: var(--db-correct-tint);
+  --color-db-wrong: var(--db-wrong);
+  --color-db-wrong-ink: var(--db-wrong-ink);
+  --color-db-wrong-tint: var(--db-wrong-tint);
+  --color-db-info: var(--db-info);
+  --color-db-info-ink: var(--db-info-ink);
+  --color-db-info-tint: var(--db-info-tint);
+}
+
+:root {
+  /* Ink: every frame is drawn with it, and the drop under a raised thing is ink too. */
+  --pp-ink: var(--ll-ink);
+  --pp-line: 1.5px;
+  --pp-drop: 2px 2px 0 var(--ll-ink);
+  --pp-drop-lift: 3px 3px 0 var(--ll-ink);
+  --pp-cut: 5px 4px 6px 4px / 4px 6px 4px 5px;
+  --pp-fibre: var(--ll-tex-fibre, none);
+
+  --db-primary: var(--ll-marker);
+  --db-primary-lo: color-mix(in oklab, var(--ll-marker), var(--ll-ink) 22%);
+  --db-ledge: var(--ll-ink);
+  --db-tint: var(--ll-hi-select);
+  --db-tint-ink: var(--ll-ink);
+  --db-ground: var(--ll-desk);
+  --db-surface: var(--ll-paper);
+  --db-raised: var(--ll-paper-shade);
+  --db-line: var(--ll-ink);
+  --db-line-strong: var(--ll-ink);
+  --db-ink: var(--ll-ink);
+  --db-ink-soft: var(--ll-ink-soft);
+  --db-muted: var(--ll-ink-muted);
+  --db-faint: var(--ll-pencil);
+
+  --db-xp: var(--ll-hi);
+  --db-xp-ledge: var(--ll-ink);
+  --db-xp-ink: var(--ll-ink);
+  --db-xp-tint: var(--ll-sticky-yellow);
+  --db-streak: #e4672f;
+  --db-streak-ink: var(--ll-ink);
+  --db-streak-tint: var(--ll-sticky-orange);
+  --db-correct: var(--ll-green);
+  --db-correct-ledge: var(--ll-ink);
+  --db-correct-ink: var(--ll-ink);
+  --db-correct-tint: var(--ll-sticky-green);
+  --db-wrong: var(--ll-red);
+  --db-wrong-ledge: var(--ll-ink);
+  --db-wrong-ink: var(--ll-ink);
+  --db-wrong-tint: var(--ll-sticky-pink);
+  --db-info: #3b6fb6;
+  --db-info-ink: var(--ll-ink);
+  --db-info-tint: var(--ll-sticky-blue);
+}
+
+/* ======================================================================================
+   Frames the ink layer no longer draws
+   ====================================================================================== */
+:root[data-look="paper"] :is([data-ink-host], .ll-ink-host):not([data-ink-ready]) { outline: none; }
+:root[data-look="paper"] :is(a, button, [role="button"], [role="tab"], [role="radio"], [role="checkbox"], [role="switch"], [data-ink-host]):focus-visible {
+  outline: 2px solid var(--ll-focus, var(--ll-ink));
+  outline-offset: 2px;
+}
+
+/* ---------- Buttons: marker on paper, an ink line, a small ink drop that the press takes away ---------- */
+:root[data-look="paper"] [data-slot="button"] {
+  border-radius: var(--pp-cut);
+  transition: translate 90ms ease-out, box-shadow 90ms ease-out, background-color 120ms ease;
+}
+:root[data-look="paper"] [data-slot="button"]:is([data-variant="default"], [data-variant="destructive"], [data-variant="secondary"], [data-variant="outline"]) {
+  background-image: var(--pp-fibre);
+  background-size: 240px 240px;
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop);
+}
+:root[data-look="paper"] [data-slot="button"][data-variant="default"] { background-color: var(--ll-marker); }
+:root[data-look="paper"] [data-slot="button"][data-variant="destructive"] { background-color: var(--ll-red); }
+:root[data-look="paper"] [data-slot="button"][data-variant="secondary"] { background-color: var(--ll-sticky-yellow); }
+:root[data-look="paper"] [data-slot="button"][data-variant="outline"] { background-color: var(--ll-slip); }
+:root[data-look="paper"] [data-slot="button"]:is([data-variant="default"], [data-variant="destructive"], [data-variant="secondary"], [data-variant="outline"]):hover:not(:disabled) {
+  translate: -1px -1px;
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop-lift);
+}
+:root[data-look="paper"] [data-slot="button"]:is([data-variant="default"], [data-variant="destructive"], [data-variant="secondary"], [data-variant="outline"]):is(:active, [data-pressed]:not([data-pressed="false"])) {
+  translate: 2px 2px;
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink);
+}
+:root[data-look="paper"] [data-slot="button"][data-variant="ghost"] { border-radius: 4px; }
+:root[data-look="paper"] [data-slot="button"][data-variant="ghost"]:hover { background-color: var(--ll-hi-select); }
+:root[data-look="paper"] [data-slot="button"][data-variant="link"] { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+:root[data-look="paper"] [data-slot="button"]:is(:disabled, [aria-disabled="true"]) {
+  background-color: var(--ll-paper-shade);
+  background-image: none;
+  box-shadow: none;
+  outline: 1.5px dashed var(--ll-pencil-mark);
+  outline-offset: -1.5px;
+  translate: none;
+}
+:root[data-look="paper"] [data-slot="button"][data-shape="pill"] { border-radius: 999px; }
+:root[data-look="paper"] [data-slot="button"]:is([data-size="icon"], [data-size="icon-lg"], [data-size="icon-sm"])[data-shape="pill"] { border-radius: 999px; }
+
+/* The Check / Continue stamp: the same marker button, a size up. */
+:root[data-look="paper"] .stamp {
+  border: 0;
+  border-radius: var(--pp-cut);
+  background-color: var(--ll-marker);
+  background-image: var(--pp-fibre);
+  background-size: 240px 240px;
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop-lift);
+}
+:root[data-look="paper"] .stamp:hover:not(:disabled) { translate: -1px -1px; }
+:root[data-look="paper"] .stamp:active:not(:disabled) { translate: 3px 3px; box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:root[data-look="paper"] .stamp:disabled { background-color: var(--ll-paper-shade); box-shadow: none; outline: 1.5px dashed var(--ll-pencil-mark); outline-offset: -1.5px; color: var(--ll-pencil); }
+/* In the dark the ink turns light, but the marker stays a bright stock: print on it in dark ink. */
+:root[data-look="paper"][data-mode="dark"] :is([data-slot="button"]:is([data-variant="default"], [data-variant="destructive"]), .stamp:not(:disabled)) { color: #1b1a17; }
+
+/* ---------- Fields: slip paper in an ink box; focus adds a highlighter wash ---------- */
+:root[data-look="paper"] :is([data-slot="input-frame"], [data-slot="textarea-frame"], [data-slot="select-trigger"], [data-slot="native-select"], [data-slot="command-input-wrapper"], [data-slot="sidebar-input"]) {
+  background-color: var(--ll-slip);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 var(--pp-line) var(--ll-ink-soft);
+}
+:root[data-look="paper"] :is([data-slot="input-frame"], [data-slot="textarea-frame"], [data-slot="select-trigger"], [data-slot="native-select"], [data-slot="command-input-wrapper"]):is(:focus-within, :focus-visible) {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--pp-ink), 0 0 0 3px var(--ll-hi-select);
+}
+:root[data-look="paper"] :is([data-slot="input-frame"], [data-slot="textarea-frame"]) :is(input, textarea) { background: transparent; }
+:root[data-look="paper"] :is([data-slot="input-frame"], [data-slot="textarea-frame"]) :is(input, textarea):focus-visible { outline: none; }
+:root[data-look="paper"] :is([data-slot="input-frame"], [data-slot="textarea-frame"]):has([aria-invalid="true"]) { box-shadow: inset 0 0 0 2px var(--ll-red); }
+
+/* ---------- Checkbox, radio, switch, toggles ---------- */
+:root[data-look="paper"] [data-slot="checkbox"] { border-radius: 3px; background: var(--ll-slip); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:root[data-look="paper"] [data-slot="checkbox"]:is([data-state="checked"], [data-state="indeterminate"]) { background-color: var(--ll-hi); }
+:root[data-look="paper"] [data-slot="radio-group-item"] { border-radius: 999px; background: var(--ll-slip); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:root[data-look="paper"] [data-slot="radio-group-item"][data-state="checked"] { background: var(--pp-ink); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), inset 0 0 0 4px var(--ll-slip); }
+:root[data-look="paper"] [data-slot="switch"] { border-radius: 999px; background: var(--ll-paper-shade); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:root[data-look="paper"] [data-slot="switch"][data-state="checked"] { background: var(--ll-hi); }
+:root[data-look="paper"] [data-slot="switch-thumb"] { border-radius: 999px; background: var(--ll-slip); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:root[data-look="paper"] :is([data-slot="toggle"], [data-slot="toggle-group-item"]) { border-radius: 4px; box-shadow: inset 0 0 0 1px var(--ll-pencil-mark); }
+:root[data-look="paper"] :is([data-slot="toggle"], [data-slot="toggle-group-item"])[data-state="on"] { background: var(--ll-hi-select); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+
+/* ---------- Progress: an ink tube filled with marker; a run turns it highlighter yellow ---------- */
+:root[data-look="paper"] [data-slot="progress"] { border-radius: 999px; background: var(--ll-paper-shade); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); overflow: hidden; }
+:root[data-look="paper"] [data-slot="progress-indicator"] { background: var(--ll-marker); }
+:root[data-look="paper"] [data-slot="progress"][data-tone="hi"] [data-slot="progress-indicator"] { background: var(--ll-hi); }
+
+/* ---------- Tabs: folder tabs; the open one is highlighter yellow ---------- */
+:root[data-look="paper"] [data-slot="tabs-trigger"] { border-radius: 5px 5px 0 0; box-shadow: inset 0 0 0 1px var(--ll-pencil-mark); background: var(--ll-paper-shade); }
+:root[data-look="paper"] [data-slot="tabs-trigger"][data-state="active"] { background: var(--ll-hi); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); color: var(--ll-ink); }
+
+/* ---------- Answer choices: slip paper in ink; picked is a highlighter wash, lifted off the page ---------- */
+:root[data-look="paper"] [data-slot="choice"] {
+  border: 0;
+  border-radius: var(--pp-cut);
+  background-color: var(--ll-slip);
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop);
+  transition: translate 100ms ease-out, box-shadow 100ms ease-out, background-color 150ms;
+}
+:root[data-look="paper"] [data-slot="choice"]:hover:not(:disabled) { translate: -1px -1px; box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop-lift); }
+:root[data-look="paper"] [data-slot="choice"]:active:not(:disabled) { translate: 2px 2px; box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:root[data-look="paper"] [data-slot="choice"][data-selected] { translate: -1px -1px; background-color: var(--ll-hi-select); box-shadow: inset 0 0 0 2px var(--pp-ink), var(--pp-drop-lift); }
+:root[data-look="paper"] [data-slot="choice"][data-tone="correct"] { background-color: var(--db-correct-tint); box-shadow: inset 0 0 0 2px var(--pp-ink), var(--pp-drop); }
+:root[data-look="paper"] [data-slot="choice"][data-tone="wrong"] { background-color: var(--db-wrong-tint); box-shadow: inset 0 0 0 2px var(--pp-ink), var(--pp-drop); }
+
+/* ---------- Badges, keys, alerts, menus, dialogs, skeletons ---------- */
+:root[data-look="paper"] [data-slot="badge"] { border-radius: 999px; box-shadow: inset 0 0 0 1.2px var(--pp-ink); }
+:root[data-look="paper"] [data-slot="kbd"] { border-radius: 4px; background: var(--ll-slip); box-shadow: inset 0 0 0 1px var(--pp-ink), 0 1.5px 0 var(--pp-ink); }
+:root[data-look="paper"] [data-slot="alert"] { background: var(--ll-slip); border-radius: 4px; box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:root[data-look="paper"] :is([data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="popover-content"], [data-slot="hover-card-content"], [data-slot="tooltip-content"], [data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]) {
+  background-color: var(--ll-paper);
+  background-image: var(--pp-fibre);
+  background-size: 240px 240px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), 4px 4px 0 color-mix(in srgb, var(--pp-ink) 85%, transparent);
+}
+:root[data-look="paper"] :is([data-slot="dropdown-menu-item"], [data-slot="select-item"], [data-slot="command-item"]):is([data-highlighted], [data-selected="true"]) { background: var(--ll-hi-select); }
+:root[data-look="paper"] [data-slot="skeleton"] { background: var(--ll-paper-shade); border-radius: 4px; }
+:root[data-look="paper"] [data-slot="sidebar-menu-button"][data-active="true"] { background: var(--ll-hi-select); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); font-weight: 700; }
+:root[data-look="paper"] [data-slot="sidebar-menu-button"] > [data-slot="game-emoji"] { width: 24px; height: 24px; }
+
+/* ======================================================================================
+   The game layer, in ink and paper
+   ====================================================================================== */
+
+/* A raised paper thing: slip stock, an ink line, an ink drop. */
+.pp-card {
+  position: relative;
+  background-color: var(--ll-slip);
+  background-image: var(--pp-fibre);
+  background-size: 240px 240px;
+  border-radius: var(--pp-cut);
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop);
+}
+/* A sticky note in one of the meaning colours: tinted stock, a faint fold of shadow, no frame. */
+.pp-note {
+  position: relative;
+  background-image: var(--pp-fibre);
+  background-size: 240px 240px;
+  border-radius: 2px;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.06), 0 8px 14px -10px rgb(0 0 0 / 0.45);
+  color: var(--ll-ink);
+}
+.pp-note[data-tone="xp"] { background-color: var(--db-xp-tint); }
+.pp-note[data-tone="streak"] { background-color: var(--db-streak-tint); }
+.pp-note[data-tone="correct"] { background-color: var(--db-correct-tint); }
+.pp-note[data-tone="wrong"] { background-color: var(--db-wrong-tint); }
+.pp-note[data-tone="info"] { background-color: var(--db-info-tint); }
+.pp-note[data-tone="paper"] { background-color: var(--ll-paper); }
+/* A strip of tape across the top edge. */
+.pp-tape::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 72px;
+  height: 18px;
+  translate: -50% 0;
+  rotate: -3deg;
+  background: var(--ll-tape);
+  box-shadow: inset 0 0 0 1px var(--ll-tape-edge, transparent);
+}
+
+/* Game strip chips on Today. */
+.gm-chip { min-height: 48px; }
+.gm-chip:is(a):hover { translate: -1px -1px; box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop-lift); }
+
+/* The path: paper discs in ink, the trail a pencil dotted line. */
+.gm-stone {
+  border-radius: 999px;
+  background-image: var(--pp-fibre);
+  background-size: 240px 240px;
+  box-shadow: inset 0 0 0 2px var(--pp-ink), 3px 3px 0 var(--pp-ink);
+  color: var(--ll-ink);
+}
+.gm-stone:active { translate: 2px 2px; box-shadow: inset 0 0 0 2px var(--pp-ink); }
+.gm-stone[data-tone="done"] { background-color: var(--ll-marker); }
+.gm-stone[data-tone="current"] { background-color: var(--ll-marker); outline: 3px solid var(--ll-hi); outline-offset: 4px; }
+.gm-stone[data-tone="review"] { background-color: var(--db-correct-tint); }
+.gm-stone[data-tone="open"] { background-color: var(--ll-slip); }
+.gm-stone[data-tone="locked"] { background-color: var(--ll-paper-shade); color: var(--ll-pencil); box-shadow: none; outline: 1.5px dashed var(--ll-pencil-mark); outline-offset: -1.5px; }
+.gm-say {
+  border-radius: 4px;
+  background: var(--ll-slip);
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop);
+  color: var(--ll-ink);
+}
+.gm-say::after { content: ""; position: absolute; bottom: -6px; left: 50%; width: 11px; height: 11px; translate: -50% 0; rotate: 45deg; background: var(--ll-slip); box-shadow: 1.5px 1.5px 0 0 var(--pp-ink); }
+
+/* The lesson bar: an ink tube filling with green, page by page. */
+.db-lesson-bar {
+  position: relative;
+  flex: 1 1 160px;
+  max-width: 420px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--ll-paper-shade);
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink);
+  overflow: hidden;
+}
+.db-lesson-bar > span { position: absolute; inset: 0 auto 0 0; width: var(--db-lesson-done, 0%); background: var(--ll-hi); box-shadow: inset calc(-1 * var(--pp-line)) 0 0 var(--pp-ink), inset 0 0 0 var(--pp-line) var(--pp-ink); border-radius: 999px; transition: width 380ms ease-out; }
+.db-reading-bar { height: 4px; background: var(--ll-marker); }
+
+/* Soc's speech bubble. */
+.db-bubble {
+  position: relative;
+  display: inline-block;
+  max-width: 34ch;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--ll-slip);
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop);
+  font-size: 15px;
+  color: var(--ll-ink);
+}
+.db-bubble::before { content: ""; position: absolute; left: -6px; bottom: 9px; width: 11px; height: 11px; rotate: 45deg; background: var(--ll-slip); box-shadow: -1.5px 1.5px 0 0 var(--pp-ink); }
+
+/* A sticky bottom bar on phones for Next and Check. */
+@media (max-width: 767px) {
+  :is([data-slot="lesson-nav"], [data-slot="answer-bar"]) {
+    position: sticky;
+    bottom: calc(69px + env(safe-area-inset-bottom));
+    z-index: 20;
+    margin-inline: -16px;
+    padding: 12px 16px;
+    background-color: var(--ll-paper);
+    background-image: var(--pp-fibre);
+    background-size: 240px 240px;
+    border-top: var(--pp-line) solid var(--pp-ink);
+  }
+  [data-slot="lesson-nav"] > [data-slot="button"]:last-child { flex: 1; }
+  [data-slot="answer-bar"] .stamp { width: 100%; }
+}
+
+/* The answer sheet: a sticky note slid up from the bottom, an ink line along its top. */
+:root[data-look="paper"] .feedback-sheet { border-top: 2px solid var(--pp-ink); background-color: var(--ll-slip); background-image: var(--pp-fibre); background-size: 240px 240px; box-shadow: 0 -6px 16px -12px rgb(0 0 0 / 0.5); }
+:root[data-look="paper"] .feedback-sheet[data-tone="correct"] { background-color: var(--db-correct-tint); }
+:root[data-look="paper"] .feedback-sheet[data-tone="wrong"] { background-color: var(--db-wrong-tint); }
+@media (min-width: 640px) { :root[data-look="paper"] .feedback-sheet { border-radius: 6px 6px 0 0; box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), 0 -6px 16px -12px rgb(0 0 0 / 0.5); border-top: 0; } }
+
+/* Tab bar: the current place sits on a highlighter swipe. */
+[data-slot="mobile-nav-icon"] { height: 32px; width: 54px; border-radius: 999px; }
+[data-slot="mobile-nav"] a[aria-current="page"] [data-slot="mobile-nav-icon"] { background: var(--ll-hi-select); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); }
+:is([data-slot="mobile-nav"] a:not([aria-current]), [data-slot="sidebar-menu-button"]:not([data-active="true"])) [data-slot="game-emoji"] { filter: saturate(0.6); opacity: 0.85; }
+
+/* Progress header: a level card with an ink tube; stat tiles as sticky notes. */
+.db-level-track { position: relative; display: block; height: 12px; border-radius: 999px; background: var(--ll-paper-shade); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); overflow: hidden; }
+.db-level-track > span { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--ll-hi); box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink); transition: width 600ms ease-out; }
+
+/* The milestone ribbon and frozen pebbles. */
+.db-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 8px;
+  border-radius: 3px;
+  background: var(--db-streak-tint);
+  box-shadow: inset 0 0 0 var(--pp-line) var(--pp-ink), var(--pp-drop);
+  font-weight: 700;
+  color: var(--ll-ink);
+  rotate: -1.5deg;
+}
+.db-frozen > [data-slot="pebble-friend"] { filter: saturate(0.55) brightness(1.1); }
+.db-sticker-locked > span:first-child > [data-slot="pebble-friend"] { filter: grayscale(1); opacity: 0.45; }
+.db-week-on { background: var(--db-streak) !important; border-color: var(--pp-ink) !important; color: var(--ll-ink) !important; }
+
+/* Pebble friends get the sticker's ink edge. */
+:root[data-look="paper"] [data-slot="pebble-friend"] > path:first-of-type { stroke: var(--pp-ink); stroke-width: 7; }
+
+/* Game emoji as die-cut stickers: an ink edge (the outline layer), the paper rim, a short drop. */
+[data-slot="game-emoji"] .ge-edge * {
+  fill: var(--pp-ink) !important;
+  stroke: var(--pp-ink) !important;
+  stroke-width: 6px !important;
+  stroke-linejoin: round;
+  opacity: 1 !important;
+}
+
+/* ---------- Motion helpers for the game layer (honour reduced motion) ---------- */
+@keyframes db-pop { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.08); opacity: 1 } 100% { transform: scale(1) } }
+@keyframes db-rise { from { transform: translateY(10px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes db-bob { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
+@keyframes db-flicker { 0%, 100% { transform: scale(1) rotate(-2deg) } 50% { transform: scale(1.06) rotate(2deg) } }
+@keyframes db-spin { to { transform: rotate(360deg) } }
+@keyframes db-sheet-up { from { transform: translateY(100%) } to { transform: none } }
+@keyframes db-shake { 0%, 100% { transform: none } 20% { transform: translateX(-6px) } 40% { transform: translateX(6px) } 60% { transform: translateX(-4px) } 80% { transform: translateX(3px) } }
+.db-pop { animation: db-pop 420ms cubic-bezier(.2, .9, .3, 1.3) both; }
+.db-rise { animation: db-rise 380ms cubic-bezier(.2, .8, .3, 1) both; }
+.db-bob { animation: db-bob 3.2s ease-in-out infinite; }
+.db-flicker { animation: db-flicker 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
+.db-sheet-up { animation: db-sheet-up 300ms cubic-bezier(.2, .8, .3, 1) both; }
+.db-shake { animation: db-shake 380ms ease-in-out both; }
+@keyframes db-confetti {
+  0% { transform: translate(-50%, -50%) scale(.4); opacity: 0 }
+  15% { opacity: 1 }
+  100% { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y) + 120px)) rotate(var(--r)); opacity: 0 }
+}
+.db-confetti { animation: db-confetti 1.5s cubic-bezier(.15, .7, .35, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .db-confetti { display: none; }
+  .db-pop, .db-rise, .db-bob, .db-flicker, .db-sheet-up, .db-shake { animation: none; }
+}
+:root[data-motion="reduced"] :is(.db-pop, .db-rise, .db-bob, .db-flicker, .db-sheet-up, .db-shake) { animation: none; }
+:root[data-motion="reduced"] .db-confetti { display: none; }

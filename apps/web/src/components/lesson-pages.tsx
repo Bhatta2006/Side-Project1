@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight } from '@/components/icons';
 import Markdown from '@/components/markdown';
 import { afterFirstParagraph } from '@/components/socrat/lesson-pictures';
 import { Button } from '@/components/ui/button';
+import { PebbleFriend } from '@/components/socrat/pebble-friend';
+import { playInGame } from '@/lib/game-sound';
 import { isCheckPage, minutes, splitPages } from '@/lib/pages';
 import { cn } from '@/lib/utils';
 
@@ -85,6 +87,7 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
 
   function go(step: number) {
     moved.current = true;
+    playInGame('tap');
     setIndex(i => Math.max(0, Math.min(total - 1, i + step)));
   }
 
@@ -126,7 +129,8 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
 
   return (
     <div ref={top} className="max-w-[68ch] scroll-mt-24">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div data-slot="lesson-dots" className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div aria-hidden="true" className="db-lesson-bar" style={{ '--db-lesson-done': `${(100 * (index + 1)) / total}%` } as CSSProperties}><span /></div>
         <ol className="flex items-center gap-1.5" aria-label="Lesson pages">
           {Array.from({ length: total }, (_, i) => (
             <li key={i}>
@@ -151,7 +155,13 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
         <span className="text-[13px] text-muted-foreground">About {minutes(reading)} min</span>
       </div>
 
-      <section aria-labelledby="lesson-page-title" id="step-lesson">
+      <section aria-labelledby="lesson-page-title" id="step-lesson" data-slot="lesson-page" data-check={page && isCheckPage(page) ? '' : undefined}>
+        {page && isCheckPage(page) ? (
+          <div aria-hidden="true" className="mb-4 flex items-end gap-3">
+            <PebbleFriend kind="soc" size={56} className="db-bob" />
+            <span className="db-bubble">Your turn. Think it through before you look.</span>
+          </div>
+        ) : null}
         <p className="mb-1 text-[13px] font-medium text-muted-foreground">{label}</p>
         {title ? (
           <h2 id="lesson-page-title" ref={heading} tabIndex={-1} className="mb-4 font-display text-2xl font-semibold tracking-[-0.03em] outline-none">
@@ -162,7 +172,7 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
         {page && tool && !isCheckPage(page) ? <div className="mt-6">{tool(index, page.title)}</div> : null}
       </section>
 
-      <div className="mt-8 flex items-center justify-between gap-3 border-t pt-5">
+      <div data-slot="lesson-nav" className="mt-8 flex items-center justify-between gap-3 border-t pt-5">
         <Button variant="outline" onClick={() => go(-1)} disabled={index === 0}>
           <ArrowLeft className="size-4" aria-hidden="true" /> Back
         </Button>

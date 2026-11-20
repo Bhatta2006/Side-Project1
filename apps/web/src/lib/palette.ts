@@ -1,13 +1,15 @@
 'use client';
-// The learner's colours: a palette (app/palettes.css) and light, dark or the device's choice.
+// The learner's colours: one of the six notebook palettes, and light, dark or the device's choice.
+// One look, "paper" (app/paper.css): the notebook's desk, paper and ink, with frames drawn in CSS
+// instead of an ink frame per element, and the game layer on top.
 // Kept in this browser's localStorage and applied to <html> by PALETTE_BOOT_SCRIPT before the first
-// paint, so a page never flashes the wrong colours. Classic in light is the default and changes nothing.
+// paint, so a page never flashes the wrong colours.
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useSession } from '@/lib/session';
-import { PALETTE_KEY as KEY } from './palette-boot';
+import { PALETTE_KEY as KEY, type PALETTE_IDS } from './palette-boot';
 
-export type PaletteId = 'classic' | 'tide' | 'lilac' | 'meadow' | 'riso' | 'dusk';
+export type PaletteId = (typeof PALETTE_IDS)[number];
 export type ColourMode = 'light' | 'dark' | 'system';
 export interface PalettePref { palette: PaletteId; mode: ColourMode }
 
@@ -39,8 +41,10 @@ const prefersDark = () => typeof matchMedia === 'function' && matchMedia('(prefe
 export function applyPalette(pref: PalettePref) {
   const el = document.documentElement;
   const dark = pref.mode === 'dark' || (pref.mode === 'system' && prefersDark());
+  // Classic in light is the notebook's own default and needs no attribute; everything else names itself.
   if (pref.palette !== 'classic' || dark) el.dataset.palette = pref.palette;
   else delete el.dataset.palette;
+  el.dataset.look = 'paper';
   if (dark) el.dataset.mode = 'dark';
   else delete el.dataset.mode;
 }

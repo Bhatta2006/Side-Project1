@@ -43,8 +43,22 @@ router = APIRouter(prefix="/api/v1")
 MIN_AGE = 13
 
 
-# The colour palettes the web app offers (apps/web/src/app/palettes.css).
-APPEARANCE_PALETTES = {"classic", "tide", "lilac", "meadow", "riso", "dusk"}
+# The colour palettes the web app offers (apps/web/src/app/palettes.css): the six notebook palettes.
+# The retired Daybreak ids stay accepted so a saved choice still loads; the web falls back to Classic.
+APPEARANCE_PALETTES = {
+    "daybreak",
+    "ruby",
+    "ocean",
+    "lagoon",
+    "sunset",
+    "berry",
+    "classic",
+    "tide",
+    "lilac",
+    "meadow",
+    "riso",
+    "dusk",
+}
 APPEARANCE_MODES = {"light", "dark", "system"}
 
 

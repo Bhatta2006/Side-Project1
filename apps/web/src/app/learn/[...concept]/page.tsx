@@ -61,7 +61,7 @@ function ReadingProgress() {
     window.addEventListener('resize', onScroll);
     return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); cancelAnimationFrame(frame); };
   }, []);
-  return <div ref={bar} className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left scale-x-0 bg-primary" aria-hidden="true" />;
+  return <div ref={bar} className="db-reading-bar fixed inset-x-0 top-0 z-50 h-0.5 origin-left scale-x-0 bg-primary" aria-hidden="true" />;
 }
 
 /** Read → Check → Practice: reading is separate from proving. */

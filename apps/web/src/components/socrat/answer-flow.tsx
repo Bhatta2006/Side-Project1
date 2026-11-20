@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { play } from '@/lib/game-sound';
+import { GameEmoji } from './game-emoji';
+import { PebbleFriend } from './pebble-friend';
 
 /**
  * Lesson feel (item 2 of docs/research/duolingo-teardown.md), behind `features.lesson_feel`.
@@ -27,24 +30,16 @@ export function praise(run: number, seed: number): string {
   return run >= RUN_SHOWN ? `${run} in a row.` : PRAISE[Math.abs(seed) % PRAISE.length];
 }
 
-/** "n in a row" as pen tally marks: groups of four strokes crossed by a fifth. */
+/** "n in a row": an orange paper chip with Ember's flame that pops on every new answer in the run. */
 export function RunTally({ run, className }: { run: number; className?: string }) {
   if (run < RUN_SHOWN) return null;
-  const groups = Math.floor(run / 5);
-  const rest = run % 5;
-  const marks = [...Array.from({ length: Math.min(groups, 4) }, () => 5), ...(rest && groups < 4 ? [rest] : [])];
   return (
-    <p className={cn('inline-flex items-center gap-2 text-[15px] font-semibold text-pen animate-pop', className)} aria-live="polite">
-      <span className="inline-flex gap-1.5" aria-hidden="true">
-        {marks.map((count, i) => (
-          <svg key={i} viewBox="0 0 26 18" className="h-[18px] w-[26px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            {Array.from({ length: Math.min(count, 4) }, (_, j) => <path key={j} d={`M${4 + j * 5} 3.5l-.6 11`} />)}
-            {count === 5 ? <path d="M1.5 13.5L23.5 4" /> : null}
-          </svg>
-        ))}
-      </span>
-      {run} in a row
+    <>
+    <p key={run} className={cn('db-ribbon db-pop w-fit text-[15px]', className)} aria-live="polite">
+      <GameEmoji name="flame" size={24} className={run >= RUN_GLOW ? 'db-flicker' : undefined} />
+      {run} in a row{run >= RUN_GLOW ? '. On fire.' : ''}
     </p>
+    </>
   );
 }
 
@@ -118,15 +113,19 @@ export type SheetTone = 'correct' | 'wrong' | 'neutral';
  * Feedback after an answer, in a sheet that sticks to the bottom of the column: highlighter
  * for right, red pen for wrong. Its button takes focus, so Enter continues.
  */
-export function FeedbackSheet({ tone, title, children, action, onContinue }: {
+export function FeedbackSheet({ tone, title, children, action, onContinue, run = 0 }: {
   tone: SheetTone;
   title: string;
   children?: ReactNode;
   action: string;
   onContinue(): void;
+  /** Right answers in a row, counting this one: the correct sound climbs with it. */
+  run?: number;
 }) {
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => { button.current?.focus({ preventScroll: true }); }, []);
+  // Heard once, when the sheet opens.
+  useEffect(() => { if (tone !== 'neutral') play(tone, run); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div
       role="status"
@@ -138,14 +137,10 @@ export function FeedbackSheet({ tone, title, children, action, onContinue }: {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-display text-xl font-semibold tracking-[-0.02em]">
-            <span aria-hidden="true" className="feedback-mark grid size-8 flex-none place-items-center rounded-full">
-              {tone === 'correct' ? (
-                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-              ) : tone === 'wrong' ? (
-                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M7 7l10 10M17 7L7 17" /></svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 12h12" /></svg>
-              )}
+            {/* Jade cheers a right answer; Soc sits with a wrong one. */}
+            <span aria-hidden="true" className="relative flex-none">
+              {tone === 'correct' ? <PebbleFriend kind="jade" mood="happy" size={46} className="db-pop" /> : tone === 'wrong' ? <PebbleFriend kind="soc" size={46} className="db-pop" /> : null}
+              {tone !== 'neutral' ? <GameEmoji name={tone === 'correct' ? 'check' : 'cross'} size={22} className="absolute -right-1.5 -bottom-1 db-pop [animation-delay:120ms]" /> : null}
             </span>
             {title}
           </p>

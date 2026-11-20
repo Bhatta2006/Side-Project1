@@ -20,6 +20,10 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Soc } from '@/components/socrat/illustration';
+import { Celebrate } from '@/components/socrat/celebrate';
+import { PebbleFriend } from '@/components/socrat/pebble-friend';
+import { dailyGoalName } from '@/lib/game';
+import { cn } from '@/lib/utils';
 
 type Mode = 'sprint' | 'builder' | 'explorer';
 type Task = { prompt: string; scene: string; options: string[] };
@@ -70,15 +74,23 @@ const MINUTES = [
 ];
 const EXAMPLES = ['Build a REST API', 'Pass my DBMS exam', 'Understand stock investing', 'Play my first song on guitar'];
 
-function Ask({ eyebrow, title, body }: { eyebrow?: string; title: string; body?: string }) {
+function Ask({ eyebrow, title, body, trio }: { eyebrow?: string; title: string; body?: string; trio?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className={cn('flex items-start justify-between gap-4', trio && 'max-sm:flex-col-reverse max-sm:gap-1')}>
       <div className="min-w-0">
         {eyebrow ? <p className="font-hand origin-left -rotate-2 text-[22px] text-pen">{eyebrow}</p> : null}
         <h1 className="type-display-l mt-1 text-balance">{title}</h1>
         {body ? <p className="mt-3 text-base text-muted-foreground">{body}</p> : null}
       </div>
-      <Soc size={88} mood="curious" className="mt-2 hidden sm:block" />
+      {trio ? (
+        <span aria-hidden="true" className="relative mt-1 h-[92px] w-[132px] flex-none">
+          <PebbleFriend kind="jade" size={52} className="db-bob absolute bottom-0 left-0 -rotate-6 [animation-delay:400ms]" />
+          <PebbleFriend kind="ember" size={48} className="db-bob absolute right-0 bottom-1 rotate-6 [animation-delay:800ms]" />
+          <PebbleFriend kind="soc" mood="happy" size={72} className="db-bob absolute top-0 left-[30px]" />
+        </span>
+      ) : (
+        <Soc size={88} mood="curious" className="mt-2 hidden sm:block" />
+      )}
     </div>
   );
 }
@@ -282,7 +294,7 @@ export default function Start() {
       <div key={step} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
         {step === 'goal' ? (
           <form onSubmit={submitGoal} className="grid gap-6">
-            <Ask eyebrow="first question" title="What do you want to be able to actually do?" body="Any skill, in your own words. Messy is fine." />
+            <Ask eyebrow="first question" trio title="What do you want to be able to actually do?" body="Any skill, in your own words. Messy is fine." />
             <Textarea autoFocus className="min-h-24 text-lg" maxLength={500} value={text} onChange={e => setText(e.target.value)} aria-label="What you want to be able to do" placeholder="For example: automate my boring Excel work" />
             <ul className="flex flex-wrap gap-2" aria-label="Examples">
               {EXAMPLES.map(x => <li key={x}><Button type="button" variant="outline" size="sm" onClick={() => setText(x)}>{x}</Button></li>)}
@@ -333,6 +345,7 @@ export default function Start() {
             <div className="grid gap-3 sm:grid-cols-3">
               {MINUTES.map(o => (
                 <Choice key={o.m} className="min-h-[88px]" selected={minutes === o.m} aria-pressed={minutes === o.m} disabled={busy} onClick={() => void chooseTime(o.m)}>
+                  <span className="mb-0.5 block text-[13px] font-bold text-pen">{dailyGoalName(o.m)}</span>
                   <span className="choice-title block text-lg font-semibold">{o.label}</span>
                   <span className="block text-[14px] text-muted-foreground">{o.body}</span>
                 </Choice>
@@ -431,6 +444,7 @@ export default function Start() {
 
         {step === 'plan' ? (
           <div className="grid gap-6">
+            {plan?.blueprint && (!plan.start || plan.start.state === 'first_lesson_ready') ? <Celebrate kind="amber" emoji="map" sound="finish" className="-mb-4 justify-self-start" /> : null}
             <Ask title={plan?.blueprint?.title || plan?.skeleton?.title || 'Writing your course plan'} body={plan?.blueprint ? plan.blueprint.tagline : 'Module 1 first, the rest just before you reach it. This takes a minute.'} />
             {!plan?.blueprint ? <Loading variant="inline" label="Planning your course" /> : null}
             <ol className="grid gap-2">

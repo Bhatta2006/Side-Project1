@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Check } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { StatusIcon } from '@/components/socrat/status';
+import { playInGame } from '@/lib/game-sound';
 
 type Tone = 'idle' | 'correct' | 'wrong';
 
@@ -22,10 +23,11 @@ export function Choice({
   note,
   ...rest
 }: ComponentProps<'button'> & { selected?: boolean; tone?: Tone; marker?: ReactNode; icon?: ReactNode; note?: ReactNode }) {
-  const props = rest;
+  const { onClick, ...props } = rest;
   return (
     <button
       type="button"
+      data-slot="choice"
       data-selected={selected || undefined}
       data-tone={tone}
       className={cn(
@@ -39,6 +41,7 @@ export function Choice({
         className,
       )}
       {...props}
+      onClick={e => { if (!props.disabled) playInGame('tap'); onClick?.(e); }}
     >
       {marker !== undefined ? (
         <span
