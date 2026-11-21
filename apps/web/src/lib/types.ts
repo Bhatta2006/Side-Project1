@@ -106,6 +106,8 @@ export interface BillingStatus {
   plan: PlanId;
   usage: Record<'chat' | 'playground', { limit: number; used: number; window: 'day' | 'week' }>;
   free_concepts: string[] | null;
+  /** Every learner gets Pro's features (demo switch); plan and prices are unchanged. */
+  everyone_pro?: boolean;
   renews_at: number | null;
   cancel_at_period_end: boolean;
   prices: Record<'plus' | 'pro', Record<'month' | 'year', Record<'INR' | 'USD', number>>>;

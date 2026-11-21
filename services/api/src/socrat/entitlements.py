@@ -39,8 +39,12 @@ PLANS = {
 }
 
 
+# Set from SOCRAT_EVERYONE_PRO at startup: every learner gets Pro's features (hackathon demo,
+# 2026-11-21). Plans, prices and checkout are untouched; only the feature checks read it.
+EVERYONE_PRO = False
+
 # Set from SOCRAT_PLAYGROUND_FREE_PER_WEEK at startup: visuals a free learner may ask for.
-FREE_PLAYGROUND_PER_WEEK = 0
+FREE_PLAYGROUND_PER_WEEK = 10
 
 
 def limits(plan: str) -> dict[str, tuple[int, str]]:
@@ -67,6 +71,13 @@ def plan_of(db: Session, user_id: str, stamp: int | None = None) -> str:
     return paid
 
 
+def access_plan(db: Session, user_id: str, stamp: int | None = None) -> str:
+    """The plan whose features the learner gets: Pro for everyone while EVERYONE_PRO is on,
+    otherwise the plan they are on. Billing (what they pay, what they see on /pricing) keeps
+    using plan_of."""
+    return "pro" if EVERYONE_PRO else plan_of(db, user_id, stamp)
+
+
 def free_concepts(catalog: Catalog) -> set[str]:
     return {
         f"{course_id}:{concept}"
@@ -78,7 +89,7 @@ def free_concepts(catalog: Catalog) -> set[str]:
 
 def plan_locked(db: Session, catalog: Catalog, user_id: str, stamp: int) -> set[str]:
     """Concepts the learner's plan does not include."""
-    if not ENABLED or plan_of(db, user_id, stamp) != "free":
+    if not ENABLED or access_plan(db, user_id, stamp) != "free":
         return set()
     return set(catalog.concepts) - free_concepts(catalog)
 
@@ -89,7 +100,7 @@ def require_concept(db: Session, catalog: Catalog, user_id: str, concept: str, s
 
 
 def has(db: Session, user_id: str, feature: str, stamp: int | None = None) -> bool:
-    return not ENABLED or RANK[plan_of(db, user_id, stamp)] >= RANK[TIER[feature]]
+    return not ENABLED or RANK[access_plan(db, user_id, stamp)] >= RANK[TIER[feature]]
 
 
 def require(db: Session, user_id: str, feature: str, stamp: int | None = None):
@@ -142,7 +153,7 @@ def used(db: Session, user_id: str, feature: str, since: int) -> int:
 def enforce(db: Session, user_id: str, feature: str, stamp: int):
     if not ENABLED:
         return
-    limit, unit = limits(plan_of(db, user_id, stamp))[feature]
+    limit, unit = limits(access_plan(db, user_id, stamp))[feature]
     if limit == 0:
         raise HTTPException(402, "upgrade_required")
     since = window_start(db.get(User, user_id), unit, stamp)
@@ -151,7 +162,7 @@ def enforce(db: Session, user_id: str, feature: str, stamp: int):
 
 
 def usage(db: Session, user_id: str, stamp: int) -> dict:
-    plan = plan_of(db, user_id, stamp)
+    plan = access_plan(db, user_id, stamp)
     user = db.get(User, user_id)
     out = {}
     for feature, (limit, unit) in limits(plan).items():

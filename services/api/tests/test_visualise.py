@@ -12,6 +12,7 @@ from test_learner_api import client, login, onboard  # noqa: F401
 from test_shared_visuals import CONCEPT, second_learner, start, state
 
 from socrat import entitlements
+from socrat.config import Settings
 from socrat.explainer import shared
 from socrat.learn.routes import catalog
 from socrat.models import PlaygroundJob, SharedVisual
@@ -94,9 +95,7 @@ def test_show_me_this_part_is_off_by_default_and_then_cached_per_page(client, co
         assert db.scalars(select(PlaygroundJob.shared)).all() == [True]  # nobody's allowance
 
 
-def test_a_free_learner_gets_a_small_weekly_allowance_only_when_one_is_set(
-    client, configured, monkeypatch
-):
+def test_a_free_learner_gets_a_weekly_allowance_by_default(client, configured, monkeypatch):
     headers, _ = configured
     monkeypatch.setattr(entitlements, "ENABLED", True)  # plans on: this learner is on Free
 
@@ -104,8 +103,11 @@ def test_a_free_learner_gets_a_small_weekly_allowance_only_when_one_is_set(
         body = dict(prompt="Explain electromagnetic induction", request_id=str(uuid.uuid4()))
         return client.post("/api/v1/playground/generate", headers=headers, json=body)
 
-    assert entitlements.limits("free")["playground"] == (0, "day")
-    assert ask().status_code == 402  # as before
+    # Since 2026-11-21 the free plan can use the Playground out of the box (it was locked: 402).
+    assert Settings(environment="test").playground_free_per_week == 10
+    assert entitlements.limits("free")["playground"] == (10, "week")
+    monkeypatch.setattr(entitlements, "FREE_PLAYGROUND_PER_WEEK", 0)  # an operator can lock it
+    assert ask().status_code == 402
     monkeypatch.setattr(entitlements, "FREE_PLAYGROUND_PER_WEEK", 1)
     assert entitlements.limits("free")["playground"] == (1, "week")
     assert entitlements.limits("plus")["playground"] == (3, "day")  # paid plans are untouched

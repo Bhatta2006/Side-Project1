@@ -167,6 +167,11 @@ class Settings(DatabaseSettings):
     explainer_enabled: bool = True
     # Freemium plans (Razorpay Subscriptions). Off = no plan limits for anyone.
     billing_enabled: bool = False
+    # Every learner gets Pro's features (limits, topics, assessments) whatever plan they are on,
+    # so hackathon mentors can try the whole demo (owner, 2026-11-21). Plans, prices and
+    # checkout stay as they are. Set SOCRAT_EVERYONE_PRO=false to bring the plan limits back.
+    # Unset: on, except in tests (which check the real plan limits).
+    everyone_pro: bool | None = None
     razorpay_key_id: str = Field(
         default="", validation_alias=AliasChoices("socrat_razorpay_key_id", "razorpay_key_id")
     )
@@ -186,12 +191,18 @@ class Settings(DatabaseSettings):
     # 3D films need far more spatial reasoning than sketches: an optional stronger model (and
     # its prices, so usage is costed right) used only once a request is routed to 3D.
     explainer_3d_model: str = ""
-    # 3D is still being tested: only admin accounts may request it (and Auto never picks it for
-    # anyone else). Set false to open 3D to every learner.
-    explainer_3d_admin_only: bool = True
+    # 3D is open to every learner, free plan included (owner, 2026-11-21). Set true to limit it
+    # to admin accounts again (Auto then never picks it for anyone else). The film is data the
+    # host checks and plays (film.py), so no model-written code runs either way.
+    explainer_3d_admin_only: bool = False
     # Sketches as declarative data played by host code (explainer/sketch.py) instead of a
-    # model-written HTML page with scripts. Off until the owner switches it on.
-    explainer_sketch_declarative: bool = False
+    # model-written HTML page with scripts. On since 2026-11-21 (owner: make sketches fast and
+    # accurate): no model JavaScript runs, the spec gets deterministic accuracy checks, and the
+    # AI review runs after the sketch is shown. False brings back model-written HTML sketches.
+    explainer_sketch_declarative: bool = True
+    # Thinking effort for sketches and the Auto router (Vertex thinking level, Anthropic effort).
+    # Low keeps the first answer quick; 3D films keep the provider's own effort. "" = default.
+    explainer_sketch_effort: Literal["", "low", "medium", "high"] = "low"
     explainer_3d_price_input_per_mtok: float = Field(default=0, ge=0, le=1000)
     explainer_3d_price_output_per_mtok: float = Field(default=0, ge=0, le=1000)
     # Large models think before their first token; the tutor's short timeout is too tight.
@@ -203,9 +214,14 @@ class Settings(DatabaseSettings):
     # one visual per lesson.
     explainer_section_visuals: bool = False
     # Visuals a learner on the free plan may ask for in the Playground each week (their own
-    # questions; the shared lesson visuals are free for everyone already). 0: none, as before.
-    playground_free_per_week: int = Field(default=0, ge=0, le=20)
+    # questions; the shared lesson visuals are free for everyone already). 0: none (the free
+    # plan is locked out, as before 2026-11-21).
+    playground_free_per_week: int = Field(default=10, ge=0, le=20)
     explainer_concurrent_limit: int = Field(default=4, ge=1, le=16)
+    # Run queued Playground visuals in the API process as well as in socrat.worker (jobs.claim
+    # makes the two safe together). Unset: on in development, where no worker usually runs, so
+    # a local Playground does not sit queued forever; off elsewhere and in tests.
+    explainer_runner: bool | None = None
     explainer_sandbox_origin: str = ""
     explainer_checker_url: str = ""
     explainer_checker_secret: SecretStr = SecretStr("")
@@ -527,6 +543,10 @@ class Settings(DatabaseSettings):
             raise ValueError("SOCRAT_GEN_RELAXED_GATES is for local testing only")
         if self.environment == "test":
             self.gen_runner = False
+        if self.everyone_pro is None:
+            self.everyone_pro = self.environment != "test"
+        if self.explainer_runner is None:
+            self.explainer_runner = self.environment == "development"
         from socrat.coursegen.roles import check_roles, check_tiers
 
         check_roles(self.gen_roles)

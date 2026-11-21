@@ -62,8 +62,12 @@ def test_free_plan_limits_then_paid_unlocks(paid):
         with pytest.raises(HTTPException) as err:
             entitlements.require_concept(db, catalog, uid, locked, 0)
         assert err.value.status_code == 402
-        with pytest.raises(HTTPException) as err:
-            entitlements.enforce(db, uid, "playground", 1_800_000_000)
+        # Free has a weekly Playground allowance by default (2026-11-21); 0 locks it again.
+        entitlements.enforce(db, uid, "playground", 1_800_000_000)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(entitlements, "FREE_PLAYGROUND_PER_WEEK", 0)
+            with pytest.raises(HTTPException) as err:
+                entitlements.enforce(db, uid, "playground", 1_800_000_000)
         assert err.value.status_code == 402
         thread = AssistantThread(user_id=uid, scope="general")
         db.add(thread)
@@ -221,3 +225,26 @@ def test_free_learners_cannot_reach_paid_content_by_any_route(paid):
         assert not set(
             learn.practice_topics(db, catalog, enrollment, 0)
         ) - entitlements.free_concepts(catalog)
+
+
+def test_everyone_pro_gives_free_learners_pro_features_but_keeps_their_plan(paid):
+    """Hackathon demo switch (2026-11-21): Pro's features for all, prices and plans untouched."""
+    from socrat.config import Settings
+
+    assert Settings(environment="development").everyone_pro is True
+    assert Settings(environment="test").everyone_pro is False  # tests check the real limits
+    api, headers, _ = paid
+    uid = user_id(api)
+    catalog = default_catalog()
+    locked = next(f"algo:{c}" for m in catalog.course("algo").modules[2:] for c in m.concepts)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(entitlements, "EVERYONE_PRO", True)
+        with Session(api.app.state.engine) as db, db.begin():
+            assert entitlements.plan_of(db, uid) == "free"  # what they pay for is unchanged
+            assert entitlements.access_plan(db, uid) == "pro"
+            entitlements.require_concept(db, catalog, uid, locked, 0)  # no 402
+            entitlements.require(db, uid, "assessment")
+            assert entitlements.usage(db, uid, 0)["playground"]["limit"] == 15
+        status = api.get("/api/v1/billing/status", headers=headers).json()
+        assert status["plan"] == "free" and status["everyone_pro"] is True
+        assert status["free_concepts"] is None

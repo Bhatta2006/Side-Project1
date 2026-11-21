@@ -44,7 +44,6 @@ Remove a line only when the check it names has run.
 |---|---|
 | `test_admin_drafts.py` x3 | copy `content/courses`, removed with the built-in courses |
 | `test_local_backend.py`, `test_native_limits.py` (20) | no `g++` / `java` on this machine |
-| `test_explainer.py::test_artifact_validation_and_compiler_boundaries` | theme token (predates) |
 | `test_sourced_content.py::test_a_researched_lesson_is_sent_back...` | predates |
 
 ## Checked by code only where a person or model judges in practice
@@ -72,3 +71,29 @@ The Daybreak look of slices 1 and 2 was replaced the same day by the notebook pa
 | Contrast | Not measured with a tool: sticky-note tones, the dark-mode stones and the pencil trail | run an axe pass on Today, a quiz and Progress |
 | JS budget | Not measured against the 410 KB budget | `npm run build` and the CI budget check |
 | Playwright visual specs | Will differ from `gbuild/main` | re-baseline with the e2e re-seed |
+
+## Playground (2026-11-21: fixed, 3D for all, fast declarative sketches, Pro for everyone)
+
+What was broken: a free learner got 402 (`playground=(0, "day")` with billing on); a local API never
+ran Playground jobs (only `socrat.worker` claims them; `explainer_runner` now runs them in development);
+the web CSP framed visuals only from port 8000 (now `API_INTERNAL_URL`'s origin unless
+`NEXT_PUBLIC_EXPLAINER_SANDBOX_ORIGIN` is set); every one-variant declarative sketch failed validation
+(no input control: the host page now always has a step slider).
+
+Sketch latency, live, Vertex `gemini-3.8-flash`, 5 prompts run at once (binary search, stack, compound
+interest, photosynthesis, SQL LIKE). Before: the default model-written HTML path took 82-175 s per
+sketch (median 87 s), 2 of 5 cut off and repaired. The declarative path with default thinking and an
+inline AI review took 32-137 s (median 45 s). After (declarative on, `explainer_sketch_effort=low`, the AI
+review after delivery, deterministic checks): 13-34 s (median 32 s), 5 of 5 ready, 5 of 5 later
+reviews passed (v4 run). Medium effort was slower (19-118 s) and no more accurate.
+
+| Area | Not verified | To close it |
+|---|---|---|
+| Visual in the app frame | Seen only by opening the frame URL alone: the desktop app's browser pane blocks cross-host subframes (`ERR_BLOCKED_BY_CLIENT`), so the iframe inside `/playground` was not seen rendering | open `/playground` in a normal browser on the pitch setup and generate a sketch |
+| Sketch speed | 4 runs of 5 prompts plus 3 in the app; Gemini still sometimes writes broken JSON mid-object at low effort (1-2 repairs in some runs) | more prompts; a JSON schema for Vertex (`response_schema`) if repairs stay common |
+| JSON mode on Vertex | Turned off for sketches: with `response_mime_type=application/json` Gemini broke objects mid-way in this test | retest on a newer model |
+| Note-number check | Tuned on 10 live sketches; may reject a sketch whose note cites a number that is fine but not drawn (a percentage, a year) | watch `visual attempt ... note says` in the logs |
+| 3D for everyone | Tested with the scripted example film only; no live 3D film was generated in this change | one live 3D request as a free learner |
+| Pro for everyone (`SOCRAT_EVERYONE_PRO`, on outside tests) | Billing status, paywall welcome and limits checked by tests and the API; not every Pro-gated screen was clicked through | click through assessments and locked topics as a free learner |
+| Production runner | `explainer_runner` is off outside development; production still relies on `socrat.worker` | unchanged, but check the worker is deployed with the API |
+| Film parse | `film.py` still fails a film the model followed with stray text (the sketch parser now ignores it) | same `raw_decode` fix in `film.parse` |

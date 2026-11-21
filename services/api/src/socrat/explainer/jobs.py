@@ -136,8 +136,17 @@ async def run(engine: Engine, settings: Settings, job_id: str):
                     feature="playground",
                 )
 
-            provider = metered(provider_settings)
-            film_provider = metered(film_settings) if film_settings else None
+            # Sketches and routing think little, so the first answer is quick; films keep the
+            # full effort (their own model when one is configured).
+            sketch_settings = (
+                provider_settings.model_copy(update={"ai_effort": settings.explainer_sketch_effort})
+                if settings.explainer_sketch_effort
+                else provider_settings
+            )
+            provider = metered(sketch_settings)
+            film_provider = (
+                metered(film_settings or provider_settings) if mode != "sketch" else None
+            )
             async for event in generator.generate(
                 provider, provider_settings, prompt, language, level, mode, film_provider
             ):
@@ -172,6 +181,9 @@ async def run(engine: Engine, settings: Settings, job_id: str):
                     )
                     job.status = "ready"
                     record_event(db, user_id, "explainer.created", job_id)
+                if event["document"]["qa"].get("ai_review") == "pending":
+                    beater.cancel()  # the job is ready; the beat would cancel this task
+                    await review_after(engine, job_id, provider, event["document"])
                 return
             fail(engine, job_id, "playground_generation_invalid")
     except TimeoutError:
@@ -185,6 +197,45 @@ async def run(engine: Engine, settings: Settings, job_id: str):
         fail(engine, job_id, "playground_generation_unavailable")
     finally:
         beater.cancel()
+
+
+async def review_after(engine: Engine, artifact_id: str, provider, document: dict):
+    """The advisory AI review of a sketch the learner already has; its verdict replaces the
+    "pending" label on the saved visual. A failure leaves it "unavailable", never unshown."""
+    try:
+        verdict = await generator.audit(
+            provider, document["html"], document["request"], [], document.get("sketch")
+        )
+    except Exception:
+        log.exception("playground review after delivery failed")
+        verdict = {"ai_review": "unavailable"}
+    with Session(engine) as db, db.begin():
+        row = db.get(AssistantMessage, artifact_id)
+        if row is None:
+            return
+        content = json.loads(row.content)
+        content["qa"] = {**content.get("qa", {}), **verdict}
+        row.content = json.dumps(content)
+
+
+POLL_SECONDS = 1
+
+
+async def run_forever(engine: Engine, settings: Settings):
+    """Claim and run queued visuals in this process (settings.explainer_runner), next to or
+    instead of socrat.worker; claim() hands each job to one runner."""
+    running: set[asyncio.Task] = set()
+    while True:
+        try:
+            while len(running) < settings.explainer_concurrent_limit and (
+                job_id := await asyncio.to_thread(claim, engine)
+            ):
+                task = asyncio.create_task(run(engine, settings, job_id))
+                running.add(task)
+                task.add_done_callback(running.discard)
+        except Exception:
+            log.exception("playground_claim_failed")
+        await asyncio.sleep(POLL_SECONDS)
 
 
 def fail(engine: Engine, job_id: str, code: str):

@@ -112,8 +112,12 @@ def status(request: Request):
         return dict(
             enabled=entitlements.ENABLED,
             plan=plan,
+            # Pro's features for everyone (the demo switch): nothing is locked, no welcome paywall.
+            everyone_pro=entitlements.EVERYONE_PRO,
             usage=entitlements.usage(db, user.id, stamp),
-            free_concepts=None if paid else sorted(entitlements.free_concepts(catalog())),
+            free_concepts=None
+            if paid or entitlements.EVERYONE_PRO
+            else sorted(entitlements.free_concepts(catalog())),
             renews_at=sub.current_end if sub and paid else None,
             cancel_at_period_end=bool(sub and paid and sub.cancel_at_period_end),
             prices=PRICES,

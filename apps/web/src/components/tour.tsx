@@ -49,7 +49,7 @@ const STEPS: Step[] = [
   {
     route: '/today', nav: 'today', target: 'today-next',
     title: NAME.today,
-    body: 'Your plan for the day, sized to your daily minutes. This card is always your next lesson, check or problem. Start here each time you sit down.',
+    body: 'Your plan for the day, sized to your daily minutes. The glowing stone on your path is always your next lesson, check or problem. Start there each time you sit down.',
   },
   {
     route: '/today', target: 'tutor',
