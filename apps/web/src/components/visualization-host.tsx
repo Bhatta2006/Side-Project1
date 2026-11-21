@@ -81,6 +81,9 @@ const RENDERERS: Record<string, Renderer> = {
   ),
 };
 
+/** In-lesson exercises (engine/renderers.py INTERACTIONS). */
+const INTERACTIONS = new Set(['predict-reveal', 'step-through', 'order-steps', 'sort-buckets', 'fill-blank', 'match-pairs']);
+
 /** Renderers that download a library or call the server on every change; lite mode holds them. */
 const HEAVY = new Set(['function-plot', 'simulation', 'playground-visual']);
 
@@ -128,7 +131,8 @@ export function VisualizationHost({ spec, lesson }: { spec: VisualizationSpec; l
       <Guard spec={spec}>
         <div role="group" aria-label={spec.alt_text}>{render({ params: spec.params, spec, lesson })}</div>
       </Guard>
-      <figcaption className="mt-1 text-[13px] text-muted-foreground">{spec.purpose}</figcaption>
+      {/* An in-lesson exercise speaks for itself; its purpose is the designer's note, not the learner's. */}
+      {INTERACTIONS.has(spec.renderer) ? null : <figcaption className="mt-1 text-[13px] text-muted-foreground">{spec.purpose}</figcaption>}
     </figure>
   );
 }

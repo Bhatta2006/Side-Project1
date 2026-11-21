@@ -166,8 +166,8 @@ export function SortBuckets({ params, seed }: { params: P; seed: string }) {
       <Prompt text={params.prompt} />
       <ul className="grid gap-2">
         {items.map(item => (
-          <li key={item.text} className={cn(tile, 'grid gap-2 sm:flex sm:items-center', checked && (placed[item.text] === item.bucket ? good : bad))}>
-            <span className="flex-1">{codeSpans(item.text)}</span>
+          <li key={item.text} className={cn(tile, 'grid gap-2', checked && (placed[item.text] === item.bucket ? good : bad))}>
+            <span>{codeSpans(item.text)}</span>
             <span role="group" aria-label={`Category for ${item.text}`} className="flex flex-wrap gap-1">
               {buckets.map(b => (
                 <button
