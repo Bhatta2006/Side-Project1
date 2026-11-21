@@ -69,6 +69,8 @@ ROLE_EFFORT = {
     "onboarding": "low",
     "diagnostic": "low",
     "experience": "low",
+    # A short structured plan, on the first lesson's critical path (live: 15 s at high).
+    "director": "low",
 }
 
 # A person is waiting on these: a stalled call falls back (generic doors, no calibration, the
@@ -101,6 +103,7 @@ ROLE_TIER = {
     "intent": "fast",
     "onboarding": "fast",  # a visitor is waiting on it
     "experience": "fast",
+    "director": "fast",
 }
 
 

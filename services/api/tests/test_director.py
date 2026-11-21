@@ -181,3 +181,29 @@ def test_without_the_flag_no_plan_is_asked_for(client, published, web):
     assert run(client, script.make, web())
     assert script.prompts["director"] == []
     assert "LESSON PLAN" not in script.prompts["author"][0]
+
+
+def test_a_waiting_learner_gets_one_plan_try(client):
+    import asyncio
+
+    from socrat.coursegen import jobs
+
+    asked = []
+
+    class Reply:
+        data = {"thread": "", "sections": []}  # fails its checks
+        problem = ""
+        cost_usd = 0.0
+
+    async def ask(role, system, prompt, tokens):
+        asked.append(role)
+        return Reply()
+
+    state = client.app.state
+    with jobs.Session(state.engine) as db, db.begin():
+        db.add(jobs.GenerationJob(id="j1", kind="package", course_id="c", input={}, log=[]))
+    for tries, calls in ((1, 1), (2, 3)):
+        plan = asyncio.run(
+            jobs._direct(ask, state.engine, "j1", "", CONCEPT, [], (3, 6), "", tries)
+        )
+        assert plan is None and len(asked) == calls

@@ -1320,12 +1320,17 @@ async def run_package(
             [m.id for m in designs.allowed(course, brief.adapter)] if settings.gen_visuals else []
         )
         span = paging.pages if paging is not None else director.DEFAULT_PAGES
+        # A learner is waiting on the first lesson: one try, no second ask (a failed plan just
+        # means the lesson is written the old way).
+        tries = 1 if data.get("trigger") == "first" else 2
         plan = await _direct(
-            ask, engine, job_id, ctx, concept, interactions, span, "\n\n".join(who)
+            ask, engine, job_id, ctx, concept, interactions, span, "\n\n".join(who), tries
         )
         if plan is not None:
             ctx = f"{ctx}\n\n{director.author_block(plan)}"
 
+    designing: asyncio.Future | None = None  # the Experience Designer's call for this lesson
+    designed_for: str | None = None  # the lesson text it is designing for
     polished = False  # one extra round for imprecise facts, at most
     rounds = settings.gen_package_rounds
     fallback = None  # the first package that passed, kept while that round runs
@@ -1421,6 +1426,25 @@ async def run_package(
             atom_rules = pkg.ATOMS_MARKED if settings.gen_marked_answers else pkg.ATOMS
             asked["atoms"] = (atom_rules + note, prompt, 8000)
             parts["atoms"] = ask("atoms", *asked["atoms"], escalate=last and atoms is not None)
+        drafted = str(lesson.get("lesson", ""))
+        if settings.gen_visuals and designed_for != drafted:
+            # The designer needs only the lesson: it runs while the quiz and atoms are written
+            # (a rewritten lesson gets a fresh design; an unchanged one keeps its design).
+            designed_for = drafted
+            designing = asyncio.ensure_future(
+                add_visuals(
+                    ask,
+                    concept,
+                    course,
+                    drafted,
+                    engine,
+                    job_id,
+                    attempt,
+                    brief.adapter,
+                    "\n\n".join(who),
+                    director.designer_block(plan) if plan is not None else "",
+                )
+            )
         replies = dict(zip(parts, await asyncio.gather(*parts.values()), strict=True))
         # A quiz or atoms reply that is not readable JSON is re-asked once, at once and alone,
         # with the parse error. Before, it cost a whole round (3 by default), and the next round
@@ -1514,19 +1538,9 @@ async def run_package(
             status, findings = validation.assess(issues, None, None, {}, bar, adapter, [])
             report(attempt, status, findings)
             continue
-        if settings.gen_visuals:
-            live = await add_visuals(
-                ask,
-                live,
-                course,
-                str(lesson.get("lesson", "")),
-                engine,
-                job_id,
-                attempt,
-                brief.adapter,
-                "\n\n".join(who),
-                director.designer_block(plan) if plan is not None else "",
-            )
+        if designing is not None:
+            if visuals := await designing:
+                live = live.model_copy(update={"visuals": visuals})
         shown = {k: lesson.get(k) for k in ("lesson", "key_points", "pitfalls")}
         # The checkers see the code's real output (adapters' expected), not the author's claim.
         bundle = json.dumps(
@@ -1653,7 +1667,7 @@ async def run_package(
 
 async def add_visuals(
     ask,
-    live,
+    concept,
     course,
     lesson_text: str,
     engine,
@@ -1662,43 +1676,52 @@ async def add_visuals(
     chosen: str = "",
     learner: str = "",
     plan: str = "",
-):
-    """The Experience Designer step. Visuals only enrich a lesson, so a refusal, a bad reply or
-    specs that fail the registry leave the lesson as written (and say so in the log)."""
+) -> list:
+    """The Experience Designer step: the checked visuals for this lesson text. It needs only
+    the lesson, so it runs alongside the quiz and atoms. Visuals only enrich a lesson, so a
+    refusal, a bad reply or specs that fail the registry give none (and say so in the log)."""
     from socrat.engine import design
 
     if not design.allowed(course, chosen):
-        return live
+        return []
     try:
         reply = await ask(
             "experience",
             design.SYSTEM,
-            design.prompt(course, live, lesson_text, chosen, learner, plan),
+            design.prompt(course, concept, lesson_text, chosen, learner, plan),
             8000,
         )
     except ProviderError:
         _note(engine, job_id, {"role": "experience", "round": attempt, "event": "unavailable"})
-        return live
+        return []
     found = (reply.data or {}).get("visuals", [])
     kept, dropped = design.check(found, course, chosen, lesson_text)
     entry = {"role": "experience", "round": attempt, "visuals": len(kept), "dropped": dropped[:5]}
     _note(engine, job_id, entry, reply.cost_usd)
-    return live.model_copy(update={"visuals": kept}) if kept else live
+    return kept
 
 
 async def _direct(
-    ask, engine: Engine, job_id: str, ctx: str, concept, interactions, pages, learner: str
+    ask,
+    engine: Engine,
+    job_id: str,
+    ctx: str,
+    concept,
+    interactions,
+    pages,
+    learner: str,
+    tries: int = 2,
 ) -> dict | None:
-    """The Lesson Director's plan, checked by code; asked once more with the problems, then
-    given up on (the lesson is written without a plan)."""
+    """The Lesson Director's plan, checked by code; asked again with the problems up to
+    ``tries`` times, then given up on (the lesson is written without a plan)."""
     prompt = director.prompt(ctx, concept, interactions, pages, learner)
     problems: list[str] = []
-    for attempt in (1, 2):
+    for attempt in range(1, tries + 1):
         asked = prompt
         if problems:
             asked += "\n\nFix all of these in a complete reply:\n- " + "\n- ".join(problems)
         try:
-            reply = await ask("director", director.SYSTEM, asked, 4000)
+            reply = await ask("director", director.SYSTEM, asked, 2500)
         except ProviderError:
             _note(engine, job_id, {"role": "director", "event": "unavailable"})
             return None

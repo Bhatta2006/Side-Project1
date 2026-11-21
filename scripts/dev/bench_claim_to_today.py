@@ -116,7 +116,20 @@ def from_jobs(db_url: str, row: dict) -> dict:
         (e["at"] for e in log if e.get("event") in ("outline_saved", "outline_reused")), None
     )
     sizes = next((e for e in log if "modules" in e and "concepts" in e), {})
+    # When the first lesson's draft could be read (gen_first_lesson_preview), before its checks.
+    preview = None
+    for j in jobs:
+        if j.course_id == course and j.kind == "package":
+            jlog = json.loads(j.log) if isinstance(j.log, str) else j.log
+            at = next((e["at"] for e in jlog if e.get("event") == "preview_ready"), None)
+            if at is not None:
+                preview = (
+                    at - row["claimed_at"]
+                    if preview is None
+                    else min(preview, at - row["claimed_at"])
+                )
     return row | dict(
+        preview_s=preview,
         course=course,
         outline_end_s=end - row["claimed_at"] if end else None,
         modules=sizes.get("modules"),
@@ -128,13 +141,15 @@ def from_jobs(db_url: str, row: dict) -> dict:
 
 def table(rows: list[dict]) -> str:
     head = (
-        "| goal | mode | min | T1 s | T2 s | outline end s | outline $ | lessons $ | size | note |"
+        "| goal | mode | min | T1 s | preview s | T2 s | outline end s | outline $ | lessons $ "
+        "| size | note |"
     )
-    lines = [head, "|" + "---|" * 10]
+    lines = [head, "|" + "---|" * 11]
     for r in rows:
         cost = r.get("cost", {})
         lines.append(
             f"| {r['goal']} | {r['mode']} | {r['minutes']} | {r.get('t1_s', '')} | "
+            f"{r.get('preview_s') or ''} | "
             f"{r.get('t2_s', '')} | {r.get('outline_end_s', '')} | {cost.get('outline', '')} | "
             f"{cost.get('package', '')} | {r.get('modules', '')}/{r.get('concepts', '')} | "
             f"{r.get('error', '') or ('failed' if 'failed_s' in r else '')} |"
