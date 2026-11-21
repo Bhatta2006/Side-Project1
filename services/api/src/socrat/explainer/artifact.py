@@ -22,14 +22,13 @@ MAX_BYTES = 300_000
 
 
 def _font_faces() -> str:
-    """Socrat's own typefaces, inlined: the sandbox only accepts data: fonts."""
+    """Socrat's own typeface, inlined: the sandbox only accepts data: fonts. Visuals use the
+    app's normal sans only (owner, 2026-11-21: plain fonts, light frames), so the handwritten
+    face is no longer shipped in every frame (~35 KB less per visual)."""
     import base64
 
     faces = []
-    for family, name, weight in (
-        ("Geist", "geist-wght.woff2", "100 900"),
-        ("Delicious Handrawn", "delicious-handrawn-latin-400.woff2", "400"),
-    ):
+    for family, name, weight in (("Geist", "geist-wght.woff2", "100 900"),):
         path = REPO_ROOT / "apps/web/src/fonts" / name
         if path.exists():
             data = base64.b64encode(path.read_bytes()).decode("ascii")
@@ -233,7 +232,7 @@ def validate(raw: str) -> Document:
 
 BASE_STYLE = """
 :root{color-scheme:light dark;--background:Canvas;--foreground:CanvasText;--card:Canvas;--muted:ButtonFace;--muted-foreground:GrayText;--border:ButtonBorder;--primary:AccentColor;--primary-foreground:AccentColorText;--radius:.7rem}
-:root{--ink:var(--foreground);--pen:#CC2A24;--highlight:#F6E05E;--sans:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;--hand:"Delicious Handrawn","Segoe Print","Bradley Hand",cursive;--paper-lines:repeating-linear-gradient(to bottom,transparent 0,transparent 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 28px)}
+:root{--ink:var(--foreground);--pen:#CC2A24;--highlight:#F6E05E;--sans:"Geist",ui-sans-serif,system-ui,"Segoe UI",sans-serif;--hand:var(--sans);--paper-lines:repeating-linear-gradient(to bottom,transparent 0,transparent 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 27px,color-mix(in srgb,var(--foreground) 8%,transparent) 28px)}
 :root[style*="color-scheme: dark"]{--pen:#FF7D72;--highlight:#E9D53A}
 *{box-sizing:border-box}html,body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--sans)}body{padding:20px;line-height:1.55}button,input,select,textarea{font:inherit}button,input,select{min-height:44px}button{cursor:pointer}button:disabled{cursor:default;opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:3px}svg,canvas{max-width:100%}pre{overflow:auto}#visual{min-height:220px}#transcript{margin-top:24px}a{pointer-events:none}
 @media(max-width:600px){body{padding:12px}}

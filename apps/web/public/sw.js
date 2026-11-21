@@ -22,5 +22,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   if (request.method !== 'GET' || request.mode !== 'navigate') return;
+  // Only this site's own pages: a Playground visual is a frame from the sandbox origin, and
+  // re-fetching it here falls under the page's connect-src and blocks the visual.
+  if (new URL(request.url).origin !== self.location.origin) return;
   event.respondWith(fetch(request).catch(() => caches.match(OFFLINE)));
 });

@@ -32,7 +32,7 @@ export function PaywallHost() {
       if (!profile.enrollment) return;
       let seen = true;
       try { seen = localStorage.getItem(WELCOME_KEY + profile.id) !== null; localStorage.setItem(WELCOME_KEY + profile.id, '1'); } catch { /* storage unavailable: skip the welcome */ }
-      if (s.enabled && s.plan === 'free' && !seen) setReason(current => current ?? 'welcome');
+      if (s.enabled && s.plan === 'free' && !s.everyone_pro && !seen) setReason(current => current ?? 'welcome');
     }).catch(() => undefined);
   }, [profile]);
 

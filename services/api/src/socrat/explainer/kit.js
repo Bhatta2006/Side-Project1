@@ -13,7 +13,7 @@ const Sketch = (() => {
     return node;
   }
   const chipOf = c => (typeof c === 'object' ? c : { text: c });
-  const stroke = (color, width) => `fill:none;stroke:${color};stroke-width:${width || 2.4};stroke-linecap:round;stroke-linejoin:round`;
+  const stroke = (color, width) => `fill:none;stroke:${color};stroke-width:${width || 1.6};stroke-linecap:round;stroke-linejoin:round`;
   const fail = message => { throw new Error('Sketch: ' + message); };
   const toneColor = tone => (tone === 'pen' ? PEN : tone === 'primary' ? 'var(--primary)' : tone === 'muted' ? MUTED : INK);
 
@@ -24,23 +24,21 @@ const Sketch = (() => {
     const svg = el(host, 'svg', { viewBox: `0 0 ${W} 200`, role: 'img', 'aria-labelledby': 'sketch-desc' });
     svg.setAttribute('style', 'width:100%;height:auto;display:block');
     el(svg, 'desc', { id: 'sketch-desc' }, options.desc || 'A hand-drawn diagram; the note above it says what it shows.');
-    const defs = el(svg, 'defs', {});
-    const rough = el(defs, 'filter', { id: 'sketch-rough' });
-    el(rough, 'feTurbulence', { type: 'fractalNoise', baseFrequency: '0.03', numOctaves: '2', seed: '3' });
-    el(rough, 'feDisplacementMap', { in: 'SourceGraphic', scale: '2.2' });
-    const shapes = el(svg, 'g', { filter: 'url(#sketch-rough)' });
+    el(svg, 'defs', {});
+    // Clean strokes in the app's own font: no roughening filter, nothing heavy to draw.
+    const shapes = el(svg, 'g', {});
     const labels = el(svg, 'g', {});
     const probe = el(svg, 'text', { x: -999, y: -999, 'aria-hidden': 'true' });
     const measure = (text, size) => {
-      probe.setAttribute('style', `font-family:var(--hand);font-size:${size}px`);
+      probe.setAttribute('style', `font-family:var(--sans);font-size:${size}px`);
       probe.textContent = text;
       const width = probe.getComputedTextLength ? probe.getComputedTextLength() : 0;
       probe.textContent = '';
       return width || String(text).length * size * 0.58;
     };
     const text = (x, y, value, size, color, anchor) =>
-      el(labels, 'text', { x: x.toFixed(1), y: y.toFixed(1), 'text-anchor': anchor || 'middle', style: `font-family:var(--hand);font-size:${size}px;fill:${color || INK}` }, value);
-    // Text is measured in the hand font; if it was still loading, lay the last scene out again.
+      el(labels, 'text', { x: x.toFixed(1), y: y.toFixed(1), 'text-anchor': anchor || 'middle', style: `font-family:var(--sans);font-size:${size}px;fill:${color || INK}` }, value);
+    // Text is measured in the app font; if it was still loading, lay the last scene out again.
     let last = null;
     if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => { if (last) draw(last, { svg, shapes, labels, measure, text }); });
     return { draw: scene => { last = scene; return draw(scene, { svg, shapes, labels, measure, text }); } };
@@ -138,13 +136,13 @@ const Sketch = (() => {
         const values = b.row.items.map(it => Number(it.value) || 0), max = Math.max(1, ...values), room = b.h - 62;
         const barH = Math.max(4, (room * (Number(b.it.value) || 0)) / max), base = b.y + b.h - 30, bw = Math.min(b.w - 10, 56);
         const bx = b.x + (b.w - bw) / 2;
-        el(shapes, 'rect', { x: bx.toFixed(1), y: (base - barH).toFixed(1), width: bw.toFixed(1), height: barH.toFixed(1), rx: 4, style: `${stroke(color, hit ? 3.2 : 2.4)};fill:${active ? 'var(--highlight)' : CARD}` });
-        el(shapes, 'line', { x1: b.x, y1: base, x2: b.x + b.w, y2: base, style: stroke(MUTED, 1.6) });
+        el(shapes, 'rect', { x: bx.toFixed(1), y: (base - barH).toFixed(1), width: bw.toFixed(1), height: barH.toFixed(1), rx: 4, style: `${stroke(color, hit ? 2.2 : 1.5)};fill:${active ? 'var(--highlight)' : CARD}` });
+        el(shapes, 'line', { x1: b.x, y1: base, x2: b.x + b.w, y2: base, style: stroke(MUTED, 1.2) });
         text(b.x + b.w / 2, base - barH - 7, b.it.value, 16, ink);
         text(b.x + b.w / 2, b.y + b.h - 8, b.it.text ?? '', b.font, ink);
         continue;
       }
-      el(shapes, 'rect', { x: b.x.toFixed(1), y: b.y.toFixed(1), width: b.w.toFixed(1), height: b.h, rx: 11, style: `${stroke(color, hit ? 3.2 : 2.4)};fill:${active ? 'var(--highlight)' : CARD}` });
+      el(shapes, 'rect', { x: b.x.toFixed(1), y: b.y.toFixed(1), width: b.w.toFixed(1), height: b.h, rx: 11, style: `${stroke(color, hit ? 2.2 : 1.5)};fill:${active ? 'var(--highlight)' : CARD}` });
       const chips = b.it.chips || [];
       text(b.x + b.w / 2, chips.length ? b.y + 26 : b.y + b.h / 2 + b.font * 0.34, b.it.text ?? '', b.font, ink);
       const sizes = chips.map(c => Math.max(28, measure(String(chipOf(c).text), chipSize) + 14));
@@ -154,7 +152,7 @@ const Sketch = (() => {
         const chipId = `${b.id}#${n}`;
         boxes[chipId] = { id: chipId, x: cx, y: cy, w: cw, h: 28 };
         const on = chip.state === 'active';
-        el(shapes, 'rect', { x: cx.toFixed(1), y: cy, width: cw, height: 28, rx: 7, style: `${stroke(chip.state === 'hit' ? PEN : INK, 2)};fill:${on ? 'var(--highlight)' : CARD}` });
+        el(shapes, 'rect', { x: cx.toFixed(1), y: cy, width: cw, height: 28, rx: 7, style: `${stroke(chip.state === 'hit' ? PEN : INK, 1.25)};fill:${on ? 'var(--highlight)' : CARD}` });
         text(cx + cw / 2, cy + 20, chip.text, chipSize, on ? HILITE_TEXT : INK);
         cx += cw + 6;
       });
@@ -214,15 +212,15 @@ const Sketch = (() => {
     rows.forEach(row => (pointerLevels.get(row) || []).forEach((level, n) => level.forEach(({ id, cx, p }) => {
       const b = boxes[id];
       const color = toneColor(p.tone || 'pen'), top = b.y + b.h + 5, tip = top + 18 + 30 * n;
-      el(shapes, 'path', { d: `M${cx.toFixed(1)} ${(tip + 2).toFixed(1)}L${cx.toFixed(1)} ${top.toFixed(1)}`, style: stroke(color, 2.2) });
-      el(shapes, 'path', { d: `M${(cx - 6).toFixed(1)} ${(top + 9).toFixed(1)}L${cx.toFixed(1)} ${top.toFixed(1)}L${(cx + 6).toFixed(1)} ${(top + 9).toFixed(1)}`, style: stroke(color, 2.2) });
+      el(shapes, 'path', { d: `M${cx.toFixed(1)} ${(tip + 2).toFixed(1)}L${cx.toFixed(1)} ${top.toFixed(1)}`, style: stroke(color, 1.6) });
+      el(shapes, 'path', { d: `M${(cx - 6).toFixed(1)} ${(top + 9).toFixed(1)}L${cx.toFixed(1)} ${top.toFixed(1)}L${(cx + 6).toFixed(1)} ${(top + 9).toFixed(1)}`, style: stroke(color, 1.6) });
       text(cx, tip + 21, p.text, 18, color);
     })));
 
     // Focus: a pen outline hugging an item. Only an item that exists can be circled.
     focus.forEach(id => {
       const b = box(id);
-      el(shapes, 'rect', { x: (b.x - 7).toFixed(1), y: (b.y - 7).toFixed(1), width: (b.w + 14).toFixed(1), height: (b.h + 14).toFixed(1), rx: 14, style: stroke(PEN, 3) });
+      el(shapes, 'rect', { x: (b.x - 7).toFixed(1), y: (b.y - 7).toFixed(1), width: (b.w + 14).toFixed(1), height: (b.h + 14).toFixed(1), rx: 14, style: stroke(PEN, 2) });
     });
     // Left gutter labels, centered on the row.
     rows.forEach(row => {

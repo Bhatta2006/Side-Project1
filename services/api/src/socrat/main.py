@@ -101,6 +101,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             asyncio.create_task(coursegen_jobs.run_forever(engine, settings, default_catalog))
             for _ in range(settings.gen_runner_concurrency if settings.gen_runner else 0)
         ]
+        if settings.explainer_runner:
+            from socrat.explainer import jobs as explainer_jobs
+
+            generation.append(asyncio.create_task(explainer_jobs.run_forever(engine, settings)))
         # Parsing the catalog takes seconds; do it at start so the first learner does not pay for
         # it (requests that arrive meanwhile wait for this one load, see single_flight).
         if settings.prewarm_content:
@@ -169,6 +173,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     entitlements.ENABLED = settings.billing_enabled
     streaks.EXTRAS = settings.streak_plus_enabled
     entitlements.FREE_PLAYGROUND_PER_WEEK = settings.playground_free_per_week
+    entitlements.EVERYONE_PRO = settings.everyone_pro
     from socrat.coursegen import prefetch
 
     prefetch.AHEAD = settings.gen_lessons_ahead

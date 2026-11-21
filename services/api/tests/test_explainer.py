@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from test_learner_api import client, login, onboard  # noqa: F401
 
+from socrat import entitlements
 from socrat.assistant.gateway import Event
 from socrat.config import Settings
 from socrat.explainer import artifact, generator, jobs, routes
@@ -21,6 +22,8 @@ from socrat.models import AssistantMessage, PlaygroundJob
 
 HTML = (Path(__file__).parent / "fixtures/visual.html").read_text(encoding="utf-8")
 QA = dict(ok=True, step_count=4, checks=["working-interaction"])
+# Most of these tests exercise model-written HTML sketches; declarative ones: test_sketch_spec.py.
+HTML_SKETCHES = Settings(environment="test", explainer_sketch_declarative=False)
 
 
 class Provider:
@@ -42,6 +45,8 @@ def configured(client, monkeypatch):  # noqa: F811
     client.app.state.settings.ai_provider = "openai"
     # The general tests exercise 3D itself; the restriction has its own test below.
     client.app.state.settings.explainer_3d_admin_only = False
+    # These tests feed model-written HTML; declarative sketches have test_sketch_spec.py.
+    client.app.state.settings.explainer_sketch_declarative = False
     provider = Provider([HTML] * 20)
     monkeypatch.setattr(jobs, "make_provider", lambda _, **kwargs: provider)
 
@@ -171,7 +176,7 @@ def test_generate_has_no_prescribed_examples_and_repairs_invalid_html(monkeypatc
             event
             async for event in generator.generate(
                 provider,
-                Settings(environment="test"),
+                HTML_SKETCHES,
                 "Explain the CAP theorem with interactive server failures",
                 "python",
                 "deep",
@@ -233,7 +238,7 @@ def test_reviewer_outage_does_not_discard_a_visual_that_passed_the_browser_check
         return [
             event
             async for event in generator.generate(
-                provider, Settings(environment="test"), "Explain a stack", "python", "standard"
+                provider, HTML_SKETCHES, "Explain a stack", "python", "standard"
             )
         ]
 
@@ -262,7 +267,7 @@ def test_ai_review_findings_flag_the_visual_instead_of_regenerating(monkeypatch)
         return [
             event
             async for event in generator.generate(
-                provider, Settings(environment="test"), request, "python", "standard"
+                provider, HTML_SKETCHES, request, "python", "standard"
             )
         ]
 
@@ -294,7 +299,7 @@ def test_checker_rejection_restarts_the_steps_and_names_the_failed_step(monkeypa
         return [
             event
             async for event in generator.generate(
-                provider, Settings(environment="test"), "Explain a queue", "python", "standard"
+                provider, HTML_SKETCHES, "Explain a queue", "python", "standard"
             )
         ]
 
@@ -492,9 +497,11 @@ def test_visual_quota_and_model_override_do_not_change_tutor_settings(
     payload = {"prompt": "Explain a cellular process visually"}
     first = generate(client, headers, payload)
     assert first["artifact"]["model"] == "visual-coder-model"
-    assert received == [
-        ("visual-coder-model", {"chat_template_kwargs": {"enable_thinking": False}})
-    ]
+    # A sketch provider (low effort) and, since Auto may pick 3D, a full-effort one for films.
+    assert received and all(
+        r == ("visual-coder-model", {"chat_template_kwargs": {"enable_thinking": False}})
+        for r in received
+    )
     assert client.app.state.settings.openai_model == "original-tutor-model"
     second = client.post("/api/v1/playground/generate", headers=headers, json=payload)
     assert second.status_code == 429 and second.json()["error"]["code"] == "playground_daily_limit"
@@ -540,7 +547,9 @@ def test_prompt_skeleton_passes_the_validator_and_asks_for_a_hand_drawn_visual()
     compiled, _ = artifact.compile_document(generator.SKELETON, "c", "http://host.socrat.invalid")
     assert "--paper-lines" in compiled and "--pen" in compiled
     # The host's kit does the layout and arrives before the generated script that calls it.
-    assert "feTurbulence" in artifact.KIT
+    # Plain look (2026-11-21): the app's sans font, no roughening filter, no handwritten face.
+    assert "feTurbulence" not in artifact.KIT and "var(--sans)" in artifact.KIT
+    assert "Delicious Handrawn" not in compiled
     assert compiled.index("const Sketch") < compiled.index("Sketch.mount")
 
 
@@ -707,7 +716,7 @@ def test_generate_selects_the_3d_prompt_and_data_by_mode(monkeypatch):
             event
             async for event in generator.generate(
                 provider,
-                Settings(environment="test"),
+                HTML_SKETCHES,
                 "Explain how a jet engine makes thrust",
                 "python",
                 "standard",
@@ -748,7 +757,7 @@ def test_a_broken_film_is_repaired_with_the_exact_problem(monkeypatch):
             event
             async for event in generator.generate(
                 provider,
-                Settings(environment="test"),
+                HTML_SKETCHES,
                 "How does a jet engine work?",
                 "python",
                 "standard",
@@ -785,7 +794,7 @@ def test_auto_mode_lets_the_prompt_pick_the_medium(monkeypatch, routed, expected
             event
             async for event in generator.generate(
                 provider,
-                Settings(environment="test"),
+                HTML_SKETCHES,
                 "How does a jet engine work?",
                 "python",
                 "standard",
@@ -800,7 +809,26 @@ def test_auto_mode_lets_the_prompt_pick_the_medium(monkeypatch, routed, expected
     assert events[-1]["document"]["mode"] == expected
 
 
-def test_3d_is_admin_only_while_it_is_tested(client, configured):  # noqa: F811
+def test_3d_is_open_to_every_learner_by_default(client, configured, monkeypatch):  # noqa: F811
+    """Owner, 2026-11-21: 3D for everyone, free plan included. Plans are on and this learner
+    is on Free: the mode picker is offered and an explicit 3D request is accepted."""
+    headers, provider = configured
+    assert Settings(environment="test").explainer_3d_admin_only is False
+    monkeypatch.setattr(entitlements, "ENABLED", True)
+    monkeypatch.setattr(entitlements, "FREE_PLAYGROUND_PER_WEEK", 10)
+    assert client.get("/api/v1/playground/artifacts").json()["three_d"] is True
+    provider.responses = iter([generator.FILM_EXAMPLE] + [HTML] * 20)
+    job = generate(
+        client,
+        headers,
+        dict(prompt="How does a jet engine work?", request_id=str(uuid.uuid4()), mode="3d"),
+    )
+    assert job["status"] == "ready" and job["artifact"]["mode"] == "3d"
+    # The film is still data the host checks: a film that breaks the spec never ships.
+    assert job["artifact"]["qa"]
+
+
+def test_3d_can_be_limited_to_admins_again(client, configured):  # noqa: F811
     headers, provider = configured
     settings = client.app.state.settings
     settings.explainer_3d_admin_only = True

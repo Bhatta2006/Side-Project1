@@ -178,6 +178,8 @@ def test_every_plan_can_watch_and_fill_without_spending_its_own_allowance(
 
     headers, provider = configured
     monkeypatch.setattr(entitlements, "ENABLED", True)  # plans on: this learner is on Free
+    # Even with the free Playground allowance switched off, shared visuals stay open.
+    monkeypatch.setattr(entitlements, "FREE_PLAYGROUND_PER_WEEK", 0)
     own = dict(prompt="Explain electromagnetic induction", request_id=str(uuid.uuid4()))
     assert client.post("/api/v1/playground/generate", headers=headers, json=own).status_code == 402
 
