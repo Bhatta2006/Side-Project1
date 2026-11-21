@@ -16,14 +16,14 @@ import { cn } from '@/lib/utils';
 type P = Record<string, any>;
 
 const tile = 'rounded-lg border px-3 py-2 text-left text-sm transition-colors';
-const good = 'border-emerald-600/60 bg-emerald-600/10';
-const bad = 'border-red-600/60 bg-red-600/10';
+const good = 'border-db-correct bg-db-correct-tint';
+const bad = 'border-db-wrong bg-db-wrong-tint';
 
 function Result({ right, total, children }: { right: number; total: number; children?: ReactNode }) {
   const all = right === total;
   return (
     <div role="status" aria-live="polite" className="mt-3 grid gap-2 text-sm">
-      <p className={cn('font-semibold', all ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground')}>
+      <p className={cn('font-semibold', all ? 'text-db-correct-ink' : 'text-foreground')}>
         {all ? 'All right.' : `${right} of ${total} right.`}
       </p>
       {children}
