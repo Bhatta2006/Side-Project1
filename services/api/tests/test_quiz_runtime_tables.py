@@ -35,7 +35,7 @@ def migrated(tmp_path, revision="head"):
 
 def test_upgrade_creates_the_tables_and_downgrade_removes_only_them(tmp_path):
     config, engine = migrated(tmp_path)
-    assert SCHEMA_REVISION == "0052_learner_profile"
+    assert SCHEMA_REVISION == "0053_lesson_illustrations"
     before = set(sa.inspect(engine).get_table_names())
     assert TABLES <= before
     command.downgrade(config, "0008_product_tour")
@@ -56,6 +56,7 @@ def test_upgrade_creates_the_tables_and_downgrade_removes_only_them(tmp_path):
         "generated_concepts",
         "generation_jobs",
         "shared_visuals",
+        "lesson_illustrations",
         "learning_requests",
         "creator_perks",
         "course_reports",

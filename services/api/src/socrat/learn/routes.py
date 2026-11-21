@@ -813,6 +813,8 @@ def concept(qualified: str, request: Request, locale: str | None = None):
         shown = localized.overlay(db, qualified, cat.concept(qualified), tag, view)
         # Whether each page of the lesson offers "show me this part" (explainer/shared.py).
         shown["section_visuals"] = bool(request.app.state.settings.explainer_section_visuals)
+        # Whether "Listen" may ask the server for a Gemini voice (learn/speech.py).
+        shown["speech"] = bool(request.app.state.settings.lesson_speech)
         return shown
 
 
@@ -820,20 +822,28 @@ def concept(qualified: str, request: Request, locale: str | None = None):
 async def concept_images(qualified: str, request: Request):
     """Pictures about this lesson, each with its credit and source link (learn/images.py)."""
     settings = request.app.state.settings
-    if not settings.lesson_images:
+    if not (settings.lesson_images or settings.gen_illustrations):
         raise HTTPException(404, "not_found")
     cat = catalog()
     if qualified not in cat.concepts:
         raise HTTPException(404, "not_found")
+    concept = cat.concept(qualified)
+    course_id, concept_id = qualified.split(":", 1)
     with Session(engine(request)) as db:
         user = user_of(request, db)
         guard_instruction(db, cat, user, qualified)
-    from socrat.learn import images
+        # Pictures drawn for this lesson version; listed last so they win their section.
+        from socrat.coursegen import illustrate
 
-    concept = cat.concept(qualified)
-    course = cat.course(qualified.split(":", 1)[0])
-    query = images.query_for(concept.title, course.title)
-    return {"items": await images.find(qualified, query, settings, lesson=concept.lesson)}
+        version = concept.provenance.version if concept.provenance else 0
+        drawn = illustrate.listed(db, course_id, concept_id, version)
+    found: list[dict] = []
+    if settings.lesson_images:
+        from socrat.learn import images
+
+        query = images.query_for(concept.title, cat.course(course_id).title)
+        found = await images.find(qualified, query, settings, lesson=concept.lesson)
+    return {"items": [*found, *drawn]}
 
 
 @router.post("/concepts/{qualified}/explain")

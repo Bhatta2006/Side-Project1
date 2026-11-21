@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -1148,3 +1149,24 @@ class ResourceHealth(Base):
     last_ok_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_checked_at: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(8), default="ok")  # ok | failing | dead
+
+
+class LessonIllustration(Base):
+    """A generated picture for one section of a lesson version (coursegen/illustrate.py).
+    Served by ``GET /api/v1/illustrations/{id}``; a new lesson version gets its own."""
+
+    __tablename__ = "lesson_illustrations"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    course_id: Mapped[str] = mapped_column(String(80))
+    concept_id: Mapped[str] = mapped_column(String(80))
+    version: Mapped[int] = mapped_column(Integer)
+    section: Mapped[str] = mapped_column(String(200))
+    caption: Mapped[str] = mapped_column(String(300))
+    alt: Mapped[str] = mapped_column(String(600))
+    mime: Mapped[str] = mapped_column(String(40))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    model: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (
+        Index("ix_lesson_illustrations_concept", "course_id", "concept_id", "version"),
+    )

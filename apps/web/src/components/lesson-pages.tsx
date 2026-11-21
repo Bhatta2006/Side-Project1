@@ -35,7 +35,7 @@ export type ExtraPage = { key: string; title: string; node: ReactNode };
  * pages of their own, then the recap. Page sizes were chosen for this learner when the lesson
  * was written. "Show the whole lesson" keeps the single scroll for anyone who prefers it.
  */
-export function LessonPages({ id, source, language, extra = [], recap, onPage, tool, figure }: {
+export function LessonPages({ id, source, language, extra = [], recap, onPage, tool, figure, inline }: {
   id: string;
   source: string;
   language?: string;
@@ -47,6 +47,8 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
   tool?: (index: number, title: string) => ReactNode;
   /** A picture for a section, by its heading: drawn inside the text, after its first paragraph. */
   figure?: (title: string) => ReactNode;
+  /** Interactive elements that belong to a section, by its heading: shown at the end of its page. */
+  inline?: (title: string) => ReactNode;
 }) {
   const reading = useMemo(() => splitPages(source), [source]);
   const total = reading.length + extra.length + 1;
@@ -111,8 +113,11 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
       <div className="max-w-[68ch]">
         {total > 2 ? <div className="mb-4 flex justify-end">{toggle}</div> : null}
         <div id="step-lesson">
-          {figure ? reading.map((p, i) => (
-            <Section key={i} body={p.title ? `## ${p.title}\n\n${p.body}` : p.body} node={isCheckPage(p) ? null : figure(p.title)} language={language} />
+          {figure || inline ? reading.map((p, i) => (
+            <div key={i}>
+              <Section body={p.title ? `## ${p.title}\n\n${p.body}` : p.body} node={figure && !isCheckPage(p) ? figure(p.title) : null} language={language} />
+              {inline && !isCheckPage(p) ? inline(p.title) : null}
+            </div>
           )) : <Markdown source={source} language={language} rich />}
         </div>
         {extra.map(p => <div key={p.key} className="mt-8">{p.node}</div>)}
@@ -169,6 +174,7 @@ export function LessonPages({ id, source, language, extra = [], recap, onPage, t
           </h2>
         ) : <h2 id="lesson-page-title" ref={heading} tabIndex={-1} className="sr-only">Lesson</h2>}
         {page ? <Section body={page.body} node={figure && !isCheckPage(page) ? figure(page.title) : null} language={language} /> : onExtra ? extra[index - reading.length].node : recap}
+        {page && inline && !isCheckPage(page) ? inline(page.title) : null}
         {page && tool && !isCheckPage(page) ? <div className="mt-6">{tool(index, page.title)}</div> : null}
       </section>
 

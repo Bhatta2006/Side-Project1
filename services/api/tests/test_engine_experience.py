@@ -135,3 +135,101 @@ def test_a_concept_cannot_carry_an_unregistered_or_malformed_visual():
     for broken in (dict(GOOD_MAP, renderer="nope"), dict(GOOD_MAP, params={})):
         with pytest.raises(ValueError):
             Concept.model_validate(base | dict(visuals=[broken]))
+
+
+FILL = dict(
+    renderer="fill-blank",
+    section="Part 1",
+    params=dict(text="A model learns its [[rule|rules]] from [[examples]]."),
+    purpose="Recall where a model's rule comes from",
+    fallback_text="A model learns its rule from examples.",
+    alt_text="A sentence with two gaps to fill.",
+)
+ORDER = dict(
+    renderer="order-steps",
+    section="part 2",  # matched to the heading whatever its case and punctuation
+    params=dict(prompt="Put the steps in order.", items=["Collect data", "Train", "Test"]),
+    purpose="Order the steps of building a model",
+    fallback_text="Collect data, then train, then test.",
+    alt_text="Three steps to put in order.",
+)
+
+
+def test_interactions_are_placed_in_the_lesson_sections(client, published, web):
+    same_section = dict(FILL, section="Part 1", params=dict(text="Data is [[examples]]."))
+    nowhere = dict(GOOD_MAP, section="A heading the lesson does not have")
+    broken = dict(ORDER, section="Part 3", params=dict(prompt="Order.", items=["a", "a", "b"]))
+    designer = script(visuals=[FILL, same_section, ORDER, nowhere, broken])
+    live = release(client, published, web, designer)
+    assert [(v.renderer, v.section) for v in live.visuals] == [
+        ("fill-blank", "Part 1"),
+        ("order-steps", "Part 2"),
+        ("concept-map", ""),  # unknown section: shown after the lesson, as before
+    ]
+    offered = designer.prompts[0]
+    assert "fill-blank" in offered and "- Part 0" in offered and "<learner>" in offered
+
+
+@pytest.mark.parametrize(
+    "renderer, params",
+    [
+        (
+            "predict-reveal",
+            dict(prompt="What happens next?", options=["a", "b"], answer=2, explanation="Because."),
+        ),
+        (
+            "predict-reveal",
+            dict(prompt="What happens next?", options=["a", "A"], answer=0, explanation="Because."),
+        ),
+        (
+            "sort-buckets",
+            dict(
+                prompt="Sort these.",
+                buckets=["x", "y"],
+                items=[
+                    dict(text="1", bucket="x"),
+                    dict(text="2", bucket="x"),
+                    dict(text="3", bucket="z"),
+                ],
+            ),
+        ),
+        (
+            "sort-buckets",
+            dict(
+                prompt="Sort these.",
+                buckets=["x", "y"],
+                items=[dict(text=str(i), bucket="x") for i in range(3)],
+            ),
+        ),
+        ("fill-blank", dict(text="No blanks in this sentence.")),
+        ("fill-blank", dict(text="An empty [[ ]] blank.")),
+        (
+            "match-pairs",
+            dict(
+                prompt="Match them.",
+                pairs=[
+                    dict(left="a", right="1"),
+                    dict(left="a", right="2"),
+                    dict(left="b", right="3"),
+                ],
+            ),
+        ),
+        ("step-through", dict(steps=[dict(body="only one")])),
+    ],
+)
+def test_an_inconsistent_answer_key_is_rejected(renderer, params):
+    spec = dict(FILL, renderer=renderer, params=params)
+    from socrat.engine import renderers
+
+    assert renderers.validate_spec(spec)
+
+
+def test_interactions_are_offered_in_every_subject_and_never_count_as_mastery():
+    from socrat.engine import domains, renderers
+
+    manifests = renderers.all_manifests()
+    assert all(manifests[r].evidence == "exposure" for r in renderers.INTERACTIONS)
+    for adapter in domains.ADAPTERS:
+        course = default_catalog().course("basics")
+        offered = {m.id for m in design.allowed(course, adapter)}
+        assert set(renderers.INTERACTIONS) <= offered

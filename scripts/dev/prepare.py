@@ -67,6 +67,9 @@ for feature in (
     "REMINDERS",
 ):
     values["SOCRAT_" + feature + "_ENABLED"] = "true"
+# Settings added by hand (feature flags under test) survive a restart.
+for name, value in old.items():
+    values.setdefault(name, value)
 (ROOT / ".cache").mkdir(exist_ok=True)
 path.write_text("\n".join(name + "=" + json.dumps(value) for name, value in values.items()) + "\n")
 path.chmod(0o600)

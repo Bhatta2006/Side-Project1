@@ -40,6 +40,7 @@ ROLES = {
     "extractor",  # sources -> a root unit's reusable material (coursegen/brain/researcher.py)
     "diagnostic",  # a short placement quiz for a learner's own course
     "experience",  # picks registered visuals/labs for a lesson (never writes code)
+    "director",  # plans one lesson's sections before it is written (coursegen/director.py)
     "intent",  # a learner's free-text request -> a structured intent
     "onboarding",  # Lesson 0: starter scenarios and a two-step calibration
     "translator",  # lesson text -> another language, under placeholder and glossary checks
@@ -229,9 +230,17 @@ _LATEX = re.compile(
 _MATH_SPAN = re.compile(r"\$\$.+?\$\$|\$[^$]+?\$", re.DOTALL)
 
 
+# An odd run of backslashes followed by a character JSON cannot escape (\s of \sigma, \{, \l of
+# \land, \u not followed by four hex digits): invalid JSON that would fail the whole reply. A
+# live run lost a lesson round to it (2026-11-21). Doubling the last backslash is always safe.
+_INVALID_ESCAPE = re.compile(r'(?<!\\)((?:\\\\)*)\\(?=[^"\\/bfnrtu]|u(?![0-9a-fA-F]{4}))')
+
+
 def keep_latex(raw: str) -> str:
-    """Raw JSON with single backslashes of LaTeX commands inside maths doubled."""
-    return _MATH_SPAN.sub(lambda m: _LATEX.sub(r"\\\\", m.group(0)), raw)
+    """Raw JSON with LaTeX backslashes kept: commands inside maths that JSON would silently
+    read as escapes (\\frac, \\beta), and anywhere a backslash JSON cannot read (\\sigma)."""
+    raw = _MATH_SPAN.sub(lambda m: _LATEX.sub(r"\\\\", m.group(0)), raw)
+    return _INVALID_ESCAPE.sub(r"\1\\\\", raw)
 
 
 def parse_json(text: str) -> tuple[dict | None, str]:

@@ -41,8 +41,10 @@ from socrat.catalog.registry import Catalog, CatalogError
 from socrat.catalog.schema import Citation
 from socrat.config import Settings
 from socrat.coursegen import (
+    director,
     execute,
     fetch,
+    illustrate,
     learner_plan,
     prefetch,
     research,
@@ -1146,6 +1148,11 @@ async def run_package(
             quizzed = learner_hook.quiz_block(db, course_id, now())
     if shaped:
         ctx = f"{ctx}\n\n{shaped}"
+    # What the Experience Designer knows of the learner: who the course is for, plus this
+    # learner's own module brief and Lesson 0 plan on a private course.
+    who = [f"Learners: {brief.audience}. Already know: {brief.background or 'see the lesson'}"]
+    if shaped:
+        who.append(shaped)
     # Lesson 0 (Brief.plan): only while the course is still read by its learner alone, so a
     # course shared later stops carrying their words, door and sample.
     probe: list[str] = []
@@ -1158,6 +1165,7 @@ async def run_package(
             probe = [gap for gap, cid in mapped.items() if cid == concept_id][:1]
             block = learner_plan.data_block(brief.plan, probe)
             ctx = f"{ctx}\n\n{block}\n{learner_plan.LESSON_RULES}"
+            who.append(block)
     quiz_extra = "\n\n".join(
         part
         for part in (
@@ -1292,12 +1300,31 @@ async def run_package(
                     enqueue_once(db, "exam", course_id, {"trigger": "release"}, None, module)
             if settings.gen_review_variants:
                 enqueue_once(db, "variants", course_id, {"trigger": "release"}, None, concept_id)
+            if settings.gen_illustrations and plan and (drawn := illustrate.wanted(plan)):
+                order = {"trigger": "release", "pictures": drawn, "thread": plan["thread"]}
+                enqueue_once(db, "illustrate", course_id, order, None, concept_id)
             if project_due(db, course, concept_id):
                 enqueue_once(db, "project", course_id, {"trigger": "release"}, None, concept.module)
         event = {"role": "system", "event": "released", "calls": calls}
         if wants and not exercise:
             event["exercise"] = "waiting for the execution service"
         _note(engine, job_id, event, state="done")
+
+    # The Lesson Director's plan (sections, running example, interactions, pictures), checked
+    # by code. None: written the old way.
+    plan = None
+    if settings.gen_lesson_director and not data.get("previous"):
+        from socrat.engine import design as designs
+
+        interactions = (
+            [m.id for m in designs.allowed(course, brief.adapter)] if settings.gen_visuals else []
+        )
+        span = paging.pages if paging is not None else director.DEFAULT_PAGES
+        plan = await _direct(
+            ask, engine, job_id, ctx, concept, interactions, span, "\n\n".join(who)
+        )
+        if plan is not None:
+            ctx = f"{ctx}\n\n{director.author_block(plan)}"
 
     polished = False  # one extra round for imprecise facts, at most
     rounds = settings.gen_package_rounds
@@ -1330,6 +1357,8 @@ async def run_package(
                     if isinstance(r, dict) and r.get("url") in verified
                 ]
             issues = pkg.check_lesson(concept, course, lesson, style, paging)
+            if plan is not None:
+                issues += director.heading_issues(str(lesson.get("lesson", "")), plan)
             issues += research.check(str(lesson.get("lesson", "")), cited)
             # A dead link is dropped, not a reason for a new round, while the live ones and the
             # researcher's sources still make the two a lesson needs.
@@ -1495,6 +1524,8 @@ async def run_package(
                 job_id,
                 attempt,
                 brief.adapter,
+                "\n\n".join(who),
+                director.designer_block(plan) if plan is not None else "",
             )
         shown = {k: lesson.get(k) for k in ("lesson", "key_points", "pitfalls")}
         # The checkers see the code's real output (adapters' expected), not the author's claim.
@@ -1621,7 +1652,16 @@ async def run_package(
 
 
 async def add_visuals(
-    ask, live, course, lesson_text: str, engine, job_id: str, attempt: int, chosen: str = ""
+    ask,
+    live,
+    course,
+    lesson_text: str,
+    engine,
+    job_id: str,
+    attempt: int,
+    chosen: str = "",
+    learner: str = "",
+    plan: str = "",
 ):
     """The Experience Designer step. Visuals only enrich a lesson, so a refusal, a bad reply or
     specs that fail the registry leave the lesson as written (and say so in the log)."""
@@ -1631,15 +1671,51 @@ async def add_visuals(
         return live
     try:
         reply = await ask(
-            "experience", design.SYSTEM, design.prompt(course, live, lesson_text, chosen), 3000
+            "experience",
+            design.SYSTEM,
+            design.prompt(course, live, lesson_text, chosen, learner, plan),
+            8000,
         )
     except ProviderError:
         _note(engine, job_id, {"role": "experience", "round": attempt, "event": "unavailable"})
         return live
-    kept, dropped = design.check((reply.data or {}).get("visuals", []), course, chosen)
+    found = (reply.data or {}).get("visuals", [])
+    kept, dropped = design.check(found, course, chosen, lesson_text)
     entry = {"role": "experience", "round": attempt, "visuals": len(kept), "dropped": dropped[:5]}
     _note(engine, job_id, entry, reply.cost_usd)
     return live.model_copy(update={"visuals": kept}) if kept else live
+
+
+async def _direct(
+    ask, engine: Engine, job_id: str, ctx: str, concept, interactions, pages, learner: str
+) -> dict | None:
+    """The Lesson Director's plan, checked by code; asked once more with the problems, then
+    given up on (the lesson is written without a plan)."""
+    prompt = director.prompt(ctx, concept, interactions, pages, learner)
+    problems: list[str] = []
+    for attempt in (1, 2):
+        asked = prompt
+        if problems:
+            asked += "\n\nFix all of these in a complete reply:\n- " + "\n- ".join(problems)
+        try:
+            reply = await ask("director", director.SYSTEM, asked, 4000)
+        except ProviderError:
+            _note(engine, job_id, {"role": "director", "event": "unavailable"})
+            return None
+        if reply.data is None:
+            plan, problems = None, [reply.problem]
+        else:
+            plan, problems = director.check(reply.data, concept, interactions, pages)
+        entry = {
+            "role": "director",
+            "attempt": attempt,
+            "sections": [s["heading"] for s in plan["sections"]] if plan else [],
+            "issues": problems[:10],
+        }
+        _note(engine, job_id, entry, reply.cost_usd)
+        if plan is not None:
+            return plan
+    return None
 
 
 def project_due(db: Session, course, released: str) -> bool:
@@ -1710,6 +1786,10 @@ async def run_once(
             from socrat.coursegen.variants import run_variants
 
             await run_variants(engine, settings, base, job_id, make)
+        elif kind == "illustrate":
+            from socrat.coursegen.illustrate import run_illustrate
+
+            await run_illustrate(engine, settings, job_id)
         elif kind == "research":
             from socrat.coursegen.brain.researcher import run_research
 

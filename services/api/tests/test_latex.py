@@ -15,6 +15,14 @@ def test_single_backslash_latex_survives_json():
     )
 
 
+def test_a_backslash_json_cannot_read_no_longer_fails_the_reply():
+    # Seen live: "Invalid \escape" cost a whole lesson round.
+    raw = r'{"lesson": "$\sigma_{a} \land b$, sets $\{1\}$, $\underline{x}$, \\sigma, é"}'
+    data, problem = parse_json(raw)
+    assert problem == ""
+    assert data["lesson"] == r"$\sigma_{a} \land b$, sets $\{1\}$, $\underline{x}$, \sigma, " + "é"
+
+
 def test_correct_json_and_prose_are_untouched():
     # Already doubled, and real newlines outside maths, stay as they are.
     data, _ = parse_json(r'{"lesson": "$\\frac{1}{2}$\ntext\tand\nbelow", "n": "\nto the end"}')

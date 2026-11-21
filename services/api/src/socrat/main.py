@@ -31,6 +31,7 @@ from socrat.coursegen import jobs as coursegen_jobs
 from socrat.coursegen.brain.routes import router as brain_router
 from socrat.coursegen.cost_routes import router as engine_costs_router
 from socrat.coursegen.diagnostic_routes import router as diagnostic_router
+from socrat.coursegen.illustrate import router as illustrations_router
 from socrat.coursegen.maintain_routes import router as maintenance_router
 from socrat.coursegen.moderation import admin as moderation_admin
 from socrat.coursegen.moderation import learner as moderation_learner
@@ -51,6 +52,7 @@ from socrat.learn.reviews import router as reviews_router
 from socrat.learn.routes import router as learner_router
 from socrat.learn.sections import router as sections_router
 from socrat.learn.session_routes import router as session_router
+from socrat.learn.speech import router as speech_router
 from socrat.learn.streak_routes import router as streak_router
 from socrat.learn.tasks import admin as tasks_admin
 from socrat.learn.tasks import router as tasks_router
@@ -170,6 +172,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(onboarding_router)
     app.include_router(billing_router)
     app.include_router(email_auth_router)
+    app.include_router(illustrations_router)
+    app.include_router(speech_router)
     entitlements.ENABLED = settings.billing_enabled
     streaks.EXTRAS = settings.streak_plus_enabled
     entitlements.FREE_PLAYGROUND_PER_WEEK = settings.playground_free_per_week

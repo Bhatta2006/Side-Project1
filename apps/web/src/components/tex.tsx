@@ -15,7 +15,9 @@ export function TeX({ tex, display = false }: { tex: string; display?: boolean }
   } catch {
     return <code className="math-source">{display ? `$$${tex}$$` : `$${tex}$`}</code>;
   }
+  // A span even for display maths (styled as a block): $$...$$ also appears inside paragraphs,
+  // and a <div> inside a <p> is invalid HTML.
   return display
-    ? <div className="math-display" role="math" aria-label={tex} dangerouslySetInnerHTML={{ __html: html }} />
+    ? <span className="math-display" role="math" aria-label={tex} dangerouslySetInnerHTML={{ __html: html }} />
     : <span className="math-inline" dangerouslySetInnerHTML={{ __html: html }} />;
 }

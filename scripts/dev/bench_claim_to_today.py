@@ -32,6 +32,7 @@ GOALS = {
     "sql": "I want to learn SQL for my college project",
     "exam": "Help me pass my GCSE chemistry exam in June",
     "music": "I want to learn to read sheet music for the piano",
+    "maths": "Teach me probability and Bayes' theorem for my statistics course",
 }
 MODES = ("sprint", "builder", "explorer")
 MINUTES = (10, 25)

@@ -5,6 +5,7 @@ import { Component, useState, type ReactNode } from 'react';
 import Markdown from '@/components/markdown';
 import { Graph } from '@/components/studio/graph';
 import { CodeTask } from '@/components/visuals/code-task';
+import { FillBlank, MatchPairs, OrderSteps, PredictReveal, SortBuckets, StepThrough } from '@/components/visuals/interactions';
 import { Simulation } from '@/components/visuals/simulation';
 import { Timeline } from '@/components/visuals/timeline';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,8 @@ export type VisualizationSpec = {
   purpose: string;
   fallback_text: string;
   alt_text: string;
+  /** The lesson section (its heading) this element is shown in; empty: after the lesson. */
+  section?: string;
 };
 
 type Lesson = { concept: string; title: string };
@@ -58,6 +61,12 @@ const RENDERERS: Record<string, Renderer> = {
   timeline: ({ params }) => <Timeline params={params as { unit: string; length: number; tracks: string[] }} />,
   'code-studio': ({ params }) => <CodeTask params={params as { language: string; starter?: string; problem_id?: string | null }} />,
   'playground-visual': ({ lesson }) => (lesson ? <ConceptVisual concept={lesson.concept} title={lesson.title} /> : null),
+  'predict-reveal': ({ params }) => <PredictReveal params={params} />,
+  'step-through': ({ params }) => <StepThrough params={params} />,
+  'order-steps': ({ params, spec }) => <OrderSteps params={params} seed={spec.purpose} />,
+  'sort-buckets': ({ params, spec }) => <SortBuckets params={params} seed={spec.purpose} />,
+  'fill-blank': ({ params }) => <FillBlank params={params} />,
+  'match-pairs': ({ params, spec }) => <MatchPairs params={params} seed={spec.purpose} />,
   'self-check': ({ params }) => (
     <ul className="space-y-2">
       {(params.criteria as string[]).map((c) => (

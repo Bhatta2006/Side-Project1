@@ -48,3 +48,9 @@ test('reading time counts teaching words only', () => {
   assert.equal(words(check), 4);
   assert.equal(minutes(splitPages(LESSON)), 1);
 });
+
+test('visuals go on the page whose heading they name, loosely matched', async () => {
+  const { placeVisuals } = await import('../src/lib/pages.ts');
+  const placed = placeVisuals(LESSON, [{ section: 'what a fraction is' }, { section: '' }, { section: 'Nowhere' }, { section: '**Comparing**' }]);
+  assert.deepEqual([...placed.entries()], [['what a fraction is', [0]], ['comparing', [3]]]);
+});

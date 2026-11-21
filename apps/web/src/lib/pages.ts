@@ -48,3 +48,23 @@ export function words(page: Page): number {
 export function minutes(pages: Page[], rate = 130): number {
   return Math.max(1, Math.round(pages.reduce((n, p) => n + words(p), 0) / rate));
 }
+
+/** A heading compared loosely (case, emphasis marks, punctuation), the same way the server places visuals. */
+export function sectionKey(title: string): string {
+  return title.toLowerCase().replace(/[`*_]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * Which visuals (by index) belong on which reading page (by its section key). A visual whose
+ * section is empty or is not a heading of this lesson (a translated lesson renames them) is left
+ * out, so it keeps its place after the lesson.
+ */
+export function placeVisuals(source: string, visuals: { section?: string }[]): Map<string, number[]> {
+  const titles = new Set(splitPages(source).filter(p => !isCheckPage(p)).map(p => sectionKey(p.title)));
+  const placed = new Map<string, number[]>();
+  visuals.forEach((v, i) => {
+    const key = v.section ? sectionKey(v.section) : '';
+    if (key && titles.has(key)) placed.set(key, [...(placed.get(key) ?? []), i]);
+  });
+  return placed;
+}

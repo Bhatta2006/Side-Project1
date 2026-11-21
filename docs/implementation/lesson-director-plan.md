@@ -78,5 +78,22 @@ What exists but is off or thin:
 - `listen.tsx` plays it, falls back to the browser voice when off or failed.
 - WAV is about 48 KB/s: encode to Opus/MP3 (needs ffmpeg on the VM).
 
-## 4. Not verified
-Nothing in steps 2-5 is built. Step 1 is covered by unit tests only; no live generation run.
+## 4. Status (2026-11-21)
+
+All five steps are built, each behind a flag that defaults off. Locally (`.env.local`) every
+course-generator flag is on; the VM is unchanged.
+
+| Step | Flag | Built | Differs from the plan |
+|---|---|---|---|
+| 1 Maths | none | KaTeX (`components/tex.tsx`, `lib/math.ts`), `MATH` prompt rule, `roles.keep_latex`, `check_lesson` maths gates | as planned |
+| 2 Interactions | `gen_visuals` | 6 renderers in `engine/renderers.py` (`INTERACTIONS`, offered in every subject, evidence `exposure`), `components/visuals/interactions.tsx`, designer sees the whole lesson, its sections and the learner, up to 6 elements, one per section | no `:::embed:::` markers: a visual names its `section` and the page shows it at the end of that page (`lib/pages.placeVisuals`); hotspot and flashcard skipped |
+| 3 Director | `gen_lesson_director` | `coursegen/director.py`: one plan call, code checks (objectives, misconceptions, page count, allowed interactions, running example, at most 2 pictures), one re-ask, else no plan; author must use the planned headings; designer builds the planned interactions | text stays one author call (one voice, one example); no separate "editor" stitch call: the existing reviewer reads the assembled package |
+| 4 Pictures | `gen_illustrations` | `coursegen/illustrate.py`: an `illustrate` job after release, `vertex.generate_image` (16:9, no text in the picture), then `vertex.look` checks it shows the idea and has no text; only passing pictures are stored (`lesson_illustrations`, migration 0053) and served at `/api/v1/illustrations/{id}`, listed with the section pictures | caption and alt come from the check (what was drawn), not the plan |
+| 5 Speech | `lesson_speech` | `learn/speech.py`: `GET /concepts/{id}/speech?page=N`, Markdown, code, hidden answers and display maths left out, inline maths in words; `Listen` plays page after page, fetching the next while one plays, browser voice as fallback | WAV, no Opus/MP3 (no ffmpeg); in-memory cache of 24 pages per process |
+
+## 5. Not verified
+
+See `not-verified.md` (2026-11-21 rows). In short: the interactive renderers and the maths were
+seen in Chrome on a real generated lesson; the director, pictures and speech were run live once
+(see `live-run-log.md`); translation of interaction params is not done (a translated lesson
+shows them in the original language); speech of a translated lesson falls back to the browser.
