@@ -337,7 +337,10 @@ def me_summary(request: Request):
         day = db.get(DailyActivity, (user.id, learn.local_day(user, stamp).isoformat()))
         return {
             "streak": learn.streak(db, user, enrollment, stamp),
-            "minutes": {"done": day.minutes if day else 0, "goal": learn.session_budget(enrollment)},
+            "minutes": {
+                "done": day.minutes if day else 0,
+                "goal": learn.session_budget(enrollment),
+            },
         }
 
 
