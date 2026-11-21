@@ -14,24 +14,18 @@ import type { Activity, AssessmentStatus, PlanView, Today } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ErrorNote, Loading, Page, Reveal, Ring } from '@/components/common';
 import { ReasonChip } from '@/components/socrat/reason-chip';
-import { Illustration, Soc } from '@/components/socrat/illustration';
-import { SocFigure } from '@/components/socrat/soc';
+import { Illustration } from '@/components/socrat/illustration';
 import { StatusIcon, statusFromBand, statusFromRoadmap } from '@/components/socrat/status';
-import { SkillPath } from '@/components/socrat/skill-path';
+import { CoursePath, type PathModule } from '@/components/socrat/course-path';
 import { GameBar } from '@/components/socrat/game-bar';
 import { GoalReachedMoment, LevelUpMoment } from '@/components/socrat/game-moments';
 import { usePlanLocks } from '@/lib/plan-locks';
 import { WeekStrip } from '@/components/socrat/week-strip';
-import { ArrowCircle, Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Doodle } from '@/components/ui/doodle';
 import { CommunityCard } from '@/components/community-link';
-import { LessonProgress } from '@/components/socrat/lesson-progress';
 import { usePreparing } from '@/lib/preparing';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-// The sticker catalogue is large (lib/ink/art/stickers): load it after the page paints.
-const Sticker = dynamic(() => import('@/components/ui/sticker').then(m => m.Sticker), { ssr: false });
 
 // The chat loads on demand, as on the problem page: it opens only when asked, and its code
 // otherwise sits in Today's first load. An early openSignal still opens it once it arrives.
@@ -85,21 +79,7 @@ function milestone(plan: PlanView | null, current?: string | null) {
   const module = plan.modules.find(m => m.id === (current ?? plan.current_module)) ?? plan.modules.find(m => m.concepts.some(c => c.concept === plan.current_concept));
   if (!module) return null;
   const finished = module.concepts.filter(c => ['mastered', 'practiced'].includes(c.status)).length;
-  return { title: module.title, finished, total: module.concepts.length, concepts: module.concepts, current: plan.current_concept };
-}
-
-/** Progress with a solid fill that grows in once on load (no gradients, per the design system). */
-function GrowBar({ value, label }: { value: number; label: string }) {
-  const [drawn, setDrawn] = useState(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setDrawn(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-  return (
-    <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)} className="h-2.5 flex-1 overflow-hidden rounded-full bg-raised">
-      <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-[var(--ease-soft)]" style={{ width: drawn ? `${Math.max(2, Math.min(100, value))}%` : '0%' }} />
-    </div>
-  );
+  return { id: module.id, title: module.title, finished, total: module.concepts.length, concepts: module.concepts, current: plan.current_concept };
 }
 
 function SessionRow({ activity, done, onLater }: { activity: Activity; done: boolean; onLater?: () => void }) {
@@ -149,7 +129,7 @@ export default function TodayPage() {
     api.get<{ current: AssessmentStatus }>('/assessments').then(r => setAssessment(r.current)).catch(() => undefined);
   }, []);
   useEffect(() => { if (allowed && courseReady) load(); }, [allowed, courseReady, load]);
-  // Lessons still being written: a bar each, and Today reloads when one goes live.
+  // Lessons still being written: a ring on their stone, and Today reloads when one goes live.
   const preparing = usePreparing(Boolean(allowed && courseReady), load);
   // The open section lives in the URL hash, so a link or a refresh lands where the learner was.
   useEffect(() => {
@@ -169,7 +149,6 @@ export default function TodayPage() {
   const next = today.next;
   const review = today.queue.find(a => a.kind === 'review');
   const goal = milestone(plan, today.current_module);
-  const goalPercent = goal && goal.total ? (100 * goal.finished) / goal.total : 0;
   const learned = today.progress.finished;
   const mastered = today.progress.mastered ?? 0;
   const complete = today.progress.complete === true;
@@ -178,11 +157,21 @@ export default function TodayPage() {
   const session = [...today.done.map(a => ({ a, done: true })), ...queue.map(a => ({ a, done: false }))];
   // A learner who has not started sees a plan, not a column of zeros.
   const fresh = today.streak.current === 0 && today.done.length === 0 && today.progress.finished === 0 && today.streak.week_minutes === 0;
-  const active: TabId = tab === 'map' && !goal ? 'session' : tab;
+  // Every module of the course, in order; a lesson still being written carries its progress.
+  const writing = new Map(preparing.filter(l => l.state !== 'later').map(l => [l.concept, l]));
+  const pathModules: PathModule[] = (plan?.modules ?? []).filter(m => m.concepts.length).map(m => ({
+    id: m.id,
+    title: m.title,
+    current: m.id === goal?.id,
+    locked: Boolean(m.locked_by),
+    nodes: m.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: planLocked(c.concept) ? 'locked' : statusFromRoadmap(c), current: c.concept === plan?.current_concept, reviewDue: c.review_due, writing: writing.get(c.concept) })),
+  }));
+  const pathTotal = pathModules.reduce((n, m) => n + m.nodes.length, 0);
+  const active: TabId = tab === 'map' && !pathModules.length ? 'session' : tab;
 
   // Each tab names what is inside it, so nothing is a mystery click.
   const tabs: { id: TabId; label: string; hint: string }[] = [
-    ...(goal ? [{ id: 'map' as const, label: 'Path', hint: `${goal.finished}/${goal.total}` }] : []),
+    ...(pathModules.length ? [{ id: 'map' as const, label: 'Path', hint: `${learned}/${pathTotal}` }] : []),
     { id: 'session', label: 'Session', hint: session.length ? (today.done.length ? `${today.done.length}/${session.length}` : `${session.length}`) : '' },
     { id: 'practice', label: 'Practice', hint: '' },
     { id: 'progress', label: 'Progress', hint: `${today.progress.percent}%` },
@@ -231,127 +220,31 @@ export default function TodayPage() {
       ) : null}
 
       <div className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
-        {/* 3. Hero: the next recommended activity. */}
-        <Reveal index={1} className="col-span-12 lg:col-span-8">
-          {next ? (
-            <Card tone="hero" tape="corner" seed="today-next" data-tour="today-next" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="next-heading">
-              {/* Soc on his books, waving the next step on, with a note pointing at him. */}
-              <div aria-hidden="true" className="pointer-events-none absolute right-4 -bottom-3 hidden w-[170px] sm:block lg:w-[190px] xl:right-6 xl:w-[220px] 2xl:right-12 2xl:w-[250px]">
-                <div className="absolute -top-14 -left-6 flex items-end gap-0 xl:-top-16 xl:-left-24">
-                  <span className="font-script text-[22px] whitespace-nowrap text-red -rotate-6 xl:text-[24px]">you&apos;ve got this</span>
-                  <Doodle name="arrow-bounce" size={44} rotate={70} seed="today-arrow" className="-mb-6 -scale-x-100" />
-                </div>
-                <SocFigure books mood="happy" idle className="h-auto w-full" />
-              </div>
-              <div aria-hidden="true" className="pointer-events-none absolute right-5 bottom-2 sm:hidden">
-                <SocFigure size={84} mood="curious" />
-              </div>
-              <Sticker name="highlighter" size={56} rotate={-14} seed="today-hl" className="absolute -top-6 right-8 hidden sm:block xl:right-14" />
-              <div className="relative flex h-full flex-col gap-5 px-(--card-spacing) sm:max-w-[60%] xl:max-w-[54%]">
-                <p className="type-label text-(--card-muted)">{today.minutes.reached ? `Daily goal reached. Keep going or stop here.` : `Today, goal ${today.minutes.goal} min`}</p>
-                <div>
-                  <h2 id="next-heading" className="type-display-m max-w-[20ch] break-words">{next.title}</h2>
-                  <p className="mt-3 max-w-md text-base text-(--card-muted)">{next.reason || 'Next in your plan.'}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">{CHIP[next.kind] ?? KIND_LABEL[next.kind]}</Badge>
-                  {next.minutes ? <Badge variant="outline">{next.minutes} min</Badge> : null}
-                </div>
-                <div className="mt-auto">
-                  <Button asChild variant="ink" size="lg">
-                    <Link href={activityHref(next.id)} transitionTypes={['nav-forward']}>
-                      {VERB[next.kind] ?? 'Continue'}
-                      <ArrowCircle />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ) : (
-            <Card tone="hero" data-tour="today-next" className="relative" aria-labelledby="next-heading">
-              <div aria-hidden="true" className="pointer-events-none absolute right-8 -bottom-3 hidden w-[200px] sm:block">
-                <SocFigure books mood={today.study_day ? 'proud' : 'sleepy'} idle className="h-auto w-full" />
-              </div>
-              <div className="relative flex flex-col gap-4 px-(--card-spacing) sm:max-w-[60%]">
-                <h2 id="next-heading" className="type-display-m">{complete ? `${today.course.title} complete` : today.study_day ? 'Done for today' : 'Rest day'}</h2>
-                <p className="max-w-md text-(--card-muted)">
+        {/* 3. Nothing next: a short note in place of the stone that would say "Start". */}
+        {!next ? (
+          <Reveal index={1} className="col-span-12">
+            <div role="status" className="paper flex flex-wrap items-center justify-between gap-3 rounded-card px-5 py-4">
+              <span className="min-w-0">
+                <span className="block font-display text-lg font-semibold tracking-[-0.02em]">{complete ? `${today.course.title} complete` : today.study_day ? 'Done for today' : 'Rest day'}</span>
+                <span className="block text-sm text-muted-foreground">
                   {complete
                     ? today.finale?.graduated
                       ? `All ${today.progress.total} skills mastered: learned, then proven again after time away.`
-                      : `All ${today.progress.total} skills learned, each proven by a check. ${mastered} mastered so far; reviews over the coming weeks prove the other ${today.finale?.to_master ?? today.progress.total - mastered}.`
+                      : `All ${today.progress.total} skills learned. ${mastered} mastered so far; reviews prove the rest.`
                     : today.study_day
-                      ? 'Everything planned for today is complete. You can keep going from your plan.'
-                      : 'Today is not one of your study days. You can work ahead from your plan.'}
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {complete ? <Button asChild variant="ink" size="lg"><Link href="/progress">See your evidence<ArrowCircle /></Link></Button> : <Button asChild variant="ink" size="lg"><Link href="/plan">Open {NAME.skills}<ArrowCircle /></Link></Button>}
-                  {complete ? <Button asChild variant="outline" size="lg"><Link href="/assessments">{NAME.assessment}</Link></Button> : null}
-                  {complete && today.finale?.next_course ? <Button asChild variant="outline" size="lg"><Link href={`/start?course=${today.finale.next_course.id}&next=1`}>Start {today.finale.next_course.title}</Link></Button> : null}
-                </div>
-                {complete && today.finale?.capstone ? (
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-medium">Your capstone: {today.finale.capstone.title}</p>
-                    <p className="text-sm text-(--card-muted)">{today.finale.capstone.summary}</p>
-                    <Link href="/projects" className="text-sm underline underline-offset-4">
-                      {today.finale.capstone.done === 0 ? 'Start the capstone' : today.finale.capstone.done === today.finale.capstone.total ? 'Capstone complete: review it' : `Continue the capstone (${today.finale.capstone.done} of ${today.finale.capstone.total} milestones)`}
-                    </Link>
-                  </div>
-                ) : null}
-                {complete && today.finale?.challenges.length ? (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm font-medium">Still unsolved: the hardest problems in this course</p>
-                    <ul className="flex flex-col gap-1">
-                      {today.finale.challenges.map(p => (
-                        <li key={p.id}><Link href={`/problems/${p.id}`} className="text-sm underline underline-offset-4">{p.title}</Link> <span className="text-xs text-(--card-muted)">{p.difficulty}</span></li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            </Card>
-          )}
-        </Reveal>
-
-        {/* Talk to your tutor: beside the hero (8 + 4 columns). */}
-        <Reveal index={2} className="col-span-12 hidden lg:col-span-4 lg:block">
-          <Card tone="raised" tape="top" seed="today-ask" className="relative h-full min-h-72 lg:min-h-80" aria-labelledby="soc-heading">
-            <div className="relative flex h-full flex-col gap-4 px-(--card-spacing)">
-              <p className="font-script origin-left -rotate-2 text-[24px] text-red">stuck? talk to me</p>
-              <div className="max-w-[55%]">
-                <h2 id="soc-heading" className="type-display-m">Ask Soc</h2>
-                <p className="mt-3 text-base text-muted-foreground">Get unstuck, ask questions, or request a hint.</p>
-              </div>
-              {/* A bigger target for pointer users; keyboard users have the Ask Soc button below. */}
-              <button type="button" tabIndex={-1} aria-hidden="true" onClick={() => setAskSoc(n => n + 1)} className="absolute top-12 right-(--card-spacing) rounded-full">
-                <Soc size={84} mood="curious" />
-              </button>
-              <Button type="button" variant="outline" size="lg" data-tour="tutor" onClick={() => setAskSoc(n => n + 1)} className="mt-auto w-full justify-between" aria-haspopup="dialog">
-                Ask Soc
-                <ArrowCircle />
-              </Button>
+                      ? 'Everything planned for today is complete. Keep going from the path if you like.'
+                      : 'Today is not one of your study days. You can work ahead from the path.'}
+                </span>
+              </span>
+              {complete ? (
+                <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
+                  <Link href="/progress" className="underline underline-offset-4">See your evidence</Link>
+                  <Link href="/assessments" className="underline underline-offset-4">{NAME.assessment}</Link>
+                  {today.finale?.capstone ? <Link href="/projects" className="underline underline-offset-4">Capstone: {today.finale.capstone.title}</Link> : null}
+                  {today.finale?.next_course ? <Link href={`/start?course=${today.finale.next_course.id}&next=1`} className="underline underline-offset-4">Start {today.finale.next_course.title}</Link> : null}
+                </span>
+              ) : null}
             </div>
-          </Card>
-        </Reveal>
-
-        {/* Lessons being written right now, so nobody has to refresh to find out. */}
-        {preparing.some(l => l.state !== 'later') ? (
-          <Reveal index={3} className="col-span-12">
-            <Card tone="raised" className="relative" aria-labelledby="preparing-heading">
-              <div className="grid gap-4 px-(--card-spacing)">
-                <div>
-                  <h2 id="preparing-heading" className="font-display text-lg font-semibold tracking-[-0.02em]">{next ? 'Your next lessons are being written' : 'Your lesson is being written'}</h2>
-                  <p className="text-sm text-muted-foreground">Each is written, fact-checked and reviewed before it opens. It appears here the moment it&apos;s ready.</p>
-                </div>
-                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {preparing.filter(l => l.state !== 'later').slice(0, 3).map(l => (
-                    <li key={l.concept} className="flex flex-col justify-between gap-2">
-                      <span className="font-semibold">{l.title}</span>
-                      <LessonProgress lesson={l} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Card>
           </Reveal>
         ) : null}
 
@@ -422,31 +315,11 @@ export default function TodayPage() {
               </div>
             </TabsContent>
 
-            {/* Skill map: where you are in the current module. */}
-            {goal ? (
+            {/* The path: the whole course on one canvas, lessons being written ringed with their progress. */}
+            {pathModules.length ? (
               <TabsContent value="map">
-                <Card aria-labelledby="map-heading">
-                  <div className="grid gap-5 px-(--card-spacing)">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
-                      <div>
-                        <p className="type-label text-muted-foreground">Next milestone</p>
-                        <h2 id="map-heading" className="font-display text-2xl leading-tight font-semibold tracking-[-0.03em]">{goal.title}</h2>
-                      </div>
-                      <p className="text-[15px] text-muted-foreground">
-                        {goal.total - goal.finished > 0 ? `${goal.total - goal.finished} more skill${goal.total - goal.finished === 1 ? '' : 's'} to reach it.` : 'Milestone reached. The next module is opening up.'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <GrowBar value={goalPercent} label={`${goal.title}: ${goal.finished} of ${goal.total} skills`} />
-                      <span className="text-sm font-semibold text-muted-foreground tabular-nums">{Math.round(goalPercent)}%</span>
-                    </div>
-                    <SkillPath
-                      startLabel={next ? (VERB[next.kind] ?? 'Start') : 'Start'}
-                      label={goal.title}
-                      nodes={goal.concepts.map(c => ({ id: c.concept, title: c.title, href: conceptHref(c.concept), status: planLocked(c.concept) ? 'locked' : statusFromRoadmap(c), current: c.concept === goal.current, reviewDue: c.review_due }))}
-                    />
-                  </div>
-                </Card>
+                <h2 className="sr-only">Your path</h2>
+                <CoursePath modules={pathModules} startLabel={next ? (VERB[next.kind] ?? 'Start') : 'Start'} />
               </TabsContent>
             ) : null}
 

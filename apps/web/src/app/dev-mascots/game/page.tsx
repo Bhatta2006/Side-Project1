@@ -55,8 +55,8 @@ export default function GameParts() {
             { id: 'b', title: 'Methods: GET and POST', href: '#', status: 'practised' },
             { id: 'c', title: 'Status codes', href: '#', status: 'practised', reviewDue: true },
             { id: 'd', title: 'Your first endpoint', href: '#', status: 'not_seen', current: true },
-            { id: 'e', title: 'JSON bodies', href: '#', status: 'not_seen' },
-            { id: 'f', title: 'Routing', href: '#', status: 'locked' },
+            { id: 'e', title: 'JSON bodies', href: '#', status: 'not_seen', writing: { concept: 'e', title: 'JSON bodies', module: 'm', state: 'writing', progress: 0.42, label: 'Reading the sources' } },
+            { id: 'f', title: 'Routing', href: '#', status: 'locked', writing: { concept: 'f', title: 'Routing', module: 'm', state: 'queued', progress: 0, label: 'Waiting its turn' } },
             { id: 'g', title: 'Errors that help', href: '#', status: 'locked' },
           ]}
         />
