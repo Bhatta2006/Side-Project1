@@ -18,6 +18,7 @@ Remove a line only when the check it names has run.
 
 | Review variants (4.2), module exams (4.1), outline tags (4.3) | Scripted only: no live model has written variants or an exam | one live course with `gen_review_variants`, `gen_module_exams`, `gen_outline_tags` on |
 | Module exams (4.1) | A learner taking a checkpoint that mixes exam items (only the pool is checked) | a checkpoint session in a test or a live run |
+| Maths (lesson-director-plan step 1) | KaTeX rendering seen only in unit tests of the splitter; no live lesson written with the new `MATH` rule; `roles.keep_latex` repair tested on fixtures, not on real Gemini replies | generate one maths-heavy lesson (e.g. relational algebra) and open it on `/learn` and `/notes` |
 
 ## Real infrastructure
 
