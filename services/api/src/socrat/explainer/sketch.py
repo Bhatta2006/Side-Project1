@@ -229,13 +229,15 @@ def check(spec: dict, request: str = "") -> dict:
     if not isinstance(variants, list) or not 1 <= len(variants) <= MAX_VARIANTS:
         _fail(f"variants needs 1 to {MAX_VARIANTS} entries")
     choice = spec.get("input")
+    options: list[str] = []
     if len(variants) > 1:
         if not isinstance(choice, dict):
             _fail("several variants need an input: {label, options} with one option per variant")
         _text(choice.get("label"), "input.label", 2, 40)
-        options = choice.get("options")
-        if not isinstance(options, list) or len(options) != len(variants):
+        raw = choice.get("options")
+        if not isinstance(raw, list) or len(raw) != len(variants):
             _fail("input.options needs exactly one option per variant")
+        options = raw
         for n, o in enumerate(options):
             _text(o, f"input.options[{n}]", 1, 40)
     for v, variant in enumerate(variants):
@@ -253,7 +255,7 @@ def check(spec: dict, request: str = "") -> dict:
             _fail(f"variants[{v}]: every step needs its own note saying what changed")
     if len(variants) == 1 and len(variants[0]["steps"]) < 2:
         _fail("Give the one variant at least 2 steps (or add a second variant to choose)")
-    if len(variants) > 1 and len({o.strip().lower() for o in choice["options"]}) < len(variants):
+    if len(variants) > 1 and len({o.strip().lower() for o in options}) < len(variants):
         _fail("input.options must all differ: each one picks its own variant")
     _accuracy(spec, request)
     return spec

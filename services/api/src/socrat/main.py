@@ -173,7 +173,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     entitlements.ENABLED = settings.billing_enabled
     streaks.EXTRAS = settings.streak_plus_enabled
     entitlements.FREE_PLAYGROUND_PER_WEEK = settings.playground_free_per_week
-    entitlements.EVERYONE_PRO = settings.everyone_pro
+    entitlements.EVERYONE_PRO = bool(settings.everyone_pro)
     from socrat.coursegen import prefetch
 
     prefetch.AHEAD = settings.gen_lessons_ahead
