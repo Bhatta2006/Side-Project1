@@ -260,3 +260,28 @@ def test_a_readable_first_lesson_draft_is_flagged_for_today():
     assert progress.readable(first)
     assert not progress.readable(later)  # only the first lesson's draft is shown (learn/preview.py)
     assert not progress.readable(GenerationJob(state="running", input={"trigger": "first"}, log=[]))
+
+
+def test_a_planned_page_that_is_too_long_can_be_split_without_breaking_the_plan():
+    """Live 2026-11-21: the page gate said "split it into two pages", the plan gate then said
+    "use exactly the planned headings", and the first lesson failed after five rounds."""
+    plan, _ = director.check(GOOD, CONCEPT, ["predict-reveal", "sort-buckets"], (3, 6))
+    split = (
+        "## A suspicious email\n\n## A suspicious email (continued)\n\n"
+        "## What you believed before\n\n## Flipping the condition\n\n"
+        "## Flipping the condition (part 2)\n\n## Check yourself\n"
+    )
+    assert director.heading_issues(split, plan) == []
+    # A continuation of a heading that is not the one before it is still out of plan.
+    wrong = "## A suspicious email\n\n## Flipping the condition (continued)\n\n" + split
+    assert director.heading_issues(wrong, plan)
+
+    long_page = (
+        "Page 'A suspicious email' has about 420 words; this learner's pages hold about "
+        "160-240. Split it into two pages."
+    )
+    told = director.page_issues([long_page, "Other issue."], plan)
+    assert "(continued)" in told[0] and "A suspicious email" in told[0]
+    assert told[1] == "Other issue."
+    cut = "Page 'A suspicious em' has about 420 words; this learner's pages hold about 1-2. Split it into two pages."
+    assert "'## A suspicious email (continued)'" in director.page_issues([cut], plan)[0]

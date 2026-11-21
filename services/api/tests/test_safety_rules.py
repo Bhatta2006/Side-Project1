@@ -27,3 +27,14 @@ def test_code_adds_notes_the_model_left_out_and_keeps_them_first():
     assert "A model note" in applied.safety_notes
     assert "financial" in safety.disclaimer(applied.safety_notes)
     assert safety.disclaimer(["Hazardous practice is taught with simulations."]) == ""
+
+
+def test_the_lab_note_is_for_lab_subjects_not_every_maths_course():
+    """Live 2026-11-21: a probability lesson told the learner "hazardous experiments need
+    qualified supervision" because the maths-and-science adapter added it to every course."""
+    for text in ("Teach me probability and Bayes' theorem", "Help me with algebra"):
+        applied = intents.apply_adapter(intents.from_rules(text), text)
+        assert applied.adapter == "math-science"
+        assert not any("Lab" in n or "experiment" in n.lower() for n in applied.safety_notes)
+    assert safety.LAB_NOTE in safety.notes("Help me with my chemistry practicals")
+    assert safety.LAB_NOTE in safety.notes("I want to do titration experiments")

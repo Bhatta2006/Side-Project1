@@ -208,7 +208,7 @@ export function FillBlank({ params }: { params: P }) {
   const right = marks.filter(Boolean).length;
   return (
     <div>
-      <p className="text-[15px] leading-9">
+      <p className="text-[15px] leading-9 whitespace-pre-line">
         {parts.map((p, n) => 'blank' in p ? (
           <input
             key={n}

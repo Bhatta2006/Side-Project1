@@ -228,3 +228,41 @@ which turns off the per-learner first-lesson path; owner: not required now).
 The last row released both first lessons in one round (68 s and 82 s from job start). The 570 s
 run lost about 3 minutes to one Vertex call that hung until the waiting-learner timeout (120 s)
 and a restart of the job. Not fixed: that timeout and the outline's own time (46-169 s).
+
+## 2026-11-21: lesson generator tested in the browser (branch gbuild/lesson-director-and-first-lesson)
+
+Local stack, Vertex gemini-3.8-flash, every generator flag on except `course_brain` (launch config
+`lesson-api` / `lesson-web`). One learner: "Teach me probability and Bayes' theorem for my
+statistics course", Builder, sport door, 25 min. Outline 82 s; six lessons queued.
+
+What broke, and what was fixed in the same change:
+- **First lesson failed after 5 rounds.** The page gate said "split it into two pages", the
+  director's heading gate said "use exactly the planned headings"; the author flipped between
+  them (420-509 words on page 1 every other round). Now a planned section may go on under
+  "<heading> (continued)" (`director.heading_issues`), the split request names that heading
+  (`director.page_issues`), and the interaction lands after the continued page
+  (`lib/pages.placeVisuals`). The retry released (reviewer 4-5 on every axis, about $0.10).
+- **Pictures: 0 of 8 kept.** 5 `provider_rate_limited` (every released lesson queues its
+  illustrate job at once) and 3 "text in the picture" (ideas such as "a 2x2 grid with Make and
+  Miss columns"). Rate-limited pictures are now queued again after 90/300/900 s, and a retry
+  keeps the pictures an earlier run stored; ideas that need words or numbers are not drawn.
+- **Today said "Done for today, everything planned is complete"** while the first lesson was
+  still being written. Hidden while the first-lesson card shows.
+- **Daily goal "0/30 min" for a learner who chose 25.** Today and the header now use the
+  session length from Lesson 0 (`learn.session_budget`), not the rounded scheduling bucket.
+- **Bold around maths showed raw `**`** (`**Sample Space ($S$)**` in a table). Maths and code
+  now leave a placeholder, so emphasis pairs around them (`components/markdown.tsx`).
+- **Table cells broke words letter by letter** ("Ele/men/tary"): `td { overflow-wrap: anywhere }`
+  let the table shrink columns; cells in `.table-scroll` now break only long words.
+- **Fill-in-the-blank showed `$P(Sv) = $`**: maths written with a space before the closing `$`
+  just before a blank is trimmed (`lib/interactions.blanks`); its line breaks are kept.
+- **A probability lesson carried "hazardous experiments need qualified supervision"**: the
+  maths-and-science adapter added it to every course. It now comes from lab words only
+  (`engine.safety.LAB_NOTE`).
+
+Worked as built: Lesson 0 to Today, the path with writing progress, KaTeX maths, sort-into-
+buckets and the other interactions, paging and recap, Gemini speech (page 1: 6.5 MB WAV in 23 s).
+
+Seen, not fixed: the rule-based intent keeps "for my statistics course" in the subject and
+lowercases "Bayes" in the title; a job running when the API restarts waits an hour
+(`STALE_SECONDS`) unless a learner waits on it; illustrate jobs record $0 (image price 0).

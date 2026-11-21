@@ -9,6 +9,12 @@ test('blanks split text and keep every accepted form', () => {
   ]);
 });
 
+test('maths that leads into a blank stays maths, prices stay text', () => {
+  // Live 2026-11-21: "$P(Sv) = $ [[0.10]]" showed as raw "$P(Sv) = $".
+  assert.deepEqual(blanks('So $P(Sv) = $ [[0.10]]'), [{ text: 'So $P(Sv) =$ ' }, { blank: 0, accept: ['0.10'] }]);
+  assert.deepEqual(blanks('From $5 and $ [[10]]'), [{ text: 'From $5 and $ ' }, { blank: 0, accept: ['10'] }]);
+});
+
 test('answers match whatever their case, spaces, closing full stop or dollars', () => {
   assert.equal(normalise('  The  Rule. '), 'the rule');
   assert.ok(accepted('RULES', ['rule', 'rules']));

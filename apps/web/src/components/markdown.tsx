@@ -128,36 +128,59 @@ export function codeSpans(text: string): ReactNode[] {
 
 const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*|_[^_\s][^_]*_)|(\[[^\]]+\]\([^)\s]+\))/g;
 
-/** Inline Markdown. Code spans and maths are cut out first, so emphasis never eats a subscript. */
+/**
+ * Inline Markdown. Code spans and maths are cut out first, so emphasis never eats a subscript;
+ * each leaves a placeholder in the line, so emphasis around it still pairs up
+ * (`**Sample space ($S$)**` is bold with maths inside, not two stray `**`).
+ */
 export function inline(text: string): ReactNode[] {
-  return pieces(text).flatMap((p, i): ReactNode[] =>
-    p.kind === 'math' ? [<TeX key={`m${i}`} tex={p.tex} display={p.display} />]
-      : p.kind === 'code' ? [<code key={`k${i}`}>{p.text}</code>]
-      : markup(p.text, `t${i}`));
+  const slots: ReactNode[] = [];
+  const masked = pieces(text).map((p, i) => {
+    if (p.kind === 'text') return p.text.replace(/[\uE000\uE001]/g, '');
+    slots.push(p.kind === 'math' ? <TeX key={`m${i}`} tex={p.tex} display={p.display} /> : <code key={`k${i}`}>{p.text}</code>);
+    return `\uE000${slots.length - 1}\uE001`;
+  }).join('');
+  return markup(masked, 't', slots);
 }
 
-function markup(text: string, prefix: string): ReactNode[] {
+const SLOT = /\uE000(\d+)\uE001/g;
+
+/** Text with its maths and code put back. */
+function restore(text: string, slots: ReactNode[]): ReactNode[] {
+  const out: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(SLOT)) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(slots[Number(m[1])]);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+function markup(text: string, prefix: string, slots: ReactNode[]): ReactNode[] {
   const out: ReactNode[] = [];
   let last = 0;
   let n = 0;
   const key = () => `${prefix}-${n++}`;
   for (const match of text.matchAll(INLINE)) {
-    if (match.index > last) out.push(text.slice(last, match.index));
+    if (match.index > last) out.push(...restore(text.slice(last, match.index), slots));
     const token = match[0];
     if (match[1]) out.push(<code key={key()}>{token.slice(1, -1)}</code>);
-    else if (match[2]) out.push(<strong key={key()}>{inline(token.slice(2, -2))}</strong>);
-    else if (match[3]) out.push(<em key={key()}>{inline(token.slice(1, -1))}</em>);
+    else if (match[2]) { const k = key(); out.push(<strong key={k}>{markup(token.slice(2, -2), k, slots)}</strong>); }
+    else if (match[3]) { const k = key(); out.push(<em key={k}>{markup(token.slice(1, -1), k, slots)}</em>); }
     else {
       const [, label, href] = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/) ?? [];
+      const k = key();
       if (href && /^https?:\/\//.test(href)) {
-        out.push(<a key={key()} href={href} target="_blank" rel="noopener noreferrer">{inline(label)}</a>);
+        out.push(<a key={k} href={href} target="_blank" rel="noopener noreferrer">{markup(label, k, slots)}</a>);
       } else if (href && href.startsWith('/')) {
-        out.push(<a key={key()} href={href}>{inline(label)}</a>);
-      } else out.push(label ?? token);
+        out.push(<a key={k} href={href}>{markup(label, k, slots)}</a>);
+      } else out.push(...restore(label ?? token, slots));
     }
     last = match.index + token.length;
   }
-  if (last < text.length) out.push(text.slice(last));
+  if (last < text.length) out.push(...restore(text.slice(last), slots));
   return out;
 }
 

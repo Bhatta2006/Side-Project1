@@ -54,3 +54,10 @@ test('visuals go on the page whose heading they name, loosely matched', async ()
   const placed = placeVisuals(LESSON, [{ section: 'what a fraction is' }, { section: '' }, { section: 'Nowhere' }, { section: '**Comparing**' }]);
   assert.deepEqual([...placed.entries()], [['what a fraction is', [0]], ['comparing', [3]]]);
 });
+
+test('a visual follows the continued page of its section', async () => {
+  const { placeVisuals } = await import('../src/lib/pages.ts');
+  const lesson = '## Sample space\n\nA.\n\n## Sample space (continued)\n\nB.\n\n## Complements\n\nC.\n\n## Check yourself\n\nQ';
+  const placed = placeVisuals(lesson, [{ section: 'Sample space' }, { section: 'Complements' }]);
+  assert.deepEqual([...placed.entries()], [['sample space continued', [0]], ['complements', [1]]]);
+});

@@ -223,8 +223,10 @@ export default function TodayPage() {
       ) : null}
 
       <div className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
-        {/* 3. Nothing next: a short note in place of the stone that would say "Start". */}
-        {!next ? (
+        {/* 3. Nothing next: a short note in place of the stone that would say "Start".
+            Not while the first lesson is being written: the card below says that, and
+            "Done for today" before anything was started reads as a bug. */}
+        {!next && !firstWriting ? (
           <Reveal index={1} className="col-span-12">
             <div role="status" className="paper flex flex-wrap items-center justify-between gap-3 rounded-card px-5 py-4">
               <span className="min-w-0">

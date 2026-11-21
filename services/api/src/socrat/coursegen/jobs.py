@@ -1410,6 +1410,7 @@ async def run_package(
                 ]
             issues = pkg.check_lesson(concept, course, lesson, style, paging)
             if plan is not None:
+                issues = director.page_issues(issues, plan)
                 issues += director.heading_issues(str(lesson.get("lesson", "")), plan)
             # Not on the last round: there the first-lesson gate is waived, not failed.
             drafted = str(lesson.get("lesson", ""))

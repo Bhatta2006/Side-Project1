@@ -59,12 +59,22 @@ export function sectionKey(title: string): string {
  * section is empty or is not a heading of this lesson (a translated lesson renames them) is left
  * out, so it keeps its place after the lesson.
  */
+const CONTINUED = /\s*\((?:continued|cont\.?|part\s*\d+)\)\s*$/i;
+
 export function placeVisuals(source: string, visuals: { section?: string }[]): Map<string, number[]> {
-  const titles = new Set(splitPages(source).filter(p => !isCheckPage(p)).map(p => sectionKey(p.title)));
+  // A section too long for one page goes on under "<heading> (continued)": its visuals follow
+  // the last of its pages, where the section ends.
+  const last = new Map<string, string>();
+  for (const p of splitPages(source).filter(p => !isCheckPage(p))) {
+    const key = sectionKey(p.title);
+    const base = sectionKey(p.title.replace(CONTINUED, ''));
+    if (base !== key && last.has(base)) last.set(base, key);
+    else last.set(key, key);
+  }
   const placed = new Map<string, number[]>();
   visuals.forEach((v, i) => {
-    const key = v.section ? sectionKey(v.section) : '';
-    if (key && titles.has(key)) placed.set(key, [...(placed.get(key) ?? []), i]);
+    const page = v.section ? last.get(sectionKey(v.section)) : undefined;
+    if (page) placed.set(page, [...(placed.get(page) ?? []), i]);
   });
   return placed;
 }

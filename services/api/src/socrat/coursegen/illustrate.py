@@ -30,6 +30,8 @@ from socrat.models import GenerationJob, LessonIllustration, need, now
 
 KIND = "illustrate"
 SECTION_CHARS = 1500
+# Seconds before a rate-limited picture is tried again, per retry; then it is skipped.
+RATE_LIMIT_WAITS = (90, 300, 900)
 
 STYLE = (
     "A clean, friendly educational illustration in a flat editorial style: simple shapes, soft "
@@ -83,6 +85,16 @@ def verdict(text: str) -> tuple[dict | None, str]:
     return {"caption": caption[:300], "alt": alt[:600]}, ""
 
 
+# An idea that can only be drawn with words or numbers in it: the image check always rejects
+# those (live 2026-11-21: "a 2x2 grid ... with Make and Miss columns", "a probability tree ...
+# with assigned probabilities"), so they are not drawn at all.
+NEEDS_TEXT = re.compile(
+    r"\d|%|\blabel|\bcolumn|\brows?\b|\btable\b|\bchart\b|\bgraph\b|\baxis|\baxes\b|"
+    r"\bformula|\bequation|\bnumbers?\b|\bprobabilit|\btree\b|\bwritten\b|\btext\b",
+    re.I,
+)
+
+
 def wanted(plan: dict | None) -> list[dict]:
     """The pictures a plan asks for: [{section, idea}], at most ``director.MAX_PICTURES``."""
     if not plan:
@@ -90,7 +102,7 @@ def wanted(plan: dict | None) -> list[dict]:
     found = [
         {"section": s["heading"], "idea": s["picture"]}
         for s in plan.get("sections", [])
-        if s.get("picture")
+        if s.get("picture") and not NEEDS_TEXT.search(s["picture"])
     ]
     return found[: director.MAX_PICTURES]
 
@@ -116,8 +128,9 @@ async def run_illustrate(
         _note(engine, job_id, {"role": "illustrator", "event": "not_live"}, state="done")
         return
     version = concept.provenance.version
-    kept, skipped = [], []
-    for picture in data.get("pictures", [])[: director.MAX_PICTURES]:
+    kept, skipped, later = [], [], []
+    pictures = data.get("pictures", [])[: director.MAX_PICTURES]
+    for picture in pictures:
         section = section_text(concept.lesson, picture["section"])
         if not section:
             skipped.append(f"{picture['section']}: no such section")
@@ -136,6 +149,8 @@ async def run_illustrate(
             )
         except ProviderError as exc:
             skipped.append(f"{picture['section']}: {exc}")
+            if str(exc) == "provider_rate_limited":
+                later.append(picture)
             continue
         if seen is None:
             skipped.append(f"{picture['section']}: {why}")
@@ -155,16 +170,37 @@ async def run_illustrate(
                 created_at=now(),
             )
         )
+    # Only the sections drawn in this run are replaced: a retry must not drop the pictures an
+    # earlier run kept.
+    drawn = [p["section"][:200] for p in pictures if p not in later]
     with Session(engine) as db, db.begin():
         db.execute(
             delete(LessonIllustration).where(
                 LessonIllustration.course_id == course_id,
                 LessonIllustration.concept_id == concept_id,
                 LessonIllustration.version == version,
+                LessonIllustration.section.in_(drawn),
             )
         )
         db.add_all(kept)
     event = {"role": "illustrator", "event": "drawn", "kept": len(kept), "skipped": skipped[:5]}
+    with Session(engine) as db:
+        attempts = need(db.get(GenerationJob, job_id)).attempts
+    if later and attempts < len(RATE_LIMIT_WAITS):
+        # Every released lesson queues its pictures at once, so the image model's quota is hit
+        # in bursts (live 2026-11-21: 5 of 8 rate limited). Those are drawn again later.
+        wait = RATE_LIMIT_WAITS[attempts]
+        _note(
+            engine,
+            job_id,
+            {**event, "retry_in": wait, "again": [p["section"] for p in later]},
+            state="queued",
+            stage="",
+            attempts=attempts + 1,
+            not_before=now() + wait,
+            input={**data, "pictures": later},
+        )
+        return
     _note(engine, job_id, event, state="done")
 
 

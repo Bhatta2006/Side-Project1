@@ -145,7 +145,8 @@ def author_block(plan: dict, door: str | None = None) -> str:
             else []
         ),
         "- Write these '## ' sections, with exactly these headings, in this order, then the "
-        "closing '## Check yourself' page (a '## ' page of its own; sources, if any, after it):",
+        "closing '## Check yourself' page (a '## ' page of its own; sources, if any, after it). "
+        "A section longer than one page goes on under '## <its heading> (continued)':",
     ]
     for i, s in enumerate(plan["sections"], 1):
         extra = []
@@ -178,18 +179,52 @@ def designer_block(plan: dict) -> str:
     )
 
 
+_CONTINUED = re.compile(r"\s*\((?:continued|cont\.?|part\s*\d+)\)\s*$", re.I)
+
+
 def heading_issues(lesson: str, plan: dict) -> list[str]:
     """The author's '## ' headings must be the plan's, in order (a closing check page may
-    follow)."""
-    got = [
-        _key(h)
-        for h in re.findall(r"^##\s+(.+?)\s*$", lesson, re.MULTILINE)
-        if not re.match(r"(check yourself|self-check|quick check|sources|references)", h, re.I)
-    ]
+    follow). A planned section too long for one page may go on under its own heading plus
+    "(continued)" or "(part 2)": the page gate asks for that split, so it must not break the
+    plan (live 2026-11-21: the two gates sent the first lesson back and forth until it failed)."""
+    got: list[str] = []
+    for h in re.findall(r"^##\s+(.+?)\s*$", lesson, re.MULTILINE):
+        if re.match(r"(check yourself|self-check|quick check|sources|references)", h, re.I):
+            continue
+        base = _CONTINUED.sub("", h)
+        if base != h and got and _key(base) == got[-1]:
+            continue
+        got.append(_key(h))
     want = [_key(s["heading"]) for s in plan["sections"]]
     if got == want:
         return []
     return [
         "Use exactly the planned '## ' headings, in order: "
         + "; ".join(s["heading"] for s in plan["sections"])
+        + ". A section too long for one page goes on under '## <its heading> (continued)'."
     ]
+
+
+def page_issues(issues: list[str], plan: dict) -> list[str]:
+    """The page gate's "split it into two pages", said in a way the planned headings allow."""
+    out = []
+    for issue in issues:
+        m = re.match(r"Page '(.+?)' has about .*Split it into two pages\.$", issue)
+        if m:
+            # The page gate cuts titles at 60 characters: name the planned heading in full.
+            title = _CONTINUED.sub("", m.group(1))
+            heading = next(
+                (
+                    s["heading"]
+                    for s in plan["sections"]
+                    if _key(s["heading"]).startswith(_key(title))
+                ),
+                title,
+            )
+            issue = (
+                f"{issue[: -len('Split it into two pages.')]}Split it into two pages without "
+                f"changing the plan: keep '## {heading}' on the first and title the second "
+                f"'## {heading} (continued)'."
+            )
+        out.append(issue)
+    return out

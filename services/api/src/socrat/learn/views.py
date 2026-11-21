@@ -118,7 +118,9 @@ def today_view(db: Session, catalog: Catalog, user: User, enrollment: Enrollment
         dict(item, status="pending") for item in (plan.days[0]["items"] if plan.days else [])
     ]
     pending = [p for p in pending if p["id"] not in done_ids]
-    budget = enrollment.minutes_per_day
+    # The learner's own session length from Lesson 0 (10/25/60), not the rounded-up
+    # scheduling bucket: a learner who chose 25 minutes must not see "0/30 min".
+    budget = learn.session_budget(enrollment)
     day = next(
         (
             d

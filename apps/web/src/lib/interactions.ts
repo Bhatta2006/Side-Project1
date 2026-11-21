@@ -11,13 +11,23 @@ export function normalise(text: string): string {
 
 export type BlankPart = { text: string } | { blank: number; accept: string[] };
 
+/**
+ * Maths that leads into a blank, written "$P(S) = $ [[0.1]]": the space before the closing `$`
+ * makes it text by the price rule in lib/math.ts, so it showed as "$P(S) = $". Trimmed here,
+ * just before a blank, so prices elsewhere keep that rule.
+ */
+function beforeBlank(text: string): string {
+  return text.replace(/(\$(?=[^\s$])[^$\n]*?[^\s\\])\s+\$(\s*)$/, (all: string, open: string, gap: string) =>
+    /[=\\^_()+<>]/.test(open) ? `${open}$${gap}` : all);
+}
+
 /** "A [[rule|rules]] from [[data]]" -> text and blanks, in order. */
 export function blanks(text: string): BlankPart[] {
   const out: BlankPart[] = [];
   let last = 0;
   let n = 0;
   for (const m of text.matchAll(/\[\[([^[\]]+)\]\]/g)) {
-    if (m.index > last) out.push({ text: text.slice(last, m.index) });
+    if (m.index > last) out.push({ text: beforeBlank(text.slice(last, m.index)) });
     out.push({ blank: n++, accept: m[1].split('|').map(a => a.trim()).filter(Boolean) });
     last = m.index + m[0].length;
   }
