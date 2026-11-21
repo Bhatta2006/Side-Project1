@@ -605,6 +605,20 @@ async def run_outline(
 INTRO_WORDS = 150  # the door belongs in the opening, not somewhere in the lesson
 
 
+def door_issue(door: str | None, lesson: str) -> str:
+    """The lesson does not open with the learner's door (half its words in the opening), or
+    "". Checked as soon as the lesson is written, so a miss costs one rewrite of the lesson,
+    not a whole round after the quiz, atoms and visuals were built for it."""
+    words = learner_plan._tokens(door or "")
+    opening = learner_plan._tokens(" ".join(lesson.split()[:INTRO_WORDS]))
+    if not words or len(words & opening) * 2 >= len(words):
+        return ""
+    return (
+        f'Open the lesson with the learner\'s everyday scenario (their door), "{door}", in the first two or '
+        "three sentences, then map it to the formal term."
+    )
+
+
 def first_lesson_issues(brief: Brief, course, live, personal: bool) -> list[str]:
     """The first-lesson gate for a Lesson 0 learner (backlog 2.5), code only: it fits the
     session; and, when it was written for them (``personal``), it opens with their door, keeps an
@@ -617,14 +631,8 @@ def first_lesson_issues(brief: Brief, course, live, personal: bool) -> list[str]
     issues = [over] if (over := first_session_over(brief, course, live)) else []
     if not personal:
         return issues
-    if plan.door:
-        door = learner_plan._tokens(plan.door)
-        opening = learner_plan._tokens(" ".join(live.lesson.split()[:INTRO_WORDS]))
-        if door and len(door & opening) * 2 < len(door):
-            issues.append(
-                "Open the lesson with the learner's everyday scenario (the door) in the first "
-                "few sentences, then map it to the formal term."
-            )
+    if door := door_issue(plan.door, live.lesson):
+        issues.append(door)
     for c in plan.constraints:
         lang = c.enforced_as.removeprefix("languages=")
         if c.enforced_as.startswith("languages=") and shape.effective(course).studio == "code":
@@ -1343,6 +1351,12 @@ async def run_package(
             event["exercise"] = "waiting for the execution service"
         _note(engine, job_id, event, state="done")
 
+    # The course's opening lesson for a Lesson 0 learner must open with their door
+    # (first_lesson_issues); the director and the early lesson gate both need it.
+    opens_course = bool(
+        personal and course.modules and course.modules[0].concepts[:1] == [concept.id]
+    )
+    door_text = brief.plan.door if opens_course and brief.plan is not None else None
     # The Lesson Director's plan (sections, running example, interactions, pictures), checked
     # by code. None: written the old way.
     plan = None
@@ -1360,7 +1374,7 @@ async def run_package(
             ask, engine, job_id, ctx, concept, interactions, span, "\n\n".join(who), tries
         )
         if plan is not None:
-            ctx = f"{ctx}\n\n{director.author_block(plan)}"
+            ctx = f"{ctx}\n\n{director.author_block(plan, door_text if opens_course else None)}"
 
     designing: asyncio.Future | None = None  # the Experience Designer's call for this lesson
     designed_for: str | None = None  # the lesson text it is designing for
@@ -1397,6 +1411,10 @@ async def run_package(
             issues = pkg.check_lesson(concept, course, lesson, style, paging)
             if plan is not None:
                 issues += director.heading_issues(str(lesson.get("lesson", "")), plan)
+            # Not on the last round: there the first-lesson gate is waived, not failed.
+            drafted = str(lesson.get("lesson", ""))
+            if opens_course and attempt < rounds and (door := door_issue(door_text, drafted)):
+                issues.append(door)
             issues += research.check(str(lesson.get("lesson", "")), cited)
             # A dead link is dropped, not a reason for a new round, while the live ones and the
             # researcher's sources still make the two a lesson needs.

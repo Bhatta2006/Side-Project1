@@ -130,11 +130,20 @@ def check(
     return {"thread": str(raw["thread"])[:400], "sections": clean}, []
 
 
-def author_block(plan: dict) -> str:
-    """The plan as the lesson author must follow it."""
+def author_block(plan: dict, door: str | None = None) -> str:
+    """The plan as the lesson author must follow it. ``door``: the learner's everyday scene,
+    which the course's first lesson opens with (it outranks section 1's own hook)."""
     lines = [
         "LESSON PLAN (from the Lesson Director; follow it exactly):",
         f"- Running example, threaded through every section: {plan['thread']}",
+        *(
+            [
+                f"- The first two or three sentences of section 1 open with the learner's own "
+                f'scene, "{door}", then map it to the formal idea.'
+            ]
+            if door
+            else []
+        ),
         "- Write these '## ' sections, with exactly these headings, in this order, then the "
         "closing '## Check yourself' page (a '## ' page of its own; sources, if any, after it):",
     ]

@@ -231,3 +231,32 @@ def test_a_sources_page_is_neither_sized_nor_a_planned_heading():
     assert director.heading_issues(text, plan) == []
     profile = PageProfile(words=(1, 400), ideas=1, pages=(3, 6), check_every=1, elements=())
     assert not any("Sources" in p for p in check(text, profile))
+
+
+def test_the_door_opens_the_first_lesson_and_is_checked_as_soon_as_it_is_written():
+    from socrat.coursegen import jobs
+
+    door = "Estimating rent for a new apartment"
+    plan, _ = director.check(GOOD, CONCEPT, ["predict-reveal", "sort-buckets"], (3, 6))
+    assert door in director.author_block(plan, door)
+    assert door not in director.author_block(plan)
+    opens = "When estimating rent for a new apartment, you compare similar flats. " * 3
+    assert jobs.door_issue(door, opens) == ""
+    missed = jobs.door_issue(door, "Can your laptop load a 10 GB dataset? " * 5)
+    assert door in missed and "first two or three sentences" in missed
+    assert jobs.door_issue(None, "anything") == ""
+
+
+def test_a_readable_first_lesson_draft_is_flagged_for_today():
+    from socrat.coursegen import progress
+    from socrat.models import GenerationJob
+
+    first = GenerationJob(
+        state="running", input={"trigger": "first"}, log=[{"event": "preview_ready"}]
+    )
+    later = GenerationJob(
+        state="running", input={"trigger": "prefetch"}, log=[{"event": "preview_ready"}]
+    )
+    assert progress.readable(first)
+    assert not progress.readable(later)  # only the first lesson's draft is shown (learn/preview.py)
+    assert not progress.readable(GenerationJob(state="running", input={"trigger": "first"}, log=[]))

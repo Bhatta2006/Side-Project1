@@ -753,8 +753,10 @@ def preparing(request: Request):
         course = generated.course(db, enrollment.course_id) if enrollment else None
         if course is None:
             return {"lessons": []}
-        rounds = request.app.state.settings.gen_package_rounds
-        return {"lessons": progress.for_course(db, course, rounds, now())}
+        settings = request.app.state.settings
+        drafts = settings.gen_first_lesson_preview
+        lessons = progress.for_course(db, course, settings.gen_package_rounds, now(), drafts)
+        return {"lessons": lessons}
 
 
 @router.get("/plan")

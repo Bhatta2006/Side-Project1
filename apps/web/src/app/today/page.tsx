@@ -159,6 +159,9 @@ export default function TodayPage() {
   const fresh = today.streak.current === 0 && today.done.length === 0 && today.progress.finished === 0 && today.streak.week_minutes === 0;
   // Every module of the course, in order; a lesson still being written carries its progress.
   const writing = new Map(preparing.filter(l => l.state !== 'later').map(l => [l.concept, l]));
+  // Nothing learned yet and the course's first lesson not live: the learner is waiting for it.
+  const firstConcept = plan?.modules.find(m => m.concepts.length)?.concepts[0]?.concept;
+  const firstWriting = firstConcept && today.progress.finished === 0 ? writing.get(firstConcept) : undefined;
   const pathModules: PathModule[] = (plan?.modules ?? []).filter(m => m.concepts.length).map(m => ({
     id: m.id,
     title: m.title,
@@ -272,6 +275,33 @@ export default function TodayPage() {
               </Link>
             ) : null}
           </Reveal>
+        ) : null}
+
+        {/* A course whose first lesson is still being written: say so here, where the learner
+            now waits after onboarding, and open the draft the moment there is one. */}
+        {firstWriting ? (
+          <div className="col-span-12">
+            <Link
+              href={conceptHref(firstWriting.concept)}
+              role="status"
+              aria-live="polite"
+              className={cn('paper flex items-center justify-between gap-3 rounded-card px-5 py-4 transition-transform duration-200', firstWriting.draft && 'hover:-translate-y-0.5')}
+              onClick={e => { if (!firstWriting.draft) e.preventDefault(); }}
+              aria-disabled={!firstWriting.draft}
+            >
+              <span className="grid gap-0.5">
+                <span className="font-display text-lg font-semibold tracking-[-0.02em]">
+                  {firstWriting.draft ? 'Your first lesson is ready to read' : 'Your first lesson is being written for you'}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {firstWriting.draft
+                    ? `${firstWriting.title}: a draft, still being checked. Its questions follow when the checks pass.`
+                    : `${firstWriting.title}: ${firstWriting.label.toLowerCase()}${firstWriting.state === 'writing' ? ` (${Math.round(firstWriting.progress * 100)}%)` : ''}. Usually under three minutes.`}
+                </span>
+              </span>
+              {firstWriting.draft ? <span className="flex flex-none items-center gap-1 font-semibold">Read it <ArrowRight className="size-5" aria-hidden="true" /></span> : <Ring value={Math.round(firstWriting.progress * 100)} label={`${Math.round(firstWriting.progress * 100)}%`} size={48} ariaLabel="Writing progress" />}
+            </Link>
+          </div>
         ) : null}
 
         {/* 5. Everything else, one section at a time. */}

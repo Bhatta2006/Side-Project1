@@ -241,6 +241,18 @@ export default function Start() {
     return () => { alive = false; clearInterval(timer); };
   }, [step, draft?.request_id, plan?.start?.state]);
 
+  // As soon as the plan is saved, enrol and go to Today: the first lesson is written there
+  // (its stone fills up, its draft opens), instead of the learner watching this page for minutes.
+  const started = useRef(false);
+  useEffect(() => {
+    const state = plan?.start?.state;
+    if (step !== 'plan' || started.current || !plan?.blueprint || offer) return;
+    if (state && state !== 'roadmap_ready' && state !== 'first_lesson_ready') return;
+    started.current = true;
+    void begin();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- begin reads the latest plan
+  }, [step, plan?.blueprint, plan?.start?.state, offer]);
+
   async function enrol(published: Plan, level?: string) {
     await api.post('/enrollments', level ? { ...published.enroll, level } : published.enroll);
     try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
@@ -446,7 +458,7 @@ export default function Start() {
           <div className="grid gap-6">
             {plan?.blueprint && (!plan.start || plan.start.state === 'first_lesson_ready') ? <Celebrate kind="amber" emoji="map" sound="finish" className="-mb-4 justify-self-start" /> : null}
             <Ask title={plan?.blueprint?.title || plan?.skeleton?.title || 'Writing your course plan'} body={plan?.blueprint ? plan.blueprint.tagline : 'Module 1 first, the rest just before you reach it. This takes a minute.'} />
-            {!plan?.blueprint ? <Loading variant="inline" label="Planning your course" /> : null}
+            {!plan?.blueprint && !plan?.skeleton ? <Loading variant="inline" label="Planning your course" /> : null}
             <ol className="grid gap-2">
               {(plan?.blueprint?.modules.map(m => ({ title: m.title, n: m.concepts.length })) ?? plan?.skeleton?.modules.map(m => ({ title: m.title, n: m.lessons.length })) ?? []).map((m, i) => (
                 <li key={`${i}-${m.title}`} className="flex min-h-12 items-center justify-between gap-3 rounded-[4px] border bg-card px-4 py-3">
@@ -456,11 +468,12 @@ export default function Start() {
               ))}
             </ol>
             {plan?.job?.state === 'failed' ? <ErrorNote message="The plan could not be written. Try again in a moment." /> : null}
-            {plan?.blueprint && plan.start?.state === 'roadmap_ready' ? (
-              // Visible words, not placeholder bars: a live run waited 2-5 minutes here.
+            {plan?.blueprint && plan.start?.state === 'roadmap_ready' && !offer ? (
+              // The learner waits on Today, not here: the plan is enough to enrol, and Today shows
+              // the first lesson filling up and opens its draft as soon as there is one.
               <p role="status" className="flex items-center gap-3 rounded-[4px] border bg-card px-4 py-3 text-[15px]">
                 <span aria-hidden className="size-2.5 shrink-0 animate-pulse rounded-full bg-primary" />
-                Your first lesson is being written for you. It is usually ready in a few minutes; you can stay on this page.
+                Your plan is ready. Taking you to your course while the first lesson is written…
               </p>
             ) : null}
             {plan?.start?.state === 'first_lesson_failed' ? (
