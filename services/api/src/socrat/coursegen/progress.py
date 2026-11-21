@@ -89,8 +89,19 @@ def of_job(job: GenerationJob | None, rounds: int, now: int) -> dict:
     )
 
 
-def for_course(db: Session, course, rounds: int, now: int) -> list[dict]:
-    """Every lesson of ``course`` that is not live yet, in course order, with its progress."""
+def readable(job: GenerationJob) -> bool:
+    """A running first-lesson job whose draft passed the lesson gates (learn/preview.py)."""
+    return (
+        job.state == "running"
+        and (job.input or {}).get("trigger") == "first"
+        and any(e.get("event") == "preview_ready" for e in job.log or [])
+    )
+
+
+def for_course(db: Session, course, rounds: int, now: int, drafts: bool = False) -> list[dict]:
+    """Every lesson of ``course`` that is not live yet, in course order, with its progress.
+    With ``drafts`` (``gen_first_lesson_preview``) a first lesson whose draft can be read says
+    so (``draft``), so Today sends the learner to read it instead of to wait."""
     latest: dict[str, GenerationJob] = {}
     for job in db.scalars(
         select(GenerationJob)
@@ -105,12 +116,14 @@ def for_course(db: Session, course, rounds: int, now: int) -> list[dict]:
             concept = by_id.get(cid)
             if concept is None or concept.status == "live":
                 continue
-            out.append(
-                dict(
-                    concept=f"{course.id}:{cid}",
-                    title=concept.title,
-                    module=module.id,
-                    **of_job(latest.get(cid), rounds, now),
-                )
+            item = dict(
+                concept=f"{course.id}:{cid}",
+                title=concept.title,
+                module=module.id,
+                **of_job(latest.get(cid), rounds, now),
             )
+            current = latest.get(cid)
+            if drafts and current is not None and readable(current):
+                item |= {"draft": True, "label": "Draft ready to read; still being checked"}
+            out.append(item)
     return out

@@ -48,3 +48,33 @@ export function words(page: Page): number {
 export function minutes(pages: Page[], rate = 130): number {
   return Math.max(1, Math.round(pages.reduce((n, p) => n + words(p), 0) / rate));
 }
+
+/** A heading compared loosely (case, emphasis marks, punctuation), the same way the server places visuals. */
+export function sectionKey(title: string): string {
+  return title.toLowerCase().replace(/[`*_]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * Which visuals (by index) belong on which reading page (by its section key). A visual whose
+ * section is empty or is not a heading of this lesson (a translated lesson renames them) is left
+ * out, so it keeps its place after the lesson.
+ */
+const CONTINUED = /\s*\((?:continued|cont\.?|part\s*\d+)\)\s*$/i;
+
+export function placeVisuals(source: string, visuals: { section?: string }[]): Map<string, number[]> {
+  // A section too long for one page goes on under "<heading> (continued)": its visuals follow
+  // the last of its pages, where the section ends.
+  const last = new Map<string, string>();
+  for (const p of splitPages(source).filter(p => !isCheckPage(p))) {
+    const key = sectionKey(p.title);
+    const base = sectionKey(p.title.replace(CONTINUED, ''));
+    if (base !== key && last.has(base)) last.set(base, key);
+    else last.set(key, key);
+  }
+  const placed = new Map<string, number[]>();
+  visuals.forEach((v, i) => {
+    const page = v.section ? last.get(sectionKey(v.section)) : undefined;
+    if (page) placed.set(page, [...(placed.get(page) ?? []), i]);
+  });
+  return placed;
+}

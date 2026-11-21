@@ -342,6 +342,8 @@ class Visual(Model):
     purpose: str = Field(min_length=5, max_length=300)
     fallback_text: str = Field(min_length=10, max_length=4000)
     alt_text: str = Field(min_length=5, max_length=600)
+    # The lesson section ("## " heading) it is shown in; empty: after the lesson.
+    section: str = Field(default="", max_length=200)
 
     @model_validator(mode="after")
     def registered(self):
@@ -378,7 +380,7 @@ class Concept(Model):
     quiz: list[QuizItem] = Field(default_factory=list, max_length=10)
     prompts: list[Prompt] = Field(default_factory=list, max_length=4)
     exercises: list[Exercise] = Field(default_factory=list, max_length=10)
-    visuals: list[Visual] = Field(default_factory=list, max_length=4)
+    visuals: list[Visual] = Field(default_factory=list, max_length=8)
     experiments: list[Experiment] = Field(default_factory=list, max_length=6)
     problems: list[Slug] = Field(default_factory=list)
     practice_links: list[PracticeLink] = Field(default_factory=list, max_length=10)

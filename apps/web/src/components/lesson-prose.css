@@ -160,3 +160,8 @@
 @media print {
   .prose-lesson .callout-note { background: none; }
 }
+
+/* Maths (components/tex.tsx): a wide formula scrolls on its own instead of the page. */
+.math-display { display: block; margin: 1.1em 0; overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }
+.math-display .katex-display { margin: 0; }
+.math-inline .katex { font-size: 1.05em; }

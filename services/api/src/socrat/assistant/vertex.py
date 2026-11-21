@@ -236,6 +236,68 @@ async def _media(
     client: Any,
 ) -> tuple[Any, bytes, str]:
     """One metered non-text call; returns the first inline-data part of the reply."""
+    reply = await _call(
+        settings,
+        model=model,
+        contents=contents,
+        config=config,
+        flat_price=flat_price,
+        feature=feature,
+        engine=engine,
+        user_id=user_id,
+        client=client,
+    )
+    for part in reply.parts or []:
+        if part.inline_data and part.inline_data.data:
+            return reply, part.inline_data.data, part.inline_data.mime_type or ""
+    raise ProviderError("provider_empty_reply")  # blocked by a safety filter, or text only
+
+
+async def look(
+    settings: Settings,
+    image: bytes,
+    mime: str,
+    question: str,
+    *,
+    engine: Engine | None = None,
+    feature: str = "image_check",
+    client: Any = None,
+) -> str:
+    """The text model's answer to ``question`` about one image (billed by tokens). Raises
+    ProviderError."""
+    from google.genai import types
+
+    parts = [types.Part.from_bytes(data=image, mime_type=mime), types.Part(text=question)]
+    reply = await _call(
+        settings,
+        model=settings.vertex_model,
+        contents=[types.Content(role="user", parts=parts)],
+        config=types.GenerateContentConfig(response_mime_type="application/json"),
+        flat_price=None,
+        feature=feature,
+        engine=engine,
+        user_id=None,
+        client=client,
+    )
+    text = reply.text or ""
+    if not text:
+        raise ProviderError("provider_empty_reply")
+    return text
+
+
+async def _call(
+    settings: Settings,
+    *,
+    model: str,
+    contents: Any,
+    config: Any,
+    flat_price: float | None,
+    feature: str,
+    engine: Engine | None,
+    user_id: str | None,
+    client: Any,
+) -> Any:
+    """One budget-checked, metered generate_content call (``flat_price`` None: by tokens)."""
     if not settings.ai_enabled or not settings.vertex_api_key.get_secret_value():
         raise ProviderError("provider_offline")
     if engine is not None:
@@ -262,10 +324,7 @@ async def _media(
                 stamp=now(),
                 cost_usd=flat_price,
             )
-    for part in reply.parts or []:
-        if part.inline_data and part.inline_data.data:
-            return reply, part.inline_data.data, part.inline_data.mime_type or ""
-    raise ProviderError("provider_empty_reply")  # blocked by a safety filter, or text only
+    return reply
 
 
 async def generate_image(

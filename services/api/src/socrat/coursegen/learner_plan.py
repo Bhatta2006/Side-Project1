@@ -464,7 +464,17 @@ def data_block(plan: LearnerPlan, probe: list[str] | None = None) -> str:
 OUTLINE_RULES = """This course is for the one learner in the <learner> block. Their "request" is
 authoritative: an outline that drifts from it is wrong, whatever the brief's rewrite says. Honour
 every "asks" quote. Open the first module where their "start" sample says (skip what they showed
-first try; begin just before what they missed)."""
+first try; begin just before what they missed).
+Keep the first module short: 2-4 lessons that give a complete first win soon, since the
+learner is waiting for it. Move everything else to later modules; nothing is dropped, later
+modules are written while the learner studies.
+The first lesson teaches the idea their Lesson 0 sample probed ("start.concept_probed"),
+through their door: that is what they just met and want next. Setup, tooling, data loading
+and other plumbing come after it, unless the request itself is about them.
+A gap id in "start.gaps" is a short label for the learner's mistaken belief about that probed
+idea (for example a label with "crash" or "error" means they expected the rule to break, not
+that software crashes). Confront it inside the lessons on that idea; never turn a gap into a
+separate topic of its own."""
 
 LESSON_RULES = """This lesson is for the one learner in the <learner> block.
 - If a "door" is given, open with it in 2-3 sentences and map it to the formal term, then

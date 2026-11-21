@@ -25,7 +25,15 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const STATUSES = Object.keys(STATUS_LABEL) as Status[];
 const MOODS: SocMood[] = ['neutral', 'worried', 'curious', 'thinking', 'happy', 'proud', 'surprised', 'confused', 'sleepy', 'wink'];
-const ILLUSTRATIONS: IllustrationName[] = ['welcome', 'orbit', 'stack', 'ladder', 'empty', 'bulb', 'target', 'plane'];
+const INTERACTIONS = [
+  { renderer: 'predict-reveal', purpose: 'Predict what selection returns', params: { prompt: 'Selecting rows where $\\text{origin} = \\text{JFK}$ from a 6-column table gives a table with how many columns?', options: ['Fewer than 6', 'Exactly 6', 'More than 6'], answer: 1, explanation: 'Selection $\\sigma$ filters **rows**; the schema keeps all 6 columns.' } },
+  { renderer: 'step-through', purpose: 'Walk through a projection', params: { intro: 'Compute $\\pi_{name}(Students)$.', steps: [{ title: 'Pick the column', body: 'Keep only `name`.' }, { title: 'Drop duplicates', body: 'Relations are sets: two "Ada" rows become one.' }] } },
+  { renderer: 'order-steps', purpose: 'Order the steps of a query', params: { prompt: 'Put the steps of evaluating this query in order.', items: ['FROM: read the table', 'WHERE: keep matching rows', 'SELECT: keep the columns'], explanation: 'Rows are filtered before columns are chosen.' } },
+  { renderer: 'sort-buckets', purpose: 'Tell selection from projection', params: { prompt: 'Which operator does each request need?', buckets: ['Selection σ', 'Projection π'], items: [{ text: 'Flights from JFK', bucket: 'Selection σ' }, { text: 'Only the flight numbers', bucket: 'Projection π' }, { text: 'Seats above 0', bucket: 'Selection σ' }] } },
+  { renderer: 'fill-blank', purpose: 'Recall what each operator filters', params: { text: 'Selection filters [[rows|tuples]]; projection filters [[columns|attributes]].', explanation: 'Rows versus columns.' } },
+  { renderer: 'match-pairs', purpose: 'Match symbols to operators', params: { prompt: 'Match each symbol to its operator.', pairs: [{ left: '$\\sigma$', right: 'Selection' }, { left: '$\\pi$', right: 'Projection' }, { left: '$\\bowtie$', right: 'Join' }] } },
+];
+const ILLUSTRATIONS: IllustrationName[] =['welcome', 'orbit', 'stack', 'ladder', 'empty', 'bulb', 'target', 'plane'];
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -141,6 +149,12 @@ export default function Gallery() {
           <VisualizationHost spec={{ renderer: 'simulation', version: '1.0', params: { model: 'circuit', inputs: { voltage: 10, resistance: 5 } }, purpose: 'See current change with resistance', fallback_text: 'Ohm law: current is voltage divided by resistance, so 10 V across 5 ohm gives 2 A.', alt_text: 'A circuit with one resistor.' }} />
           <VisualizationHost spec={{ renderer: 'timeline', version: '1.0', params: { unit: 'beat', length: 8, tracks: ['Kick', 'Snare'] }, purpose: 'Place beats on a bar', fallback_text: 'Eight beats: kick on 1 and 5, snare on 3 and 7.', alt_text: 'Two tracks of eight beats.' }} />
           <VisualizationHost spec={{ renderer: 'code-studio', version: '1.0', params: { language: 'python', starter: 'def solve(x):\n    return x' }, purpose: 'Try a starter', fallback_text: 'Write solve(x) so it returns x doubled.', alt_text: 'A Python starter function.' }} />
+        </div>
+      </Block>
+
+      <Block title="In-lesson interactions">
+        <div className="grid gap-6" data-testid="lesson-interactions">
+          {INTERACTIONS.map(spec => <VisualizationHost key={spec.renderer} spec={{ version: '1.0', alt_text: 'An interactive exercise.', fallback_text: 'The same exercise as text, with its answer.', ...spec }} />)}
         </div>
       </Block>
 

@@ -9,6 +9,7 @@ import { ErrorNote, Loading, Page, PageHeader } from '@/components/common';
 import { EmptyState } from '@/components/socrat/states';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { TeX } from '@/components/tex';
 
 /**
  * The course's own sections (GET /sections): what this subject needs beyond lessons and
@@ -31,7 +32,7 @@ interface Overview { course: string; lessons_done: number; lessons_total: number
 
 function Value({ entry, index, formula }: { entry: Entry; index: number; formula: boolean }) {
   const text = entry.values[index];
-  if (formula) return <code className="font-mono text-[15px] break-words">{text}</code>;
+  if (formula) return <TeX tex={text} />;
   if (index === 0 && entry.url) {
     return <a href={entry.url} target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-4">{text}</a>;
   }

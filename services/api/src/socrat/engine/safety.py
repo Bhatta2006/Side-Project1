@@ -17,7 +17,10 @@ HIGH_STAKES = {
 }
 HAZARDS = r"high[- ]voltage|mains (power|electricity|wiring)|electrical wiring|explosive\w*|firearms?|guns?|weapons?|hazardous chemicals?|chemistry (at home|experiments)|lathe|welding|power tools|chainsaw"
 
+LAB = r"labs?|laboratory|experiments?|practicals?|titrations?|chemistry|chemicals?|biology|dissections?|microbiology"
+
 DISCLAIMER = "This is education, not professional {field} advice; check real decisions with a qualified professional."
+LAB_NOTE = "Lab procedures are simulated; hazardous experiments need qualified supervision."
 HAZARD_NOTE = "Hazardous practice is taught with simulations; anything real needs qualified supervision and proper safety equipment."
 
 
@@ -40,6 +43,8 @@ def notes(text: str) -> list[str]:
     ]
     if _word(HAZARDS, low):
         out.append(HAZARD_NOTE)
+    if _word(LAB, low):
+        out.append(LAB_NOTE)
     return out
 
 

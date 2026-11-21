@@ -14,6 +14,8 @@ export interface PreparingLesson {
   progress: number;
   label: string;
   eta_seconds?: number;
+  /** A first lesson whose draft can already be read (GET /concepts/{id}/preview). */
+  draft?: boolean;
   at?: number;
 }
 

@@ -96,7 +96,8 @@ register(
         renderers=("markdown", "function-plot", "simulation", "concept-map", "playground-visual"),
         capabilities=("math.check", "physics.simulate"),
         verifiable="fully",
-        safety=("Lab procedures are simulated; hazardous experiments need qualified supervision.",),
+        # No fixed note: most of this domain is maths, where a lab warning is noise. Lab
+        # subjects get engine.safety.LAB_NOTE from their own words.
     )
 )
 register(

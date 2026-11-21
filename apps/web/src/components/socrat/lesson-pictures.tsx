@@ -9,7 +9,10 @@ export interface Picture {
   src: string;
   title: string;
   source_url: string;
-  provider: 'wikimedia' | 'openverse' | 'web';
+  /** generated: drawn by the image model for this lesson and checked (coursegen/illustrate.py). */
+  provider: 'wikimedia' | 'openverse' | 'web' | 'generated';
+  /** What a screen reader says; generated pictures have their own, others use the title. */
+  alt?: string;
   credit: string;
   license: string;
   license_url: string;
@@ -17,7 +20,7 @@ export interface Picture {
   height: number;
 }
 
-const FROM: Record<Picture['provider'], string> = { wikimedia: 'Wikimedia Commons', openverse: 'Openverse', web: 'the web' };
+const FROM: Record<Picture['provider'], string> = { wikimedia: 'Wikimedia Commons', openverse: 'Openverse', web: 'the web', generated: 'Socrat' };
 
 /**
  * Pictures for a lesson, one per section (GET /concepts/{id}/images), by section heading.
@@ -46,14 +49,14 @@ export function LessonFigure({ picture }: { picture: Picture }) {
       {picture.title ? <figcaption className="text-[15px] text-foreground">{picture.title}</figcaption> : null}
       <button type="button" onClick={() => setOpen(true)} className="block overflow-hidden rounded-[4px] bg-raised" aria-label={`Show larger: ${picture.title || 'picture'}`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- remote images from many hosts, served by their providers */}
-        <img src={picture.src} alt={picture.title} loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} className="mx-auto max-h-96 w-auto object-contain" />
+        <img src={picture.src} alt={picture.alt || picture.title} loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} className="mx-auto max-h-96 w-auto object-contain" />
       </button>
       <Credit p={picture} />
       {open ? (
         <div role="dialog" aria-modal="true" aria-label={picture.title || 'Picture'} className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setOpen(false)} onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}>
           <div className="grid max-h-full max-w-5xl gap-2 rounded-card bg-card p-3" onClick={e => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={picture.src} alt={picture.title} referrerPolicy="no-referrer" className="max-h-[80vh] w-auto rounded-[4px] object-contain" />
+            <img src={picture.src} alt={picture.alt || picture.title} referrerPolicy="no-referrer" className="max-h-[80vh] w-auto rounded-[4px] object-contain" />
             <div className="flex flex-wrap items-start justify-between gap-3">
               <Credit p={picture} />
               <button type="button" autoFocus onClick={() => setOpen(false)} className="rounded-[4px] border border-line px-3 py-1 text-sm">Close</button>
@@ -67,6 +70,9 @@ export function LessonFigure({ picture }: { picture: Picture }) {
 
 /** Author, licence and source, as the licence asks; a web result says only where it is from. */
 function Credit({ p }: { p: Picture }) {
+  if (p.provider === 'generated') {
+    return <p className="text-[13px] leading-snug text-muted-foreground">{p.credit}. AI pictures can be wrong; the lesson text is what counts.</p>;
+  }
   return (
     <p className="text-[13px] leading-snug text-muted-foreground">
       {p.credit ? `${p.credit} · ` : ''}

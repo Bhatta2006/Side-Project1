@@ -852,6 +852,9 @@ html.dark {
   .prose-compact > * + * { margin-top: 0.6em; }
   .prose-compact pre { font-size: 13px; padding: 12px 14px; border-radius: 16px; }
   .table-scroll { overflow-x: auto; max-width: 100%; }
+  /* The wrapper scrolls sideways, so cells keep whole words: "anywhere" (from td above) let a
+     table squeeze its columns to one letter wide ("Ele/men/tary"). */
+  .table-scroll td, .table-scroll th { overflow-wrap: break-word; }
   .code-block { font-family: var(--font-mono); font-size: 14px; line-height: 22px; background: var(--code-bg); color: var(--code-fg); border-radius: 16px; padding: 14px 16px; overflow-x: auto; white-space: pre; border: 1px solid var(--border); font-variant-ligatures: none; }
   .io-block { font-family: var(--font-mono); font-size: 13px; line-height: 20px; background: var(--raised); border-radius: 12px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow-y: auto; }
 

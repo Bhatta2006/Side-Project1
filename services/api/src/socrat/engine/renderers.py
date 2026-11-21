@@ -13,7 +13,7 @@ component to the web registry. Nothing in the course compiler changes.
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
@@ -283,6 +283,174 @@ SELF_CHECK = register(
 )
 
 
+# --- in-lesson interactions ------------------------------------------------------------------
+# Small things a learner does inside a lesson page, in any subject. Each carries its own answer
+# key, checked here for consistency (and by the fact checker for truth). They are practice:
+# evidence "exposure", so a wrong key can never move mastery.
+
+Short = Annotated[str, Field(min_length=1, max_length=300)]
+_BLANK = re.compile(r"\[\[([^\[\]]+)\]\]")
+
+
+def _distinct(values: list[str], what: str) -> list[str]:
+    if len({v.strip().lower() for v in values}) != len(values):
+        raise ValueError(f"{what} must be distinct")
+    return values
+
+
+class PredictReveal(Params):
+    prompt: str = Field(min_length=5, max_length=500)
+    options: list[str] = Field(min_length=2, max_length=5)
+    answer: int = Field(ge=0)
+    explanation: str = Field(min_length=5, max_length=1200)
+
+    @model_validator(mode="after")
+    def key_in_range(self):
+        _distinct(self.options, "options")
+        if self.answer >= len(self.options):
+            raise ValueError("answer must be the index of one of the options")
+        return self
+
+
+class Step(Params):
+    title: str = Field(default="", max_length=120)
+    body: str = Field(min_length=1, max_length=1200)
+
+
+class StepThrough(Params):
+    intro: str = Field(default="", max_length=500)
+    steps: list[Step] = Field(min_length=2, max_length=10)
+
+
+class OrderSteps(Params):
+    prompt: str = Field(min_length=5, max_length=500)
+    items: list[str] = Field(min_length=3, max_length=8)  # in the correct order
+    explanation: str = Field(default="", max_length=1200)
+
+    @field_validator("items")
+    @classmethod
+    def distinct_items(cls, value: list[str]) -> list[str]:
+        return _distinct(value, "items")
+
+
+class BucketItem(Params):
+    text: Short
+    bucket: Short
+
+
+class SortBuckets(Params):
+    prompt: str = Field(min_length=5, max_length=500)
+    buckets: list[str] = Field(min_length=2, max_length=4)
+    items: list[BucketItem] = Field(min_length=3, max_length=12)
+    explanation: str = Field(default="", max_length=1200)
+
+    @model_validator(mode="after")
+    def every_bucket_used(self):
+        _distinct(self.buckets, "buckets")
+        _distinct([i.text for i in self.items], "items")
+        if unknown := {i.bucket for i in self.items} - set(self.buckets):
+            raise ValueError(f"items name buckets that do not exist: {sorted(unknown)}")
+        if empty := set(self.buckets) - {i.bucket for i in self.items}:
+            raise ValueError(f"buckets with no item: {sorted(empty)}")
+        return self
+
+
+class FillBlank(Params):
+    # Blanks are written in place as [[answer]] or [[answer|other accepted answer]].
+    text: str = Field(min_length=5, max_length=1200)
+    explanation: str = Field(default="", max_length=1200)
+
+    @field_validator("text")
+    @classmethod
+    def has_blanks(cls, value: str) -> str:
+        blanks = _BLANK.findall(value)
+        if not 1 <= len(blanks) <= 6:
+            raise ValueError("text needs 1-6 blanks written as [[answer]]")
+        if any(not a.strip() for b in blanks for a in b.split("|")):
+            raise ValueError("every accepted answer in a blank must be non-empty")
+        return value
+
+
+class Pair(Params):
+    left: Short
+    right: Short
+
+
+class MatchPairs(Params):
+    prompt: str = Field(min_length=5, max_length=500)
+    pairs: list[Pair] = Field(min_length=3, max_length=8)
+
+    @model_validator(mode="after")
+    def one_to_one(self):
+        _distinct([p.left for p in self.pairs], "left sides")
+        _distinct([p.right for p in self.pairs], "right sides")
+        return self
+
+
+def _interaction(id: str, description: str, params: type[Params], supports: tuple[str, ...]):
+    return register(
+        Manifest(
+            id=id,
+            version="1.0",
+            description=description,
+            domains=("*",),
+            params=params,
+            events=("answered",),
+            runtime=(),
+            evidence="exposure",
+            accessible_alternative="Keyboard and screen-reader operable; fallback_text as text.",
+            on_error="Show fallback_text.",
+            supports=supports,
+        )
+    )
+
+
+INTERACTIONS = tuple(
+    m.id
+    for m in (
+        _interaction(
+            "predict-reveal",
+            "The learner commits to a prediction from options, then sees the answer and why. "
+            "Use before a result the lesson is about to show.",
+            PredictReveal,
+            ("interact-predict",),
+        ),
+        _interaction(
+            "step-through",
+            "A worked example revealed one step at a time; the learner thinks before each step.",
+            StepThrough,
+            ("interact-worked",),
+        ),
+        _interaction(
+            "order-steps",
+            "The learner puts 3-8 steps or events in order (items are given in the correct "
+            "order and shuffled on screen).",
+            OrderSteps,
+            ("interact-sequence",),
+        ),
+        _interaction(
+            "sort-buckets",
+            "The learner sorts 3-12 items into 2-4 categories: classify, tell apart.",
+            SortBuckets,
+            ("interact-classify",),
+        ),
+        _interaction(
+            "fill-blank",
+            "The learner fills 1-6 gaps in a sentence, rule or formula. Write each blank in "
+            "place as [[answer]] or [[answer|other accepted form]]; maths in $...$.",
+            FillBlank,
+            ("interact-recall",),
+        ),
+        _interaction(
+            "match-pairs",
+            "The learner matches 3-8 terms to their meanings, examples or results.",
+            MatchPairs,
+            ("interact-relate",),
+        ),
+    )
+)
+
+
 # --- specs a lesson carries ------------------------------------------------------------------
 
 
@@ -296,6 +464,8 @@ class VisualizationSpec(BaseModel):
     purpose: str = Field(min_length=5, max_length=300)  # the learning objective it serves
     fallback_text: str = Field(min_length=10, max_length=4000)  # shown if it cannot run
     alt_text: str = Field(min_length=5, max_length=600)  # accessible description
+    # The lesson section ("## " heading) it belongs in; empty: shown after the lesson.
+    section: str = Field(default="", max_length=200)
 
 
 def validate_spec(spec: dict | VisualizationSpec) -> list[str]:

@@ -66,6 +66,7 @@ function WritingRing({ lesson }: { lesson: PreparingLesson }) {
 }
 
 function writingLine(l: PreparingLesson) {
+  if (l.draft) return 'Draft ready to read';
   if (l.state === 'writing') return `Writing ${Math.round(l.progress * 100)}%`;
   if (l.state === 'stuck') return 'Writing paused';
   return l.label || 'Waiting its turn';

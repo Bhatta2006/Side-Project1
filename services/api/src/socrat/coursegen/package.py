@@ -145,7 +145,17 @@ def practice_line(course: Course) -> str:
     )
 
 
-LESSON = """You are the Lesson Author for Socrat. Socrat lessons are deep enough to master a
+# Shared by every author whose text reaches the learner: the web typesets exactly these
+# delimiters with KaTeX (apps/web/src/lib/math.ts), and the JSON reply must keep backslashes.
+MATH = r"""
+
+Maths: inline as $...$, display as $$...$$ on a line of its own; KaTeX commands only (no
+\begin{align}, \label or packages); never put maths in `code` spans or code fences. Inside the
+JSON reply every backslash is doubled: "$\\frac{a}{b}$", not "$\frac{a}{b}$". Write a dollar
+amount as "5 dollars" or "USD 5", never with a $ sign."""
+
+LESSON = (
+    """You are the Lesson Author for Socrat. Socrat lessons are deep enough to master a
 skill, not summaries. Write one concept's lesson in Markdown, original prose only.
 
 The lesson must:
@@ -170,8 +180,11 @@ Reply with one JSON object only:
 Give up to 5 resources, only ones you are certain exist at exactly that URL: official
 documentation, well-known textbooks' free pages, or major university course pages. Every link
 is checked and a dead one is dropped, so an empty list is better than a guess."""
+    + MATH
+)
 
-QUIZ = """You are the Quiz Builder for Socrat. From the lesson, write multiple-choice items
+QUIZ = (
+    """You are the Quiz Builder for Socrat. From the lesson, write multiple-choice items
 that check understanding, not recall of wording.
 
 - 5-8 items; every objective tested at least once; difficulties spread from 1 to 5.
@@ -183,6 +196,8 @@ that check understanding, not recall of wording.
 Reply with one JSON object only:
 {"quiz": [{"id": "kebab-case", "prompt": "...", "options": ["..."], "answer": 0,
            "explanation": "...", "difficulty": 1}]}"""
+    + MATH
+)
 
 
 def outline_tags(concept) -> dict[str, str]:
@@ -242,7 +257,8 @@ def keep_tags(quiz: dict, allowed: set[str]) -> dict:
     return {**quiz, "quiz": out}
 
 
-ATOMS = """You are the Atom Author for Socrat. Atoms are short teaching steps a session can
+ATOMS = (
+    """You are the Atom Author for Socrat. Atoms are short teaching steps a session can
 mix in: each takes 10-120 seconds and has one objective.
 
 Allowed kinds: hook (at most 2 sentences), concept, worked, explanation, reflection,
@@ -256,6 +272,8 @@ Reply with one JSON object only:
             "why": "optional", "seconds": 60,
             "steps": [{"state": "...", "prompt": "...", "options": ["..."], "answer": 0,
                        "explanation": "..."}]}]}"""
+    + MATH
+)
 
 # With ``gen_marked_answers`` the writer marks the right option itself instead of giving its
 # index (coursegen/keyed.py derives the index), so the key cannot point at the wrong option.
@@ -573,6 +591,12 @@ def _common_lesson_checks(course: Course, text: str) -> list[str]:
     stray = {f for f in fences if f.lower() not in allowed}
     if stray:
         problems.append(f"Code blocks in {sorted(stray)} are outside the course languages.")
+    if text.count("$$") % 2:
+        problems.append("A $$ display formula is not closed: open and close each with $$.")
+    if re.search(r"[\x08\x0c]", text):
+        problems.append(
+            "A LaTeX command lost its backslash (\\frac, \\beta): double every backslash in JSON."
+        )
     # Missing self-check answers are not a reason to hold a lesson back: every lesson ships
     # with a quiz and in-lesson checks, and the reviewer may still ask for them.
     return problems

@@ -40,6 +40,7 @@ ROLES = {
     "extractor",  # sources -> a root unit's reusable material (coursegen/brain/researcher.py)
     "diagnostic",  # a short placement quiz for a learner's own course
     "experience",  # picks registered visuals/labs for a lesson (never writes code)
+    "director",  # plans one lesson's sections before it is written (coursegen/director.py)
     "intent",  # a learner's free-text request -> a structured intent
     "onboarding",  # Lesson 0: starter scenarios and a two-step calibration
     "translator",  # lesson text -> another language, under placeholder and glossary checks
@@ -68,6 +69,8 @@ ROLE_EFFORT = {
     "onboarding": "low",
     "diagnostic": "low",
     "experience": "low",
+    # A short structured plan, on the first lesson's critical path (live: 15 s at high).
+    "director": "low",
 }
 
 # A person is waiting on these: a stalled call falls back (generic doors, no calibration, the
@@ -100,6 +103,7 @@ ROLE_TIER = {
     "intent": "fast",
     "onboarding": "fast",  # a visitor is waiting on it
     "experience": "fast",
+    "director": "fast",
 }
 
 
@@ -217,6 +221,31 @@ def envelope(role: str, reply: "Reply") -> Envelope:
     )
 
 
+# LaTeX commands that start with a JSON escape letter (\b \f \n \r \t). Written with one
+# backslash, json.loads reads "\frac" as a form feed plus "rac" without any error, so inside
+# $...$ the backslash is doubled before parsing. \ne, \nu, \not and \ni are left alone: after a
+# real newline they are ordinary words.
+_LATEX = re.compile(
+    r"(?<!\\)\\(?=(?:b(?:eta|ar|inom|mod|oldsymbol|igg?|ot|ullet|egin)|f(?:rac|orall|lat)"
+    r"|n(?:abla|eq|otin|mid|eg)|r(?:ho|ight|ightarrow|angle|ceil|floor)"
+    r"|t(?:heta|au|ext|extbf|extit|imes|ilde|frac|riangle|o|op))(?![A-Za-z]))"
+)
+_MATH_SPAN = re.compile(r"\$\$.+?\$\$|\$[^$]+?\$", re.DOTALL)
+
+
+# An odd run of backslashes followed by a character JSON cannot escape (\s of \sigma, \{, \l of
+# \land, \u not followed by four hex digits): invalid JSON that would fail the whole reply. A
+# live run lost a lesson round to it (2026-11-21). Doubling the last backslash is always safe.
+_INVALID_ESCAPE = re.compile(r'(?<!\\)((?:\\\\)*)\\(?=[^"\\/bfnrtu]|u(?![0-9a-fA-F]{4}))')
+
+
+def keep_latex(raw: str) -> str:
+    """Raw JSON with LaTeX backslashes kept: commands inside maths that JSON would silently
+    read as escapes (\\frac, \\beta), and anywhere a backslash JSON cannot read (\\sigma)."""
+    raw = _MATH_SPAN.sub(lambda m: _LATEX.sub(r"\\\\", m.group(0)), raw)
+    return _INVALID_ESCAPE.sub(r"\1\\\\", raw)
+
+
 def parse_json(text: str) -> tuple[dict | None, str]:
     # Lessons contain ``` fences inside JSON strings, so only an outer fence is stripped.
     raw = text.strip()
@@ -226,7 +255,7 @@ def parse_json(text: str) -> tuple[dict | None, str]:
     elif not raw.startswith("{"):
         raw = raw[raw.find("{") : raw.rfind("}") + 1]
     try:
-        value = json.loads(raw)
+        value = json.loads(keep_latex(raw))
     except json.JSONDecodeError as exc:
         return None, f"reply was not valid JSON ({exc.msg} at line {exc.lineno})"
     if not isinstance(value, dict):

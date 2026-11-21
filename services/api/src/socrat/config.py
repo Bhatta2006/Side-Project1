@@ -292,6 +292,14 @@ class Settings(DatabaseSettings):
     simulate_per_minute: int = Field(default=60, ge=0, le=10_000)
     diagnostic_per_hour: int = Field(default=10, ge=0, le=1000)
     gen_visuals: bool = False  # Experience Designer adds typed visuals to generated lessons
+    # The Lesson Director plans each lesson's sections, running example, interactions and
+    # pictures before it is written (coursegen/director.py); a failed plan changes nothing.
+    gen_lesson_director: bool = False
+    # Draw the pictures the director planned once a lesson is released (coursegen/illustrate.py,
+    # Vertex image model, then an image check). Needs gen_lesson_director and a Vertex key.
+    gen_illustrations: bool = False
+    # Lesson pages read aloud by Gemini TTS (learn/speech.py) instead of the browser's voice.
+    lesson_speech: bool = False
     # Quiz and atom writers mark the right option in the item instead of giving its index
     # (coursegen/keyed.py). Replies in either form are always accepted; this changes the ask.
     gen_marked_answers: bool = False

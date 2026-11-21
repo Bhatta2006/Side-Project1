@@ -18,6 +18,12 @@ Remove a line only when the check it names has run.
 
 | Review variants (4.2), module exams (4.1), outline tags (4.3) | Scripted only: no live model has written variants or an exam | one live course with `gen_review_variants`, `gen_module_exams`, `gen_outline_tags` on |
 | Module exams (4.1) | A learner taking a checkpoint that mixes exam items (only the pool is checked) | a checkpoint session in a test or a live run |
+| Maths (lesson-director-plan step 1) | Seen live on one probability lesson (inline, display, sets, subscripts typeset; no corrupted backslashes). `/notes` Formulas section not opened; `keep_latex` never had to repair a real reply | open `/notes` on a course with finished maths lessons |
+| In-lesson interactions (step 2) | Live: 4 lessons, 2 elements each, placed in their sections, none dropped; clicked through in Chrome on the dev gallery only, not on a generated lesson page; params are not translated | open a generated lesson with elements on `/learn`, and one translated lesson |
+| Lesson director (step 3) | See live-run-log.md 2026-11-21; quality against the old flow not benchmarked | `bench_claim_to_today.py` with and without `SOCRAT_GEN_LESSON_DIRECTOR` on the same goals |
+| Pictures (step 4) | Image prices are 0 in `.env` (`SOCRAT_VERTEX_IMAGE_PRICE_USD`), so the budget never stops drawing; the vision check was run on live images only in the run logged | set the real per-image price; review a sample of kept and rejected pictures by eye |
+| Speech (step 5) | Gemini voice heard only through the API, not judged by a listener; WAV pages are large (about 48 KB per second); the cache is per process | listen to a lesson end to end in Chrome; add Opus encoding if size matters |
+| Fixes from the 2026-11-21 browser test (live-run-log.md) | The page-split vs planned-heading fix, the rate-limit retry of pictures and the picture filter are covered by tests only: no live first lesson hit a too-long page after the fix, and no live picture was kept in that run | one live `bench_claim_to_today.py` run with `gen_illustrations` on; count `illustrator` kept vs skipped |
 
 ## Real infrastructure
 

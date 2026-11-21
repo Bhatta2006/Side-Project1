@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LessonFigure, useLessonPictures } from '@/components/socrat/lesson-pictures';
 import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, ThumbsDown, ThumbsUp, TriangleAlert } from '@/components/icons';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { LANGUAGE_LABEL, NAME, activityHref, conceptHref, joinSegments } from '@
 import type { ConceptView, Resource } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { defaultBlocks, orderBlocks } from '@/lib/sequence';
+import { placeVisuals, sectionKey } from '@/lib/pages';
 import { strongSoFar } from '@/lib/strong-so-far';
 import Markdown from '@/components/markdown';
 import { LessonPages } from '@/components/lesson-pages';
@@ -180,6 +181,8 @@ export default function Lesson() {
   // Real pictures about the topic, one per section, each credited and linked to its source.
   const pictures = useLessonPictures(qualified);
   const [concept, setConcept] = useState<ConceptView | null>(null);
+  // Interactive elements that name a section of this lesson: shown on that section's page.
+  const placed = useMemo(() => (concept ? placeVisuals(concept.lesson, concept.visuals ?? []) : new Map<string, number[]>()), [concept]);
   const [error, setError] = useState('');
   const [upgrade, setUpgrade] = useState(false);
   const [locked, setLocked] = useState<'' | 'gate' | 'preparing'>('');
@@ -373,7 +376,8 @@ export default function Lesson() {
         <article className="min-w-0">
           <Stepper concept={concept} className="mb-8 lg:hidden" />
           <p className="type-body-l mb-6 max-w-[68ch] text-muted-foreground text-pretty">{concept.summary}</p>
-          <Listen target="#step-lesson" />
+          {/* The server reads the original text; a translated lesson is read by the browser. */}
+          <Listen target="#step-lesson" remote={concept.speech && !concept.translation ? `/api/v1/concepts/${qualified}/speech` : undefined} />
 
           {/* The concept's shared visual sits above the reading; free-form requests stay in the Playground. */}
           <section className="mb-8" aria-label={`${concept.title}, visual`}>
@@ -414,11 +418,17 @@ export default function Lesson() {
             ) : undefined}
             onPage={page => signal('page', page)}
             figure={pictures.size ? title => { const p = pictures.get(title); return p ? <LessonFigure picture={p} /> : null; } : undefined}
+            inline={placed.size ? title => placed.get(sectionKey(title))?.map(i => (
+              <div key={i} id={`step-visual-${i}`} className="mt-6 rounded-xl border bg-card px-4 pt-3">
+                <p className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">Try it</p>
+                <VisualizationHost spec={concept.visuals![i]} lesson={{ concept: concept.id, title: concept.title }} />
+              </div>
+            )) : undefined}
             id={qualified}
             source={concept.lesson}
             language={concept.language}
             extra={orderBlocks(concept.sequence, defaultBlocks(concept.visuals?.length ?? 0, (concept.tasks ?? []).map(t => t.id)))
-              .filter(block => block.kind !== 'lesson')
+              .filter(block => block.kind !== 'lesson' && !(block.kind === 'visual' && [...placed.values()].some(v => v.includes(block.index))))
               .map((block, i) => {
                 if (block.kind === 'visual') {
                   const v = concept.visuals![block.index];

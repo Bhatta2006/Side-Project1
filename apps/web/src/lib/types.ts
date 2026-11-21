@@ -608,6 +608,8 @@ export interface ProjectView {
 export interface ConceptView {
   /** Each page of the lesson offers "show me this part" (a shared visual of that page). */
   section_visuals?: boolean;
+  /** Lesson pages can be read aloud by the server's Gemini voice (learn/speech.py). */
+  speech?: boolean;
   prompts?: WrittenPrompt[];
   id: string;
   course: string;
@@ -634,7 +636,7 @@ export interface ConceptView {
   translation?: { locale: string; status: 'machine' | 'reviewed'; reviewer: string | null; preview: boolean; rtl: boolean } | null;
   key_points: string[];
   /** Registered interactive elements; each renders through the visualization host with a text fallback. */
-  visuals?: { renderer: string; version: string; params: Record<string, unknown>; purpose: string; fallback_text: string; alt_text: string }[];
+  visuals?: { renderer: string; version: string; params: Record<string, unknown>; purpose: string; fallback_text: string; alt_text: string; section?: string }[];
   pitfalls: string[];
   resources: Resource[];
   problems: { id: string; title: string; difficulty: string; solved: boolean }[];

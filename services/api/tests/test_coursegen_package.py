@@ -271,9 +271,12 @@ def test_a_package_the_reviewer_calls_wrong_stays_planned(client, published, web
     )
     run(client, script.make, web())
     detail = client.get("/api/v1/admin/courses/ai-basics/concepts/loss", headers=published).json()
-    assert detail["jobs"][0]["state"] == "failed"
+    # The failed job and its one automatic retry (retry_once) can share a created_at second,
+    # so their order in the list is not fixed: pick the failed one.
+    failed = [j for j in detail["jobs"] if j["state"] == "failed"]
+    assert len(failed) == 1
     assert detail["concept"]["status"] == "planned" and detail["atoms"] is None
-    assert detail["jobs"][0]["output"]["scores"]["correctness"] == 2  # the last draft is kept
+    assert failed[0]["output"]["scores"]["correctness"] == 2  # the last draft is kept
 
 
 def test_a_sound_package_is_released_when_rounds_run_out(client, published, web):  # noqa: F811

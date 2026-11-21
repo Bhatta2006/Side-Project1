@@ -272,7 +272,12 @@ def check(text: str, p: PageProfile) -> list[str]:
     import re
 
     parts = re.split(r"^## ", text, flags=re.MULTILINE)[1:]
-    sized = [s for s in parts if not re.match(r"(check yourself|self-check|quick check)", s, re.I)]
+    # The closing check and a sources list are not teaching pages: they are not sized.
+    sized = [
+        s
+        for s in parts
+        if not re.match(r"(check yourself|self-check|quick check|sources|references)", s, re.I)
+    ]
     problems = []
     if not p.pages[0] - 1 <= len(parts) <= p.pages[1] + 2:
         problems.append(

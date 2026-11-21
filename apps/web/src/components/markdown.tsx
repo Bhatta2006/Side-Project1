@@ -1,10 +1,13 @@
 import { Fragment, type ReactNode } from 'react';
 import { CopyCodeBlock } from '@/components/socrat/copy-code-block';
+import { TeX } from '@/components/tex';
+import { displayMath, pieces } from '@/lib/math';
 import './lesson-prose.css';
 
 /**
- * Minimal, dependency-free Markdown renderer for lessons and assistant replies.
- * Produces React elements only (never raw HTML), so content cannot inject markup.
+ * Minimal Markdown renderer for lessons and assistant replies.
+ * Produces React elements only (never raw HTML), so content cannot inject markup; the one
+ * exception is KaTeX's own output for maths (components/tex.tsx), which escapes its input.
  * Code fences tagged with another programming language than `language` are hidden,
  * which lets one lesson carry Python, C++ and Java variants side by side.
  */
@@ -16,6 +19,7 @@ const CODE_LANGUAGES: Record<string, string> = {
 type Block =
   | { type: 'heading'; level: number; text: string }
   | { type: 'paragraph'; text: string }
+  | { type: 'math'; tex: string }
   | { type: 'code'; lang: string; text: string }
   | { type: 'list'; ordered: boolean; items: string[] }
   | { type: 'quote'; text: string }
@@ -39,6 +43,8 @@ function cells(line: string): string[] {
   return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
 }
 
+const DISPLAY_START = /^\s*(\$\$|\\\[)/;
+
 export function parse(source: string): Block[] {
   const lines = source.replace(/\r\n/g, '\n').split('\n');
   const blocks: Block[] = [];
@@ -55,6 +61,15 @@ export function parse(source: string): Block[] {
       continue;
     }
     if (!line.trim()) { i++; continue; }
+    // Display maths, $$...$$ or \[...\], on one line or several.
+    if (DISPLAY_START.test(line)) {
+      const close = line.trim().startsWith('$$') ? '$$' : '\\]';
+      let j = i;
+      let body = line;
+      while (j + 1 < lines.length && body.trim().indexOf(close, 2) < 0 && lines[j + 1].trim()) body += '\n' + lines[++j];
+      const tex = displayMath(body);
+      if (tex) { blocks.push({ type: 'math', tex }); i = j + 1; continue; }
+    }
     // Generated lessons keep self-check answers in <details>; they become a reveal, not raw tags.
     if (/^\s*<details/i.test(line)) {
       const body: string[] = [];
@@ -97,41 +112,75 @@ export function parse(source: string): Block[] {
     const body: string[] = [];
     while (
       i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i]) && !/^#{1,6}\s/.test(lines[i]) &&
-      !bullet.test(lines[i]) && !/^\s*>/.test(lines[i]) && !lines[i].trim().startsWith('|')
+      !bullet.test(lines[i]) && !/^\s*>/.test(lines[i]) && !lines[i].trim().startsWith('|') &&
+      !(body.length && DISPLAY_START.test(lines[i]))
     ) body.push(lines[i++].trim());
     blocks.push({ type: 'paragraph', text: body.join(' ') });
   }
   return blocks;
 }
 
-/** Only `code` spans: for question prompts, where * and _ are usually maths, not emphasis. */
+/** Only `code` spans and maths: for question prompts, where * and _ are usually maths, not emphasis. */
 export function codeSpans(text: string): ReactNode[] {
-  return text.split(/(`[^`]+`)/).map((part, i) => (i % 2 ? <code key={i}>{part.slice(1, -1)}</code> : part));
+  return pieces(text).map((p, i) =>
+    p.kind === 'math' ? <TeX key={i} tex={p.tex} display={p.display} /> : p.kind === 'code' ? <code key={i}>{p.text}</code> : p.text);
 }
 
 const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*|_[^_\s][^_]*_)|(\[[^\]]+\]\([^)\s]+\))/g;
 
+/**
+ * Inline Markdown. Code spans and maths are cut out first, so emphasis never eats a subscript;
+ * each leaves a placeholder in the line, so emphasis around it still pairs up
+ * (`**Sample space ($S$)**` is bold with maths inside, not two stray `**`).
+ */
 export function inline(text: string): ReactNode[] {
+  const slots: ReactNode[] = [];
+  const masked = pieces(text).map((p, i) => {
+    if (p.kind === 'text') return p.text.replace(/[\uE000\uE001]/g, '');
+    slots.push(p.kind === 'math' ? <TeX key={`m${i}`} tex={p.tex} display={p.display} /> : <code key={`k${i}`}>{p.text}</code>);
+    return `\uE000${slots.length - 1}\uE001`;
+  }).join('');
+  return markup(masked, 't', slots);
+}
+
+const SLOT = /\uE000(\d+)\uE001/g;
+
+/** Text with its maths and code put back. */
+function restore(text: string, slots: ReactNode[]): ReactNode[] {
   const out: ReactNode[] = [];
   let last = 0;
-  let key = 0;
+  for (const m of text.matchAll(SLOT)) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(slots[Number(m[1])]);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+function markup(text: string, prefix: string, slots: ReactNode[]): ReactNode[] {
+  const out: ReactNode[] = [];
+  let last = 0;
+  let n = 0;
+  const key = () => `${prefix}-${n++}`;
   for (const match of text.matchAll(INLINE)) {
-    if (match.index > last) out.push(text.slice(last, match.index));
+    if (match.index > last) out.push(...restore(text.slice(last, match.index), slots));
     const token = match[0];
-    if (match[1]) out.push(<code key={key++}>{token.slice(1, -1)}</code>);
-    else if (match[2]) out.push(<strong key={key++}>{inline(token.slice(2, -2))}</strong>);
-    else if (match[3]) out.push(<em key={key++}>{inline(token.slice(1, -1))}</em>);
+    if (match[1]) out.push(<code key={key()}>{token.slice(1, -1)}</code>);
+    else if (match[2]) { const k = key(); out.push(<strong key={k}>{markup(token.slice(2, -2), k, slots)}</strong>); }
+    else if (match[3]) { const k = key(); out.push(<em key={k}>{markup(token.slice(1, -1), k, slots)}</em>); }
     else {
       const [, label, href] = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/) ?? [];
+      const k = key();
       if (href && /^https?:\/\//.test(href)) {
-        out.push(<a key={key++} href={href} target="_blank" rel="noopener noreferrer">{inline(label)}</a>);
+        out.push(<a key={k} href={href} target="_blank" rel="noopener noreferrer">{markup(label, k, slots)}</a>);
       } else if (href && href.startsWith('/')) {
-        out.push(<a key={key++} href={href}>{inline(label)}</a>);
-      } else out.push(label ?? token);
+        out.push(<a key={k} href={href}>{markup(label, k, slots)}</a>);
+      } else out.push(...restore(label ?? token, slots));
     }
     last = match.index + token.length;
   }
-  if (last < text.length) out.push(text.slice(last));
+  if (last < text.length) out.push(...restore(text.slice(last), slots));
   return out;
 }
 
@@ -208,6 +257,8 @@ export default function Markdown({ source, language, className = '', rich = fals
         lead = false;
         return <p key={index} className={first ? 'lead' : undefined}>{text(b.text)}</p>;
       }
+      case 'math':
+        return <TeX key={index} tex={b.tex} display />;
       case 'code':
         return <CopyCodeBlock key={index} code={b.text} lang={b.lang || undefined} />;
       case 'list': {
