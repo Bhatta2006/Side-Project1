@@ -207,3 +207,27 @@ def test_a_waiting_learner_gets_one_plan_try(client):
             jobs._direct(ask, state.engine, "j1", "", CONCEPT, [], (3, 6), "", tries)
         )
         assert plan is None and len(asked) == calls
+
+
+def test_a_first_lesson_gets_a_budget_that_fits_its_session():
+    from socrat.coursegen import jobs
+    from socrat.planner.engine import written_minutes
+
+    budget = jobs.first_lesson_budget(10)
+    words = int(budget.split("at most ")[1].split(" words")[0])
+    used = written_minutes(" ".join(["w"] * words), jobs.FIRST_QUIZ_ITEMS)
+    assert used["lesson"] + used["quiz"] <= 10 * 1.1  # passes first_session_over
+    assert jobs.first_lesson_budget(5).count("at most 360 words") == 1  # never below 2 minutes
+
+
+def test_a_sources_page_is_neither_sized_nor_a_planned_heading():
+    from socrat.style.pages import PageProfile, check
+
+    plan, _ = director.check(GOOD, CONCEPT, ["predict-reveal", "sort-buckets"], (3, 6))
+    text = (
+        "## A suspicious email\n\n## What you believed before\n\n## Flipping the condition\n\n"
+        "## Check yourself\n\nQ\n\n## Sources\n\n[1] x\n"
+    )
+    assert director.heading_issues(text, plan) == []
+    profile = PageProfile(words=(1, 400), ideas=1, pages=(3, 6), check_every=1, elements=())
+    assert not any("Sources" in p for p in check(text, profile))

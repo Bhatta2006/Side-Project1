@@ -636,6 +636,26 @@ def first_lesson_issues(brief: Brief, course, live, personal: bool) -> list[str]
     return issues
 
 
+FIRST_QUIZ_ITEMS = 4
+FIRST_QUIZ = "This is the learner's first session, timed: write exactly {n} items, no more."
+
+
+def first_lesson_budget(minutes: int) -> str:
+    """What the first lesson may take, in words, so it fits ``minutes`` with its quiz (the
+    same arithmetic as ``planner.engine.written_minutes``)."""
+    from socrat.planner.engine import READ_WORDS_PER_MINUTE, written_minutes
+
+    quiz = written_minutes("x", FIRST_QUIZ_ITEMS)["quiz"]  # type: ignore[index]
+    reading = max(2, int(minutes * 0.95) - quiz)  # a little under the gate's 10% slack
+    words = reading * READ_WORDS_PER_MINUTE
+    return (
+        f"FIRST SESSION: the learner has {minutes} minutes for this lesson and its "
+        f"{FIRST_QUIZ_ITEMS}-item check. The whole lesson, every page and the self-check "
+        f"included, is at most {words} words. One idea, taught well; leave the rest to the "
+        "next lessons."
+    )
+
+
 def first_session_over(brief: Brief, course, live) -> str:
     """A Lesson 0 learner's first lesson must fit their session (computed minutes, 10%
     slack); the reason it does not, or ""."""
@@ -1175,13 +1195,26 @@ async def run_package(
         )
         if part
     )
+    # A Lesson 0 learner's first lesson has a session to fit (first_session_over): the budget is
+    # given up front instead of found by the gate after a whole round (live: most first lessons
+    # lost a round to "takes 12 minutes; the learner has 10").
+    first_budget = None
+    if data.get("trigger") == "first" and brief.plan is not None and brief.plan.session_minutes:
+        first_budget = first_lesson_budget(brief.plan.session_minutes)
     # Lesson pages sized for this learner (style/pages.py), decided by code from the request.
     paging = None
     if settings.gen_lesson_pages:
         from socrat.style import pages
 
         paging = pages.profile(brief.learner or pages.learner_of(None, style), style)
+        if first_budget is not None:
+            # The first session must fit: as few pages as this learner's profile allows.
+            low, high = paging.pages
+            paging = replace(paging, pages=(low, min(low + 1, high)))
         ctx = f"{ctx}\n\n{pages.block(paging)}"
+    if first_budget is not None:
+        ctx = f"{ctx}\n\n{first_budget}"
+        quiz_extra = "\n\n".join(filter(None, [quiz_extra, FIRST_QUIZ.format(n=FIRST_QUIZ_ITEMS)]))
     note = pkg.STYLE_NOTE if style else ""
     cited: list[dict] = []
     version = concept.provenance.version + 1 if concept.provenance else 1

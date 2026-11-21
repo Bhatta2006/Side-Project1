@@ -31,7 +31,9 @@ Rules:
 - Choose ONE running example from the learner's own world (their goal, background, work,
   interests) and thread it through the lesson ("thread"). Each section says in "hook" how it
   uses the learner's details.
-- Section 1 opens with a question the learner can try before reading on.
+- Section 1 opens with a question the learner can try before reading on. If the learner
+  block gives a "door" (their everyday scenario), section 1 opens with that scenario: say so
+  in its "hook".
 - Put an interaction in at least half of the sections, using only the listed ids:
   "interaction" is the id, "idea" says what the learner does and with which items (taken
   from the section). Leave both "" for a reading-only section.
@@ -134,7 +136,7 @@ def author_block(plan: dict) -> str:
         "LESSON PLAN (from the Lesson Director; follow it exactly):",
         f"- Running example, threaded through every section: {plan['thread']}",
         "- Write these '## ' sections, with exactly these headings, in this order, then the "
-        "closing 'Check yourself' page:",
+        "closing '## Check yourself' page (a '## ' page of its own; sources, if any, after it):",
     ]
     for i, s in enumerate(plan["sections"], 1):
         extra = []
@@ -173,7 +175,7 @@ def heading_issues(lesson: str, plan: dict) -> list[str]:
     got = [
         _key(h)
         for h in re.findall(r"^##\s+(.+?)\s*$", lesson, re.MULTILINE)
-        if not re.match(r"(check yourself|self-check|quick check)", h, re.I)
+        if not re.match(r"(check yourself|self-check|quick check|sources|references)", h, re.I)
     ]
     want = [_key(s["heading"]) for s in plan["sections"]]
     if got == want:
