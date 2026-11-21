@@ -212,3 +212,19 @@ minutes, three learners at once, at `46adb37` (all fixes from live run 3 in). To
   "1st/2nd endings"). The check now applies to the `final_task` only, where it still caught a real addition in this
   run ("integrate ... into Python", which the learner never asked for). Test in `test_roadmap.py`.
 - Cost: first lessons $0.36-0.38 when nothing is redone, about 2.5x the $0.15 target (owner accepted for now).
+
+## 2026-11-21: first lesson after onboarding, Vertex gemini-3.8-flash, local stack
+
+`scripts/dev/bench_claim_to_today.py --goals sql,music --modes builder --minutes 10`, every
+generator flag on except `course_brain` / `brain_scoper` (they route requests to shared courses,
+which turns off the per-learner first-lesson path; owner: not required now).
+
+| Build | Goal | Outline ready s | Draft readable s | First lesson ready s | First-lesson $ |
+|---|---|---|---|---|---|
+| before the director (morning) | sql | 169 | n/a | 362 | 0.44 |
+| quick director + designer beside the quiz (course brain still on for music) | sql / music | 49 / 165 | 121 / 199 | 350 / 570 | 1.23 / 0.81 |
+| + session budget up front, Sources page and door fixes | sql / music | 109 / 46 | 141 / 96 | 178 / 130 | 0.35 / 0.33 |
+
+The last row released both first lessons in one round (68 s and 82 s from job start). The 570 s
+run lost about 3 minutes to one Vertex call that hung until the waiting-learner timeout (120 s)
+and a restart of the job. Not fixed: that timeout and the outline's own time (46-169 s).
